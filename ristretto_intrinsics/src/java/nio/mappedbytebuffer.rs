@@ -4,7 +4,6 @@ use crate::sun::nio::fs::managed_files;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError::IoException;
 use ristretto_types::Thread;
@@ -22,7 +21,6 @@ use std::sync::Arc;
     "java/nio/MappedByteBuffer.force0(Ljava/io/FileDescriptor;JJ)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn force_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -76,8 +74,7 @@ pub async fn force_0<T: Thread + 'static>(
 /// memory is always resident, so we return `true`. This is spec-compliant: the result is a
 /// hint with no behavioral guarantees.
 #[intrinsic_method("java/nio/MappedByteBuffer.isLoaded0(JJI)Z", LessThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn is_loaded_0<T: Thread + 'static>(
+pub fn is_loaded_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -93,8 +90,7 @@ pub async fn is_loaded_0<T: Thread + 'static>(
 /// Loads the region into physical memory. In our model memory is always resident, so this is a
 /// no-op. The JVM specification only requires best-effort behavior.
 #[intrinsic_method("java/nio/MappedByteBuffer.load0(JJ)V", LessThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn load_0<T: Thread + 'static>(
+pub fn load_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -196,7 +192,7 @@ mod tests {
         params.push_long(0);
         params.push_long(16);
         params.push_int(1);
-        let result = is_loaded_0(thread, params).await?;
+        let result = is_loaded_0(thread, params)?;
         #[cfg(target_os = "windows")]
         let expected = 0;
         #[cfg(not(target_os = "windows"))]
@@ -211,7 +207,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push_long(0);
         params.push_long(16);
-        let result = load_0(thread, params).await?;
+        let result = load_0(thread, params)?;
         assert!(result.is_none());
         Ok(())
     }

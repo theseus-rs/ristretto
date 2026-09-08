@@ -38,18 +38,34 @@ use proc_macro::TokenStream;
 ///
 /// # Examples
 ///
+/// Synchronous intrinsics return directly, without allocating a future:
+///
 /// ```text
-/// #[intrinsic_method("java/lang/Object.hashCode()I", Any)]
-/// #[async_recursion(?Send)]
-/// async fn hash_code(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
-///     // actual logic
-///    ...
+/// #[intrinsic_method("java/lang/Float.floatToRawIntBits(F)I", Any)]
+/// pub fn float_to_raw_int_bits<T: Thread + 'static>(
+///     _thread: Arc<T>, mut parameters: Parameters,
+/// ) -> Result<Option<Value>> {
+///     Ok(Some(Value::Int(parameters.pop_float()?.to_bits() as i32)))
 /// }
 /// ```
 ///
-/// The macro preserves the original Rust function and generates a static item (currently a tuple
-/// `(&'static str, &'static str, ristretto_classfile::VersionSpecification)`) that associates the
-/// full intrinsic name, the Rust function's name, and the version specification.
+/// Async intrinsics automatically receive platform-aware recursive future boxing:
+///
+/// ```text
+/// #[intrinsic_method("java/lang/Object.getClass()Ljava/lang/Class;", Any)]
+/// pub async fn get_class<T: Thread + 'static>(
+///     thread: Arc<T>, mut parameters: Parameters,
+/// ) -> Result<Option<Value>> {
+///     // Async class loading and Java calls can be awaited here.
+///     ...
+/// }
+/// ```
+///
+/// The macro detects the `async` declaration, rather than inferring it from the body.
+/// Async futures are `Send` on native targets and may be non-`Send` on WebAssembly.
+/// An existing `#[async_method]` immediately below this attribute is accepted without
+/// double boxing, but is unnecessary. The generated registration metadata preserves
+/// the intrinsic name, Rust function name, and Java version specification.
 #[proc_macro_attribute]
 pub fn intrinsic_method(attributes: TokenStream, item: TokenStream) -> TokenStream {
     intrinsic::process(attributes.into(), item.into()).into()
@@ -67,7 +83,6 @@ pub fn intrinsic_method(attributes: TokenStream, item: TokenStream) -> TokenStre
 /// WASM and non-WASM targets:
 ///
 /// ```text
-/// #[intrinsic_method("java/lang/Object.hashCode()I", Any)]
 /// #[async_method]
 /// async fn hash_code(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
 ///     // actual logic
@@ -83,7 +98,7 @@ pub fn async_method(_attributes: TokenStream, item: TokenStream) -> TokenStream 
 ///
 /// This macro scans the `ristretto_intrinsics/src/` directory for functions annotated with
 /// `#[intrinsic_method]`, extracts their signatures and version specifications, and generates
-/// static PHF (Perfect Hash Function) maps for each supported Java version.
+/// static `LazyLock<AHashMap>` registries for each supported Java version.
 ///
 /// # Usage
 ///
@@ -91,7 +106,7 @@ pub fn async_method(_attributes: TokenStream, item: TokenStream) -> TokenStream 
 /// generate_intrinsic_registry!();
 /// ```
 ///
-/// This generates static PHF maps named `JAVA_8`, `JAVA_11`, `JAVA_17`, `JAVA_21`, and `JAVA_25`,
+/// This generates static registry maps named `JAVA_8`, `JAVA_11`, `JAVA_17`, `JAVA_21`, and `JAVA_25`,
 /// each mapping method signatures to their intrinsic method implementations.
 #[proc_macro]
 pub fn generate_intrinsic_registry(input: TokenStream) -> TokenStream {

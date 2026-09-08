@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
@@ -14,7 +13,6 @@ use ristretto_types::Thread;
     "sun/nio/ch/UnixDispatcher.close0(Ljava/io/FileDescriptor;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -36,8 +34,7 @@ pub async fn close_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/UnixDispatcher.init()V", GreaterThanOrEqual(JAVA_21))]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -48,8 +45,7 @@ pub async fn init<T: Thread + 'static>(
     "sun/nio/ch/UnixDispatcher.preClose0(Ljava/io/FileDescriptor;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn pre_close_0<T: Thread + 'static>(
+pub fn pre_close_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -70,7 +66,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init(thread, Parameters::default()).await?;
+        let result = init(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -78,7 +74,7 @@ mod tests {
     #[tokio::test]
     async fn test_pre_close_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = pre_close_0(thread, Parameters::default()).await;
+        let result = pre_close_0(thread, Parameters::default());
         assert!(result.is_ok());
     }
 }

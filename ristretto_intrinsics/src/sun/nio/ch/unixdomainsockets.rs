@@ -2,7 +2,6 @@ use crate::java::io::socketfiledescriptor::{get_fd, set_fd};
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -269,7 +268,6 @@ async fn restore_blocking<V: VM>(vm: &V, fd: i32) -> Result<()> {
     "sun/nio/ch/UnixDomainSockets.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/lang/Object;)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn accept_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -340,7 +338,6 @@ pub async fn accept_0<T: Thread + 'static>(
     "sun/nio/ch/UnixDomainSockets.bind0(Ljava/io/FileDescriptor;[B)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn bind_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -370,7 +367,6 @@ pub async fn bind_0<T: Thread + 'static>(
     "sun/nio/ch/UnixDomainSockets.connect0(Ljava/io/FileDescriptor;[B)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn connect_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -467,8 +463,7 @@ pub async fn connect_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/UnixDomainSockets.init()Z", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -483,7 +478,6 @@ pub async fn init<T: Thread + 'static>(
     "sun/nio/ch/UnixDomainSockets.localAddress0(Ljava/io/FileDescriptor;)[B",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn local_address_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -509,7 +503,6 @@ pub async fn local_address_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/UnixDomainSockets.socket0()I", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn socket_0<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -571,7 +564,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init(thread, Parameters::default()).await.expect("init");
+        let result = init(thread, Parameters::default()).expect("init");
         assert_eq!(Some(Value::from(true)), result);
     }
 

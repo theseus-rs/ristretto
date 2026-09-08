@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "java/util/concurrent/atomic/AtomicLong.VMSupportsCS8()Z",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn vm_supports_cs_8<T: Thread + 'static>(
+pub fn vm_supports_cs_8<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,7 +38,7 @@ mod tests {
     #[tokio::test]
     async fn test_vm_supports_cs_8() -> Result<()> {
         let (_vm, thread) = crate::test::java21_thread().await?;
-        let value = vm_supports_cs_8(thread, Parameters::default()).await?;
+        let value = vm_supports_cs_8(thread, Parameters::default())?;
         let expected = matches!(
             ARCH,
             "x86_64"

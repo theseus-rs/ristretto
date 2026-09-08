@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Between, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -33,7 +32,6 @@ async fn create_byte_buffer<T: Thread + 'static>(
     "jdk/internal/perf/Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn attach<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -49,7 +47,6 @@ pub async fn attach<T: Thread + 'static>(
     "jdk/internal/perf/Perf.attach0(I)Ljava/nio/ByteBuffer;",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
 pub async fn attach_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -63,7 +60,6 @@ pub async fn attach_0<T: Thread + 'static>(
     "jdk/internal/perf/Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn create_byte_array<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -93,7 +89,6 @@ pub async fn create_byte_array<T: Thread + 'static>(
     "jdk/internal/perf/Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn create_long<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -113,8 +108,7 @@ pub async fn create_long<T: Thread + 'static>(
     "jdk/internal/perf/Perf.detach(Ljava/nio/ByteBuffer;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn detach<T: Thread + 'static>(
+pub fn detach<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -125,8 +119,7 @@ pub async fn detach<T: Thread + 'static>(
     "jdk/internal/perf/Perf.highResCounter()J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn high_res_counter<T: Thread + 'static>(
+pub fn high_res_counter<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -142,8 +135,7 @@ pub async fn high_res_counter<T: Thread + 'static>(
     "jdk/internal/perf/Perf.highResFrequency()J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn high_res_frequency<T: Thread + 'static>(
+pub fn high_res_frequency<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -154,8 +146,7 @@ pub async fn high_res_frequency<T: Thread + 'static>(
     "jdk/internal/perf/Perf.registerNatives()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn register_natives<T: Thread + 'static>(
+pub fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -227,7 +218,7 @@ mod tests {
     #[tokio::test]
     async fn test_detach() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = detach(thread, Parameters::default()).await?;
+        let result = detach(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -235,7 +226,7 @@ mod tests {
     #[tokio::test]
     async fn test_high_res_counter() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = high_res_counter(thread, Parameters::default()).await?;
+        let result = high_res_counter(thread, Parameters::default())?;
         assert!(matches!(result, Some(Value::Long(v)) if v > 0));
         Ok(())
     }
@@ -243,7 +234,7 @@ mod tests {
     #[tokio::test]
     async fn test_high_res_frequency() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = high_res_frequency(thread, Parameters::default()).await?;
+        let result = high_res_frequency(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Long(1_000_000_000)));
         Ok(())
     }
@@ -251,7 +242,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Parameters::default()).await?;
+        let result = register_natives(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

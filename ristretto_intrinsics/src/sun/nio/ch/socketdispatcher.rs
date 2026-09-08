@@ -8,7 +8,6 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -419,7 +418,6 @@ async fn writev_file_descriptor<V: VM>(vm: &V, fd: i32, data: &[u8]) -> Result<O
     GreaterThanOrEqual(JAVA_17)
 )]
 #[expect(clippy::too_many_lines)]
-#[async_method]
 pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -540,7 +538,6 @@ pub async fn read_0<T: Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[expect(clippy::too_many_lines)]
-#[async_method]
 pub async fn readv_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -699,7 +696,6 @@ pub async fn readv_0<T: Thread + 'static>(
     "sun/nio/ch/SocketDispatcher.write0(Ljava/io/FileDescriptor;JI)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -806,7 +802,6 @@ pub async fn write_0<T: Thread + 'static>(
     "sun/nio/ch/SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn writev_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -919,7 +914,6 @@ pub async fn writev_0<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/nio/ch/SocketDispatcher.close0(I)V", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn close0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -935,7 +929,6 @@ pub async fn close0<T: Thread + 'static>(
     "sun/nio/ch/SocketDispatcher.close0(Ljava/io/FileDescriptor;)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn close0_windows_le_v11<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -952,8 +945,7 @@ pub async fn close0_windows_le_v11<T: Thread + 'static>(
     "sun/nio/ch/SocketDispatcher.preClose0(Ljava/io/FileDescriptor;)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn pre_close0<T: Thread + 'static>(
+pub fn pre_close0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -966,7 +958,6 @@ pub async fn pre_close0<T: Thread + 'static>(
     "sun/nio/ch/SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn read0_windows_le_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -979,7 +970,6 @@ pub async fn read0_windows_le_v11<T: Thread + 'static>(
     "sun/nio/ch/SocketDispatcher.readv0(Ljava/io/FileDescriptor;JI)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn readv0_windows_le_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -992,7 +982,6 @@ pub async fn readv0_windows_le_v11<T: Thread + 'static>(
     "sun/nio/ch/SocketDispatcher.write0(Ljava/io/FileDescriptor;JI)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn write0_windows_le_v17<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1005,7 +994,6 @@ pub async fn write0_windows_le_v17<T: Thread + 'static>(
     "sun/nio/ch/SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn writev0_windows_le_v17<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1146,7 +1134,7 @@ mod tests {
     #[tokio::test]
     async fn test_pre_close0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = pre_close0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = pre_close0(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(result.expect("pre_close0"), None);
     }
 

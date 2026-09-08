@@ -2,7 +2,6 @@ use crate::java::lang::thread::{ThreadState, set_thread_status};
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{ObjectArray, Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Assignable;
 use ristretto_types::Error::InternalError;
@@ -32,7 +31,6 @@ pub fn get_monitor_id(reference: &Reference) -> Option<usize> {
 ///
 /// - [java.lang.Object.clone()](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/Object.html#clone())
 #[intrinsic_method("java/lang/Object.clone()Ljava/lang/Object;", Any)]
-#[async_method]
 pub async fn clone<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -108,7 +106,6 @@ pub async fn clone<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Object.getClass()Ljava/lang/Class;", Any)]
-#[async_method]
 pub async fn get_class<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -127,8 +124,7 @@ pub async fn get_class<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Object.hashCode()I", Any)]
-#[async_method]
-pub async fn hash_code<T: Thread + 'static>(
+pub fn hash_code<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -145,8 +141,7 @@ pub async fn hash_code<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Object.notify()V", Any)]
-#[async_method]
-pub async fn notify<T: Thread + 'static>(
+pub fn notify<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -166,8 +161,7 @@ pub async fn notify<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Object.notifyAll()V", Any)]
-#[async_method]
-pub async fn notify_all<T: Thread + 'static>(
+pub fn notify_all<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -187,8 +181,7 @@ pub async fn notify_all<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Object.registerNatives()V", LessThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn register_natives<T: Thread + 'static>(
+pub fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -196,7 +189,6 @@ pub async fn register_natives<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Object.wait(J)V", LessThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn wait<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -205,7 +197,6 @@ pub async fn wait<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Object.wait0(J)V", GreaterThan(JAVA_17))]
-#[async_method]
 pub async fn wait_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -280,7 +271,7 @@ mod tests {
         }
 
         let parameters = Parameters::new(vec![object_value]);
-        let result = notify_all(thread, parameters).await?;
+        let result = notify_all(thread, parameters)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -305,7 +296,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::java11_thread().await?;
-        let result = register_natives(thread, Parameters::default()).await?;
+        let result = register_natives(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.FillConsoleOutputAttribute(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;SILjdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;Ljdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn fill_console_output_attribute<T: Thread + 'static>(
+pub fn fill_console_output_attribute<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn fill_console_output_attribute<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.FillConsoleOutputCharacter(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;CILjdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;Ljdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn fill_console_output_character<T: Thread + 'static>(
+pub fn fill_console_output_character<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,8 +41,7 @@ pub async fn fill_console_output_character<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.GetConsoleMode(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn get_console_mode<T: Thread + 'static>(
+pub fn get_console_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -57,8 +53,7 @@ pub async fn get_console_mode<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.GetConsoleScreenBufferInfo(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$CONSOLE_SCREEN_BUFFER_INFO;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn get_console_screen_buffer_info<T: Thread + 'static>(
+pub fn get_console_screen_buffer_info<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -70,8 +65,7 @@ pub async fn get_console_screen_buffer_info<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.GetStdHandle(I)Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn get_std_handle<T: Thread + 'static>(
+pub fn get_std_handle<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,8 +76,7 @@ pub async fn get_std_handle<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.ReadConsoleInput(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;[Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$INPUT_RECORD;ILjdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn read_console_input<T: Thread + 'static>(
+pub fn read_console_input<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -97,8 +90,7 @@ pub async fn read_console_input<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.ScrollConsoleScreenBuffer(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$SMALL_RECT;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$SMALL_RECT;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$CHAR_INFO;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn scroll_console_screen_buffer<T: Thread + 'static>(
+pub fn scroll_console_screen_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -113,8 +105,7 @@ pub async fn scroll_console_screen_buffer<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleCursorPosition(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn set_console_cursor_position<T: Thread + 'static>(
+pub fn set_console_cursor_position<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -126,8 +117,7 @@ pub async fn set_console_cursor_position<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleMode(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;I)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn set_console_mode<T: Thread + 'static>(
+pub fn set_console_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -139,8 +129,7 @@ pub async fn set_console_mode<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleTextAttribute(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;S)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn set_console_text_attribute<T: Thread + 'static>(
+pub fn set_console_text_attribute<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -152,8 +141,7 @@ pub async fn set_console_text_attribute<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleTitle(Ljava/lang/String;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn set_console_title<T: Thread + 'static>(
+pub fn set_console_title<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -164,8 +152,7 @@ pub async fn set_console_title<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.WaitForSingleObject(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;I)I",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn wait_for_single_object<T: Thread + 'static>(
+pub fn wait_for_single_object<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -177,8 +164,7 @@ pub async fn wait_for_single_object<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.WriteConsoleW(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;[CILjdk/internal/org/jline/terminal/impl/jna/win/IntByReference;Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn write_console_w<T: Thread + 'static>(
+pub fn write_console_w<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -193,8 +179,7 @@ pub async fn write_console_w<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.initIDs()V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -221,8 +206,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.FillConsoleOutputAttribute(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;SILjdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;Ljdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V",
             result.unwrap_err().to_string()
@@ -242,8 +226,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.FillConsoleOutputCharacter(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;CILjdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;Ljdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V",
             result.unwrap_err().to_string()
@@ -257,8 +240,7 @@ mod tests {
         let result = get_console_mode(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.GetConsoleMode(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V",
             result.unwrap_err().to_string()
@@ -272,8 +254,7 @@ mod tests {
         let result = get_console_screen_buffer_info(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.GetConsoleScreenBufferInfo(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$CONSOLE_SCREEN_BUFFER_INFO;)V",
             result.unwrap_err().to_string()
@@ -284,7 +265,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_std_handle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_std_handle(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_std_handle(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.GetStdHandle(I)Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;",
             result.unwrap_err().to_string()
@@ -303,8 +284,7 @@ mod tests {
                 Value::Int(0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.ReadConsoleInput(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;[Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$INPUT_RECORD;ILjdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V",
             result.unwrap_err().to_string()
@@ -324,8 +304,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.ScrollConsoleScreenBuffer(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$SMALL_RECT;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$SMALL_RECT;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$CHAR_INFO;)V",
             result.unwrap_err().to_string()
@@ -339,8 +318,7 @@ mod tests {
         let result = set_console_cursor_position(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleCursorPosition(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;)V",
             result.unwrap_err().to_string()
@@ -354,8 +332,7 @@ mod tests {
         let result = set_console_mode(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleMode(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;I)V",
             result.unwrap_err().to_string()
@@ -369,8 +346,7 @@ mod tests {
         let result = set_console_text_attribute(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleTextAttribute(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;S)V",
             result.unwrap_err().to_string()
@@ -381,7 +357,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_console_title() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_console_title(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = set_console_title(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleTitle(Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -395,8 +371,7 @@ mod tests {
         let result = wait_for_single_object(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.WaitForSingleObject(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;I)I",
             result.unwrap_err().to_string()
@@ -416,8 +391,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.WriteConsoleW(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;[CILjdk/internal/org/jline/terminal/impl/jna/win/IntByReference;Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;)V",
             result.unwrap_err().to_string()
@@ -428,7 +402,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default());
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.initIDs()V",
             result.unwrap_err().to_string()

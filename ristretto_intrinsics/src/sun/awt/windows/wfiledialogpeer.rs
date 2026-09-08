@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -9,8 +8,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/awt/windows/WFileDialogPeer._dispose()V", Any)]
-#[async_method]
-pub async fn dispose<T: Thread + 'static>(
+pub fn dispose<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -20,8 +18,7 @@ pub async fn dispose<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WFileDialogPeer._hide()V", Any)]
-#[async_method]
-pub async fn hide<T: Thread + 'static>(
+pub fn hide<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,8 +28,7 @@ pub async fn hide<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WFileDialogPeer._show()V", Any)]
-#[async_method]
-pub async fn show<T: Thread + 'static>(
+pub fn show<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -45,8 +41,7 @@ pub async fn show<T: Thread + 'static>(
     "sun/awt/windows/WFileDialogPeer.getLocationOnScreen()Ljava/awt/Point;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_location_on_screen<T: Thread + 'static>(
+pub fn get_location_on_screen<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -56,8 +51,7 @@ pub async fn get_location_on_screen<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WFileDialogPeer.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -70,8 +64,7 @@ pub async fn init_ids<T: Thread + 'static>(
     "sun/awt/windows/WFileDialogPeer.setFilterString(Ljava/lang/String;)V",
     Any
 )]
-#[async_method]
-pub async fn set_filter_string<T: Thread + 'static>(
+pub fn set_filter_string<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,8 +75,7 @@ pub async fn set_filter_string<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WFileDialogPeer.toBack()V", Any)]
-#[async_method]
-pub async fn to_back<T: Thread + 'static>(
+pub fn to_back<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -93,8 +85,7 @@ pub async fn to_back<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WFileDialogPeer.toFront()V", Any)]
-#[async_method]
-pub async fn to_front<T: Thread + 'static>(
+pub fn to_front<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -112,7 +103,7 @@ mod tests {
     #[tokio::test]
     async fn test_dispose() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dispose(thread, Parameters::default()).await;
+        let result = dispose(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WFileDialogPeer._dispose()V",
             result.unwrap_err().to_string()
@@ -123,7 +114,7 @@ mod tests {
     #[tokio::test]
     async fn test_hide() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = hide(thread, Parameters::default()).await;
+        let result = hide(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WFileDialogPeer._hide()V",
             result.unwrap_err().to_string()
@@ -134,7 +125,7 @@ mod tests {
     #[tokio::test]
     async fn test_show() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = show(thread, Parameters::default()).await;
+        let result = show(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WFileDialogPeer._show()V",
             result.unwrap_err().to_string()
@@ -145,7 +136,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_location_on_screen() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_location_on_screen(thread, Parameters::default()).await;
+        let result = get_location_on_screen(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WFileDialogPeer.getLocationOnScreen()Ljava/awt/Point;",
             result.unwrap_err().to_string()
@@ -156,7 +147,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WFileDialogPeer.initIDs()V",
             result.unwrap_err().to_string()
@@ -167,7 +158,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_filter_string() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_filter_string(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = set_filter_string(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WFileDialogPeer.setFilterString(Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -178,7 +169,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_back() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = to_back(thread, Parameters::default()).await;
+        let result = to_back(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WFileDialogPeer.toBack()V",
             result.unwrap_err().to_string()
@@ -189,7 +180,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_front() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = to_front(thread, Parameters::default()).await;
+        let result = to_front(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WFileDialogPeer.toFront()V",
             result.unwrap_err().to_string()

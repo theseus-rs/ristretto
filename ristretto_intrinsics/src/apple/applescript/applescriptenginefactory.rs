@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "apple/applescript/AppleScriptEngineFactory.initNative()V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn init_native<T: Thread + 'static>(
+pub fn init_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,7 +24,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_native() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = init_native(thread, Parameters::default()).await?;
+        let result = init_native(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }

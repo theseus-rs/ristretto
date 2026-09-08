@@ -4,7 +4,6 @@ use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classfile::{JAVA_8, JAVA_11};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -15,7 +14,6 @@ use std::sync::Arc;
     "sun/nio/ch/SocketChannelImpl.checkConnect(Ljava/io/FileDescriptor;ZZ)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn check_connect_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -34,7 +32,6 @@ pub async fn check_connect_0<T: Thread + 'static>(
     "sun/nio/ch/SocketChannelImpl.checkConnect(Ljava/io/FileDescriptor;Z)I",
     Equal(JAVA_11)
 )]
-#[async_method]
 pub async fn check_connect_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -52,7 +49,6 @@ pub async fn check_connect_1<T: Thread + 'static>(
     "sun/nio/ch/SocketChannelImpl.sendOutOfBandData(Ljava/io/FileDescriptor;B)I",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn send_out_of_band_data<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

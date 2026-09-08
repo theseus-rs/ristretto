@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError;
@@ -13,8 +12,7 @@ use std::sync::Arc;
     "jdk/internal/misc/Signal.findSignal0(Ljava/lang/String;)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn find_signal_0<T: Thread + 'static>(
+pub fn find_signal_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -61,8 +59,7 @@ pub async fn find_signal_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/Signal.handle0(IJ)J", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn handle_0<T: Thread + 'static>(
+pub fn handle_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -73,8 +70,7 @@ pub async fn handle_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/Signal.raise0(I)V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn raise_0<T: Thread + 'static>(
+pub fn raise_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -92,7 +88,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let signal_name = "INT".to_object(&thread).await?;
         let parameters = Parameters::new(vec![signal_name]);
-        let value = find_signal_0(thread, parameters).await?;
+        let value = find_signal_0(thread, parameters)?;
         assert_eq!(value, Some(Value::Int(2)));
         Ok(())
     }
@@ -103,7 +99,7 @@ mod tests {
         let signal = Value::Int(2);
         let handler = Value::Long(0);
         let parameters = Parameters::new(vec![signal, handler]);
-        let value = handle_0(thread, parameters).await?;
+        let value = handle_0(thread, parameters)?;
         assert_eq!(value, Some(Value::Long(0)));
         Ok(())
     }
@@ -111,7 +107,7 @@ mod tests {
     #[tokio::test]
     async fn test_raise_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = raise_0(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = raise_0(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "jdk.internal.misc.Signal.raise0(I)V",
             result.unwrap_err().to_string()

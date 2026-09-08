@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "jdk/internal/foreign/abi/ProgrammableInvoker.generateAdapter(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J",
     Equal(JAVA_17)
 )]
-#[async_method]
-pub async fn generate_adapter<T: Thread + 'static>(
+pub fn generate_adapter<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn generate_adapter<T: Thread + 'static>(
     "jdk/internal/foreign/abi/ProgrammableInvoker.invokeNative(JJ)V",
     Equal(JAVA_17)
 )]
-#[async_method]
-pub async fn invoke_native<T: Thread + 'static>(
+pub fn invoke_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -43,8 +40,7 @@ pub async fn invoke_native<T: Thread + 'static>(
     "jdk/internal/foreign/abi/ProgrammableInvoker.registerNatives()V",
     Equal(JAVA_17)
 )]
-#[async_method]
-pub async fn register_natives<T: Thread + 'static>(
+pub fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -61,8 +57,7 @@ mod tests {
         let result = generate_adapter(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk.internal.foreign.abi.ProgrammableInvoker.generateAdapter(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J",
             result.unwrap_err().to_string()
@@ -75,8 +70,7 @@ mod tests {
         let result = invoke_native(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk.internal.foreign.abi.ProgrammableInvoker.invokeNative(JJ)V",
             result.unwrap_err().to_string()
@@ -86,7 +80,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
-        let result = register_natives(thread, Parameters::default()).await?;
+        let result = register_natives(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

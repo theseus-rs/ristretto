@@ -1,7 +1,7 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::{Parameters, Result, Thread, VM};
 use std::collections::HashMap;
@@ -212,8 +212,7 @@ pub(crate) async fn wait<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.create()I", GreaterThan(JAVA_8))]
-#[async_method]
-pub async fn create<T: Thread + 'static>(
+pub fn create<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -222,8 +221,7 @@ pub async fn create<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.filterOffset()I", Any)]
-#[async_method]
-pub async fn filter_offset<T: Thread + 'static>(
+pub fn filter_offset<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -231,8 +229,7 @@ pub async fn filter_offset<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.flagsOffset()I", Any)]
-#[async_method]
-pub async fn flags_offset<T: Thread + 'static>(
+pub fn flags_offset<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -240,8 +237,7 @@ pub async fn flags_offset<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.identOffset()I", Any)]
-#[async_method]
-pub async fn ident_offset<T: Thread + 'static>(
+pub fn ident_offset<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -249,7 +245,6 @@ pub async fn ident_offset<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.keventPoll(IJI)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn kevent_poll<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -263,7 +258,6 @@ pub async fn kevent_poll<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.keventRegister(IIII)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn kevent_register<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -279,8 +273,7 @@ pub async fn kevent_register<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.keventSize()I", Any)]
-#[async_method]
-pub async fn kevent_size<T: Thread + 'static>(
+pub fn kevent_size<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -288,8 +281,7 @@ pub async fn kevent_size<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.kqueue()I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn kqueue<T: Thread + 'static>(
+pub fn kqueue<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -298,7 +290,6 @@ pub async fn kqueue<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.poll(IJIJ)I", GreaterThan(JAVA_8))]
-#[async_method]
 pub async fn poll<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -313,7 +304,6 @@ pub async fn poll<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.register(IIII)I", GreaterThan(JAVA_8))]
-#[async_method]
 pub async fn register_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "java/lang/invoke/LambdaProxyClassArchive.addToArchive(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MemberName;Ljava/lang/invoke/MethodType;Ljava/lang/Class;)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn add_to_archive<T: Thread + 'static>(
+pub fn add_to_archive<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,8 +29,7 @@ pub async fn add_to_archive<T: Thread + 'static>(
     "java/lang/invoke/LambdaProxyClassArchive.findFromArchive(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MemberName;Ljava/lang/invoke/MethodType;)Ljava/lang/Class;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn find_from_archive<T: Thread + 'static>(
+pub fn find_from_archive<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -63,8 +60,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "java.lang.invoke.LambdaProxyClassArchive.addToArchive(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MemberName;Ljava/lang/invoke/MethodType;Ljava/lang/Class;)V",
             result.unwrap_err().to_string()
@@ -84,8 +80,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "java.lang.invoke.LambdaProxyClassArchive.findFromArchive(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MemberName;Ljava/lang/invoke/MethodType;)Ljava/lang/Class;",
             result.unwrap_err().to_string()

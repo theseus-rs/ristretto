@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classfile::{JAVA_8, JAVA_17};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -9,8 +8,7 @@ use std::ops::Rem;
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/StrictMath.IEEEremainder(DD)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn ieee_remainder<T: Thread + 'static>(
+pub fn ieee_remainder<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -21,8 +19,7 @@ pub async fn ieee_remainder<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.acos(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn acos<T: Thread + 'static>(
+pub fn acos<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,8 +29,7 @@ pub async fn acos<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.asin(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn asin<T: Thread + 'static>(
+pub fn asin<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -43,8 +39,7 @@ pub async fn asin<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.atan(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn atan<T: Thread + 'static>(
+pub fn atan<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,8 +49,7 @@ pub async fn atan<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.atan2(DD)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn atan_2<T: Thread + 'static>(
+pub fn atan_2<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +60,7 @@ pub async fn atan_2<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.cbrt(D)D", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn cbrt<T: Thread + 'static>(
+pub fn cbrt<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -77,8 +70,7 @@ pub async fn cbrt<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.cos(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn cos<T: Thread + 'static>(
+pub fn cos<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -88,8 +80,7 @@ pub async fn cos<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.cosh(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn cosh<T: Thread + 'static>(
+pub fn cosh<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,8 +90,7 @@ pub async fn cosh<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.exp(D)D", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn exp<T: Thread + 'static>(
+pub fn exp<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -110,8 +100,7 @@ pub async fn exp<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.expm1(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn expm_1<T: Thread + 'static>(
+pub fn expm_1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -121,8 +110,7 @@ pub async fn expm_1<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.hypot(DD)D", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn hypot<T: Thread + 'static>(
+pub fn hypot<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -133,8 +121,7 @@ pub async fn hypot<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.log(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn log<T: Thread + 'static>(
+pub fn log<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -144,8 +131,7 @@ pub async fn log<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.log10(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn log_10<T: Thread + 'static>(
+pub fn log_10<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -155,8 +141,7 @@ pub async fn log_10<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.log1p(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn log_1p<T: Thread + 'static>(
+pub fn log_1p<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -166,8 +151,7 @@ pub async fn log_1p<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.pow(DD)D", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn pow<T: Thread + 'static>(
+pub fn pow<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -178,8 +162,7 @@ pub async fn pow<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.sin(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn sin<T: Thread + 'static>(
+pub fn sin<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -189,8 +172,7 @@ pub async fn sin<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.sinh(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn sinh<T: Thread + 'static>(
+pub fn sinh<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -200,8 +182,7 @@ pub async fn sinh<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.sqrt(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn sqrt<T: Thread + 'static>(
+pub fn sqrt<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -211,8 +192,7 @@ pub async fn sqrt<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.tan(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn tan<T: Thread + 'static>(
+pub fn tan<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -222,8 +202,7 @@ pub async fn tan<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/StrictMath.tanh(D)D", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn tanh<T: Thread + 'static>(
+pub fn tanh<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -240,7 +219,7 @@ mod tests {
     async fn test_ieee_remainder() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(1.0), Value::Double(2.0)]);
-        let result = ieee_remainder(thread, parameters).await?;
+        let result = ieee_remainder(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -249,7 +228,7 @@ mod tests {
     async fn test_acos() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
-        let result = acos(thread, parameters).await?;
+        let result = acos(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(std::f64::consts::FRAC_PI_2)));
         Ok(())
     }
@@ -258,7 +237,7 @@ mod tests {
     async fn test_asin() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
-        let result = asin(thread, parameters).await?;
+        let result = asin(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -267,7 +246,7 @@ mod tests {
     async fn test_atan() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
-        let result = atan(thread, parameters).await?;
+        let result = atan(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -276,7 +255,7 @@ mod tests {
     async fn test_atan_2() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0), Value::Double(0.0)]);
-        let result = atan_2(thread, parameters).await?;
+        let result = atan_2(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -285,7 +264,7 @@ mod tests {
     async fn test_cbrt() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(8.0)]);
-        let result = cbrt(thread, parameters).await?;
+        let result = cbrt(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(2.0)));
         Ok(())
     }
@@ -294,7 +273,7 @@ mod tests {
     async fn test_cos() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
-        let result = cos(thread, parameters).await?;
+        let result = cos(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -303,7 +282,7 @@ mod tests {
     async fn test_cosh() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
-        let result = cosh(thread, parameters).await?;
+        let result = cosh(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -312,7 +291,7 @@ mod tests {
     async fn test_exp() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
-        let result = exp(thread, parameters).await?;
+        let result = exp(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -321,7 +300,7 @@ mod tests {
     async fn test_expm_1() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
-        let result = expm_1(thread, parameters).await?;
+        let result = expm_1(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -330,7 +309,7 @@ mod tests {
     async fn test_hypot() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(3.0), Value::Double(4.0)]);
-        let result = hypot(thread, parameters).await?;
+        let result = hypot(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(5.0)));
         Ok(())
     }
@@ -339,7 +318,7 @@ mod tests {
     async fn test_log() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(std::f64::consts::E)]);
-        let result = log(thread, parameters).await?;
+        let result = log(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -348,7 +327,7 @@ mod tests {
     async fn test_log_10() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(100.0)]);
-        let result = log_10(thread, parameters).await?;
+        let result = log_10(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(2.0)));
         Ok(())
     }
@@ -357,7 +336,7 @@ mod tests {
     async fn test_log_1p() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(std::f64::consts::E - 1.0)]);
-        let result = log_1p(thread, parameters).await?;
+        let result = log_1p(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(1.0)));
         Ok(())
     }
@@ -366,7 +345,7 @@ mod tests {
     async fn test_pow() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(2.0), Value::Double(3.0)]);
-        let result = pow(thread, parameters).await?;
+        let result = pow(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(8.0)));
         Ok(())
     }
@@ -375,7 +354,7 @@ mod tests {
     async fn test_sin() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
-        let result = sin(thread, parameters).await?;
+        let result = sin(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -384,7 +363,7 @@ mod tests {
     async fn test_sinh() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
-        let result = sinh(thread, parameters).await?;
+        let result = sinh(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -393,7 +372,7 @@ mod tests {
     async fn test_sqrt() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(4.0)]);
-        let result = sqrt(thread, parameters).await?;
+        let result = sqrt(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(2.0)));
         Ok(())
     }
@@ -402,7 +381,7 @@ mod tests {
     async fn test_tan() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
-        let result = tan(thread, parameters).await?;
+        let result = tan(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }
@@ -411,7 +390,7 @@ mod tests {
     async fn test_tanh() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
-        let result = tanh(thread, parameters).await?;
+        let result = tanh(thread, parameters)?;
         assert_eq!(result, Some(Value::Double(0.0)));
         Ok(())
     }

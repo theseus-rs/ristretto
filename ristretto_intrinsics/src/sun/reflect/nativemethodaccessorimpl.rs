@@ -2,7 +2,6 @@ use crate::jdk;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -12,7 +11,6 @@ use std::sync::Arc;
     "sun/reflect/NativeMethodAccessorImpl.invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn invoke_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,

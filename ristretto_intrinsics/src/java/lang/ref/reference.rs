@@ -2,15 +2,13 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
 use ristretto_gc::Gc;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/ref/Reference.clear0()V", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn clear_0<T: Thread + 'static>(
+pub fn clear_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -24,8 +22,7 @@ pub async fn clear_0<T: Thread + 'static>(
     "java/lang/ref/Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_and_clear_reference_pending_list<T: Thread + 'static>(
+pub fn get_and_clear_reference_pending_list<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -37,8 +34,7 @@ pub async fn get_and_clear_reference_pending_list<T: Thread + 'static>(
     "java/lang/ref/Reference.hasReferencePendingList()Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn has_reference_pending_list<T: Thread + 'static>(
+pub fn has_reference_pending_list<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,8 +46,7 @@ pub async fn has_reference_pending_list<T: Thread + 'static>(
     "java/lang/ref/Reference.refersTo0(Ljava/lang/Object;)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn refers_to_0<T: Thread + 'static>(
+pub fn refers_to_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -71,7 +66,6 @@ pub async fn refers_to_0<T: Thread + 'static>(
     "java/lang/ref/Reference.waitForReferencePendingList()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn wait_for_reference_pending_list<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
@@ -102,7 +96,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(weak_reference.clone());
 
-        let result = clear_0(thread, parameters).await?;
+        let result = clear_0(thread, parameters)?;
         assert_eq!(result, None);
         let weak_reference = weak_reference.as_object_ref()?;
         let referent = weak_reference.value("referent")?;
@@ -113,8 +107,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_and_clear_reference_pending_list() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_and_clear_reference_pending_list(thread, Parameters::default())
-            .await?
+        let result = get_and_clear_reference_pending_list(thread, Parameters::default())?
             .expect("pending list");
         assert_eq!(result, Value::Object(None));
         Ok(())
@@ -123,9 +116,8 @@ mod tests {
     #[tokio::test]
     async fn test_has_reference_pending_list() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let value = has_reference_pending_list(thread, Parameters::default())
-            .await?
-            .expect("has pending list");
+        let value =
+            has_reference_pending_list(thread, Parameters::default())?.expect("has pending list");
         let has_pending_list = value.as_bool()?;
         assert!(!has_pending_list);
         Ok(())
@@ -145,7 +137,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(weak_reference.clone());
         parameters.push(value);
-        let value = refers_to_0(thread, parameters).await?.expect("refers to");
+        let value = refers_to_0(thread, parameters)?.expect("refers to");
         let refers_to = value.as_bool()?;
         assert!(refers_to);
         Ok(())
@@ -178,16 +170,13 @@ mod tests {
         ] {
             let parameters = Parameters::new(vec![reference.clone(), candidate]);
             assert_eq!(
-                refers_to_0(thread.clone(), parameters).await?,
+                refers_to_0(thread.clone(), parameters)?,
                 Some(Value::from(expected))
             );
         }
-        clear_0(thread.clone(), Parameters::new(vec![reference.clone()])).await?;
+        clear_0(thread.clone(), Parameters::new(vec![reference.clone()]))?;
         let parameters = Parameters::new(vec![reference, Value::Object(None)]);
-        assert_eq!(
-            refers_to_0(thread, parameters).await?,
-            Some(Value::from(true))
-        );
+        assert_eq!(refers_to_0(thread, parameters)?, Some(Value::from(true)));
         Ok(())
     }
 

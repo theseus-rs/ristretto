@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/security/krb5/SCDynamicStoreConfig.getKerberosConfig()Ljava/util/Hashtable;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_kerberos_config_0<T: Thread + 'static>(
+pub fn get_kerberos_config_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn get_kerberos_config_0<T: Thread + 'static>(
     "sun/security/krb5/SCDynamicStoreConfig.getKerberosConfig()Ljava/util/List;",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn get_kerberos_config_1<T: Thread + 'static>(
+pub fn get_kerberos_config_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -43,8 +40,7 @@ pub async fn get_kerberos_config_1<T: Thread + 'static>(
     "sun/security/krb5/SCDynamicStoreConfig.installNotificationCallback()V",
     Any
 )]
-#[async_method]
-pub async fn install_notification_callback<T: Thread + 'static>(
+pub fn install_notification_callback<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -61,7 +57,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_kerberos_config_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = get_kerberos_config_0(thread, Parameters::default()).await;
+        let result = get_kerberos_config_0(thread, Parameters::default());
         assert_eq!(
             "sun.security.krb5.SCDynamicStoreConfig.getKerberosConfig()Ljava/util/Hashtable;",
             result.unwrap_err().to_string()
@@ -71,7 +67,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_kerberos_config_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_kerberos_config_1(thread, Parameters::default()).await;
+        let result = get_kerberos_config_1(thread, Parameters::default());
         assert_eq!(
             "sun.security.krb5.SCDynamicStoreConfig.getKerberosConfig()Ljava/util/List;",
             result.unwrap_err().to_string()
@@ -81,7 +77,7 @@ mod tests {
     #[tokio::test]
     async fn test_install_notification_callback() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = install_notification_callback(thread, Parameters::default()).await;
+        let result = install_notification_callback(thread, Parameters::default());
         assert_eq!(
             "sun.security.krb5.SCDynamicStoreConfig.installNotificationCallback()V",
             result.unwrap_err().to_string()

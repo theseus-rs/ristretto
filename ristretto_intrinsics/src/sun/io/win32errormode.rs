@@ -1,14 +1,12 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/io/Win32ErrorMode.setErrorMode(J)J", Any)]
-#[async_method]
-pub async fn set_error_mode<T: Thread + 'static>(
+pub fn set_error_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -24,7 +22,7 @@ mod tests {
     async fn test_set_error_mode() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let parameters = Parameters::new(vec![Value::Long(0)]);
-        let result = set_error_mode(thread, parameters).await?;
+        let result = set_error_mode(thread, parameters)?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }

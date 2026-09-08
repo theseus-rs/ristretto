@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/security/ec/ECDSASignature.signDigest([B[B[B[BI)[B",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn sign_digest<T: Thread + 'static>(
+pub fn sign_digest<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,8 +30,7 @@ pub async fn sign_digest<T: Thread + 'static>(
     "sun/security/ec/ECDSASignature.verifySignedDigest([B[B[B[B)Z",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn verify_signed_digest<T: Thread + 'static>(
+pub fn verify_signed_digest<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -63,8 +60,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.ec.ECDSASignature.signDigest([B[B[B[BI)[B",
             result.unwrap_err().to_string()
@@ -82,8 +78,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.ec.ECDSASignature.verifySignedDigest([B[B[B[B)Z",
             result.unwrap_err().to_string()

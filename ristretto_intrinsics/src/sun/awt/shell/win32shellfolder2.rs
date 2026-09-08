@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -9,8 +8,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.bindToObject(JJ)J", Any)]
-#[async_method]
-pub async fn bind_to_object<T: Thread + 'static>(
+pub fn bind_to_object<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -22,8 +20,7 @@ pub async fn bind_to_object<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.combinePIDLs(JJ)J", Any)]
-#[async_method]
-pub async fn combine_pidls<T: Thread + 'static>(
+pub fn combine_pidls<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -35,8 +32,7 @@ pub async fn combine_pidls<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.compareIDs(JJJ)I", Any)]
-#[async_method]
-pub async fn compare_ids<T: Thread + 'static>(
+pub fn compare_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,8 +45,7 @@ pub async fn compare_ids<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.compareIDsByColumn(JJJI)I", Any)]
-#[async_method]
-pub async fn compare_ids_by_column<T: Thread + 'static>(
+pub fn compare_ids_by_column<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -64,8 +59,7 @@ pub async fn compare_ids_by_column<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.copyFirstPIDLEntry(J)J", Any)]
-#[async_method]
-pub async fn copy_first_pidlentry<T: Thread + 'static>(
+pub fn copy_first_pidlentry<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -76,8 +70,7 @@ pub async fn copy_first_pidlentry<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.disposeIcon(J)V", Any)]
-#[async_method]
-pub async fn dispose_icon<T: Thread + 'static>(
+pub fn dispose_icon<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -91,8 +84,7 @@ pub async fn dispose_icon<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.doGetColumnInfo(J)[Lsun/awt/shell/ShellFolderColumnInfo;",
     Any
 )]
-#[async_method]
-pub async fn do_get_column_info<T: Thread + 'static>(
+pub fn do_get_column_info<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -107,8 +99,7 @@ pub async fn do_get_column_info<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.doGetColumnValue(JJI)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
-pub async fn do_get_column_value<T: Thread + 'static>(
+pub fn do_get_column_value<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -124,8 +115,7 @@ pub async fn do_get_column_value<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.extractIcon(JJIZ)J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn extract_icon<T: Thread + 'static>(
+pub fn extract_icon<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -139,8 +129,7 @@ pub async fn extract_icon<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.extractIcon(JJZ)J", Equal(JAVA_8))]
-#[async_method]
-pub async fn extract_icon_windows_v8<T: Thread + 'static>(
+pub fn extract_icon_windows_v8<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -153,8 +142,7 @@ pub async fn extract_icon_windows_v8<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.extractIcon(JJZZ)J", Equal(JAVA_11))]
-#[async_method]
-pub async fn extract_icon_windows_v11<T: Thread + 'static>(
+pub fn extract_icon_windows_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -168,8 +156,7 @@ pub async fn extract_icon_windows_v11<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getAttributes0(JJI)I", Any)]
-#[async_method]
-pub async fn get_attributes0<T: Thread + 'static>(
+pub fn get_attributes0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -185,8 +172,7 @@ pub async fn get_attributes0<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.getDisplayNameOf(JJI)Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn get_display_name_of<T: Thread + 'static>(
+pub fn get_display_name_of<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -199,8 +185,7 @@ pub async fn get_display_name_of<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getEnumObjects(JZZ)J", Any)]
-#[async_method]
-pub async fn get_enum_objects<T: Thread + 'static>(
+pub fn get_enum_objects<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -216,8 +201,7 @@ pub async fn get_enum_objects<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.getExecutableType(Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn get_executable_type<T: Thread + 'static>(
+pub fn get_executable_type<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -232,8 +216,7 @@ pub async fn get_executable_type<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.getFileSystemPath0(I)Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn get_file_system_path0<T: Thread + 'static>(
+pub fn get_file_system_path0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -247,8 +230,7 @@ pub async fn get_file_system_path0<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.getFolderType(J)Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn get_folder_type<T: Thread + 'static>(
+pub fn get_folder_type<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -259,8 +241,7 @@ pub async fn get_folder_type<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getIShellIcon(J)J", Any)]
-#[async_method]
-pub async fn get_ishell_icon<T: Thread + 'static>(
+pub fn get_ishell_icon<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -271,8 +252,7 @@ pub async fn get_ishell_icon<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getIcon(Ljava/lang/String;Z)J", Any)]
-#[async_method]
-pub async fn get_icon<T: Thread + 'static>(
+pub fn get_icon<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -287,8 +267,7 @@ pub async fn get_icon<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.getIconBits(J)[I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_icon_bits<T: Thread + 'static>(
+pub fn get_icon_bits<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -299,8 +278,7 @@ pub async fn get_icon_bits<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getIconBits(JI)[I", Equal(JAVA_8))]
-#[async_method]
-pub async fn get_icon_bits_windows_v8<T: Thread + 'static>(
+pub fn get_icon_bits_windows_v8<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -312,8 +290,7 @@ pub async fn get_icon_bits_windows_v8<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getIconIndex(JJ)I", Any)]
-#[async_method]
-pub async fn get_icon_index<T: Thread + 'static>(
+pub fn get_icon_index<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -328,8 +305,7 @@ pub async fn get_icon_index<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.getIconResource(Ljava/lang/String;III)J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_icon_resource<T: Thread + 'static>(
+pub fn get_icon_resource<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -346,8 +322,7 @@ pub async fn get_icon_resource<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.getIconResource(Ljava/lang/String;IIIZ)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_icon_resource_windows_le_v11<T: Thread + 'static>(
+pub fn get_icon_resource_windows_le_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -362,8 +337,7 @@ pub async fn get_icon_resource_windows_le_v11<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getLinkLocation(JJZ)J", Any)]
-#[async_method]
-pub async fn get_link_location<T: Thread + 'static>(
+pub fn get_link_location<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -376,8 +350,7 @@ pub async fn get_link_location<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getNextChild(J)J", Any)]
-#[async_method]
-pub async fn get_next_child<T: Thread + 'static>(
+pub fn get_next_child<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -388,8 +361,7 @@ pub async fn get_next_child<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getNextPIDLEntry(J)J", Any)]
-#[async_method]
-pub async fn get_next_pidlentry<T: Thread + 'static>(
+pub fn get_next_pidlentry<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -403,8 +375,7 @@ pub async fn get_next_pidlentry<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.getStandardViewButton0(I)[I",
     Equal(JAVA_8)
 )]
-#[async_method]
-pub async fn get_standard_view_button0<T: Thread + 'static>(
+pub fn get_standard_view_button0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -418,8 +389,7 @@ pub async fn get_standard_view_button0<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.getStandardViewButton0(IZ)[I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_standard_view_button0_windows_ge_v11<T: Thread + 'static>(
+pub fn get_standard_view_button0_windows_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -431,8 +401,7 @@ pub async fn get_standard_view_button0_windows_ge_v11<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getSystemIcon(I)J", Any)]
-#[async_method]
-pub async fn get_system_icon<T: Thread + 'static>(
+pub fn get_system_icon<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -446,8 +415,7 @@ pub async fn get_system_icon<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.hiResIconAvailable(JJ)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn hi_res_icon_available<T: Thread + 'static>(
+pub fn hi_res_icon_available<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -459,8 +427,7 @@ pub async fn hi_res_icon_available<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.initDesktop()V", Any)]
-#[async_method]
-pub async fn init_desktop<T: Thread + 'static>(
+pub fn init_desktop<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -470,8 +437,7 @@ pub async fn init_desktop<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -481,8 +447,7 @@ pub async fn init_ids<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.initSpecial(JI)V", Any)]
-#[async_method]
-pub async fn init_special<T: Thread + 'static>(
+pub fn init_special<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -497,8 +462,7 @@ pub async fn init_special<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.loadKnownFolders()[Lsun/awt/shell/Win32ShellFolder2$KnownFolderDefinition;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn load_known_folders<T: Thread + 'static>(
+pub fn load_known_folders<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -508,8 +472,7 @@ pub async fn load_known_folders<T: Thread + 'static>(
     "sun/awt/shell/Win32ShellFolder2.parseDisplayName0(JLjava/lang/String;)J",
     Any
 )]
-#[async_method]
-pub async fn parse_display_name0<T: Thread + 'static>(
+pub fn parse_display_name0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -521,8 +484,7 @@ pub async fn parse_display_name0<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.releaseEnumObjects(J)V", Any)]
-#[async_method]
-pub async fn release_enum_objects<T: Thread + 'static>(
+pub fn release_enum_objects<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -533,8 +495,7 @@ pub async fn release_enum_objects<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.releaseIShellFolder(J)V", Any)]
-#[async_method]
-pub async fn release_ishell_folder<T: Thread + 'static>(
+pub fn release_ishell_folder<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -545,8 +506,7 @@ pub async fn release_ishell_folder<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.releasePIDL(J)V", Any)]
-#[async_method]
-pub async fn release_pidl<T: Thread + 'static>(
+pub fn release_pidl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -568,8 +528,7 @@ mod tests {
         let result = bind_to_object(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.bindToObject(JJ)J",
             result.unwrap_err().to_string()
@@ -583,8 +542,7 @@ mod tests {
         let result = combine_pidls(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.combinePIDLs(JJ)J",
             result.unwrap_err().to_string()
@@ -598,8 +556,7 @@ mod tests {
         let result = compare_ids(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.compareIDs(JJJ)I",
             result.unwrap_err().to_string()
@@ -618,8 +575,7 @@ mod tests {
                 Value::Long(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.compareIDsByColumn(JJJI)I",
             result.unwrap_err().to_string()
@@ -630,7 +586,7 @@ mod tests {
     #[tokio::test]
     async fn test_copy_first_pidlentry() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = copy_first_pidlentry(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = copy_first_pidlentry(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.copyFirstPIDLEntry(J)J",
             result.unwrap_err().to_string()
@@ -641,7 +597,7 @@ mod tests {
     #[tokio::test]
     async fn test_dispose_icon() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dispose_icon(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = dispose_icon(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.disposeIcon(J)V",
             result.unwrap_err().to_string()
@@ -652,7 +608,7 @@ mod tests {
     #[tokio::test]
     async fn test_do_get_column_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = do_get_column_info(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = do_get_column_info(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.doGetColumnInfo(J)[Lsun/awt/shell/ShellFolderColumnInfo;",
             result.unwrap_err().to_string()
@@ -666,8 +622,7 @@ mod tests {
         let result = do_get_column_value(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.doGetColumnValue(JJI)Ljava/lang/Object;",
             result.unwrap_err().to_string()
@@ -686,8 +641,7 @@ mod tests {
                 Value::Int(0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.extractIcon(JJIZ)J",
             result.unwrap_err().to_string()
@@ -701,8 +655,7 @@ mod tests {
         let result = extract_icon_windows_v8(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.extractIcon(JJZ)J",
             result.unwrap_err().to_string()
@@ -721,8 +674,7 @@ mod tests {
                 Value::from(false),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.extractIcon(JJZZ)J",
             result.unwrap_err().to_string()
@@ -736,8 +688,7 @@ mod tests {
         let result = get_attributes0(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getAttributes0(JJI)I",
             result.unwrap_err().to_string()
@@ -751,8 +702,7 @@ mod tests {
         let result = get_display_name_of(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getDisplayNameOf(JJI)Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -766,8 +716,7 @@ mod tests {
         let result = get_enum_objects(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getEnumObjects(JZZ)J",
             result.unwrap_err().to_string()
@@ -778,7 +727,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_executable_type() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_executable_type(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_executable_type(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getExecutableType(Ljava/lang/String;)Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -789,7 +738,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_file_system_path0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_file_system_path0(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_file_system_path0(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getFileSystemPath0(I)Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -800,7 +749,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_folder_type() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_folder_type(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_folder_type(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getFolderType(J)Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -811,7 +760,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_ishell_icon() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_ishell_icon(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_ishell_icon(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getIShellIcon(J)J",
             result.unwrap_err().to_string()
@@ -825,8 +774,7 @@ mod tests {
         let result = get_icon(
             thread,
             Parameters::new(vec![Value::Object(None), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getIcon(Ljava/lang/String;Z)J",
             result.unwrap_err().to_string()
@@ -837,7 +785,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_icon_bits() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_icon_bits(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_icon_bits(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getIconBits(J)[I",
             result.unwrap_err().to_string()
@@ -849,8 +797,7 @@ mod tests {
     async fn test_get_icon_bits_windows_v8() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            get_icon_bits_windows_v8(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]))
-                .await;
+            get_icon_bits_windows_v8(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getIconBits(JI)[I",
             result.unwrap_err().to_string()
@@ -864,8 +811,7 @@ mod tests {
         let result = get_icon_index(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getIconIndex(JJ)I",
             result.unwrap_err().to_string()
@@ -884,8 +830,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getIconResource(Ljava/lang/String;III)J",
             result.unwrap_err().to_string()
@@ -905,8 +850,7 @@ mod tests {
                 Value::Int(0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getIconResource(Ljava/lang/String;IIIZ)J",
             result.unwrap_err().to_string()
@@ -920,8 +864,7 @@ mod tests {
         let result = get_link_location(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getLinkLocation(JJZ)J",
             result.unwrap_err().to_string()
@@ -932,7 +875,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_next_child() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_next_child(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_next_child(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getNextChild(J)J",
             result.unwrap_err().to_string()
@@ -943,7 +886,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_next_pidlentry() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_next_pidlentry(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_next_pidlentry(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getNextPIDLEntry(J)J",
             result.unwrap_err().to_string()
@@ -954,7 +897,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_standard_view_button0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_standard_view_button0(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_standard_view_button0(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getStandardViewButton0(I)[I",
             result.unwrap_err().to_string()
@@ -968,8 +911,7 @@ mod tests {
         let result = get_standard_view_button0_windows_ge_v11(
             thread,
             Parameters::new(vec![Value::Int(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getStandardViewButton0(IZ)[I",
             result.unwrap_err().to_string()
@@ -980,7 +922,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_system_icon() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_system_icon(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_system_icon(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.getSystemIcon(I)J",
             result.unwrap_err().to_string()
@@ -994,8 +936,7 @@ mod tests {
         let result = hi_res_icon_available(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.hiResIconAvailable(JJ)Z",
             result.unwrap_err().to_string()
@@ -1006,7 +947,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_desktop() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_desktop(thread, Parameters::default()).await;
+        let result = init_desktop(thread, Parameters::default());
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.initDesktop()V",
             result.unwrap_err().to_string()
@@ -1017,7 +958,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default());
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.initIDs()V",
             result.unwrap_err().to_string()
@@ -1028,8 +969,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_special() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            init_special(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+        let result = init_special(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.initSpecial(JI)V",
             result.unwrap_err().to_string()
@@ -1040,7 +980,7 @@ mod tests {
     #[tokio::test]
     async fn test_load_known_folders() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = load_known_folders(thread, Parameters::default()).await;
+        let result = load_known_folders(thread, Parameters::default());
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.loadKnownFolders()[Lsun/awt/shell/Win32ShellFolder2$KnownFolderDefinition;",
             result.unwrap_err().to_string()
@@ -1054,8 +994,7 @@ mod tests {
         let result = parse_display_name0(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.parseDisplayName0(JLjava/lang/String;)J",
             result.unwrap_err().to_string()
@@ -1066,7 +1005,7 @@ mod tests {
     #[tokio::test]
     async fn test_release_enum_objects() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = release_enum_objects(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = release_enum_objects(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.releaseEnumObjects(J)V",
             result.unwrap_err().to_string()
@@ -1077,7 +1016,7 @@ mod tests {
     #[tokio::test]
     async fn test_release_ishell_folder() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = release_ishell_folder(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = release_ishell_folder(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.releaseIShellFolder(J)V",
             result.unwrap_err().to_string()
@@ -1088,7 +1027,7 @@ mod tests {
     #[tokio::test]
     async fn test_release_pidl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = release_pidl(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = release_pidl(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/shell/Win32ShellFolder2.releasePIDL(J)V",
             result.unwrap_err().to_string()

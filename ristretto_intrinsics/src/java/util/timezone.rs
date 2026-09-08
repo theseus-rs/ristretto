@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaObject;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("java/util/TimeZone.getSystemGMTOffsetID()Ljava/lang/String;", Any)]
-#[async_method]
-pub async fn get_system_gmt_offset_id<T: Thread + 'static>(
+pub fn get_system_gmt_offset_id<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,7 +21,6 @@ pub async fn get_system_gmt_offset_id<T: Thread + 'static>(
     "java/util/TimeZone.getSystemTimeZoneID(Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_system_time_zone_id<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -43,9 +40,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_system_gmt_offset_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_system_gmt_offset_id(thread, Parameters::default())
-            .await
-            .expect("result");
+        let result = get_system_gmt_offset_id(thread, Parameters::default()).expect("result");
         assert!(result.is_none());
     }
 

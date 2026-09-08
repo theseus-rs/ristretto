@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -16,8 +15,7 @@ use std::sync::Arc;
     "sun/java2d/x11/X11SurfaceData.XSetCopyMode(J)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_set_copy_mode<T: Thread + 'static>(
+pub fn x_set_copy_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,8 +30,7 @@ pub async fn x_set_copy_mode<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.XSetForeground(JI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_set_foreground<T: Thread + 'static>(
+pub fn x_set_foreground<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,8 +46,7 @@ pub async fn x_set_foreground<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.XSetXorMode(J)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_set_xor_mode<T: Thread + 'static>(
+pub fn x_set_xor_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -65,8 +61,7 @@ pub async fn x_set_xor_mode<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.initIDs(Ljava/lang/Class;Z)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -77,8 +72,7 @@ pub async fn init_ids<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.initSurface(IIIJ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn init_surface<T: Thread + 'static>(
+pub fn init_surface<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -96,8 +90,7 @@ pub async fn init_surface<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.isDgaAvailable()Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn is_dga_available<T: Thread + 'static>(
+pub fn is_dga_available<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -111,8 +104,7 @@ pub async fn is_dga_available<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.isShmPMAvailable()Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn is_shm_pm_available<T: Thread + 'static>(
+pub fn is_shm_pm_available<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -127,8 +119,7 @@ pub async fn is_shm_pm_available<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.initIDs(Ljava/lang/Class;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init_ids_linux_ge_v11_v1<T: Thread + 'static>(
+pub fn init_ids_linux_ge_v11_v1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -144,8 +135,7 @@ pub async fn init_ids_linux_ge_v11_v1<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.XSetCopyMode(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xset_copy_mode_linux_ge_v11<T: Thread + 'static>(
+pub fn xset_copy_mode_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -161,8 +151,7 @@ pub async fn xset_copy_mode_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.XSetForeground(JI)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xset_foreground_linux_ge_v11<T: Thread + 'static>(
+pub fn xset_foreground_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -179,8 +168,7 @@ pub async fn xset_foreground_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.XSetXorMode(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xset_xor_mode_linux_ge_v11<T: Thread + 'static>(
+pub fn xset_xor_mode_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -196,8 +184,7 @@ pub async fn xset_xor_mode_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.initIDs(Ljava/lang/Class;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init_ids_linux_ge_v11_v2<T: Thread + 'static>(
+pub fn init_ids_linux_ge_v11_v2<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -213,8 +200,7 @@ pub async fn init_ids_linux_ge_v11_v2<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.initSurface(IIIJ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init_surface_linux_ge_v11<T: Thread + 'static>(
+pub fn init_surface_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -233,8 +219,7 @@ pub async fn init_surface_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11SurfaceData.isShmPMAvailable()Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn is_shm_pmavailable_linux_ge_v11<T: Thread + 'static>(
+pub fn is_shm_pmavailable_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -251,7 +236,7 @@ mod tests {
     #[tokio::test]
     async fn test_x_set_copy_mode() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = x_set_copy_mode(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = x_set_copy_mode(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.x11.X11SurfaceData.XSetCopyMode(J)V",
             result.unwrap_err().to_string()
@@ -261,8 +246,7 @@ mod tests {
     #[tokio::test]
     async fn test_x_set_foreground() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result =
-            x_set_foreground(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+        let result = x_set_foreground(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun.java2d.x11.X11SurfaceData.XSetForeground(JI)V",
             result.unwrap_err().to_string()
@@ -272,7 +256,7 @@ mod tests {
     #[tokio::test]
     async fn test_x_set_xor_mode() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = x_set_xor_mode(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = x_set_xor_mode(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.x11.X11SurfaceData.XSetXorMode(J)V",
             result.unwrap_err().to_string()
@@ -282,7 +266,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -298,8 +282,7 @@ mod tests {
                 Value::Int(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11SurfaceData.initSurface(IIIJ)V",
             result.unwrap_err().to_string()
@@ -309,7 +292,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_dga_available() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = is_dga_available(thread, Parameters::default()).await;
+        let result = is_dga_available(thread, Parameters::default());
         assert_eq!(
             "sun.java2d.x11.X11SurfaceData.isDgaAvailable()Z",
             result.unwrap_err().to_string()
@@ -319,7 +302,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_shm_pm_available() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = is_shm_pm_available(thread, Parameters::default()).await;
+        let result = is_shm_pm_available(thread, Parameters::default());
         assert_eq!(
             "sun.java2d.x11.X11SurfaceData.isShmPMAvailable()Z",
             result.unwrap_err().to_string()
@@ -330,8 +313,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids_linux_ge_v11_v1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            init_ids_linux_ge_v11_v1(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = init_ids_linux_ge_v11_v1(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/java2d/x11/X11SurfaceData.initIDs(Ljava/lang/Class;)V",
             result.unwrap_err().to_string()
@@ -342,8 +324,7 @@ mod tests {
     #[tokio::test]
     async fn test_xset_copy_mode_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            xset_copy_mode_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xset_copy_mode_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/java2d/x11/X11SurfaceData.XSetCopyMode(J)V",
             result.unwrap_err().to_string()
@@ -357,8 +338,7 @@ mod tests {
         let result = xset_foreground_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11SurfaceData.XSetForeground(JI)V",
             result.unwrap_err().to_string()
@@ -369,8 +349,7 @@ mod tests {
     #[tokio::test]
     async fn test_xset_xor_mode_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            xset_xor_mode_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xset_xor_mode_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/java2d/x11/X11SurfaceData.XSetXorMode(J)V",
             result.unwrap_err().to_string()
@@ -381,8 +360,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids_linux_ge_v11_v2() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            init_ids_linux_ge_v11_v2(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = init_ids_linux_ge_v11_v2(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/java2d/x11/X11SurfaceData.initIDs(Ljava/lang/Class;)V",
             result.unwrap_err().to_string()
@@ -401,8 +379,7 @@ mod tests {
                 Value::Int(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11SurfaceData.initSurface(IIIJ)V",
             result.unwrap_err().to_string()
@@ -413,7 +390,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_shm_pmavailable_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = is_shm_pmavailable_linux_ge_v11(thread, Parameters::default()).await;
+        let result = is_shm_pmavailable_linux_ge_v11(thread, Parameters::default());
         assert_eq!(
             "sun/java2d/x11/X11SurfaceData.isShmPMAvailable()Z",
             result.unwrap_err().to_string()

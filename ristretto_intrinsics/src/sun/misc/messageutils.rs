@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/misc/MessageUtils.toStderr(Ljava/lang/String;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn to_stderr<T: Thread + 'static>(
+pub fn to_stderr<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn to_stderr<T: Thread + 'static>(
     "sun/misc/MessageUtils.toStdout(Ljava/lang/String;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn to_stdout<T: Thread + 'static>(
+pub fn to_stdout<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -47,7 +44,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_stderr() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = to_stderr(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = to_stderr(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.misc.MessageUtils.toStderr(Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -57,7 +54,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_stdout() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = to_stdout(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = to_stdout(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.misc.MessageUtils.toStdout(Ljava/lang/String;)V",
             result.unwrap_err().to_string()

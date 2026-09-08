@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/java2d/metal/MTLTextRenderer.drawGlyphList(IZZZIFF[J[F)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn draw_glyph_list<T: Thread + 'static>(
+pub fn draw_glyph_list<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -52,8 +50,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.metal.MTLTextRenderer.drawGlyphList(IZZZIFF[J[F)V",
             result.unwrap_err().to_string()

@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "jdk/internal/loader/NativeLibrary.findEntry0(JLjava/lang/String;)J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn find_entry_0<T: Thread + 'static>(
+pub fn find_entry_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,7 +36,7 @@ mod tests {
         let (handle, jni_version) = native_libraries.load("sctp", true)?;
         assert_eq!(jni_version, JniVersion::V1_6);
         let name = "missing".to_object(&thread).await?;
-        let result = find_entry_0(thread, Parameters::new(vec![Value::Long(handle), name])).await?;
+        let result = find_entry_0(thread, Parameters::new(vec![Value::Long(handle), name]))?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }

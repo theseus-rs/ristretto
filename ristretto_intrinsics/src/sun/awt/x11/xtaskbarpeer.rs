@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/awt/X11/XTaskbarPeer.init(Ljava/lang/String;IZ)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,16 +24,14 @@ pub async fn init<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XTaskbarPeer.runloop()V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn runloop<T: Thread + 'static>(
+pub fn runloop<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XTaskbarPeer.runloop()V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/X11/XTaskbarPeer.setBadge(JZ)V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn set_badge<T: Thread + 'static>(
+pub fn set_badge<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,8 +46,7 @@ pub async fn set_badge<T: Thread + 'static>(
     "sun/awt/X11/XTaskbarPeer.setNativeMenu([Ljava/awt/MenuItem;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_native_menu<T: Thread + 'static>(
+pub fn set_native_menu<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -62,8 +57,7 @@ pub async fn set_native_menu<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XTaskbarPeer.setUrgent(Z)V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn set_urgent<T: Thread + 'static>(
+pub fn set_urgent<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -77,8 +71,7 @@ pub async fn set_urgent<T: Thread + 'static>(
     "sun/awt/X11/XTaskbarPeer.updateProgress(DZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn update_progress<T: Thread + 'static>(
+pub fn update_progress<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -101,8 +94,7 @@ mod tests {
         let result = init(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XTaskbarPeer.init(Ljava/lang/String;IZ)Z",
             result.unwrap_err().to_string()
@@ -113,7 +105,7 @@ mod tests {
     #[tokio::test]
     async fn test_runloop() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = runloop(thread, Parameters::default()).await;
+        let result = runloop(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11/XTaskbarPeer.runloop()V",
             result.unwrap_err().to_string()
@@ -127,8 +119,7 @@ mod tests {
         let result = set_badge(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XTaskbarPeer.setBadge(JZ)V",
             result.unwrap_err().to_string()
@@ -139,7 +130,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_native_menu() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_native_menu(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = set_native_menu(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/X11/XTaskbarPeer.setNativeMenu([Ljava/awt/MenuItem;)V",
             result.unwrap_err().to_string()
@@ -150,7 +141,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_urgent() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_urgent(thread, Parameters::new(vec![Value::from(false)])).await;
+        let result = set_urgent(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "sun/awt/X11/XTaskbarPeer.setUrgent(Z)V",
             result.unwrap_err().to_string()
@@ -164,8 +155,7 @@ mod tests {
         let result = update_progress(
             thread,
             Parameters::new(vec![Value::Double(0.0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XTaskbarPeer.updateProgress(DZ)V",
             result.unwrap_err().to_string()

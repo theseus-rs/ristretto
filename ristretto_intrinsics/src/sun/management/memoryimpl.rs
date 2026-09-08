@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/management/MemoryImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;",
     Any
 )]
-#[async_method]
-pub async fn get_memory_managers_0<T: Thread + 'static>(
+pub fn get_memory_managers_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,8 +25,7 @@ pub async fn get_memory_managers_0<T: Thread + 'static>(
     "sun/management/MemoryImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;",
     Any
 )]
-#[async_method]
-pub async fn get_memory_pools_0<T: Thread + 'static>(
+pub fn get_memory_pools_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -43,8 +40,7 @@ pub async fn get_memory_pools_0<T: Thread + 'static>(
     "sun/management/MemoryImpl.getMemoryUsage0(Z)Ljava/lang/management/MemoryUsage;",
     Any
 )]
-#[async_method]
-pub async fn get_memory_usage_0<T: Thread + 'static>(
+pub fn get_memory_usage_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -57,8 +53,7 @@ pub async fn get_memory_usage_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/management/MemoryImpl.setVerboseGC(Z)V", Any)]
-#[async_method]
-pub async fn set_verbose_gc<T: Thread + 'static>(
+pub fn set_verbose_gc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -76,7 +71,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_memory_managers_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_memory_managers_0(thread, Parameters::default()).await;
+        let result = get_memory_managers_0(thread, Parameters::default());
         assert_eq!(
             "sun.management.MemoryImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;",
             result.unwrap_err().to_string()
@@ -86,7 +81,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_memory_pools_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_memory_pools_0(thread, Parameters::default()).await;
+        let result = get_memory_pools_0(thread, Parameters::default());
         assert_eq!(
             "sun.management.MemoryImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;",
             result.unwrap_err().to_string()
@@ -96,7 +91,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_memory_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_memory_usage_0(thread, Parameters::new(vec![Value::from(false)])).await;
+        let result = get_memory_usage_0(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "sun.management.MemoryImpl.getMemoryUsage0(Z)Ljava/lang/management/MemoryUsage;",
             result.unwrap_err().to_string()
@@ -106,7 +101,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_verbose_gc() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_verbose_gc(thread, Parameters::new(vec![Value::from(false)])).await;
+        let result = set_verbose_gc(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "sun.management.MemoryImpl.setVerboseGC(Z)V",
             result.unwrap_err().to_string()

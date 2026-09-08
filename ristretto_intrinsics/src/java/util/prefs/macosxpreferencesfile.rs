@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::{JavaObject, Parameters, Result, Thread, VM};
@@ -32,8 +31,7 @@ static PREFS: LazyLock<Mutex<HashMap<DomainKey, HashMap<String, String>>>> =
     "java/util/prefs/MacOSXPreferencesFile.addChildToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Z",
     Any
 )]
-#[async_method]
-pub async fn add_child_to_node<T: Thread + 'static>(
+pub fn add_child_to_node<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -56,8 +54,7 @@ pub async fn add_child_to_node<T: Thread + 'static>(
     "java/util/prefs/MacOSXPreferencesFile.addKeyToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V",
     Any
 )]
-#[async_method]
-pub async fn add_key_to_node<T: Thread + 'static>(
+pub fn add_key_to_node<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -80,8 +77,7 @@ pub async fn add_key_to_node<T: Thread + 'static>(
     "java/util/prefs/MacOSXPreferencesFile.addNode(Ljava/lang/String;Ljava/lang/String;JJ)Z",
     Any
 )]
-#[async_method]
-pub async fn add_node<T: Thread + 'static>(
+pub fn add_node<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,8 +95,7 @@ pub async fn add_node<T: Thread + 'static>(
 
 /// `anyHost() -> long`
 #[intrinsic_method("java/util/prefs/MacOSXPreferencesFile.anyHost()J", Any)]
-#[async_method]
-pub async fn any_host<T: Thread + 'static>(
+pub fn any_host<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -109,8 +104,7 @@ pub async fn any_host<T: Thread + 'static>(
 
 /// `anyUser() -> long`
 #[intrinsic_method("java/util/prefs/MacOSXPreferencesFile.anyUser()J", Any)]
-#[async_method]
-pub async fn any_user<T: Thread + 'static>(
+pub fn any_user<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -119,8 +113,7 @@ pub async fn any_user<T: Thread + 'static>(
 
 /// `currentHost() -> long`
 #[intrinsic_method("java/util/prefs/MacOSXPreferencesFile.currentHost()J", Any)]
-#[async_method]
-pub async fn current_host<T: Thread + 'static>(
+pub fn current_host<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -129,8 +122,7 @@ pub async fn current_host<T: Thread + 'static>(
 
 /// `currentUser() -> long`
 #[intrinsic_method("java/util/prefs/MacOSXPreferencesFile.currentUser()J", Any)]
-#[async_method]
-pub async fn current_user<T: Thread + 'static>(
+pub fn current_user<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -142,7 +134,6 @@ pub async fn current_user<T: Thread + 'static>(
     "java/util/prefs/MacOSXPreferencesFile.getChildrenForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_children_for_node<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -187,7 +178,6 @@ pub async fn get_children_for_node<T: Thread + 'static>(
     "java/util/prefs/MacOSXPreferencesFile.getKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_key_from_node<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -217,7 +207,6 @@ pub async fn get_key_from_node<T: Thread + 'static>(
     "java/util/prefs/MacOSXPreferencesFile.getKeysForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_keys_for_node<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -262,8 +251,7 @@ pub async fn get_keys_for_node<T: Thread + 'static>(
     "java/util/prefs/MacOSXPreferencesFile.removeChildFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V",
     Any
 )]
-#[async_method]
-pub async fn remove_child_from_node<T: Thread + 'static>(
+pub fn remove_child_from_node<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -286,8 +274,7 @@ pub async fn remove_child_from_node<T: Thread + 'static>(
     "java/util/prefs/MacOSXPreferencesFile.removeKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V",
     Any
 )]
-#[async_method]
-pub async fn remove_key_from_node<T: Thread + 'static>(
+pub fn remove_key_from_node<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -312,8 +299,7 @@ pub async fn remove_key_from_node<T: Thread + 'static>(
     "java/util/prefs/MacOSXPreferencesFile.removeNode(Ljava/lang/String;Ljava/lang/String;JJ)V",
     Any
 )]
-#[async_method]
-pub async fn remove_node<T: Thread + 'static>(
+pub fn remove_node<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -336,8 +322,7 @@ pub async fn remove_node<T: Thread + 'static>(
     "java/util/prefs/MacOSXPreferencesFile.synchronize(Ljava/lang/String;JJ)Z",
     Any
 )]
-#[async_method]
-pub async fn synchronize<T: Thread + 'static>(
+pub fn synchronize<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -355,36 +340,28 @@ mod tests {
     #[tokio::test]
     async fn test_current_user() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = current_user(thread, Parameters::default())
-            .await
-            .expect("result");
+        let result = current_user(thread, Parameters::default()).expect("result");
         assert_eq!(Some(Value::Long(CURRENT_USER)), result);
     }
 
     #[tokio::test]
     async fn test_any_user() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = any_user(thread, Parameters::default())
-            .await
-            .expect("result");
+        let result = any_user(thread, Parameters::default()).expect("result");
         assert_eq!(Some(Value::Long(ANY_USER)), result);
     }
 
     #[tokio::test]
     async fn test_current_host() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = current_host(thread, Parameters::default())
-            .await
-            .expect("result");
+        let result = current_host(thread, Parameters::default()).expect("result");
         assert_eq!(Some(Value::Long(CURRENT_HOST)), result);
     }
 
     #[tokio::test]
     async fn test_any_host() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = any_host(thread, Parameters::default())
-            .await
-            .expect("result");
+        let result = any_host(thread, Parameters::default()).expect("result");
         assert_eq!(Some(Value::Long(ANY_HOST)), result);
     }
 
@@ -402,7 +379,7 @@ mod tests {
         params.push(app.to_object(&thread).await.expect("value"));
         params.push_long(CURRENT_USER);
         params.push_long(ANY_HOST);
-        let result = add_key_to_node(thread.clone(), params).await.expect("ok");
+        let result = add_key_to_node(thread.clone(), params).expect("ok");
         assert_eq!(None, result); // void
 
         // get key: static native order is (path, key, appName, user, host)
@@ -424,7 +401,7 @@ mod tests {
         params.push(app.to_object(&thread).await.expect("value"));
         params.push_long(CURRENT_USER);
         params.push_long(ANY_HOST);
-        let _ = remove_node(thread, params).await;
+        let _ = remove_node(thread, params);
     }
 
     #[tokio::test]
@@ -459,7 +436,6 @@ mod tests {
         params.push_long(CURRENT_USER);
         params.push_long(ANY_HOST);
         let result = add_node(thread.clone(), params)
-            .await
             .expect("ok")
             .expect("value");
         assert_eq!(Value::Int(1), result); // new node
@@ -471,7 +447,6 @@ mod tests {
         params.push_long(CURRENT_USER);
         params.push_long(ANY_HOST);
         let result = add_node(thread.clone(), params)
-            .await
             .expect("ok")
             .expect("value");
         assert_eq!(Value::Int(0), result); // already exists
@@ -482,7 +457,7 @@ mod tests {
         params.push(app.to_object(&thread).await.expect("value"));
         params.push_long(CURRENT_USER);
         params.push_long(ANY_HOST);
-        let _ = remove_node(thread, params).await;
+        let _ = remove_node(thread, params);
     }
 
     #[tokio::test]
@@ -493,10 +468,7 @@ mod tests {
         params.push("com.test.sync".to_object(&thread).await.expect("value"));
         params.push_long(CURRENT_USER);
         params.push_long(ANY_HOST);
-        let result = synchronize(thread, params)
-            .await
-            .expect("ok")
-            .expect("value");
+        let result = synchronize(thread, params).expect("ok").expect("value");
         assert_eq!(Value::Int(1), result); // true
     }
 }

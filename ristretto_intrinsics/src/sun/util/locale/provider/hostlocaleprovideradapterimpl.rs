@@ -11,7 +11,6 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 #[cfg(not(target_os = "linux"))]
 use ristretto_classloader::{Reference, Value};
 #[cfg(not(target_os = "linux"))]
-use ristretto_macros::async_method;
 #[cfg(not(target_os = "linux"))]
 use ristretto_macros::intrinsic_method;
 #[cfg(not(target_os = "linux"))]
@@ -1702,7 +1701,6 @@ mod windows {
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getAmPmStrings(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_am_pm_strings<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1733,7 +1731,6 @@ pub async fn get_am_pm_strings<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;II)[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_calendar_display_strings<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1754,7 +1751,6 @@ pub async fn get_calendar_display_strings<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarID(Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_calendar_id<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1772,8 +1768,7 @@ pub async fn get_calendar_id<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarInt(Ljava/lang/String;I)I",
     Any
 )]
-#[async_method]
-pub async fn get_calendar_int<T: Thread + 'static>(
+pub fn get_calendar_int<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1789,7 +1784,6 @@ pub async fn get_calendar_int<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCurrencySymbol(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_currency_symbol<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1824,7 +1818,6 @@ pub async fn get_currency_symbol<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getDateTimePatternNative(IILjava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_date_time_pattern_native<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1844,8 +1837,7 @@ pub async fn get_date_time_pattern_native<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getDecimalSeparator(Ljava/lang/String;C)C",
     Any
 )]
-#[async_method]
-pub async fn get_decimal_separator<T: Thread + 'static>(
+pub fn get_decimal_separator<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1877,7 +1869,6 @@ pub async fn get_decimal_separator<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getDefaultLocale(I)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_default_locale<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1908,7 +1899,6 @@ pub async fn get_default_locale<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getDisplayString(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_display_string<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1948,7 +1938,6 @@ pub async fn get_display_string<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getEras(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_eras<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1983,7 +1972,6 @@ pub async fn get_eras<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getExponentSeparator(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_exponent_separator<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2002,8 +1990,7 @@ pub async fn get_exponent_separator<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getGroupingSeparator(Ljava/lang/String;C)C",
     Any
 )]
-#[async_method]
-pub async fn get_grouping_separator<T: Thread + 'static>(
+pub fn get_grouping_separator<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2035,7 +2022,6 @@ pub async fn get_grouping_separator<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getInfinity(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_infinity<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2070,7 +2056,6 @@ pub async fn get_infinity<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getInternationalCurrencySymbol(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_international_currency_symbol<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2105,8 +2090,7 @@ pub async fn get_international_currency_symbol<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getMinusSign(Ljava/lang/String;C)C",
     Any
 )]
-#[async_method]
-pub async fn get_minus_sign<T: Thread + 'static>(
+pub fn get_minus_sign<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2138,8 +2122,7 @@ pub async fn get_minus_sign<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getMonetaryDecimalSeparator(Ljava/lang/String;C)C",
     Any
 )]
-#[async_method]
-pub async fn get_monetary_decimal_separator<T: Thread + 'static>(
+pub fn get_monetary_decimal_separator<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2171,7 +2154,6 @@ pub async fn get_monetary_decimal_separator<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getMonths(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_months<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2206,7 +2188,6 @@ pub async fn get_months<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getNaN(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_nan<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2241,7 +2222,6 @@ pub async fn get_nan<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getNumberPatternNative(ILjava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_number_pattern_native<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2260,8 +2240,7 @@ pub async fn get_number_pattern_native<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getPerMill(Ljava/lang/String;C)C",
     Any
 )]
-#[async_method]
-pub async fn get_per_mill<T: Thread + 'static>(
+pub fn get_per_mill<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2293,8 +2272,7 @@ pub async fn get_per_mill<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getPercent(Ljava/lang/String;C)C",
     Any
 )]
-#[async_method]
-pub async fn get_percent<T: Thread + 'static>(
+pub fn get_percent<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2326,7 +2304,6 @@ pub async fn get_percent<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getShortMonths(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_short_months<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2361,7 +2338,6 @@ pub async fn get_short_months<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getShortWeekdays(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_short_weekdays<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2396,7 +2372,6 @@ pub async fn get_short_weekdays<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getTimeZoneDisplayString(Ljava/lang/String;ILjava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_time_zone_display_string<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2421,7 +2396,6 @@ pub async fn get_time_zone_display_string<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getWeekdays(Ljava/lang/String;[Ljava/lang/String;)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_weekdays<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2456,8 +2430,7 @@ pub async fn get_weekdays<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getZeroDigit(Ljava/lang/String;C)C",
     Any
 )]
-#[async_method]
-pub async fn get_zero_digit<T: Thread + 'static>(
+pub fn get_zero_digit<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2489,8 +2462,7 @@ pub async fn get_zero_digit<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDataValue(Ljava/lang/String;I)I",
     Any
 )]
-#[async_method]
-pub async fn get_calendar_data_value<T: Thread + 'static>(
+pub fn get_calendar_data_value<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2505,7 +2477,6 @@ pub async fn get_calendar_data_value<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;III)[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_calendar_display_strings_windows<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2527,8 +2498,7 @@ pub async fn get_calendar_display_strings_windows<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarID(Ljava/lang/String;)I",
     Any
 )]
-#[async_method]
-pub async fn get_calendar_id_windows<T: Thread + 'static>(
+pub fn get_calendar_id_windows<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2542,7 +2512,6 @@ pub async fn get_calendar_id_windows<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getDateTimePattern(IILjava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_date_time_pattern<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2563,7 +2532,6 @@ pub async fn get_date_time_pattern<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getNumberPattern(ILjava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_number_pattern<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2582,8 +2550,7 @@ pub async fn get_number_pattern<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.initialize()Z",
     Any
 )]
-#[async_method]
-pub async fn initialize<T: Thread + 'static>(
+pub fn initialize<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2595,8 +2562,7 @@ pub async fn initialize<T: Thread + 'static>(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.isNativeDigit(Ljava/lang/String;)Z",
     Any
 )]
-#[async_method]
-pub async fn is_native_digit<T: Thread + 'static>(
+pub fn is_native_digit<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2734,16 +2700,13 @@ mod tests {
     #[tokio::test]
     async fn test_get_calendar_int() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = value(
-            get_calendar_int(
-                thread.clone(),
-                Parameters::new(vec![
-                    tag(&thread).await,
-                    Value::Int(MacCalendarDataKind::FirstDayOfWeek.as_i32()),
-                ]),
-            )
-            .await,
-        );
+        let result = value(get_calendar_int(
+            thread.clone(),
+            Parameters::new(vec![
+                tag(&thread).await,
+                Value::Int(MacCalendarDataKind::FirstDayOfWeek.as_i32()),
+            ]),
+        ));
         assert!(result.as_i32().expect("int") > 0);
     }
 
@@ -2778,13 +2741,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_decimal_separator() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = value(
-            get_decimal_separator(
-                thread.clone(),
-                default_char_parameters(tag(&thread).await, '.'),
-            )
-            .await,
-        );
+        let result = value(get_decimal_separator(
+            thread.clone(),
+            default_char_parameters(tag(&thread).await, '.'),
+        ));
         assert_eq!(Value::from('.'), result);
     }
 
@@ -2845,13 +2805,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_grouping_separator() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = value(
-            get_grouping_separator(
-                thread.clone(),
-                default_char_parameters(tag(&thread).await, ','),
-            )
-            .await,
-        );
+        let result = value(get_grouping_separator(
+            thread.clone(),
+            default_char_parameters(tag(&thread).await, ','),
+        ));
         assert_eq!(Value::from(','), result);
     }
 
@@ -2886,26 +2843,20 @@ mod tests {
     #[tokio::test]
     async fn test_get_minus_sign() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = value(
-            get_minus_sign(
-                thread.clone(),
-                default_char_parameters(tag(&thread).await, '-'),
-            )
-            .await,
-        );
+        let result = value(get_minus_sign(
+            thread.clone(),
+            default_char_parameters(tag(&thread).await, '-'),
+        ));
         assert_eq!(Value::from('-'), result);
     }
 
     #[tokio::test]
     async fn test_get_monetary_decimal_separator() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = value(
-            get_monetary_decimal_separator(
-                thread.clone(),
-                default_char_parameters(tag(&thread).await, '.'),
-            )
-            .await,
-        );
+        let result = value(get_monetary_decimal_separator(
+            thread.clone(),
+            default_char_parameters(tag(&thread).await, '.'),
+        ));
         assert_eq!(Value::from('.'), result);
     }
 
@@ -2956,26 +2907,20 @@ mod tests {
     #[tokio::test]
     async fn test_get_per_mill() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = value(
-            get_per_mill(
-                thread.clone(),
-                default_char_parameters(tag(&thread).await, '\u{2030}'),
-            )
-            .await,
-        );
+        let result = value(get_per_mill(
+            thread.clone(),
+            default_char_parameters(tag(&thread).await, '\u{2030}'),
+        ));
         assert!(matches!(result, Value::Int(_)));
     }
 
     #[tokio::test]
     async fn test_get_percent() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = value(
-            get_percent(
-                thread.clone(),
-                default_char_parameters(tag(&thread).await, '%'),
-            )
-            .await,
-        );
+        let result = value(get_percent(
+            thread.clone(),
+            default_char_parameters(tag(&thread).await, '%'),
+        ));
         assert_eq!(Value::from('%'), result);
     }
 
@@ -3040,13 +2985,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_zero_digit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = value(
-            get_zero_digit(
-                thread.clone(),
-                default_char_parameters(tag(&thread).await, '0'),
-            )
-            .await,
-        );
+        let result = value(get_zero_digit(
+            thread.clone(),
+            default_char_parameters(tag(&thread).await, '0'),
+        ));
         assert_eq!(Value::from('0'), result);
     }
 
@@ -3060,8 +3002,7 @@ mod tests {
                 tag(&thread).await,
                 Value::Int(WindowsCalendarDataKind::FirstDayOfWeek.as_i32()),
             ]),
-        )
-        .await;
+        );
         assert!(matches!(value(result), Value::Int(_)));
     }
 
@@ -3087,8 +3028,7 @@ mod tests {
     async fn test_get_calendar_id_windows() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            get_calendar_id_windows(thread.clone(), Parameters::new(vec![tag(&thread).await]))
-                .await;
+            get_calendar_id_windows(thread.clone(), Parameters::new(vec![tag(&thread).await]));
         assert!(matches!(value(result), Value::Int(_)));
     }
 
@@ -3120,7 +3060,7 @@ mod tests {
     #[tokio::test]
     async fn test_initialize() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = initialize(thread, Parameters::default()).await;
+        let result = initialize(thread, Parameters::default());
         assert_eq!(Value::from(true), value(result));
     }
 
@@ -3128,8 +3068,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_native_digit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            is_native_digit(thread.clone(), Parameters::new(vec![tag(&thread).await])).await;
+        let result = is_native_digit(thread.clone(), Parameters::new(vec![tag(&thread).await]));
         assert!(matches!(value(result), Value::Int(_)));
     }
 }

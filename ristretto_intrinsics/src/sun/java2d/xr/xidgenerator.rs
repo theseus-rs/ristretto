@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -13,8 +12,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/xr/XIDGenerator.bufferXIDs([II)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn buffer_x_ids<T: Thread + 'static>(
+pub fn buffer_x_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,8 +29,7 @@ pub async fn buffer_x_ids<T: Thread + 'static>(
     "sun/java2d/xr/XIDGenerator.bufferXIDs([II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn buffer_xids_linux_ge_v11<T: Thread + 'static>(
+pub fn buffer_xids_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,8 +51,7 @@ mod tests {
         let result = buffer_x_ids(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XIDGenerator.bufferXIDs([II)V",
             result.unwrap_err().to_string()
@@ -69,8 +65,7 @@ mod tests {
         let result = buffer_xids_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XIDGenerator.bufferXIDs([II)V",
             result.unwrap_err().to_string()

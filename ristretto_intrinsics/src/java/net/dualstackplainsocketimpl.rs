@@ -6,7 +6,7 @@ use crate::net_helpers::{
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result, Thread, VM};
 use std::sync::Arc;
 
@@ -14,7 +14,6 @@ use std::sync::Arc;
     "java/net/DualStackPlainSocketImpl.accept0(I[Ljava/net/InetSocketAddress;)I",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn accept0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -37,7 +36,6 @@ pub async fn accept0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/DualStackPlainSocketImpl.available0(I)I", Equal(JAVA_8))]
-#[async_method]
 pub async fn available0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -52,7 +50,6 @@ pub async fn available0<T: Thread + 'static>(
     "java/net/DualStackPlainSocketImpl.bind0(ILjava/net/InetAddress;IZ)V",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn bind0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -74,7 +71,6 @@ pub async fn bind0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/DualStackPlainSocketImpl.close0(I)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn close0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -87,7 +83,6 @@ pub async fn close0<T: Thread + 'static>(
     "java/net/DualStackPlainSocketImpl.configureBlocking(IZ)V",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn configure_blocking<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -102,7 +97,6 @@ pub async fn configure_blocking<T: Thread + 'static>(
     "java/net/DualStackPlainSocketImpl.connect0(ILjava/net/InetAddress;I)I",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn connect0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -123,7 +117,6 @@ pub async fn connect0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/DualStackPlainSocketImpl.getIntOption(II)I", Equal(JAVA_8))]
-#[async_method]
 pub async fn get_int_option<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -136,8 +129,7 @@ pub async fn get_int_option<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/DualStackPlainSocketImpl.initIDs()V", Equal(JAVA_8))]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -145,7 +137,6 @@ pub async fn init_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/DualStackPlainSocketImpl.listen0(II)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn listen0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -160,7 +151,6 @@ pub async fn listen0<T: Thread + 'static>(
     "java/net/DualStackPlainSocketImpl.localAddress(ILjava/net/InetAddressContainer;)V",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn local_address<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -174,7 +164,6 @@ pub async fn local_address<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/DualStackPlainSocketImpl.localPort0(I)I", Equal(JAVA_8))]
-#[async_method]
 pub async fn local_port0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -184,7 +173,6 @@ pub async fn local_port0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/DualStackPlainSocketImpl.sendOOB(II)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn send_oob<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -196,7 +184,6 @@ pub async fn send_oob<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/DualStackPlainSocketImpl.setIntOption(III)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn set_int_option<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -209,7 +196,6 @@ pub async fn set_int_option<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/DualStackPlainSocketImpl.shutdown0(II)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn shutdown0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -221,7 +207,6 @@ pub async fn shutdown0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/DualStackPlainSocketImpl.socket0(ZZ)I", Equal(JAVA_8))]
-#[async_method]
 pub async fn socket0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -238,7 +223,6 @@ pub async fn socket0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/DualStackPlainSocketImpl.waitForConnect(II)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn wait_for_connect<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -253,7 +237,6 @@ pub async fn wait_for_connect<T: Thread + 'static>(
     "java/net/DualStackPlainSocketImpl.waitForNewConnection(II)V",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn wait_for_new_connection<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

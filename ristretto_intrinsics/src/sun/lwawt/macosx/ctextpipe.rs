@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/lwawt/macosx/CTextPipe.doDrawGlyphs(Lsun/java2d/SurfaceData;JLjava/awt/font/GlyphVector;FF)V",
     Any
 )]
-#[async_method]
-pub async fn do_draw_glyphs<T: Thread + 'static>(
+pub fn do_draw_glyphs<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn do_draw_glyphs<T: Thread + 'static>(
     "sun/lwawt/macosx/CTextPipe.doDrawString(Lsun/java2d/SurfaceData;JLjava/lang/String;DD)V",
     Any
 )]
-#[async_method]
-pub async fn do_draw_string<T: Thread + 'static>(
+pub fn do_draw_string<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,8 +46,7 @@ pub async fn do_draw_string<T: Thread + 'static>(
     "sun/lwawt/macosx/CTextPipe.doOneUnicode(Lsun/java2d/SurfaceData;JCFF)V",
     Any
 )]
-#[async_method]
-pub async fn do_one_unicode<T: Thread + 'static>(
+pub fn do_one_unicode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -69,8 +65,7 @@ pub async fn do_one_unicode<T: Thread + 'static>(
     "sun/lwawt/macosx/CTextPipe.doUnicodes(Lsun/java2d/SurfaceData;J[CIIFF)V",
     Any
 )]
-#[async_method]
-pub async fn do_unicodes<T: Thread + 'static>(
+pub fn do_unicodes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -103,8 +98,7 @@ mod tests {
                 Value::Float(0.0),
                 Value::Float(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CTextPipe.doDrawGlyphs(Lsun/java2d/SurfaceData;JLjava/awt/font/GlyphVector;FF)V",
             result.unwrap_err().to_string()
@@ -123,8 +117,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Double(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CTextPipe.doDrawString(Lsun/java2d/SurfaceData;JLjava/lang/String;DD)V",
             result.unwrap_err().to_string()
@@ -143,8 +136,7 @@ mod tests {
                 Value::Float(0.0),
                 Value::Float(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CTextPipe.doOneUnicode(Lsun/java2d/SurfaceData;JCFF)V",
             result.unwrap_err().to_string()
@@ -165,8 +157,7 @@ mod tests {
                 Value::Float(0.0),
                 Value::Float(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CTextPipe.doUnicodes(Lsun/java2d/SurfaceData;J[CIIFF)V",
             result.unwrap_err().to_string()

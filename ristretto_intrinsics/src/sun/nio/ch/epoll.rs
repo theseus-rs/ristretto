@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -136,8 +135,7 @@ pub(crate) async fn wait_for_events<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EPoll.create()I", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn create<T: Thread + 'static>(
+pub fn create<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -146,7 +144,6 @@ pub async fn create<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EPoll.ctl(IIII)I", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn ctl<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -162,8 +159,7 @@ pub async fn ctl<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EPoll.dataOffset()I", Any)]
-#[async_method]
-pub async fn data_offset<T: Thread + 'static>(
+pub fn data_offset<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -171,8 +167,7 @@ pub async fn data_offset<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EPoll.epollCreate()I", Equal(JAVA_8))]
-#[async_method]
-pub async fn epoll_create<T: Thread + 'static>(
+pub fn epoll_create<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -181,7 +176,6 @@ pub async fn epoll_create<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EPoll.epollCtl(IIII)I", Equal(JAVA_8))]
-#[async_method]
 pub async fn epoll_ctl<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -197,7 +191,6 @@ pub async fn epoll_ctl<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EPoll.epollWait(IJI)I", Equal(JAVA_8))]
-#[async_method]
 pub async fn epoll_wait<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -210,8 +203,7 @@ pub async fn epoll_wait<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EPoll.eventSize()I", Any)]
-#[async_method]
-pub async fn event_size<T: Thread + 'static>(
+pub fn event_size<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -219,8 +211,7 @@ pub async fn event_size<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EPoll.eventsOffset()I", Any)]
-#[async_method]
-pub async fn events_offset<T: Thread + 'static>(
+pub fn events_offset<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -228,7 +219,6 @@ pub async fn events_offset<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EPoll.wait(IJII)I", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn wait<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -248,7 +238,7 @@ mod tests {
     #[tokio::test]
     async fn test_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create(thread, Parameters::default()).await.expect("create");
+        let result = create(thread, Parameters::default()).expect("create");
         assert!(matches!(result, Some(Value::Int(fd)) if fd >= 0));
     }
 
@@ -271,18 +261,14 @@ mod tests {
     #[tokio::test]
     async fn test_data_offset() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = data_offset(thread, Parameters::default())
-            .await
-            .expect("offset");
+        let result = data_offset(thread, Parameters::default()).expect("offset");
         assert_eq!(Some(Value::Int(4)), result);
     }
 
     #[tokio::test]
     async fn test_epoll_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = epoll_create(thread, Parameters::default())
-            .await
-            .expect("create");
+        let result = epoll_create(thread, Parameters::default()).expect("create");
         assert!(matches!(result, Some(Value::Int(fd)) if fd >= 0));
     }
 
@@ -316,18 +302,14 @@ mod tests {
     #[tokio::test]
     async fn test_event_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = event_size(thread, Parameters::default())
-            .await
-            .expect("size");
+        let result = event_size(thread, Parameters::default()).expect("size");
         assert_eq!(Some(Value::Int(12)), result);
     }
 
     #[tokio::test]
     async fn test_events_offset() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = events_offset(thread, Parameters::default())
-            .await
-            .expect("offset");
+        let result = events_offset(thread, Parameters::default()).expect("offset");
         assert_eq!(Some(Value::Int(0)), result);
     }
 

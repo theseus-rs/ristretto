@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -80,8 +79,7 @@ fn encode_vm_storage(_type_: i32, _index: i32) -> i64 {
     "jdk/internal/invoke/NativeEntryPoint.registerNatives()V",
     Equal(JAVA_17)
 )]
-#[async_method]
-pub async fn register_natives<T: Thread + 'static>(
+pub fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -92,8 +90,7 @@ pub async fn register_natives<T: Thread + 'static>(
     "jdk/internal/invoke/NativeEntryPoint.vmStorageToVMReg(II)J",
     Equal(JAVA_17)
 )]
-#[async_method]
-pub async fn vm_storage_to_vm_reg<T: Thread + 'static>(
+pub fn vm_storage_to_vm_reg<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -110,7 +107,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
-        let result = register_natives(thread, Parameters::default()).await?;
+        let result = register_natives(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -121,8 +118,7 @@ mod tests {
         let result = vm_storage_to_vm_reg(
             thread,
             Parameters::new(vec![Value::Int(INTEGER_TYPE), Value::Int(0)]),
-        )
-        .await?;
+        )?;
         assert_eq!(
             result,
             Some(Value::Long(encode_vm_storage(INTEGER_TYPE, 0)))

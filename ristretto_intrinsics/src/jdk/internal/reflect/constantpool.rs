@@ -2,7 +2,6 @@ use crate::java::lang::class;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{Constant, FieldType, JAVA_11};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Parameters;
@@ -15,7 +14,6 @@ use std::sync::Arc;
     "jdk/internal/reflect/ConstantPool.getClassAt0(Ljava/lang/Object;I)Ljava/lang/Class;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_class_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -34,7 +32,6 @@ pub async fn get_class_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getClassAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/Class;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_class_at_if_loaded_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -53,7 +50,6 @@ pub async fn get_class_at_if_loaded_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getClassRefIndexAt0(Ljava/lang/Object;I)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_class_ref_index_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -80,7 +76,6 @@ pub async fn get_class_ref_index_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getDoubleAt0(Ljava/lang/Object;I)D",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_double_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -97,7 +92,6 @@ pub async fn get_double_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getFieldAt0(Ljava/lang/Object;I)Ljava/lang/reflect/Field;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_field_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -129,7 +123,6 @@ pub async fn get_field_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getFieldAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/reflect/Field;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_field_at_if_loaded_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -141,7 +134,6 @@ pub async fn get_field_at_if_loaded_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getFloatAt0(Ljava/lang/Object;I)F",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_float_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -158,7 +150,6 @@ pub async fn get_float_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getIntAt0(Ljava/lang/Object;I)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_int_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -175,7 +166,6 @@ pub async fn get_int_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getLongAt0(Ljava/lang/Object;I)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_long_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -192,7 +182,6 @@ pub async fn get_long_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getMemberRefInfoAt0(Ljava/lang/Object;I)[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_member_ref_info_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -238,7 +227,6 @@ pub async fn get_member_ref_info_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getMethodAt0(Ljava/lang/Object;I)Ljava/lang/reflect/Member;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_method_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -294,7 +282,6 @@ pub async fn get_method_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getMethodAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/reflect/Member;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_method_at_if_loaded_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -306,7 +293,6 @@ pub async fn get_method_at_if_loaded_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getNameAndTypeRefIndexAt0(Ljava/lang/Object;I)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_name_and_type_ref_index_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -350,7 +336,6 @@ pub async fn get_name_and_type_ref_index_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getNameAndTypeRefInfoAt0(Ljava/lang/Object;I)[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_name_and_type_ref_info_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -402,7 +387,6 @@ pub async fn get_name_and_type_ref_info_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getSize0(Ljava/lang/Object;)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_size_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -418,7 +402,6 @@ pub async fn get_size_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getStringAt0(Ljava/lang/Object;I)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_string_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -436,7 +419,6 @@ pub async fn get_string_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getTagAt0(Ljava/lang/Object;I)B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_tag_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -459,7 +441,6 @@ pub async fn get_tag_at_0<T: Thread + 'static>(
     "jdk/internal/reflect/ConstantPool.getUTF8At0(Ljava/lang/Object;I)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_utf_8_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -483,7 +464,7 @@ pub(crate) mod tests {
     };
     use ristretto_classloader::{Class, Object};
     use ristretto_types::VM;
-    use ristretto_vm::IntrinsicMethod;
+    use ristretto_vm::AsyncIntrinsicMethod;
 
     pub async fn test_object() -> Result<(Arc<ristretto_vm::VM>, Arc<ristretto_vm::Thread>, Value)>
     {
@@ -576,7 +557,7 @@ pub(crate) mod tests {
         Ok((vm, thread, value))
     }
 
-    pub async fn get_class_at_test(get_class_at: IntrinsicMethod) -> Result<()> {
+    pub async fn get_class_at_test(get_class_at: AsyncIntrinsicMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(8)]);
         let result = get_class_at(thread, parameters).await?.expect("value");
@@ -592,7 +573,7 @@ pub(crate) mod tests {
     }
 
     pub async fn get_class_at_if_loaded_test(
-        get_class_at_if_loaded: IntrinsicMethod,
+        get_class_at_if_loaded: AsyncIntrinsicMethod,
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(8)]);
@@ -634,7 +615,7 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    pub async fn get_double_at_test(get_double_at: IntrinsicMethod) -> Result<()> {
+    pub async fn get_double_at_test(get_double_at: AsyncIntrinsicMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(13)]);
         let result = get_double_at(thread, parameters).await?.expect("value");
@@ -649,7 +630,7 @@ pub(crate) mod tests {
         get_double_at_test(get_double_at_0).await
     }
 
-    pub async fn get_field_at_test(get_field_at: IntrinsicMethod) -> Result<()> {
+    pub async fn get_field_at_test(get_field_at: AsyncIntrinsicMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(20)]);
         let result = get_field_at(thread, parameters).await?.expect("value");
@@ -667,7 +648,7 @@ pub(crate) mod tests {
     }
 
     pub async fn get_field_at_if_loaded_test(
-        get_field_at_if_loaded: IntrinsicMethod,
+        get_field_at_if_loaded: AsyncIntrinsicMethod,
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(20)]);
@@ -687,7 +668,7 @@ pub(crate) mod tests {
         get_field_at_if_loaded_test(get_field_at_if_loaded_0).await
     }
 
-    pub async fn get_float_at_test(get_float_at: IntrinsicMethod) -> Result<()> {
+    pub async fn get_float_at_test(get_float_at: AsyncIntrinsicMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(12)]);
         let result = get_float_at(thread, parameters).await?.expect("value");
@@ -702,7 +683,7 @@ pub(crate) mod tests {
         get_float_at_test(get_float_at_0).await
     }
 
-    pub async fn get_int_at_test(get_int_at: IntrinsicMethod) -> Result<()> {
+    pub async fn get_int_at_test(get_int_at: AsyncIntrinsicMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(9)]);
         let result = get_int_at(thread, parameters).await?.expect("value");
@@ -716,7 +697,7 @@ pub(crate) mod tests {
         get_int_at_test(get_int_at_0).await
     }
 
-    pub async fn get_long_at_test(get_long_at: IntrinsicMethod) -> Result<()> {
+    pub async fn get_long_at_test(get_long_at: AsyncIntrinsicMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(10)]);
         let result = get_long_at(thread, parameters).await?.expect("value");
@@ -731,7 +712,7 @@ pub(crate) mod tests {
     }
 
     pub async fn get_member_ref_info_at_field_test(
-        get_member_ref_info_at: IntrinsicMethod,
+        get_member_ref_info_at: AsyncIntrinsicMethod,
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(20)]);
@@ -756,7 +737,7 @@ pub(crate) mod tests {
     }
 
     pub async fn get_member_ref_info_at_method_test(
-        get_member_ref_info_at: IntrinsicMethod,
+        get_member_ref_info_at: AsyncIntrinsicMethod,
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(6)]);
@@ -780,7 +761,7 @@ pub(crate) mod tests {
         get_member_ref_info_at_method_test(get_member_ref_info_at_0).await
     }
 
-    pub async fn get_method_at_constructor_test(get_method_at: IntrinsicMethod) -> Result<()> {
+    pub async fn get_method_at_constructor_test(get_method_at: AsyncIntrinsicMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(6)]);
         let result = get_method_at(thread, parameters).await?.expect("value");
@@ -795,7 +776,7 @@ pub(crate) mod tests {
         get_method_at_constructor_test(get_method_at_0).await
     }
 
-    pub async fn get_method_at_method_test(get_method_at: IntrinsicMethod) -> Result<()> {
+    pub async fn get_method_at_method_test(get_method_at: AsyncIntrinsicMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(25)]);
         let result = get_method_at(thread, parameters).await?.expect("value");
@@ -813,7 +794,7 @@ pub(crate) mod tests {
     }
 
     pub async fn get_method_at_if_loaded_constructor_test(
-        get_method_at_if_loaded: IntrinsicMethod,
+        get_method_at_if_loaded: AsyncIntrinsicMethod,
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(6)]);
@@ -832,7 +813,7 @@ pub(crate) mod tests {
     }
 
     pub async fn get_method_at_if_loaded_method_test(
-        get_method_at_if_loaded: IntrinsicMethod,
+        get_method_at_if_loaded: AsyncIntrinsicMethod,
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(25)]);
@@ -910,7 +891,7 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    pub async fn get_size_test(get_size: IntrinsicMethod) -> Result<()> {
+    pub async fn get_size_test(get_size: AsyncIntrinsicMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_size(thread, parameters).await?.expect("value");
@@ -924,7 +905,7 @@ pub(crate) mod tests {
         get_size_test(get_size_0).await
     }
 
-    pub async fn get_string_at_test(get_string_at: IntrinsicMethod) -> Result<()> {
+    pub async fn get_string_at_test(get_string_at: AsyncIntrinsicMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(16)]);
         let result = get_string_at(thread, parameters).await?.expect("value");
@@ -951,7 +932,7 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    pub async fn get_utf_8_at_test(get_utf_8_at: IntrinsicMethod) -> Result<()> {
+    pub async fn get_utf_8_at_test(get_utf_8_at: AsyncIntrinsicMethod) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(15)]);
         let result = get_utf_8_at(thread, parameters).await?.expect("value");

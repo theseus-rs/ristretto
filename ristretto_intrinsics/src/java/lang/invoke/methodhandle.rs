@@ -19,7 +19,6 @@ use tracing::debug;
     "java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
 pub async fn invoke<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -379,7 +378,6 @@ async fn box_primitive<T: Thread + 'static>(thread: &T, value: Value) -> Result<
     "java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
 pub async fn invoke_basic<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -443,7 +441,6 @@ pub async fn invoke_basic<T: Thread + 'static>(
     "java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
 pub async fn invoke_exact<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -511,8 +508,7 @@ pub async fn invoke_exact<T: Thread + 'static>(
 ///
 /// This is needed for lambda methods where MemberName.clazz may be Object but the actual
 /// lambda method is defined in an interface (like Function.andThen).
-#[async_method]
-async fn find_method_in_hierarchy<T: Thread + 'static>(
+fn find_method_in_hierarchy<T: Thread + 'static>(
     _thread: &Arc<T>,
     target_class: &Arc<Class>,
     receiver: &Value,
@@ -618,8 +614,7 @@ fn search_class_hierarchy_for_method(
 ///
 /// This is used when a static lambda method (like those in interface default methods)
 /// cannot be found on the specified target class.
-#[async_method]
-async fn find_static_lambda_method<T: Thread + 'static>(
+fn find_static_lambda_method<T: Thread + 'static>(
     _thread: &Arc<T>,
     arguments: &[Value],
     method_name: &str,
@@ -786,8 +781,7 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
                 &receiver,
                 &member_name,
                 &member_descriptor,
-            )
-            .await?;
+            )?;
 
             let mut call_arguments = vec![receiver];
             call_arguments.extend(arguments);
@@ -807,7 +801,6 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
                 Err(_) if member_name.starts_with("lambda$") => {
                     // For lambda methods, try to find in argument's class hierarchy
                     find_static_lambda_method(&thread, &arguments, &member_name, &member_descriptor)
-                        .await
                         .ok_or_else(|| {
                             InternalError(format!(
                                 "Static lambda method not found: {target_class_name}.{member_name}{member_descriptor}"
@@ -1482,7 +1475,6 @@ pub async fn dispatch_holder_method<T: Thread + 'static>(
     "java/lang/invoke/MethodHandle.linkToInterface([Ljava/lang/Object;)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
 pub async fn link_to_interface<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1502,7 +1494,6 @@ pub async fn link_to_interface<T: Thread + 'static>(
     "java/lang/invoke/MethodHandle.linkToNative([Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn link_to_native<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1522,7 +1513,6 @@ pub async fn link_to_native<T: Thread + 'static>(
     "java/lang/invoke/MethodHandle.linkToSpecial([Ljava/lang/Object;)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
 pub async fn link_to_special<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1542,7 +1532,6 @@ pub async fn link_to_special<T: Thread + 'static>(
     "java/lang/invoke/MethodHandle.linkToStatic([Ljava/lang/Object;)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
 pub async fn link_to_static<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1562,7 +1551,6 @@ pub async fn link_to_static<T: Thread + 'static>(
     "java/lang/invoke/MethodHandle.linkToVirtual([Ljava/lang/Object;)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
 pub async fn link_to_virtual<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,

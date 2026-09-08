@@ -5,7 +5,6 @@ use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
 use ristretto_gc::Gc;
 use ristretto_gc::sync::RwLock;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError::{IndexOutOfBoundsException, NullPointerException};
@@ -32,7 +31,6 @@ struct StackTraceFrame {
     "java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn init_stack_trace_element<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -52,7 +50,6 @@ pub async fn init_stack_trace_element<T: Thread + 'static>(
     "java/lang/StackTraceElement.initStackTraceElements([Ljava/lang/StackTraceElement;Ljava/lang/Throwable;)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn init_stack_trace_elements_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -81,7 +78,6 @@ pub async fn init_stack_trace_elements_0<T: Thread + 'static>(
     "java/lang/StackTraceElement.initStackTraceElements([Ljava/lang/StackTraceElement;Ljava/lang/Object;I)V",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
 pub async fn init_stack_trace_elements_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

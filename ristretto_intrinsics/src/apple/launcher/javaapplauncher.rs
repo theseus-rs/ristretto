@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "apple/launcher/JavaAppLauncher.nativeConvertAndRelease(J)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn native_convert_and_release<T: Thread + 'static>(
+pub fn native_convert_and_release<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn native_convert_and_release<T: Thread + 'static>(
     "apple/launcher/JavaAppLauncher.nativeInvokeNonPublic(Ljava/lang/Class;Ljava/lang/reflect/Method;[Ljava/lang/String;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn native_invoke_non_public<T: Thread + 'static>(
+pub fn native_invoke_non_public<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -46,8 +43,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_convert_and_release() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result =
-            native_convert_and_release(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = native_convert_and_release(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "apple.launcher.JavaAppLauncher.nativeConvertAndRelease(J)Ljava/lang/Object;",
             result.unwrap_err().to_string()
@@ -64,8 +60,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "apple.launcher.JavaAppLauncher.nativeInvokeNonPublic(Ljava/lang/Class;Ljava/lang/reflect/Method;[Ljava/lang/String;)V",
             result.unwrap_err().to_string()

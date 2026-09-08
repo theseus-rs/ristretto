@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/java2d/windows/GDIRenderer.devCopyArea(Lsun/java2d/windows/GDIWindowSurfaceData;IIIIII)V",
     Any
 )]
-#[async_method]
-pub async fn dev_copy_area<T: Thread + 'static>(
+pub fn dev_copy_area<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -29,8 +27,7 @@ pub async fn dev_copy_area<T: Thread + 'static>(
     "sun/java2d/windows/GDIRenderer.doDrawArc(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V",
     Any
 )]
-#[async_method]
-pub async fn do_draw_arc<T: Thread + 'static>(
+pub fn do_draw_arc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,8 +47,7 @@ pub async fn do_draw_arc<T: Thread + 'static>(
     "sun/java2d/windows/GDIRenderer.doDrawLine(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
     Any
 )]
-#[async_method]
-pub async fn do_draw_line<T: Thread + 'static>(
+pub fn do_draw_line<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -69,8 +65,7 @@ pub async fn do_draw_line<T: Thread + 'static>(
     "sun/java2d/windows/GDIRenderer.doDrawOval(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
     Any
 )]
-#[async_method]
-pub async fn do_draw_oval<T: Thread + 'static>(
+pub fn do_draw_oval<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -88,8 +83,7 @@ pub async fn do_draw_oval<T: Thread + 'static>(
     "sun/java2d/windows/GDIRenderer.doDrawPoly(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;III[I[IIZ)V",
     Any
 )]
-#[async_method]
-pub async fn do_draw_poly<T: Thread + 'static>(
+pub fn do_draw_poly<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -109,8 +103,7 @@ pub async fn do_draw_poly<T: Thread + 'static>(
     "sun/java2d/windows/GDIRenderer.doDrawRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
     Any
 )]
-#[async_method]
-pub async fn do_draw_rect<T: Thread + 'static>(
+pub fn do_draw_rect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -128,8 +121,7 @@ pub async fn do_draw_rect<T: Thread + 'static>(
     "sun/java2d/windows/GDIRenderer.doDrawRoundRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V",
     Any
 )]
-#[async_method]
-pub async fn do_draw_round_rect<T: Thread + 'static>(
+pub fn do_draw_round_rect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -149,8 +141,7 @@ pub async fn do_draw_round_rect<T: Thread + 'static>(
     "sun/java2d/windows/GDIRenderer.doFillArc(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V",
     Any
 )]
-#[async_method]
-pub async fn do_fill_arc<T: Thread + 'static>(
+pub fn do_fill_arc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -170,8 +161,7 @@ pub async fn do_fill_arc<T: Thread + 'static>(
     "sun/java2d/windows/GDIRenderer.doFillOval(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
     Any
 )]
-#[async_method]
-pub async fn do_fill_oval<T: Thread + 'static>(
+pub fn do_fill_oval<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -189,8 +179,7 @@ pub async fn do_fill_oval<T: Thread + 'static>(
     "sun/java2d/windows/GDIRenderer.doFillPoly(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;III[I[II)V",
     Any
 )]
-#[async_method]
-pub async fn do_fill_poly<T: Thread + 'static>(
+pub fn do_fill_poly<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -209,8 +198,7 @@ pub async fn do_fill_poly<T: Thread + 'static>(
     "sun/java2d/windows/GDIRenderer.doFillRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
     Any
 )]
-#[async_method]
-pub async fn do_fill_rect<T: Thread + 'static>(
+pub fn do_fill_rect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -228,8 +216,7 @@ pub async fn do_fill_rect<T: Thread + 'static>(
     "sun/java2d/windows/GDIRenderer.doFillRoundRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V",
     Any
 )]
-#[async_method]
-pub async fn do_fill_round_rect<T: Thread + 'static>(
+pub fn do_fill_round_rect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -249,8 +236,7 @@ pub async fn do_fill_round_rect<T: Thread + 'static>(
     "sun/java2d/windows/GDIRenderer.doShape(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIILjava/awt/geom/Path2D$Float;Z)V",
     Any
 )]
-#[async_method]
-pub async fn do_shape<T: Thread + 'static>(
+pub fn do_shape<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -284,8 +270,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.devCopyArea(Lsun/java2d/windows/GDIWindowSurfaceData;IIIIII)V",
             result.unwrap_err().to_string()
@@ -310,8 +295,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.doDrawArc(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V",
             result.unwrap_err().to_string()
@@ -334,8 +318,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.doDrawLine(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
             result.unwrap_err().to_string()
@@ -358,8 +341,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.doDrawOval(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
             result.unwrap_err().to_string()
@@ -384,8 +366,7 @@ mod tests {
                 Value::Int(0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.doDrawPoly(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;III[I[IIZ)V",
             result.unwrap_err().to_string()
@@ -408,8 +389,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.doDrawRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
             result.unwrap_err().to_string()
@@ -434,8 +414,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.doDrawRoundRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V",
             result.unwrap_err().to_string()
@@ -460,8 +439,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.doFillArc(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V",
             result.unwrap_err().to_string()
@@ -484,8 +462,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.doFillOval(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
             result.unwrap_err().to_string()
@@ -509,8 +486,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.doFillPoly(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;III[I[II)V",
             result.unwrap_err().to_string()
@@ -533,8 +509,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.doFillRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
             result.unwrap_err().to_string()
@@ -559,8 +534,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.doFillRoundRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V",
             result.unwrap_err().to_string()
@@ -583,8 +557,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/windows/GDIRenderer.doShape(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIILjava/awt/geom/Path2D$Float;Z)V",
             result.unwrap_err().to_string()

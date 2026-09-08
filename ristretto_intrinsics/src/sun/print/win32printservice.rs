@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/print/Win32PrintService.getAllMediaIDs(Ljava/lang/String;Ljava/lang/String;)[I",
     Any
 )]
-#[async_method]
-pub async fn get_all_media_ids<T: Thread + 'static>(
+pub fn get_all_media_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn get_all_media_ids<T: Thread + 'static>(
     "sun/print/Win32PrintService.getAllMediaNames(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn get_all_media_names<T: Thread + 'static>(
+pub fn get_all_media_names<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -41,8 +38,7 @@ pub async fn get_all_media_names<T: Thread + 'static>(
     "sun/print/Win32PrintService.getAllMediaSizes(Ljava/lang/String;Ljava/lang/String;)[I",
     Any
 )]
-#[async_method]
-pub async fn get_all_media_sizes<T: Thread + 'static>(
+pub fn get_all_media_sizes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -58,8 +54,7 @@ pub async fn get_all_media_sizes<T: Thread + 'static>(
     "sun/print/Win32PrintService.getAllMediaTrayNames(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn get_all_media_tray_names<T: Thread + 'static>(
+pub fn get_all_media_tray_names<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -71,8 +66,7 @@ pub async fn get_all_media_tray_names<T: Thread + 'static>(
     "sun/print/Win32PrintService.getAllMediaTrays(Ljava/lang/String;Ljava/lang/String;)[I",
     Any
 )]
-#[async_method]
-pub async fn get_all_media_trays<T: Thread + 'static>(
+pub fn get_all_media_trays<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -88,8 +82,7 @@ pub async fn get_all_media_trays<T: Thread + 'static>(
     "sun/print/Win32PrintService.getAllResolutions(Ljava/lang/String;Ljava/lang/String;)[I",
     Any
 )]
-#[async_method]
-pub async fn get_all_resolutions<T: Thread + 'static>(
+pub fn get_all_resolutions<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -105,8 +98,7 @@ pub async fn get_all_resolutions<T: Thread + 'static>(
     "sun/print/Win32PrintService.getCapabilities(Ljava/lang/String;Ljava/lang/String;)I",
     Any
 )]
-#[async_method]
-pub async fn get_capabilities<T: Thread + 'static>(
+pub fn get_capabilities<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -122,8 +114,7 @@ pub async fn get_capabilities<T: Thread + 'static>(
     "sun/print/Win32PrintService.getCopiesSupported(Ljava/lang/String;Ljava/lang/String;)I",
     Any
 )]
-#[async_method]
-pub async fn get_copies_supported<T: Thread + 'static>(
+pub fn get_copies_supported<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -139,8 +130,7 @@ pub async fn get_copies_supported<T: Thread + 'static>(
     "sun/print/Win32PrintService.getDefaultSettings(Ljava/lang/String;Ljava/lang/String;)[I",
     Any
 )]
-#[async_method]
-pub async fn get_default_settings<T: Thread + 'static>(
+pub fn get_default_settings<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -153,8 +143,7 @@ pub async fn get_default_settings<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/print/Win32PrintService.getJobStatus(Ljava/lang/String;I)I", Any)]
-#[async_method]
-pub async fn get_job_status<T: Thread + 'static>(
+pub fn get_job_status<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -169,8 +158,7 @@ pub async fn get_job_status<T: Thread + 'static>(
     "sun/print/Win32PrintService.getMediaPrintableArea(Ljava/lang/String;I)[F",
     Any
 )]
-#[async_method]
-pub async fn get_media_printable_area<T: Thread + 'static>(
+pub fn get_media_printable_area<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -185,8 +173,7 @@ pub async fn get_media_printable_area<T: Thread + 'static>(
     "sun/print/Win32PrintService.getPrinterPort(Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn get_printer_port<T: Thread + 'static>(
+pub fn get_printer_port<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -209,8 +196,7 @@ mod tests {
         let result = get_all_media_ids(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/print/Win32PrintService.getAllMediaIDs(Ljava/lang/String;Ljava/lang/String;)[I",
             result.unwrap_err().to_string()
@@ -224,8 +210,7 @@ mod tests {
         let result = get_all_media_names(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/print/Win32PrintService.getAllMediaNames(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -239,8 +224,7 @@ mod tests {
         let result = get_all_media_sizes(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/print/Win32PrintService.getAllMediaSizes(Ljava/lang/String;Ljava/lang/String;)[I",
             result.unwrap_err().to_string()
@@ -254,8 +238,7 @@ mod tests {
         let result = get_all_media_tray_names(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/print/Win32PrintService.getAllMediaTrayNames(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -269,8 +252,7 @@ mod tests {
         let result = get_all_media_trays(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/print/Win32PrintService.getAllMediaTrays(Ljava/lang/String;Ljava/lang/String;)[I",
             result.unwrap_err().to_string()
@@ -284,8 +266,7 @@ mod tests {
         let result = get_all_resolutions(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/print/Win32PrintService.getAllResolutions(Ljava/lang/String;Ljava/lang/String;)[I",
             result.unwrap_err().to_string()
@@ -299,8 +280,7 @@ mod tests {
         let result = get_capabilities(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/print/Win32PrintService.getCapabilities(Ljava/lang/String;Ljava/lang/String;)I",
             result.unwrap_err().to_string()
@@ -314,8 +294,7 @@ mod tests {
         let result = get_copies_supported(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/print/Win32PrintService.getCopiesSupported(Ljava/lang/String;Ljava/lang/String;)I",
             result.unwrap_err().to_string()
@@ -329,8 +308,7 @@ mod tests {
         let result = get_default_settings(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/print/Win32PrintService.getDefaultSettings(Ljava/lang/String;Ljava/lang/String;)[I",
             result.unwrap_err().to_string()
@@ -344,8 +322,7 @@ mod tests {
         let result = get_job_status(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/print/Win32PrintService.getJobStatus(Ljava/lang/String;I)I",
             result.unwrap_err().to_string()
@@ -359,8 +336,7 @@ mod tests {
         let result = get_media_printable_area(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/print/Win32PrintService.getMediaPrintableArea(Ljava/lang/String;I)[F",
             result.unwrap_err().to_string()
@@ -371,7 +347,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_printer_port() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_printer_port(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_printer_port(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/print/Win32PrintService.getPrinterPort(Ljava/lang/String;)Ljava/lang/String;",
             result.unwrap_err().to_string()

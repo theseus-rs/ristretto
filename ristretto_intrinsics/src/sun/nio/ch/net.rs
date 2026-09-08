@@ -6,7 +6,6 @@ use crate::net_helpers::{
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -759,7 +758,6 @@ async fn socket_operation_interrupted<T: Thread + 'static>(
     "sun/nio/ch/Net.accept(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 #[expect(clippy::too_many_lines)]
 pub async fn accept<T: Thread + 'static>(
     thread: Arc<T>,
@@ -928,7 +926,6 @@ pub async fn accept<T: Thread + 'static>(
     "sun/nio/ch/Net.available(Ljava/io/FileDescriptor;)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn available<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -991,7 +988,6 @@ pub async fn available<T: Thread + 'static>(
     "sun/nio/ch/Net.bind0(Ljava/io/FileDescriptor;ZZLjava/net/InetAddress;I)V",
     Any
 )]
-#[async_method]
 pub async fn bind_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1023,7 +1019,6 @@ pub async fn bind_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.blockOrUnblock4(ZLjava/io/FileDescriptor;III)I", Any)]
-#[async_method]
 pub async fn block_or_unblock_4<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1060,7 +1055,6 @@ pub async fn block_or_unblock_4<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.blockOrUnblock6(ZLjava/io/FileDescriptor;[BI[B)I", Any)]
-#[async_method]
 pub async fn block_or_unblock_6<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1115,8 +1109,7 @@ pub async fn block_or_unblock_6<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.canIPv6SocketJoinIPv4Group0()Z", Any)]
-#[async_method]
-pub async fn can_ipv6_socket_join_ipv4_group_0<T: Thread + 'static>(
+pub fn can_ipv6_socket_join_ipv4_group_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1128,8 +1121,7 @@ pub async fn can_ipv6_socket_join_ipv4_group_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.canJoin6WithIPv4Group0()Z", Any)]
-#[async_method]
-pub async fn can_join_6_with_ipv4_group_0<T: Thread + 'static>(
+pub fn can_join_6_with_ipv4_group_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1140,8 +1132,7 @@ pub async fn can_join_6_with_ipv4_group_0<T: Thread + 'static>(
     "sun/nio/ch/Net.canUseIPv6OptionsWithIPv4LocalAddress0()Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn can_use_ipv6_options_with_ipv4_local_address_0<T: Thread + 'static>(
+pub fn can_use_ipv6_options_with_ipv4_local_address_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1152,7 +1143,6 @@ pub async fn can_use_ipv6_options_with_ipv4_local_address_0<T: Thread + 'static>
     "sun/nio/ch/Net.connect0(ZLjava/io/FileDescriptor;Ljava/net/InetAddress;I)I",
     Any
 )]
-#[async_method]
 pub async fn connect_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1256,7 +1246,6 @@ pub async fn connect_0<T: Thread + 'static>(
     "sun/nio/ch/Net.discardOOB(Ljava/io/FileDescriptor;)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn discard_oob<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1282,7 +1271,6 @@ pub async fn discard_oob<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.getIntOption0(Ljava/io/FileDescriptor;ZII)I", Any)]
-#[async_method]
 pub async fn get_int_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1304,7 +1292,6 @@ pub async fn get_int_option_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.getInterface4(Ljava/io/FileDescriptor;)I", Any)]
-#[async_method]
 pub async fn get_interface_4<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1325,7 +1312,6 @@ pub async fn get_interface_4<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.getInterface6(Ljava/io/FileDescriptor;)I", Any)]
-#[async_method]
 pub async fn get_interface_6<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1346,8 +1332,7 @@ pub async fn get_interface_6<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1355,8 +1340,7 @@ pub async fn init_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.isExclusiveBindAvailable()I", Any)]
-#[async_method]
-pub async fn is_exclusive_bind_available<T: Thread + 'static>(
+pub fn is_exclusive_bind_available<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1366,8 +1350,7 @@ pub async fn is_exclusive_bind_available<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.isIPv6Available0()Z", Any)]
-#[async_method]
-pub async fn is_ipv6_available_0<T: Thread + 'static>(
+pub fn is_ipv6_available_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1377,8 +1360,7 @@ pub async fn is_ipv6_available_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.isReusePortAvailable0()Z", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn is_reuse_port_available_0<T: Thread + 'static>(
+pub fn is_reuse_port_available_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1386,7 +1368,6 @@ pub async fn is_reuse_port_available_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.joinOrDrop4(ZLjava/io/FileDescriptor;III)I", Any)]
-#[async_method]
 pub async fn join_or_drop_4<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1420,7 +1401,6 @@ pub async fn join_or_drop_4<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.joinOrDrop6(ZLjava/io/FileDescriptor;[BI[B)I", Any)]
-#[async_method]
 pub async fn join_or_drop_6<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1484,7 +1464,6 @@ pub async fn join_or_drop_6<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.listen(Ljava/io/FileDescriptor;I)V", Any)]
-#[async_method]
 pub async fn listen<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1577,7 +1556,6 @@ pub async fn listen<T: Thread + 'static>(
     "sun/nio/ch/Net.localInetAddress(Ljava/io/FileDescriptor;)Ljava/net/InetAddress;",
     Any
 )]
-#[async_method]
 pub async fn local_inet_address<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1600,7 +1578,6 @@ pub async fn local_inet_address<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.localPort(Ljava/io/FileDescriptor;)I", Any)]
-#[async_method]
 pub async fn local_port<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1630,7 +1607,6 @@ pub async fn local_port<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.poll(Ljava/io/FileDescriptor;IJ)I", Any)]
-#[async_method]
 pub async fn poll<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1706,7 +1682,6 @@ pub async fn poll<T: Thread + 'static>(
     "sun/nio/ch/Net.pollConnect(Ljava/io/FileDescriptor;J)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn poll_connect<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1778,8 +1753,7 @@ pub async fn poll_connect<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.pollconnValue()S", Any)]
-#[async_method]
-pub async fn pollconn_value<T: Thread + 'static>(
+pub fn pollconn_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1791,8 +1765,7 @@ pub async fn pollconn_value<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.pollerrValue()S", Any)]
-#[async_method]
-pub async fn pollerr_value<T: Thread + 'static>(
+pub fn pollerr_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1804,8 +1777,7 @@ pub async fn pollerr_value<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.pollhupValue()S", Any)]
-#[async_method]
-pub async fn pollhup_value<T: Thread + 'static>(
+pub fn pollhup_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1817,8 +1789,7 @@ pub async fn pollhup_value<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.pollinValue()S", Any)]
-#[async_method]
-pub async fn pollin_value<T: Thread + 'static>(
+pub fn pollin_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1830,8 +1801,7 @@ pub async fn pollin_value<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.pollnvalValue()S", Any)]
-#[async_method]
-pub async fn pollnval_value<T: Thread + 'static>(
+pub fn pollnval_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1843,8 +1813,7 @@ pub async fn pollnval_value<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.polloutValue()S", Any)]
-#[async_method]
-pub async fn pollout_value<T: Thread + 'static>(
+pub fn pollout_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1859,7 +1828,6 @@ pub async fn pollout_value<T: Thread + 'static>(
     "sun/nio/ch/Net.remoteInetAddress(Ljava/io/FileDescriptor;)Ljava/net/InetAddress;",
     Any
 )]
-#[async_method]
 pub async fn remote_inet_address<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1882,7 +1850,6 @@ pub async fn remote_inet_address<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.remotePort(Ljava/io/FileDescriptor;)I", Any)]
-#[async_method]
 pub async fn remote_port<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1914,7 +1881,6 @@ pub async fn remote_port<T: Thread + 'static>(
     "sun/nio/ch/Net.sendOOB(Ljava/io/FileDescriptor;B)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn send_oob<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1940,7 +1906,6 @@ pub async fn send_oob<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.setIntOption0(Ljava/io/FileDescriptor;ZIIIZ)V", Any)]
-#[async_method]
 pub async fn set_int_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1964,7 +1929,6 @@ pub async fn set_int_option_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.setInterface4(Ljava/io/FileDescriptor;I)V", Any)]
-#[async_method]
 pub async fn set_interface_4<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1986,7 +1950,6 @@ pub async fn set_interface_4<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.setInterface6(Ljava/io/FileDescriptor;I)V", Any)]
-#[async_method]
 pub async fn set_interface_6<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2014,8 +1977,7 @@ pub async fn set_interface_6<T: Thread + 'static>(
     "sun/nio/ch/Net.shouldSetBothIPv4AndIPv6Options0()Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn should_set_both_ipv4_and_ipv6_options_0<T: Thread + 'static>(
+pub fn should_set_both_ipv4_and_ipv6_options_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2026,7 +1988,6 @@ pub async fn should_set_both_ipv4_and_ipv6_options_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.shutdown(Ljava/io/FileDescriptor;I)V", Any)]
-#[async_method]
 pub async fn shutdown<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2057,7 +2018,6 @@ pub async fn shutdown<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.socket0(ZZZZ)I", Any)]
-#[async_method]
 pub async fn socket_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2144,8 +2104,7 @@ pub async fn socket_0<T: Thread + 'static>(
     "sun/nio/ch/Net.shouldShutdownWriteBeforeClose0()Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn should_shutdown_write_before_close_0<T: Thread + 'static>(
+pub fn should_shutdown_write_before_close_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2196,7 +2155,7 @@ mod tests {
     #[tokio::test]
     async fn test_can_ipv6_socket_join_ipv4_group_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = can_ipv6_socket_join_ipv4_group_0(thread, Parameters::default()).await?;
+        let result = can_ipv6_socket_join_ipv4_group_0(thread, Parameters::default())?;
         assert_eq!(
             Some(Value::from(cfg!(any(
                 target_os = "linux",
@@ -2211,7 +2170,7 @@ mod tests {
     #[tokio::test]
     async fn test_can_join_6_with_ipv4_group_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = can_join_6_with_ipv4_group_0(thread, Parameters::default()).await?;
+        let result = can_join_6_with_ipv4_group_0(thread, Parameters::default())?;
         assert_eq!(Some(Value::from(cfg!(target_os = "macos"))), result);
         Ok(())
     }
@@ -2219,8 +2178,7 @@ mod tests {
     #[tokio::test]
     async fn test_can_use_ipv6_options_with_ipv4_local_address_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result =
-            can_use_ipv6_options_with_ipv4_local_address_0(thread, Parameters::default()).await?;
+        let result = can_use_ipv6_options_with_ipv4_local_address_0(thread, Parameters::default())?;
         assert_eq!(Some(Value::from(cfg!(target_family = "unix"))), result);
         Ok(())
     }
@@ -2263,7 +2221,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -2271,7 +2229,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_exclusive_bind_available() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = is_exclusive_bind_available(thread, Parameters::default()).await?;
+        let result = is_exclusive_bind_available(thread, Parameters::default())?;
         let expected = if cfg!(target_os = "windows") { 1 } else { -1 };
         assert_eq!(Some(Value::Int(expected)), result);
         Ok(())
@@ -2280,7 +2238,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_ipv6_available_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = is_ipv6_available_0(thread, Parameters::default()).await?;
+        let result = is_ipv6_available_0(thread, Parameters::default())?;
         assert_eq!(Some(Value::from(true)), result);
         Ok(())
     }
@@ -2288,7 +2246,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_reuse_port_available_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = is_reuse_port_available_0(thread, Parameters::default()).await?;
+        let result = is_reuse_port_available_0(thread, Parameters::default())?;
         let expected = i32::from(cfg!(unix));
         assert_eq!(Some(Value::Int(expected)), result);
         Ok(())
@@ -2378,7 +2336,7 @@ mod tests {
     #[tokio::test]
     async fn test_pollconn_value() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = pollconn_value(thread, Parameters::default()).await?;
+        let result = pollconn_value(thread, Parameters::default())?;
         #[cfg(unix)]
         let expected = libc::POLLOUT;
         #[cfg(windows)]
@@ -2390,7 +2348,7 @@ mod tests {
     #[tokio::test]
     async fn test_pollerr_value() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = pollerr_value(thread, Parameters::default()).await?;
+        let result = pollerr_value(thread, Parameters::default())?;
         #[cfg(unix)]
         let expected = libc::POLLERR;
         #[cfg(windows)]
@@ -2402,7 +2360,7 @@ mod tests {
     #[tokio::test]
     async fn test_pollhup_value() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = pollhup_value(thread, Parameters::default()).await?;
+        let result = pollhup_value(thread, Parameters::default())?;
         #[cfg(unix)]
         let expected = libc::POLLHUP;
         #[cfg(windows)]
@@ -2414,7 +2372,7 @@ mod tests {
     #[tokio::test]
     async fn test_pollin_value() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = pollin_value(thread, Parameters::default()).await?;
+        let result = pollin_value(thread, Parameters::default())?;
         #[cfg(unix)]
         let expected = libc::POLLIN;
         #[cfg(windows)]
@@ -2426,7 +2384,7 @@ mod tests {
     #[tokio::test]
     async fn test_pollnval_value() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = pollnval_value(thread, Parameters::default()).await?;
+        let result = pollnval_value(thread, Parameters::default())?;
         #[cfg(unix)]
         let expected = libc::POLLNVAL;
         #[cfg(windows)]
@@ -2438,7 +2396,7 @@ mod tests {
     #[tokio::test]
     async fn test_pollout_value() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = pollout_value(thread, Parameters::default()).await?;
+        let result = pollout_value(thread, Parameters::default())?;
         #[cfg(unix)]
         let expected = libc::POLLOUT;
         #[cfg(windows)]
@@ -2492,7 +2450,7 @@ mod tests {
     #[tokio::test]
     async fn test_should_set_both_ipv4_and_ipv6_options_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = should_set_both_ipv4_and_ipv6_options_0(thread, Parameters::default()).await?;
+        let result = should_set_both_ipv4_and_ipv6_options_0(thread, Parameters::default())?;
         assert_eq!(
             Some(Value::from(cfg!(any(
                 target_os = "linux",
@@ -2520,7 +2478,7 @@ mod tests {
     #[tokio::test]
     async fn test_should_shutdown_write_before_close_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = should_shutdown_write_before_close_0(thread, Parameters::default()).await?;
+        let result = should_shutdown_write_before_close_0(thread, Parameters::default())?;
         let expected = cfg!(target_os = "windows");
         assert_eq!(Some(Value::from(expected)), result);
         Ok(())

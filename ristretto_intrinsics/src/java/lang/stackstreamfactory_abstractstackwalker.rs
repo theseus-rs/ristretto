@@ -3,7 +3,6 @@ use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::{Object, Reference, Value};
 use ristretto_gc::GarbageCollector;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::{Frame, JavaObject, Parameters, Result, Thread, VM};
@@ -212,7 +211,6 @@ async fn call_stack_walk_impl<T: Thread + 'static>(
     "java/lang/StackStreamFactory$AbstractStackWalker.callStackWalk(JIII[Ljava/lang/Object;)Ljava/lang/Object;",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn call_stack_walk_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -231,7 +229,6 @@ pub async fn call_stack_walk_0<T: Thread + 'static>(
     "java/lang/StackStreamFactory$AbstractStackWalker.callStackWalk(JILjdk/internal/vm/ContinuationScope;Ljdk/internal/vm/Continuation;II[Ljava/lang/Object;)Ljava/lang/Object;",
     Equal(JAVA_21)
 )]
-#[async_method]
 pub async fn call_stack_walk_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -252,7 +249,6 @@ pub async fn call_stack_walk_1<T: Thread + 'static>(
     "java/lang/StackStreamFactory$AbstractStackWalker.callStackWalk(IILjdk/internal/vm/ContinuationScope;Ljdk/internal/vm/Continuation;II[Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThan(JAVA_21)
 )]
-#[async_method]
 pub async fn call_stack_walk_2<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -273,8 +269,7 @@ pub async fn call_stack_walk_2<T: Thread + 'static>(
     "java/lang/StackStreamFactory$AbstractStackWalker.fetchStackFrames(JJII[Ljava/lang/Object;)I",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn fetch_stack_frames_0<T: Thread + 'static>(
+pub fn fetch_stack_frames_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -292,8 +287,7 @@ pub async fn fetch_stack_frames_0<T: Thread + 'static>(
     "java/lang/StackStreamFactory$AbstractStackWalker.fetchStackFrames(IJIII[Ljava/lang/Object;)I",
     GreaterThan(JAVA_21)
 )]
-#[async_method]
-pub async fn fetch_stack_frames_1<T: Thread + 'static>(
+pub fn fetch_stack_frames_1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -312,8 +306,7 @@ pub async fn fetch_stack_frames_1<T: Thread + 'static>(
     "java/lang/StackStreamFactory$AbstractStackWalker.setContinuation(J[Ljava/lang/Object;Ljdk/internal/vm/Continuation;)V",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
-pub async fn set_continuation<T: Thread + 'static>(
+pub fn set_continuation<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -339,9 +332,7 @@ mod tests {
             Value::Int(0),       // startIndex
             Value::Object(None), // frames
         ]);
-        let result = fetch_stack_frames_0(thread, params)
-            .await
-            .expect("fetchStackFrames should succeed");
+        let result = fetch_stack_frames_0(thread, params).expect("fetchStackFrames should succeed");
         assert_eq!(Some(Value::Int(0)), result);
     }
 
@@ -357,9 +348,7 @@ mod tests {
             Value::Int(0),       // startIndex
             Value::Object(None), // frames
         ]);
-        let result = fetch_stack_frames_1(thread, params)
-            .await
-            .expect("fetchStackFrames should succeed");
+        let result = fetch_stack_frames_1(thread, params).expect("fetchStackFrames should succeed");
         assert_eq!(Some(Value::Int(0)), result);
     }
 
@@ -372,9 +361,7 @@ mod tests {
             Value::Object(None), // frames
             Value::Object(None), // continuation
         ]);
-        let result = set_continuation(thread, params)
-            .await
-            .expect("setContinuation should succeed");
+        let result = set_continuation(thread, params).expect("setContinuation should succeed");
         assert_eq!(None, result);
     }
 }

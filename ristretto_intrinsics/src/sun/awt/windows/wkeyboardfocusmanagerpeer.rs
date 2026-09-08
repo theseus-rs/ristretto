@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/awt/windows/WKeyboardFocusManagerPeer.getNativeFocusOwner()Ljava/awt/Component;",
     Any
 )]
-#[async_method]
-pub async fn get_native_focus_owner<T: Thread + 'static>(
+pub fn get_native_focus_owner<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn get_native_focus_owner<T: Thread + 'static>(
     "sun/awt/windows/WKeyboardFocusManagerPeer.getNativeFocusedWindow()Ljava/awt/Window;",
     Any
 )]
-#[async_method]
-pub async fn get_native_focused_window<T: Thread + 'static>(
+pub fn get_native_focused_window<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -41,8 +38,7 @@ pub async fn get_native_focused_window<T: Thread + 'static>(
     "sun/awt/windows/WKeyboardFocusManagerPeer.setNativeFocusOwner(Ljava/awt/peer/ComponentPeer;)V",
     Any
 )]
-#[async_method]
-pub async fn set_native_focus_owner<T: Thread + 'static>(
+pub fn set_native_focus_owner<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -58,7 +54,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_native_focus_owner() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_native_focus_owner(thread, Parameters::default()).await;
+        let result = get_native_focus_owner(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WKeyboardFocusManagerPeer.getNativeFocusOwner()Ljava/awt/Component;",
             result.unwrap_err().to_string()
@@ -69,7 +65,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_native_focused_window() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_native_focused_window(thread, Parameters::default()).await;
+        let result = get_native_focused_window(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WKeyboardFocusManagerPeer.getNativeFocusedWindow()Ljava/awt/Window;",
             result.unwrap_err().to_string()
@@ -80,8 +76,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_native_focus_owner() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            set_native_focus_owner(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = set_native_focus_owner(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WKeyboardFocusManagerPeer.setNativeFocusOwner(Ljava/awt/peer/ComponentPeer;)V",
             result.unwrap_err().to_string()

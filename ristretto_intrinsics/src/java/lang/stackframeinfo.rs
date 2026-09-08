@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_25;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{JavaObject, Parameters, Result, Thread};
 use std::sync::Arc;
@@ -16,7 +15,6 @@ use std::sync::Arc;
     "java/lang/StackFrameInfo.expandStackFrameInfo()V",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_method]
 pub async fn expand_stack_frame_info<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

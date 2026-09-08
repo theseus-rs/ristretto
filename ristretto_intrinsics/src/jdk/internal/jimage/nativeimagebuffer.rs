@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -13,7 +12,6 @@ use std::sync::Arc;
     "jdk/internal/jimage/NativeImageBuffer.getNativeMap(Ljava/lang/String;)Ljava/nio/ByteBuffer;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_native_map<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

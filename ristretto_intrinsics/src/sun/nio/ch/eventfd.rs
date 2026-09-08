@@ -1,15 +1,13 @@
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/EventFD.eventfd0()I", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn eventfd0<T: Thread + 'static>(
+pub fn eventfd0<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -25,8 +23,7 @@ pub async fn eventfd0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EventFD.set0(I)I", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn set0<T: Thread + 'static>(
+pub fn set0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -42,24 +39,19 @@ mod tests {
     #[tokio::test]
     async fn test_eventfd0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = eventfd0(thread, Parameters::default())
-            .await
-            .expect("eventfd");
+        let result = eventfd0(thread, Parameters::default()).expect("eventfd");
         assert!(matches!(result, Some(Value::Int(fd)) if fd >= 0));
     }
 
     #[tokio::test]
     async fn test_set0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let Some(Value::Int(fd)) = eventfd0(thread.clone(), Parameters::default())
-            .await
-            .expect("eventfd")
+        let Some(Value::Int(fd)) =
+            eventfd0(thread.clone(), Parameters::default()).expect("eventfd")
         else {
             panic!("expected descriptor");
         };
-        let result = set0(thread, Parameters::new(vec![Value::Int(fd)]))
-            .await
-            .expect("set");
+        let result = set0(thread, Parameters::new(vec![Value::Int(fd)])).expect("set");
         assert_eq!(Some(Value::Int(8)), result);
     }
 }

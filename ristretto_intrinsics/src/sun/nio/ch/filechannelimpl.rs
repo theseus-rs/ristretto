@@ -5,7 +5,6 @@ use crate::sun::nio::fs::managed_files;
 use ristretto_classfile::VersionSpecification::{Equal, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError::{IllegalArgumentException, IoException, OutOfMemoryError};
@@ -15,8 +14,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/FileChannelImpl.initIDs()J", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -87,7 +85,6 @@ async fn do_map<V: VM>(vm: &Arc<V>, fd: i64, prot: i32, position: i64, length: i
 }
 
 #[intrinsic_method("sun/nio/ch/FileChannelImpl.map0(IJJ)J", LessThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn map_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -113,7 +110,6 @@ pub async fn map_0_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/FileChannelImpl.map0(IJJZ)J", Equal(JAVA_17))]
-#[async_method]
 pub async fn map_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -134,8 +130,7 @@ pub async fn map_0_1<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/FileChannelImpl.maxDirectTransferSize0()I", Equal(JAVA_17))]
-#[async_method]
-pub async fn max_direct_transfer_size_0<T: Thread + 'static>(
+pub fn max_direct_transfer_size_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -146,7 +141,6 @@ pub async fn max_direct_transfer_size_0<T: Thread + 'static>(
     "sun/nio/ch/FileChannelImpl.transferTo0(Ljava/io/FileDescriptor;JJLjava/io/FileDescriptor;)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn transfer_to_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -180,8 +174,7 @@ pub async fn transfer_to_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/FileChannelImpl.unmap0(JJ)I", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn unmap_0<T: Thread + 'static>(
+pub fn unmap_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -239,7 +232,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }
@@ -247,7 +240,7 @@ mod tests {
     #[tokio::test]
     async fn test_max_direct_transfer_size_0() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
-        let result = max_direct_transfer_size_0(thread, Parameters::default()).await?;
+        let result = max_direct_transfer_size_0(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(i32::MAX)));
         Ok(())
     }
@@ -275,7 +268,7 @@ mod tests {
         let weak = Arc::downgrade(&vm);
         let thread = ristretto_vm::Thread::new(&weak, 99);
         let _ = thread2;
-        unmap_0(thread, params).await?;
+        unmap_0(thread, params)?;
         let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
         assert!(regions.get(address).is_none());
         Ok(())
@@ -341,7 +334,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push_long(0xdead_beef);
         params.push_long(16);
-        let result = unmap_0(thread, params).await?;
+        let result = unmap_0(thread, params)?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }

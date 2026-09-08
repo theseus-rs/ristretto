@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/net/ExtendedOptionsImpl.flowSupported()Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn flow_supported<T: Thread + 'static>(
+pub fn flow_supported<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,8 +21,7 @@ pub async fn flow_supported<T: Thread + 'static>(
     "sun/net/ExtendedOptionsImpl.getFlowOption(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_flow_option<T: Thread + 'static>(
+pub fn get_flow_option<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -36,8 +33,7 @@ pub async fn get_flow_option<T: Thread + 'static>(
     "sun/net/ExtendedOptionsImpl.getTcpKeepAliveIntvl(Ljava/io/FileDescriptor;)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_tcp_keep_alive_intvl<T: Thread + 'static>(
+pub fn get_tcp_keep_alive_intvl<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,8 +45,7 @@ pub async fn get_tcp_keep_alive_intvl<T: Thread + 'static>(
     "sun/net/ExtendedOptionsImpl.getTcpKeepAliveProbes(Ljava/io/FileDescriptor;)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_tcp_keep_alive_probes<T: Thread + 'static>(
+pub fn get_tcp_keep_alive_probes<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -62,8 +57,7 @@ pub async fn get_tcp_keep_alive_probes<T: Thread + 'static>(
     "sun/net/ExtendedOptionsImpl.getTcpKeepAliveTime(Ljava/io/FileDescriptor;)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_tcp_keep_alive_time<T: Thread + 'static>(
+pub fn get_tcp_keep_alive_time<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -72,8 +66,7 @@ pub async fn get_tcp_keep_alive_time<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/net/ExtendedOptionsImpl.init()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -84,8 +77,7 @@ pub async fn init<T: Thread + 'static>(
     "sun/net/ExtendedOptionsImpl.keepAliveOptionsSupported()Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn keep_alive_options_supported<T: Thread + 'static>(
+pub fn keep_alive_options_supported<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -96,8 +88,7 @@ pub async fn keep_alive_options_supported<T: Thread + 'static>(
     "sun/net/ExtendedOptionsImpl.setFlowOption(Ljava/io/FileDescriptor;Ljdk/net/SocketFlow;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn set_flow_option<T: Thread + 'static>(
+pub fn set_flow_option<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -109,8 +100,7 @@ pub async fn set_flow_option<T: Thread + 'static>(
     "sun/net/ExtendedOptionsImpl.setTcpKeepAliveIntvl(Ljava/io/FileDescriptor;I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn set_tcp_keep_alive_intvl<T: Thread + 'static>(
+pub fn set_tcp_keep_alive_intvl<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -121,8 +111,7 @@ pub async fn set_tcp_keep_alive_intvl<T: Thread + 'static>(
     "sun/net/ExtendedOptionsImpl.setTcpKeepAliveProbes(Ljava/io/FileDescriptor;I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn set_tcp_keep_alive_probes<T: Thread + 'static>(
+pub fn set_tcp_keep_alive_probes<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -133,8 +122,7 @@ pub async fn set_tcp_keep_alive_probes<T: Thread + 'static>(
     "sun/net/ExtendedOptionsImpl.setTcpKeepAliveTime(Ljava/io/FileDescriptor;I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn set_tcp_keep_alive_time<T: Thread + 'static>(
+pub fn set_tcp_keep_alive_time<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -148,7 +136,7 @@ mod tests {
     #[tokio::test]
     async fn test_flow_supported() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = flow_supported(thread, Parameters::default()).await?;
+        let result = flow_supported(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -156,7 +144,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_flow_option() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = get_flow_option(thread, Parameters::default()).await?;
+        let result = get_flow_option(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -164,7 +152,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_tcp_keep_alive_intvl() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = get_tcp_keep_alive_intvl(thread, Parameters::default()).await?;
+        let result = get_tcp_keep_alive_intvl(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(75)));
         Ok(())
     }
@@ -172,7 +160,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_tcp_keep_alive_probes() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = get_tcp_keep_alive_probes(thread, Parameters::default()).await?;
+        let result = get_tcp_keep_alive_probes(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(9)));
         Ok(())
     }
@@ -180,7 +168,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_tcp_keep_alive_time() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = get_tcp_keep_alive_time(thread, Parameters::default()).await?;
+        let result = get_tcp_keep_alive_time(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(7200)));
         Ok(())
     }
@@ -188,7 +176,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = init(thread, Parameters::default()).await?;
+        let result = init(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -196,7 +184,7 @@ mod tests {
     #[tokio::test]
     async fn test_keep_alive_options_supported() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = keep_alive_options_supported(thread, Parameters::default()).await?;
+        let result = keep_alive_options_supported(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -204,7 +192,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_flow_option() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = set_flow_option(thread, Parameters::default()).await?;
+        let result = set_flow_option(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -212,7 +200,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_tcp_keep_alive_intvl() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = set_tcp_keep_alive_intvl(thread, Parameters::default()).await?;
+        let result = set_tcp_keep_alive_intvl(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -220,7 +208,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_tcp_keep_alive_probes() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = set_tcp_keep_alive_probes(thread, Parameters::default()).await?;
+        let result = set_tcp_keep_alive_probes(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -228,7 +216,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_tcp_keep_alive_time() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = set_tcp_keep_alive_time(thread, Parameters::default()).await?;
+        let result = set_tcp_keep_alive_time(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

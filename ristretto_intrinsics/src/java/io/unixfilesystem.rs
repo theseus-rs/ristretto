@@ -5,7 +5,7 @@ use ristretto_classfile::VersionSpecification::{
 };
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result, Thread};
 use std::sync::Arc;
 
@@ -13,7 +13,6 @@ use std::sync::Arc;
     "java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn canonicalize_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -25,31 +24,28 @@ pub async fn canonicalize_0<T: Thread + 'static>(
     "java/io/UnixFileSystem.checkAccess(Ljava/io/File;I)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn check_access<T: Thread + 'static>(
+pub fn check_access<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::check_access(thread, parameters).await
+    filesystem::check_access(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/io/UnixFileSystem.checkAccess0(Ljava/io/File;I)Z",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
-pub async fn check_access_0<T: Thread + 'static>(
+pub fn check_access_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::check_access(thread, parameters).await
+    filesystem::check_access(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/io/UnixFileSystem.createDirectory(Ljava/io/File;)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn create_directory<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -61,7 +57,6 @@ pub async fn create_directory<T: Thread + 'static>(
     "java/io/UnixFileSystem.createDirectory0(Ljava/io/File;)Z",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
 pub async fn create_directory_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -73,7 +68,6 @@ pub async fn create_directory_0<T: Thread + 'static>(
     "java/io/UnixFileSystem.createFileExclusively(Ljava/lang/String;)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn create_file_exclusively<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -85,7 +79,6 @@ pub async fn create_file_exclusively<T: Thread + 'static>(
     "java/io/UnixFileSystem.createFileExclusively0(Ljava/lang/String;)Z",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
 pub async fn create_file_exclusively_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -94,7 +87,6 @@ pub async fn create_file_exclusively_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/UnixFileSystem.delete0(Ljava/io/File;)Z", Any)]
-#[async_method]
 pub async fn delete_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -103,19 +95,17 @@ pub async fn delete_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/UnixFileSystem.getBooleanAttributes0(Ljava/io/File;)I", Any)]
-#[async_method]
-pub async fn get_boolean_attributes_0<T: Thread + 'static>(
+pub fn get_boolean_attributes_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::get_boolean_attributes(thread, parameters).await
+    filesystem::get_boolean_attributes(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/io/UnixFileSystem.getLastModifiedTime(Ljava/io/File;)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_last_modified_time<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -127,7 +117,6 @@ pub async fn get_last_modified_time<T: Thread + 'static>(
     "java/io/UnixFileSystem.getLastModifiedTime0(Ljava/io/File;)J",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
 pub async fn get_last_modified_time_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -139,7 +128,6 @@ pub async fn get_last_modified_time_0<T: Thread + 'static>(
     "java/io/UnixFileSystem.getLength(Ljava/io/File;)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_length<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -151,7 +139,6 @@ pub async fn get_length<T: Thread + 'static>(
     "java/io/UnixFileSystem.getLength0(Ljava/io/File;)J",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
 pub async fn get_length_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -163,41 +150,37 @@ pub async fn get_length_0<T: Thread + 'static>(
     "java/io/UnixFileSystem.getNameMax0(Ljava/lang/String;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_name_max_0<T: Thread + 'static>(
+pub fn get_name_max_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::get_name_max(thread, parameters).await
+    filesystem::get_name_max(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/io/UnixFileSystem.getSpace(Ljava/io/File;I)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_space<T: Thread + 'static>(
+pub fn get_space<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::get_space(thread, parameters).await
+    filesystem::get_space(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/io/UnixFileSystem.getSpace0(Ljava/io/File;I)J",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
-pub async fn get_space_0<T: Thread + 'static>(
+pub fn get_space_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::get_space(thread, parameters).await
+    filesystem::get_space(thread, parameters)
 }
 
 #[intrinsic_method("java/io/UnixFileSystem.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -208,7 +191,6 @@ pub async fn init_ids<T: Thread + 'static>(
     "java/io/UnixFileSystem.list(Ljava/io/File;)[Ljava/lang/String;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn list<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -220,7 +202,6 @@ pub async fn list<T: Thread + 'static>(
     "java/io/UnixFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
 pub async fn list_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -229,7 +210,6 @@ pub async fn list_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/UnixFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z", Any)]
-#[async_method]
 pub async fn rename_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -241,31 +221,28 @@ pub async fn rename_0<T: Thread + 'static>(
     "java/io/UnixFileSystem.setLastModifiedTime(Ljava/io/File;J)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn set_last_modified_time<T: Thread + 'static>(
+pub fn set_last_modified_time<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::set_last_modified_time(thread, parameters).await
+    filesystem::set_last_modified_time(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/io/UnixFileSystem.setLastModifiedTime0(Ljava/io/File;J)Z",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
-pub async fn set_last_modified_time_0<T: Thread + 'static>(
+pub fn set_last_modified_time_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::set_last_modified_time(thread, parameters).await
+    filesystem::set_last_modified_time(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/io/UnixFileSystem.setPermission(Ljava/io/File;IZZ)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn set_permission<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -277,7 +254,6 @@ pub async fn set_permission<T: Thread + 'static>(
     "java/io/UnixFileSystem.setPermission0(Ljava/io/File;IZZ)Z",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
 pub async fn set_permission_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -289,7 +265,6 @@ pub async fn set_permission_0<T: Thread + 'static>(
     "java/io/UnixFileSystem.setReadOnly(Ljava/io/File;)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn set_read_only<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -301,7 +276,6 @@ pub async fn set_read_only<T: Thread + 'static>(
     "java/io/UnixFileSystem.setReadOnly0(Ljava/io/File;)Z",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
 pub async fn set_read_only_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -350,7 +324,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         parameters.push_int(FileAccessMode::READ.bits());
-        let value = check_access(thread, parameters).await?.expect("access");
+        let value = check_access(thread, parameters)?.expect("access");
         let has_access = value.as_bool()?;
         assert!(has_access);
         Ok(())
@@ -363,7 +337,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         parameters.push_int(FileAccessMode::READ.bits());
-        let value = check_access_0(thread, parameters).await?.expect("access");
+        let value = check_access_0(thread, parameters)?.expect("access");
         let has_access = value.as_bool()?;
         assert!(has_access);
         Ok(())
@@ -475,9 +449,7 @@ mod tests {
         let (_file, file_object) = create_file(&thread, "get_boolean_attributes_0").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
-        let value = get_boolean_attributes_0(thread, parameters)
-            .await?
-            .expect("attributes");
+        let value = get_boolean_attributes_0(thread, parameters)?.expect("attributes");
         let attributes = value.as_i32()?;
         assert!(attributes > 0);
         Ok(())
@@ -575,7 +547,7 @@ mod tests {
         let path = "get_name_max_0.txt".to_object(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(path);
-        let value = get_name_max_0(thread, parameters).await?.expect("name max");
+        let value = get_name_max_0(thread, parameters)?.expect("name max");
         let length = value.as_i64()?;
         assert_eq!(255, length);
         Ok(())
@@ -589,7 +561,7 @@ mod tests {
             let mut parameters = Parameters::default();
             parameters.push(file_object);
             parameters.push_int(space_type);
-            let value = get_space(thread, parameters).await?.expect("space");
+            let value = get_space(thread, parameters)?.expect("space");
             let space = value.as_i64()?;
 
             if space_type > 2 {
@@ -609,7 +581,7 @@ mod tests {
             let mut parameters = Parameters::default();
             parameters.push(file_object);
             parameters.push_int(space_type);
-            let value = get_space_0(thread, parameters).await?.expect("space");
+            let value = get_space_0(thread, parameters)?.expect("space");
             let space = value.as_i64()?;
 
             if space_type > 2 {
@@ -624,7 +596,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -690,9 +662,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         parameters.push_long(0);
-        let value = set_last_modified_time(thread, parameters)
-            .await?
-            .expect("success");
+        let value = set_last_modified_time(thread, parameters)?.expect("success");
         let success = value.as_bool()?;
         assert!(success);
         Ok(())
@@ -705,9 +675,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         parameters.push_long(0);
-        let value = set_last_modified_time_0(thread, parameters)
-            .await?
-            .expect("success");
+        let value = set_last_modified_time_0(thread, parameters)?.expect("success");
         let success = value.as_bool()?;
         assert!(success);
         Ok(())

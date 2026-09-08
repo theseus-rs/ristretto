@@ -16,7 +16,6 @@ use ristretto_classfile::VersionSpecification::{Between, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
 #[cfg(not(target_os = "windows"))]
-use ristretto_macros::async_method;
 #[cfg(not(target_os = "windows"))]
 use ristretto_macros::intrinsic_method;
 #[cfg(not(target_os = "windows"))]
@@ -96,7 +95,6 @@ async fn send_datagram<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.bind0(ILjava/net/InetAddress;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn bind_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -126,7 +124,6 @@ pub async fn bind_0<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.connect0(Ljava/net/InetAddress;I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn connect_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -145,7 +142,6 @@ pub async fn connect_0<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.dataAvailable()I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn data_available<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -162,7 +158,6 @@ pub async fn data_available<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.datagramSocketClose()V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn datagram_socket_close<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -182,7 +177,6 @@ pub async fn datagram_socket_close<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.datagramSocketCreate()V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn datagram_socket_create<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -199,7 +193,6 @@ pub async fn datagram_socket_create<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.disconnect0(I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn disconnect_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -213,7 +206,6 @@ pub async fn disconnect_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainDatagramSocketImpl.getTTL()B", LessThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn get_ttl<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -231,7 +223,6 @@ pub async fn get_ttl<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.getTimeToLive()I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_time_to_live<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -246,8 +237,7 @@ pub async fn get_time_to_live<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainDatagramSocketImpl.init()V", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -259,7 +249,6 @@ pub async fn init<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.join(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn join<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -284,7 +273,6 @@ pub async fn join<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.leave(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn leave<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -309,7 +297,6 @@ pub async fn leave<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.peek(Ljava/net/InetAddress;)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn peek<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -329,7 +316,6 @@ pub async fn peek<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.peekData(Ljava/net/DatagramPacket;)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn peek_data<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -346,7 +332,6 @@ pub async fn peek_data<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.receive0(Ljava/net/DatagramPacket;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn receive_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -363,7 +348,6 @@ pub async fn receive_0<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.send(Ljava/net/DatagramPacket;)V",
     Between(JAVA_8, JAVA_11)
 )]
-#[async_method]
 pub async fn send<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -376,7 +360,6 @@ pub async fn send<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.send0(Ljava/net/DatagramPacket;)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn send_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -389,7 +372,6 @@ pub async fn send_0<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.setTTL(B)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn set_ttl<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -408,7 +390,6 @@ pub async fn set_ttl<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.setTimeToLive(I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn set_time_to_live<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -426,7 +407,6 @@ pub async fn set_time_to_live<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.socketGetOption(I)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_get_option<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -516,7 +496,6 @@ pub async fn socket_get_option<T: Thread + 'static>(
     "java/net/PlainDatagramSocketImpl.socketSetOption0(ILjava/lang/Object;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_set_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -690,7 +669,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
-        let result = init(thread, Parameters::default()).await?;
+        let result = init(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }

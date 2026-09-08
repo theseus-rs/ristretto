@@ -6,7 +6,6 @@ use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17};
 use ristretto_classloader::{Reference, Value};
 use ristretto_gc::Gc;
 use ristretto_gc::sync::RwLock;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError::IllegalArgumentException;
@@ -120,8 +119,7 @@ fn arraycopy_within_helper<T: Clone>(
     "java/lang/System.arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V",
     Any
 )]
-#[async_method]
-pub async fn arraycopy<T: Thread + 'static>(
+pub fn arraycopy<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -222,8 +220,7 @@ pub async fn arraycopy<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/System.allowSecurityManager()Z", Any)]
-#[async_method]
-pub async fn allow_security_manager<T: Thread + 'static>(
+pub fn allow_security_manager<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -231,8 +228,7 @@ pub async fn allow_security_manager<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/System.currentTimeMillis()J", Any)]
-#[async_method]
-pub async fn current_time_millis<T: Thread + 'static>(
+pub fn current_time_millis<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -248,8 +244,7 @@ pub async fn current_time_millis<T: Thread + 'static>(
     "java/lang/System.getSecurityManager()Ljava/lang/SecurityManager;",
     Any
 )]
-#[async_method]
-pub async fn get_security_manager<T: Thread + 'static>(
+pub fn get_security_manager<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -264,12 +259,11 @@ pub async fn get_security_manager<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/System.identityHashCode(Ljava/lang/Object;)I", Any)]
-#[async_method]
-pub async fn identity_hash_code<T: Thread + 'static>(
+pub fn identity_hash_code<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    hash_code(thread, parameters).await
+    hash_code(thread, parameters)
 }
 
 #[intrinsic_method(
@@ -277,7 +271,6 @@ pub async fn identity_hash_code<T: Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 /// Mechanism for initializing properties for Java versions <= 11
-#[async_method]
 pub async fn init_properties<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -316,7 +309,6 @@ pub async fn init_properties<T: Thread + 'static>(
     "java/lang/System.mapLibraryName(Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn map_library_name<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -333,8 +325,7 @@ pub async fn map_library_name<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/System.nanoTime()J", Any)]
-#[async_method]
-pub async fn nano_time<T: Thread + 'static>(
+pub fn nano_time<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -347,7 +338,6 @@ pub async fn nano_time<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/System.registerNatives()V", Any)]
-#[async_method]
 pub async fn register_natives<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -386,7 +376,6 @@ pub async fn register_natives<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/System.setIn0(Ljava/io/InputStream;)V", Any)]
-#[async_method]
 pub async fn set_in_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -399,7 +388,6 @@ pub async fn set_in_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/System.setOut0(Ljava/io/PrintStream;)V", Any)]
-#[async_method]
 pub async fn set_out_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -412,7 +400,6 @@ pub async fn set_out_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/System.setErr0(Ljava/io/PrintStream;)V", Any)]
-#[async_method]
 pub async fn set_err_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -428,8 +415,7 @@ pub async fn set_err_0<T: Thread + 'static>(
     "java/lang/System.setSecurityManager(Ljava/lang/SecurityManager;)V",
     Any
 )]
-#[async_method]
-pub async fn set_security_manager<T: Thread + 'static>(
+pub fn set_security_manager<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -726,7 +712,7 @@ mod tests {
     #[tokio::test]
     async fn test_allow_security_manager() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = allow_security_manager(thread, Parameters::default()).await?;
+        let result = allow_security_manager(thread, Parameters::default())?;
         assert_eq!(Some(Value::from(false)), result);
         Ok(())
     }
@@ -734,7 +720,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_security_manager() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_security_manager(thread, Parameters::default()).await?;
+        let result = get_security_manager(thread, Parameters::default())?;
         assert_eq!(Some(Value::Object(None)), result);
         Ok(())
     }
@@ -742,7 +728,7 @@ mod tests {
     #[tokio::test]
     async fn test_nano_time() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = nano_time(thread, Parameters::default()).await?;
+        let result = nano_time(thread, Parameters::default())?;
         let time = result.unwrap_or(Value::Long(0)).as_i64()?;
         assert!(time > 0);
         Ok(())
@@ -751,7 +737,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_security_manager() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = set_security_manager(thread, Parameters::default()).await;
+        let result = set_security_manager(thread, Parameters::default());
         assert!(result.is_err());
         Ok(())
     }

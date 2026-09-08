@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM as _};
@@ -56,8 +55,7 @@ fn record<T: Thread + 'static>(thread: &T, event: HprofEvent) -> Result<()> {
     "com/sun/demo/jvmti/hprof/Tracker.nativeCallSite(Ljava/lang/Object;II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn native_call_site<T: Thread + 'static>(
+pub fn native_call_site<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -81,8 +79,7 @@ pub async fn native_call_site<T: Thread + 'static>(
     "com/sun/demo/jvmti/hprof/Tracker.nativeNewArray(Ljava/lang/Object;Ljava/lang/Object;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn native_new_array<T: Thread + 'static>(
+pub fn native_new_array<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -105,8 +102,7 @@ pub async fn native_new_array<T: Thread + 'static>(
     "com/sun/demo/jvmti/hprof/Tracker.nativeObjectInit(Ljava/lang/Object;Ljava/lang/Object;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn native_object_init<T: Thread + 'static>(
+pub fn native_object_init<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -129,8 +125,7 @@ pub async fn native_object_init<T: Thread + 'static>(
     "com/sun/demo/jvmti/hprof/Tracker.nativeReturnSite(Ljava/lang/Object;II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn native_return_site<T: Thread + 'static>(
+pub fn native_return_site<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -160,8 +155,7 @@ mod tests {
         let result = native_call_site(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(None, result.expect("result"));
     }
 
@@ -171,8 +165,7 @@ mod tests {
         let result = native_new_array(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(None, result.expect("result"));
     }
 
@@ -182,8 +175,7 @@ mod tests {
         let result = native_object_init(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(None, result.expect("result"));
     }
 
@@ -193,8 +185,7 @@ mod tests {
         let result = native_return_site(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(None, result.expect("result"));
     }
 }

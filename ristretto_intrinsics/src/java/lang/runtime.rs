@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -14,8 +13,7 @@ use std::sync::Arc;
 use sysinfo::{MemoryRefreshKind, System};
 
 #[intrinsic_method("java/lang/Runtime.availableProcessors()I", Any)]
-#[async_method]
-pub async fn available_processors<T: Thread + 'static>(
+pub fn available_processors<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,8 +30,7 @@ pub async fn available_processors<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Runtime.freeMemory()J", Any)]
-#[async_method]
-pub async fn free_memory<T: Thread + 'static>(
+pub fn free_memory<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,18 +52,13 @@ pub async fn free_memory<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Runtime.gc()V", Any)]
-#[async_method]
-pub async fn gc<T: Thread + 'static>(
-    thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
+pub fn gc<T: Thread + 'static>(thread: Arc<T>, _parameters: Parameters) -> Result<Option<Value>> {
     thread.vm()?.garbage_collector().collect();
     Ok(None)
 }
 
 #[intrinsic_method("java/lang/Runtime.maxMemory()J", Any)]
-#[async_method]
-pub async fn max_memory<T: Thread + 'static>(
+pub fn max_memory<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -86,8 +78,7 @@ pub async fn max_memory<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Runtime.runFinalization0()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn run_finalization_0<T: Thread + 'static>(
+pub fn run_finalization_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -95,8 +86,7 @@ pub async fn run_finalization_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Runtime.traceInstructions(Z)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn trace_instructions<T: Thread + 'static>(
+pub fn trace_instructions<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -108,8 +98,7 @@ pub async fn trace_instructions<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Runtime.traceMethodCalls(Z)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn trace_method_calls<T: Thread + 'static>(
+pub fn trace_method_calls<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -121,8 +110,7 @@ pub async fn trace_method_calls<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Runtime.totalMemory()J", Any)]
-#[async_method]
-pub async fn total_memory<T: Thread + 'static>(
+pub fn total_memory<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -151,7 +139,7 @@ mod tests {
     #[tokio::test]
     async fn test_available_processors() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = available_processors(thread, Parameters::default()).await?;
+        let result = available_processors(thread, Parameters::default())?;
         let available_processors = result.unwrap_or(Value::Int(0)).as_i32()?;
         assert!(available_processors >= 1);
         Ok(())
@@ -160,7 +148,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_memory() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = free_memory(thread, Parameters::default()).await?;
+        let result = free_memory(thread, Parameters::default())?;
         let free_memory = result.unwrap_or(Value::Long(0)).as_i64()?;
         #[cfg(not(target_family = "wasm"))]
         assert!(free_memory >= 1);
@@ -172,7 +160,7 @@ mod tests {
     #[tokio::test]
     async fn test_gc() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = gc(thread, Parameters::default()).await?;
+        let result = gc(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -180,7 +168,7 @@ mod tests {
     #[tokio::test]
     async fn test_max_memory() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = max_memory(thread, Parameters::default()).await?;
+        let result = max_memory(thread, Parameters::default())?;
         let max_memory = result.unwrap_or(Value::Long(0)).as_i64()?;
         assert!(max_memory >= 1);
         Ok(())
@@ -189,7 +177,7 @@ mod tests {
     #[tokio::test]
     async fn test_run_finalization_0() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = run_finalization_0(thread, Parameters::default()).await?;
+        let result = run_finalization_0(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -197,7 +185,7 @@ mod tests {
     #[tokio::test]
     async fn test_trace_instructions() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = trace_instructions(thread, Parameters::new(vec![Value::from(false)])).await;
+        let result = trace_instructions(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "java.lang.Runtime.traceInstructions(Z)V",
             result.unwrap_err().to_string()
@@ -207,7 +195,7 @@ mod tests {
     #[tokio::test]
     async fn test_trace_method_calls() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = trace_method_calls(thread, Parameters::new(vec![Value::from(false)])).await;
+        let result = trace_method_calls(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "java.lang.Runtime.traceMethodCalls(Z)V",
             result.unwrap_err().to_string()
@@ -217,7 +205,7 @@ mod tests {
     #[tokio::test]
     async fn test_total_memory() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = total_memory(thread, Parameters::default()).await?;
+        let result = total_memory(thread, Parameters::default())?;
         let total_memory = result.unwrap_or(Value::Long(0)).as_i64()?;
         #[cfg(not(target_family = "wasm"))]
         assert!(total_memory >= 1);

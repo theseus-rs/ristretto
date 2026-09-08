@@ -2,7 +2,6 @@ use ahash::AHashSet;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::VM;
@@ -13,7 +12,6 @@ use std::sync::Arc;
     "java/lang/Package.getSystemPackage0(Ljava/lang/String;)Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_system_package_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -58,7 +56,6 @@ pub async fn get_system_package_0<T: Thread + 'static>(
     "java/lang/Package.getSystemPackages0()[Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_system_packages_0<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,

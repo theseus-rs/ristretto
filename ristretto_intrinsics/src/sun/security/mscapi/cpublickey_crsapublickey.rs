@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/security/mscapi/CPublicKey$CRSAPublicKey.getExponent([B)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_exponent<T: Thread + 'static>(
+pub fn get_exponent<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,8 +25,7 @@ pub async fn get_exponent<T: Thread + 'static>(
     "sun/security/mscapi/CPublicKey$CRSAPublicKey.getModulus([B)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_modulus<T: Thread + 'static>(
+pub fn get_modulus<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -47,7 +44,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_exponent() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_exponent(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_exponent(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/security/mscapi/CPublicKey$CRSAPublicKey.getExponent([B)[B",
             result.unwrap_err().to_string()
@@ -58,7 +55,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_modulus() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_modulus(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_modulus(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/security/mscapi/CPublicKey$CRSAPublicKey.getModulus([B)[B",
             result.unwrap_err().to_string()

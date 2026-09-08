@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/opengl/OGLRenderer.drawPoly([I[IIZII)V", Any)]
-#[async_method]
-pub async fn draw_poly<T: Thread + 'static>(
+pub fn draw_poly<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -42,8 +40,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.opengl.OGLRenderer.drawPoly([I[IIZII)V",
             result.unwrap_err().to_string()

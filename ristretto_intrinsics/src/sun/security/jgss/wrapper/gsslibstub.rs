@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/security/jgss/wrapper/GSSLibStub.acceptContext(JLorg/ietf/jgss/ChannelBinding;[BLsun/security/jgss/wrapper/NativeGSSContext;)[B",
     Any
 )]
-#[async_method]
-pub async fn accept_context<T: Thread + 'static>(
+pub fn accept_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -24,8 +22,7 @@ pub async fn accept_context<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.acquireCred(JII)J", Any)]
-#[async_method]
-pub async fn acquire_cred<T: Thread + 'static>(
+pub fn acquire_cred<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -39,8 +36,7 @@ pub async fn acquire_cred<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.canonicalizeName(J)J", Any)]
-#[async_method]
-pub async fn canonicalize_name<T: Thread + 'static>(
+pub fn canonicalize_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -52,8 +48,7 @@ pub async fn canonicalize_name<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.compareName(JJ)Z", Any)]
-#[async_method]
-pub async fn compare_name<T: Thread + 'static>(
+pub fn compare_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +61,7 @@ pub async fn compare_name<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.deleteContext(J)J", Any)]
-#[async_method]
-pub async fn delete_context<T: Thread + 'static>(
+pub fn delete_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,8 +76,7 @@ pub async fn delete_context<T: Thread + 'static>(
     "sun/security/jgss/wrapper/GSSLibStub.displayName(J)[Ljava/lang/Object;",
     Any
 )]
-#[async_method]
-pub async fn display_name<T: Thread + 'static>(
+pub fn display_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -95,8 +88,7 @@ pub async fn display_name<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.exportContext(J)[B", Any)]
-#[async_method]
-pub async fn export_context<T: Thread + 'static>(
+pub fn export_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -108,8 +100,7 @@ pub async fn export_context<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.exportName(J)[B", Any)]
-#[async_method]
-pub async fn export_name<T: Thread + 'static>(
+pub fn export_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -124,8 +115,7 @@ pub async fn export_name<T: Thread + 'static>(
     "sun/security/jgss/wrapper/GSSLibStub.getContextMech(J)Lorg/ietf/jgss/Oid;",
     Any
 )]
-#[async_method]
-pub async fn get_context_mech<T: Thread + 'static>(
+pub fn get_context_mech<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -137,8 +127,7 @@ pub async fn get_context_mech<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getContextName(JZ)J", Any)]
-#[async_method]
-pub async fn get_context_name<T: Thread + 'static>(
+pub fn get_context_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -151,8 +140,7 @@ pub async fn get_context_name<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getContextTime(J)I", Any)]
-#[async_method]
-pub async fn get_context_time<T: Thread + 'static>(
+pub fn get_context_time<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -164,8 +152,7 @@ pub async fn get_context_time<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getCredName(J)J", Any)]
-#[async_method]
-pub async fn get_cred_name<T: Thread + 'static>(
+pub fn get_cred_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -177,8 +164,7 @@ pub async fn get_cred_name<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getCredTime(J)I", Any)]
-#[async_method]
-pub async fn get_cred_time<T: Thread + 'static>(
+pub fn get_cred_time<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -190,8 +176,7 @@ pub async fn get_cred_time<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getCredUsage(J)I", Any)]
-#[async_method]
-pub async fn get_cred_usage<T: Thread + 'static>(
+pub fn get_cred_usage<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -203,8 +188,7 @@ pub async fn get_cred_usage<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getMechPtr([B)J", Any)]
-#[async_method]
-pub async fn get_mech_ptr<T: Thread + 'static>(
+pub fn get_mech_ptr<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -216,8 +200,7 @@ pub async fn get_mech_ptr<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getMic(JI[B)[B", Any)]
-#[async_method]
-pub async fn get_mic<T: Thread + 'static>(
+pub fn get_mic<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -234,8 +217,7 @@ pub async fn get_mic<T: Thread + 'static>(
     "sun/security/jgss/wrapper/GSSLibStub.importContext([B)Lsun/security/jgss/wrapper/NativeGSSContext;",
     Any
 )]
-#[async_method]
-pub async fn import_context<T: Thread + 'static>(
+pub fn import_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -247,8 +229,7 @@ pub async fn import_context<T: Thread + 'static>(
     "sun/security/jgss/wrapper/GSSLibStub.importName([BLorg/ietf/jgss/Oid;)J",
     Any
 )]
-#[async_method]
-pub async fn import_name<T: Thread + 'static>(
+pub fn import_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -264,8 +245,7 @@ pub async fn import_name<T: Thread + 'static>(
     "sun/security/jgss/wrapper/GSSLibStub.indicateMechs()[Lorg/ietf/jgss/Oid;",
     Any
 )]
-#[async_method]
-pub async fn indicate_mechs<T: Thread + 'static>(
+pub fn indicate_mechs<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -276,8 +256,7 @@ pub async fn indicate_mechs<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.init(Ljava/lang/String;Z)Z", Any)]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -293,8 +272,7 @@ pub async fn init<T: Thread + 'static>(
     "sun/security/jgss/wrapper/GSSLibStub.initContext(JJLorg/ietf/jgss/ChannelBinding;[BLsun/security/jgss/wrapper/NativeGSSContext;)[B",
     Any
 )]
-#[async_method]
-pub async fn init_context<T: Thread + 'static>(
+pub fn init_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -307,8 +285,7 @@ pub async fn init_context<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.inquireContext(J)[J", Any)]
-#[async_method]
-pub async fn inquire_context<T: Thread + 'static>(
+pub fn inquire_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -323,8 +300,7 @@ pub async fn inquire_context<T: Thread + 'static>(
     "sun/security/jgss/wrapper/GSSLibStub.inquireNamesForMech()[Lorg/ietf/jgss/Oid;",
     Any
 )]
-#[async_method]
-pub async fn inquire_names_for_mech<T: Thread + 'static>(
+pub fn inquire_names_for_mech<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -336,8 +312,7 @@ pub async fn inquire_names_for_mech<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.releaseCred(J)J", Any)]
-#[async_method]
-pub async fn release_cred<T: Thread + 'static>(
+pub fn release_cred<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -349,8 +324,7 @@ pub async fn release_cred<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.releaseName(J)V", Any)]
-#[async_method]
-pub async fn release_name<T: Thread + 'static>(
+pub fn release_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -365,8 +339,7 @@ pub async fn release_name<T: Thread + 'static>(
     "sun/security/jgss/wrapper/GSSLibStub.unwrap(J[BLorg/ietf/jgss/MessageProp;)[B",
     Any
 )]
-#[async_method]
-pub async fn unwrap<T: Thread + 'static>(
+pub fn unwrap<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -383,8 +356,7 @@ pub async fn unwrap<T: Thread + 'static>(
     "sun/security/jgss/wrapper/GSSLibStub.verifyMic(J[B[BLorg/ietf/jgss/MessageProp;)V",
     Any
 )]
-#[async_method]
-pub async fn verify_mic<T: Thread + 'static>(
+pub fn verify_mic<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -403,8 +375,7 @@ pub async fn verify_mic<T: Thread + 'static>(
     "sun/security/jgss/wrapper/GSSLibStub.wrap(J[BLorg/ietf/jgss/MessageProp;)[B",
     Any
 )]
-#[async_method]
-pub async fn wrap<T: Thread + 'static>(
+pub fn wrap<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -418,8 +389,7 @@ pub async fn wrap<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.wrapSizeLimit(JIII)I", Any)]
-#[async_method]
-pub async fn wrap_size_limit<T: Thread + 'static>(
+pub fn wrap_size_limit<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -448,8 +418,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.acceptContext(JLorg/ietf/jgss/ChannelBinding;[BLsun/security/jgss/wrapper/NativeGSSContext;)[B",
             result.unwrap_err().to_string()
@@ -462,8 +431,7 @@ mod tests {
         let result = acquire_cred(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.acquireCred(JII)J",
             result.unwrap_err().to_string()
@@ -473,7 +441,7 @@ mod tests {
     #[tokio::test]
     async fn test_canonicalize_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = canonicalize_name(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = canonicalize_name(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.canonicalizeName(J)J",
             result.unwrap_err().to_string()
@@ -486,8 +454,7 @@ mod tests {
         let result = compare_name(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.compareName(JJ)Z",
             result.unwrap_err().to_string()
@@ -497,7 +464,7 @@ mod tests {
     #[tokio::test]
     async fn test_delete_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = delete_context(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = delete_context(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.deleteContext(J)J",
             result.unwrap_err().to_string()
@@ -507,7 +474,7 @@ mod tests {
     #[tokio::test]
     async fn test_display_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = display_name(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = display_name(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.displayName(J)[Ljava/lang/Object;",
             result.unwrap_err().to_string()
@@ -517,7 +484,7 @@ mod tests {
     #[tokio::test]
     async fn test_export_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = export_context(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = export_context(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.exportContext(J)[B",
             result.unwrap_err().to_string()
@@ -527,7 +494,7 @@ mod tests {
     #[tokio::test]
     async fn test_export_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = export_name(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = export_name(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.exportName(J)[B",
             result.unwrap_err().to_string()
@@ -537,7 +504,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_context_mech() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_context_mech(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_context_mech(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.getContextMech(J)Lorg/ietf/jgss/Oid;",
             result.unwrap_err().to_string()
@@ -550,8 +517,7 @@ mod tests {
         let result = get_context_name(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.getContextName(JZ)J",
             result.unwrap_err().to_string()
@@ -561,7 +527,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_context_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_context_time(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_context_time(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.getContextTime(J)I",
             result.unwrap_err().to_string()
@@ -571,7 +537,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_cred_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_cred_name(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_cred_name(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.getCredName(J)J",
             result.unwrap_err().to_string()
@@ -581,7 +547,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_cred_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_cred_time(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_cred_time(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.getCredTime(J)I",
             result.unwrap_err().to_string()
@@ -591,7 +557,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_cred_usage() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_cred_usage(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_cred_usage(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.getCredUsage(J)I",
             result.unwrap_err().to_string()
@@ -601,7 +567,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_mech_ptr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_mech_ptr(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_mech_ptr(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.getMechPtr([B)J",
             result.unwrap_err().to_string()
@@ -614,8 +580,7 @@ mod tests {
         let result = get_mic(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.getMic(JI[B)[B",
             result.unwrap_err().to_string()
@@ -625,7 +590,7 @@ mod tests {
     #[tokio::test]
     async fn test_import_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = import_context(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = import_context(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.importContext([B)Lsun/security/jgss/wrapper/NativeGSSContext;",
             result.unwrap_err().to_string()
@@ -638,8 +603,7 @@ mod tests {
         let result = import_name(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.importName([BLorg/ietf/jgss/Oid;)J",
             result.unwrap_err().to_string()
@@ -649,7 +613,7 @@ mod tests {
     #[tokio::test]
     async fn test_indicate_mechs() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = indicate_mechs(thread, Parameters::default()).await;
+        let result = indicate_mechs(thread, Parameters::default());
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.indicateMechs()[Lorg/ietf/jgss/Oid;",
             result.unwrap_err().to_string()
@@ -662,8 +626,7 @@ mod tests {
         let result = init(
             thread,
             Parameters::new(vec![Value::Object(None), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.init(Ljava/lang/String;Z)Z",
             result.unwrap_err().to_string()
@@ -682,8 +645,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.initContext(JJLorg/ietf/jgss/ChannelBinding;[BLsun/security/jgss/wrapper/NativeGSSContext;)[B",
             result.unwrap_err().to_string()
@@ -693,7 +655,7 @@ mod tests {
     #[tokio::test]
     async fn test_inquire_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = inquire_context(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = inquire_context(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.inquireContext(J)[J",
             result.unwrap_err().to_string()
@@ -703,7 +665,7 @@ mod tests {
     #[tokio::test]
     async fn test_inquire_names_for_mech() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = inquire_names_for_mech(thread, Parameters::default()).await;
+        let result = inquire_names_for_mech(thread, Parameters::default());
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.inquireNamesForMech()[Lorg/ietf/jgss/Oid;",
             result.unwrap_err().to_string()
@@ -713,7 +675,7 @@ mod tests {
     #[tokio::test]
     async fn test_release_cred() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = release_cred(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = release_cred(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.releaseCred(J)J",
             result.unwrap_err().to_string()
@@ -723,7 +685,7 @@ mod tests {
     #[tokio::test]
     async fn test_release_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = release_name(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = release_name(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.releaseName(J)V",
             result.unwrap_err().to_string()
@@ -740,8 +702,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.unwrap(J[BLorg/ietf/jgss/MessageProp;)[B",
             result.unwrap_err().to_string()
@@ -759,8 +720,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.verifyMic(J[B[BLorg/ietf/jgss/MessageProp;)V",
             result.unwrap_err().to_string()
@@ -777,8 +737,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.wrap(J[BLorg/ietf/jgss/MessageProp;)[B",
             result.unwrap_err().to_string()
@@ -796,8 +755,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.jgss.wrapper.GSSLibStub.wrapSizeLimit(JIII)I",
             result.unwrap_err().to_string()

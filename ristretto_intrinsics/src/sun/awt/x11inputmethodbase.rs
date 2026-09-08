@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/awt/X11InputMethodBase.disposeXIC()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn dispose_xic<T: Thread + 'static>(
+pub fn dispose_xic<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,8 +21,7 @@ pub async fn dispose_xic<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11InputMethodBase.initIDs()V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -34,8 +31,7 @@ pub async fn init_ids<T: Thread + 'static>(
     "sun/awt/X11InputMethodBase.isCompositionEnabledNative()Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn is_composition_enabled_native<T: Thread + 'static>(
+pub fn is_composition_enabled_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -48,8 +44,7 @@ pub async fn is_composition_enabled_native<T: Thread + 'static>(
     "sun/awt/X11InputMethodBase.resetXIC()Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn reset_xic<T: Thread + 'static>(
+pub fn reset_xic<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -62,8 +57,7 @@ pub async fn reset_xic<T: Thread + 'static>(
     "sun/awt/X11InputMethodBase.setCompositionEnabledNative(Z)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_composition_enabled_native<T: Thread + 'static>(
+pub fn set_composition_enabled_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -77,8 +71,7 @@ pub async fn set_composition_enabled_native<T: Thread + 'static>(
     "sun/awt/X11InputMethodBase.turnoffStatusWindow()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn turnoff_status_window<T: Thread + 'static>(
+pub fn turnoff_status_window<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -96,7 +89,7 @@ mod tests {
     #[tokio::test]
     async fn test_dispose_xic() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dispose_xic(thread, Parameters::default()).await;
+        let result = dispose_xic(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11InputMethodBase.disposeXIC()V",
             result.unwrap_err().to_string()
@@ -107,7 +100,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11InputMethodBase.initIDs()V",
             result.unwrap_err().to_string()
@@ -118,7 +111,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_composition_enabled_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = is_composition_enabled_native(thread, Parameters::default()).await;
+        let result = is_composition_enabled_native(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11InputMethodBase.isCompositionEnabledNative()Z",
             result.unwrap_err().to_string()
@@ -129,7 +122,7 @@ mod tests {
     #[tokio::test]
     async fn test_reset_xic() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = reset_xic(thread, Parameters::default()).await;
+        let result = reset_xic(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11InputMethodBase.resetXIC()Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -141,7 +134,7 @@ mod tests {
     async fn test_set_composition_enabled_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            set_composition_enabled_native(thread, Parameters::new(vec![Value::from(false)])).await;
+            set_composition_enabled_native(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "sun/awt/X11InputMethodBase.setCompositionEnabledNative(Z)Z",
             result.unwrap_err().to_string()
@@ -152,7 +145,7 @@ mod tests {
     #[tokio::test]
     async fn test_turnoff_status_window() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = turnoff_status_window(thread, Parameters::default()).await;
+        let result = turnoff_status_window(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11InputMethodBase.turnoffStatusWindow()V",
             result.unwrap_err().to_string()

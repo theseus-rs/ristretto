@@ -7,7 +7,6 @@ use ristretto_classfile::VersionSpecification::Any;
 #[cfg(not(target_os = "windows"))]
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -21,7 +20,6 @@ use std::sync::Arc;
     "sun/nio/ch/DatagramDispatcher.dup0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn dup_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -65,7 +63,6 @@ pub async fn dup_0<T: Thread + 'static>(
     "sun/nio/ch/DatagramDispatcher.read0(Ljava/io/FileDescriptor;JI)I",
     Any
 )]
-#[async_method]
 pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -132,7 +129,6 @@ pub async fn read_0<T: Thread + 'static>(
     "sun/nio/ch/DatagramDispatcher.readv0(Ljava/io/FileDescriptor;JI)J",
     Any
 )]
-#[async_method]
 pub async fn readv_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -218,7 +214,6 @@ pub async fn readv_0<T: Thread + 'static>(
     "sun/nio/ch/DatagramDispatcher.write0(Ljava/io/FileDescriptor;JI)I",
     Any
 )]
-#[async_method]
 pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -277,7 +272,6 @@ pub async fn write_0<T: Thread + 'static>(
     "sun/nio/ch/DatagramDispatcher.writev0(Ljava/io/FileDescriptor;JI)J",
     Any
 )]
-#[async_method]
 pub async fn writev_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

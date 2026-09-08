@@ -2,7 +2,6 @@ use crate::bounds;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -29,8 +28,7 @@ static CRC32_TABLE: LazyLock<[u32; 256]> = LazyLock::new(|| {
 
 /// Update CRC-32 checksum with a single byte.
 #[intrinsic_method("java/util/zip/CRC32.update(II)I", Any)]
-#[async_method]
-pub async fn update<T: Thread + 'static>(
+pub fn update<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -52,18 +50,16 @@ pub async fn update<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/CRC32.updateByteBuffer(IJII)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn update_byte_buffer<T: Thread + 'static>(
+pub fn update_byte_buffer<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    update_byte_buffer_0(thread, parameters).await
+    update_byte_buffer_0(thread, parameters)
 }
 
 /// Update CRC-32 checksum from a direct byte buffer.
 #[intrinsic_method("java/util/zip/CRC32.updateByteBuffer0(IJII)I", GreaterThan(JAVA_8))]
-#[async_method]
-pub async fn update_byte_buffer_0<T: Thread + 'static>(
+pub fn update_byte_buffer_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -76,18 +72,16 @@ pub async fn update_byte_buffer_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/CRC32.updateBytes(I[BII)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn update_bytes<T: Thread + 'static>(
+pub fn update_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    update_bytes_0(thread, parameters).await
+    update_bytes_0(thread, parameters)
 }
 
 /// Update CRC-32 checksum from a byte array.
 #[intrinsic_method("java/util/zip/CRC32.updateBytes0(I[BII)I", GreaterThan(JAVA_8))]
-#[async_method]
-pub async fn update_bytes_0<T: Thread + 'static>(
+pub fn update_bytes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -162,7 +156,7 @@ mod tests {
         parameters.push_int(0); // crc
         parameters.push_int(i32::from(b'a')); // byte 'a'
 
-        let result = update(thread.clone(), parameters).await?;
+        let result = update(thread.clone(), parameters)?;
         let crc = result.expect("crc value").as_i32()?;
 
         // Known CRC32 value for single byte 'a' starting from 0
@@ -181,7 +175,7 @@ mod tests {
             let mut parameters = Parameters::default();
             parameters.push_int(crc);
             parameters.push_int(i32::from(byte));
-            let result = update(thread.clone(), parameters).await?;
+            let result = update(thread.clone(), parameters)?;
             crc = result.expect("crc value").as_i32()?;
         }
 
@@ -209,7 +203,7 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(3); // length
 
-        let result = update_bytes_0(thread, parameters).await?;
+        let result = update_bytes_0(thread, parameters)?;
         let crc = result.expect("crc value").as_i32()?;
 
         // Same as updating byte by byte
@@ -236,7 +230,7 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(3); // length
 
-        let result = update_bytes(thread, parameters).await?;
+        let result = update_bytes(thread, parameters)?;
         let crc = result.expect("crc value").as_i32()?;
 
         assert_eq!(crc, 0x3524_41c2_u32.cast_signed());
@@ -268,7 +262,7 @@ mod tests {
         parameters.push_int(1); // offset; skip 'x'
         parameters.push_int(3); // length; just 'a', 'b', 'c'
 
-        let result = update_bytes_0(thread, parameters).await?;
+        let result = update_bytes_0(thread, parameters)?;
         let crc = result.expect("crc value").as_i32()?;
 
         // Same as "abc"
@@ -286,7 +280,7 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(3); // length
 
-        let result = update_bytes_0(thread, parameters).await;
+        let result = update_bytes_0(thread, parameters);
         assert!(result.is_err());
     }
 
@@ -309,7 +303,7 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(0); // length = 0
 
-        let result = update_bytes_0(thread, parameters).await?;
+        let result = update_bytes_0(thread, parameters)?;
         let crc = result.expect("crc value").as_i32()?;
 
         // CRC unchanged with zero length
@@ -328,7 +322,7 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(0); // length = 0
 
-        let result = update_byte_buffer(thread, parameters).await?;
+        let result = update_byte_buffer(thread, parameters)?;
         let crc = result.expect("crc value").as_i32()?;
 
         // CRC unchanged with zero length
@@ -347,7 +341,7 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(0); // length = 0
 
-        let result = update_byte_buffer_0(thread, parameters).await?;
+        let result = update_byte_buffer_0(thread, parameters)?;
         let crc = result.expect("crc value").as_i32()?;
 
         // CRC unchanged with zero length

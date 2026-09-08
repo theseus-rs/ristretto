@@ -3,7 +3,6 @@ use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -14,8 +13,7 @@ use std::sync::Arc;
     "sun/management/FileSystemImpl.isAccessUserOnly0(Ljava/lang/String;)Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn is_access_user_only_0<T: Thread + 'static>(
+pub fn is_access_user_only_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn is_access_user_only_0<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/management/FileSystemImpl.init0()V", Equal(JAVA_8))]
-#[async_method]
-pub async fn init0<T: Thread + 'static>(
+pub fn init0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,8 +41,7 @@ pub async fn init0<T: Thread + 'static>(
     "sun/management/FileSystemImpl.isSecuritySupported0(Ljava/lang/String;)Z",
     Equal(JAVA_8)
 )]
-#[async_method]
-pub async fn is_security_supported0<T: Thread + 'static>(
+pub fn is_security_supported0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -58,8 +54,7 @@ pub async fn is_security_supported0<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/management/FileSystemImpl.init0()V", Equal(JAVA_8))]
-#[async_method]
-pub async fn init0_windows_v8<T: Thread + 'static>(
+pub fn init0_windows_v8<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -74,8 +69,7 @@ pub async fn init0_windows_v8<T: Thread + 'static>(
     "sun/management/FileSystemImpl.isSecuritySupported0(Ljava/lang/String;)Z",
     Equal(JAVA_8)
 )]
-#[async_method]
-pub async fn is_security_supported0_windows_v8<T: Thread + 'static>(
+pub fn is_security_supported0_windows_v8<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -93,8 +87,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_access_user_only_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result =
-            is_access_user_only_0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = is_access_user_only_0(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.management.FileSystemImpl.isAccessUserOnly0(Ljava/lang/String;)Z",
             result.unwrap_err().to_string()
@@ -105,7 +98,7 @@ mod tests {
     #[tokio::test]
     async fn test_init0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init0(thread, Parameters::default()).await;
+        let result = init0(thread, Parameters::default());
         assert_eq!(
             "sun/management/FileSystemImpl.init0()V",
             result.unwrap_err().to_string()
@@ -116,8 +109,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_security_supported0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            is_security_supported0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = is_security_supported0(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/management/FileSystemImpl.isSecuritySupported0(Ljava/lang/String;)Z",
             result.unwrap_err().to_string()
@@ -128,7 +120,7 @@ mod tests {
     #[tokio::test]
     async fn test_init0_windows_v8() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init0_windows_v8(thread, Parameters::default()).await;
+        let result = init0_windows_v8(thread, Parameters::default());
         assert_eq!(
             "sun/management/FileSystemImpl.init0()V",
             result.unwrap_err().to_string()
@@ -140,8 +132,7 @@ mod tests {
     async fn test_is_security_supported0_windows_v8() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            is_security_supported0_windows_v8(thread, Parameters::new(vec![Value::Object(None)]))
-                .await;
+            is_security_supported0_windows_v8(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/management/FileSystemImpl.isSecuritySupported0(Ljava/lang/String;)Z",
             result.unwrap_err().to_string()

@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::VM;
@@ -12,7 +11,6 @@ use super::common::throw_unix_exception;
 use super::managed_files;
 
 #[intrinsic_method("sun/nio/fs/UnixCopyFile.transfer(IIJ)V", LessThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn transfer<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/java2d/loops/MaskFill.DrawAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDDDD)V",
     Any
 )]
-#[async_method]
-pub async fn draw_aa_pgram<T: Thread + 'static>(
+pub fn draw_aa_pgram<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -34,8 +32,7 @@ pub async fn draw_aa_pgram<T: Thread + 'static>(
     "sun/java2d/loops/MaskFill.FillAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDD)V",
     Any
 )]
-#[async_method]
-pub async fn fill_aa_pgram<T: Thread + 'static>(
+pub fn fill_aa_pgram<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,8 +52,7 @@ pub async fn fill_aa_pgram<T: Thread + 'static>(
     "sun/java2d/loops/MaskFill.MaskFill(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;IIII[BII)V",
     Any
 )]
-#[async_method]
-pub async fn mask_fill<T: Thread + 'static>(
+pub fn mask_fill<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -95,8 +91,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Double(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.loops.MaskFill.DrawAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDDDD)V",
             result.unwrap_err().to_string()
@@ -119,8 +114,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Double(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.loops.MaskFill.FillAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDD)V",
             result.unwrap_err().to_string()
@@ -144,8 +138,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.loops.MaskFill.MaskFill(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;IIII[BII)V",
             result.unwrap_err().to_string()

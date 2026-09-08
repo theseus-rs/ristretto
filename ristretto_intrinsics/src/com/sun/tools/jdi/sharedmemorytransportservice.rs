@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "com/sun/tools/jdi/SharedMemoryTransportService.accept0(JJ)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn accept0<T: Thread + 'static>(
+pub fn accept0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn accept0<T: Thread + 'static>(
     "com/sun/tools/jdi/SharedMemoryTransportService.attach0(Ljava/lang/String;J)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn attach0<T: Thread + 'static>(
+pub fn attach0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,8 +41,7 @@ pub async fn attach0<T: Thread + 'static>(
     "com/sun/tools/jdi/SharedMemoryTransportService.initialize()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn initialize<T: Thread + 'static>(
+pub fn initialize<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -58,8 +54,7 @@ pub async fn initialize<T: Thread + 'static>(
     "com/sun/tools/jdi/SharedMemoryTransportService.name(J)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn name<T: Thread + 'static>(
+pub fn name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -73,8 +68,7 @@ pub async fn name<T: Thread + 'static>(
     "com/sun/tools/jdi/SharedMemoryTransportService.startListening0(Ljava/lang/String;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn start_listening0<T: Thread + 'static>(
+pub fn start_listening0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -89,8 +83,7 @@ pub async fn start_listening0<T: Thread + 'static>(
     "com/sun/tools/jdi/SharedMemoryTransportService.stopListening0(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn stop_listening0<T: Thread + 'static>(
+pub fn stop_listening0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -112,8 +105,7 @@ mod tests {
         let result = accept0(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/tools/jdi/SharedMemoryTransportService.accept0(JJ)J",
             result.unwrap_err().to_string()
@@ -127,8 +119,7 @@ mod tests {
         let result = attach0(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/tools/jdi/SharedMemoryTransportService.attach0(Ljava/lang/String;J)J",
             result.unwrap_err().to_string()
@@ -139,7 +130,7 @@ mod tests {
     #[tokio::test]
     async fn test_initialize() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = initialize(thread, Parameters::default()).await;
+        let result = initialize(thread, Parameters::default());
         assert_eq!(
             "com/sun/tools/jdi/SharedMemoryTransportService.initialize()V",
             result.unwrap_err().to_string()
@@ -150,7 +141,7 @@ mod tests {
     #[tokio::test]
     async fn test_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = name(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = name(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "com/sun/tools/jdi/SharedMemoryTransportService.name(J)Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -161,7 +152,7 @@ mod tests {
     #[tokio::test]
     async fn test_start_listening0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = start_listening0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = start_listening0(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "com/sun/tools/jdi/SharedMemoryTransportService.startListening0(Ljava/lang/String;)J",
             result.unwrap_err().to_string()
@@ -172,7 +163,7 @@ mod tests {
     #[tokio::test]
     async fn test_stop_listening0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = stop_listening0(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = stop_listening0(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "com/sun/tools/jdi/SharedMemoryTransportService.stopListening0(J)V",
             result.unwrap_err().to_string()

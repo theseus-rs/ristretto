@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/management/MemoryPoolImpl.getCollectionUsage0()Ljava/lang/management/MemoryUsage;",
     Any
 )]
-#[async_method]
-pub async fn get_collection_usage_0<T: Thread + 'static>(
+pub fn get_collection_usage_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,8 +25,7 @@ pub async fn get_collection_usage_0<T: Thread + 'static>(
     "sun/management/MemoryPoolImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;",
     Any
 )]
-#[async_method]
-pub async fn get_memory_managers_0<T: Thread + 'static>(
+pub fn get_memory_managers_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -39,8 +36,7 @@ pub async fn get_memory_managers_0<T: Thread + 'static>(
     "sun/management/MemoryPoolImpl.getPeakUsage0()Ljava/lang/management/MemoryUsage;",
     Any
 )]
-#[async_method]
-pub async fn get_peak_usage_0<T: Thread + 'static>(
+pub fn get_peak_usage_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,8 +51,7 @@ pub async fn get_peak_usage_0<T: Thread + 'static>(
     "sun/management/MemoryPoolImpl.getUsage0()Ljava/lang/management/MemoryUsage;",
     Any
 )]
-#[async_method]
-pub async fn get_usage_0<T: Thread + 'static>(
+pub fn get_usage_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -67,8 +62,7 @@ pub async fn get_usage_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/management/MemoryPoolImpl.resetPeakUsage0()V", Any)]
-#[async_method]
-pub async fn reset_peak_usage_0<T: Thread + 'static>(
+pub fn reset_peak_usage_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -79,8 +73,7 @@ pub async fn reset_peak_usage_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/management/MemoryPoolImpl.setCollectionThreshold0(JJ)V", Any)]
-#[async_method]
-pub async fn set_collection_threshold_0<T: Thread + 'static>(
+pub fn set_collection_threshold_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -96,8 +89,7 @@ pub async fn set_collection_threshold_0<T: Thread + 'static>(
     "sun/management/MemoryPoolImpl.setPoolCollectionSensor(Lsun/management/Sensor;)V",
     Any
 )]
-#[async_method]
-pub async fn set_pool_collection_sensor<T: Thread + 'static>(
+pub fn set_pool_collection_sensor<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -113,8 +105,7 @@ pub async fn set_pool_collection_sensor<T: Thread + 'static>(
     "sun/management/MemoryPoolImpl.setPoolUsageSensor(Lsun/management/Sensor;)V",
     Any
 )]
-#[async_method]
-pub async fn set_pool_usage_sensor<T: Thread + 'static>(
+pub fn set_pool_usage_sensor<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -126,8 +117,7 @@ pub async fn set_pool_usage_sensor<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/management/MemoryPoolImpl.setUsageThreshold0(JJ)V", Any)]
-#[async_method]
-pub async fn set_usage_threshold_0<T: Thread + 'static>(
+pub fn set_usage_threshold_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -146,7 +136,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_collection_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_collection_usage_0(thread, Parameters::default()).await;
+        let result = get_collection_usage_0(thread, Parameters::default());
         assert_eq!(
             "sun.management.MemoryPoolImpl.getCollectionUsage0()Ljava/lang/management/MemoryUsage;",
             result.unwrap_err().to_string()
@@ -156,7 +146,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_memory_managers_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_memory_managers_0(thread, Parameters::default()).await;
+        let result = get_memory_managers_0(thread, Parameters::default());
         assert_eq!(
             "sun.management.MemoryPoolImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;",
             result.unwrap_err().to_string()
@@ -166,7 +156,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_peak_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_peak_usage_0(thread, Parameters::default()).await;
+        let result = get_peak_usage_0(thread, Parameters::default());
         assert_eq!(
             "sun.management.MemoryPoolImpl.getPeakUsage0()Ljava/lang/management/MemoryUsage;",
             result.unwrap_err().to_string()
@@ -176,7 +166,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_usage_0(thread, Parameters::default()).await;
+        let result = get_usage_0(thread, Parameters::default());
         assert_eq!(
             "sun.management.MemoryPoolImpl.getUsage0()Ljava/lang/management/MemoryUsage;",
             result.unwrap_err().to_string()
@@ -186,7 +176,7 @@ mod tests {
     #[tokio::test]
     async fn test_reset_peak_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = reset_peak_usage_0(thread, Parameters::default()).await;
+        let result = reset_peak_usage_0(thread, Parameters::default());
         assert_eq!(
             "sun.management.MemoryPoolImpl.resetPeakUsage0()V",
             result.unwrap_err().to_string()
@@ -199,8 +189,7 @@ mod tests {
         let result = set_collection_threshold_0(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.management.MemoryPoolImpl.setCollectionThreshold0(JJ)V",
             result.unwrap_err().to_string()
@@ -210,8 +199,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_pool_collection_sensor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            set_pool_collection_sensor(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = set_pool_collection_sensor(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.management.MemoryPoolImpl.setPoolCollectionSensor(Lsun/management/Sensor;)V",
             result.unwrap_err().to_string()
@@ -221,8 +209,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_pool_usage_sensor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            set_pool_usage_sensor(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = set_pool_usage_sensor(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.management.MemoryPoolImpl.setPoolUsageSensor(Lsun/management/Sensor;)V",
             result.unwrap_err().to_string()
@@ -235,8 +222,7 @@ mod tests {
         let result = set_usage_threshold_0(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.management.MemoryPoolImpl.setUsageThreshold0(JJ)V",
             result.unwrap_err().to_string()

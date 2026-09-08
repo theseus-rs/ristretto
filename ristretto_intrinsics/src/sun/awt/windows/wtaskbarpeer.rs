@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/awt/windows/WTaskbarPeer.flashWindow(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn flash_window<T: Thread + 'static>(
+pub fn flash_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,8 +25,7 @@ pub async fn flash_window<T: Thread + 'static>(
     "sun/awt/windows/WTaskbarPeer.nativeInit()Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn native_init<T: Thread + 'static>(
+pub fn native_init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -41,8 +38,7 @@ pub async fn native_init<T: Thread + 'static>(
     "sun/awt/windows/WTaskbarPeer.setOverlayIcon(J[III)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_overlay_icon<T: Thread + 'static>(
+pub fn set_overlay_icon<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -59,8 +55,7 @@ pub async fn set_overlay_icon<T: Thread + 'static>(
     "sun/awt/windows/WTaskbarPeer.setProgressState(JLjava/awt/Taskbar$State;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_progress_state<T: Thread + 'static>(
+pub fn set_progress_state<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -75,8 +70,7 @@ pub async fn set_progress_state<T: Thread + 'static>(
     "sun/awt/windows/WTaskbarPeer.setProgressValue(JI)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_progress_value<T: Thread + 'static>(
+pub fn set_progress_value<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -96,7 +90,7 @@ mod tests {
     #[tokio::test]
     async fn test_flash_window() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = flash_window(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = flash_window(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WTaskbarPeer.flashWindow(J)V",
             result.unwrap_err().to_string()
@@ -107,7 +101,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_init(thread, Parameters::default()).await;
+        let result = native_init(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WTaskbarPeer.nativeInit()Z",
             result.unwrap_err().to_string()
@@ -126,8 +120,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WTaskbarPeer.setOverlayIcon(J[III)V",
             result.unwrap_err().to_string()
@@ -141,8 +134,7 @@ mod tests {
         let result = set_progress_state(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WTaskbarPeer.setProgressState(JLjava/awt/Taskbar$State;)V",
             result.unwrap_err().to_string()
@@ -154,7 +146,7 @@ mod tests {
     async fn test_set_progress_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            set_progress_value(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+            set_progress_value(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WTaskbarPeer.setProgressValue(JI)V",
             result.unwrap_err().to_string()

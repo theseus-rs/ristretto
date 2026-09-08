@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -16,8 +15,7 @@ use std::sync::Arc;
     "com/sun/security/auth/module/NTSystem.getCurrent(Z)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_current<T: Thread + 'static>(
+pub fn get_current<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,8 +30,7 @@ pub async fn get_current<T: Thread + 'static>(
     "com/sun/security/auth/module/NTSystem.getImpersonationToken0()J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_impersonation_token_0<T: Thread + 'static>(
+pub fn get_impersonation_token_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -45,8 +42,7 @@ pub async fn get_impersonation_token_0<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("com/sun/security/auth/module/NTSystem.getCurrent(Z)V", Equal(JAVA_8))]
-#[async_method]
-pub async fn get_current_windows_v8<T: Thread + 'static>(
+pub fn get_current_windows_v8<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -62,8 +58,7 @@ pub async fn get_current_windows_v8<T: Thread + 'static>(
     "com/sun/security/auth/module/NTSystem.getImpersonationToken0()J",
     Equal(JAVA_8)
 )]
-#[async_method]
-pub async fn get_impersonation_token0_windows_v8<T: Thread + 'static>(
+pub fn get_impersonation_token0_windows_v8<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -80,7 +75,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_current() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_current(thread, Parameters::new(vec![Value::from(false)])).await;
+        let result = get_current(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "com.sun.security.auth.module.NTSystem.getCurrent(Z)V",
             result.unwrap_err().to_string()
@@ -90,7 +85,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_impersonation_token_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_impersonation_token_0(thread, Parameters::default()).await;
+        let result = get_impersonation_token_0(thread, Parameters::default());
         assert_eq!(
             "com.sun.security.auth.module.NTSystem.getImpersonationToken0()J",
             result.unwrap_err().to_string()
@@ -101,8 +96,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_current_windows_v8() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            get_current_windows_v8(thread, Parameters::new(vec![Value::from(false)])).await;
+        let result = get_current_windows_v8(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "com/sun/security/auth/module/NTSystem.getCurrent(Z)V",
             result.unwrap_err().to_string()
@@ -113,7 +107,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_impersonation_token0_windows_v8() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_impersonation_token0_windows_v8(thread, Parameters::default()).await;
+        let result = get_impersonation_token0_windows_v8(thread, Parameters::default());
         assert_eq!(
             "com/sun/security/auth/module/NTSystem.getImpersonationToken0()J",
             result.unwrap_err().to_string()

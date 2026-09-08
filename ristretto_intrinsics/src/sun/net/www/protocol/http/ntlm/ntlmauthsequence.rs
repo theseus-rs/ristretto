@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/net/www/protocol/http/ntlm/NTLMAuthSequence.getCredentialsHandle(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)J",
     Any
 )]
-#[async_method]
-pub async fn get_credentials_handle<T: Thread + 'static>(
+pub fn get_credentials_handle<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -25,8 +23,7 @@ pub async fn get_credentials_handle<T: Thread + 'static>(
     "sun/net/www/protocol/http/ntlm/NTLMAuthSequence.getNextToken(J[BLsun/net/www/protocol/http/ntlm/NTLMAuthSequence$Status;)[B",
     Any
 )]
-#[async_method]
-pub async fn get_next_token<T: Thread + 'static>(
+pub fn get_next_token<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -39,8 +36,7 @@ pub async fn get_next_token<T: Thread + 'static>(
     "sun/net/www/protocol/http/ntlm/NTLMAuthSequence.initFirst(Ljava/lang/Class;)V",
     Any
 )]
-#[async_method]
-pub async fn init_first<T: Thread + 'static>(
+pub fn init_first<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +62,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/net/www/protocol/http/ntlm/NTLMAuthSequence.getCredentialsHandle(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)J",
             result.unwrap_err().to_string()
@@ -85,8 +80,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/net/www/protocol/http/ntlm/NTLMAuthSequence.getNextToken(J[BLsun/net/www/protocol/http/ntlm/NTLMAuthSequence$Status;)[B",
             result.unwrap_err().to_string()
@@ -97,7 +91,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_first() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_first(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = init_first(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/net/www/protocol/http/ntlm/NTLMAuthSequence.initFirst(Ljava/lang/Class;)V",
             result.unwrap_err().to_string()

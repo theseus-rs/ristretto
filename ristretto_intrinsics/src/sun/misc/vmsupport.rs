@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/misc/VMSupport.getVMTemporaryDirectory()Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_vm_temporary_directory<T: Thread + 'static>(
+pub fn get_vm_temporary_directory<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,8 +25,7 @@ pub async fn get_vm_temporary_directory<T: Thread + 'static>(
     "sun/misc/VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn init_agent_properties<T: Thread + 'static>(
+pub fn init_agent_properties<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -47,7 +44,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_vm_temporary_directory() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = get_vm_temporary_directory(thread, Parameters::default()).await;
+        let result = get_vm_temporary_directory(thread, Parameters::default());
         assert_eq!(
             "sun.misc.VMSupport.getVMTemporaryDirectory()Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -57,8 +54,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_agent_properties() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result =
-            init_agent_properties(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = init_agent_properties(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.misc.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;",
             result.unwrap_err().to_string()

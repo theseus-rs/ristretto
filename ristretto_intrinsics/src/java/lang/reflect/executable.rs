@@ -2,7 +2,6 @@ use byteorder::{BigEndian, WriteBytesExt};
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaObject;
 use ristretto_types::Thread;
@@ -14,7 +13,6 @@ use std::sync::Arc;
     "java/lang/reflect/Executable.getParameters0()[Ljava/lang/reflect/Parameter;",
     Any
 )]
-#[async_method]
 pub async fn get_parameters_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -95,7 +93,6 @@ pub async fn get_parameters_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Executable.getTypeAnnotationBytes0()[B", Any)]
-#[async_method]
 pub async fn get_type_annotation_bytes_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

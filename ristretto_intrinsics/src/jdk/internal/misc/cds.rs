@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Between, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -14,8 +13,7 @@ use tracing::debug;
     "jdk/internal/misc/CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn define_archived_modules<T: Thread + 'static>(
+pub fn define_archived_modules<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn define_archived_modules<T: Thread + 'static>(
     "jdk/internal/misc/CDS.dumpClassList(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn dump_class_list<T: Thread + 'static>(
+pub fn dump_class_list<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,8 +41,7 @@ pub async fn dump_class_list<T: Thread + 'static>(
     "jdk/internal/misc/CDS.dumpDynamicArchive(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn dump_dynamic_archive<T: Thread + 'static>(
+pub fn dump_dynamic_archive<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -57,8 +53,7 @@ pub async fn dump_dynamic_archive<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/CDS.getCDSConfigStatus()I", GreaterThan(JAVA_21))]
-#[async_method]
-pub async fn get_cds_config_status<T: Thread + 'static>(
+pub fn get_cds_config_status<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -69,8 +64,7 @@ pub async fn get_cds_config_status<T: Thread + 'static>(
     "jdk/internal/misc/CDS.getRandomSeedForDumping()J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_random_seed_for_dumping<T: Thread + 'static>(
+pub fn get_random_seed_for_dumping<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -85,8 +79,7 @@ pub async fn get_random_seed_for_dumping<T: Thread + 'static>(
     "jdk/internal/misc/CDS.initializeFromArchive(Ljava/lang/Class;)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn initialize_from_archive<T: Thread + 'static>(
+pub fn initialize_from_archive<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -98,8 +91,7 @@ pub async fn initialize_from_archive<T: Thread + 'static>(
     "jdk/internal/misc/CDS.isDumpingArchive0()Z",
     Between(JAVA_17, JAVA_21)
 )]
-#[async_method]
-pub async fn is_dumping_archive_0<T: Thread + 'static>(
+pub fn is_dumping_archive_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -110,8 +102,7 @@ pub async fn is_dumping_archive_0<T: Thread + 'static>(
     "jdk/internal/misc/CDS.isDumpingClassList0()Z",
     Between(JAVA_17, JAVA_21)
 )]
-#[async_method]
-pub async fn is_dumping_class_list_0<T: Thread + 'static>(
+pub fn is_dumping_class_list_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -122,8 +113,7 @@ pub async fn is_dumping_class_list_0<T: Thread + 'static>(
     "jdk/internal/misc/CDS.isSharingEnabled0()Z",
     Between(JAVA_17, JAVA_21)
 )]
-#[async_method]
-pub async fn is_sharing_enabled_0<T: Thread + 'static>(
+pub fn is_sharing_enabled_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -134,8 +124,7 @@ pub async fn is_sharing_enabled_0<T: Thread + 'static>(
     "jdk/internal/misc/CDS.logLambdaFormInvoker(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn log_lambda_form_invoker<T: Thread + 'static>(
+pub fn log_lambda_form_invoker<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -148,8 +137,7 @@ pub async fn log_lambda_form_invoker<T: Thread + 'static>(
     "jdk/internal/misc/CDS.needsClassInitBarrier0(Ljava/lang/Class;)Z",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_method]
-pub async fn needs_class_init_barrier_0<T: Thread + 'static>(
+pub fn needs_class_init_barrier_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -171,8 +159,7 @@ mod tests {
         let result = define_archived_modules(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk.internal.misc.CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",
             result.unwrap_err().to_string()
@@ -182,7 +169,7 @@ mod tests {
     #[tokio::test]
     async fn test_dump_class_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dump_class_list(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = dump_class_list(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "jdk.internal.misc.CDS.dumpClassList(Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -192,7 +179,7 @@ mod tests {
     #[tokio::test]
     async fn test_dump_dynamic_archive() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dump_dynamic_archive(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = dump_dynamic_archive(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "jdk.internal.misc.CDS.dumpDynamicArchive(Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -202,7 +189,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_cds_config_status() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_cds_config_status(thread, Parameters::default()).await?;
+        let result = get_cds_config_status(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -210,7 +197,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_random_seed_for_dumping() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_random_seed_for_dumping(thread, Parameters::default()).await?;
+        let result = get_random_seed_for_dumping(thread, Parameters::default())?;
         let hash = result.unwrap_or(Value::Long(0)).as_i64()?;
         assert_ne!(0, hash);
         Ok(())
@@ -220,7 +207,7 @@ mod tests {
     async fn test_initialize_from_archive() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let parameters = Parameters::new(vec![Value::Object(None)]);
-        let result = initialize_from_archive(thread, parameters).await?;
+        let result = initialize_from_archive(thread, parameters)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -228,7 +215,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_dumping_archive_0() -> Result<()> {
         let (_vm, thread) = crate::test::java21_thread().await?;
-        let result = is_dumping_archive_0(thread, Parameters::default()).await?;
+        let result = is_dumping_archive_0(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -236,7 +223,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_dumping_class_list_0() -> Result<()> {
         let (_vm, thread) = crate::test::java21_thread().await?;
-        let result = is_dumping_class_list_0(thread, Parameters::default()).await?;
+        let result = is_dumping_class_list_0(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -244,7 +231,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_sharing_enabled_0() -> Result<()> {
         let (_vm, thread) = crate::test::java21_thread().await?;
-        let result = is_sharing_enabled_0(thread, Parameters::default()).await?;
+        let result = is_sharing_enabled_0(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -256,7 +243,7 @@ mod tests {
             .to_object(&thread)
             .await?;
         let parameters = Parameters::new(vec![line]);
-        let result = log_lambda_form_invoker(thread, parameters).await?;
+        let result = log_lambda_form_invoker(thread, parameters)?;
         assert!(result.is_none());
         Ok(())
     }
@@ -264,8 +251,7 @@ mod tests {
     #[tokio::test]
     async fn test_needs_class_init_barrier_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            needs_class_init_barrier_0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = needs_class_init_barrier_0(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "jdk.internal.misc.CDS.needsClassInitBarrier0(Ljava/lang/Class;)Z",
             result.unwrap_err().to_string()

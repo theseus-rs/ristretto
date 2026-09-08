@@ -8,7 +8,6 @@ use ristretto_classfile::JAVA_8;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
 use ristretto_types::JavaError::RuntimeException;
@@ -56,7 +55,6 @@ fn resolve_path<T: Thread + 'static>(thread: &Arc<T>, path: &str) -> Result<Path
 }
 
 #[intrinsic_method("java/io/FileOutputStream.close0()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -65,8 +63,7 @@ pub async fn close_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileOutputStream.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -74,7 +71,6 @@ pub async fn init_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileOutputStream.open0(Ljava/lang/String;Z)V", Any)]
-#[async_method]
 #[expect(clippy::too_many_lines)]
 pub async fn open_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -207,7 +203,6 @@ pub async fn open_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileOutputStream.write(IZ)V", Any)]
-#[async_method]
 pub async fn write<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -229,7 +224,6 @@ pub async fn write<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileOutputStream.writeBytes([BIIZ)V", Any)]
-#[async_method]
 pub async fn write_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -315,7 +309,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }

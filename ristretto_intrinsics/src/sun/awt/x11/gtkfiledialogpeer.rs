@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/awt/X11/GtkFileDialogPeer.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -19,8 +17,7 @@ pub async fn init_ids<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/GtkFileDialogPeer.quit()V", Any)]
-#[async_method]
-pub async fn quit<T: Thread + 'static>(
+pub fn quit<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,8 +27,7 @@ pub async fn quit<T: Thread + 'static>(
     "sun/awt/X11/GtkFileDialogPeer.run(Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/io/FilenameFilter;ZII)V",
     Any
 )]
-#[async_method]
-pub async fn run<T: Thread + 'static>(
+pub fn run<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -46,8 +42,7 @@ pub async fn run<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/GtkFileDialogPeer.run(Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/io/FilenameFilter;ZII)V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/X11/GtkFileDialogPeer.setBounds(IIIII)V", Any)]
-#[async_method]
-pub async fn set_bounds<T: Thread + 'static>(
+pub fn set_bounds<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -62,8 +57,7 @@ pub async fn set_bounds<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/GtkFileDialogPeer.toFront()V", Any)]
-#[async_method]
-pub async fn to_front<T: Thread + 'static>(
+pub fn to_front<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -81,7 +75,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11/GtkFileDialogPeer.initIDs()V",
             result.unwrap_err().to_string()
@@ -92,7 +86,7 @@ mod tests {
     #[tokio::test]
     async fn test_quit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = quit(thread, Parameters::default()).await;
+        let result = quit(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11/GtkFileDialogPeer.quit()V",
             result.unwrap_err().to_string()
@@ -115,8 +109,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/GtkFileDialogPeer.run(Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/io/FilenameFilter;ZII)V",
             result.unwrap_err().to_string()
@@ -136,8 +129,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/GtkFileDialogPeer.setBounds(IIIII)V",
             result.unwrap_err().to_string()
@@ -148,7 +140,7 @@ mod tests {
     #[tokio::test]
     async fn test_to_front() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = to_front(thread, Parameters::default()).await;
+        let result = to_front(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11/GtkFileDialogPeer.toFront()V",
             result.unwrap_err().to_string()

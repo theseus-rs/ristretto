@@ -4,7 +4,6 @@ use ristretto_classfile::attributes::RequiresFlags;
 use ristretto_classloader::module::ModuleDescriptor;
 use ristretto_classloader::module::{Exports, Opens, Provides, Requires, ResolvedConfiguration};
 use ristretto_classloader::{Class, Object, Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::module_access::ModuleAccess;
 use ristretto_types::{DefinedModule, Thread, VM};
@@ -29,7 +28,6 @@ use tracing::{debug, warn};
     "jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;",
     Any
 )]
-#[async_method]
 pub async fn boot<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,

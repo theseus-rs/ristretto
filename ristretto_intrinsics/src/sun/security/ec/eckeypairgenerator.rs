@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/security/ec/ECKeyPairGenerator.generateECKeyPair(I[B[B)[Ljava/lang/Object;",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn generate_ec_key_pair<T: Thread + 'static>(
+pub fn generate_ec_key_pair<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,8 +29,7 @@ pub async fn generate_ec_key_pair<T: Thread + 'static>(
     "sun/security/ec/ECKeyPairGenerator.isCurveSupported([B)Z",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn is_curve_supported<T: Thread + 'static>(
+pub fn is_curve_supported<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -57,8 +54,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.ec.ECKeyPairGenerator.generateECKeyPair(I[B[B)[Ljava/lang/Object;",
             result.unwrap_err().to_string()
@@ -68,7 +64,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_curve_supported() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = is_curve_supported(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = is_curve_supported(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.security.ec.ECKeyPairGenerator.isCurveSupported([B)Z",
             result.unwrap_err().to_string()

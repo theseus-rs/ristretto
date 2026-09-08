@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/lwawt/macosx/CDropTarget.createNativeDropTarget(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;Ljava/awt/peer/ComponentPeer;J)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn create_native_drop_target_0<T: Thread + 'static>(
+pub fn create_native_drop_target_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn create_native_drop_target_0<T: Thread + 'static>(
     "sun/lwawt/macosx/CDropTarget.createNativeDropTarget(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn create_native_drop_target_1<T: Thread + 'static>(
+pub fn create_native_drop_target_1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,8 +37,7 @@ pub async fn create_native_drop_target_1<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CDropTarget.releaseNativeDropTarget(J)V", Any)]
-#[async_method]
-pub async fn release_native_drop_target<T: Thread + 'static>(
+pub fn release_native_drop_target<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -67,8 +63,7 @@ mod tests {
                 Value::Object(None),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CDropTarget.createNativeDropTarget(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;Ljava/awt/peer/ComponentPeer;J)J",
             result.unwrap_err().to_string()
@@ -85,8 +80,7 @@ mod tests {
                 Value::Object(None),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CDropTarget.createNativeDropTarget(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J",
             result.unwrap_err().to_string()
@@ -96,8 +90,7 @@ mod tests {
     #[tokio::test]
     async fn test_release_native_drop_target() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            release_native_drop_target(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = release_native_drop_target(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CDropTarget.releaseNativeDropTarget(J)V",
             result.unwrap_err().to_string()

@@ -1,18 +1,13 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/KQueueArrayWrapper.init()I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
-    thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
+pub fn init<T: Thread + 'static>(thread: Arc<T>, _parameters: Parameters) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     Ok(Some(Value::Int(super::kqueue::create_queue(&*vm)?)))
 }
@@ -21,7 +16,6 @@ pub async fn init<T: Thread + 'static>(
     "sun/nio/ch/KQueueArrayWrapper.initStructSizes()V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn init_struct_sizes<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -36,7 +30,6 @@ pub async fn init_struct_sizes<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueueArrayWrapper.interrupt(I)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn interrupt<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -52,7 +45,6 @@ pub async fn interrupt<T: Thread + 'static>(
     "sun/nio/ch/KQueueArrayWrapper.kevent0(IJIJ)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn kevent_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -70,7 +62,6 @@ pub async fn kevent_0<T: Thread + 'static>(
     "sun/nio/ch/KQueueArrayWrapper.register0(IIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn register_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -96,12 +87,11 @@ mod tests {
     use ristretto_classloader::Reference;
     use ristretto_types::VM;
 
-    async fn socket_pair<T: Thread + 'static>(thread: Arc<T>) -> Result<(i32, i32)> {
+    fn socket_pair<T: Thread + 'static>(thread: Arc<T>) -> Result<(i32, i32)> {
         let vm = thread.vm()?;
         let pair = Value::new_object(vm.garbage_collector(), Reference::from(vec![0_i32, 0_i32]));
         let result =
-            super::super::kqueueport::socketpair(thread, Parameters::new(vec![pair.clone()]))
-                .await?;
+            super::super::kqueueport::socketpair(thread, Parameters::new(vec![pair.clone()]))?;
         assert_eq!(None, result);
         let values = pair.as_int_vec_ref()?;
         let [first, second, ..] = values.as_ref() else {
@@ -112,10 +102,9 @@ mod tests {
         Ok((*first, *second))
     }
 
-    async fn close<T: Thread + 'static>(thread: Arc<T>, fd: i32) -> Result<()> {
+    fn close<T: Thread + 'static>(thread: Arc<T>, fd: i32) -> Result<()> {
         let result =
-            super::super::kqueueport::close_0(thread, Parameters::new(vec![Value::Int(fd)]))
-                .await?;
+            super::super::kqueueport::close_0(thread, Parameters::new(vec![Value::Int(fd)]))?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -123,13 +112,13 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let Some(Value::Int(fd)) = init(thread.clone(), Parameters::default()).await? else {
+        let Some(Value::Int(fd)) = init(thread.clone(), Parameters::default())? else {
             return Err(ristretto_types::Error::InternalError(
                 "KQueueArrayWrapper.init returned no descriptor".to_string(),
             ));
         };
         assert!(fd >= 0);
-        close(thread, fd).await
+        close(thread, fd)
     }
 
     #[tokio::test]
@@ -149,7 +138,7 @@ mod tests {
     #[tokio::test]
     async fn test_interrupt() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let (writer, reader) = socket_pair(thread.clone()).await?;
+        let (writer, reader) = socket_pair(thread.clone())?;
         let result = interrupt(thread.clone(), Parameters::new(vec![Value::Int(writer)])).await?;
         assert_eq!(None, result);
         let result = super::super::kqueueport::drain_1(
@@ -158,14 +147,14 @@ mod tests {
         )
         .await?;
         assert_eq!(None, result);
-        close(thread.clone(), writer).await?;
-        close(thread, reader).await
+        close(thread.clone(), writer)?;
+        close(thread, reader)
     }
 
     #[tokio::test]
     async fn test_kevent_0() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let Some(Value::Int(kqfd)) = init(thread.clone(), Parameters::default()).await? else {
+        let Some(Value::Int(kqfd)) = init(thread.clone(), Parameters::default())? else {
             return Err(ristretto_types::Error::InternalError(
                 "KQueueArrayWrapper.init returned no descriptor".to_string(),
             ));
@@ -181,18 +170,18 @@ mod tests {
         )
         .await?;
         assert_eq!(Some(Value::Int(0)), result);
-        close(thread, kqfd).await
+        close(thread, kqfd)
     }
 
     #[tokio::test]
     async fn test_register_0() -> Result<()> {
         let (vm, thread) = crate::test::java8_thread().await?;
-        let Some(Value::Int(kqfd)) = init(thread.clone(), Parameters::default()).await? else {
+        let Some(Value::Int(kqfd)) = init(thread.clone(), Parameters::default())? else {
             return Err(ristretto_types::Error::InternalError(
                 "KQueueArrayWrapper.init returned no descriptor".to_string(),
             ));
         };
-        let (writer, reader) = socket_pair(thread.clone()).await?;
+        let (writer, reader) = socket_pair(thread.clone())?;
         let result = register_0(
             thread.clone(),
             Parameters::new(vec![
@@ -230,8 +219,8 @@ mod tests {
         })?;
         assert_eq!(u64::try_from(reader)?, u64::from_ne_bytes(ident));
 
-        close(thread.clone(), kqfd).await?;
-        close(thread.clone(), writer).await?;
-        close(thread, reader).await
+        close(thread.clone(), kqfd)?;
+        close(thread.clone(), writer)?;
+        close(thread, reader)
     }
 }

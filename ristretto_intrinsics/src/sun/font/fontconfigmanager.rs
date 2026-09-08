@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -16,8 +15,7 @@ use std::sync::Arc;
     "sun/font/FontConfigManager.getFontConfig(Ljava/lang/String;Lsun/font/FontConfigManager$FontConfigInfo;[Lsun/font/FontConfigManager$FcCompFont;Z)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_font_config<T: Thread + 'static>(
+pub fn get_font_config<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,8 +30,7 @@ pub async fn get_font_config<T: Thread + 'static>(
     "sun/font/FontConfigManager.getFontConfigAASettings(Ljava/lang/String;Ljava/lang/String;)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_font_config_aa_settings<T: Thread + 'static>(
+pub fn get_font_config_aa_settings<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,8 +47,7 @@ pub async fn get_font_config_aa_settings<T: Thread + 'static>(
     "sun/font/FontConfigManager.getFontConfigVersion()I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_font_config_version<T: Thread + 'static>(
+pub fn get_font_config_version<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +62,7 @@ pub async fn get_font_config_version<T: Thread + 'static>(
     "sun/font/FontConfigManager.getFontConfig(Ljava/lang/String;Lsun/font/FontConfigManager$FontConfigInfo;[Lsun/font/FontConfigManager$FcCompFont;Z)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_font_config_linux_ge_v11<T: Thread + 'static>(
+pub fn get_font_config_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -83,8 +78,7 @@ pub async fn get_font_config_linux_ge_v11<T: Thread + 'static>(
     "sun/font/FontConfigManager.getFontConfigAASettings(Ljava/lang/String;Ljava/lang/String;)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_font_config_aasettings_linux_ge_v11<T: Thread + 'static>(
+pub fn get_font_config_aasettings_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,8 +96,7 @@ pub async fn get_font_config_aasettings_linux_ge_v11<T: Thread + 'static>(
     "sun/font/FontConfigManager.getFontConfigVersion()I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_font_config_version_linux_ge_v11<T: Thread + 'static>(
+pub fn get_font_config_version_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -128,8 +121,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.FontConfigManager.getFontConfig(Ljava/lang/String;Lsun/font/FontConfigManager$FontConfigInfo;[Lsun/font/FontConfigManager$FcCompFont;Z)V",
             result.unwrap_err().to_string()
@@ -142,8 +134,7 @@ mod tests {
         let result = get_font_config_aa_settings(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.FontConfigManager.getFontConfigAASettings(Ljava/lang/String;Ljava/lang/String;)I",
             result.unwrap_err().to_string()
@@ -153,7 +144,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_font_config_version() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = get_font_config_version(thread, Parameters::default()).await;
+        let result = get_font_config_version(thread, Parameters::default());
         assert_eq!(
             "sun.font.FontConfigManager.getFontConfigVersion()I",
             result.unwrap_err().to_string()
@@ -172,8 +163,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/font/FontConfigManager.getFontConfig(Ljava/lang/String;Lsun/font/FontConfigManager$FontConfigInfo;[Lsun/font/FontConfigManager$FcCompFont;Z)V",
             result.unwrap_err().to_string()
@@ -187,8 +177,7 @@ mod tests {
         let result = get_font_config_aasettings_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/font/FontConfigManager.getFontConfigAASettings(Ljava/lang/String;Ljava/lang/String;)I",
             result.unwrap_err().to_string()
@@ -199,7 +188,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_font_config_version_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_font_config_version_linux_ge_v11(thread, Parameters::default()).await;
+        let result = get_font_config_version_linux_ge_v11(thread, Parameters::default());
         assert_eq!(
             "sun/font/FontConfigManager.getFontConfigVersion()I",
             result.unwrap_err().to_string()

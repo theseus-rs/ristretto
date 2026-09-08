@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/font/CCharToGlyphMapper.countGlyphs(J)I", Any)]
-#[async_method]
-pub async fn count_glyphs<T: Thread + 'static>(
+pub fn count_glyphs<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -21,8 +19,7 @@ pub async fn count_glyphs<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/CCharToGlyphMapper.nativeCharsToGlyphs(JI[C[I)V", Any)]
-#[async_method]
-pub async fn native_chars_to_glyphs<T: Thread + 'static>(
+pub fn native_chars_to_glyphs<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -43,7 +40,7 @@ mod tests {
     #[tokio::test]
     async fn test_count_glyphs() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = count_glyphs(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = count_glyphs(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.font.CCharToGlyphMapper.countGlyphs(J)I",
             result.unwrap_err().to_string()
@@ -61,8 +58,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.CCharToGlyphMapper.nativeCharsToGlyphs(JI[C[I)V",
             result.unwrap_err().to_string()

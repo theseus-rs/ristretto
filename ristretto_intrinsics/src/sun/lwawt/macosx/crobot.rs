@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -9,8 +8,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CRobot.initRobot()V", Any)]
-#[async_method]
-pub async fn init_robot<T: Thread + 'static>(
+pub fn init_robot<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -18,8 +16,7 @@ pub async fn init_robot<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CRobot.keyEvent(IZ)V", Any)]
-#[async_method]
-pub async fn key_event<T: Thread + 'static>(
+pub fn key_event<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -29,8 +26,7 @@ pub async fn key_event<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CRobot.mouseEvent(IIIIZZ)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn mouse_event_0<T: Thread + 'static>(
+pub fn mouse_event_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -47,8 +43,7 @@ pub async fn mouse_event_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CRobot.mouseEvent(IIIZZ)V", GreaterThan(JAVA_8))]
-#[async_method]
-pub async fn mouse_event_1<T: Thread + 'static>(
+pub fn mouse_event_1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -64,8 +59,7 @@ pub async fn mouse_event_1<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CRobot.mouseWheel(I)V", Any)]
-#[async_method]
-pub async fn mouse_wheel<T: Thread + 'static>(
+pub fn mouse_wheel<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -80,8 +74,7 @@ pub async fn mouse_wheel<T: Thread + 'static>(
     "sun/lwawt/macosx/CRobot.nativeGetScreenPixels(IIII[I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn native_get_screen_pixels_0<T: Thread + 'static>(
+pub fn native_get_screen_pixels_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -100,8 +93,7 @@ pub async fn native_get_screen_pixels_0<T: Thread + 'static>(
     "sun/lwawt/macosx/CRobot.nativeGetScreenPixels(IIIID[I)V",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn native_get_screen_pixels_1<T: Thread + 'static>(
+pub fn native_get_screen_pixels_1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -124,7 +116,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_robot() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_robot(thread, Parameters::default()).await;
+        let result = init_robot(thread, Parameters::default());
         assert_eq!(
             "sun.lwawt.macosx.CRobot.initRobot()V",
             result.unwrap_err().to_string()
@@ -137,8 +129,7 @@ mod tests {
         let result = key_event(
             thread,
             Parameters::new(vec![Value::Int(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CRobot.keyEvent(IZ)V",
             result.unwrap_err().to_string()
@@ -158,8 +149,7 @@ mod tests {
                 Value::from(false),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CRobot.mouseEvent(IIIIZZ)V",
             result.unwrap_err().to_string()
@@ -178,8 +168,7 @@ mod tests {
                 Value::from(false),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CRobot.mouseEvent(IIIZZ)V",
             result.unwrap_err().to_string()
@@ -189,7 +178,7 @@ mod tests {
     #[tokio::test]
     async fn test_mouse_wheel() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = mouse_wheel(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = mouse_wheel(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CRobot.mouseWheel(I)V",
             result.unwrap_err().to_string()
@@ -208,8 +197,7 @@ mod tests {
                 Value::Int(0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CRobot.nativeGetScreenPixels(IIII[I)V",
             result.unwrap_err().to_string()
@@ -229,8 +217,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CRobot.nativeGetScreenPixels(IIIID[I)V",
             result.unwrap_err().to_string()

@@ -2,7 +2,6 @@ use super::support::{self, READER};
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -10,7 +9,6 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageReader.abortRead(J)V", Any)]
-#[async_method]
 pub async fn abort_read<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -26,7 +24,6 @@ pub async fn abort_read<T: Thread + 'static>(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.clearNativeReadAbortFlag(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn clear_native_read_abort_flag<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -39,8 +36,7 @@ pub async fn clear_native_read_abort_flag<T: Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageReader.disposeReader(J)V", Any)]
-#[async_method]
-pub async fn dispose_reader<T: Thread + 'static>(
+pub fn dispose_reader<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -57,8 +53,7 @@ pub async fn dispose_reader<T: Thread + 'static>(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.initJPEGImageReader()J",
     Any
 )]
-#[async_method]
-pub async fn init_jpeg_image_reader<T: Thread + 'static>(
+pub fn init_jpeg_image_reader<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -69,8 +64,7 @@ pub async fn init_jpeg_image_reader<T: Thread + 'static>(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.initReaderIDs(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V",
     Any
 )]
-#[async_method]
-pub async fn init_reader_i_ds<T: Thread + 'static>(
+pub fn init_reader_i_ds<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -86,7 +80,6 @@ pub async fn init_reader_i_ds<T: Thread + 'static>(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.readImage(IJ[BI[I[IIIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;IIZ)Z",
     Any
 )]
-#[async_method]
 #[expect(
     clippy::too_many_lines,
     reason = "ImageIO native operation marshals its Java arguments and runs the scanline callback protocol"
@@ -263,7 +256,6 @@ pub async fn read_image<T: Thread + 'static>(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.readImageHeader(JZZ)Z",
     Any
 )]
-#[async_method]
 pub async fn read_image_header<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -318,7 +310,6 @@ pub async fn read_image_header<T: Thread + 'static>(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.resetLibraryState(J)V",
     Any
 )]
-#[async_method]
 pub async fn reset_library_state<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -333,7 +324,6 @@ pub async fn reset_library_state<T: Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageReader.resetReader(J)V", Any)]
-#[async_method]
 pub async fn reset_reader<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -347,7 +337,6 @@ pub async fn reset_reader<T: Thread + 'static>(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.setOutColorSpace(JI)V",
     Any
 )]
-#[async_method]
 pub async fn set_out_color_space<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -362,7 +351,6 @@ pub async fn set_out_color_space<T: Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageReader.setSource(J)V", Any)]
-#[async_method]
 pub async fn set_source<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -379,12 +367,10 @@ mod tests {
     #[tokio::test]
     async fn lifecycle_and_disposed_reader() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let id = init_jpeg_image_reader(thread.clone(), Parameters::default())
-            .await?
+        let id = init_jpeg_image_reader(thread.clone(), Parameters::default())?
             .expect("reader handle")
             .as_i64()?;
-        let other = init_jpeg_image_reader(thread.clone(), Parameters::default())
-            .await?
+        let other = init_jpeg_image_reader(thread.clone(), Parameters::default())?
             .expect("reader handle")
             .as_i64()?;
         assert!(id > 0 && other > 0 && id != other);
@@ -403,8 +389,8 @@ mod tests {
         reset_library_state(thread.clone(), Parameters::new(vec![Value::Long(id)])).await?;
         reset_reader(thread.clone(), Parameters::new(vec![Value::Long(id)])).await?;
         set_source(thread.clone(), Parameters::new(vec![Value::Long(id)])).await?;
-        dispose_reader(thread.clone(), Parameters::new(vec![Value::Long(id)])).await?;
-        dispose_reader(thread.clone(), Parameters::new(vec![Value::Long(id)])).await?;
+        dispose_reader(thread.clone(), Parameters::new(vec![Value::Long(id)]))?;
+        dispose_reader(thread.clone(), Parameters::new(vec![Value::Long(id)]))?;
         let error = abort_read(thread.clone(), Parameters::new(vec![Value::Long(id)])).await;
         assert!(
             matches!(error, Err(Error::Throwable(ref value)) if value.as_object_ref()?.class().name() == "java/lang/IllegalStateException")

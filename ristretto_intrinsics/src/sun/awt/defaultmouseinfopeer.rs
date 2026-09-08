@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/awt/DefaultMouseInfoPeer.fillPointWithCoords(Ljava/awt/Point;)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn fill_point_with_coords<T: Thread + 'static>(
+pub fn fill_point_with_coords<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn fill_point_with_coords<T: Thread + 'static>(
     "sun/awt/DefaultMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn is_window_under_mouse<T: Thread + 'static>(
+pub fn is_window_under_mouse<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -47,8 +44,7 @@ mod tests {
     #[tokio::test]
     async fn test_fill_point_with_coords() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result =
-            fill_point_with_coords(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = fill_point_with_coords(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.awt.DefaultMouseInfoPeer.fillPointWithCoords(Ljava/awt/Point;)I",
             result.unwrap_err().to_string()
@@ -58,8 +54,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_window_under_mouse() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result =
-            is_window_under_mouse(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = is_window_under_mouse(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.awt.DefaultMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z",
             result.unwrap_err().to_string()

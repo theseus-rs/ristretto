@@ -12,7 +12,7 @@ use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::VersionSpecification::{Equal, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 #[cfg(target_family = "unix")]
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result, Thread};
@@ -23,8 +23,7 @@ const SO_TIMEOUT: i32 = 0x1006;
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainSocketImpl.initProto()V", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn init_proto<T: Thread + 'static>(
+pub fn init_proto<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -36,7 +35,6 @@ pub async fn init_proto<T: Thread + 'static>(
     "java/net/PlainSocketImpl.socketAccept(Ljava/net/SocketImpl;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_accept<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -62,7 +60,6 @@ pub async fn socket_accept<T: Thread + 'static>(
     "java/net/PlainSocketImpl.socketAvailable()I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_available<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -78,7 +75,6 @@ pub async fn socket_available<T: Thread + 'static>(
     "java/net/PlainSocketImpl.socketBind(Ljava/net/InetAddress;I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_bind<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -104,7 +100,6 @@ pub async fn socket_bind<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainSocketImpl.socketClose0(Z)V", LessThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn socket_close_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -124,7 +119,6 @@ pub async fn socket_close_0<T: Thread + 'static>(
     "java/net/PlainSocketImpl.socketConnect(Ljava/net/InetAddress;II)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_connect<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -173,7 +167,6 @@ async fn create_instance<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainSocketImpl.socketCreate(Z)V", LessThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn socket_create_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -187,7 +180,6 @@ pub async fn socket_create_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainSocketImpl.socketCreate(ZZ)V", Equal(JAVA_17))]
-#[async_method]
 pub async fn socket_create_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -204,7 +196,6 @@ pub async fn socket_create_1<T: Thread + 'static>(
     "java/net/PlainSocketImpl.socketGetOption(ILjava/lang/Object;)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_get_option<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -235,7 +226,6 @@ pub async fn socket_get_option<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainSocketImpl.socketListen(I)V", LessThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn socket_listen<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -251,7 +241,6 @@ pub async fn socket_listen<T: Thread + 'static>(
     "java/net/PlainSocketImpl.socketSendUrgentData(I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_send_urgent_data<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -267,7 +256,6 @@ pub async fn socket_send_urgent_data<T: Thread + 'static>(
     "java/net/PlainSocketImpl.socketSetOption0(IZLjava/lang/Object;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_set_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -305,7 +293,6 @@ pub async fn socket_set_option_0<T: Thread + 'static>(
     "java/net/PlainSocketImpl.socketShutdown(I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_shutdown<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -323,7 +310,6 @@ pub async fn socket_shutdown<T: Thread + 'static>(
     "java/net/PlainSocketImpl.accept0(I[Ljava/net/InetSocketAddress;)I",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn accept0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -333,7 +319,6 @@ pub async fn accept0<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.available0(I)I", Between(JAVA_11, JAVA_17))]
-#[async_method]
 pub async fn available0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -346,7 +331,6 @@ pub async fn available0<T: Thread + 'static>(
     "java/net/PlainSocketImpl.bind0(ILjava/net/InetAddress;IZ)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn bind0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -356,7 +340,6 @@ pub async fn bind0<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.close0(I)V", Between(JAVA_11, JAVA_17))]
-#[async_method]
 pub async fn close0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -369,7 +352,6 @@ pub async fn close0<T: Thread + 'static>(
     "java/net/PlainSocketImpl.configureBlocking(IZ)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn configure_blocking<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -382,7 +364,6 @@ pub async fn configure_blocking<T: Thread + 'static>(
     "java/net/PlainSocketImpl.connect0(ILjava/net/InetAddress;I)I",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn connect0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -395,7 +376,6 @@ pub async fn connect0<T: Thread + 'static>(
     "java/net/PlainSocketImpl.getIntOption(II)I",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn get_int_option<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -405,7 +385,6 @@ pub async fn get_int_option<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.listen0(II)V", Between(JAVA_11, JAVA_17))]
-#[async_method]
 pub async fn listen0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -418,7 +397,6 @@ pub async fn listen0<T: Thread + 'static>(
     "java/net/PlainSocketImpl.localAddress(ILjava/net/InetAddressContainer;)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn local_address<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -428,7 +406,6 @@ pub async fn local_address<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.localPort0(I)I", Between(JAVA_11, JAVA_17))]
-#[async_method]
 pub async fn local_port0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -438,7 +415,6 @@ pub async fn local_port0<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.sendOOB(II)V", Between(JAVA_11, JAVA_17))]
-#[async_method]
 pub async fn send_oob<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -451,7 +427,6 @@ pub async fn send_oob<T: Thread + 'static>(
     "java/net/PlainSocketImpl.setIntOption(III)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn set_int_option<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -461,7 +436,6 @@ pub async fn set_int_option<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.shutdown0(II)V", Between(JAVA_11, JAVA_17))]
-#[async_method]
 pub async fn shutdown0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -474,7 +448,6 @@ pub async fn shutdown0<T: Thread + 'static>(
     "java/net/PlainSocketImpl.waitForConnect(II)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn wait_for_connect<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -487,7 +460,6 @@ pub async fn wait_for_connect<T: Thread + 'static>(
     "java/net/PlainSocketImpl.waitForNewConnection(II)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn wait_for_new_connection<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -497,8 +469,7 @@ pub async fn wait_for_new_connection<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.initIDs()V", Between(JAVA_11, JAVA_17))]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -510,7 +481,6 @@ pub async fn init_ids<T: Thread + 'static>(
     "java/net/PlainSocketImpl.setSoTimeout0(II)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn set_so_timeout0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -523,7 +493,6 @@ pub async fn set_so_timeout0<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.socket0(Z)I", Between(JAVA_11, JAVA_17))]
-#[async_method]
 pub async fn socket0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -541,7 +510,7 @@ mod tests {
     #[tokio::test]
     async fn init_is_a_no_op() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
-        assert_eq!(None, init_proto(thread, Parameters::default()).await?);
+        assert_eq!(None, init_proto(thread, Parameters::default())?);
         Ok(())
     }
 }

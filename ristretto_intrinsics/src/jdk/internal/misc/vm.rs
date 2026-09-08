@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Equal, GreaterThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "jdk/internal/misc/VM.getNanoTimeAdjustment(J)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_nano_time_adjustment<T: Thread + 'static>(
+pub fn get_nano_time_adjustment<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -36,8 +34,7 @@ pub async fn get_nano_time_adjustment<T: Thread + 'static>(
     "jdk/internal/misc/VM.getRuntimeArguments()[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_runtime_arguments<T: Thread + 'static>(
+pub fn get_runtime_arguments<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -48,8 +45,7 @@ pub async fn get_runtime_arguments<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.getegid()J", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn getegid<T: Thread + 'static>(
+pub fn getegid<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -57,8 +53,7 @@ pub async fn getegid<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.geteuid()J", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn geteuid<T: Thread + 'static>(
+pub fn geteuid<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +61,7 @@ pub async fn geteuid<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.getgid()J", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn getgid<T: Thread + 'static>(
+pub fn getgid<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -75,8 +69,7 @@ pub async fn getgid<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.getuid()J", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn getuid<T: Thread + 'static>(
+pub fn getuid<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -84,8 +77,7 @@ pub async fn getuid<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.initialize()V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn initialize<T: Thread + 'static>(
+pub fn initialize<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -96,8 +88,7 @@ pub async fn initialize<T: Thread + 'static>(
     "jdk/internal/misc/VM.initializeFromArchive(Ljava/lang/Class;)V",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn initialize_from_archive<T: Thread + 'static>(
+pub fn initialize_from_archive<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -108,8 +99,7 @@ pub async fn initialize_from_archive<T: Thread + 'static>(
     "jdk/internal/misc/VM.latestUserDefinedLoader0()Ljava/lang/ClassLoader;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn latest_user_defined_loader_0<T: Thread + 'static>(
+pub fn latest_user_defined_loader_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -124,7 +114,7 @@ mod tests {
     async fn test_get_nano_time_adjustment() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let params = Parameters::new(vec![Value::Long(0)]);
-        let result = get_nano_time_adjustment(thread, params).await;
+        let result = get_nano_time_adjustment(thread, params);
         assert!(result.is_ok());
         let value = result.unwrap();
         assert!(matches!(value, Some(Value::Long(_))));
@@ -133,7 +123,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_runtime_arguments() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_runtime_arguments(thread, Parameters::default()).await;
+        let result = get_runtime_arguments(thread, Parameters::default());
         assert_eq!(
             "jdk.internal.misc.VM.getRuntimeArguments()[Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -143,7 +133,7 @@ mod tests {
     #[tokio::test]
     async fn test_getegid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = getegid(thread, Parameters::default()).await;
+        let result = getegid(thread, Parameters::default());
         assert_eq!(
             "jdk.internal.misc.VM.getegid()J",
             result.unwrap_err().to_string()
@@ -153,7 +143,7 @@ mod tests {
     #[tokio::test]
     async fn test_geteuid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = geteuid(thread, Parameters::default()).await;
+        let result = geteuid(thread, Parameters::default());
         assert_eq!(
             "jdk.internal.misc.VM.geteuid()J",
             result.unwrap_err().to_string()
@@ -163,7 +153,7 @@ mod tests {
     #[tokio::test]
     async fn test_getgid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = getgid(thread, Parameters::default()).await;
+        let result = getgid(thread, Parameters::default());
         assert_eq!(
             "jdk.internal.misc.VM.getgid()J",
             result.unwrap_err().to_string()
@@ -173,7 +163,7 @@ mod tests {
     #[tokio::test]
     async fn test_getuid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = getuid(thread, Parameters::default()).await;
+        let result = getuid(thread, Parameters::default());
         assert_eq!(
             "jdk.internal.misc.VM.getuid()J",
             result.unwrap_err().to_string()
@@ -183,7 +173,7 @@ mod tests {
     #[tokio::test]
     async fn test_initialize() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let value = initialize(thread, Parameters::default()).await?;
+        let value = initialize(thread, Parameters::default())?;
         assert_eq!(value, None);
         Ok(())
     }
@@ -191,7 +181,7 @@ mod tests {
     #[tokio::test]
     async fn test_initialize_from_archive() -> Result<()> {
         let (_vm, thread) = crate::test::java11_thread().await?;
-        let value = initialize_from_archive(thread, Parameters::default()).await?;
+        let value = initialize_from_archive(thread, Parameters::default())?;
         assert_eq!(value, None);
         Ok(())
     }
@@ -199,7 +189,7 @@ mod tests {
     #[tokio::test]
     async fn test_latest_user_defined_loader_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = latest_user_defined_loader_0(thread, Parameters::default()).await?;
+        let result = latest_user_defined_loader_0(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }

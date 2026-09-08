@@ -3,7 +3,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -13,8 +12,7 @@ use std::sync::Arc;
     "jdk/net/WindowsSocketOptions.getIpDontFragment0(IZ)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn get_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
+pub fn get_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn get_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
     "jdk/net/WindowsSocketOptions.getTcpKeepAliveIntvl0(I)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
+pub fn get_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -42,8 +39,7 @@ pub async fn get_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
     "jdk/net/WindowsSocketOptions.getTcpKeepAliveProbes0(I)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
+pub fn get_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -56,8 +52,7 @@ pub async fn get_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
     "jdk/net/WindowsSocketOptions.getTcpKeepAliveTime0(I)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_tcp_keep_alive_time_0<T: ristretto_types::Thread + 'static>(
+pub fn get_tcp_keep_alive_time_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -70,8 +65,7 @@ pub async fn get_tcp_keep_alive_time_0<T: ristretto_types::Thread + 'static>(
     "jdk/net/WindowsSocketOptions.keepAliveOptionsSupported0()Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn keep_alive_options_supported_0<T: ristretto_types::Thread + 'static>(
+pub fn keep_alive_options_supported_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -83,8 +77,7 @@ pub async fn keep_alive_options_supported_0<T: ristretto_types::Thread + 'static
     "jdk/net/WindowsSocketOptions.setIpDontFragment0(IZZ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn set_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
+pub fn set_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,8 +92,7 @@ pub async fn set_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
     "jdk/net/WindowsSocketOptions.setTcpKeepAliveIntvl0(II)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn set_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
+pub fn set_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -114,8 +106,7 @@ pub async fn set_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
     "jdk/net/WindowsSocketOptions.setTcpKeepAliveProbes0(II)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn set_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
+pub fn set_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -129,8 +120,7 @@ pub async fn set_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
     "jdk/net/WindowsSocketOptions.setTcpKeepAliveTime0(II)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn set_tcp_keep_alive_time_0<T: ristretto_types::Thread + 'static>(
+pub fn set_tcp_keep_alive_time_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -146,35 +136,35 @@ mod tests {
     #[tokio::test]
     async fn test_get_ip_dont_fragment_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_ip_dont_fragment_0(thread, Parameters::default()).await;
+        let result = get_ip_dont_fragment_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_tcp_keep_alive_intvl_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_tcp_keep_alive_intvl_0(thread, Parameters::default()).await;
+        let result = get_tcp_keep_alive_intvl_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_tcp_keep_alive_probes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_tcp_keep_alive_probes_0(thread, Parameters::default()).await;
+        let result = get_tcp_keep_alive_probes_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_tcp_keep_alive_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_tcp_keep_alive_time_0(thread, Parameters::default()).await;
+        let result = get_tcp_keep_alive_time_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_keep_alive_options_supported_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = keep_alive_options_supported_0(thread, Parameters::default()).await?;
+        let result = keep_alive_options_supported_0(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::from(true)));
         Ok(())
     }
@@ -182,28 +172,28 @@ mod tests {
     #[tokio::test]
     async fn test_set_ip_dont_fragment_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_ip_dont_fragment_0(thread, Parameters::default()).await;
+        let result = set_ip_dont_fragment_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_set_tcp_keep_alive_intvl_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_tcp_keep_alive_intvl_0(thread, Parameters::default()).await;
+        let result = set_tcp_keep_alive_intvl_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_set_tcp_keep_alive_probes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_tcp_keep_alive_probes_0(thread, Parameters::default()).await;
+        let result = set_tcp_keep_alive_probes_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_set_tcp_keep_alive_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_tcp_keep_alive_time_0(thread, Parameters::default()).await;
+        let result = set_tcp_keep_alive_time_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 }

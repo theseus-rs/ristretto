@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/font/CStrike.createNativeStrikePtr(J[D[DII)J", Any)]
-#[async_method]
-pub async fn create_native_strike_ptr<T: Thread + 'static>(
+pub fn create_native_strike_ptr<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -25,8 +23,7 @@ pub async fn create_native_strike_ptr<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/CStrike.disposeNativeStrikePtr(J)V", Any)]
-#[async_method]
-pub async fn dispose_native_strike_ptr<T: Thread + 'static>(
+pub fn dispose_native_strike_ptr<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,8 +35,7 @@ pub async fn dispose_native_strike_ptr<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/CStrike.getFontMetrics(J)Lsun/font/StrikeMetrics;", Any)]
-#[async_method]
-pub async fn get_font_metrics<T: Thread + 'static>(
+pub fn get_font_metrics<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -51,8 +47,7 @@ pub async fn get_font_metrics<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/CStrike.getGlyphImagePtrsNative(J[J[II)V", Any)]
-#[async_method]
-pub async fn get_glyph_image_ptrs_native<T: Thread + 'static>(
+pub fn get_glyph_image_ptrs_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -67,8 +62,7 @@ pub async fn get_glyph_image_ptrs_native<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/CStrike.getNativeGlyphAdvance(JI)F", Any)]
-#[async_method]
-pub async fn get_native_glyph_advance<T: Thread + 'static>(
+pub fn get_native_glyph_advance<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -84,8 +78,7 @@ pub async fn get_native_glyph_advance<T: Thread + 'static>(
     "sun/font/CStrike.getNativeGlyphImageBounds(JILjava/awt/geom/Rectangle2D$Float;DD)V",
     Any
 )]
-#[async_method]
-pub async fn get_native_glyph_image_bounds<T: Thread + 'static>(
+pub fn get_native_glyph_image_bounds<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -105,8 +98,7 @@ pub async fn get_native_glyph_image_bounds<T: Thread + 'static>(
     "sun/font/CStrike.getNativeGlyphOutline(JIDD)Ljava/awt/geom/GeneralPath;",
     Any
 )]
-#[async_method]
-pub async fn get_native_glyph_outline<T: Thread + 'static>(
+pub fn get_native_glyph_outline<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -136,8 +128,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.CStrike.createNativeStrikePtr(J[D[DII)J",
             result.unwrap_err().to_string()
@@ -147,7 +138,7 @@ mod tests {
     #[tokio::test]
     async fn test_dispose_native_strike_ptr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dispose_native_strike_ptr(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = dispose_native_strike_ptr(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.font.CStrike.disposeNativeStrikePtr(J)V",
             result.unwrap_err().to_string()
@@ -157,7 +148,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_font_metrics() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_font_metrics(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_font_metrics(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.font.CStrike.getFontMetrics(J)Lsun/font/StrikeMetrics;",
             result.unwrap_err().to_string()
@@ -175,8 +166,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.CStrike.getGlyphImagePtrsNative(J[J[II)V",
             result.unwrap_err().to_string()
@@ -187,8 +177,7 @@ mod tests {
     async fn test_get_native_glyph_advance() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            get_native_glyph_advance(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]))
-                .await;
+            get_native_glyph_advance(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun.font.CStrike.getNativeGlyphAdvance(JI)F",
             result.unwrap_err().to_string()
@@ -207,8 +196,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Double(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.CStrike.getNativeGlyphImageBounds(JILjava/awt/geom/Rectangle2D$Float;DD)V",
             result.unwrap_err().to_string()
@@ -226,8 +214,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Double(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.CStrike.getNativeGlyphOutline(JIDD)Ljava/awt/geom/GeneralPath;",
             result.unwrap_err().to_string()

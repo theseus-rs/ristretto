@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/awt/windows/WComponentPeer._dispose()V", Any)]
-#[async_method]
-pub async fn dispose<T: Thread + 'static>(
+pub fn dispose<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -19,8 +17,7 @@ pub async fn dispose<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer._setBackground(I)V", Any)]
-#[async_method]
-pub async fn set_background<T: Thread + 'static>(
+pub fn set_background<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,8 +28,7 @@ pub async fn set_background<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer._setFont(Ljava/awt/Font;)V", Any)]
-#[async_method]
-pub async fn set_font<T: Thread + 'static>(
+pub fn set_font<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -43,8 +39,7 @@ pub async fn set_font<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer._setForeground(I)V", Any)]
-#[async_method]
-pub async fn set_foreground<T: Thread + 'static>(
+pub fn set_foreground<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,8 +50,7 @@ pub async fn set_foreground<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.addNativeDropTarget()J", Any)]
-#[async_method]
-pub async fn add_native_drop_target<T: Thread + 'static>(
+pub fn add_native_drop_target<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +60,7 @@ pub async fn add_native_drop_target<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.beginValidate()V", Any)]
-#[async_method]
-pub async fn begin_validate<T: Thread + 'static>(
+pub fn begin_validate<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -77,8 +70,7 @@ pub async fn begin_validate<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.createPrintedPixels(IIIII)[I", Any)]
-#[async_method]
-pub async fn create_printed_pixels<T: Thread + 'static>(
+pub fn create_printed_pixels<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -93,8 +85,7 @@ pub async fn create_printed_pixels<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.disable()V", Any)]
-#[async_method]
-pub async fn disable<T: Thread + 'static>(
+pub fn disable<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -104,8 +95,7 @@ pub async fn disable<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.enable()V", Any)]
-#[async_method]
-pub async fn enable<T: Thread + 'static>(
+pub fn enable<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -115,8 +105,7 @@ pub async fn enable<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.endValidate()V", Any)]
-#[async_method]
-pub async fn end_validate<T: Thread + 'static>(
+pub fn end_validate<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -129,8 +118,7 @@ pub async fn end_validate<T: Thread + 'static>(
     "sun/awt/windows/WComponentPeer.getLocationOnScreen()Ljava/awt/Point;",
     Any
 )]
-#[async_method]
-pub async fn get_location_on_screen<T: Thread + 'static>(
+pub fn get_location_on_screen<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -140,8 +128,7 @@ pub async fn get_location_on_screen<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.hide()V", Any)]
-#[async_method]
-pub async fn hide<T: Thread + 'static>(
+pub fn hide<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -151,8 +138,7 @@ pub async fn hide<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.isObscured()Z", Any)]
-#[async_method]
-pub async fn is_obscured<T: Thread + 'static>(
+pub fn is_obscured<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -165,8 +151,7 @@ pub async fn is_obscured<T: Thread + 'static>(
     "sun/awt/windows/WComponentPeer.nativeHandleEvent(Ljava/awt/AWTEvent;)V",
     Any
 )]
-#[async_method]
-pub async fn native_handle_event<T: Thread + 'static>(
+pub fn native_handle_event<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -177,8 +162,7 @@ pub async fn native_handle_event<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.nativeHandlesWheelScrolling()Z", Any)]
-#[async_method]
-pub async fn native_handles_wheel_scrolling<T: Thread + 'static>(
+pub fn native_handles_wheel_scrolling<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -191,8 +175,7 @@ pub async fn native_handles_wheel_scrolling<T: Thread + 'static>(
     "sun/awt/windows/WComponentPeer.pSetParent(Ljava/awt/peer/ComponentPeer;)V",
     Any
 )]
-#[async_method]
-pub async fn p_set_parent<T: Thread + 'static>(
+pub fn p_set_parent<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -203,8 +186,7 @@ pub async fn p_set_parent<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.pShow()V", Any)]
-#[async_method]
-pub async fn p_show<T: Thread + 'static>(
+pub fn p_show<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -214,8 +196,7 @@ pub async fn p_show<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.removeNativeDropTarget()V", Any)]
-#[async_method]
-pub async fn remove_native_drop_target<T: Thread + 'static>(
+pub fn remove_native_drop_target<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -225,8 +206,7 @@ pub async fn remove_native_drop_target<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.reshape(IIII)V", Any)]
-#[async_method]
-pub async fn reshape<T: Thread + 'static>(
+pub fn reshape<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -240,8 +220,7 @@ pub async fn reshape<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.reshapeNoCheck(IIII)V", Any)]
-#[async_method]
-pub async fn reshape_no_check<T: Thread + 'static>(
+pub fn reshape_no_check<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -255,8 +234,7 @@ pub async fn reshape_no_check<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.setFocus(Z)V", Any)]
-#[async_method]
-pub async fn set_focus<T: Thread + 'static>(
+pub fn set_focus<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -270,8 +248,7 @@ pub async fn set_focus<T: Thread + 'static>(
     "sun/awt/windows/WComponentPeer.setRectangularShape(IIIILsun/java2d/pipe/Region;)V",
     Any
 )]
-#[async_method]
-pub async fn set_rectangular_shape<T: Thread + 'static>(
+pub fn set_rectangular_shape<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -287,8 +264,7 @@ pub async fn set_rectangular_shape<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.setZOrder(J)V", Any)]
-#[async_method]
-pub async fn set_zorder<T: Thread + 'static>(
+pub fn set_zorder<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -299,8 +275,7 @@ pub async fn set_zorder<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.start()V", Any)]
-#[async_method]
-pub async fn start<T: Thread + 'static>(
+pub fn start<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -310,8 +285,7 @@ pub async fn start<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WComponentPeer.updateWindow()V", Any)]
-#[async_method]
-pub async fn update_window<T: Thread + 'static>(
+pub fn update_window<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -329,7 +303,7 @@ mod tests {
     #[tokio::test]
     async fn test_dispose() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dispose(thread, Parameters::default()).await;
+        let result = dispose(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer._dispose()V",
             result.unwrap_err().to_string()
@@ -340,7 +314,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_background() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_background(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = set_background(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WComponentPeer._setBackground(I)V",
             result.unwrap_err().to_string()
@@ -351,7 +325,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_font() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_font(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = set_font(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WComponentPeer._setFont(Ljava/awt/Font;)V",
             result.unwrap_err().to_string()
@@ -362,7 +336,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_foreground() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_foreground(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = set_foreground(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WComponentPeer._setForeground(I)V",
             result.unwrap_err().to_string()
@@ -373,7 +347,7 @@ mod tests {
     #[tokio::test]
     async fn test_add_native_drop_target() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = add_native_drop_target(thread, Parameters::default()).await;
+        let result = add_native_drop_target(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.addNativeDropTarget()J",
             result.unwrap_err().to_string()
@@ -384,7 +358,7 @@ mod tests {
     #[tokio::test]
     async fn test_begin_validate() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = begin_validate(thread, Parameters::default()).await;
+        let result = begin_validate(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.beginValidate()V",
             result.unwrap_err().to_string()
@@ -404,8 +378,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WComponentPeer.createPrintedPixels(IIIII)[I",
             result.unwrap_err().to_string()
@@ -416,7 +389,7 @@ mod tests {
     #[tokio::test]
     async fn test_disable() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = disable(thread, Parameters::default()).await;
+        let result = disable(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.disable()V",
             result.unwrap_err().to_string()
@@ -427,7 +400,7 @@ mod tests {
     #[tokio::test]
     async fn test_enable() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = enable(thread, Parameters::default()).await;
+        let result = enable(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.enable()V",
             result.unwrap_err().to_string()
@@ -438,7 +411,7 @@ mod tests {
     #[tokio::test]
     async fn test_end_validate() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = end_validate(thread, Parameters::default()).await;
+        let result = end_validate(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.endValidate()V",
             result.unwrap_err().to_string()
@@ -449,7 +422,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_location_on_screen() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_location_on_screen(thread, Parameters::default()).await;
+        let result = get_location_on_screen(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.getLocationOnScreen()Ljava/awt/Point;",
             result.unwrap_err().to_string()
@@ -460,7 +433,7 @@ mod tests {
     #[tokio::test]
     async fn test_hide() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = hide(thread, Parameters::default()).await;
+        let result = hide(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.hide()V",
             result.unwrap_err().to_string()
@@ -471,7 +444,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_obscured() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = is_obscured(thread, Parameters::default()).await;
+        let result = is_obscured(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.isObscured()Z",
             result.unwrap_err().to_string()
@@ -482,7 +455,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_handle_event() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_handle_event(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = native_handle_event(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WComponentPeer.nativeHandleEvent(Ljava/awt/AWTEvent;)V",
             result.unwrap_err().to_string()
@@ -493,7 +466,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_handles_wheel_scrolling() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_handles_wheel_scrolling(thread, Parameters::default()).await;
+        let result = native_handles_wheel_scrolling(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.nativeHandlesWheelScrolling()Z",
             result.unwrap_err().to_string()
@@ -504,7 +477,7 @@ mod tests {
     #[tokio::test]
     async fn test_p_set_parent() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = p_set_parent(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = p_set_parent(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WComponentPeer.pSetParent(Ljava/awt/peer/ComponentPeer;)V",
             result.unwrap_err().to_string()
@@ -515,7 +488,7 @@ mod tests {
     #[tokio::test]
     async fn test_p_show() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = p_show(thread, Parameters::default()).await;
+        let result = p_show(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.pShow()V",
             result.unwrap_err().to_string()
@@ -526,7 +499,7 @@ mod tests {
     #[tokio::test]
     async fn test_remove_native_drop_target() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = remove_native_drop_target(thread, Parameters::default()).await;
+        let result = remove_native_drop_target(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.removeNativeDropTarget()V",
             result.unwrap_err().to_string()
@@ -545,8 +518,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WComponentPeer.reshape(IIII)V",
             result.unwrap_err().to_string()
@@ -565,8 +537,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WComponentPeer.reshapeNoCheck(IIII)V",
             result.unwrap_err().to_string()
@@ -577,7 +548,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_focus() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_focus(thread, Parameters::new(vec![Value::from(false)])).await;
+        let result = set_focus(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "sun/awt/windows/WComponentPeer.setFocus(Z)V",
             result.unwrap_err().to_string()
@@ -597,8 +568,7 @@ mod tests {
                 Value::Int(0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WComponentPeer.setRectangularShape(IIIILsun/java2d/pipe/Region;)V",
             result.unwrap_err().to_string()
@@ -609,7 +579,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_zorder() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_zorder(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = set_zorder(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WComponentPeer.setZOrder(J)V",
             result.unwrap_err().to_string()
@@ -620,7 +590,7 @@ mod tests {
     #[tokio::test]
     async fn test_start() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = start(thread, Parameters::default()).await;
+        let result = start(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.start()V",
             result.unwrap_err().to_string()
@@ -631,7 +601,7 @@ mod tests {
     #[tokio::test]
     async fn test_update_window() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = update_window(thread, Parameters::default()).await;
+        let result = update_window(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WComponentPeer.updateWindow()V",
             result.unwrap_err().to_string()

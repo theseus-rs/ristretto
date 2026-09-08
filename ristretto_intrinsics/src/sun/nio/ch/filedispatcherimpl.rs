@@ -25,7 +25,6 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 #[cfg(target_family = "unix")]
 use ristretto_classloader::Reference;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError;
@@ -50,8 +49,7 @@ fn io_status(operation: &str, error: &std::io::Error) -> Result<i64> {
     "sun/nio/ch/FileDispatcherImpl.canTransferToFromOverlappedMap0()Z",
     Equal(JAVA_17)
 )]
-#[async_method]
-pub async fn can_transfer_to_from_overlapped_map_0<T: Thread + 'static>(
+pub fn can_transfer_to_from_overlapped_map_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -92,7 +90,6 @@ async fn close_internal<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.close0(Ljava/io/FileDescriptor;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -105,7 +102,6 @@ pub async fn close_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.close0(Ljava/io/FileDescriptor;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn close_0_windows<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -118,7 +114,6 @@ pub async fn close_0_windows<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.closeIntFD(I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn close_int_fd<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -140,7 +135,6 @@ pub async fn close_int_fd<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.dup0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V",
     Equal(JAVA_17)
 )]
-#[async_method]
 pub async fn dup_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -172,7 +166,6 @@ pub async fn dup_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.force0(Ljava/io/FileDescriptor;Z)I",
     Any
 )]
-#[async_method]
 pub async fn force_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -205,7 +198,6 @@ pub async fn force_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.force0(Ljava/io/FileDescriptor;Z)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn force_0_linux<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -235,8 +227,7 @@ pub async fn force_0_linux<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/ch/FileDispatcherImpl.init()V", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -245,8 +236,7 @@ pub async fn init<T: Thread + 'static>(
 
 #[cfg(any(target_os = "linux", target_os = "wasi"))]
 #[intrinsic_method("sun/nio/ch/FileDispatcherImpl.init0()V", GreaterThanOrEqual(JAVA_21))]
-#[async_method]
-pub async fn init_0<T: Thread + 'static>(
+pub fn init_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -290,7 +280,6 @@ async fn lock_internal<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.lock0(Ljava/io/FileDescriptor;ZJJZ)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn lock_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -303,7 +292,6 @@ pub async fn lock_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.lock0(Ljava/io/FileDescriptor;ZJJZ)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn lock_0_windows<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -316,8 +304,7 @@ pub async fn lock_0_windows<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.preClose0(Ljava/io/FileDescriptor;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn pre_close_0<T: Thread + 'static>(
+pub fn pre_close_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -359,7 +346,6 @@ async fn pread_internal<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.pread0(Ljava/io/FileDescriptor;JIJ)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn pread_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -372,7 +358,6 @@ pub async fn pread_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.pread0(Ljava/io/FileDescriptor;JIJ)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn pread_0_windows<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -406,7 +391,6 @@ async fn pwrite_internal<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.pwrite0(Ljava/io/FileDescriptor;JIJ)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn pwrite_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -419,7 +403,6 @@ pub async fn pwrite_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.pwrite0(Ljava/io/FileDescriptor;JIJ)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn pwrite_0_windows<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -464,7 +447,6 @@ async fn read_internal<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -477,7 +459,6 @@ pub async fn read_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn read_0_windows<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -556,7 +537,6 @@ async fn readv_internal<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.readv0(Ljava/io/FileDescriptor;JI)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn readv_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -569,7 +549,6 @@ pub async fn readv_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.readv0(Ljava/io/FileDescriptor;JI)J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn readv_0_windows<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -610,7 +589,6 @@ async fn release_internal<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.release0(Ljava/io/FileDescriptor;JJ)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn release_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -623,7 +601,6 @@ pub async fn release_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.release0(Ljava/io/FileDescriptor;JJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn release_0_windows<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -659,7 +636,6 @@ async fn seek_internal<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn seek_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -672,7 +648,6 @@ pub async fn seek_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn seek_0_windows<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -685,8 +660,7 @@ pub async fn seek_0_windows<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;)I",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
-pub async fn set_direct_0<T: Thread + 'static>(
+pub fn set_direct_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -711,7 +685,6 @@ async fn size_internal<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn size_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -724,7 +697,6 @@ pub async fn size_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn size_0_windows<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -736,8 +708,7 @@ pub async fn size_0_windows<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.transferTo0(Ljava/io/FileDescriptor;JJLjava/io/FileDescriptor;Z)J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn transfer_to_0<T: Thread + 'static>(
+pub fn transfer_to_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -765,7 +736,6 @@ async fn truncate_internal<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn truncate_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -778,7 +748,6 @@ pub async fn truncate_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn truncate_0_windows<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -791,7 +760,6 @@ pub async fn truncate_0_windows<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.write0(Ljava/io/FileDescriptor;JI)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -819,7 +787,6 @@ pub async fn write_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.writev0(Ljava/io/FileDescriptor;JI)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn writev_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -870,8 +837,7 @@ pub async fn writev_0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.allocationGranularity0()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn allocation_granularity0<T: Thread + 'static>(
+pub fn allocation_granularity0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -883,7 +849,6 @@ pub async fn allocation_granularity0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I",
     Equal(JAVA_25)
 )]
-#[async_method]
 pub async fn available0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -904,7 +869,6 @@ pub async fn available0<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/nio/ch/FileDispatcherImpl.closeByHandle(J)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn close_by_handle<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -920,7 +884,6 @@ pub async fn close_by_handle<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/nio/ch/FileDispatcherImpl.duplicateHandle(J)J", Any)]
-#[async_method]
 pub async fn duplicate_handle<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -938,7 +901,6 @@ pub async fn duplicate_handle<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z",
     Equal(JAVA_25)
 )]
-#[async_method]
 pub async fn is_other0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -958,7 +920,6 @@ pub async fn is_other0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn map0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1053,8 +1014,7 @@ async fn path_for_fd(
     "sun/nio/ch/FileDispatcherImpl.maxDirectTransferSize0()I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn max_direct_transfer_size0<T: Thread + 'static>(
+pub fn max_direct_transfer_size0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1066,8 +1026,7 @@ pub async fn max_direct_transfer_size0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;Ljava/nio/CharBuffer;)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_direct0<T: Thread + 'static>(
+pub fn set_direct0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1083,7 +1042,6 @@ pub async fn set_direct0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.transferFrom0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;JJZ)J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn transfer_from0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1135,8 +1093,7 @@ pub async fn transfer_from0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.unmap0(JJ)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn unmap0<T: Thread + 'static>(
+pub fn unmap0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1164,7 +1121,6 @@ pub async fn unmap0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.write0(Ljava/io/FileDescriptor;JIZ)I",
     Any
 )]
-#[async_method]
 pub async fn write0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1196,7 +1152,6 @@ pub async fn write0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.writev0(Ljava/io/FileDescriptor;JIZ)J",
     Any
 )]
-#[async_method]
 pub async fn writev0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1249,7 +1204,7 @@ mod tests {
     #[tokio::test]
     async fn test_can_transfer_to_from_overlapped_map_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let result = can_transfer_to_from_overlapped_map_0(thread, Parameters::default()).await;
+        let result = can_transfer_to_from_overlapped_map_0(thread, Parameters::default());
         assert!(result.is_ok());
     }
 
@@ -1289,7 +1244,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
-        let result = init(thread, Parameters::default()).await?;
+        let result = init(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1298,7 +1253,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_0(thread, Parameters::default()).await?;
+        let result = init_0(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1314,7 +1269,7 @@ mod tests {
     #[tokio::test]
     async fn test_pre_close_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let result = pre_close_0(thread, Parameters::default()).await;
+        let result = pre_close_0(thread, Parameters::default());
         assert!(result.is_ok());
     }
 
@@ -1364,9 +1319,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_direct_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let result = set_direct_0(thread, Parameters::default())
-            .await
-            .expect("set_direct_0");
+        let result = set_direct_0(thread, Parameters::default()).expect("set_direct_0");
         assert_eq!(result, Some(Value::Int(-1)));
     }
 
@@ -1380,7 +1333,7 @@ mod tests {
     #[tokio::test]
     async fn test_transfer_to_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = transfer_to_0(thread, Parameters::default()).await.unwrap();
+        let result = transfer_to_0(thread, Parameters::default()).unwrap();
         assert_eq!(result, Some(Value::Long(-4)));
     }
 
@@ -1411,7 +1364,7 @@ mod tests {
     #[tokio::test]
     async fn test_allocation_granularity0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = allocation_granularity0(thread, Parameters::default()).await;
+        let result = allocation_granularity0(thread, Parameters::default());
         assert_eq!(Some(Value::Long(65536)), result.unwrap());
     }
 
@@ -1490,7 +1443,7 @@ mod tests {
     #[tokio::test]
     async fn test_max_direct_transfer_size0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = max_direct_transfer_size0(thread, Parameters::default()).await;
+        let result = max_direct_transfer_size0(thread, Parameters::default());
         assert_eq!(Some(Value::Int(i32::MAX)), result.unwrap());
     }
 
@@ -1502,7 +1455,6 @@ mod tests {
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
         )
-        .await
         .expect("set_direct0");
         assert_eq!(result, Some(Value::Int(-1)));
     }
@@ -1535,7 +1487,6 @@ mod tests {
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
         )
-        .await
         .expect("unmap0");
         assert_eq!(result, Some(Value::Int(0)));
     }

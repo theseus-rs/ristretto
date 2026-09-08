@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_gc::sync::RwLock;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -102,10 +101,9 @@ fn level_to_compression(level: i32) -> Compression {
     "java/util/zip/Deflater.deflateBytes(J[BIII)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 #[expect(clippy::match_same_arms)]
 #[expect(clippy::too_many_lines)]
-pub async fn deflate_bytes<T: Thread + 'static>(
+pub fn deflate_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -258,8 +256,7 @@ pub async fn deflate_bytes<T: Thread + 'static>(
     "java/util/zip/Deflater.deflateBufferBuffer(JJIJIII)J",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn deflate_buffer_buffer<T: Thread + 'static>(
+pub fn deflate_buffer_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -278,8 +275,7 @@ pub async fn deflate_buffer_buffer<T: Thread + 'static>(
     "java/util/zip/Deflater.deflateBufferBytes(JJI[BIIII)J",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn deflate_buffer_bytes<T: Thread + 'static>(
+pub fn deflate_buffer_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -299,8 +295,7 @@ pub async fn deflate_buffer_bytes<T: Thread + 'static>(
     "java/util/zip/Deflater.deflateBytesBuffer(J[BIIJIII)J",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn deflate_bytes_buffer<T: Thread + 'static>(
+pub fn deflate_bytes_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -320,10 +315,9 @@ pub async fn deflate_bytes_buffer<T: Thread + 'static>(
     "java/util/zip/Deflater.deflateBytesBytes(J[BII[BIIII)J",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
 #[expect(clippy::match_same_arms)]
 #[expect(clippy::too_many_lines)]
-pub async fn deflate_bytes_bytes<T: Thread + 'static>(
+pub fn deflate_bytes_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -464,8 +458,7 @@ pub async fn deflate_bytes_bytes<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/Deflater.end(J)V", Any)]
-#[async_method]
-pub async fn end<T: Thread + 'static>(
+pub fn end<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -479,8 +472,7 @@ pub async fn end<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/Deflater.getAdler(J)I", Any)]
-#[async_method]
-pub async fn get_adler<T: Thread + 'static>(
+pub fn get_adler<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -506,8 +498,7 @@ pub async fn get_adler<T: Thread + 'static>(
 
 /// Initialize a new Deflater.
 #[intrinsic_method("java/util/zip/Deflater.init(IIZ)J", Any)]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -541,8 +532,7 @@ pub async fn init<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/Deflater.initIDs()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -550,8 +540,7 @@ pub async fn init_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/Deflater.reset(J)V", Any)]
-#[async_method]
-pub async fn reset<T: Thread + 'static>(
+pub fn reset<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -581,8 +570,7 @@ pub async fn reset<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/Deflater.setDictionary(J[BII)V", Any)]
-#[async_method]
-pub async fn set_dictionary<T: Thread + 'static>(
+pub fn set_dictionary<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -649,8 +637,7 @@ pub async fn set_dictionary<T: Thread + 'static>(
     "java/util/zip/Deflater.setDictionaryBuffer(JJI)V",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn set_dictionary_buffer<T: Thread + 'static>(
+pub fn set_dictionary_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -668,7 +655,7 @@ mod tests {
     use super::*;
     use ristretto_classloader::{Object, Reference};
 
-    async fn create_deflater<T: Thread + 'static>(
+    fn create_deflater<T: Thread + 'static>(
         thread: &Arc<T>,
         level: i32,
         nowrap: bool,
@@ -677,7 +664,7 @@ mod tests {
         parameters.push_int(level); // level
         parameters.push_int(0); // strategy = DEFAULT_STRATEGY
         parameters.push_int(i32::from(nowrap)); // nowrap
-        let result = init(thread.clone(), parameters).await?;
+        let result = init(thread.clone(), parameters)?;
         Ok(result.expect("handle").as_i64()?)
     }
 
@@ -711,13 +698,13 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
 
         // Test init with default compression
-        let handle = create_deflater(&thread, -1, false).await?;
+        let handle = create_deflater(&thread, -1, false)?;
         assert!(handle > 0);
 
         // Test end
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = end(thread, parameters).await?;
+        let result = end(thread, parameters)?;
         assert!(result.is_none());
         Ok(())
     }
@@ -727,13 +714,13 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
 
         // Test init with nowrap = true (raw deflate)
-        let handle = create_deflater(&thread, 6, true).await?;
+        let handle = create_deflater(&thread, 6, true)?;
         assert!(handle > 0);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        end(thread, parameters).await?;
+        end(thread, parameters)?;
         Ok(())
     }
 
@@ -741,17 +728,17 @@ mod tests {
     async fn test_get_adler() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        let handle = create_deflater(&thread, -1, false).await?;
+        let handle = create_deflater(&thread, -1, false)?;
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = get_adler(thread.clone(), parameters).await?;
+        let result = get_adler(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Int(1)), result);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        end(thread, parameters).await?;
+        end(thread, parameters)?;
         Ok(())
     }
 
@@ -759,25 +746,25 @@ mod tests {
     async fn test_reset() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        let handle = create_deflater(&thread, -1, false).await?;
+        let handle = create_deflater(&thread, -1, false)?;
 
         // Test reset
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = reset(thread.clone(), parameters).await?;
+        let result = reset(thread.clone(), parameters)?;
         assert!(result.is_none());
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        end(thread, parameters).await?;
+        end(thread, parameters)?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -786,7 +773,7 @@ mod tests {
     async fn test_deflate_bytes_bytes() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        let handle = create_deflater(&thread, 6, false).await?;
+        let handle = create_deflater(&thread, 6, false)?;
 
         // Create input array
         let input_bytes: Vec<i8> = b"Hello, World!"
@@ -820,7 +807,7 @@ mod tests {
         parameters.push_int(4); // flush = FINISH
         parameters.push_int(0); // params (unused)
 
-        let result = deflate_bytes_bytes(thread.clone(), parameters).await?;
+        let result = deflate_bytes_bytes(thread.clone(), parameters)?;
         let packed = result.expect("result").as_i64()?;
 
         // Extract bytes_read from bits 0-30
@@ -843,7 +830,7 @@ mod tests {
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        end(thread, parameters).await?;
+        end(thread, parameters)?;
         Ok(())
     }
 
@@ -851,7 +838,7 @@ mod tests {
     async fn test_deflate_bytes() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
 
-        let handle = create_deflater(&thread, 6, false).await?;
+        let handle = create_deflater(&thread, 6, false)?;
         let vm = thread.vm()?;
         let gc = vm.garbage_collector();
 
@@ -885,7 +872,7 @@ mod tests {
         parameters.push_int(100); // out_len
         parameters.push_int(0); // flush
 
-        let result = deflate_bytes(thread.clone(), parameters).await?;
+        let result = deflate_bytes(thread.clone(), parameters)?;
         let bytes_written = result.expect("result").as_i32()?;
         assert!(bytes_written > 0);
 
@@ -897,7 +884,7 @@ mod tests {
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        end(thread, parameters).await?;
+        end(thread, parameters)?;
         Ok(())
     }
 
@@ -905,7 +892,7 @@ mod tests {
     async fn test_set_dictionary() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        let handle = create_deflater(&thread, 6, false).await?;
+        let handle = create_deflater(&thread, 6, false)?;
 
         // Create dictionary array
         let dict_bytes: Vec<i8> = b"dictionary".iter().map(|b| (*b).cast_signed()).collect();
@@ -923,13 +910,13 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(10); // length
 
-        let result = set_dictionary(thread.clone(), parameters).await?;
+        let result = set_dictionary(thread.clone(), parameters)?;
         assert!(result.is_none());
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        end(thread, parameters).await?;
+        end(thread, parameters)?;
         Ok(())
     }
 
@@ -937,7 +924,7 @@ mod tests {
     async fn test_deflate_buffer_buffer_zero_len() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        let handle = create_deflater(&thread, 6, false).await?;
+        let handle = create_deflater(&thread, 6, false)?;
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
@@ -948,13 +935,13 @@ mod tests {
         parameters.push_int(0); // params
         parameters.push_int(0); // flush
 
-        let result = deflate_buffer_buffer(thread.clone(), parameters).await?;
+        let result = deflate_buffer_buffer(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Long(0)), result);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        end(thread, parameters).await?;
+        end(thread, parameters)?;
         Ok(())
     }
 
@@ -962,7 +949,7 @@ mod tests {
     async fn test_deflate_buffer_bytes_zero_len() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        let handle = create_deflater(&thread, 6, false).await?;
+        let handle = create_deflater(&thread, 6, false)?;
 
         let output_bytes: Vec<i8> = vec![0i8; 100];
         let output_ref = Reference::from(output_bytes);
@@ -983,13 +970,13 @@ mod tests {
         parameters.push_int(0); // params
         parameters.push_int(0); // flush
 
-        let result = deflate_buffer_bytes(thread.clone(), parameters).await?;
+        let result = deflate_buffer_bytes(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Long(0)), result);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        end(thread, parameters).await?;
+        end(thread, parameters)?;
         Ok(())
     }
 
@@ -997,7 +984,7 @@ mod tests {
     async fn test_deflate_bytes_buffer_zero_len() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        let handle = create_deflater(&thread, 6, false).await?;
+        let handle = create_deflater(&thread, 6, false)?;
 
         let input_bytes: Vec<i8> = vec![b'a'.cast_signed()];
         let input_ref = Reference::from(input_bytes);
@@ -1018,13 +1005,13 @@ mod tests {
         parameters.push_int(0); // params
         parameters.push_int(0); // flush
 
-        let result = deflate_bytes_buffer(thread.clone(), parameters).await?;
+        let result = deflate_bytes_buffer(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Long(0)), result);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        end(thread, parameters).await?;
+        end(thread, parameters)?;
         Ok(())
     }
 
@@ -1032,20 +1019,20 @@ mod tests {
     async fn test_set_dictionary_buffer_zero_len() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        let handle = create_deflater(&thread, 6, false).await?;
+        let handle = create_deflater(&thread, 6, false)?;
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
         parameters.push_long(0); // addr
         parameters.push_int(0); // len = 0
 
-        let result = set_dictionary_buffer(thread.clone(), parameters).await?;
+        let result = set_dictionary_buffer(thread.clone(), parameters)?;
         assert!(result.is_none());
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        end(thread, parameters).await?;
+        end(thread, parameters)?;
         Ok(())
     }
 }

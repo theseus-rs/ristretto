@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaObject;
 use ristretto_types::Thread;
@@ -31,7 +30,6 @@ unsafe extern "C" {
     "sun/nio/fs/UTIFileTypeDetector.probe0(Ljava/lang/String;)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn probe_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

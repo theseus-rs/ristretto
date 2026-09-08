@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/awt/windows/WTrayIconPeer._displayMessage(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
     Any
 )]
-#[async_method]
-pub async fn display_message<T: Thread + 'static>(
+pub fn display_message<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -22,8 +20,7 @@ pub async fn display_message<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WTrayIconPeer._displayMessage(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/windows/WTrayIconPeer._dispose()V", Any)]
-#[async_method]
-pub async fn dispose<T: Thread + 'static>(
+pub fn dispose<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -33,8 +30,7 @@ pub async fn dispose<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WTrayIconPeer.create()V", Any)]
-#[async_method]
-pub async fn create<T: Thread + 'static>(
+pub fn create<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,8 +40,7 @@ pub async fn create<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WTrayIconPeer.setNativeIcon([I[BIII)V", Any)]
-#[async_method]
-pub async fn set_native_icon<T: Thread + 'static>(
+pub fn set_native_icon<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -60,8 +55,7 @@ pub async fn set_native_icon<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WTrayIconPeer.setToolTip(Ljava/lang/String;)V", Any)]
-#[async_method]
-pub async fn set_tool_tip<T: Thread + 'static>(
+pub fn set_tool_tip<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -72,8 +66,7 @@ pub async fn set_tool_tip<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WTrayIconPeer.updateNativeIcon(Z)V", Any)]
-#[async_method]
-pub async fn update_native_icon<T: Thread + 'static>(
+pub fn update_native_icon<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,8 +92,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WTrayIconPeer._displayMessage(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -111,7 +103,7 @@ mod tests {
     #[tokio::test]
     async fn test_dispose() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dispose(thread, Parameters::default()).await;
+        let result = dispose(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WTrayIconPeer._dispose()V",
             result.unwrap_err().to_string()
@@ -122,7 +114,7 @@ mod tests {
     #[tokio::test]
     async fn test_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create(thread, Parameters::default()).await;
+        let result = create(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WTrayIconPeer.create()V",
             result.unwrap_err().to_string()
@@ -142,8 +134,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WTrayIconPeer.setNativeIcon([I[BIII)V",
             result.unwrap_err().to_string()
@@ -154,7 +145,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_tool_tip() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_tool_tip(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = set_tool_tip(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WTrayIconPeer.setToolTip(Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -165,7 +156,7 @@ mod tests {
     #[tokio::test]
     async fn test_update_native_icon() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = update_native_icon(thread, Parameters::new(vec![Value::from(false)])).await;
+        let result = update_native_icon(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "sun/awt/windows/WTrayIconPeer.updateNativeIcon(Z)V",
             result.unwrap_err().to_string()

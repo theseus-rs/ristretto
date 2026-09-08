@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -9,8 +8,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformWindow._toggleFullScreenMode(J)V", Any)]
-#[async_method]
-pub async fn toggle_full_screen_mode<T: Thread + 'static>(
+pub fn toggle_full_screen_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -22,8 +20,7 @@ pub async fn toggle_full_screen_mode<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativeCreateNSWindow(JJJDDDD)J", Any)]
-#[async_method]
-pub async fn native_create_ns_window<T: Thread + 'static>(
+pub fn native_create_ns_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -41,8 +38,7 @@ pub async fn native_create_ns_window<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativeDispose(J)V", Any)]
-#[async_method]
-pub async fn native_dispose<T: Thread + 'static>(
+pub fn native_dispose<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,8 +50,7 @@ pub async fn native_dispose<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativeEnterFullScreenMode(J)V", Any)]
-#[async_method]
-pub async fn native_enter_full_screen_mode<T: Thread + 'static>(
+pub fn native_enter_full_screen_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -67,8 +62,7 @@ pub async fn native_enter_full_screen_mode<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativeExitFullScreenMode(J)V", Any)]
-#[async_method]
-pub async fn native_exit_full_screen_mode<T: Thread + 'static>(
+pub fn native_exit_full_screen_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -83,8 +77,7 @@ pub async fn native_exit_full_screen_mode<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeGetNSWindowInsets(J)Ljava/awt/Insets;",
     Any
 )]
-#[async_method]
-pub async fn native_get_ns_window_insets<T: Thread + 'static>(
+pub fn native_get_ns_window_insets<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,8 +92,7 @@ pub async fn native_get_ns_window_insets<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeGetTopmostPlatformWindowUnderMouse()Lsun/lwawt/macosx/CPlatformWindow;",
     Any
 )]
-#[async_method]
-pub async fn native_get_topmost_platform_window_under_mouse<T: Thread + 'static>(
+pub fn native_get_topmost_platform_window_under_mouse<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -108,8 +100,7 @@ pub async fn native_get_topmost_platform_window_under_mouse<T: Thread + 'static>
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativePushNSWindowToBack(J)V", Any)]
-#[async_method]
-pub async fn native_push_ns_window_to_back<T: Thread + 'static>(
+pub fn native_push_ns_window_to_back<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -121,8 +112,7 @@ pub async fn native_push_ns_window_to_back<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativePushNSWindowToFront(J)V", Any)]
-#[async_method]
-pub async fn native_push_ns_window_to_front<T: Thread + 'static>(
+pub fn native_push_ns_window_to_front<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -137,8 +127,7 @@ pub async fn native_push_ns_window_to_front<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeRevalidateNSWindowShadow(J)V",
     Any
 )]
-#[async_method]
-pub async fn native_revalidate_ns_window_shadow<T: Thread + 'static>(
+pub fn native_revalidate_ns_window_shadow<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -153,8 +142,7 @@ pub async fn native_revalidate_ns_window_shadow<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeSetAllowAutomaticTabbingProperty(Z)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn native_set_allow_automatic_tabbing_property<T: Thread + 'static>(
+pub fn native_set_allow_automatic_tabbing_property<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -166,8 +154,7 @@ pub async fn native_set_allow_automatic_tabbing_property<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativeSetEnabled(JZ)V", Any)]
-#[async_method]
-pub async fn native_set_enabled<T: Thread + 'static>(
+pub fn native_set_enabled<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -183,8 +170,7 @@ pub async fn native_set_enabled<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowBounds(JDDDD)V",
     Any
 )]
-#[async_method]
-pub async fn native_set_ns_window_bounds<T: Thread + 'static>(
+pub fn native_set_ns_window_bounds<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -203,8 +189,7 @@ pub async fn native_set_ns_window_bounds<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowLocationByPlatform(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn native_set_ns_window_location_by_platform<T: Thread + 'static>(
+pub fn native_set_ns_window_location_by_platform<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -216,8 +201,7 @@ pub async fn native_set_ns_window_location_by_platform<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowMenuBar(JJ)V", Any)]
-#[async_method]
-pub async fn native_set_ns_window_menu_bar<T: Thread + 'static>(
+pub fn native_set_ns_window_menu_bar<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -233,8 +217,7 @@ pub async fn native_set_ns_window_menu_bar<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowMinMax(JDDDD)V",
     Any
 )]
-#[async_method]
-pub async fn native_set_ns_window_min_max<T: Thread + 'static>(
+pub fn native_set_ns_window_min_max<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -253,8 +236,7 @@ pub async fn native_set_ns_window_min_max<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowMinimizedIcon(JJ)V",
     Any
 )]
-#[async_method]
-pub async fn native_set_ns_window_minimized_icon<T: Thread + 'static>(
+pub fn native_set_ns_window_minimized_icon<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -270,8 +252,7 @@ pub async fn native_set_ns_window_minimized_icon<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowRepresentedFilename(JLjava/lang/String;)V",
     Any
 )]
-#[async_method]
-pub async fn native_set_ns_window_represented_filename<T: Thread + 'static>(
+pub fn native_set_ns_window_represented_filename<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -284,8 +265,7 @@ pub async fn native_set_ns_window_represented_filename<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowStandardFrame(JDDDD)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn native_set_ns_window_standard_frame<T: Thread + 'static>(
+pub fn native_set_ns_window_standard_frame<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -304,8 +284,7 @@ pub async fn native_set_ns_window_standard_frame<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowStyleBits(JII)V",
     Any
 )]
-#[async_method]
-pub async fn native_set_ns_window_style_bits<T: Thread + 'static>(
+pub fn native_set_ns_window_style_bits<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -322,8 +301,7 @@ pub async fn native_set_ns_window_style_bits<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeSetNSWindowTitle(JLjava/lang/String;)V",
     Any
 )]
-#[async_method]
-pub async fn native_set_ns_window_title<T: Thread + 'static>(
+pub fn native_set_ns_window_title<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -339,8 +317,7 @@ pub async fn native_set_ns_window_title<T: Thread + 'static>(
     "sun/lwawt/macosx/CPlatformWindow.nativeSynthesizeMouseEnteredExitedEvents()V",
     Any
 )]
-#[async_method]
-pub async fn native_synthesize_mouse_entered_exited_events_1<T: Thread + 'static>(
+pub fn native_synthesize_mouse_entered_exited_events_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -354,8 +331,7 @@ pub async fn native_synthesize_mouse_entered_exited_events_1<T: Thread + 'static
     "sun/lwawt/macosx/CPlatformWindow.nativeSynthesizeMouseEnteredExitedEvents(JI)V",
     Any
 )]
-#[async_method]
-pub async fn native_synthesize_mouse_entered_exited_events_2<T: Thread + 'static>(
+pub fn native_synthesize_mouse_entered_exited_events_2<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -375,7 +351,7 @@ mod tests {
     #[tokio::test]
     async fn test_toggle_full_screen_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = toggle_full_screen_mode(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = toggle_full_screen_mode(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow._toggleFullScreenMode(J)V",
             result.unwrap_err().to_string()
@@ -396,8 +372,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Double(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeCreateNSWindow(JJJDDDD)J",
             result.unwrap_err().to_string()
@@ -407,7 +382,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_dispose() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_dispose(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = native_dispose(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeDispose(J)V",
             result.unwrap_err().to_string()
@@ -417,8 +392,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_enter_full_screen_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            native_enter_full_screen_mode(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = native_enter_full_screen_mode(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeEnterFullScreenMode(J)V",
             result.unwrap_err().to_string()
@@ -428,8 +402,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_exit_full_screen_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            native_exit_full_screen_mode(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = native_exit_full_screen_mode(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeExitFullScreenMode(J)V",
             result.unwrap_err().to_string()
@@ -439,8 +412,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_get_ns_window_insets() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            native_get_ns_window_insets(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = native_get_ns_window_insets(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeGetNSWindowInsets(J)Ljava/awt/Insets;",
             result.unwrap_err().to_string()
@@ -450,8 +422,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_get_topmost_platform_window_under_mouse() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            native_get_topmost_platform_window_under_mouse(thread, Parameters::default()).await;
+        let result = native_get_topmost_platform_window_under_mouse(thread, Parameters::default());
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeGetTopmostPlatformWindowUnderMouse()Lsun/lwawt/macosx/CPlatformWindow;",
             result.unwrap_err().to_string()
@@ -461,8 +432,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_push_ns_window_to_back() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            native_push_ns_window_to_back(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = native_push_ns_window_to_back(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativePushNSWindowToBack(J)V",
             result.unwrap_err().to_string()
@@ -472,8 +442,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_push_ns_window_to_front() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            native_push_ns_window_to_front(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = native_push_ns_window_to_front(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativePushNSWindowToFront(J)V",
             result.unwrap_err().to_string()
@@ -484,7 +453,7 @@ mod tests {
     async fn test_native_revalidate_ns_window_shadow() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            native_revalidate_ns_window_shadow(thread, Parameters::new(vec![Value::Long(0)])).await;
+            native_revalidate_ns_window_shadow(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeRevalidateNSWindowShadow(J)V",
             result.unwrap_err().to_string()
@@ -497,8 +466,7 @@ mod tests {
         let result = native_set_allow_automatic_tabbing_property(
             thread,
             Parameters::new(vec![Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeSetAllowAutomaticTabbingProperty(Z)V",
             result.unwrap_err().to_string()
@@ -511,8 +479,7 @@ mod tests {
         let result = native_set_enabled(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeSetEnabled(JZ)V",
             result.unwrap_err().to_string()
@@ -531,8 +498,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Double(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowBounds(JDDDD)V",
             result.unwrap_err().to_string()
@@ -545,8 +511,7 @@ mod tests {
         let result = native_set_ns_window_location_by_platform(
             thread,
             Parameters::new(vec![Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowLocationByPlatform(J)V",
             result.unwrap_err().to_string()
@@ -559,8 +524,7 @@ mod tests {
         let result = native_set_ns_window_menu_bar(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowMenuBar(JJ)V",
             result.unwrap_err().to_string()
@@ -579,8 +543,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Double(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowMinMax(JDDDD)V",
             result.unwrap_err().to_string()
@@ -593,8 +556,7 @@ mod tests {
         let result = native_set_ns_window_minimized_icon(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowMinimizedIcon(JJ)V",
             result.unwrap_err().to_string()
@@ -607,8 +569,7 @@ mod tests {
         let result = native_set_ns_window_represented_filename(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowRepresentedFilename(JLjava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -618,7 +579,7 @@ mod tests {
     #[tokio::test]
     async fn testnative_set_ns_window_standard_frame() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_set_ns_window_standard_frame(thread, Parameters::default()).await;
+        let result = native_set_ns_window_standard_frame(thread, Parameters::default());
         assert!(result.is_err());
     }
 
@@ -628,8 +589,7 @@ mod tests {
         let result = native_set_ns_window_style_bits(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowStyleBits(JII)V",
             result.unwrap_err().to_string()
@@ -642,8 +602,7 @@ mod tests {
         let result = native_set_ns_window_title(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CPlatformWindow.nativeSetNSWindowTitle(JLjava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -653,14 +612,12 @@ mod tests {
     #[tokio::test]
     async fn test_native_synthesize_mouse_entered_exited_events_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ =
-            native_synthesize_mouse_entered_exited_events_1(thread, Parameters::default()).await;
+        let _ = native_synthesize_mouse_entered_exited_events_1(thread, Parameters::default());
     }
 
     #[tokio::test]
     async fn test_native_synthesize_mouse_entered_exited_events_2() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ =
-            native_synthesize_mouse_entered_exited_events_2(thread, Parameters::default()).await;
+        let _ = native_synthesize_mouse_entered_exited_events_2(thread, Parameters::default());
     }
 }

@@ -5,7 +5,7 @@
 
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::{Parameters, Result, Thread, VM};
 use std::sync::Arc;
@@ -33,7 +33,6 @@ fn read_wide_string<V: VM + ?Sized>(vm: &V, address: i64) -> Result<Vec<u16>> {
     "sun/nio/fs/RegistryFileTypeDetector.queryStringValue(JJ)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 #[expect(unsafe_code)]
 pub async fn query_string_value<T: Thread + 'static>(
     thread: Arc<T>,

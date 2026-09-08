@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Equal, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaObject;
 use ristretto_types::Thread;
@@ -13,8 +12,7 @@ use std::sync::Arc;
     "jdk/internal/loader/NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J",
     Equal(JAVA_17)
 )]
-#[async_method]
-pub async fn find_entry_0<T: Thread + 'static>(
+pub fn find_entry_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,7 +30,6 @@ pub async fn find_entry_0<T: Thread + 'static>(
     "jdk/internal/loader/NativeLibraries.findBuiltinLib(Ljava/lang/String;)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn find_builtin_lib<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -56,8 +53,7 @@ pub async fn find_builtin_lib<T: Thread + 'static>(
     "jdk/internal/loader/NativeLibraries.load(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZZ)Z",
     Equal(JAVA_17)
 )]
-#[async_method]
-pub async fn load_0<T: Thread + 'static>(
+pub fn load_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -80,8 +76,7 @@ pub async fn load_0<T: Thread + 'static>(
     "jdk/internal/loader/NativeLibraries.load(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn load_1<T: Thread + 'static>(
+pub fn load_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -103,8 +98,7 @@ pub async fn load_1<T: Thread + 'static>(
     "jdk/internal/loader/NativeLibraries.unload(Ljava/lang/String;ZZJ)V",
     Equal(JAVA_17)
 )]
-#[async_method]
-pub async fn unload_0<T: Thread + 'static>(
+pub fn unload_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -121,8 +115,7 @@ pub async fn unload_0<T: Thread + 'static>(
     "jdk/internal/loader/NativeLibraries.unload(Ljava/lang/String;ZJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn unload_1<T: Thread + 'static>(
+pub fn unload_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -150,7 +143,7 @@ mod tests {
         let native_library =
             Value::new_object(vm.garbage_collector(), Reference::Object(native_library));
         let name = "missing".to_object(&thread).await?;
-        let result = find_entry_0(thread, Parameters::new(vec![native_library, name])).await?;
+        let result = find_entry_0(thread, Parameters::new(vec![native_library, name]))?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }
@@ -172,7 +165,7 @@ mod tests {
             Value::Int(1),
             Value::Int(1),
         ]);
-        let result = load_0(thread, parameters).await?;
+        let result = load_0(thread, parameters)?;
         assert_eq!(result, Some(Value::Int(1)));
         let native_library = native_library.as_object_ref()?;
         assert_eq!(
@@ -198,7 +191,7 @@ mod tests {
             Value::Int(1),
             Value::Int(1),
         ]);
-        let result = load_1(thread, parameters).await?;
+        let result = load_1(thread, parameters)?;
         assert_eq!(result, Some(Value::Int(1)));
         let native_library = native_library.as_object_ref()?;
         assert_eq!(
@@ -213,7 +206,7 @@ mod tests {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let name = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![name, Value::Int(1), Value::Int(1), Value::Long(2)]);
-        let result = unload_0(thread, parameters).await?;
+        let result = unload_0(thread, parameters)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -223,7 +216,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let name = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![name, Value::Int(1), Value::Long(2)]);
-        let result = unload_1(thread, parameters).await?;
+        let result = unload_1(thread, parameters)?;
         assert_eq!(result, None);
         Ok(())
     }

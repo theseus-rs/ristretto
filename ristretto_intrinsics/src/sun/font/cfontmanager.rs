@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/font/CFontManager.loadNativeDirFonts(Ljava/lang/String;)V", Any)]
-#[async_method]
-pub async fn load_native_dir_fonts<T: Thread + 'static>(
+pub fn load_native_dir_fonts<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -21,8 +19,7 @@ pub async fn load_native_dir_fonts<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/CFontManager.loadNativeFonts()V", Any)]
-#[async_method]
-pub async fn load_native_fonts<T: Thread + 'static>(
+pub fn load_native_fonts<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -39,8 +36,7 @@ mod tests {
     #[tokio::test]
     async fn test_load_native_dir_fonts() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            load_native_dir_fonts(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = load_native_dir_fonts(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.font.CFontManager.loadNativeDirFonts(Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -50,7 +46,7 @@ mod tests {
     #[tokio::test]
     async fn test_load_native_fonts() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = load_native_fonts(thread, Parameters::default()).await;
+        let result = load_native_fonts(thread, Parameters::default());
         assert_eq!(
             "sun.font.CFontManager.loadNativeFonts()V",
             result.unwrap_err().to_string()

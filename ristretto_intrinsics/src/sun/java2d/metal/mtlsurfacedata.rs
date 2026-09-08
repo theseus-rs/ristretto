@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/java2d/metal/MTLSurfaceData.clearWindow()V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn clear_window<T: Thread + 'static>(
+pub fn clear_window<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,8 +25,7 @@ pub async fn clear_window<T: Thread + 'static>(
     "sun/java2d/metal/MTLSurfaceData.getMTLTexturePointer(J)J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_mtl_texture_pointer<T: Thread + 'static>(
+pub fn get_mtl_texture_pointer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -43,8 +40,7 @@ pub async fn get_mtl_texture_pointer<T: Thread + 'static>(
     "sun/java2d/metal/MTLSurfaceData.initFlipBackbuffer(J)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn init_flip_backbuffer<T: Thread + 'static>(
+pub fn init_flip_backbuffer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -59,8 +55,7 @@ pub async fn init_flip_backbuffer<T: Thread + 'static>(
     "sun/java2d/metal/MTLSurfaceData.initOps(Lsun/java2d/metal/MTLGraphicsConfig;JJJIIZ)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn init_ops<T: Thread + 'static>(
+pub fn init_ops<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,8 +77,7 @@ pub async fn init_ops<T: Thread + 'static>(
     "sun/java2d/metal/MTLSurfaceData.initRTexture(JZII)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn init_r_texture<T: Thread + 'static>(
+pub fn init_r_texture<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -101,8 +95,7 @@ pub async fn init_r_texture<T: Thread + 'static>(
     "sun/java2d/metal/MTLSurfaceData.initTexture(JZII)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn init_texture<T: Thread + 'static>(
+pub fn init_texture<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -123,7 +116,7 @@ mod tests {
     #[tokio::test]
     async fn test_clear_window() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = clear_window(thread, Parameters::default()).await;
+        let result = clear_window(thread, Parameters::default());
         assert_eq!(
             "sun.java2d.metal.MTLSurfaceData.clearWindow()V",
             result.unwrap_err().to_string()
@@ -133,7 +126,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_mtl_texture_pointer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_mtl_texture_pointer(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_mtl_texture_pointer(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.metal.MTLSurfaceData.getMTLTexturePointer(J)J",
             result.unwrap_err().to_string()
@@ -143,7 +136,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_flip_backbuffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_flip_backbuffer(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = init_flip_backbuffer(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.metal.MTLSurfaceData.initFlipBackbuffer(J)Z",
             result.unwrap_err().to_string()
@@ -164,8 +157,7 @@ mod tests {
                 Value::Int(0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.metal.MTLSurfaceData.initOps(Lsun/java2d/metal/MTLGraphicsConfig;JJJIIZ)V",
             result.unwrap_err().to_string()
@@ -183,8 +175,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.metal.MTLSurfaceData.initRTexture(JZII)Z",
             result.unwrap_err().to_string()
@@ -202,8 +193,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.metal.MTLSurfaceData.initTexture(JZII)Z",
             result.unwrap_err().to_string()

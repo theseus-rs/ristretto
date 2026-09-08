@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/awt/windows/WScrollbarPeer.create(Lsun/awt/windows/WComponentPeer;)V",
     Any
 )]
-#[async_method]
-pub async fn create<T: Thread + 'static>(
+pub fn create<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,8 +21,7 @@ pub async fn create<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WScrollbarPeer.getScrollbarSize(I)I", Any)]
-#[async_method]
-pub async fn get_scrollbar_size<T: Thread + 'static>(
+pub fn get_scrollbar_size<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -35,8 +32,7 @@ pub async fn get_scrollbar_size<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WScrollbarPeer.setLineIncrement(I)V", Any)]
-#[async_method]
-pub async fn set_line_increment<T: Thread + 'static>(
+pub fn set_line_increment<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -47,8 +43,7 @@ pub async fn set_line_increment<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WScrollbarPeer.setPageIncrement(I)V", Any)]
-#[async_method]
-pub async fn set_page_increment<T: Thread + 'static>(
+pub fn set_page_increment<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -59,8 +54,7 @@ pub async fn set_page_increment<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WScrollbarPeer.setValues(IIII)V", Any)]
-#[async_method]
-pub async fn set_values<T: Thread + 'static>(
+pub fn set_values<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,7 +76,7 @@ mod tests {
     #[tokio::test]
     async fn test_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = create(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WScrollbarPeer.create(Lsun/awt/windows/WComponentPeer;)V",
             result.unwrap_err().to_string()
@@ -93,7 +87,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_scrollbar_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_scrollbar_size(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_scrollbar_size(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WScrollbarPeer.getScrollbarSize(I)I",
             result.unwrap_err().to_string()
@@ -104,7 +98,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_line_increment() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_line_increment(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = set_line_increment(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WScrollbarPeer.setLineIncrement(I)V",
             result.unwrap_err().to_string()
@@ -115,7 +109,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_page_increment() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_page_increment(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = set_page_increment(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WScrollbarPeer.setPageIncrement(I)V",
             result.unwrap_err().to_string()
@@ -134,8 +128,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WScrollbarPeer.setValues(IIII)V",
             result.unwrap_err().to_string()

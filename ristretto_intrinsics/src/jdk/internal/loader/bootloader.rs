@@ -2,7 +2,6 @@ use ahash::AHashSet;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{ClassLoader, Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::ModuleAccess;
 use ristretto_types::Parameters;
@@ -26,7 +25,6 @@ async fn boot_class_loader<T: Thread + 'static>(thread: &Arc<T>) -> Result<Arc<C
     "jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_system_package_location<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -50,7 +48,6 @@ pub async fn get_system_package_location<T: Thread + 'static>(
     "jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_system_package_names<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -95,7 +92,6 @@ pub async fn get_system_package_names<T: Thread + 'static>(
     "jdk/internal/loader/BootLoader.findResourceAsStream(Ljava/lang/String;Ljava/lang/String;)Ljava/io/InputStream;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn find_resource_as_stream<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -124,8 +120,7 @@ pub async fn find_resource_as_stream<T: Thread + 'static>(
     "jdk/internal/loader/BootLoader.setBootLoaderUnnamedModule0(Ljava/lang/Module;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_boot_loader_unnamed_module_0<T: Thread + 'static>(
+pub fn set_boot_loader_unnamed_module_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -183,7 +178,7 @@ mod tests {
     async fn test_set_boot_loader_unnamed_module_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let parameters = Parameters::new(vec![Value::Object(None)]);
-        let result = set_boot_loader_unnamed_module_0(thread, parameters).await?;
+        let result = set_boot_loader_unnamed_module_0(thread, parameters)?;
         assert_eq!(result, None);
         Ok(())
     }

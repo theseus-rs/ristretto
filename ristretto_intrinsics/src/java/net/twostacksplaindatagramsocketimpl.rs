@@ -7,7 +7,7 @@ use crate::net_helpers::{
 use ristretto_classfile::VersionSpecification::{Between, Equal, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result, Thread, VM};
 use std::net::Ipv4Addr;
 use std::sync::Arc;
@@ -43,7 +43,6 @@ fn multicast_interface_v4(interface: &Value) -> Result<Ipv4Addr> {
     "java/net/TwoStacksPlainDatagramSocketImpl.bind0(ILjava/net/InetAddress;Z)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn bind0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -65,7 +64,6 @@ pub async fn bind0<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.connect0(Ljava/net/InetAddress;I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn connect0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -81,7 +79,6 @@ pub async fn connect0<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.dataAvailable()I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn data_available<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -96,7 +93,6 @@ pub async fn data_available<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.datagramSocketClose()V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn datagram_socket_close<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -114,7 +110,6 @@ pub async fn datagram_socket_close<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.datagramSocketCreate()V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn datagram_socket_create<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -136,7 +131,6 @@ pub async fn datagram_socket_create<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.disconnect0(I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn disconnect0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -150,7 +144,6 @@ pub async fn disconnect0<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.getTTL()B",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_ttl<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -162,7 +155,6 @@ pub async fn get_ttl<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.getTimeToLive()I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_time_to_live<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -176,8 +168,7 @@ pub async fn get_time_to_live<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.init()V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -200,7 +191,6 @@ async fn membership<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.join(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn join<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -212,7 +202,6 @@ pub async fn join<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.leave(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn leave<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -224,7 +213,6 @@ pub async fn leave<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.peek(Ljava/net/InetAddress;)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn peek<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -256,7 +244,6 @@ async fn receive<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.peekData(Ljava/net/DatagramPacket;)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn peek_data<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -268,7 +255,6 @@ pub async fn peek_data<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.receive0(Ljava/net/DatagramPacket;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn receive0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -290,7 +276,6 @@ async fn send_packet<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.send(Ljava/net/DatagramPacket;)V",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn send<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -302,7 +287,6 @@ pub async fn send<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.send0(Ljava/net/DatagramPacket;)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn send0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -314,7 +298,6 @@ pub async fn send0<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.setTTL(B)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn set_ttl<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -326,7 +309,6 @@ pub async fn set_ttl<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.setTimeToLive(I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn set_time_to_live<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -341,7 +323,6 @@ pub async fn set_time_to_live<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.socketGetOption(I)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_get_option<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -421,7 +402,6 @@ pub async fn socket_get_option<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.socketLocalAddress(I)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_local_address<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -439,7 +419,6 @@ pub async fn socket_local_address<T: Thread + 'static>(
     "java/net/TwoStacksPlainDatagramSocketImpl.socketNativeSetOption(ILjava/lang/Object;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_native_set_option<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

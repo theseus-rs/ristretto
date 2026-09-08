@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -16,8 +15,7 @@ use std::sync::Arc;
     "sun/font/X11TextRenderer.doDrawGlyphList(JJLsun/java2d/pipe/Region;Lsun/font/GlyphList;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn do_draw_glyph_list<T: Thread + 'static>(
+pub fn do_draw_glyph_list<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -37,8 +35,7 @@ pub async fn do_draw_glyph_list<T: Thread + 'static>(
     "sun/font/X11TextRenderer.doDrawGlyphList(JJLsun/java2d/pipe/Region;Lsun/font/GlyphList;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn do_draw_glyph_list_linux_ge_v11<T: Thread + 'static>(
+pub fn do_draw_glyph_list_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -68,8 +65,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.X11TextRenderer.doDrawGlyphList(JJLsun/java2d/pipe/Region;Lsun/font/GlyphList;)V",
             result.unwrap_err().to_string()
@@ -88,8 +84,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/font/X11TextRenderer.doDrawGlyphList(JJLsun/java2d/pipe/Region;Lsun/font/GlyphList;)V",
             result.unwrap_err().to_string()

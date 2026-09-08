@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardBeginTransaction(J)V", Any)]
-#[async_method]
-pub async fn s_card_begin_transaction<T: Thread + 'static>(
+pub fn s_card_begin_transaction<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -24,8 +22,7 @@ pub async fn s_card_begin_transaction<T: Thread + 'static>(
     "sun/security/smartcardio/PCSC.SCardConnect(JLjava/lang/String;II)J",
     Any
 )]
-#[async_method]
-pub async fn s_card_connect<T: Thread + 'static>(
+pub fn s_card_connect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,8 +37,7 @@ pub async fn s_card_connect<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardControl(JI[B)[B", Any)]
-#[async_method]
-pub async fn s_card_control<T: Thread + 'static>(
+pub fn s_card_control<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,8 +51,7 @@ pub async fn s_card_control<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardDisconnect(JI)V", Any)]
-#[async_method]
-pub async fn s_card_disconnect<T: Thread + 'static>(
+pub fn s_card_disconnect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -69,8 +64,7 @@ pub async fn s_card_disconnect<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardEndTransaction(JI)V", Any)]
-#[async_method]
-pub async fn s_card_end_transaction<T: Thread + 'static>(
+pub fn s_card_end_transaction<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -83,8 +77,7 @@ pub async fn s_card_end_transaction<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardEstablishContext(I)J", Any)]
-#[async_method]
-pub async fn s_card_establish_context<T: Thread + 'static>(
+pub fn s_card_establish_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,8 +92,7 @@ pub async fn s_card_establish_context<T: Thread + 'static>(
     "sun/security/smartcardio/PCSC.SCardGetStatusChange(JJ[I[Ljava/lang/String;)[I",
     Any
 )]
-#[async_method]
-pub async fn s_card_get_status_change<T: Thread + 'static>(
+pub fn s_card_get_status_change<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -118,8 +110,7 @@ pub async fn s_card_get_status_change<T: Thread + 'static>(
     "sun/security/smartcardio/PCSC.SCardListReaders(J)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn s_card_list_readers<T: Thread + 'static>(
+pub fn s_card_list_readers<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -131,8 +122,7 @@ pub async fn s_card_list_readers<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardStatus(J[B)[B", Any)]
-#[async_method]
-pub async fn s_card_status<T: Thread + 'static>(
+pub fn s_card_status<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -145,8 +135,7 @@ pub async fn s_card_status<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardTransmit(JI[BII)[B", Any)]
-#[async_method]
-pub async fn s_card_transmit<T: Thread + 'static>(
+pub fn s_card_transmit<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -168,7 +157,7 @@ mod tests {
     #[tokio::test]
     async fn test_s_card_begin_transaction() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = s_card_begin_transaction(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = s_card_begin_transaction(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.smartcardio.PCSC.SCardBeginTransaction(J)V",
             result.unwrap_err().to_string()
@@ -186,8 +175,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.smartcardio.PCSC.SCardConnect(JLjava/lang/String;II)J",
             result.unwrap_err().to_string()
@@ -200,8 +188,7 @@ mod tests {
         let result = s_card_control(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.smartcardio.PCSC.SCardControl(JI[B)[B",
             result.unwrap_err().to_string()
@@ -212,7 +199,7 @@ mod tests {
     async fn test_s_card_disconnect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            s_card_disconnect(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+            s_card_disconnect(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun.security.smartcardio.PCSC.SCardDisconnect(JI)V",
             result.unwrap_err().to_string()
@@ -223,8 +210,7 @@ mod tests {
     async fn test_s_card_end_transaction() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            s_card_end_transaction(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]))
-                .await;
+            s_card_end_transaction(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun.security.smartcardio.PCSC.SCardEndTransaction(JI)V",
             result.unwrap_err().to_string()
@@ -234,7 +220,7 @@ mod tests {
     #[tokio::test]
     async fn test_s_card_establish_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = s_card_establish_context(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = s_card_establish_context(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun.security.smartcardio.PCSC.SCardEstablishContext(I)J",
             result.unwrap_err().to_string()
@@ -252,8 +238,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.smartcardio.PCSC.SCardGetStatusChange(JJ[I[Ljava/lang/String;)[I",
             result.unwrap_err().to_string()
@@ -263,7 +248,7 @@ mod tests {
     #[tokio::test]
     async fn test_s_card_list_readers() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = s_card_list_readers(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = s_card_list_readers(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.security.smartcardio.PCSC.SCardListReaders(J)[Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -276,8 +261,7 @@ mod tests {
         let result = s_card_status(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.smartcardio.PCSC.SCardStatus(J[B)[B",
             result.unwrap_err().to_string()
@@ -296,8 +280,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.smartcardio.PCSC.SCardTransmit(JI[BII)[B",
             result.unwrap_err().to_string()

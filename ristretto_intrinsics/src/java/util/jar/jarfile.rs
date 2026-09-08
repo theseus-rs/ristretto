@@ -2,7 +2,6 @@ use crate::java::util::zip::zipfile::get_zip_file_state;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM as _};
@@ -17,7 +16,6 @@ use std::sync::Arc;
     "java/util/jar/JarFile.getMetaInfEntryNames()[Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_meta_inf_entry_names<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

@@ -2,7 +2,6 @@ use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -13,8 +12,7 @@ use std::sync::Arc;
     "sun/font/FileFontStrike._getGlyphImageFromWindows(Ljava/lang/String;IIIZI)J",
     Any
 )]
-#[async_method]
-pub async fn get_glyph_image_from_windows<T: Thread + 'static>(
+pub fn get_glyph_image_from_windows<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,8 +29,7 @@ pub async fn get_glyph_image_from_windows<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/FileFontStrike.initNative()Z", LessThanOrEqual(JAVA_21))]
-#[async_method]
-pub async fn init_native<T: Thread + 'static>(
+pub fn init_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -56,8 +53,7 @@ mod tests {
                 Value::from(false),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.FileFontStrike._getGlyphImageFromWindows(Ljava/lang/String;IIIZI)J",
             result.unwrap_err().to_string()
@@ -67,7 +63,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_native(thread, Parameters::default()).await;
+        let result = init_native(thread, Parameters::default());
         assert_eq!(
             "sun.font.FileFontStrike.initNative()Z",
             result.unwrap_err().to_string()

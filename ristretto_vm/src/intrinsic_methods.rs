@@ -9,4 +9,4 @@ mod intrinsics;
 mod registry;
 
 /// Re-export the `MethodRegistry` for use by other modules in the VM
-pub use registry::{IntrinsicMethod, MethodRegistry};
+pub use registry::{AsyncIntrinsicMethod, IntrinsicMethod, MethodRegistry, SyncIntrinsicMethod};

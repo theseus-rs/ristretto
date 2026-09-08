@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/security/mscapi/CSignature.importECPublicKey(Ljava/lang/String;[BI)Lsun/security/mscapi/CPublicKey;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn import_ecpublic_key<T: Thread + 'static>(
+pub fn import_ecpublic_key<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn import_ecpublic_key<T: Thread + 'static>(
     "sun/security/mscapi/CSignature.importPublicKey(Ljava/lang/String;[BI)Lsun/security/mscapi/CPublicKey;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn import_public_key<T: Thread + 'static>(
+pub fn import_public_key<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,8 +37,7 @@ pub async fn import_public_key<T: Thread + 'static>(
     "sun/security/mscapi/CSignature.signCngHash(I[BIILjava/lang/String;JJ)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn sign_cng_hash<T: Thread + 'static>(
+pub fn sign_cng_hash<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -61,8 +57,7 @@ pub async fn sign_cng_hash<T: Thread + 'static>(
     "sun/security/mscapi/CSignature.signHash(Z[BILjava/lang/String;JJ)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn sign_hash<T: Thread + 'static>(
+pub fn sign_hash<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -81,8 +76,7 @@ pub async fn sign_hash<T: Thread + 'static>(
     "sun/security/mscapi/CSignature.verifyCngSignedHash(I[BI[BIILjava/lang/String;JJ)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn verify_cng_signed_hash<T: Thread + 'static>(
+pub fn verify_cng_signed_hash<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -105,8 +99,7 @@ pub async fn verify_cng_signed_hash<T: Thread + 'static>(
     "sun/security/mscapi/CSignature.verifySignedHash([BILjava/lang/String;[BIJJ)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn verify_signed_hash<T: Thread + 'static>(
+pub fn verify_signed_hash<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -138,8 +131,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/security/mscapi/CSignature.importECPublicKey(Ljava/lang/String;[BI)Lsun/security/mscapi/CPublicKey;",
             result.unwrap_err().to_string()
@@ -157,8 +149,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/security/mscapi/CSignature.importPublicKey(Ljava/lang/String;[BI)Lsun/security/mscapi/CPublicKey;",
             result.unwrap_err().to_string()
@@ -180,8 +171,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/security/mscapi/CSignature.signCngHash(I[BIILjava/lang/String;JJ)[B",
             result.unwrap_err().to_string()
@@ -202,8 +192,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/security/mscapi/CSignature.signHash(Z[BILjava/lang/String;JJ)[B",
             result.unwrap_err().to_string()
@@ -227,8 +216,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/security/mscapi/CSignature.verifyCngSignedHash(I[BI[BIILjava/lang/String;JJ)Z",
             result.unwrap_err().to_string()
@@ -250,8 +238,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/security/mscapi/CSignature.verifySignedHash([BILjava/lang/String;[BIJJ)Z",
             result.unwrap_err().to_string()

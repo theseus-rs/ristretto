@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Frame;
 use ristretto_types::JavaObject;
@@ -13,7 +12,6 @@ use std::sync::Arc;
     "sun/reflect/Reflection.getCallerClass()Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_caller_class_1<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -35,7 +33,6 @@ pub async fn get_caller_class_1<T: Thread + 'static>(
     "sun/reflect/Reflection.getCallerClass(I)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_caller_class_2<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -65,7 +62,6 @@ pub async fn get_caller_class_2<T: Thread + 'static>(
     "sun/reflect/Reflection.getClassAccessFlags(Ljava/lang/Class;)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_class_access_flags<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

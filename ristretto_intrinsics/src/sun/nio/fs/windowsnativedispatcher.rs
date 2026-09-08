@@ -15,7 +15,6 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::VersionSpecification::{Equal, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaObject;
@@ -436,7 +435,6 @@ fn write_native_structure<V: VM + ?Sized, S>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CloseHandle(J)V", Any)]
-#[async_method]
 pub async fn close_handle<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -455,7 +453,6 @@ pub async fn close_handle<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CreateFile0(JIIJII)J", Any)]
-#[async_method]
 pub async fn create_file_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -520,7 +517,6 @@ pub async fn create_file_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.FindClose(J)V", Any)]
-#[async_method]
 pub async fn find_close<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -542,7 +538,6 @@ pub async fn find_close<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.FindFirstFile0(JLsun/nio/fs/WindowsNativeDispatcher$FirstFile;)V",
     Any
 )]
-#[async_method]
 pub async fn find_first_file_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -584,7 +579,6 @@ pub async fn find_first_file_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetFileAttributesEx0(JJ)V", Any)]
-#[async_method]
 pub async fn get_file_attributes_ex_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -613,7 +607,6 @@ pub async fn get_file_attributes_ex_0<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.GetFullPathName0(J)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_full_path_name_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -648,8 +641,7 @@ pub async fn get_full_path_name_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -657,7 +649,6 @@ pub async fn init_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.AccessCheck(JJIIIII)Z", Any)]
-#[async_method]
 pub async fn access_check<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -706,7 +697,6 @@ pub async fn access_check<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.AddAccessAllowedAceEx(JIIJ)V", Any)]
-#[async_method]
 pub async fn add_access_allowed_ace_ex<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -740,7 +730,6 @@ pub async fn add_access_allowed_ace_ex<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.AddAccessDeniedAceEx(JIIJ)V", Any)]
-#[async_method]
 pub async fn add_access_denied_ace_ex<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -774,7 +763,6 @@ pub async fn add_access_denied_ace_ex<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.AdjustTokenPrivileges(JJI)V", Any)]
-#[async_method]
 pub async fn adjust_token_privileges<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -826,7 +814,6 @@ pub async fn adjust_token_privileges<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.BackupRead0(JJIZJLsun/nio/fs/WindowsNativeDispatcher$BackupResult;)V",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn backup_read0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -933,7 +920,6 @@ pub async fn backup_read0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.BackupSeek(JJJ)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn backup_seek<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -989,7 +975,6 @@ pub async fn backup_seek<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CancelIo(J)V", Any)]
-#[async_method]
 pub async fn cancel_io<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1018,7 +1003,6 @@ pub async fn cancel_io<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.ConvertSidToStringSid(J)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn convert_sid_to_string_sid<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1031,7 +1015,6 @@ pub async fn convert_sid_to_string_sid<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.ConvertStringSidToSid0(J)J", Any)]
-#[async_method]
 pub async fn convert_string_sid_to_sid0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1083,7 +1066,6 @@ pub async fn convert_string_sid_to_sid0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CopyFileEx0(JJIJ)V", Any)]
-#[async_method]
 pub async fn copy_file_ex0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1131,7 +1113,6 @@ pub async fn copy_file_ex0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CreateDirectory0(JJ)V", Any)]
-#[async_method]
 pub async fn create_directory0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1171,7 +1152,6 @@ pub async fn create_directory0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CreateEvent(ZZ)J", Any)]
-#[async_method]
 pub async fn create_event<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1202,7 +1182,6 @@ pub async fn create_event<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CreateHardLink0(JJ)V", Any)]
-#[async_method]
 pub async fn create_hard_link0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1226,7 +1205,6 @@ pub async fn create_hard_link0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CreateIoCompletionPort(JJJ)J", Any)]
-#[async_method]
 pub async fn create_io_completion_port<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1245,7 +1223,6 @@ pub async fn create_io_completion_port<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CreateSymbolicLink0(JJI)V", Any)]
-#[async_method]
 pub async fn create_symbolic_link0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1270,7 +1247,6 @@ pub async fn create_symbolic_link0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.DeleteFile0(J)V", Any)]
-#[async_method]
 pub async fn delete_file0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1305,7 +1281,6 @@ pub async fn delete_file0<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.DeviceIoControlGetReparsePoint(JJI)V",
     Any
 )]
-#[async_method]
 pub async fn device_io_control_get_reparse_point<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1380,7 +1355,6 @@ async fn read_reparse_point(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.DeviceIoControlSetSparse(J)V", Any)]
-#[async_method]
 pub async fn device_io_control_set_sparse<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1417,7 +1391,6 @@ pub async fn device_io_control_set_sparse<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.DuplicateTokenEx(JI)J", Any)]
-#[async_method]
 pub async fn duplicate_token_ex<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1451,7 +1424,6 @@ pub async fn duplicate_token_ex<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.FindFirstFile1(JJ)J", Any)]
-#[async_method]
 pub async fn find_first_file1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1483,7 +1455,6 @@ pub async fn find_first_file1<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.FindFirstStream0(JLsun/nio/fs/WindowsNativeDispatcher$FirstStream;)V",
     Any
 )]
-#[async_method]
 pub async fn find_first_stream0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1536,7 +1507,6 @@ pub async fn find_first_stream0<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.FindNextFile(JJ)Ljava/lang/String;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn find_next_file<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1548,7 +1518,6 @@ pub async fn find_next_file<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.FindNextFile0(JJ)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn find_next_file0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1589,7 +1558,6 @@ async fn find_next_file_impl<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.FindNextStream(J)Ljava/lang/String;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn find_next_stream<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1601,7 +1569,6 @@ pub async fn find_next_stream<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.FindNextStream0(J)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn find_next_stream0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1642,7 +1609,6 @@ async fn find_next_stream_impl<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.FormatMessage(I)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn format_message<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1686,7 +1652,6 @@ fn format_win32_message(_code: i32) -> Option<String> {
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetAce(JI)J", Any)]
-#[async_method]
 pub async fn get_ace<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1726,7 +1691,6 @@ pub async fn get_ace<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.GetAclInformation0(JLsun/nio/fs/WindowsNativeDispatcher$AclInformation;)V",
     Any
 )]
-#[async_method]
 pub async fn get_acl_information0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1764,8 +1728,7 @@ pub async fn get_acl_information0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetCurrentProcess()J", Any)]
-#[async_method]
-pub async fn get_current_process<T: Thread + 'static>(
+pub fn get_current_process<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1776,8 +1739,7 @@ pub async fn get_current_process<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetCurrentThread()J", Any)]
-#[async_method]
-pub async fn get_current_thread<T: Thread + 'static>(
+pub fn get_current_thread<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1791,7 +1753,6 @@ pub async fn get_current_thread<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.GetDiskFreeSpace0(JLsun/nio/fs/WindowsNativeDispatcher$DiskFreeSpace;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_disk_free_space0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1822,7 +1783,6 @@ pub async fn get_disk_free_space0<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.GetDiskFreeSpaceEx0(JLsun/nio/fs/WindowsNativeDispatcher$DiskFreeSpace;)V",
     Any
 )]
-#[async_method]
 pub async fn get_disk_free_space_ex0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1936,8 +1896,7 @@ fn disk_free_space_ex(_path: &str) -> std::result::Result<DiskFreeSpaceExInfo, i
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetDriveType0(J)I", Any)]
-#[async_method]
-pub async fn get_drive_type0<T: Thread + 'static>(
+pub fn get_drive_type0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1965,7 +1924,6 @@ fn drive_type(_path: &str) -> i32 {
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetFileAttributes0(J)I", Any)]
-#[async_method]
 pub async fn get_file_attributes0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1985,7 +1943,6 @@ pub async fn get_file_attributes0<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.GetFileInformationByHandle(JJ)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_file_information_by_handle<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1997,7 +1954,6 @@ pub async fn get_file_information_by_handle<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.GetFileInformationByHandle0(JJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn get_file_information_by_handle0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2053,7 +2009,6 @@ pub(crate) async fn file_identity(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetFileSecurity0(JIJI)I", Any)]
-#[async_method]
 pub async fn get_file_security0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2115,7 +2070,6 @@ pub async fn get_file_security0<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.GetFileSizeEx(J)J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_file_size_ex<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2134,7 +2088,6 @@ pub async fn get_file_size_ex<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.GetFinalPathNameByHandle(J)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_final_path_name_by_handle<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2201,8 +2154,7 @@ async fn final_path_name(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetLengthSid(J)I", Any)]
-#[async_method]
-pub async fn get_length_sid<T: Thread + 'static>(
+pub fn get_length_sid<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2212,7 +2164,6 @@ pub async fn get_length_sid<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetLogicalDrives()I", Any)]
-#[async_method]
 pub async fn get_logical_drives<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -2226,7 +2177,6 @@ pub async fn get_logical_drives<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetOverlappedResult(JJ)I", Any)]
-#[async_method]
 pub async fn get_overlapped_result<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2268,7 +2218,6 @@ pub async fn get_overlapped_result<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.GetQueuedCompletionStatus0(JLsun/nio/fs/WindowsNativeDispatcher$CompletionStatus;)V",
     Any
 )]
-#[async_method]
 pub async fn get_queued_completion_status0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2298,8 +2247,7 @@ pub async fn get_queued_completion_status0<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.GetSecurityDescriptorDacl(J)J",
     Any
 )]
-#[async_method]
-pub async fn get_security_descriptor_dacl<T: Thread + 'static>(
+pub fn get_security_descriptor_dacl<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2337,8 +2285,7 @@ pub async fn get_security_descriptor_dacl<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.GetSecurityDescriptorOwner(J)J",
     Any
 )]
-#[async_method]
-pub async fn get_security_descriptor_owner<T: Thread + 'static>(
+pub fn get_security_descriptor_owner<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2369,7 +2316,6 @@ pub async fn get_security_descriptor_owner<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetTokenInformation(JIJI)I", Any)]
-#[async_method]
 pub async fn get_token_information<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2453,7 +2399,6 @@ pub async fn get_token_information<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.GetVolumeInformation0(JLsun/nio/fs/WindowsNativeDispatcher$VolumeInformation;)V",
     Any
 )]
-#[async_method]
 pub async fn get_volume_information0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2538,7 +2483,6 @@ fn volume_information(_path: &str) -> std::result::Result<(String, String, u32, 
     "sun/nio/fs/WindowsNativeDispatcher.GetVolumePathName0(J)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_volume_path_name0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2583,7 +2527,6 @@ fn volume_path_name(_path: &str) -> std::result::Result<String, i32> {
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.InitializeAcl(JI)V", Any)]
-#[async_method]
 pub async fn initialize_acl<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2616,8 +2559,7 @@ pub async fn initialize_acl<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.InitializeSecurityDescriptor(J)V",
     Any
 )]
-#[async_method]
-pub async fn initialize_security_descriptor<T: Thread + 'static>(
+pub fn initialize_security_descriptor<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2638,8 +2580,7 @@ pub async fn initialize_security_descriptor<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.LocalFree(J)V", Any)]
-#[async_method]
-pub async fn local_free<T: Thread + 'static>(
+pub fn local_free<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2657,7 +2598,6 @@ pub async fn local_free<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.LookupAccountName0(JJI)I", Any)]
-#[async_method]
 pub async fn lookup_account_name0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2728,7 +2668,6 @@ pub async fn lookup_account_name0<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.LookupAccountSid0(JLsun/nio/fs/WindowsNativeDispatcher$Account;)V",
     Any
 )]
-#[async_method]
 pub async fn lookup_account_sid0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2793,7 +2732,6 @@ pub async fn lookup_account_sid0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.LookupPrivilegeValue0(J)J", Any)]
-#[async_method]
 pub async fn lookup_privilege_value0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2822,7 +2760,6 @@ pub async fn lookup_privilege_value0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.MoveFileEx0(JJI)V", Any)]
-#[async_method]
 pub async fn move_file_ex0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2847,7 +2784,6 @@ pub async fn move_file_ex0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.OpenProcessToken(JI)J", Any)]
-#[async_method]
 pub async fn open_process_token<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2875,7 +2811,6 @@ pub async fn open_process_token<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.OpenThreadToken(JIZ)J", Any)]
-#[async_method]
 pub async fn open_thread_token<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2913,8 +2848,7 @@ pub async fn open_thread_token<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.PostQueuedCompletionStatus(JJ)V",
     Any
 )]
-#[async_method]
-pub async fn post_queued_completion_status<T: Thread + 'static>(
+pub fn post_queued_completion_status<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2938,7 +2872,6 @@ pub async fn post_queued_completion_status<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.ReadDirectoryChangesW(JJIZIJJ)V",
     Any
 )]
-#[async_method]
 #[expect(
     clippy::too_many_lines,
     reason = "issuing and completing one overlapped Win32 directory operation is one state machine"
@@ -3053,7 +2986,6 @@ pub async fn read_directory_changes_w<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.RemoveDirectory0(J)V", Any)]
-#[async_method]
 pub async fn remove_directory0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -3069,7 +3001,6 @@ pub async fn remove_directory0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.SetEndOfFile(J)V", Any)]
-#[async_method]
 pub async fn set_end_of_file<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -3088,7 +3019,6 @@ pub async fn set_end_of_file<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.SetFileAttributes0(JI)V", Any)]
-#[async_method]
 pub async fn set_file_attributes0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -3103,7 +3033,6 @@ pub async fn set_file_attributes0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.SetFileSecurity0(JIJ)V", Any)]
-#[async_method]
 pub async fn set_file_security0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -3192,7 +3121,6 @@ pub async fn set_file_security0<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.SetFileTime(JJJJ)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn set_file_time<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -3271,7 +3199,6 @@ async fn set_file_time_via_handle(
     "sun/nio/fs/WindowsNativeDispatcher.SetFileTime0(JJJJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn set_file_time0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -3299,8 +3226,7 @@ pub async fn set_file_time0<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.SetSecurityDescriptorDacl(JJ)V",
     Any
 )]
-#[async_method]
-pub async fn set_security_descriptor_dacl<T: Thread + 'static>(
+pub fn set_security_descriptor_dacl<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -3329,8 +3255,7 @@ pub async fn set_security_descriptor_dacl<T: Thread + 'static>(
     "sun/nio/fs/WindowsNativeDispatcher.SetSecurityDescriptorOwner(JJ)V",
     Any
 )]
-#[async_method]
-pub async fn set_security_descriptor_owner<T: Thread + 'static>(
+pub fn set_security_descriptor_owner<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -3356,7 +3281,6 @@ pub async fn set_security_descriptor_owner<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.SetThreadToken(JJ)V", Any)]
-#[async_method]
 pub async fn set_thread_token<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -3461,7 +3385,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -3795,18 +3719,14 @@ mod tests {
     #[tokio::test]
     async fn test_get_current_process() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_current_process(thread, Parameters::default())
-            .await
-            .expect("ok");
+        let result = get_current_process(thread, Parameters::default()).expect("ok");
         assert_eq!(Some(Value::Long(-1)), result);
     }
 
     #[tokio::test]
     async fn test_get_current_thread() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_current_thread(thread, Parameters::default())
-            .await
-            .expect("ok");
+        let result = get_current_thread(thread, Parameters::default()).expect("ok");
         assert_eq!(Some(Value::Long(-2)), result);
     }
 
@@ -3835,7 +3755,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_drive_type0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_drive_type0(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_drive_type0(thread, Parameters::new(vec![Value::Long(0)]));
         assert!(result.is_err());
     }
 
@@ -3904,9 +3824,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_length_sid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_length_sid(thread, Parameters::new(vec![Value::Long(0)]))
-            .await
-            .expect("ok");
+        let result = get_length_sid(thread, Parameters::new(vec![Value::Long(0)])).expect("ok");
         assert_eq!(Some(Value::Int(12)), result);
     }
 
@@ -3949,7 +3867,6 @@ mod tests {
     async fn test_get_security_descriptor_dacl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_security_descriptor_dacl(thread, Parameters::new(vec![Value::Long(0)]))
-            .await
             .expect("ok");
         assert_eq!(Some(Value::Long(0)), result);
     }
@@ -3958,7 +3875,6 @@ mod tests {
     async fn test_get_security_descriptor_owner() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_security_descriptor_owner(thread, Parameters::new(vec![Value::Long(0)]))
-            .await
             .expect("ok");
         assert_eq!(Some(Value::Long(0)), result);
     }
@@ -4012,7 +3928,6 @@ mod tests {
     async fn test_initialize_security_descriptor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = initialize_security_descriptor(thread, Parameters::new(vec![Value::Long(0)]))
-            .await
             .expect("ok");
         assert_eq!(None, result);
     }
@@ -4020,7 +3935,7 @@ mod tests {
     #[tokio::test]
     async fn test_local_free() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = local_free(thread, Parameters::new(vec![Value::Long(0)])).await?;
+        let result = local_free(thread, Parameters::new(vec![Value::Long(0)]))?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -4096,8 +4011,7 @@ mod tests {
         let result = post_queued_completion_status(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert!(result.is_err());
     }
 
@@ -4196,7 +4110,6 @@ mod tests {
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
         )
-        .await
         .expect("ok");
         assert_eq!(None, result);
     }
@@ -4208,7 +4121,6 @@ mod tests {
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
         )
-        .await
         .expect("ok");
         assert_eq!(None, result);
     }
@@ -4252,7 +4164,7 @@ mod windows_tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        assert_eq!(None, init_ids(thread, Parameters::default()).await?);
+        assert_eq!(None, init_ids(thread, Parameters::default())?);
         Ok(())
     }
 

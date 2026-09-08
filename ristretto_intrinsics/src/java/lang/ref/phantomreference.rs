@@ -3,7 +3,6 @@ use ristretto_classfile::JAVA_17;
 use ristretto_classfile::JAVA_25;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -13,24 +12,22 @@ use std::sync::Arc;
     "java/lang/ref/PhantomReference.clear0()V",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_method]
-pub async fn clear_0<T: Thread + 'static>(
+pub fn clear_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    reference::clear_0(thread, parameters).await
+    reference::clear_0(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/lang/ref/PhantomReference.refersTo0(Ljava/lang/Object;)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn refers_to_0<T: Thread + 'static>(
+pub fn refers_to_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    reference::refers_to_0(thread, parameters).await
+    reference::refers_to_0(thread, parameters)
 }
 
 #[cfg(test)]
@@ -55,7 +52,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(phantom_reference.clone());
 
-        let result = clear_0(thread, parameters).await?;
+        let result = clear_0(thread, parameters)?;
         assert_eq!(result, None);
         let phantom_reference = phantom_reference.as_object_ref()?;
         let referent = phantom_reference.value("referent")?;
@@ -81,7 +78,7 @@ mod tests {
         parameters.push(phantom_reference.clone());
         parameters.push(value.clone());
 
-        let value = refers_to_0(thread, parameters).await?.expect("refers to");
+        let value = refers_to_0(thread, parameters)?.expect("refers to");
         let refers_to = value.as_bool()?;
         assert!(refers_to);
         Ok(())

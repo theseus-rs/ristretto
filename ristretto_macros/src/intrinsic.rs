@@ -30,10 +30,38 @@ pub(crate) fn process(attributes: TokenStream, item: TokenStream) -> TokenStream
     let signature_lit = &arguments.signature;
     let version_specification_expr = &arguments.version_specification;
 
-    let input_fn = match syn::parse2::<ItemFn>(item) {
+    let mut input_fn = match syn::parse2::<ItemFn>(item) {
         Ok(input_fn) => input_fn,
         Err(error) => return error.to_compile_error(),
     };
+    // Every registry entry shares an owned-argument, fallible calling convention, including
+    // implementations that happen not to consume their arguments or produce an error.
+    if input_fn.sig.asyncness.is_none() {
+        input_fn.attrs.push(syn::parse_quote! {
+            #[allow(
+                clippy::needless_pass_by_value,
+                clippy::unnecessary_wraps,
+                reason = "intrinsic registry entries share an owned-argument, fallible calling convention"
+            )]
+        });
+    }
+    let returns_result = matches!(&input_fn.sig.output, syn::ReturnType::Type(_, ty)
+        if matches!(ty.as_ref(), syn::Type::Path(path)
+            if path.path.segments.last().is_some_and(|segment| segment.ident == "Result")));
+    let documents_errors = input_fn.attrs.iter().any(|attribute| {
+        attribute.path().is_ident("doc")
+            && matches!(&attribute.meta, syn::Meta::NameValue(value)
+                if matches!(&value.value, Expr::Lit(literal)
+                    if matches!(&literal.lit, syn::Lit::Str(text) if text.value().contains("# Errors"))))
+    });
+    if returns_result && !documents_errors {
+        input_fn.attrs.push(syn::parse_quote! {
+            #[doc = "\n# Errors\n\nPropagates errors from argument decoding or the intrinsic implementation."]
+        });
+        input_fn.attrs.push(syn::parse_quote! {
+            #[allow(clippy::missing_errors_doc, reason = "the intrinsic macro supplies the standard error contract")]
+        });
+    }
     let fn_name = &input_fn.sig.ident;
     let fn_vis = &input_fn.vis;
 
@@ -61,10 +89,21 @@ pub(crate) fn process(attributes: TokenStream, item: TokenStream) -> TokenStream
             (#intrinsic_name_expr, stringify!(#fn_name), #version_specification_expr);
     };
 
-    // Output the original function definition and the generated registration logic.
+    // Intrinsics own their boxing so callers need only one attribute. Consume the legacy
+    // paired attribute before applying the platform-aware transformation exactly once.
+    let function = if input_fn.sig.asyncness.is_some() {
+        input_fn
+            .attrs
+            .retain(|attribute| !attribute.path().is_ident("async_method"));
+        crate::async_method::process(quote! { #input_fn })
+    } else {
+        quote! { #input_fn }
+    };
+
+    // Output the function definition and the generated registration logic.
     let output = quote! {
         // The original function definition, with original visibility
-        #input_fn
+        #function
         // The generated static item
         #generated_registration_code
     };
@@ -96,6 +135,45 @@ mod tests {
         assert!(output.contains("\"java/lang/Object.hashCode()I\""));
         assert!(output.contains("stringify ! (hash_code)"));
         assert!(output.contains("Any"));
+        assert!(!output.contains("async_recursion"));
+    }
+
+    #[test]
+    fn process_boxes_async_functions_once_with_platform_bounds() {
+        for function in [
+            quote! { pub async fn run() -> u8 { 7 } },
+            quote! { #[async_method] pub async fn run() -> u8 { 7 } },
+        ] {
+            let output = process(quote! { "pkg/Example.run()I", Any }, function).to_string();
+            assert!(output.contains("pub async fn run"));
+            assert_eq!(output.matches("cfg_attr").count(), 2);
+            assert!(output.contains("? Send"));
+            assert!(!output.contains("# [async_method]"));
+            assert!(output.contains("_pkg_Example_run__I_run_INTRINSIC_DATA"));
+        }
+    }
+
+    #[test]
+    fn process_documents_result_errors_without_replacing_explicit_docs() {
+        let generated = process(
+            quote! { "pkg/Example.run()I", Any },
+            quote! { pub fn run() -> Result<Option<Value>> { Ok(None) } },
+        )
+        .to_string();
+        assert!(generated.contains("# Errors"));
+        assert!(generated.contains("Propagates errors"));
+
+        let documented = process(
+            quote! { "pkg/Example.run()I", Any },
+            quote! {
+                /// # Errors
+                /// Returns an error when the input is invalid.
+                pub fn run() -> Result<Option<Value>> { Ok(None) }
+            },
+        )
+        .to_string();
+        assert!(documented.contains("Returns an error when the input is invalid."));
+        assert!(!documented.contains("Propagates errors"));
     }
 
     #[test]

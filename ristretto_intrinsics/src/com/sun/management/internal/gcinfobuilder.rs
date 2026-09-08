@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "com/sun/management/internal/GcInfoBuilder.fillGcAttributeInfo(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/String;[C[Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn fill_gc_attribute_info<T: Thread + 'static>(
+pub fn fill_gc_attribute_info<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -29,8 +27,7 @@ pub async fn fill_gc_attribute_info<T: Thread + 'static>(
     "com/sun/management/internal/GcInfoBuilder.getLastGcInfo0(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_last_gc_info_0<T: Thread + 'static>(
+pub fn get_last_gc_info_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -47,8 +44,7 @@ pub async fn get_last_gc_info_0<T: Thread + 'static>(
     "com/sun/management/internal/GcInfoBuilder.getNumGcExtAttributes(Ljava/lang/management/GarbageCollectorMXBean;)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_num_gc_ext_attributes<T: Thread + 'static>(
+pub fn get_num_gc_ext_attributes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -72,8 +68,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "com.sun.management.internal.GcInfoBuilder.fillGcAttributeInfo(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/String;[C[Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -93,8 +88,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "com.sun.management.internal.GcInfoBuilder.getLastGcInfo0(Ljava/lang/management/GarbageCollectorMXBean;I[Ljava/lang/Object;[C[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;)Lcom/sun/management/GcInfo;",
             result.unwrap_err().to_string()
@@ -104,8 +98,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_num_gc_ext_attributes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            get_num_gc_ext_attributes(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_num_gc_ext_attributes(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "com.sun.management.internal.GcInfoBuilder.getNumGcExtAttributes(Ljava/lang/management/GarbageCollectorMXBean;)I",
             result.unwrap_err().to_string()

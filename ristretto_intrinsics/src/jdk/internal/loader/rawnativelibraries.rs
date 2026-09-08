@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "jdk/internal/loader/RawNativeLibraries.load0(Ljdk/internal/loader/RawNativeLibraries$RawNativeLibraryImpl;Ljava/lang/String;)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn load_0<T: Thread + 'static>(
+pub fn load_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn load_0<T: Thread + 'static>(
     "jdk/internal/loader/RawNativeLibraries.unload0(Ljava/lang/String;J)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn unload_0<T: Thread + 'static>(
+pub fn unload_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,8 +46,7 @@ mod tests {
         let result = load_0(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk.internal.loader.RawNativeLibraries.load0(Ljdk/internal/loader/RawNativeLibraries$RawNativeLibraryImpl;Ljava/lang/String;)Z",
             result.unwrap_err().to_string()
@@ -63,8 +59,7 @@ mod tests {
         let result = unload_0(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk.internal.loader.RawNativeLibraries.unload0(Ljava/lang/String;J)V",
             result.unwrap_err().to_string()

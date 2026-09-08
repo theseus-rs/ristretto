@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/awt/windows/WDragSourceContextPeer.createDragSource(Ljava/awt/Component;Ljava/awt/datatransfer/Transferable;Ljava/awt/event/InputEvent;I[JLjava/util/Map;)J",
     Any
 )]
-#[async_method]
-pub async fn create_drag_source<T: Thread + 'static>(
+pub fn create_drag_source<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn create_drag_source<T: Thread + 'static>(
     "sun/awt/windows/WDragSourceContextPeer.doDragDrop(JLjava/awt/Cursor;[IIIII)V",
     Any
 )]
-#[async_method]
-pub async fn do_drag_drop<T: Thread + 'static>(
+pub fn do_drag_drop<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,8 +46,7 @@ pub async fn do_drag_drop<T: Thread + 'static>(
     "sun/awt/windows/WDragSourceContextPeer.setNativeCursor(JLjava/awt/Cursor;I)V",
     Any
 )]
-#[async_method]
-pub async fn set_native_cursor<T: Thread + 'static>(
+pub fn set_native_cursor<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -81,8 +77,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WDragSourceContextPeer.createDragSource(Ljava/awt/Component;Ljava/awt/datatransfer/Transferable;Ljava/awt/event/InputEvent;I[JLjava/util/Map;)J",
             result.unwrap_err().to_string()
@@ -104,8 +99,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WDragSourceContextPeer.doDragDrop(JLjava/awt/Cursor;[IIIII)V",
             result.unwrap_err().to_string()
@@ -119,8 +113,7 @@ mod tests {
         let result = set_native_cursor(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WDragSourceContextPeer.setNativeCursor(JLjava/awt/Cursor;I)V",
             result.unwrap_err().to_string()

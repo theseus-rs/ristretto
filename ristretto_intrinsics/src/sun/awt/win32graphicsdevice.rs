@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/awt/Win32GraphicsDevice.configDisplayMode(ILjava/awt/peer/WindowPeer;IIII)V",
     Any
 )]
-#[async_method]
-pub async fn config_display_mode<T: Thread + 'static>(
+pub fn config_display_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -33,8 +31,7 @@ pub async fn config_display_mode<T: Thread + 'static>(
     "sun/awt/Win32GraphicsDevice.enterFullScreenExclusive(ILjava/awt/peer/WindowPeer;)V",
     Any
 )]
-#[async_method]
-pub async fn enter_full_screen_exclusive<T: Thread + 'static>(
+pub fn enter_full_screen_exclusive<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,8 +47,7 @@ pub async fn enter_full_screen_exclusive<T: Thread + 'static>(
     "sun/awt/Win32GraphicsDevice.enumDisplayModes(ILjava/util/ArrayList;)V",
     Any
 )]
-#[async_method]
-pub async fn enum_display_modes<T: Thread + 'static>(
+pub fn enum_display_modes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +62,7 @@ pub async fn enum_display_modes<T: Thread + 'static>(
     "sun/awt/Win32GraphicsDevice.exitFullScreenExclusive(ILjava/awt/peer/WindowPeer;)V",
     Any
 )]
-#[async_method]
-pub async fn exit_full_screen_exclusive<T: Thread + 'static>(
+pub fn exit_full_screen_exclusive<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -83,8 +78,7 @@ pub async fn exit_full_screen_exclusive<T: Thread + 'static>(
     "sun/awt/Win32GraphicsDevice.getCurrentDisplayMode(I)Ljava/awt/DisplayMode;",
     Any
 )]
-#[async_method]
-pub async fn get_current_display_mode<T: Thread + 'static>(
+pub fn get_current_display_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -95,8 +89,7 @@ pub async fn get_current_display_mode<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/Win32GraphicsDevice.getDefaultPixIDImpl(I)I", Any)]
-#[async_method]
-pub async fn get_default_pix_idimpl<T: Thread + 'static>(
+pub fn get_default_pix_idimpl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -107,8 +100,7 @@ pub async fn get_default_pix_idimpl<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/Win32GraphicsDevice.getMaxConfigsImpl(I)I", Any)]
-#[async_method]
-pub async fn get_max_configs_impl<T: Thread + 'static>(
+pub fn get_max_configs_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -122,8 +114,7 @@ pub async fn get_max_configs_impl<T: Thread + 'static>(
     "sun/awt/Win32GraphicsDevice.getNativeScaleX(I)F",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_native_scale_x<T: Thread + 'static>(
+pub fn get_native_scale_x<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -137,8 +128,7 @@ pub async fn get_native_scale_x<T: Thread + 'static>(
     "sun/awt/Win32GraphicsDevice.getNativeScaleY(I)F",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_native_scale_y<T: Thread + 'static>(
+pub fn get_native_scale_y<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -149,8 +139,7 @@ pub async fn get_native_scale_y<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/Win32GraphicsDevice.initDevice(I)V", Any)]
-#[async_method]
-pub async fn init_device<T: Thread + 'static>(
+pub fn init_device<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -161,8 +150,7 @@ pub async fn init_device<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/Win32GraphicsDevice.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -175,8 +163,7 @@ pub async fn init_ids<T: Thread + 'static>(
     "sun/awt/Win32GraphicsDevice.initNativeScale(I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init_native_scale<T: Thread + 'static>(
+pub fn init_native_scale<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -187,8 +174,7 @@ pub async fn init_native_scale<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/Win32GraphicsDevice.isPixFmtSupported(II)Z", Any)]
-#[async_method]
-pub async fn is_pix_fmt_supported<T: Thread + 'static>(
+pub fn is_pix_fmt_supported<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -203,8 +189,7 @@ pub async fn is_pix_fmt_supported<T: Thread + 'static>(
     "sun/awt/Win32GraphicsDevice.makeColorModel(IZ)Ljava/awt/image/ColorModel;",
     Any
 )]
-#[async_method]
-pub async fn make_color_model<T: Thread + 'static>(
+pub fn make_color_model<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -219,8 +204,7 @@ pub async fn make_color_model<T: Thread + 'static>(
     "sun/awt/Win32GraphicsDevice.setNativeScale(IFF)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_native_scale<T: Thread + 'static>(
+pub fn set_native_scale<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -251,8 +235,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.configDisplayMode(ILjava/awt/peer/WindowPeer;IIII)V",
             result.unwrap_err().to_string()
@@ -266,8 +249,7 @@ mod tests {
         let result = enter_full_screen_exclusive(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.enterFullScreenExclusive(ILjava/awt/peer/WindowPeer;)V",
             result.unwrap_err().to_string()
@@ -281,8 +263,7 @@ mod tests {
         let result = enum_display_modes(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.enumDisplayModes(ILjava/util/ArrayList;)V",
             result.unwrap_err().to_string()
@@ -296,8 +277,7 @@ mod tests {
         let result = exit_full_screen_exclusive(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.exitFullScreenExclusive(ILjava/awt/peer/WindowPeer;)V",
             result.unwrap_err().to_string()
@@ -308,7 +288,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_current_display_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_current_display_mode(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_current_display_mode(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.getCurrentDisplayMode(I)Ljava/awt/DisplayMode;",
             result.unwrap_err().to_string()
@@ -319,7 +299,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_default_pix_idimpl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_default_pix_idimpl(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_default_pix_idimpl(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.getDefaultPixIDImpl(I)I",
             result.unwrap_err().to_string()
@@ -330,7 +310,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_max_configs_impl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_max_configs_impl(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_max_configs_impl(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.getMaxConfigsImpl(I)I",
             result.unwrap_err().to_string()
@@ -341,7 +321,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_native_scale_x() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_native_scale_x(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_native_scale_x(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.getNativeScaleX(I)F",
             result.unwrap_err().to_string()
@@ -352,7 +332,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_native_scale_y() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_native_scale_y(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_native_scale_y(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.getNativeScaleY(I)F",
             result.unwrap_err().to_string()
@@ -363,7 +343,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_device() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_device(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = init_device(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.initDevice(I)V",
             result.unwrap_err().to_string()
@@ -374,7 +354,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default());
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.initIDs()V",
             result.unwrap_err().to_string()
@@ -385,7 +365,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_native_scale() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_native_scale(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = init_native_scale(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.initNativeScale(I)V",
             result.unwrap_err().to_string()
@@ -397,7 +377,7 @@ mod tests {
     async fn test_is_pix_fmt_supported() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            is_pix_fmt_supported(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+            is_pix_fmt_supported(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]));
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.isPixFmtSupported(II)Z",
             result.unwrap_err().to_string()
@@ -411,8 +391,7 @@ mod tests {
         let result = make_color_model(
             thread,
             Parameters::new(vec![Value::Int(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.makeColorModel(IZ)Ljava/awt/image/ColorModel;",
             result.unwrap_err().to_string()
@@ -426,8 +405,7 @@ mod tests {
         let result = set_native_scale(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Float(0.0), Value::Float(0.0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/Win32GraphicsDevice.setNativeScale(IFF)V",
             result.unwrap_err().to_string()

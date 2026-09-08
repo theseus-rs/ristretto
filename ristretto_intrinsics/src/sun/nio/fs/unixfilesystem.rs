@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::VM;
@@ -15,7 +14,6 @@ use super::managed_files;
     "sun/nio/fs/UnixFileSystem.bufferedCopy0(IIJIJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn buffered_copy_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

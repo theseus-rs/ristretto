@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/awt/windows/WChoicePeer.addItems([Ljava/lang/String;I)V", Any)]
-#[async_method]
-pub async fn add_items<T: Thread + 'static>(
+pub fn add_items<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -21,8 +19,7 @@ pub async fn add_items<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WChoicePeer.closeList()V", Any)]
-#[async_method]
-pub async fn close_list<T: Thread + 'static>(
+pub fn close_list<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -35,8 +32,7 @@ pub async fn close_list<T: Thread + 'static>(
     "sun/awt/windows/WChoicePeer.create(Lsun/awt/windows/WComponentPeer;)V",
     Any
 )]
-#[async_method]
-pub async fn create<T: Thread + 'static>(
+pub fn create<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -47,8 +43,7 @@ pub async fn create<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WChoicePeer.remove(I)V", Any)]
-#[async_method]
-pub async fn remove<T: Thread + 'static>(
+pub fn remove<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -59,8 +54,7 @@ pub async fn remove<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WChoicePeer.removeAll()V", Any)]
-#[async_method]
-pub async fn remove_all<T: Thread + 'static>(
+pub fn remove_all<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -70,8 +64,7 @@ pub async fn remove_all<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WChoicePeer.reshape(IIII)V", Any)]
-#[async_method]
-pub async fn reshape<T: Thread + 'static>(
+pub fn reshape<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -85,8 +78,7 @@ pub async fn reshape<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WChoicePeer.select(I)V", Any)]
-#[async_method]
-pub async fn select<T: Thread + 'static>(
+pub fn select<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -108,8 +100,7 @@ mod tests {
         let result = add_items(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WChoicePeer.addItems([Ljava/lang/String;I)V",
             result.unwrap_err().to_string()
@@ -120,7 +111,7 @@ mod tests {
     #[tokio::test]
     async fn test_close_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = close_list(thread, Parameters::default()).await;
+        let result = close_list(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WChoicePeer.closeList()V",
             result.unwrap_err().to_string()
@@ -131,7 +122,7 @@ mod tests {
     #[tokio::test]
     async fn test_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = create(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WChoicePeer.create(Lsun/awt/windows/WComponentPeer;)V",
             result.unwrap_err().to_string()
@@ -142,7 +133,7 @@ mod tests {
     #[tokio::test]
     async fn test_remove() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = remove(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = remove(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WChoicePeer.remove(I)V",
             result.unwrap_err().to_string()
@@ -153,7 +144,7 @@ mod tests {
     #[tokio::test]
     async fn test_remove_all() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = remove_all(thread, Parameters::default()).await;
+        let result = remove_all(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WChoicePeer.removeAll()V",
             result.unwrap_err().to_string()
@@ -172,8 +163,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WChoicePeer.reshape(IIII)V",
             result.unwrap_err().to_string()
@@ -184,7 +174,7 @@ mod tests {
     #[tokio::test]
     async fn test_select() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = select(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = select(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WChoicePeer.select(I)V",
             result.unwrap_err().to_string()

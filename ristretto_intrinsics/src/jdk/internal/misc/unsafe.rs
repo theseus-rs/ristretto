@@ -6,7 +6,6 @@ use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan, Gre
 use ristretto_classfile::{BaseType, JAVA_11, JAVA_17, JavaStr};
 use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_gc::Gc;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::{InternalError, InvalidOperand};
 use ristretto_types::JavaError::{
@@ -37,8 +36,7 @@ pub(crate) const REFERENCE_SIZE: usize = 8;
 pub(crate) const REFERENCE_SIZE: usize = 4;
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.addressSize0()I", Equal(JAVA_11))]
-#[async_method]
-pub async fn address_size_0<T: Thread + 'static>(
+pub fn address_size_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,7 +48,6 @@ pub async fn address_size_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.allocateInstance(Ljava/lang/Class;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn allocate_instance<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -67,8 +64,7 @@ pub async fn allocate_instance<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.allocateMemory0(J)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn allocate_memory_0<T: Thread + 'static>(
+pub fn allocate_memory_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -98,8 +94,7 @@ pub async fn allocate_memory_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.arrayBaseOffset0(Ljava/lang/Class;)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn array_base_offset_0<T: Thread + 'static>(
+pub fn array_base_offset_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -110,7 +105,6 @@ pub async fn array_base_offset_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.arrayIndexScale0(Ljava/lang/Class;)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn array_index_scale_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -144,7 +138,6 @@ pub async fn array_index_scale_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.compareAndExchangeInt(Ljava/lang/Object;JII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn compare_and_exchange_int<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -210,7 +203,6 @@ pub async fn compare_and_exchange_int<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.compareAndExchangeLong(Ljava/lang/Object;JJJ)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn compare_and_exchange_long<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -276,20 +268,18 @@ pub async fn compare_and_exchange_long<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.compareAndExchangeObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn compare_and_exchange_object<T: Thread + 'static>(
+pub fn compare_and_exchange_object<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    compare_and_exchange_reference(thread, parameters).await
+    compare_and_exchange_reference(thread, parameters)
 }
 
 #[intrinsic_method(
     "jdk/internal/misc/Unsafe.compareAndExchangeReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThan(JAVA_11)
 )]
-#[async_method]
-pub async fn compare_and_exchange_reference<T: Thread + 'static>(
+pub fn compare_and_exchange_reference<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -349,7 +339,6 @@ pub async fn compare_and_exchange_reference<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.compareAndSetInt(Ljava/lang/Object;JII)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn compare_and_set_int<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -418,7 +407,6 @@ pub async fn compare_and_set_int<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.compareAndSetLong(Ljava/lang/Object;JJJ)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn compare_and_set_long<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -487,20 +475,18 @@ pub async fn compare_and_set_long<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.compareAndSetObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn compare_and_set_object<T: Thread + 'static>(
+pub fn compare_and_set_object<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    compare_and_set_reference(thread, parameters).await
+    compare_and_set_reference(thread, parameters)
 }
 
 #[intrinsic_method(
     "jdk/internal/misc/Unsafe.compareAndSetReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
     GreaterThan(JAVA_11)
 )]
-#[async_method]
-pub async fn compare_and_set_reference<T: Thread + 'static>(
+pub fn compare_and_set_reference<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -588,8 +574,7 @@ pub async fn compare_and_set_reference<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.copyMemory0(Ljava/lang/Object;JLjava/lang/Object;JJ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn copy_memory_0<T: Thread + 'static>(
+pub fn copy_memory_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -694,8 +679,7 @@ pub async fn copy_memory_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.copySwapMemory0(Ljava/lang/Object;JLjava/lang/Object;JJJ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn copy_swap_memory_0<T: Thread + 'static>(
+pub fn copy_swap_memory_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -799,7 +783,6 @@ pub async fn copy_swap_memory_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.defineAnonymousClass0(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;",
     Equal(JAVA_11)
 )]
-#[async_method]
 pub async fn define_anonymous_class_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -863,7 +846,6 @@ pub async fn define_anonymous_class_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.defineClass0(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn define_class_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -924,7 +906,6 @@ pub async fn define_class_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.defineHiddenClass(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",
     Any
 )]
-#[async_method]
 pub async fn define_hidden_class<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -973,7 +954,6 @@ pub async fn define_hidden_class<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.ensureClassInitialized0(Ljava/lang/Class;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn ensure_class_initialized_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -994,8 +974,7 @@ pub async fn ensure_class_initialized_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.freeMemory0(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn free_memory_0<T: Thread + 'static>(
+pub fn free_memory_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1008,8 +987,7 @@ pub async fn free_memory_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.fullFence()V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn full_fence<T: Thread + 'static>(
+pub fn full_fence<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1406,7 +1384,6 @@ async fn put_reference_type<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getBoolean(Ljava/lang/Object;J)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_boolean<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1418,7 +1395,6 @@ pub async fn get_boolean<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getBooleanVolatile(Ljava/lang/Object;J)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_boolean_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1430,7 +1406,6 @@ pub async fn get_boolean_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getByte(Ljava/lang/Object;J)B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_byte<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1442,7 +1417,6 @@ pub async fn get_byte<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getByteVolatile(Ljava/lang/Object;J)B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_byte_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1454,7 +1428,6 @@ pub async fn get_byte_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getChar(Ljava/lang/Object;J)C",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_char<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1466,7 +1439,6 @@ pub async fn get_char<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getCharVolatile(Ljava/lang/Object;J)C",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_char_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1478,7 +1450,6 @@ pub async fn get_char_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getDouble(Ljava/lang/Object;J)D",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_double<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1490,7 +1461,6 @@ pub async fn get_double<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getDoubleVolatile(Ljava/lang/Object;J)D",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_double_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1502,7 +1472,6 @@ pub async fn get_double_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getFloat(Ljava/lang/Object;J)F",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_float<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1514,7 +1483,6 @@ pub async fn get_float<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getFloatVolatile(Ljava/lang/Object;J)F",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_float_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1526,7 +1494,6 @@ pub async fn get_float_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getInt(Ljava/lang/Object;J)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_int<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1538,7 +1505,6 @@ pub async fn get_int<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getIntVolatile(Ljava/lang/Object;J)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_int_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1550,8 +1516,7 @@ pub async fn get_int_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getLoadAverage0([DI)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_load_average_0<T: Thread + 'static>(
+pub fn get_load_average_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1589,7 +1554,6 @@ pub async fn get_load_average_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getLong(Ljava/lang/Object;J)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_long<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1601,7 +1565,6 @@ pub async fn get_long<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getLongVolatile(Ljava/lang/Object;J)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_long_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1613,7 +1576,6 @@ pub async fn get_long_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getObject(Ljava/lang/Object;J)Ljava/lang/Object;",
     Equal(JAVA_11)
 )]
-#[async_method]
 pub async fn get_object<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1625,7 +1587,6 @@ pub async fn get_object<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getObjectVolatile(Ljava/lang/Object;J)Ljava/lang/Object;",
     Equal(JAVA_11)
 )]
-#[async_method]
 pub async fn get_object_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1637,7 +1598,6 @@ pub async fn get_object_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getReference(Ljava/lang/Object;J)Ljava/lang/Object;",
     GreaterThan(JAVA_11)
 )]
-#[async_method]
 pub async fn get_reference<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1649,7 +1609,6 @@ pub async fn get_reference<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getReferenceVolatile(Ljava/lang/Object;J)Ljava/lang/Object;",
     GreaterThan(JAVA_11)
 )]
-#[async_method]
 pub async fn get_reference_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1661,7 +1620,6 @@ pub async fn get_reference_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getShort(Ljava/lang/Object;J)S",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_short<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1673,7 +1631,6 @@ pub async fn get_short<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getShortVolatile(Ljava/lang/Object;J)S",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_short_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1685,8 +1642,7 @@ pub async fn get_short_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.getUncompressedObject(J)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_uncompressed_object<T: Thread + 'static>(
+pub fn get_uncompressed_object<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1695,8 +1651,7 @@ pub async fn get_uncompressed_object<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.isBigEndian0()Z", Equal(JAVA_11))]
-#[async_method]
-pub async fn is_big_endian_0<T: Thread + 'static>(
+pub fn is_big_endian_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1705,8 +1660,7 @@ pub async fn is_big_endian_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.loadFence()V", Between(JAVA_11, JAVA_17))]
-#[async_method]
-pub async fn load_fence<T: Thread + 'static>(
+pub fn load_fence<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1717,7 +1671,6 @@ pub async fn load_fence<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.objectFieldOffset0(Ljava/lang/reflect/Field;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn object_field_offset_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1737,7 +1690,6 @@ pub async fn object_field_offset_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.objectFieldOffset1(Ljava/lang/Class;Ljava/lang/String;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn object_field_offset_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1755,8 +1707,7 @@ pub async fn object_field_offset_1<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.pageSize()I", Equal(JAVA_11))]
-#[async_method]
-pub async fn page_size<T: Thread + 'static>(
+pub fn page_size<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1777,7 +1728,6 @@ pub async fn page_size<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.park(ZJ)V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn park<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1800,7 +1750,6 @@ pub async fn park<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putBoolean(Ljava/lang/Object;JZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_boolean<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1812,7 +1761,6 @@ pub async fn put_boolean<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putBooleanVolatile(Ljava/lang/Object;JZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_boolean_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1824,7 +1772,6 @@ pub async fn put_boolean_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putByte(Ljava/lang/Object;JB)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_byte<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1836,7 +1783,6 @@ pub async fn put_byte<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putByteVolatile(Ljava/lang/Object;JB)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_byte_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1848,7 +1794,6 @@ pub async fn put_byte_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putChar(Ljava/lang/Object;JC)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_char<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1860,7 +1805,6 @@ pub async fn put_char<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putCharVolatile(Ljava/lang/Object;JC)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_char_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1872,7 +1816,6 @@ pub async fn put_char_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putDouble(Ljava/lang/Object;JD)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_double<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1884,7 +1827,6 @@ pub async fn put_double<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putDoubleVolatile(Ljava/lang/Object;JD)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_double_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1896,7 +1838,6 @@ pub async fn put_double_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putFloat(Ljava/lang/Object;JF)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_float<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1908,7 +1849,6 @@ pub async fn put_float<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putFloatVolatile(Ljava/lang/Object;JF)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_float_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1920,7 +1860,6 @@ pub async fn put_float_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putInt(Ljava/lang/Object;JI)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_int<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1932,7 +1871,6 @@ pub async fn put_int<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putIntVolatile(Ljava/lang/Object;JI)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_int_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1944,7 +1882,6 @@ pub async fn put_int_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putLong(Ljava/lang/Object;JJ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_long<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1956,7 +1893,6 @@ pub async fn put_long<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putLongVolatile(Ljava/lang/Object;JJ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_long_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1968,7 +1904,6 @@ pub async fn put_long_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putObject(Ljava/lang/Object;JLjava/lang/Object;)V",
     Equal(JAVA_11)
 )]
-#[async_method]
 pub async fn put_object<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1980,7 +1915,6 @@ pub async fn put_object<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putObjectVolatile(Ljava/lang/Object;JLjava/lang/Object;)V",
     Equal(JAVA_11)
 )]
-#[async_method]
 pub async fn put_object_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1992,7 +1926,6 @@ pub async fn put_object_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putReference(Ljava/lang/Object;JLjava/lang/Object;)V",
     GreaterThan(JAVA_11)
 )]
-#[async_method]
 pub async fn put_reference<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -2004,7 +1937,6 @@ pub async fn put_reference<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putReferenceVolatile(Ljava/lang/Object;JLjava/lang/Object;)V",
     GreaterThan(JAVA_11)
 )]
-#[async_method]
 pub async fn put_reference_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -2016,7 +1948,6 @@ pub async fn put_reference_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putShort(Ljava/lang/Object;JS)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_short<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -2028,7 +1959,6 @@ pub async fn put_short<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.putShortVolatile(Ljava/lang/Object;JS)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn put_short_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -2040,8 +1970,7 @@ pub async fn put_short_volatile<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.reallocateMemory0(JJ)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn reallocate_memory_0<T: Thread + 'static>(
+pub fn reallocate_memory_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2064,7 +1993,6 @@ pub async fn reallocate_memory_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.registerNatives()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn register_natives<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -2087,8 +2015,7 @@ pub async fn register_natives<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.setMemory0(Ljava/lang/Object;JJB)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_memory_0<T: Thread + 'static>(
+pub fn set_memory_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2140,7 +2067,6 @@ pub async fn set_memory_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.shouldBeInitialized0(Ljava/lang/Class;)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn should_be_initialized_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2167,8 +2093,7 @@ pub async fn should_be_initialized_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn static_field_base_0<T: Thread + 'static>(
+pub fn static_field_base_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2184,7 +2109,6 @@ pub async fn static_field_base_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn static_field_offset_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2207,8 +2131,7 @@ pub async fn static_field_offset_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.storeFence()V", Between(JAVA_11, JAVA_17))]
-#[async_method]
-pub async fn store_fence<T: Thread + 'static>(
+pub fn store_fence<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2219,8 +2142,7 @@ pub async fn store_fence<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.throwException(Ljava/lang/Throwable;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn throw_exception<T: Thread + 'static>(
+pub fn throw_exception<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2229,8 +2151,7 @@ pub async fn throw_exception<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.unalignedAccess0()Z", Equal(JAVA_11))]
-#[async_method]
-pub async fn unaligned_access_0<T: Thread + 'static>(
+pub fn unaligned_access_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2241,7 +2162,6 @@ pub async fn unaligned_access_0<T: Thread + 'static>(
     "jdk/internal/misc/Unsafe.unpark(Ljava/lang/Object;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn unpark<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2270,8 +2190,7 @@ pub async fn unpark<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.writeback0(J)V", GreaterThan(JAVA_11))]
-#[async_method]
-pub async fn writeback_0<T: Thread + 'static>(
+pub fn writeback_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2280,8 +2199,7 @@ pub async fn writeback_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.writebackPostSync0()V", GreaterThan(JAVA_11))]
-#[async_method]
-pub async fn writeback_post_sync_0<T: Thread + 'static>(
+pub fn writeback_post_sync_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2289,8 +2207,7 @@ pub async fn writeback_post_sync_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.writebackPreSync0()V", GreaterThan(JAVA_11))]
-#[async_method]
-pub async fn writeback_pre_sync_0<T: Thread + 'static>(
+pub fn writeback_pre_sync_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2325,7 +2242,7 @@ mod tests {
             Value::Object(None),
         ]);
         assert_eq!(
-            compare_and_set_reference(thread.clone(), parameters).await?,
+            compare_and_set_reference(thread.clone(), parameters)?,
             Some(Value::Int(0))
         );
         let observed = holder.as_object_ref()?.value("value")?;
@@ -2340,7 +2257,7 @@ mod tests {
             Value::Object(None),
         ]);
         assert_eq!(
-            compare_and_set_reference(thread.clone(), parameters).await?,
+            compare_and_set_reference(thread.clone(), parameters)?,
             Some(Value::Int(1))
         );
         assert!(holder.as_object_ref()?.value("value")?.is_null());
@@ -2351,7 +2268,7 @@ mod tests {
             current,
         ]);
         assert_eq!(
-            compare_and_set_reference(thread.clone(), parameters).await?,
+            compare_and_set_reference(thread.clone(), parameters)?,
             Some(Value::Int(1))
         );
         let parameters = Parameters::new(vec![
@@ -2361,7 +2278,7 @@ mod tests {
             Value::Object(None),
         ]);
         assert_eq!(
-            compare_and_set_reference(thread, parameters).await?,
+            compare_and_set_reference(thread, parameters)?,
             Some(Value::Int(0))
         );
         Ok(())
@@ -2391,7 +2308,7 @@ mod tests {
     #[tokio::test]
     async fn test_address_size_0() -> Result<()> {
         let (_vm, thread) = crate::test::java11_thread().await?;
-        let result = address_size_0(thread, Parameters::default()).await?;
+        let result = address_size_0(thread, Parameters::default())?;
         let pointer_size = i32::try_from(REFERENCE_SIZE)?;
         assert_eq!(result, Some(Value::Int(pointer_size)));
         Ok(())
@@ -2414,7 +2331,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let mut parameters = Parameters::default();
         parameters.push_long(1024); // Request 1024 bytes
-        let result = allocate_memory_0(thread, parameters).await?;
+        let result = allocate_memory_0(thread, parameters)?;
         // The implementation returns a managed memory address (>= 0x1000_0000)
         let addr = result.expect("address").as_i64()?;
         assert!(
@@ -2429,7 +2346,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let mut parameters = Parameters::default();
         parameters.push_long(512 * 1024 * 1024 + 1);
-        let result = allocate_memory_0(thread, parameters).await;
+        let result = allocate_memory_0(thread, parameters);
         assert!(matches!(
             result,
             Err(ristretto_types::Error::JavaError(OutOfMemoryError(_)))
@@ -2440,7 +2357,7 @@ mod tests {
     #[tokio::test]
     async fn test_array_base_offset_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = array_base_offset_0(thread, Parameters::default()).await?;
+        let result = array_base_offset_0(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -2520,7 +2437,7 @@ mod tests {
         parameters.push(Value::Object(None)); // expected value
         parameters.push(Value::Object(None)); // new value
         // TODO: verify results
-        let _ = compare_and_exchange_object(thread, parameters).await;
+        let _ = compare_and_exchange_object(thread, parameters);
         Ok(())
     }
 
@@ -2539,7 +2456,7 @@ mod tests {
         parameters.push(Value::Object(None)); // expected value
         parameters.push(Value::Object(None)); // new value
         // TODO: verify results
-        let _ = compare_and_exchange_reference(thread, parameters).await;
+        let _ = compare_and_exchange_reference(thread, parameters);
         Ok(())
     }
 
@@ -2565,7 +2482,7 @@ mod tests {
         parameters.push_long(8); // 8 bytes (4 shorts)
         parameters.push_long(2); // element size = 2 (short)
 
-        let result = copy_swap_memory_0(thread, parameters).await?;
+        let result = copy_swap_memory_0(thread, parameters)?;
         assert_eq!(result, None);
 
         // After byte swap, 0x0102 becomes 0x0201, etc.
@@ -2592,7 +2509,7 @@ mod tests {
             Value::Long(0),
             Value::Long(3),
         ]);
-        assert_eq!(None, copy_memory_0(thread.clone(), parameters).await?);
+        assert_eq!(None, copy_memory_0(thread.clone(), parameters)?);
         {
             let destination_guard = destination.as_reference()?;
             let Reference::ByteArray(bytes) = &*destination_guard else {
@@ -2608,7 +2525,7 @@ mod tests {
             Value::Long(0),
             Value::Long(1),
         ]);
-        assert_eq!(None, copy_memory_0(thread.clone(), parameters).await?);
+        assert_eq!(None, copy_memory_0(thread.clone(), parameters)?);
 
         let object = Value::new_object(
             gc,
@@ -2622,7 +2539,7 @@ mod tests {
             Value::Long(0),
             Value::Long(1),
         ]);
-        assert_eq!(None, copy_memory_0(thread.clone(), parameters).await?);
+        assert_eq!(None, copy_memory_0(thread.clone(), parameters)?);
 
         let parameters = Parameters::new(vec![
             Value::Int(1),
@@ -2631,7 +2548,7 @@ mod tests {
             Value::Long(0),
             Value::Long(1),
         ]);
-        assert_eq!(None, copy_memory_0(thread, parameters).await?);
+        assert_eq!(None, copy_memory_0(thread, parameters)?);
         Ok(())
     }
 
@@ -2736,11 +2653,11 @@ mod tests {
         // First allocate memory, then free it
         let mut alloc_params = Parameters::default();
         alloc_params.push_long(64);
-        let result = allocate_memory_0(thread.clone(), alloc_params).await?;
+        let result = allocate_memory_0(thread.clone(), alloc_params)?;
         let addr = result.expect("address").as_i64()?;
         let mut free_params = Parameters::default();
         free_params.push_long(addr);
-        let result = free_memory_0(thread, free_params).await?;
+        let result = free_memory_0(thread, free_params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -2748,7 +2665,7 @@ mod tests {
     #[tokio::test]
     async fn test_full_fence() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = full_fence(thread, Parameters::default()).await?;
+        let result = full_fence(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -2761,7 +2678,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(loadavg_value.clone());
         parameters.push_int(3); // nelems
-        let result = get_load_average_0(thread, parameters).await?;
+        let result = get_load_average_0(thread, parameters)?;
         // Returns 3 indicating all 3 load averages were filled
         assert_eq!(result, Some(Value::Int(3)));
         // Verify load averages are non-negative (valid values)
@@ -2778,7 +2695,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let mut parameters = Parameters::default();
         parameters.push_long(0); // address
-        let result = get_uncompressed_object(thread, parameters).await?;
+        let result = get_uncompressed_object(thread, parameters)?;
         // Returns null since this VM doesn't use compressed oops
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
@@ -2787,7 +2704,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_big_endian_0() -> Result<()> {
         let (_vm, thread) = crate::test::java11_thread().await?;
-        let result = is_big_endian_0(thread, Parameters::default()).await?;
+        let result = is_big_endian_0(thread, Parameters::default())?;
         let big_endian = cfg!(target_endian = "big");
         assert_eq!(result, Some(Value::from(big_endian)));
         Ok(())
@@ -2796,7 +2713,7 @@ mod tests {
     #[tokio::test]
     async fn test_load_fence() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
-        let result = load_fence(thread, Parameters::default()).await?;
+        let result = load_fence(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -2818,9 +2735,7 @@ mod tests {
     #[tokio::test]
     async fn test_page_size() -> Result<()> {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let value = page_size(thread, Parameters::default())
-            .await?
-            .expect("page_size");
+        let value = page_size(thread, Parameters::default())?.expect("page_size");
         let page_size = value.as_i32()?;
         let expected_page_size;
 
@@ -2859,7 +2774,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_long(0); // address
         parameters.push_long(2048); // new size
-        let result = reallocate_memory_0(thread, parameters).await?;
+        let result = reallocate_memory_0(thread, parameters)?;
         // Returns 0 as a pseudo-address since we don't manage native memory
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
@@ -2883,7 +2798,7 @@ mod tests {
         parameters.push_long(0); // offset
         parameters.push_long(8); // bytes
         parameters.push_int(0xFF); // value
-        let result = set_memory_0(thread, parameters).await?;
+        let result = set_memory_0(thread, parameters)?;
         assert_eq!(result, None);
 
         // Verify the array was filled
@@ -2914,9 +2829,7 @@ mod tests {
         let field = create_field(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(field);
-        let value = static_field_base_0(thread.clone(), parameters)
-            .await?
-            .expect("object");
+        let value = static_field_base_0(thread.clone(), parameters)?.expect("object");
         // static_field_base_0 returns the declaring class (clazz field) of the Field
         let string_class = thread.class("java/lang/String").await?;
         let string_class_object = string_class.to_object(&thread).await?;
@@ -2941,7 +2854,7 @@ mod tests {
     #[tokio::test]
     async fn test_store_fence() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
-        let result = store_fence(thread, Parameters::default()).await?;
+        let result = store_fence(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -2951,7 +2864,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let mut parameters = Parameters::default();
         parameters.push(Value::Object(None)); // null throwable
-        let result = throw_exception(thread, parameters).await;
+        let result = throw_exception(thread, parameters);
         // Should return an Error::Throwable
         assert!(matches!(result, Err(ristretto_types::Error::Throwable(_))));
         Ok(())
@@ -2960,7 +2873,7 @@ mod tests {
     #[tokio::test]
     async fn test_unaligned_access_0() -> Result<()> {
         let (_vm, thread) = crate::test::java11_thread().await?;
-        let result = unaligned_access_0(thread, Parameters::default()).await?;
+        let result = unaligned_access_0(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -2980,7 +2893,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let mut parameters = Parameters::default();
         parameters.push_long(0); // address
-        let result = writeback_0(thread, parameters).await?;
+        let result = writeback_0(thread, parameters)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -2988,7 +2901,7 @@ mod tests {
     #[tokio::test]
     async fn test_writeback_post_sync_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = writeback_post_sync_0(thread, Parameters::default()).await?;
+        let result = writeback_post_sync_0(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -2996,7 +2909,7 @@ mod tests {
     #[tokio::test]
     async fn test_writeback_pre_sync_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = writeback_pre_sync_0(thread, Parameters::default()).await?;
+        let result = writeback_pre_sync_0(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

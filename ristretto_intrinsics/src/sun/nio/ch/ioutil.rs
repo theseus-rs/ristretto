@@ -3,7 +3,6 @@ use crate::net_helpers::socket_from_type;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -11,7 +10,6 @@ use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/IOUtil.configureBlocking(Ljava/io/FileDescriptor;Z)V", Any)]
-#[async_method]
 pub async fn configure_blocking<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -70,7 +68,6 @@ pub async fn configure_blocking<T: Thread + 'static>(
 
 /// Drain bytes from fd. Returns false (nothing to drain for managed files).
 #[intrinsic_method("sun/nio/ch/IOUtil.drain(I)Z", Any)]
-#[async_method]
 pub async fn drain<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -159,7 +156,6 @@ pub async fn drain<T: Thread + 'static>(
 
 /// Drain a single byte from fd. Returns 0 (nothing drained).
 #[intrinsic_method("sun/nio/ch/IOUtil.drain1(I)I", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn drain_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -210,8 +206,7 @@ pub async fn drain_1<T: Thread + 'static>(
 
 /// Return the maximum number of file descriptors.
 #[intrinsic_method("sun/nio/ch/IOUtil.fdLimit()I", Any)]
-#[async_method]
-pub async fn fd_limit<T: Thread + 'static>(
+pub fn fd_limit<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -226,17 +221,16 @@ pub async fn fd_limit<T: Thread + 'static>(
         if unsafe { libc::getrlimit(libc::RLIMIT_NOFILE, &raw mut limit) } == -1 {
             return Err(super::posix::last_io_exception("getrlimit"));
         }
-        return Ok(Some(Value::Int(
+        Ok(Some(Value::Int(
             i32::try_from(limit.rlim_max).unwrap_or(i32::MAX),
-        )));
+        )))
     }
     #[cfg(windows)]
     Ok(Some(Value::Int(1024)))
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.fdVal(Ljava/io/FileDescriptor;)I", Any)]
-#[async_method]
-pub async fn fd_val<T: Thread + 'static>(
+pub fn fd_val<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -252,8 +246,7 @@ pub async fn fd_val<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -261,8 +254,7 @@ pub async fn init_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.iovMax()I", Any)]
-#[async_method]
-pub async fn iov_max<T: Thread + 'static>(
+pub fn iov_max<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -271,11 +263,11 @@ pub async fn iov_max<T: Thread + 'static>(
         #[expect(unsafe_code)]
         // SAFETY: sysconf has no pointer arguments.
         let value = unsafe { libc::sysconf(libc::_SC_IOV_MAX) };
-        return Ok(Some(Value::Int(if value > 0 {
+        Ok(Some(Value::Int(if value > 0 {
             i32::try_from(value).unwrap_or(i32::MAX)
         } else {
             16
-        })));
+        })))
     }
     #[cfg(windows)]
     Ok(Some(Value::Int(16)))
@@ -283,7 +275,6 @@ pub async fn iov_max<T: Thread + 'static>(
 
 /// Create a pipe. Returns a long encoding two fds: `(read_fd << 32) | write_fd`.
 #[intrinsic_method("sun/nio/ch/IOUtil.makePipe(Z)J", Any)]
-#[async_method]
 #[cfg_attr(target_family = "unix", expect(unsafe_code))]
 pub async fn make_pipe<T: Thread + 'static>(
     thread: Arc<T>,
@@ -397,17 +388,14 @@ pub async fn make_pipe<T: Thread + 'static>(
 
 /// Fill the provided byte array with random bytes.
 #[intrinsic_method("sun/nio/ch/IOUtil.randomBytes([B)Z", Any)]
-#[async_method]
-pub async fn random_bytes<T: Thread + 'static>(
+pub fn random_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     #[cfg(target_family = "unix")]
     {
         let _ = parameters.pop_reference()?;
-        return Err(
-            ristretto_types::JavaError::UnsupportedOperationException(String::new()).into(),
-        );
+        Err(ristretto_types::JavaError::UnsupportedOperationException(String::new()).into())
     }
     #[cfg(target_family = "windows")]
     {
@@ -429,8 +417,7 @@ pub async fn random_bytes<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.setfdVal(Ljava/io/FileDescriptor;I)V", Any)]
-#[async_method]
-pub async fn setfd_val<T: Thread + 'static>(
+pub fn setfd_val<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -446,7 +433,6 @@ pub async fn setfd_val<T: Thread + 'static>(
 
 /// Write a single byte to a file descriptor.
 #[intrinsic_method("sun/nio/ch/IOUtil.write1(IB)I", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
 #[cfg_attr(target_family = "windows", expect(unsafe_code))]
 pub async fn write_1<T: Thread + 'static>(
     thread: Arc<T>,
@@ -495,8 +481,7 @@ pub async fn write_1<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.writevMax()J", GreaterThanOrEqual(JAVA_21))]
-#[async_method]
-pub async fn writev_max<T: Thread + 'static>(
+pub fn writev_max<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -532,7 +517,7 @@ mod tests {
     #[tokio::test]
     async fn test_fd_limit() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = fd_limit(thread, Parameters::default()).await?;
+        let result = fd_limit(thread, Parameters::default())?;
         let Some(Value::Int(limit)) = result else {
             panic!("expected Int value");
         };
@@ -543,14 +528,14 @@ mod tests {
     #[tokio::test]
     async fn test_fd_val() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = fd_val(thread, Parameters::default()).await;
+        let result = fd_val(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -558,7 +543,7 @@ mod tests {
     #[tokio::test]
     async fn test_iov_max() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = iov_max(thread, Parameters::default()).await?;
+        let result = iov_max(thread, Parameters::default())?;
         assert!(matches!(result, Some(Value::Int(max)) if max >= 16));
         Ok(())
     }
@@ -585,14 +570,14 @@ mod tests {
     #[tokio::test]
     async fn test_random_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = random_bytes(thread, Parameters::default()).await;
+        let result = random_bytes(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_setfd_val() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = setfd_val(thread, Parameters::default()).await;
+        let result = setfd_val(thread, Parameters::default());
         assert!(result.is_err());
     }
 
@@ -613,7 +598,7 @@ mod tests {
     #[tokio::test]
     async fn test_writev_max() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = writev_max(thread, Parameters::default()).await?;
+        let result = writev_max(thread, Parameters::default())?;
         let expected = match OS {
             "windows" => i64::MAX,
             _ => i64::from(i32::MAX),

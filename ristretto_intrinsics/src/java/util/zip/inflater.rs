@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_gc::sync::RwLock;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM as _};
@@ -73,8 +72,7 @@ fn get_inflater_state<T: Thread + 'static>(thread: &Arc<T>) -> Result<Arc<Inflat
 }
 
 #[intrinsic_method("java/util/zip/Inflater.end(J)V", Any)]
-#[async_method]
-pub async fn end<T: Thread + 'static>(
+pub fn end<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -86,8 +84,7 @@ pub async fn end<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/Inflater.getAdler(J)I", Any)]
-#[async_method]
-pub async fn get_adler<T: Thread + 'static>(
+pub fn get_adler<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,8 +96,7 @@ pub async fn get_adler<T: Thread + 'static>(
     "java/util/zip/Inflater.inflateBufferBuffer(JJIJI)J",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn inflate_buffer_buffer<T: Thread + 'static>(
+pub fn inflate_buffer_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -111,8 +107,7 @@ pub async fn inflate_buffer_buffer<T: Thread + 'static>(
     "java/util/zip/Inflater.inflateBufferBytes(JJI[BII)J",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn inflate_buffer_bytes<T: Thread + 'static>(
+pub fn inflate_buffer_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -123,8 +118,7 @@ pub async fn inflate_buffer_bytes<T: Thread + 'static>(
     "java/util/zip/Inflater.inflateBytesBuffer(J[BIIJI)J",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn inflate_bytes_buffer<T: Thread + 'static>(
+pub fn inflate_bytes_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -132,8 +126,7 @@ pub async fn inflate_bytes_buffer<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/Inflater.inflateBytes(J[BII)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn inflate_bytes<T: Thread + 'static>(
+pub fn inflate_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -245,9 +238,8 @@ pub async fn inflate_bytes<T: Thread + 'static>(
     "java/util/zip/Inflater.inflateBytesBytes(J[BII[BII)J",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
 #[expect(clippy::too_many_lines)]
-pub async fn inflate_bytes_bytes<T: Thread + 'static>(
+pub fn inflate_bytes_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -384,8 +376,7 @@ pub async fn inflate_bytes_bytes<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/Inflater.init(Z)J", Any)]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -412,8 +403,7 @@ pub async fn init<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/Inflater.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -421,8 +411,7 @@ pub async fn init_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/Inflater.reset(J)V", Any)]
-#[async_method]
-pub async fn reset<T: Thread + 'static>(
+pub fn reset<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -442,8 +431,7 @@ pub async fn reset<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/Inflater.setDictionary(J[BII)V", Any)]
-#[async_method]
-pub async fn set_dictionary<T: Thread + 'static>(
+pub fn set_dictionary<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -505,8 +493,7 @@ pub async fn set_dictionary<T: Thread + 'static>(
     "java/util/zip/Inflater.setDictionaryBuffer(JJI)V",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn set_dictionary_buffer<T: Thread + 'static>(
+pub fn set_dictionary_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -526,14 +513,14 @@ mod tests {
         // Test init with nowrap = false
         let mut parameters = Parameters::default();
         parameters.push_int(0); // nowrap = false
-        let result = init(thread.clone(), parameters).await?;
+        let result = init(thread.clone(), parameters)?;
         let handle = result.expect("handle").as_i64()?;
         assert!(handle > 0);
 
         // Test end
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = end(thread, parameters).await?;
+        let result = end(thread, parameters)?;
         assert!(result.is_none());
         Ok(())
     }
@@ -543,7 +530,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let mut parameters = Parameters::default();
         parameters.push_long(1); // dummy handle
-        let result = get_adler(thread, parameters).await?;
+        let result = get_adler(thread, parameters)?;
         assert_eq!(Some(Value::Int(1)), result);
         Ok(())
     }
@@ -551,9 +538,8 @@ mod tests {
     #[tokio::test]
     async fn test_inflate_buffer_buffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = inflate_buffer_buffer(thread, Parameters::default())
-            .await
-            .expect("inflate_buffer_buffer");
+        let result =
+            inflate_buffer_buffer(thread, Parameters::default()).expect("inflate_buffer_buffer");
         // Returns 0 (no progress) since direct buffer operations not implemented
         assert_eq!(Some(Value::Long(0)), result);
     }
@@ -561,9 +547,8 @@ mod tests {
     #[tokio::test]
     async fn test_inflate_buffer_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = inflate_buffer_bytes(thread, Parameters::default())
-            .await
-            .expect("inflate_buffer_bytes");
+        let result =
+            inflate_buffer_bytes(thread, Parameters::default()).expect("inflate_buffer_bytes");
         // Returns 0 (no progress) since direct buffer operations not implemented
         assert_eq!(Some(Value::Long(0)), result);
     }
@@ -571,9 +556,8 @@ mod tests {
     #[tokio::test]
     async fn test_inflate_bytes_buffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = inflate_bytes_buffer(thread, Parameters::default())
-            .await
-            .expect("inflate_bytes_buffer");
+        let result =
+            inflate_bytes_buffer(thread, Parameters::default()).expect("inflate_bytes_buffer");
         // Returns 0 (no progress) since direct buffer operations not implemented
         assert_eq!(Some(Value::Long(0)), result);
     }
@@ -585,7 +569,7 @@ mod tests {
         // Create an inflater
         let mut parameters = Parameters::default();
         parameters.push_int(1); // nowrap = true (raw DEFLATE, as used by ZIP entries)
-        let result = init(thread.clone(), parameters).await?;
+        let result = init(thread.clone(), parameters)?;
         let handle = result.expect("handle").as_i64()?;
 
         let expected = b"Hello, World!";
@@ -623,7 +607,7 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(100); // length
 
-        let result = inflate_bytes(thread.clone(), parameters).await?;
+        let result = inflate_bytes(thread.clone(), parameters)?;
         let bytes_written = result.expect("bytes_written").as_i32()?;
         assert_eq!(i32::try_from(expected.len())?, bytes_written);
         let output = output.as_byte_vec_ref()?;
@@ -646,14 +630,14 @@ mod tests {
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        end(thread, parameters).await?;
+        end(thread, parameters)?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -664,19 +648,19 @@ mod tests {
         // First create an inflater
         let mut parameters = Parameters::default();
         parameters.push_int(0); // nowrap = false
-        let result = init(thread.clone(), parameters).await?;
+        let result = init(thread.clone(), parameters)?;
         let handle = result.expect("handle").as_i64()?;
 
         // Test reset
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = reset(thread.clone(), parameters).await?;
+        let result = reset(thread.clone(), parameters)?;
         assert!(result.is_none());
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        end(thread, parameters).await?;
+        end(thread, parameters)?;
         Ok(())
     }
 
@@ -686,7 +670,7 @@ mod tests {
         // First create a valid inflater
         let mut init_params = Parameters::default();
         init_params.push_int(0); // nowrap = false
-        let result = init(thread.clone(), init_params).await.expect("init");
+        let result = init(thread.clone(), init_params).expect("init");
         let handle = result.expect("handle").as_i64().expect("handle value");
 
         // Create dictionary array
@@ -705,15 +689,13 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(10); // length
 
-        let result = set_dictionary(thread.clone(), parameters)
-            .await
-            .expect("set_dictionary");
+        let result = set_dictionary(thread.clone(), parameters).expect("set_dictionary");
         assert!(result.is_none());
 
         // Cleanup
         let mut end_params = Parameters::default();
         end_params.push_long(handle);
-        end(thread, end_params).await.expect("end");
+        end(thread, end_params).expect("end");
     }
 
     #[tokio::test]
@@ -724,14 +706,14 @@ mod tests {
         parameters.push(Value::Object(None)); // null dict array
         parameters.push_int(0); // offset
         parameters.push_int(0); // length
-        let result = set_dictionary(thread, parameters).await;
+        let result = set_dictionary(thread, parameters);
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_set_dictionary_buffer() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = set_dictionary_buffer(thread, Parameters::default()).await?;
+        let result = set_dictionary_buffer(thread, Parameters::default())?;
         assert!(result.is_none());
         Ok(())
     }

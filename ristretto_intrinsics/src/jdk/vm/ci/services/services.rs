@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_25;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "jdk/vm/ci/services/Services.readSystemPropertiesInfo([I)J",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_method]
-pub async fn read_system_properties_info<T: Thread + 'static>(
+pub fn read_system_properties_info<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,7 +30,7 @@ mod tests {
     async fn test_read_system_properties_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            read_system_properties_info(thread, Parameters::new(vec![Value::Object(None)])).await;
+            read_system_properties_info(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "jdk.vm.ci.services.Services.readSystemPropertiesInfo([I)J",
             result.unwrap_err().to_string()

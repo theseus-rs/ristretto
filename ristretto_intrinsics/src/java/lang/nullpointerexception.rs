@@ -5,7 +5,6 @@ use ristretto_classfile::JavaStr;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaObject;
 use ristretto_types::Thread;
@@ -31,7 +30,6 @@ fn field_type_to_name(field_type: &FieldType) -> String {
     "java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_extended_npe_message<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/net/spi/DefaultProxySelector.getSystemProxies(Ljava/lang/String;Ljava/lang/String;)[Ljava/net/Proxy;",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn get_system_proxies<T: Thread + 'static>(
+pub fn get_system_proxies<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn get_system_proxies<T: Thread + 'static>(
     "sun/net/spi/DefaultProxySelector.getSystemProxy(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_system_proxy<T: Thread + 'static>(
+pub fn get_system_proxy<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -37,8 +34,7 @@ pub async fn get_system_proxy<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/net/spi/DefaultProxySelector.init()Z", Any)]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,8 +51,7 @@ mod tests {
         let result = get_system_proxies(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.net.spi.DefaultProxySelector.getSystemProxies(Ljava/lang/String;Ljava/lang/String;)[Ljava/net/Proxy;",
             result.unwrap_err().to_string()
@@ -69,8 +64,7 @@ mod tests {
         let result = get_system_proxy(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.net.spi.DefaultProxySelector.getSystemProxy(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;",
             result.unwrap_err().to_string()
@@ -80,7 +74,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init(thread, Parameters::default()).await?;
+        let result = init(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

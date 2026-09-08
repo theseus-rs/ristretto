@@ -15,8 +15,6 @@ use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Reference;
 use ristretto_classloader::Value;
 #[cfg(any(target_family = "unix", target_family = "wasm"))]
-use ristretto_macros::async_method;
-#[cfg(any(target_family = "unix", target_family = "wasm"))]
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 #[cfg(any(target_family = "unix", target_family = "wasm"))]
@@ -549,7 +547,6 @@ fn to_cstring(path: &[u8]) -> Result<CString> {
     "sun/nio/fs/UnixNativeDispatcher.access0(JI)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn access_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -585,8 +582,7 @@ pub async fn access_0_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.access0(JI)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn access_0_1<T: Thread + 'static>(
+pub fn access_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -606,12 +602,11 @@ pub async fn access_0_1<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.access0(JI)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn access_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let result = access_0_1(thread.clone(), parameters).await?;
+    let result = access_0_1(thread.clone(), parameters)?;
     if result == Some(Value::Int(0)) {
         Ok(None)
     } else {
@@ -624,8 +619,7 @@ pub async fn access_0_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.access0(JI)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn access_0_1<T: Thread + 'static>(
+pub fn access_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -663,7 +657,6 @@ pub async fn access_0_1<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.chmod0(JI)V", Any)]
-#[async_method]
 pub async fn chmod_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -696,7 +689,6 @@ pub async fn chmod_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.chown0(JII)V", Any)]
-#[async_method]
 pub async fn chown_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -730,7 +722,6 @@ pub async fn chown_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.close(I)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn close<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -743,7 +734,6 @@ pub async fn close<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.close0(I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -758,7 +748,6 @@ pub async fn close_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.closedir(J)V", Any)]
-#[async_method]
 pub async fn closedir<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -789,7 +778,6 @@ pub async fn closedir<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.dup(I)I", Any)]
-#[async_method]
 pub async fn dup<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -824,8 +812,7 @@ pub async fn dup<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.exists0(J)Z",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
-pub async fn exists_0<T: Thread + 'static>(
+pub fn exists_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -838,7 +825,6 @@ pub async fn exists_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.fclose(J)V", LessThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn fclose_1<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -869,7 +855,6 @@ pub async fn fclose_1<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fchmod(II)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn fchmod<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -882,7 +867,6 @@ pub async fn fchmod<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fchmod0(II)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn fchmod_0<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -911,7 +895,6 @@ pub async fn fchmod_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.fchmodat0(IJII)V", Equal(JAVA_25))]
-#[async_method]
 pub async fn fchmodat_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -950,8 +933,7 @@ pub async fn fchmodat_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fchmodatNoFollowSupported0()Z",
     Equal(JAVA_25)
 )]
-#[async_method]
-pub async fn fchmodat_no_follow_supported_0<T: Thread + 'static>(
+pub fn fchmodat_no_follow_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -970,7 +952,6 @@ pub async fn fchmodat_no_follow_supported_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fchown(III)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn fchown<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -983,7 +964,6 @@ pub async fn fchown<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fchown0(III)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn fchown_0<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -1012,7 +992,6 @@ pub async fn fchown_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.fdopendir(I)J", Any)]
-#[async_method]
 pub async fn fdopendir<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -1048,7 +1027,6 @@ pub async fn fdopendir<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fgetxattr0(IJJI)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn fgetxattr_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1147,7 +1125,6 @@ pub async fn fgetxattr_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.flistxattr(IJI)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn flistxattr<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -1240,7 +1217,6 @@ pub async fn flistxattr<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fopen0(JJ)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn fopen_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1277,7 +1253,6 @@ pub async fn fopen_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fpathconf(II)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn fpathconf<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -1312,7 +1287,6 @@ pub async fn fpathconf<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fremovexattr0(IJ)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn fremovexattr_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1365,7 +1339,6 @@ pub async fn fremovexattr_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fsetxattr0(IJJI)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn fsetxattr_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1437,7 +1410,6 @@ pub async fn fsetxattr_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fstat(ILsun/nio/fs/UnixFileAttributes;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn fstat<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1450,7 +1422,6 @@ pub async fn fstat<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fstat0(ILsun/nio/fs/UnixFileAttributes;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn fstat_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1509,7 +1480,6 @@ pub async fn fstat_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.fstatat0(IJILsun/nio/fs/UnixFileAttributes;)V",
     Any
 )]
-#[async_method]
 pub async fn fstatat_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1553,7 +1523,6 @@ pub async fn fstatat_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.futimens(IJJ)V", Equal(JAVA_17))]
-#[async_method]
 pub async fn futimens<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1566,7 +1535,6 @@ pub async fn futimens<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.futimens0(IJJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn futimens_0<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -1608,7 +1576,6 @@ pub async fn futimens_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.futimes(IJJ)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn futimes<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1618,7 +1585,6 @@ pub async fn futimes<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.futimes0(IJJ)V", Equal(JAVA_21))]
-#[async_method]
 pub async fn futimes_0<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -1673,7 +1639,6 @@ pub async fn futimes_0<T: Thread + 'static>(
 
 #[cfg(any(target_family = "unix", target_family = "wasm"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getcwd()[B", Any)]
-#[async_method]
 pub async fn getcwd<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -1700,7 +1665,6 @@ pub async fn getcwd<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getgrgid(I)[B", Any)]
-#[async_method]
 pub async fn getgrgid<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -1732,7 +1696,6 @@ pub async fn getgrgid<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getgrnam0(J)I", Any)]
-#[async_method]
 pub async fn getgrnam_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1767,7 +1730,6 @@ pub async fn getgrnam_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.getlinelen(J)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn getlinelen<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1812,7 +1774,6 @@ pub async fn getlinelen<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getpwnam0(J)I", Any)]
-#[async_method]
 pub async fn getpwnam_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1844,7 +1805,6 @@ pub async fn getpwnam_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getpwuid(I)[B", Any)]
-#[async_method]
 pub async fn getpwuid<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -1876,12 +1836,8 @@ pub async fn getpwuid<T: Thread + 'static>(
 
 #[cfg(any(target_family = "unix", target_family = "wasm"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.init()I", Any)]
-#[async_method]
 #[cfg(target_family = "unix")]
-pub async fn init<T: Thread + 'static>(
-    thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
+pub fn init<T: Thread + 'static>(thread: Arc<T>, _parameters: Parameters) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     if vm.java_class_file_version() >= &JAVA_25 {
         // JDK 25 removed the futimes/futimens/lutimes capability bits and reassigned
@@ -1929,8 +1885,7 @@ pub async fn init<T: Thread + 'static>(
 
 #[cfg(target_family = "wasm")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.init()I", Any)]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1940,7 +1895,6 @@ pub async fn init<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.lchown0(JII)V", Any)]
-#[async_method]
 pub async fn lchown_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1974,7 +1928,6 @@ pub async fn lchown_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.link0(JJ)V", Any)]
-#[async_method]
 pub async fn link_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1998,7 +1951,6 @@ pub async fn link_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.lstat0(JLsun/nio/fs/UnixFileAttributes;)V",
     Any
 )]
-#[async_method]
 pub async fn lstat_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2061,7 +2013,6 @@ pub async fn lstat_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.lutimes0(JJJ)V",
     Between(JAVA_17, JAVA_21)
 )]
-#[async_method]
 pub async fn lutimes_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2127,7 +2078,6 @@ pub async fn lutimes_0<T: Thread + 'static>(
 
 #[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.mkdir0(JI)V", Any)]
-#[async_method]
 pub async fn mkdir_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2160,7 +2110,6 @@ pub async fn mkdir_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.mknod0(JIJ)V", Any)]
-#[async_method]
 pub async fn mknod_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2196,7 +2145,6 @@ pub async fn mknod_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.open0(JII)I", Any)]
-#[async_method]
 pub async fn open_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2223,7 +2171,6 @@ pub async fn open_0<T: Thread + 'static>(
 
 #[cfg(target_os = "wasi")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.open0(JII)I", Any)]
-#[async_method]
 pub async fn open_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2243,7 +2190,6 @@ pub async fn open_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.openat0(IJII)I", Any)]
-#[async_method]
 pub async fn openat_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2283,7 +2229,6 @@ pub async fn openat_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.opendir0(J)J", Any)]
-#[async_method]
 pub async fn opendir_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2321,7 +2266,6 @@ struct WasiDirectories {
 
 #[cfg(target_os = "wasi")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.opendir0(J)J", Any)]
-#[async_method]
 pub async fn opendir_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2346,7 +2290,6 @@ pub async fn opendir_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.readdir0(J)[B",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn readdir_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2380,7 +2323,6 @@ pub async fn readdir_0<T: Thread + 'static>(
 
 #[cfg(target_os = "wasi")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.closedir(J)V", Any)]
-#[async_method]
 pub async fn closedir<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2402,7 +2344,6 @@ pub async fn closedir<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.pathconf0(JI)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn pathconf_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2438,7 +2379,6 @@ pub async fn pathconf_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.read(IJI)I", LessThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn read<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -2451,7 +2391,6 @@ pub async fn read<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.read0(IJI)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2502,7 +2441,6 @@ pub async fn read_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.readdir(J)[B",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn readdir<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -2515,7 +2453,6 @@ pub async fn readdir<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.readdir0(J)[B",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn readdir_0<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -2567,7 +2504,6 @@ pub async fn readdir_0<T: Thread + 'static>(
 
 #[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.readlink0(J)[B", Any)]
-#[async_method]
 pub async fn readlink_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2597,7 +2533,6 @@ pub async fn readlink_0<T: Thread + 'static>(
 
 #[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.realpath0(J)[B", Any)]
-#[async_method]
 pub async fn realpath_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2628,7 +2563,6 @@ pub async fn realpath_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.rename0(JJ)V", Any)]
-#[async_method]
 pub async fn rename_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2648,7 +2582,6 @@ pub async fn rename_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.renameat0(IJIJ)V", Any)]
-#[async_method]
 pub async fn renameat_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2685,7 +2618,6 @@ pub async fn renameat_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.rewind(J)V", Any)]
-#[async_method]
 pub async fn rewind<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2715,7 +2647,6 @@ pub async fn rewind<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.rmdir0(J)V", Any)]
-#[async_method]
 pub async fn rmdir_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2736,12 +2667,11 @@ pub async fn rmdir_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.stat0(JLsun/nio/fs/UnixFileAttributes;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn stat_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    match stat_0_1(thread.clone(), parameters).await? {
+    match stat_0_1(thread.clone(), parameters)? {
         Some(Value::Int(0)) => Ok(None),
         Some(Value::Int(errno)) => Err(throw_unix_exception(&thread, errno).await),
         _ => Err(InternalError("stat0: invalid result".to_string())),
@@ -2753,8 +2683,7 @@ pub async fn stat_0_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.stat0(JLsun/nio/fs/UnixFileAttributes;)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn stat_0_1<T: Thread + 'static>(
+pub fn stat_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2813,7 +2742,6 @@ pub async fn stat_0_1<T: Thread + 'static>(
 
 #[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.stat1(J)I", Between(JAVA_11, JAVA_17))]
-#[async_method]
 pub async fn stat_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2850,7 +2778,6 @@ pub async fn stat_1<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.statvfs0(JLsun/nio/fs/UnixFileStoreAttributes;)V",
     Any
 )]
-#[async_method]
 pub async fn statvfs_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2913,8 +2840,7 @@ pub async fn statvfs_0<T: Thread + 'static>(
 
 #[cfg(any(target_family = "unix", target_family = "wasm"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.strerror(I)[B", Any)]
-#[async_method]
-pub async fn strerror<T: Thread + 'static>(
+pub fn strerror<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2946,7 +2872,6 @@ pub async fn strerror<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.symlink0(JJ)V", Any)]
-#[async_method]
 pub async fn symlink_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2979,7 +2904,6 @@ pub async fn symlink_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.unlink0(J)V", Any)]
-#[async_method]
 pub async fn unlink_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2997,7 +2921,6 @@ pub async fn unlink_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.unlinkat0(IJI)V", Any)]
-#[async_method]
 pub async fn unlinkat_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -3033,7 +2956,6 @@ pub async fn unlinkat_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.utimes0(JJJ)V",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn utimes_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -3076,7 +2998,6 @@ pub async fn utimes_0<T: Thread + 'static>(
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.utimensat0(IJJJI)V", Equal(JAVA_25))]
-#[async_method]
 pub async fn utimensat_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -3124,7 +3045,6 @@ pub async fn utimensat_0<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.write(IJI)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn write<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -3137,7 +3057,6 @@ pub async fn write<T: Thread + 'static>(
     "sun/nio/fs/UnixNativeDispatcher.write0(IJI)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -3196,7 +3115,7 @@ mod tests {
     #[tokio::test]
     async fn test_access_0_1_default_params() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = access_0_1(thread, Parameters::default()).await;
+        let result = access_0_1(thread, Parameters::default());
         assert!(
             matches!(result, Err(ristretto_types::Error::ParametersUnderflow)),
             "expected ParametersUnderflow, got {result:?}"
@@ -3210,7 +3129,7 @@ mod tests {
         let mut params = Parameters::new(vec![]);
         params.push_long(path_addr);
         params.push_int(0);
-        let result = access_0_1(thread, params).await?;
+        let result = access_0_1(thread, params)?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -3222,7 +3141,7 @@ mod tests {
         let mut params = Parameters::new(vec![]);
         params.push_long(path_addr);
         params.push_int(0);
-        let result = access_0_1(thread, params).await?;
+        let result = access_0_1(thread, params)?;
         assert_eq!(result, Some(Value::Int(-1)));
         Ok(())
     }
@@ -3322,7 +3241,7 @@ mod tests {
         let path_addr = write_cstring_to_native(&*vm, "/");
         let mut parameters = Parameters::new(vec![]);
         parameters.push_long(path_addr);
-        let result = exists_0(thread, parameters).await?;
+        let result = exists_0(thread, parameters)?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -3763,7 +3682,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init(thread, Parameters::default()).await?;
+        let result = init(thread, Parameters::default())?;
         let value = result.expect("init result");
         if let Value::Int(bits) = value {
             #[cfg(target_family = "unix")]
@@ -4247,7 +4166,7 @@ mod tests {
             .object("sun.nio.fs.UnixFileAttributes", "", &[] as &[Value])
             .await?;
         let parameters = Parameters::new(vec![Value::Long(0), unix_file_attributes]);
-        let result = stat_0_1(thread, parameters).await;
+        let result = stat_0_1(thread, parameters);
         assert!(result.is_err());
         Ok(())
     }
@@ -4297,7 +4216,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::new(vec![]);
         parameters.push_int(2); // ENOENT
-        let result = strerror(thread, parameters).await?;
+        let result = strerror(thread, parameters)?;
         let bytes = result.expect("strerror result");
         let bytes = bytes.as_byte_vec_ref()?;
         let bytes: &[u8] = transmute_ref!(&*bytes);
@@ -4359,7 +4278,7 @@ mod tests {
     #[tokio::test]
     async fn test_fchmodat_no_follow_supported_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = fchmodat_no_follow_supported_0(thread, Parameters::default()).await?;
+        let result = fchmodat_no_follow_supported_0(thread, Parameters::default())?;
         assert!(result.is_some());
         Ok(())
     }

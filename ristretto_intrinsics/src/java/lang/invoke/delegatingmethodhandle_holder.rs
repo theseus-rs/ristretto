@@ -6,7 +6,6 @@ use super::methodhandle::dispatch_holder_method;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -28,7 +27,6 @@ async fn holder_method_stub<T: Thread + 'static>(
     "java/lang/invoke/DelegatingMethodHandle$Holder.delegate([Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn delegate<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -40,7 +38,6 @@ pub async fn delegate<T: Thread + 'static>(
     "java/lang/invoke/DelegatingMethodHandle$Holder.reinvoke_L([Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn reinvoke_l<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,

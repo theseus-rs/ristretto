@@ -2,7 +2,6 @@ use crate::bounds;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError::{ArrayIndexOutOfBoundsException, IllegalArgumentException};
@@ -25,8 +24,7 @@ use std::sync::Arc;
     "java/nio/Bits.copySwapMemory0(Ljava/lang/Object;JLjava/lang/Object;JJJ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn copy_swap_memory_0<T: Thread + 'static>(
+pub fn copy_swap_memory_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -154,7 +152,7 @@ mod tests {
         params.push_long(0);
         params.push_long(6);
         params.push_long(2);
-        let result = copy_swap_memory_0(thread, params).await?;
+        let result = copy_swap_memory_0(thread, params)?;
         assert!(result.is_none());
         assert_eq!(into_bytes(&dst), vec![0x02, 0x01, 0x04, 0x03, 0x06, 0x05]);
         Ok(())
@@ -172,7 +170,7 @@ mod tests {
         params.push_long(0);
         params.push_long(8);
         params.push_long(4);
-        copy_swap_memory_0(thread, params).await?;
+        copy_swap_memory_0(thread, params)?;
         assert_eq!(into_bytes(&dst), vec![4, 3, 2, 1, 8, 7, 6, 5]);
         Ok(())
     }
@@ -189,7 +187,7 @@ mod tests {
         params.push_long(0);
         params.push_long(8);
         params.push_long(8);
-        copy_swap_memory_0(thread, params).await?;
+        copy_swap_memory_0(thread, params)?;
         assert_eq!(into_bytes(&dst), vec![8, 7, 6, 5, 4, 3, 2, 1]);
         Ok(())
     }
@@ -206,7 +204,7 @@ mod tests {
         params.push_long(0);
         params.push_long(0);
         params.push_long(2);
-        let result = copy_swap_memory_0(thread, params).await?;
+        let result = copy_swap_memory_0(thread, params)?;
         assert!(result.is_none());
         assert_eq!(into_bytes(&dst), vec![9, 9, 9, 9]);
         Ok(())
@@ -224,7 +222,7 @@ mod tests {
         params.push_long(0);
         params.push_long(3);
         params.push_long(3); // invalid
-        let result = copy_swap_memory_0(thread, params).await;
+        let result = copy_swap_memory_0(thread, params);
         assert!(result.is_err());
         Ok(())
     }
@@ -241,7 +239,7 @@ mod tests {
         params.push_long(0);
         params.push_long(5); // not multiple of 2
         params.push_long(2);
-        let result = copy_swap_memory_0(thread, params).await;
+        let result = copy_swap_memory_0(thread, params);
         assert!(result.is_err());
         Ok(())
     }
@@ -260,7 +258,7 @@ mod tests {
         params.push_long(dst_addr);
         params.push_long(8);
         params.push_long(4);
-        copy_swap_memory_0(thread, params).await?;
+        copy_swap_memory_0(thread, params)?;
         let result = mem.read_bytes(dst_addr, 8);
         assert_eq!(result, vec![4, 3, 2, 1, 8, 7, 6, 5]);
         Ok(())

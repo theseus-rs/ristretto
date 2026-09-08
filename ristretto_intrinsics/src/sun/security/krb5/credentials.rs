@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/security/krb5/Credentials.acquireDefaultNativeCreds([I)Lsun/security/krb5/Credentials;",
     Any
 )]
-#[async_method]
-pub async fn acquire_default_native_creds<T: Thread + 'static>(
+pub fn acquire_default_native_creds<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,7 +26,7 @@ mod tests {
     async fn test_acquire_default_native_creds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            acquire_default_native_creds(thread, Parameters::new(vec![Value::Object(None)])).await;
+            acquire_default_native_creds(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.security.krb5.Credentials.acquireDefaultNativeCreds([I)Lsun/security/krb5/Credentials;",
             result.unwrap_err().to_string()

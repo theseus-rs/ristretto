@@ -9,7 +9,6 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use ristretto_classloader::Value;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use ristretto_macros::async_method;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use ristretto_macros::intrinsic_method;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -26,8 +25,7 @@ use std::sync::Arc;
     "sun/awt/PlatformGraphicsInfo.isInAquaSession()Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn is_in_aqua_session<T: Thread + 'static>(
+pub fn is_in_aqua_session<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -39,8 +37,7 @@ pub async fn is_in_aqua_session<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/awt/PlatformGraphicsInfo.hasDisplays0()Z", Equal(JAVA_25))]
-#[async_method]
-pub async fn has_displays0<T: Thread + 'static>(
+pub fn has_displays0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -62,7 +59,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_in_aqua_session() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = is_in_aqua_session(thread, Parameters::default()).await;
+        let result = is_in_aqua_session(thread, Parameters::default());
         assert_eq!(
             "sun.awt.PlatformGraphicsInfo.isInAquaSession()Z",
             result.unwrap_err().to_string()
@@ -73,7 +70,7 @@ mod tests {
     #[tokio::test]
     async fn test_has_displays0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = has_displays0(thread, Parameters::default()).await;
+        let result = has_displays0(thread, Parameters::default());
         assert_eq!(
             "sun/awt/PlatformGraphicsInfo.hasDisplays0()Z",
             result.unwrap_err().to_string()

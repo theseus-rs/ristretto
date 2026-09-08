@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/awt/windows/WCanvasPeer.create(Lsun/awt/windows/WComponentPeer;)V",
     Any
 )]
-#[async_method]
-pub async fn create<T: Thread + 'static>(
+pub fn create<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,8 +21,7 @@ pub async fn create<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WCanvasPeer.setNativeBackgroundErase(ZZ)V", Any)]
-#[async_method]
-pub async fn set_native_background_erase<T: Thread + 'static>(
+pub fn set_native_background_erase<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,7 +41,7 @@ mod tests {
     #[tokio::test]
     async fn test_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = create(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WCanvasPeer.create(Lsun/awt/windows/WComponentPeer;)V",
             result.unwrap_err().to_string()
@@ -58,8 +55,7 @@ mod tests {
         let result = set_native_background_erase(
             thread,
             Parameters::new(vec![Value::from(false), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WCanvasPeer.setNativeBackgroundErase(ZZ)V",
             result.unwrap_err().to_string()

@@ -5,15 +5,13 @@ use core_foundation_sys::string::{
 };
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result};
 use ristretto_types::{Thread, VM};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/fs/MacOSXNativeDispatcher.normalizepath([CI)[C", Any)]
-#[async_method]
-pub async fn normalizepath<T: Thread + 'static>(
+pub fn normalizepath<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -78,7 +76,7 @@ mod tests {
     #[tokio::test]
     async fn test_normalizepath_default_params() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = normalizepath(thread, Parameters::default()).await;
+        let result = normalizepath(thread, Parameters::default());
         assert!(matches!(
             result,
             Err(ristretto_types::Error::ParametersUnderflow)
@@ -98,7 +96,7 @@ mod tests {
         params.push(char_array.clone());
         params.push_int(0); // NFC form
 
-        let result = normalizepath(thread, params).await;
+        let result = normalizepath(thread, params);
         assert!(result.is_ok());
         let value = result.unwrap();
         assert!(value.is_some());
@@ -116,7 +114,7 @@ mod tests {
         params.push(char_array);
         params.push_int(0); // NFC form
 
-        let result = normalizepath(thread, params).await;
+        let result = normalizepath(thread, params);
         assert!(result.is_ok());
         let value = result.unwrap();
         assert!(value.is_some());
@@ -133,7 +131,7 @@ mod tests {
         params.push(char_array);
         params.push_int(0); // NFC form
 
-        let result = normalizepath(thread, params).await;
+        let result = normalizepath(thread, params);
         assert!(result.is_ok());
         let value = result.unwrap();
         assert!(value.is_some());

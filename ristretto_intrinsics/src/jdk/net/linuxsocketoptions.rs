@@ -3,7 +3,6 @@ use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -177,7 +176,6 @@ fn unsupported_platform<T>() -> Result<T> {
     "jdk/net/LinuxSocketOptions.getIpDontFragment0(IZ)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn get_ip_dont_fragment_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -212,7 +210,6 @@ pub async fn get_ip_dont_fragment_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.getQuickAck0(I)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_quick_ack_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -241,7 +238,6 @@ pub async fn get_quick_ack_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.getSoPeerCred0(I)J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_so_peer_cred_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -262,7 +258,6 @@ pub async fn get_so_peer_cred_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.getTcpKeepAliveIntvl0(I)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_tcp_keep_alive_intvl_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -292,7 +287,6 @@ pub async fn get_tcp_keep_alive_intvl_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.getTcpKeepAliveProbes0(I)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_tcp_keep_alive_probes_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -313,7 +307,6 @@ pub async fn get_tcp_keep_alive_probes_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.getTcpKeepAliveTime0(I)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_tcp_keep_alive_time_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -342,8 +335,7 @@ pub async fn get_tcp_keep_alive_time_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.keepAliveOptionsSupported0()Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn keep_alive_options_supported_0<T: Thread + 'static>(
+pub fn keep_alive_options_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -360,8 +352,7 @@ pub async fn keep_alive_options_supported_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.quickAckSupported0()Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn quick_ack_supported_0<T: Thread + 'static>(
+pub fn quick_ack_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -376,7 +367,6 @@ pub async fn quick_ack_supported_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.setIpDontFragment0(IZZ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn set_ip_dont_fragment_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -418,7 +408,6 @@ pub async fn set_ip_dont_fragment_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.setQuickAck0(IZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn set_quick_ack_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -449,7 +438,6 @@ pub async fn set_quick_ack_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.setTcpKeepAliveIntvl0(II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn set_tcp_keep_alive_intvl_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -481,7 +469,6 @@ pub async fn set_tcp_keep_alive_intvl_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.setTcpKeepAliveProbes0(II)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn set_tcp_keep_alive_probes_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -504,7 +491,6 @@ pub async fn set_tcp_keep_alive_probes_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.setTcpKeepAliveTime0(II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn set_tcp_keep_alive_time_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -536,8 +522,7 @@ pub async fn set_tcp_keep_alive_time_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.incomingNapiIdSupported0()Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn incoming_napi_id_supported_0<T: Thread + 'static>(
+pub fn incoming_napi_id_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -552,7 +537,6 @@ pub async fn incoming_napi_id_supported_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.getIncomingNapiId0(I)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_incoming_napi_id_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -574,7 +558,6 @@ pub async fn get_incoming_napi_id_0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.getTcpkeepAliveProbes0(I)I",
     Equal(JAVA_11)
 )]
-#[async_method]
 pub async fn get_tcpkeep_alive_probes0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -596,7 +579,6 @@ pub async fn get_tcpkeep_alive_probes0<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.setTcpkeepAliveProbes0(II)V",
     Equal(JAVA_11)
 )]
-#[async_method]
 pub async fn set_tcpkeep_alive_probes0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -617,7 +599,6 @@ pub async fn set_tcpkeep_alive_probes0<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("jdk/net/LinuxSocketOptions.getIncomingNapiId0(I)I", Equal(JAVA_17))]
-#[async_method]
 pub async fn get_incoming_napi_id0_linux_v17<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -639,7 +620,6 @@ pub async fn get_incoming_napi_id0_linux_v17<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.getTcpkeepAliveProbes0(I)I",
     Equal(JAVA_11)
 )]
-#[async_method]
 pub async fn get_tcpkeep_alive_probes0_linux_v11<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -661,8 +641,7 @@ pub async fn get_tcpkeep_alive_probes0_linux_v11<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.incomingNapiIdSupported0()Z",
     Equal(JAVA_17)
 )]
-#[async_method]
-pub async fn incoming_napi_id_supported0_linux_v17<T: Thread + 'static>(
+pub fn incoming_napi_id_supported0_linux_v17<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -677,7 +656,6 @@ pub async fn incoming_napi_id_supported0_linux_v17<T: Thread + 'static>(
     "jdk/net/LinuxSocketOptions.setTcpkeepAliveProbes0(II)V",
     Equal(JAVA_11)
 )]
-#[async_method]
 pub async fn set_tcpkeep_alive_probes0_linux_v11<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -703,7 +681,7 @@ mod tests {
     #[tokio::test]
     async fn test_keep_alive_options_supported_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = keep_alive_options_supported_0(thread, Parameters::default()).await?;
+        let result = keep_alive_options_supported_0(thread, Parameters::default())?;
         #[cfg(target_os = "linux")]
         let expected = socket_option_supported(libc::IPPROTO_TCP, libc::TCP_KEEPIDLE)
             && socket_option_supported(libc::IPPROTO_TCP, libc::TCP_KEEPCNT)
@@ -717,7 +695,7 @@ mod tests {
     #[tokio::test]
     async fn test_quick_ack_supported_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = quick_ack_supported_0(thread, Parameters::default()).await?;
+        let result = quick_ack_supported_0(thread, Parameters::default())?;
         #[cfg(target_os = "linux")]
         let expected = socket_option_supported(libc::IPPROTO_TCP, libc::TCP_QUICKACK);
         #[cfg(not(target_os = "linux"))]
@@ -912,11 +890,11 @@ mod tests {
             libc::SO_INCOMING_NAPI_ID,
         )));
         assert_eq!(
-            incoming_napi_id_supported_0(thread.clone(), Parameters::default()).await?,
+            incoming_napi_id_supported_0(thread.clone(), Parameters::default())?,
             expected_supported
         );
         assert_eq!(
-            incoming_napi_id_supported0_linux_v17(thread.clone(), Parameters::default()).await?,
+            incoming_napi_id_supported0_linux_v17(thread.clone(), Parameters::default())?,
             expected_supported
         );
         assert_eq!(
