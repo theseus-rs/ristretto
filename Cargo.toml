@@ -156,6 +156,7 @@ panic = "abort"
 [profile.release-tests]
 inherits = "release"
 debug-assertions = true
+panic = "unwind"
 
 [profile.dist]
 inherits = "release"

@@ -101,9 +101,13 @@ fn bench_initialization(criterion: &mut Criterion, executor: &tokio::runtime::Ru
         group.bench_with_input(mode, &interpreted, |bencher, &interpreted| {
             bencher.iter(|| {
                 executor.block_on(async {
-                    let _compiler = new_compiler(interpreted)
+                    let compiler = new_compiler(interpreted)
                         .await
                         .expect("compiler initialization must succeed");
+                    compiler
+                        .shutdown()
+                        .await
+                        .expect("compiler shutdown must succeed");
                 });
             });
         });
@@ -152,6 +156,10 @@ fn bench_compiler(criterion: &mut Criterion) -> Result {
                                 .compile(&fixture.arguments)
                                 .await
                                 .expect("HelloWorld.java must compile");
+                            compiler
+                                .shutdown()
+                                .await
+                                .expect("compiler shutdown must succeed");
                         });
                     })
                 });
@@ -179,6 +187,11 @@ fn bench_compiler(criterion: &mut Criterion) -> Result {
                         .expect("HelloWorld.java must compile");
                 })
             });
+            // Daemon tasks retain the VM even after Compiler is dropped. Await cancellation
+            // before creating the next sample's compiler so its heap and GC threads are freed.
+            executor
+                .block_on(compiler.shutdown())
+                .expect("compiler shutdown must succeed");
         });
     }
     Ok(())

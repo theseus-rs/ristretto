@@ -15,6 +15,9 @@ const JAVAC_MAIN_CLASS: &str = "com.sun.tools.javac.Main";
 const JAVAC_COMPILE_METHOD: &str = "compile([Ljava/lang/String;)I";
 
 /// An embedded Java compiler.
+///
+/// Call [`Self::shutdown`] when finished to stop Java daemon threads and release the VM
+/// before the surrounding Tokio runtime exits.
 pub struct Compiler {
     vm: Arc<VM>,
     compile_lock: Mutex<()>,
@@ -46,6 +49,19 @@ impl Compiler {
     pub async fn default() -> Result<Self, CompilerError> {
         let configuration = ConfigurationBuilder::new().build()?;
         Self::new(configuration).await
+    }
+
+    /// Shut down the compiler and release its VM.
+    ///
+    /// Waits for non-daemon Java threads and cancels daemon threads, which can otherwise
+    /// keep the compiler's heap alive after the compiler is dropped.
+    ///
+    /// # Errors
+    ///
+    /// if waiting for the VM's threads fails
+    pub async fn shutdown(self) -> Result<(), CompilerError> {
+        self.vm.wait_for_non_daemon_threads().await?;
+        Ok(())
     }
 
     /// Compile Java files using `javac` command-line arguments.
@@ -163,5 +179,31 @@ impl Compiler {
 impl Debug for Compiler {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         formatter.debug_struct("Compiler").finish_non_exhaustive()
+    }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+mod tests {
+    use super::*;
+
+    #[tokio::test(flavor = "current_thread")]
+    #[expect(
+        clippy::panic_in_result_fn,
+        reason = "test asserts compiler VM cleanup"
+    )]
+    async fn test_shutdown_releases_compiler_vm() -> Result<(), CompilerError> {
+        for interpreted in [true, false] {
+            let configuration = ConfigurationBuilder::new()
+                .interpreted(interpreted)
+                .build()?;
+            let compiler = Compiler::new(configuration).await?;
+            compiler
+                .compile_source("Shutdown", "public class Shutdown {}")
+                .await?;
+            let vm = Arc::downgrade(&compiler.vm);
+            compiler.shutdown().await?;
+            assert!(vm.upgrade().is_none(), "compiler VM survived shutdown");
+        }
+        Ok(())
     }
 }
