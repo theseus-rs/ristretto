@@ -29,6 +29,7 @@ allow = [
 
 [advisories]
 ignore = [
+    { id = "RUSTSEC-2026-0192", reason = "Unmaintained ttf-parser is required by Plotters for interpreter benchmark PNG charts; no patched version is available." },
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html

@@ -74,7 +74,7 @@ image = "ghcr.io/cross-rs/riscv64gc-unknown-linux-gnu:edge"
 pre-build = [
     "dpkg --add-architecture $CROSS_DEB_ARCH",
     "sed -i \"s/Architectures: arm64 armhf/Architectures: arm64 armhf $CROSS_DEB_ARCH/\" /etc/apt/sources.list.d/ubuntu.sources",
-    "apt-get update && apt-get install --assume-yes gcc-riscv64-linux-gnu libasound2-dev:$CROSS_DEB_ARCH",
+    "apt-get update && apt-get install --assume-yes gcc-riscv64-linux-gnu libasound2-dev:$CROSS_DEB_ARCH libfontconfig-dev:$CROSS_DEB_ARCH",
 ]
 
 [target.riscv64gc-unknown-linux-gnu.env]
@@ -91,7 +91,7 @@ image = "ghcr.io/cross-rs/s390x-unknown-linux-gnu:edge"
 pre-build = [
     "dpkg --add-architecture $CROSS_DEB_ARCH",
     "sed -i \"s/Architectures: arm64 armhf/Architectures: arm64 armhf $CROSS_DEB_ARCH/\" /etc/apt/sources.list.d/ubuntu.sources",
-    "apt-get update && apt-get install --assume-yes gcc-s390x-linux-gnu libasound2-dev:$CROSS_DEB_ARCH",
+    "apt-get update && apt-get install --assume-yes gcc-s390x-linux-gnu libasound2-dev:$CROSS_DEB_ARCH libfontconfig-dev:$CROSS_DEB_ARCH",
 ]
 
 [target.s390x-unknown-linux-gnu.env]

@@ -6,9 +6,13 @@ members = ["cargo:."]
 # Whether to embed dependency information using cargo-auditable
 cargo-auditable = false
 # Whether to use cargo-cyclonedx to generate an SBOM
-cargo-cyclonedx = true
+cargo-cyclonedx = false
+# Global artifacts jobs to run in CI
+global-artifacts-jobs = ["./release-sbom"]
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.32.0"
+cargo-dist-version = "0.33.0"
+# Build only the required packages, and individually
+precise-builds = true
 # CI backends to support
 ci = "github"
 # Whether dist should create a Github Release or use an existing draft

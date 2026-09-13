@@ -1,0 +1,37 @@
+name: Release SBOM
+
+on:
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - name: Install Rust
+        run: rustup toolchain install --no-self-update
+      - name: Install cargo-cyclonedx
+        shell: bash
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf --retry 3 https://github.com/CycloneDX/cyclonedx-rust-cargo/releases/download/cargo-cyclonedx-0.5.5/cargo-cyclonedx-installer.sh | sh
+      - name: Generate SBOMs
+        run: |
+          cargo cyclonedx -v
+          mkdir -p target/distrib
+          find . -name '*.cdx.xml' -not -path './target/*' -exec cp '{}' target/distrib/ ';'
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifacts-build-sbom
+          path: target/distrib/*.cdx.xml
+          if-no-files-found: error

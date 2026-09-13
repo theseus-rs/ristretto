@@ -21,4 +21,4 @@ run_apt() {
 }
 
 run_apt update
-run_apt install -y build-essential libasound2-dev pkg-config
+run_apt install -y build-essential libasound2-dev libfontconfig-dev pkg-config

@@ -35,7 +35,7 @@ use std::sync::{Arc, OnceLock, Weak};
 use tracing::{Level, debug, event_enabled};
 
 /// Maximum number of bytecodes executed in one interpreter batch.
-const INSTRUCTION_BATCH_SIZE: usize = 256;
+pub(crate) const INSTRUCTION_BATCH_SIZE: usize = 256;
 
 /// A resolved Java method invocation that the thread trampoline must dispatch.
 #[derive(Debug)]
@@ -92,6 +92,15 @@ pub(crate) enum InstructionResult {
     Async(Instruction),
 }
 
+/// Synchronous dispatch crosses into the async interpreter only at these boundaries.
+#[derive(Debug)]
+pub(crate) enum BatchExit {
+    Complete(ExecutionResult),
+    Async(Instruction),
+    Yield,
+    Fault(crate::Error),
+}
+
 /// A frame is created each time a method is invoked in the JVM.
 ///
 /// # Overview
@@ -144,6 +153,7 @@ impl Default for FrameState {
 }
 
 impl FrameState {
+    #[inline]
     pub(crate) fn reset(
         &mut self,
         class: &Class,
@@ -211,6 +221,7 @@ impl CallParameters {
         }
     }
 
+    #[inline]
     pub(crate) fn initialize(
         self,
         state: &mut FrameState,
@@ -253,7 +264,9 @@ impl Frame {
             self.field_refs.take();
             self.class = class.clone();
         }
-        self.method = method.clone();
+        if !Arc::ptr_eq(&self.method, method) {
+            self.method = method.clone();
+        }
         self.program_counter.store(0, Ordering::Relaxed);
     }
 
@@ -277,10 +290,16 @@ impl Frame {
         &mut self.class
     }
 
+    #[inline]
     pub(crate) fn method_refs(&self) -> Result<&ClassReferences<MethodRefEntry>> {
-        if let Some(entries) = self.method_refs.get() {
-            return Ok(entries);
+        match self.method_refs.get() {
+            Some(entries) => Ok(entries),
+            None => self.initialize_method_refs(),
         }
+    }
+
+    #[cold]
+    fn initialize_method_refs(&self) -> Result<&ClassReferences<MethodRefEntry>> {
         let entries = self
             .thread()?
             .vm()?
@@ -289,10 +308,16 @@ impl Frame {
         Ok(self.method_refs.get_or_init(|| entries))
     }
 
+    #[inline]
     pub(crate) fn field_refs(&self) -> Result<&ClassReferences<FieldRefEntry>> {
-        if let Some(entries) = self.field_refs.get() {
-            return Ok(entries);
+        match self.field_refs.get() {
+            Some(entries) => Ok(entries),
+            None => self.initialize_field_refs(),
         }
+    }
+
+    #[cold]
+    fn initialize_field_refs(&self) -> Result<&ClassReferences<FieldRefEntry>> {
         let entries = self
             .thread()?
             .vm()?
@@ -363,53 +388,123 @@ impl Frame {
         thread: &Thread,
         state: &mut FrameState,
     ) -> Result<ExecutionResult> {
-        let code = self.method.code();
-        let FrameState { locals, stack } = state;
-
-        for _ in 0..INSTRUCTION_BATCH_SIZE {
-            let program_counter = self.program_counter.load(Ordering::Relaxed);
-            let Some(instruction) = code.get(program_counter) else {
-                return Err(InvalidProgramCounter(program_counter));
-            };
-
-            if event_enabled!(Level::DEBUG) {
-                self.debug_execute(locals, stack, instruction)?;
-            }
-
-            // An async handler can complete immediately, so every bytecode consumes budget.
-            // Yield before executing it, while the PC, locals and operand stack are consistent.
-            if thread.record_instruction() {
-                tokio::task::yield_now().await;
-            }
-
-            let result = match self.process(locals, stack, instruction) {
-                Ok(InstructionResult::Sync(result)) => Ok(result),
-                Ok(InstructionResult::Async(instruction)) => {
-                    // Loading/bootstrap work can re-enter Java execution. Keep the recursive
-                    // future boundary here, reached only after a synchronous cache miss.
-                    Box::pin(self.process_async(stack, &instruction)).await
-                }
-                Err(error) => Err(error),
-            };
-
-            match result {
-                Ok(ExecutionResult::Continue) => {
-                    self.program_counter
-                        .store(program_counter + 1, Ordering::Relaxed);
-                }
-                Ok(ExecutionResult::ContinueAtPosition(next_program_counter)) => {
-                    self.program_counter
-                        .store(next_program_counter, Ordering::Relaxed);
-                }
-                Ok(result @ (ExecutionResult::Return(_) | ExecutionResult::Call(_))) => {
-                    return Ok(result);
-                }
-                Err(error) => {
-                    Self::handle_error_with_stack(self, stack, error).await?;
-                }
+        let debug = event_enabled!(Level::DEBUG);
+        let mut remaining = INSTRUCTION_BATCH_SIZE;
+        while remaining != 0 {
+            let boundary = self.execute_sync_batch(thread, state, &mut remaining, debug)?;
+            match self.resume_batch(state, boundary).await? {
+                ExecutionResult::Continue => {}
+                result => return Ok(result),
             }
         }
         Ok(ExecutionResult::Continue)
+    }
+
+    /// Resume a synchronous boundary with the stack unlocked, allowing Java reentry and
+    /// cancellation to use the ordinary frame-state lease.
+    pub(crate) async fn resume_batch(
+        &self,
+        state: &mut FrameState,
+        boundary: BatchExit,
+    ) -> Result<ExecutionResult> {
+        let pending = match boundary {
+            BatchExit::Complete(result) => return Ok(result),
+            BatchExit::Async(instruction) => Ok(InstructionResult::Async(instruction)),
+            BatchExit::Fault(error) => Err(error),
+            BatchExit::Yield => {
+                // The pending bytecode has already consumed budget, exactly as in ordinary
+                // dispatch. Its PC and operands remain unchanged until this yield resumes.
+                tokio::task::yield_now().await;
+                let pc = self.program_counter();
+                let instruction = self
+                    .method
+                    .code()
+                    .get(pc)
+                    .ok_or(InvalidProgramCounter(pc))?;
+                self.process(&mut state.locals, &mut state.stack, instruction)
+            }
+        };
+        let result = match pending {
+            Ok(InstructionResult::Sync(result)) => Ok(result),
+            Ok(InstructionResult::Async(instruction)) => {
+                // Loading/bootstrap work can re-enter Java execution. Keep the recursive
+                // future boundary here, reached only after a synchronous cache miss.
+                Box::pin(self.process_async(&mut state.stack, &instruction)).await
+            }
+            Err(error) => Err(error),
+        };
+
+        match result {
+            Ok(ExecutionResult::Continue) => {
+                self.program_counter
+                    .store(self.program_counter().wrapping_add(1), Ordering::Relaxed);
+                Ok(ExecutionResult::Continue)
+            }
+            Ok(ExecutionResult::ContinueAtPosition(next_program_counter)) => {
+                self.program_counter
+                    .store(next_program_counter, Ordering::Relaxed);
+                Ok(ExecutionResult::Continue)
+            }
+            Ok(result) => Ok(result),
+            Err(error) => {
+                Self::handle_error_with_stack(self, &mut state.stack, error).await?;
+                Ok(ExecutionResult::Continue)
+            }
+        }
+    }
+
+    pub(crate) fn execute_sync_batch(
+        &self,
+        thread: &Thread,
+        state: &mut FrameState,
+        remaining: &mut usize,
+        debug: bool,
+    ) -> Result<BatchExit> {
+        self.execute_sync_batch_with_budget(
+            &mut thread.instruction_budget(),
+            state,
+            remaining,
+            debug,
+        )
+    }
+
+    /// Keep ordinary bytecodes out of the async state machine. All opcodes use this dispatch
+    /// loop; no instruction sequences or workload-specific patterns are recognized.
+    #[inline(never)]
+    pub(crate) fn execute_sync_batch_with_budget(
+        &self,
+        budget: &mut crate::thread::InstructionBudget<'_>,
+        state: &mut FrameState,
+        remaining: &mut usize,
+        debug: bool,
+    ) -> Result<BatchExit> {
+        let code = self.method.code();
+        let FrameState { locals, stack } = state;
+        let mut pc = self.program_counter();
+        while *remaining != 0 {
+            let Some(instruction) = code.get(pc) else {
+                return Err(InvalidProgramCounter(pc));
+            };
+            if debug {
+                self.debug_execute(locals, stack, instruction)?;
+            }
+            *remaining -= 1;
+            if budget.record() {
+                return Ok(BatchExit::Yield);
+            }
+            match self.process(locals, stack, instruction) {
+                Ok(InstructionResult::Sync(ExecutionResult::Continue)) => pc += 1,
+                Ok(InstructionResult::Sync(ExecutionResult::ContinueAtPosition(next))) => pc = next,
+                Ok(InstructionResult::Sync(result)) => return Ok(BatchExit::Complete(result)),
+                Ok(InstructionResult::Async(instruction)) => {
+                    return Ok(BatchExit::Async(instruction));
+                }
+                Err(error) => return Ok(BatchExit::Fault(error)),
+            }
+            // Publish every instruction's next PC for stack walking and exception attribution.
+            self.program_counter.store(pc, Ordering::Relaxed);
+        }
+        Ok(BatchExit::Complete(ExecutionResult::Continue))
     }
 
     /// Resume this frame after a method call completes successfully.
@@ -422,7 +517,8 @@ impl Frame {
         if has_return_type && let Some(value) = value {
             state.stack.push(value)?;
         }
-        self.program_counter.fetch_add(1, Ordering::Relaxed);
+        self.program_counter
+            .store(self.program_counter().wrapping_add(1), Ordering::Relaxed);
         Ok(())
     }
 
@@ -489,6 +585,8 @@ impl Frame {
     /// # Implementation Note
     ///
     /// This is only invoked when the debug log level is enabled, minimizing performance impact.
+    #[cold]
+    #[inline(never)]
     fn debug_execute(
         &self,
         locals: &LocalVariables,
@@ -574,6 +672,11 @@ impl Frame {
     ///
     /// - [JVMS §6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html)
     #[expect(clippy::too_many_lines)]
+    #[expect(
+        clippy::inline_always,
+        reason = "Dispatch must merge into the synchronous loop to eliminate per-bytecode result copies"
+    )]
+    #[inline(always)]
     fn process(
         &self,
         locals: &mut LocalVariables,
@@ -951,6 +1054,31 @@ mod tests {
         let mut state = FrameState::default();
         state.reset(&class, &method, [Value::Int(1_000)])?;
         Ok((thread, frame, state))
+    }
+
+    #[test]
+    fn test_synchronous_batch_commits_budget_on_fault_and_invalid_pc() -> Result<()> {
+        let (thread, frame, mut state) =
+            batch_test_frame(|_| vec![Instruction::Iconst_1, Instruction::Pop, Instruction::Pop])?;
+        let mut remaining = INSTRUCTION_BATCH_SIZE;
+        assert!(matches!(
+            frame.execute_sync_batch(&thread, &mut state, &mut remaining, false)?,
+            BatchExit::Fault(crate::Error::OperandStackUnderflow)
+        ));
+        assert_eq!(3, thread.instruction_count());
+        assert_eq!(2, frame.program_counter());
+        assert_eq!(253, remaining);
+
+        let (thread, frame, mut state) = batch_test_frame(|_| vec![Instruction::Nop])?;
+        let mut remaining = INSTRUCTION_BATCH_SIZE;
+        assert!(matches!(
+            frame.execute_sync_batch(&thread, &mut state, &mut remaining, false),
+            Err(InvalidProgramCounter(1))
+        ));
+        assert_eq!(1, thread.instruction_count());
+        assert_eq!(1, frame.program_counter());
+        assert_eq!(255, remaining);
+        Ok(())
     }
 
     #[test]
