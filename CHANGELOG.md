@@ -7,6 +7,124 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_javac` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.33.0...ristretto_javac-v0.33.1) - 2026-09-08
+
+### Other
+- update Cargo.lock dependencies
+
+## `ristretto_java` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/v0.33.0...v0.33.1) - 2026-09-08
+
+### Added
+- implement com/sun/imageio/plugins/jpeg
+- add additional JVM languages to the playground
+- add an in-browser Java 8-25 playground
+
+### Other
+- update Cargo.lock dependencies
+- reuse call-frame storage and eliminate cached call argument allocations
+- cache field layouts, resolved field access, and class verification
+- Merge pull request #807 from theseus-rs/optimize-class-fields
+- eliminate intermediate hierarchy allocation when collecting object fields
+- Merge pull request #803 from theseus-rs/impl-jpeg-support
+- update to Rust 1.98.1
+- correct tests
+- avoid future allocations for synchronous intrinsics
+- limit system calls on initialization
+- update to cranelift=0.135.1
+- optimize JIT runtime contexts
+- implement field and method reference caching
+- batch instructions
+
+## `ristretto_resolver` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_resolver-v0.33.0...ristretto_resolver-v0.33.1) - 2026-09-08
+
+### Other
+- update to Rust 1.98.1
+
+## `ristretto_pom` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.33.0...ristretto_pom-v0.33.1) - 2026-09-08
+
+### Other
+- reuse call-frame storage and eliminate cached call argument allocations
+
+## `ristretto_vm` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.33.0...ristretto_vm-v0.33.1) - 2026-09-08
+
+### Added
+- add additional JVM languages to the playground
+- add an in-browser Java 8-25 playground
+
+### Other
+- correct tests
+- avoid future allocations for synchronous intrinsics
+- reuse call-frame storage and eliminate cached call argument allocations
+- optimize JIT runtime contexts
+- cache field layouts, resolved field access, and class verification
+- implement field and method reference caching
+- batch instructions
+- update to Rust 1.98.1
+
+## `ristretto_intrinsics` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.33.0...ristretto_intrinsics-v0.33.1) - 2026-09-08
+
+### Added
+- add additional JVM languages to the playground
+- implement com/sun/imageio/plugins/jpeg
+
+### Other
+- correct tests
+- avoid future allocations for synchronous intrinsics
+- reuse call-frame storage and eliminate cached call argument allocations
+- cache field layouts, resolved field access, and class verification
+- limit system calls on initialization
+- Merge pull request #803 from theseus-rs/impl-jpeg-support
+- update to cranelift=0.135.1
+- update to Rust 1.98.1
+
+## `ristretto_types` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.33.0...ristretto_types-v0.33.1) - 2026-09-08
+
+### Added
+- add additional JVM languages to the playground
+- add an in-browser Java 8-25 playground
+
+### Other
+- update to Rust 1.98.1
+
+## `ristretto_jit` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.33.0...ristretto_jit-v0.33.1) - 2026-09-08
+
+### Other
+- reuse call-frame storage and eliminate cached call argument allocations
+
+## `ristretto_macros` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.33.0...ristretto_macros-v0.33.1) - 2026-09-08
+
+### Other
+- avoid future allocations for synchronous intrinsics
+
+## `ristretto_classloader` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.33.0...ristretto_classloader-v0.33.1) - 2026-09-08
+
+### Added
+- implement com/sun/imageio/plugins/jpeg
+
+### Other
+- reuse call-frame storage and eliminate cached call argument allocations
+- cache field layouts, resolved field access, and class verification
+- Merge pull request #807 from theseus-rs/optimize-class-fields
+- eliminate intermediate hierarchy allocation when collecting object fields
+- Merge pull request #803 from theseus-rs/impl-jpeg-support
+- update to Rust 1.98.1
+
+## `ristretto_gc` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.33.0...ristretto_gc-v0.33.1) - 2026-09-08
+
+### Added
+- implement com/sun/imageio/plugins/jpeg
+
+### Other
+- Merge pull request #803 from theseus-rs/impl-jpeg-support
+
+## `ristretto_classfile` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.33.0...ristretto_classfile-v0.33.1) - 2026-09-08
+
+### Added
+- implement com/sun/imageio/plugins/jpeg
+
+### Other
+- reuse call-frame storage and eliminate cached call argument allocations
+
 ## `ristretto_javac` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.32.1...ristretto_javac-v0.33.0) - 2026-08-19
 
 ### Added
