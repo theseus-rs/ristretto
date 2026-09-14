@@ -2,7 +2,9 @@ use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::JavaError::{RuntimeException, StackOverflowError, UnsatisfiedLinkError, VerifyError};
 use crate::RustValue;
 use crate::configuration::{DEFAULT_MAX_JAVA_STACK_SIZE, JAVA_STACK_SLOT_SIZE, VerifyMode};
-use crate::frame::{CallParameters, ExecutionResult, FrameState, MethodCall};
+use crate::frame::{
+    BatchExit, CallParameters, ExecutionResult, FrameState, INSTRUCTION_BATCH_SIZE, MethodCall,
+};
 use crate::java_object::JavaObject;
 use crate::jit_runtime_helpers::ThreadRuntime;
 use crate::rust_value::process_values;
@@ -33,6 +35,36 @@ const STACK_OVERFLOW_RESERVE_SLOTS: usize = 1_024;
 /// Number of bytecodes to dispatch before yielding to the Tokio runtime.
 const INSTRUCTION_YIELD_COUNT: u32 = 4096;
 
+/// Account locally while synchronous dispatch owns execution. Commit before any suspension,
+/// method call, exception handling or return, so reentrant Java execution sees the current count.
+#[derive(Debug)]
+pub(crate) struct InstructionBudget<'a> {
+    thread: &'a Thread,
+    remaining: u32,
+    consumed: u32,
+}
+
+impl InstructionBudget<'_> {
+    /// The caller must stop dispatch when this returns true, before executing that bytecode.
+    #[inline]
+    #[must_use]
+    pub(crate) fn record(&mut self) -> bool {
+        self.consumed += 1;
+        self.remaining -= 1;
+        self.remaining == 0
+    }
+}
+
+impl Drop for InstructionBudget<'_> {
+    fn drop(&mut self) {
+        if self.consumed != 0 {
+            self.thread
+                .instruction_yield_count
+                .fetch_add(self.consumed, Ordering::Relaxed);
+        }
+    }
+}
+
 #[derive(Debug)]
 struct MonitorGuard {
     monitor: Option<Arc<ristretto_types::monitor::Monitor>>,
@@ -59,7 +91,14 @@ struct StackEntry {
     state: Option<FrameState>,
     slots: usize,
     has_return_type: bool,
-    _monitor: MonitorGuard,
+    monitor: MonitorGuard,
+}
+
+/// A small, bounded cache retains both identities, including synthetic methods and loaders.
+#[derive(Debug)]
+struct InterpretedTarget {
+    class: Arc<Class>,
+    method: Arc<Method>,
 }
 
 #[derive(Debug)]
@@ -71,6 +110,7 @@ struct JavaStack {
     used_slots: usize,
     max_slots: usize,
     overflow_reserve_depth: usize,
+    interpreted_targets: [Option<InterpretedTarget>; 64],
 }
 
 impl JavaStack {
@@ -84,7 +124,78 @@ impl JavaStack {
             used_slots: 0,
             max_slots,
             overflow_reserve_depth: 0,
+            interpreted_targets: std::array::from_fn(|_| None),
         }
+    }
+
+    /// Intrinsics, synchronization and JIT decisions must use the full dispatch boundary.
+    /// The registry and compiler configuration are immutable for the lifetime of this VM.
+    fn can_push_interpreted(&mut self, vm: &VM, call: &MethodCall) -> bool {
+        if vm
+            .compiler()
+            .is_some_and(|compiler| !compiler.is_interpreted())
+            || call.method.is_native()
+            || call
+                .method
+                .access_flags()
+                .contains(MethodAccessFlags::SYNCHRONIZED)
+        {
+            return false;
+        }
+        let identity = Arc::as_ptr(&call.method) as usize;
+        let index = (identity >> 4) % self.interpreted_targets.len();
+        let Some(slot) = self.interpreted_targets.get_mut(index) else {
+            return false;
+        };
+        if let Some(target) = slot
+            && Arc::ptr_eq(&target.class, &call.class)
+            && Arc::ptr_eq(&target.method, &call.method)
+        {
+            return true;
+        }
+        if vm
+            .method_registry()
+            .method(
+                call.class.name(),
+                call.method.name(),
+                call.method.descriptor(),
+            )
+            .is_some()
+        {
+            return false;
+        }
+        *slot = Some(InterpretedTarget {
+            class: call.class.clone(),
+            method: call.method.clone(),
+        });
+        true
+    }
+
+    fn push_interpreted(&mut self, thread: &Thread, call: MethodCall) -> Result<()> {
+        let MethodCall {
+            class,
+            method,
+            parameters,
+            has_return_type,
+        } = call;
+        let slots = Frame::stack_slots_for(&method)?;
+        let used_slots = self.checked_used_slots(slots, &class, &method)?;
+        let mut state = self.take_state();
+        let caller = self
+            .entries
+            .last_mut()
+            .and_then(|entry| entry.state.as_mut());
+        parameters.initialize(&mut state, &class, &method, caller)?;
+        let frame = self.take_frame(&thread.thread, &class, &method);
+        self.used_slots = used_slots;
+        self.entries.push(StackEntry {
+            frame,
+            state: Some(state),
+            slots,
+            has_return_type,
+            monitor: MonitorGuard::new(None, thread.id),
+        });
+        Ok(())
     }
 
     fn frames(&self) -> Vec<Arc<Frame>> {
@@ -109,7 +220,7 @@ impl JavaStack {
             state: Some(state),
             slots,
             has_return_type,
-            _monitor: monitor,
+            monitor,
         });
         Ok(())
     }
@@ -155,7 +266,7 @@ impl JavaStack {
             state: None,
             slots: 0,
             has_return_type,
-            _monitor: monitor,
+            monitor,
         });
     }
 
@@ -209,6 +320,11 @@ impl JavaStack {
 
 enum DispatchResult {
     FramePushed,
+    Completed(Option<Value>),
+}
+
+enum InterpreterExit {
+    Boundary(BatchExit),
     Completed(Option<Value>),
 }
 
@@ -338,12 +454,27 @@ impl Thread {
     /// Record a bytecode and return whether the executor should yield.
     ///
     /// Async handlers also consume budget because awaiting a ready future does not yield.
+    #[cfg(test)]
     pub(crate) fn record_instruction(&self) -> bool {
         let count = self
             .instruction_yield_count
             .fetch_add(1, Ordering::Relaxed)
             .wrapping_add(1);
         count.is_multiple_of(INSTRUCTION_YIELD_COUNT)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn instruction_count(&self) -> u32 {
+        self.instruction_yield_count.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn instruction_budget(&self) -> InstructionBudget<'_> {
+        let count = self.instruction_yield_count.load(Ordering::Relaxed);
+        InstructionBudget {
+            thread: self,
+            remaining: INSTRUCTION_YIELD_COUNT - count % INSTRUCTION_YIELD_COUNT,
+            consumed: 0,
+        }
     }
 
     /// Get the virtual machine that owns the thread.
@@ -1314,7 +1445,7 @@ impl Thread {
             frame,
             state,
             has_return_type,
-            _monitor: monitor,
+            monitor,
             ..
         } = stack
             .pop()
@@ -1326,36 +1457,108 @@ impl Thread {
         Ok(has_return_type)
     }
 
-    async fn run_interpreter(&self, base_depth: usize) -> Result<Option<Value>> {
-        loop {
-            let mut active = self.active_frame()?;
-            let result = loop {
-                match active.frame.execute_batch(self, &mut active.state).await {
-                    Ok(ExecutionResult::Continue) => {}
-                    Ok(ExecutionResult::Call(call)) => {
-                        let has_return_type = call.has_return_type;
-                        match self.dispatch_method(call, Some(&mut active.state)).await {
-                            Ok(DispatchResult::FramePushed) => break Ok(None),
-                            Ok(DispatchResult::Completed(value)) => {
-                                if let Err(error) = active.frame.complete_call(
-                                    &mut active.state,
-                                    value,
-                                    has_return_type,
-                                ) {
-                                    break Err((error, false));
-                                }
-                            }
-                            Err(error) => break Err((error, false)),
-                        }
+    /// Execute ordinary calls and returns within one bounded synchronous stack borrow.
+    /// No intrinsic or asynchronous handler runs under this lock. Stack walkers can observe
+    /// the complete frame chain between batches; every bytecode still publishes its PC.
+    fn run_sync_interpreter(&self, vm: &VM, base_depth: usize) -> Result<InterpreterExit> {
+        let debug = event_enabled!(Level::DEBUG);
+        let mut stack = self.stack.write();
+        let mut remaining = INSTRUCTION_BATCH_SIZE;
+        let mut budget = self.instruction_budget();
+        while remaining != 0 {
+            let entry = stack
+                .entries
+                .last_mut()
+                .ok_or_else(|| InternalError("Interpreter stack unexpectedly empty".to_owned()))?;
+            let state = entry.state.as_mut().ok_or_else(|| {
+                InternalError("Interpreter frame state is already in use".to_owned())
+            })?;
+            let boundary = entry.frame.execute_sync_batch_with_budget(
+                &mut budget,
+                state,
+                &mut remaining,
+                debug,
+            )?;
+            match boundary {
+                BatchExit::Complete(ExecutionResult::Call(call)) => {
+                    if debug || !stack.can_push_interpreted(vm, &call) {
+                        return Ok(InterpreterExit::Boundary(BatchExit::Complete(
+                            ExecutionResult::Call(call),
+                        )));
                     }
-                    Ok(ExecutionResult::Return(value)) => break Ok(Some(value)),
-                    Ok(ExecutionResult::ContinueAtPosition(_)) => {
-                        return Err(InternalError(
-                            "Frame returned an unprocessed branch result".to_owned(),
-                        ));
+                    if let Err(error) = stack.push_interpreted(self, call) {
+                        return Ok(InterpreterExit::Boundary(BatchExit::Fault(error)));
                     }
-                    Err(error) => break Err((error, true)),
                 }
+                BatchExit::Complete(ExecutionResult::Return(value)) => {
+                    // Release monitors and log results outside the stack lock.
+                    if debug || entry.monitor.monitor.is_some() {
+                        return Ok(InterpreterExit::Boundary(BatchExit::Complete(
+                            ExecutionResult::Return(value),
+                        )));
+                    }
+                    let entry = stack.pop().ok_or_else(|| {
+                        InternalError("Interpreter stack unexpectedly empty".to_owned())
+                    })?;
+                    let has_return_type = entry.has_return_type;
+                    stack.recycle(entry.frame, entry.state);
+                    if stack.entries.len() == base_depth {
+                        return Ok(InterpreterExit::Completed(value));
+                    }
+                    let caller = stack.entries.last_mut().ok_or_else(|| {
+                        InternalError("Interpreter caller unexpectedly missing".to_owned())
+                    })?;
+                    let state = caller.state.as_mut().ok_or_else(|| {
+                        InternalError("Interpreter caller state is already in use".to_owned())
+                    })?;
+                    if let Err(error) = caller.frame.complete_call(state, value, has_return_type) {
+                        return Ok(InterpreterExit::Boundary(BatchExit::Fault(error)));
+                    }
+                }
+                boundary => return Ok(InterpreterExit::Boundary(boundary)),
+            }
+        }
+        Ok(InterpreterExit::Boundary(BatchExit::Complete(
+            ExecutionResult::Continue,
+        )))
+    }
+
+    async fn run_interpreter(&self, base_depth: usize) -> Result<Option<Value>> {
+        let vm = self.vm()?;
+        loop {
+            let boundary = match self.run_sync_interpreter(&vm, base_depth) {
+                Ok(InterpreterExit::Completed(value)) => return Ok(value),
+                Ok(InterpreterExit::Boundary(BatchExit::Complete(ExecutionResult::Continue))) => {
+                    continue;
+                }
+                Ok(InterpreterExit::Boundary(boundary)) => boundary,
+                Err(error) => {
+                    self.propagate_error(base_depth, error, true).await?;
+                    continue;
+                }
+            };
+            let mut active = self.active_frame()?;
+            let result = match active.frame.resume_batch(&mut active.state, boundary).await {
+                Ok(ExecutionResult::Continue) => Ok(None),
+                Ok(ExecutionResult::Call(call)) => {
+                    let has_return_type = call.has_return_type;
+                    match self.dispatch_method(call, Some(&mut active.state)).await {
+                        Ok(DispatchResult::FramePushed) => Ok(None),
+                        Ok(DispatchResult::Completed(value)) => active
+                            .frame
+                            .complete_call(&mut active.state, value, has_return_type)
+                            .map(|()| None)
+                            .map_err(|error| (error, false)),
+                        Err(error) => Err((error, false)),
+                    }
+                }
+                Ok(ExecutionResult::Return(value)) => Ok(Some(value)),
+                Ok(ExecutionResult::ContinueAtPosition(_)) => {
+                    return Err(InternalError(
+                        "Frame returned an unprocessed branch result".to_owned(),
+                    ));
+                }
+                Err(error) => Err((error, true)),
             };
             if let Ok(Some(value)) = &result {
                 Self::debug_result(
@@ -1723,6 +1926,33 @@ mod tests {
         assert!(!thread.record_instruction());
     }
 
+    #[test]
+    fn test_instruction_budget_matches_individual_accounting() {
+        for start in [0, 4093, 4095, u32::MAX - 2] {
+            let actual = Thread::new(&Weak::new(), 1);
+            let reference = Thread::new(&Weak::new(), 2);
+            actual
+                .instruction_yield_count
+                .store(start, Ordering::Relaxed);
+            reference
+                .instruction_yield_count
+                .store(start, Ordering::Relaxed);
+            for size in [0, 1, 17, 256, 9, 4096, 256, 4096] {
+                {
+                    let mut budget = actual.instruction_budget();
+                    for _ in 0..size {
+                        let should_yield = budget.record();
+                        assert_eq!(should_yield, reference.record_instruction());
+                        if should_yield {
+                            break;
+                        }
+                    }
+                }
+                assert_eq!(actual.instruction_count(), reference.instruction_count());
+            }
+        }
+    }
+
     #[tokio::test]
     async fn test_interrupt() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -1952,6 +2182,78 @@ mod tests {
             frame.execute_batch(&thread, &mut state).await?
         );
         assert_eq!(5, frame.program_counter());
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_synchronous_trampoline_crosses_calls_and_returns() -> Result<()> {
+        let (vm, thread) = interpreted_test_thread().await?;
+        let class = recursive_test_class(&thread).await?;
+        let method = class.try_get_method("recurse", "(I)I")?;
+        // Resolve the self-call and initialize its class through the ordinary slow path.
+        assert_eq!(
+            Some(Value::Int(1)),
+            thread.execute(&class, &method, &[Value::Int(1)]).await?
+        );
+        let call = MethodCall {
+            class,
+            method,
+            parameters: vec![Value::Int(3)].into(),
+            has_return_type: false,
+        };
+        thread.stack.write().push_interpreted(&thread, call)?;
+        let count = thread.instruction_count();
+        assert!(matches!(
+            thread.run_sync_interpreter(&vm, 0)?,
+            InterpreterExit::Completed(Some(Value::Int(3)))
+        ));
+        // Nine bytecodes per recursive frame and four in the base case, with no replay.
+        assert_eq!(31, thread.instruction_count().wrapping_sub(count));
+        assert!(thread.frames()?.is_empty());
+        assert_eq!(0, thread.stack.read().used_slots);
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_interpreted_target_cache_preserves_intrinsics_and_synchronization() -> Result<()>
+    {
+        let (vm, thread) = interpreted_test_thread().await?;
+        let class = recursive_test_class(&thread).await?;
+        let method = class.try_get_method("recurse", "(I)I")?;
+        let mut call = MethodCall {
+            class,
+            method,
+            parameters: vec![Value::Int(0)].into(),
+            has_return_type: true,
+        };
+        let mut stack = JavaStack::new(64);
+        assert!(stack.can_push_interpreted(&vm, &call));
+        assert!(stack.can_push_interpreted(&vm, &call));
+        let mut definition = call.method.definition().clone();
+        definition.access_flags |= MethodAccessFlags::SYNCHRONIZED;
+        call.method = Arc::new(Method::new_synthetic(
+            definition,
+            "recurse".to_owned(),
+            "(I)I".to_owned(),
+            call.method.parameters().clone(),
+            call.method.return_type().cloned(),
+        ));
+        assert!(!stack.can_push_interpreted(&vm, &call));
+
+        call.class = thread.class("java/lang/Object").await?;
+        let original = call.class.try_get_method("hashCode", "()I")?;
+        let mut definition = original.definition().clone();
+        // Even a Java method with bytecode can have an intrinsic implementation.
+        definition.access_flags.remove(MethodAccessFlags::NATIVE);
+        call.method = Arc::new(Method::new_synthetic(
+            definition,
+            "hashCode".to_owned(),
+            "()I".to_owned(),
+            original.parameters().clone(),
+            original.return_type().cloned(),
+        ));
+        assert!(!stack.can_push_interpreted(&vm, &call));
+        assert!(!stack.can_push_interpreted(&vm, &call));
         Ok(())
     }
 

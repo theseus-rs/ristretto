@@ -4,7 +4,7 @@ use crate::Error::InternalError;
 use crate::JavaError::NullPointerException;
 use crate::Result;
 use crate::frame::{CallParameters, ExecutionResult, Frame, MethodCall};
-use crate::method_ref_cache::InvokeKind;
+use crate::method_ref_cache::{InvokeKind, ReceiverCache, ReceiverTarget};
 use crate::operand_stack::OperandStack;
 use ristretto_classloader::{Class, Reference, Value};
 use std::sync::Arc;
@@ -26,7 +26,28 @@ pub(crate) fn receiver_class(value: &Value) -> Result<Option<Arc<Class>>> {
     }
 }
 
+/// Borrow the receiver's class only long enough to probe the checked dispatch cache.
+/// The target is owned by the cache, so a hit needs no temporary class Arc clone.
+fn receiver_target<'a>(
+    value: &Value,
+    cache: &'a ReceiverCache,
+) -> Result<Option<&'a ReceiverTarget>> {
+    match value {
+        Value::Object(Some(reference)) => {
+            let reference = reference.read();
+            Ok(match &*reference {
+                Reference::Object(object) => cache.get(object.class()),
+                Reference::Array(array) => cache.get(&array.class),
+                _ => None,
+            })
+        }
+        Value::Object(None) => Err(NullPointerException(None).into()),
+        _ => Err(InternalError("Expected object reference".to_string())),
+    }
+}
+
 /// A miss leaves every operand in place for the explicit slow instruction.
+#[inline]
 pub(crate) fn try_invoke(
     frame: &Frame,
     stack: &mut OperandStack,
@@ -51,20 +72,21 @@ pub(crate) fn try_invoke(
         )
     } else {
         let receiver = stack.peek_at(resolution.param_count)?;
-        // Check null even for private methods and invokespecial.
-        let receiver_class = receiver_class(receiver)?;
         if kind == InvokeKind::Special
             || (kind == InvokeKind::Virtual && resolution.method.is_private())
         {
+            // These calls still require a non-null reference, but no receiver-class lookup.
+            match receiver {
+                Value::Object(Some(_)) => {}
+                Value::Object(None) => return Err(NullPointerException(None).into()),
+                _ => return Err(InternalError("Expected object reference".to_string())),
+            }
             (
                 resolution.declaring_class.clone(),
                 resolution.method.clone(),
             )
         } else {
-            let Some(receiver_class) = receiver_class else {
-                return Ok(None);
-            };
-            let Some(target) = resolution.dispatch.get(&receiver_class) else {
+            let Some(target) = receiver_target(receiver, &resolution.dispatch)? else {
                 return Ok(None);
             };
             (target.class.clone(), target.method.clone())

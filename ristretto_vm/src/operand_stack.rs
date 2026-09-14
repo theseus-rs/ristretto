@@ -5,6 +5,20 @@ use ristretto_gc::Gc;
 use ristretto_gc::sync::RwLock;
 use std::fmt::Display;
 
+/// An unexpected value must be formatted and dropped only on the error path.
+#[cold]
+#[inline(never)]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "Move the rejected operand's drop into the cold path"
+)]
+fn invalid_type(expected: &str, value: Value) -> crate::Error {
+    InvalidOperand {
+        expected: expected.to_owned(),
+        actual: value.to_string(),
+    }
+}
+
 /// Operand stack for the Ristretto VM
 ///
 /// # References
@@ -24,6 +38,7 @@ impl OperandStack {
         }
     }
 
+    #[inline]
     pub(crate) fn reset(&mut self, max_size: usize) {
         self.stack.clear();
         // Reusing a large allocation in small recursive frames must not multiply retained
@@ -135,10 +150,7 @@ impl OperandStack {
     pub fn pop_int(&mut self) -> Result<i32> {
         match self.pop()? {
             Value::Int(value) => Ok(value),
-            value => Err(InvalidOperand {
-                expected: "int".to_string(),
-                actual: value.to_string(),
-            }),
+            value => Err(invalid_type("int", value)),
         }
     }
 
@@ -147,12 +159,7 @@ impl OperandStack {
     pub fn pop_long(&mut self) -> Result<i64> {
         let value = match self.pop()? {
             Value::Long(value) => value,
-            value => {
-                return Err(InvalidOperand {
-                    expected: "long".to_string(),
-                    actual: value.to_string(),
-                });
-            }
+            value => return Err(invalid_type("long", value)),
         };
         Ok(value)
     }
@@ -162,10 +169,7 @@ impl OperandStack {
     pub fn pop_float(&mut self) -> Result<f32> {
         match self.pop()? {
             Value::Float(value) => Ok(value),
-            value => Err(InvalidOperand {
-                expected: "float".to_string(),
-                actual: value.to_string(),
-            }),
+            value => Err(invalid_type("float", value)),
         }
     }
 
@@ -174,12 +178,7 @@ impl OperandStack {
     pub fn pop_double(&mut self) -> Result<f64> {
         let value = match self.pop()? {
             Value::Double(value) => value,
-            value => {
-                return Err(InvalidOperand {
-                    expected: "double".to_string(),
-                    actual: value.to_string(),
-                });
-            }
+            value => return Err(invalid_type("double", value)),
         };
         Ok(value)
     }
@@ -190,10 +189,7 @@ impl OperandStack {
         let value = self.pop()?;
         match value {
             Value::Object(reference) => Ok(reference),
-            value => Err(InvalidOperand {
-                expected: "object".to_string(),
-                actual: value.to_string(),
-            }),
+            value => Err(invalid_type("object", value)),
         }
     }
 

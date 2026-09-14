@@ -11,6 +11,7 @@ use ristretto_classfile::{
 use std::borrow::Cow;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, OnceLock, RwLock, Weak};
 use tokio::sync::Notify;
 
@@ -325,6 +326,8 @@ pub struct Class {
     /// The initialization state of the class
     /// [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5).
     initialization_state: RwLock<InitializationState>,
+    /// Publishes successful initialization to steady-state static field accesses and calls.
+    initialized: AtomicBool,
     /// Notifier for threads waiting on initialization to complete.
     initialization_notify: Notify,
     /// The module this class belongs to.
@@ -440,6 +443,7 @@ impl Class {
             methods,
             object: RwLock::new(None),
             initialization_state: RwLock::new(InitializationState::NotInitialized),
+            initialized: AtomicBool::new(false),
             initialization_notify: Notify::new(),
             module_name: RwLock::new(None),
         });
@@ -530,6 +534,7 @@ impl Class {
             methods,
             object: RwLock::new(None),
             initialization_state: RwLock::new(InitializationState::NotInitialized),
+            initialized: AtomicBool::new(false),
             initialization_notify: Notify::new(),
             module_name: RwLock::new(None),
         });
@@ -790,7 +795,16 @@ impl Class {
     /// # Errors
     ///
     /// if the state cannot be accessed due to a poisoned lock.
+    #[inline]
     pub fn is_initialized(&self) -> Result<bool> {
+        if self.initialized.load(Ordering::Acquire) {
+            return Ok(true);
+        }
+        self.check_initialized()
+    }
+
+    #[cold]
+    fn check_initialized(&self) -> Result<bool> {
         let state = self
             .initialization_state
             .read()
@@ -855,6 +869,7 @@ impl Class {
             .write()
             .map_err(|error| PoisonedLock(error.to_string()))?;
         *state = InitializationState::Initialized;
+        self.initialized.store(true, Ordering::Release);
         // Notify all waiting threads
         self.initialization_notify.notify_waiters();
         Ok(())
@@ -878,6 +893,7 @@ impl Class {
             .write()
             .map_err(|error| PoisonedLock(error.to_string()))?;
         *state = InitializationState::Failed { error };
+        self.initialized.store(false, Ordering::Release);
         // Notify all waiting threads
         self.initialization_notify.notify_waiters();
         Ok(())

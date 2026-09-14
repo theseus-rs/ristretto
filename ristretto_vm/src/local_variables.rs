@@ -5,6 +5,16 @@ use ristretto_gc::Gc;
 use ristretto_gc::sync::RwLock;
 use std::fmt::Display;
 
+/// Keep allocation and value formatting out of the local-access fast path.
+#[cold]
+#[inline(never)]
+fn invalid_type(expected: &str, value: &Value) -> crate::Error {
+    InvalidLocalVariable {
+        expected: expected.to_owned(),
+        actual: value.to_string(),
+    }
+}
+
 /// Represents the local variables in a frame.
 #[derive(Clone, Debug)]
 pub struct LocalVariables {
@@ -23,6 +33,7 @@ impl LocalVariables {
     }
 
     /// Refill reusable local storage in JVM slot order, including wide-value placeholders.
+    #[inline]
     pub(crate) fn reset(
         &mut self,
         parameters: impl IntoIterator<Item = Value>,
@@ -79,10 +90,7 @@ impl LocalVariables {
     pub fn get_int(&self, index: usize) -> Result<i32> {
         match self.locals.get(index) {
             Some(Value::Int(value)) => Ok(*value),
-            Some(value) => Err(InvalidLocalVariable {
-                expected: "int".to_string(),
-                actual: value.to_string(),
-            }),
+            Some(value) => Err(invalid_type("int", value)),
             None => Err(InvalidLocalVariableIndex(index)),
         }
     }
@@ -96,10 +104,7 @@ impl LocalVariables {
     pub fn get_long(&self, index: usize) -> Result<i64> {
         match self.locals.get(index) {
             Some(Value::Long(value)) => Ok(*value),
-            Some(value) => Err(InvalidLocalVariable {
-                expected: "long".to_string(),
-                actual: value.to_string(),
-            }),
+            Some(value) => Err(invalid_type("long", value)),
             None => Err(InvalidLocalVariableIndex(index)),
         }
     }
@@ -113,10 +118,7 @@ impl LocalVariables {
     pub fn get_float(&self, index: usize) -> Result<f32> {
         match self.locals.get(index) {
             Some(Value::Float(value)) => Ok(*value),
-            Some(value) => Err(InvalidLocalVariable {
-                expected: "float".to_string(),
-                actual: value.to_string(),
-            }),
+            Some(value) => Err(invalid_type("float", value)),
             None => Err(InvalidLocalVariableIndex(index)),
         }
     }
@@ -130,10 +132,7 @@ impl LocalVariables {
     pub fn get_double(&self, index: usize) -> Result<f64> {
         match self.locals.get(index) {
             Some(Value::Double(value)) => Ok(*value),
-            Some(value) => Err(InvalidLocalVariable {
-                expected: "double".to_string(),
-                actual: value.to_string(),
-            }),
+            Some(value) => Err(invalid_type("double", value)),
             None => Err(InvalidLocalVariableIndex(index)),
         }
     }
@@ -144,13 +143,11 @@ impl LocalVariables {
     ///
     /// if the local variable at the given index was not found or if the value is not a null or
     /// object.
+    #[inline]
     pub fn get_object(&self, index: usize) -> Result<Option<Gc<RwLock<Reference>>>> {
         match self.locals.get(index) {
             Some(Value::Object(reference)) => Ok(reference.clone()),
-            Some(value) => Err(InvalidLocalVariable {
-                expected: "object".to_string(),
-                actual: value.to_string(),
-            }),
+            Some(value) => Err(invalid_type("object", value)),
             None => Err(InvalidLocalVariableIndex(index)),
         }
     }

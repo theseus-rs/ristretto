@@ -1,0 +1,22 @@
+[package]
+name = "ristretto_interpreter_bench"
+description = "Reproducible Ristretto and OpenJDK interpreter comparison"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+jiff = { workspace = true }
+nix = { workspace = true, features = ["signal", "process"] }
+plotters = { workspace = true, features = ["svg_backend", "bitmap_backend", "bitmap_encoder", "ttf"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["process", "io-util"] }
