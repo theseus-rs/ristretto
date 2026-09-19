@@ -80,7 +80,7 @@ bitflags = "2.13.2"
 bytes = "1.12.1"
 bytemuck = "1.25.2"
 byteorder = "1.5.0"
-clap = "4.6.6"
+clap = "4.6.7"
 console = "0.16.6"
 core-foundation-sys = "0.8.7"
 coreaudio-sys = { version = "0.2.18", features = ["audio_unit"] }

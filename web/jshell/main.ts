@@ -34,9 +34,8 @@ app.innerHTML = `${siteHeader('jshell')}
       <div id="shell-completions" role="listbox" aria-label="Completions" hidden></div>
       <div class="shell-prompt-row"><span id="shell-prompt" aria-hidden="true">jshell&gt;</span><div id="shell-input"></div><button id="shell-submit" class="button primary" aria-label="Submit input" title="Submit input (Enter)">Enter <span aria-hidden="true">↵</span></button></div>
       <div id="shell-loading"><progress id="shell-progress" max="1" value="0" aria-label="Java runtime download"></progress><span id="shell-loading-text">Loading Java…</span></div>
-      <div class="console-footer"><span id="shell-status" role="status" aria-live="polite" data-state="busy"><span class="status-dot"></span><span id="shell-status-text">Starting JShell…</span></span><span id="shell-elapsed"></span></div>
+      <div class="console-footer"><span id="shell-status" role="status" aria-live="polite" data-state="busy"><span class="status-dot"></span><span id="shell-status-text">Starting JShell…</span></span><span class="shell-shortcuts"><kbd>↑ ↓</kbd> history <span>·</span> <kbd>Tab</kbd> complete <span>·</span> <kbd>Ctrl+C</kbd> cancel</span><span id="shell-elapsed"></span></div>
     </section>
-    <footer class="workspace-footer"><span><span class="status-dot"></span> Powered by Ristretto <span class="footer-divider">·</span> <span id="runtime-label">Java 25</span></span><span class="shell-shortcuts"><kbd>↑ ↓</kbd> history <span>·</span> <kbd>Tab</kbd> complete <span>·</span> <kbd>Ctrl+C</kbd> cancel</span><details><summary>Good to know <span aria-hidden="true">＋</span></summary><div class="help-card"><p>Variables, objects, imports, and methods stay in this session until you reset, exit, switch Java versions, or reload the page. Previous snippets are not rerun when you submit new input.</p><p>Enter submits a line. JShell shows <code>...&gt;</code> when it needs more input. Shift+Enter inserts a line break; you can also paste multiline code. Up and Down recall your input. Tab completes code and commands.</p><p>Use <code>/help</code>, <code>/vars</code>, <code>/methods</code>, <code>/types</code>, <code>/imports</code>, <code>/list</code>, <code>/drop</code>, <code>/reset</code>, and <code>/exit</code>. Open script and <code>/open</code> use a file picker; <code>/save</code> downloads a script.</p><p>Ctrl+C cancels incomplete input without losing state. Interrupting running code, a time limit, or 1 MiB of output ends the current session. Evaluation is limited to 10 minutes per submission. Standard input is closed; external dependencies, GUI, networking, and subprocesses are unavailable. Some Java APIs may be unsupported.</p><p>Input history and your Java version are saved on this device when storage is available. Reloading starts a fresh session and keeps your history available for recall.</p><a href="${import.meta.env.BASE_URL}notices.html" target="_blank" rel="noreferrer">Third-party notices ↗</a></div></details></footer>
     <input id="shell-file" type="file" accept=".jsh,.java,text/plain" hidden />
   </main>`;
 
@@ -491,7 +490,6 @@ function restart() {
   clearTimeout(watchdog);
   busy = continuation = closed = false;
   setInput('');
-  element('runtime-label').textContent = `Java ${version.value}`;
   void request('');
 }
 function download(source: string, filename: string) {
@@ -548,5 +546,4 @@ window.addEventListener('beforeunload', () => {
   stopClock();
   save();
 });
-element('runtime-label').textContent = `Java ${version.value}`;
 void request('');

@@ -1,7 +1,7 @@
 import { EditorView, basicSetup } from 'codemirror';
 import { keymap } from '@codemirror/view';
 import { Compartment, Prec } from '@codemirror/state';
-import { languageNames, filenames, languageSupport } from './languages';
+import { languageNames, languageIcons, filenames, languageSupport } from './languages';
 import definitions from '../languages.json';
 import { restoreState, storageKey, legacyStorageKey } from './state';
 import { editorTheme } from '../shared/editor-theme';
@@ -42,7 +42,7 @@ app.innerHTML = `
       </div>
       <div class="panes">
         <section id="source-pane" class="source-pane" aria-label="Java source">
-          <div class="pane-header source-header"><span class="file-label"><span class="java-icon" aria-hidden="true">☕</span><span id="filename">Main.java</span></span><span id="language-label" class="language-label">JAVA 25</span></div>
+          <div class="pane-header source-header"><span class="file-label"><img id="language-icon" class="language-icon" src="${languageIcons.java}" alt="Java" /><span id="filename">Main.java</span></span><span id="language-label" class="language-label">JAVA 25</span></div>
           <div id="editor"></div>
           <div class="editor-footer"><span id="main-class-control"><label for="class-name">Main class</label><input id="class-name" value="Main" spellcheck="false" autocomplete="off" aria-describedby="main-help" /></span><span id="cursor">Ln 1, Col 1</span></div>
         </section>
@@ -54,7 +54,6 @@ app.innerHTML = `
       </div>
       <div id="loading" hidden><progress id="progress" max="1" value="0" aria-label="Runtime download"></progress><span id="loading-text">Loading Java…</span></div>
     </section>
-    <footer class="workspace-footer"><span><span class="status-dot"></span> <span id="runtime-label">Java 25</span></span><details><summary>Good to know <span aria-hidden="true">＋</span></summary><div class="help-card"><p id="main-help">Use a <code>public static void main(String[] args)</code> entry point. Set Main class to its fully qualified name when using a package.</p><p>Compile checks Java source; Check validates scripts without running their bodies. Clojure Check validates reader syntax; names and execution errors are checked by Run. Run starts a fresh program without a separate Check step. Standard input is closed and arguments are empty.</p><p>Java and the selected language’s standard libraries are included. External dependencies, GUI, networking, and process execution are unavailable. Ristretto is an evolving JVM; some Java APIs may be unsupported.</p><p>Compilation, script checking, and script execution stop after 10 minutes; Java execution stops after 30 seconds. Output is limited to 1 MiB. Compilation may take several minutes in Firefox. Stop interrupts either phase.</p><p>The first run of each version downloads its Java runtime. Switching languages or versions preserves a separate draft for each language and Scala generation. Later runs reuse locally cached assets when browser storage is available.</p><a href="${import.meta.env.BASE_URL}notices.html" target="_blank" rel="noreferrer">Third-party notices ↗</a></div></details></footer>
   </main>`;
 
 const element = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -406,7 +405,9 @@ function updateVersion() {
       ? `Java ${version}`
       : `${languageNames[language]} ${definitions[target].version}`;
   element('language-label').textContent = label.toUpperCase();
-  element('runtime-label').textContent = label;
+  const languageIcon = element<HTMLImageElement>('language-icon');
+  languageIcon.src = languageIcons[language];
+  languageIcon.alt = languageNames[language];
   versionPicker.disabled = active || language !== 'java';
   element('java-picker').hidden = language !== 'java';
   element('scala-picker').hidden = language !== 'scala';

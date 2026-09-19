@@ -57,7 +57,7 @@ async function finish(page: Page) {
 
 test('language controls, examples, saved drafts, and mobile layout', async ({ page }) => {
   await page.goto('./');
-  await expect(page.locator('.workspace-footer')).not.toContainText('Powered by Ristretto');
+  await expect(page.locator('.workspace-footer')).toHaveCount(0);
   await expect(page.getByLabel('Language').locator('option')).toHaveText([
     'Java',
     'Kotlin',

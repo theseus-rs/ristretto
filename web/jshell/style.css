@@ -19,8 +19,8 @@
   gap: 22px;
 }
 .shell-scroll {
-  height: max(340px, calc(100dvh - 350px));
-  max-height: 850px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   background: var(--editor-bg);
   scroll-behavior: auto;
@@ -114,12 +114,13 @@
   background: var(--tint);
   border-color: var(--accent);
 }
-.workspace-footer .shell-shortcuts {
+.shell-shortcuts {
   display: flex;
   gap: 8px;
   align-items: center;
   color: var(--subtle);
   font-size: 10px;
+  margin: 0 auto;
 }
 .shell-shortcuts kbd {
   font: 10px monospace;
@@ -132,11 +133,17 @@
   align-items: center;
   gap: 6px;
 }
+@media (max-width: 900px) {
+  :root[data-playground='jshell'] #app {
+    height: 100dvh;
+    min-height: 560px;
+  }
+}
 @media (max-width: 700px) {
   .session-label {
     display: none;
   }
-  .workspace-footer .shell-shortcuts {
+  .shell-shortcuts {
     display: none;
   }
   #shell-output {
@@ -153,9 +160,6 @@
   #shell-submit {
     min-width: 52px;
     padding: 7px 9px;
-  }
-  .shell-scroll {
-    height: max(350px, calc(100dvh - 400px));
   }
   .shell-workbench .toolbar .actions {
     flex-wrap: wrap;

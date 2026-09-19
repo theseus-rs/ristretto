@@ -67,6 +67,12 @@
 body {
   margin: 0;
 }
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 560px;
+}
 a {
   color: inherit;
 }
@@ -108,8 +114,8 @@ input:focus-visible {
   display: none !important;
 }
 .site-header {
-  margin: auto;
-  padding: 18px 32px;
+  flex-shrink: 0;
+  padding: 16px 32px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   column-gap: 24px;
@@ -171,8 +177,11 @@ input:focus-visible {
   font-size: 18px;
 }
 main {
-  margin: auto;
-  padding: 24px 32px 16px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 20px 32px 24px;
 }
 .status-dot {
   display: inline-block;
@@ -195,6 +204,10 @@ main {
   color: var(--subtle);
 }
 .workbench {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
   border: 1px solid var(--border);
   border-radius: 13px;
   overflow: hidden;
@@ -202,6 +215,9 @@ main {
   box-shadow:
     0 10px 40px var(--shadow),
     0 1px 2px var(--shadow);
+}
+.workbench > :not(.panes, .shell-scroll) {
+  flex-shrink: 0;
 }
 .toolbar {
   display: flex;
@@ -288,11 +304,14 @@ main {
 }
 .panes {
   display: grid;
+  flex: 1;
+  min-height: 0;
   grid-template-columns: 1.2fr 1fr;
 }
 .source-pane,
 .output-pane {
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -305,6 +324,7 @@ main {
 }
 .pane-header {
   height: 48px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -323,8 +343,10 @@ main {
   gap: 9px;
   font-size: 11px;
 }
-.java-icon {
-  font-size: 14px;
+.language-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
 }
 .language-label {
   font-size: 9px;
@@ -356,17 +378,16 @@ main {
   color: var(--accent);
 }
 #editor {
-  height: 440px;
-  min-height: 300px;
-  resize: vertical;
-  overflow: auto;
-  max-height: 900px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 .cm-editor {
   outline: none !important;
 }
 .editor-footer {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 10px;
   background: var(--surface-2);
@@ -403,7 +424,7 @@ main {
 .console-body {
   position: relative;
   flex: 1;
-  min-height: 260px;
+  min-height: 0;
 }
 #output {
   position: absolute;
@@ -477,6 +498,7 @@ kbd {
 .console-footer {
   min-height: 38px;
   display: flex;
+  flex-shrink: 0;
   flex-wrap: wrap;
   gap: 6px 12px;
   align-items: center;
@@ -534,81 +556,170 @@ progress::-webkit-progress-value {
 progress::-moz-progress-bar {
   background: var(--accent);
 }
-.workspace-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  padding: 18px 1px;
-  color: var(--subtle);
-  font-size: 10px;
+.header-help {
+  position: relative;
 }
-.workspace-footer > span {
+.header-help summary {
+  list-style: none;
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
 }
-.workspace-footer .status-dot {
-  height: 4px;
-  width: 4px;
-}
-.footer-divider {
-  margin: 0 3px;
-  color: var(--subtle);
-}
-.workspace-footer details {
-  position: relative;
-  max-width: 430px;
-  margin-left: 20px;
-}
-.workspace-footer summary {
-  list-style: none;
-  display: flex;
-  gap: 12px;
-  justify-content: end;
-  font-size: 10px;
-  color: var(--subtle);
-}
-.workspace-footer summary::-webkit-details-marker {
+.header-help summary::-webkit-details-marker {
   display: none;
+}
+.header-help summary:hover,
+.header-help[open] summary {
+  color: var(--accent);
+  background: var(--tint);
+  border-color: var(--focus);
+}
+.header-help summary svg,
+.help-close svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 .help-card {
   position: absolute;
   right: 0;
-  bottom: 25px;
-  width: min(400px, 80vw);
+  top: calc(100% + 12px);
+  display: flex;
+  flex-direction: column;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 88px);
+  overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 8px 30px var(--shadow);
-  padding: 16px 20px;
-  z-index: 4;
-  font-size: 11px;
+  box-shadow:
+    0 18px 60px var(--shadow),
+    0 4px 12px var(--shadow);
+  z-index: 10;
+  font-size: 12px;
   line-height: 1.7;
   color: var(--muted);
 }
-.help-card p:first-child {
-  margin-top: 0;
+.help-heading {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.help-eyebrow {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+.help-heading h2 {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+}
+.help-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+.help-close:hover {
+  background: var(--tint);
+  color: var(--accent);
+  border-color: var(--border);
+}
+.help-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 20px;
+}
+.help-section {
+  padding: 16px 0;
+}
+.help-section + .help-section {
+  border-top: 1px solid var(--border-soft);
+}
+.help-section h3 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+}
+.help-section p {
+  margin: 8px 0 0;
 }
 .help-card code {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.help-shortcut {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.help-shortcut kbd {
+  flex-shrink: 0;
+  padding: 2px 6px;
   font-size: 10px;
 }
-.help-card a {
+.help-commands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.help-commands code {
+  padding: 1px 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+}
+.help-notices {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
   color: var(--accent);
+  text-decoration: none;
+}
+.help-notices:hover {
+  text-decoration: underline;
 }
 @keyframes pulse {
   50% {
     opacity: 0.35;
   }
 }
-@media (min-width: 1500px) {
-  main {
-    padding-top: 24px;
-  }
-  #editor {
-    height: 490px;
-  }
-}
 @media (max-width: 900px) {
+  #app {
+    height: auto;
+    min-height: 100dvh;
+  }
   .local-note {
     grid-column: 1 / -1;
     grid-row: 2;
@@ -623,9 +734,10 @@ progress::-moz-progress-bar {
     grid-row: 1;
   }
   main {
-    padding: 24px 16px 16px;
+    padding: 16px;
   }
   .panes {
+    flex: none;
     grid-template-columns: 1fr;
   }
   .output-pane {
@@ -633,17 +745,18 @@ progress::-moz-progress-bar {
     border-top: 1px solid var(--border);
   }
   .console-body {
-    height: 270px;
-    flex: auto;
+    height: clamp(240px, 32dvh, 380px);
+    flex: none;
   }
   #editor {
-    height: 360px;
-  }
-  .workspace-footer {
-    font-size: 9px;
+    height: clamp(300px, 50dvh, 560px);
+    flex: none;
   }
   .help-card {
-    bottom: 25px;
+    position: fixed;
+    top: 70px;
+    right: 16px;
+    max-height: calc(100dvh - 86px);
   }
 }
 @media (max-width: 560px) {
@@ -671,7 +784,7 @@ progress::-moz-progress-bar {
     font-size: 21px;
   }
   main {
-    padding: 20px 16px 14px;
+    padding: 12px 16px 16px;
   }
   .toolbar {
     padding: 12px;
@@ -701,13 +814,6 @@ progress::-moz-progress-bar {
   }
   .editor-footer input {
     width: 130px;
-  }
-  .workspace-footer {
-    padding: 16px 5px;
-    gap: 10px;
-  }
-  .workspace-footer details {
-    margin-left: 0;
   }
   #output {
     padding: 18px;
@@ -759,7 +865,10 @@ progress::-moz-progress-bar {
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 10px;
+}
+.header-actions .github-link {
+  margin-left: 10px;
 }
 .theme-toggle {
   display: grid;
@@ -785,7 +894,22 @@ progress::-moz-progress-bar {
     gap: 8px;
   }
   .header-actions {
-    gap: 12px;
+    gap: 8px;
     margin-left: auto;
+  }
+  .header-help summary {
+    width: 36px;
+    padding: 7px;
+  }
+  .header-help summary > span {
+    display: none;
+  }
+  .header-actions .github-link {
+    margin-left: 0;
+  }
+}
+@media (max-width: 380px) {
+  .brand-home > span {
+    display: none;
   }
 }
