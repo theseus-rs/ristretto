@@ -2,11 +2,10 @@ use crate::Error::InternalError;
 use crate::JavaError::NullPointerException;
 use crate::Result;
 use crate::frame::{ExecutionResult, Frame, MethodCall};
-use crate::instruction::method_resolver::lookup_virtual_method;
 use crate::instruction::{receiver_class, resolve_method_ref};
 use crate::method_ref_cache::{InvokeKind, ReceiverTarget};
 use crate::operand_stack::OperandStack;
-use ristretto_classloader::Value;
+use ristretto_classloader::{ResolvedMethod, Value};
 use ristretto_types::JavaError;
 
 /// Invokevirtual instruction implementation.
@@ -41,11 +40,12 @@ pub(crate) async fn invokevirtual(
     };
 
     // Virtual dispatch: if method is not private, look up in receiver's actual class
-    let (class, method) = if resolution.method.is_private() {
-        (
-            resolution.declaring_class.clone(),
-            resolution.method.clone(),
-        )
+    let resolved = ResolvedMethod {
+        declaring_class: resolution.declaring_class.clone(),
+        method: resolution.method.clone(),
+    };
+    let target = if resolved.method.is_private() {
+        resolved
     } else {
         let object_class = if let Some(class) = receiver_class(receiver)? {
             class
@@ -61,53 +61,45 @@ pub(crate) async fn invokevirtual(
                 has_return_type: resolution.has_return_type,
             }));
         }
-        let target = match lookup_virtual_method(
-            &object_class,
-            &resolution.method_name,
-            &resolution.method_descriptor,
-        ) {
+        let target = match object_class.select_method(&resolved) {
             Ok(result) => result,
             Err(_) if object_class.is_interface() => {
                 // Per JVMS §5.4.6, interfaces implicitly extend java.lang.Object.
                 // If the method isn't found on the interface hierarchy, check Object.
                 let object_class = thread.class("java/lang/Object").await?;
-                lookup_virtual_method(
-                    &object_class,
-                    &resolution.method_name,
-                    &resolution.method_descriptor,
-                )?
+                object_class.select_method(&resolved)?
             }
             Err(e) => {
-                return Err(e);
+                return Err(e.into());
             }
         };
-        if target.1.is_static() {
+        if target.method.is_static() {
             return Err(JavaError::IncompatibleClassChangeError(format!(
                 "Method {}.{} is static",
-                target.0.name(),
+                target.declaring_class.name(),
                 resolution.method_name
             ))
             .into());
         }
-        if target.1.is_abstract() {
+        if target.method.is_abstract() {
             return Err(JavaError::AbstractMethodError(format!(
                 "Method {}.{} is abstract",
-                target.0.name(),
+                target.declaring_class.name(),
                 resolution.method_name
             ))
             .into());
         }
         resolution.dispatch.store(ReceiverTarget {
             receiver_class: object_class,
-            class: target.0.clone(),
-            method: target.1.clone(),
+            class: target.declaring_class.clone(),
+            method: target.method.clone(),
         });
         target
     };
 
     Ok(ExecutionResult::Call(MethodCall {
-        class,
-        method,
+        class: target.declaring_class,
+        method: target.method,
         parameters: parameters.into(),
         has_return_type: resolution.has_return_type,
     }))
@@ -116,19 +108,17 @@ pub(crate) async fn invokevirtual(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::Error::JavaError;
-    use crate::JavaError::NoSuchMethodError;
     use crate::VM;
-    use crate::instruction::lookup_method;
+    use ristretto_classloader::MethodResolutionError;
 
     #[tokio::test]
     async fn test_lookup_method_in_hierarchy() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java.util.TreeMap").await?;
-        let (resolved_class, method) = lookup_method(&class, "size", "()I")?;
-        assert_eq!(resolved_class.name(), "java/util/TreeMap");
-        assert_eq!(method.name(), "size");
-        assert_eq!(method.descriptor(), "()I");
+        let resolved = class.resolve_method("size", "()I")?;
+        assert_eq!(resolved.declaring_class.name(), "java/util/TreeMap");
+        assert_eq!(resolved.method.name(), "size");
+        assert_eq!(resolved.method.descriptor(), "()I");
         Ok(())
     }
 
@@ -136,10 +126,13 @@ mod test {
     async fn test_lookup_method_in_hierarchy_super_class() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java.util.ArrayList").await?;
-        let (resolved_class, method) = lookup_method(&class, "toString", "()Ljava/lang/String;")?;
-        assert_eq!(resolved_class.name(), "java/util/AbstractCollection");
-        assert_eq!(method.name(), "toString");
-        assert_eq!(method.descriptor(), "()Ljava/lang/String;");
+        let resolved = class.resolve_method("toString", "()Ljava/lang/String;")?;
+        assert_eq!(
+            resolved.declaring_class.name(),
+            "java/util/AbstractCollection"
+        );
+        assert_eq!(resolved.method.name(), "toString");
+        assert_eq!(resolved.method.descriptor(), "()Ljava/lang/String;");
         Ok(())
     }
 
@@ -147,10 +140,10 @@ mod test {
     async fn test_lookup_method_in_hierarchy_not_found() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java.util.TreeMap").await?;
-        let result = lookup_method(&class, "foo", "()V");
+        let result = class.resolve_method("foo", "()V");
         assert!(matches!(
             result,
-            Err(JavaError(NoSuchMethodError(message)))
+            Err(MethodResolutionError::NoSuchMethod(message))
             if message == "Method foo()V not found in class java/util/TreeMap"
         ));
         Ok(())

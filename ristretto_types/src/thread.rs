@@ -92,7 +92,8 @@ pub trait Thread: Send + Sync {
     /// Returns an error if the class cannot be registered.
     fn register_class(&self, class: Arc<Class>) -> crate::BoxFuture<'_, Result<()>>;
 
-    /// Invoke a method by class name and method signature.
+    /// Resolve a method by class name and signature, then dispatch instance methods on the receiver.
+    /// Static methods, constructors, and private methods execute their resolved declaration.
     ///
     /// # Errors
     /// Returns an error if the method cannot be invoked.

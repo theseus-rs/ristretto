@@ -1327,22 +1327,18 @@ fn module_descriptor_hash_code(descriptor: &ModuleDescriptor) -> i32 {
 }
 
 async fn value_hash_code<T: Thread + 'static>(thread: &Arc<T>, value: &Value) -> Result<i32> {
-    let mut class = value.as_object_ref()?.class().clone();
-    let class_name = loop {
-        if class.try_get_method("hashCode", "()I").is_ok() {
-            break class.name().to_string();
-        }
-        class = class.parent()?.ok_or_else(|| {
-            ristretto_types::Error::InternalError("hashCode method not found".to_string())
-        })?;
-    };
+    let receiver_class = value.as_object_ref()?.class().clone();
+    let object_class = thread.class("java/lang/Object").await?;
+    let method = object_class.resolve_method("hashCode", "()I")?;
+    let target = receiver_class.select_concrete_method(&method)?;
+    let class_name = target.declaring_class.name();
 
     if class_name == "java/lang/Object" {
         return identity_hash_code(value);
     }
 
     let result = match thread
-        .invoke(&class_name, "hashCode()I", std::slice::from_ref(value))
+        .invoke(class_name, "hashCode()I", std::slice::from_ref(value))
         .await
     {
         Ok(result) => result,

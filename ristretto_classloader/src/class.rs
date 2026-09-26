@@ -15,6 +15,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, OnceLock, RwLock, Weak};
 use tokio::sync::Notify;
 
+mod method_resolution;
+pub use method_resolution::{MethodResolutionError, ResolvedMethod};
+
 /// A list of methods that are designated as polymorphic in the Java Virtual Machine.
 ///
 /// Polymorphic methods can accept different argument types and return types at different call
@@ -467,17 +470,12 @@ impl Class {
         let original_name = class_file.class_name()?.to_rust_string();
         let hidden_name = format!("{original_name}+0x{suffix:016x}");
 
-        // Patch the constant pool to replace the original class name with the hidden name. This
-        // ensures that self references in bytecode (ldc, new, checkcast, etc.) will resolve to the
-        // correct hidden class name without runtime checks.
-        if let Constant::Class(name_index) =
-            class_file.constant_pool.try_get(class_file.this_class)?
-        {
-            let name_index = *name_index;
-            class_file
-                .constant_pool
-                .set(name_index, Constant::utf8(hidden_name.as_str()))?;
-        }
+        // Redirect the self-class entry while preserving the original UTF-8: string
+        // literals and other metadata may share that entry with the class name.
+        let hidden_name_index = class_file.constant_pool.add_utf8(&hidden_name)?;
+        class_file
+            .constant_pool
+            .set(class_file.this_class, Constant::Class(hidden_name_index))?;
 
         let mut source_file = None;
 
@@ -1436,7 +1434,7 @@ impl Class {
         Some(method)
     }
 
-    /// Get a method by name and descriptor.
+    /// Get a method declared by this class by name and descriptor (without searching ancestors).
     #[must_use]
     pub fn method<N, D>(&self, name: N, descriptor: D) -> Option<Arc<Method>>
     where
@@ -1463,7 +1461,7 @@ impl Class {
         None
     }
 
-    /// Get a method by name and descriptor.
+    /// Get a method declared by this class by name and descriptor (without searching ancestors).
     ///
     /// # Errors
     ///
@@ -2473,6 +2471,25 @@ mod tests {
         // Both should be hidden
         assert!(hidden_class1.is_hidden());
         assert!(hidden_class2.is_hidden());
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_hidden_preserves_shared_name_utf8() -> Result<()> {
+        let mut constant_pool = ConstantPool::new();
+        let name_index = constant_pool.add_utf8("Generated")?;
+        let this_class = constant_pool.add_class("Generated")?;
+        let literal = constant_pool.add_string("Generated")?;
+        let class_file = ClassFile {
+            constant_pool,
+            this_class,
+            ..Default::default()
+        };
+        let hidden = Class::from_hidden(None, class_file, 42)?;
+        let pool = hidden.constant_pool();
+        assert_eq!(pool.try_get_utf8(name_index)?, "Generated");
+        assert_eq!(pool.try_get_string(literal)?, "Generated");
+        assert_eq!(pool.try_get_class(this_class)?, hidden.name());
         Ok(())
     }
 

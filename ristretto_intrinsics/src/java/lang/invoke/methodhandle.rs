@@ -3,14 +3,14 @@ use crate::java::lang::invoke::methodhandlenatives::MemberNameFlags;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::ReferenceKind;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
-use ristretto_classloader::{Class, Object, Value};
+use ristretto_classloader::{Class, Object, ResolvedMethod, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError::NullPointerException;
-use ristretto_types::JavaObject;
 use ristretto_types::Thread;
 use ristretto_types::VM;
+use ristretto_types::{JavaObject, method_resolution};
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 use tracing::debug;
@@ -508,69 +508,25 @@ pub async fn invoke_exact<T: Thread + 'static>(
 ///
 /// This is needed for lambda methods where MemberName.clazz may be Object but the actual
 /// lambda method is defined in an interface (like Function.andThen).
-fn find_method_in_hierarchy<T: Thread + 'static>(
-    _thread: &Arc<T>,
+async fn find_method_in_hierarchy<T: Thread + 'static>(
+    thread: &Arc<T>,
     target_class: &Arc<Class>,
     receiver: &Value,
     method_name: &str,
     method_descriptor: &str,
-) -> Result<(Arc<Class>, Arc<ristretto_classloader::Method>)> {
-    // For virtual method dispatch, we MUST start from the receiver's actual class to properly
-    // implement polymorphism (overridden methods)
-    if let Ok(receiver_obj) = receiver.as_object_ref() {
-        let receiver_class = receiver_obj.class().clone();
-
-        // Search the receiver's class hierarchy for the method implementation
-        if let Some((class, method)) =
-            search_class_hierarchy_for_method(&receiver_class, method_name, method_descriptor)?
-        {
-            // Make sure we found a non-abstract implementation
-            if !method
-                .access_flags()
-                .contains(ristretto_classfile::MethodAccessFlags::ABSTRACT)
-            {
-                return Ok((class, method));
+) -> Result<ResolvedMethod> {
+    let receiver_class = method_resolution::receiver_class(thread.as_ref(), receiver).await?;
+    let target = target_class
+        .resolve_method(method_name, method_descriptor)
+        .or_else(|error| {
+            // Synthetic lambda MemberNames may initially refer to Object.
+            if method_name.starts_with("lambda$") && target_class.name() == "java/lang/Object" {
+                receiver_class.resolve_method(method_name, method_descriptor)
+            } else {
+                Err(error)
             }
-        }
-    }
-
-    // Fallback: If not found on receiver's class hierarchy, try the target class. This handles
-    // cases where the method might be on an interface or abstract class
-    if let Ok(method) = target_class.try_get_method(method_name, method_descriptor) {
-        // If the method is not abstract, we can use it
-        if !method
-            .access_flags()
-            .contains(ristretto_classfile::MethodAccessFlags::ABSTRACT)
-        {
-            return Ok((target_class.clone(), method));
-        }
-    }
-
-    // If the method is a lambda method and target is Object, search receiver's class hierarchy
-    if method_name.starts_with("lambda$")
-        && target_class.name() == "java/lang/Object"
-        && let Ok(receiver_obj) = receiver.as_object_ref()
-    {
-        let receiver_class = receiver_obj.class().clone();
-
-        // Search the receiver's class hierarchy (including interfaces)
-        if let Some((class, method)) =
-            search_class_hierarchy_for_method(&receiver_class, method_name, method_descriptor)?
-        {
-            return Ok((class, method));
-        }
-    }
-
-    // Include receiver info in error for debugging
-    let receiver_info = if let Ok(obj) = receiver.as_object_ref() {
-        format!("receiver class: {}", obj.class().name())
-    } else {
-        format!("receiver: {receiver:?}")
-    };
-    Err(InternalError(format!(
-        "Method not found: {}.{method_name}{method_descriptor} ({receiver_info})",
-        target_class.name()
-    )))
+        })?;
+    Ok(receiver_class.select_concrete_method(&target)?)
 }
 
 /// Searches for a method in a class's hierarchy, including interfaces.
@@ -578,17 +534,23 @@ fn search_class_hierarchy_for_method(
     class: &Arc<Class>,
     method_name: &str,
     method_descriptor: &str,
-) -> Result<Option<(Arc<Class>, Arc<ristretto_classloader::Method>)>> {
+) -> Result<Option<ResolvedMethod>> {
     // Check the class itself
     if let Ok(method) = class.try_get_method(method_name, method_descriptor) {
-        return Ok(Some((class.clone(), method)));
+        return Ok(Some(ResolvedMethod {
+            declaring_class: class.clone(),
+            method,
+        }));
     }
 
     // Check interfaces
     if let Ok(interfaces) = class.interfaces() {
         for interface in interfaces {
             if let Ok(method) = interface.try_get_method(method_name, method_descriptor) {
-                return Ok(Some((interface.clone(), method)));
+                return Ok(Some(ResolvedMethod {
+                    declaring_class: interface.clone(),
+                    method,
+                }));
             }
             // Recursively check super-interfaces
             if let Some(result) =
@@ -619,7 +581,7 @@ fn find_static_lambda_method<T: Thread + 'static>(
     arguments: &[Value],
     method_name: &str,
     method_descriptor: &str,
-) -> Option<(Arc<Class>, Arc<ristretto_classloader::Method>)> {
+) -> Option<ResolvedMethod> {
     // For static lambda methods, the first argument is often the captured 'this'
     // which is the interface instance. Search its class hierarchy.
     for arg in arguments {
@@ -775,18 +737,19 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
             // Try to find method on target class first, then on receiver's class if not found
             // This handles lambda methods where MemberName.clazz may be Object but the
             // lambda method is defined on the actual interface/class
-            let (actual_class, method) = find_method_in_hierarchy(
+            let target = find_method_in_hierarchy(
                 &thread,
                 &target_class,
                 &receiver,
                 &member_name,
                 &member_descriptor,
-            )?;
+            )
+            .await?;
 
             let mut call_arguments = vec![receiver];
             call_arguments.extend(arguments);
             let result = thread
-                .execute(&actual_class, &method, &call_arguments)
+                .execute(&target.declaring_class, &target.method, &call_arguments)
                 .await?;
             // For void methods, return null; otherwise return the result
             Ok(result.unwrap_or(Value::Object(None)))
@@ -794,10 +757,8 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
         ReferenceKind::InvokeStatic => {
             // For static methods (including static lambda methods), try the target class first
             // If not found and it's a lambda method, try to find it in arguments' class hierarchy
-            let (actual_class, method) = match target_class
-                .try_get_method(&member_name, &member_descriptor)
-            {
-                Ok(m) => (target_class.clone(), m),
+            let target = match target_class.resolve_method(&member_name, &member_descriptor) {
+                Ok(target) => target,
                 Err(_) if member_name.starts_with("lambda$") => {
                     // For lambda methods, try to find in argument's class hierarchy
                     find_static_lambda_method(&thread, &arguments, &member_name, &member_descriptor)
@@ -809,7 +770,9 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
                 }
                 Err(e) => return Err(e.into()),
             };
-            let result = thread.execute(&actual_class, &method, &arguments).await?;
+            let result = thread
+                .execute(&target.declaring_class, &target.method, &arguments)
+                .await?;
             Ok(result.unwrap_or(Value::Object(None)))
         }
         ReferenceKind::InvokeSpecial | ReferenceKind::NewInvokeSpecial => {
@@ -940,11 +903,15 @@ async fn invoke_special<T: Thread + 'static>(
             )));
         }
         let receiver = arguments.remove(0);
-        let method = target_class.try_get_method(method_name, method_descriptor)?;
+        if receiver.is_null() {
+            return Err(NullPointerException(None).into());
+        }
+        let target = target_class.resolve_method(&method_name, &method_descriptor)?;
+        let target = target_class.select_special_method(&target_class, &target)?;
         let mut call_arguments = vec![receiver];
         call_arguments.extend(arguments);
         let result = thread
-            .execute(&target_class, &method, &call_arguments)
+            .execute(&target.declaring_class, &target.method, &call_arguments)
             .await?;
         Ok(result.unwrap_or(Value::Object(None)))
     }

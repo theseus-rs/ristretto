@@ -17,6 +17,9 @@ use ristretto_types::{Parameters, Result};
 use std::sync::{Arc, Weak};
 use zerocopy::transmute_ref;
 
+/// Class-definition flag from `OpenJDK`'s `MethodHandleNatives.Constants`.
+const HIDDEN_CLASS: i32 = 0x0000_0002;
+
 /// Set the defining class loader and module on a class mirror created by defineClass.
 ///
 /// Per JVM spec §5.3.5, when defineClass is called, the class is defined by the given
@@ -103,6 +106,7 @@ async fn class_object_from_bytes<T: Thread + 'static>(
     offset: i32,
     length: i32,
     defining_class_loader: Option<Weak<ClassLoader>>,
+    is_hidden: bool,
 ) -> Result<Value> {
     let bytes_length = i32::try_from(bytes.len())?;
     let end = offset
@@ -150,11 +154,11 @@ async fn class_object_from_bytes<T: Thread + 'static>(
         // TODO: implement setting the source file
     }
 
-    // Check if this is a hidden like class (String$$StringConcat, etc.). These classes contain $$
-    // in their name and need unique names to avoid overwriting each other when multiple instances
-    // are created.
+    // Honor the explicit hidden-class flag even for names without $$ (LambdaForm$MH,
+    // for example). Distinct definitions must not overwrite each other's methods.
+    // Preserve the legacy naming convention for generated classes as well.
     let class_name = class_file.class_name()?.to_string();
-    let is_hidden_like = class_name.contains("$$");
+    let is_hidden_like = is_hidden || class_name.contains("$$");
 
     let class = if is_hidden_like {
         let suffix = vm.next_hidden_class_suffix()?;
@@ -190,8 +194,16 @@ pub async fn define_class_0_0<T: Thread + 'static>(
     let expected_class_name = parameters.pop_reference()?;
     let class_loader = parameters.pop()?;
     let defining_loader = defining_class_loader(&thread, &class_loader).await?;
-    let class =
-        class_object_from_bytes(&thread, None, &bytes, offset, length, defining_loader).await?;
+    let class = class_object_from_bytes(
+        &thread,
+        None,
+        &bytes,
+        offset,
+        length,
+        defining_loader,
+        false,
+    )
+    .await?;
     if let Some(expected_class_name) = expected_class_name {
         let expected_class_name = expected_class_name.read().as_string()?;
         let class = class.as_object_ref()?;
@@ -232,6 +244,7 @@ pub async fn define_class_1_0<T: Thread + 'static>(
         offset,
         length,
         defining_loader,
+        false,
     )
     .await?;
     if let Some(expected_class_name) = expected_class_name {
@@ -282,6 +295,7 @@ pub async fn define_class_2_0<T: Thread + 'static>(
         offset,
         length,
         defining_loader,
+        false,
     )
     .await?;
     if let Some(expected_class_name) = expected_class_name {
@@ -305,7 +319,7 @@ pub async fn define_class_0_1<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let class_data = parameters.pop()?;
-    let _flags = parameters.pop_int()?;
+    let flags = parameters.pop_int()?;
     let _initialize = parameters.pop_bool()?;
     let _protection_domain = parameters.pop()?;
     let length = parameters.pop_int()?;
@@ -321,9 +335,16 @@ pub async fn define_class_0_1<T: Thread + 'static>(
     let lookup_class = get_class(&thread, &lookup).await?;
     // Runtime package identity includes the defining loader in the Rust class metadata.
     let defining_class_loader = lookup_class.class_loader()?.as_ref().map(Arc::downgrade);
-    let class =
-        class_object_from_bytes(&thread, None, &bytes, offset, length, defining_class_loader)
-            .await?;
+    let class = class_object_from_bytes(
+        &thread,
+        None,
+        &bytes,
+        offset,
+        length,
+        defining_class_loader,
+        flags & HIDDEN_CLASS != 0,
+    )
+    .await?;
     // JVMS 5.3.5 and MethodHandles.Lookup#defineHiddenClass require a generated
     // hidden class to live in the lookup class's runtime package and module. The
     // class bytes alone do not carry module membership, so inherit it explicitly.
@@ -369,6 +390,7 @@ pub async fn define_class_1_1<T: Thread + 'static>(
         offset,
         length,
         defining_loader,
+        false,
     )
     .await?;
     set_defining_class_loader(&class, &class_loader)?;
@@ -411,6 +433,7 @@ pub async fn define_class_2_1<T: Thread + 'static>(
         offset,
         length,
         defining_loader,
+        false,
     )
     .await?;
     set_defining_class_loader(&class, &class_loader)?;

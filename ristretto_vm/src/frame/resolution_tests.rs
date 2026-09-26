@@ -243,6 +243,63 @@ async fn receiver_identity_polymorphism_and_overflow() -> Result<()> {
 }
 
 #[tokio::test]
+async fn special_conflicts_check_null_before_selection_on_cold_and_cached_calls() -> Result<()> {
+    let (vm, thread) = crate::test::thread().await?;
+    let first = target("FirstDefault", Some(MethodAccessFlags::PUBLIC), true)?;
+    let second = target("SecondDefault", Some(MethodAccessFlags::PUBLIC), true)?;
+    thread.register_class(first.clone()).await?;
+    thread.register_class(second.clone()).await?;
+    let mut combined = target("CombinedDefaults", None, true)?.class_file().clone();
+    for interface in [&first, &second] {
+        combined
+            .interfaces
+            .push(combined.constant_pool.add_class(interface.name())?);
+    }
+    let combined = Class::from(None, combined)?;
+    thread.register_class(combined.clone()).await?;
+    let receiver = target("SpecialReceiver", Some(MethodAccessFlags::PUBLIC), false)?;
+    receiver.set_interfaces(vec![combined.clone()])?;
+    let (frame, index) = caller(&thread, &combined)?;
+    let instruction = Instruction::Invokespecial(index);
+
+    // Resolution succeeds even for a null receiver. Both cold and cached dispatch
+    // must report NPE before checking the conflicting defaults at execution time.
+    for cached in [false, true] {
+        let mut stack = OperandStack::with_max_size(3);
+        stack.push_object(None)?;
+        stack.push_long(17)?;
+        stack.push_double(2.0)?;
+        let result = if cached {
+            frame.process(&mut LocalVariables::new(vec![]), &mut stack, &instruction)
+        } else {
+            frame
+                .process_async(&mut stack, &instruction)
+                .await
+                .map(InstructionResult::Sync)
+        };
+        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+
+        let result = frame
+            .process_async(&mut arguments(&vm, Some(&receiver))?, &instruction)
+            .await;
+        assert!(matches!(
+            result,
+            Err(JavaError(IncompatibleClassChangeError(_)))
+        ));
+        let result = frame.process(
+            &mut LocalVariables::new(vec![]),
+            &mut arguments(&vm, Some(&receiver))?,
+            &instruction,
+        );
+        assert!(matches!(
+            result,
+            Err(JavaError(IncompatibleClassChangeError(_)))
+        ));
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn private_receiver_methods_do_not_override_virtual_targets() -> Result<()> {
     let (vm, thread) = crate::test::thread().await?;
     let base = target("VirtualBase", Some(MethodAccessFlags::PUBLIC), false)?;
@@ -287,13 +344,22 @@ async fn interface_default_override_and_rejected_targets() -> Result<()> {
     private.set_interfaces(vec![child_interface.clone()])?;
     let private_child = target("PrivateChild", None, false)?;
     private_child.set_parent(Some(private.clone()))?;
+    let static_receiver = target(
+        "StaticReceiver",
+        Some(MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
+        false,
+    )?;
+    static_receiver.set_interfaces(vec![child_interface.clone()])?;
     for (receiver, expected) in [
         (&defaults, &interface),
         (&overrides, &overrides),
         (&private, &interface),
         (&private_child, &interface),
+        (&static_receiver, &interface),
     ] {
         for sync in [false, true] {
+            // The fifth receiver exceeds the four-entry cache and keeps using slow selection.
+            let sync = sync && !Arc::ptr_eq(receiver, &static_receiver);
             let call = dispatch(
                 &frame,
                 &mut arguments(&vm, Some(receiver))?,
@@ -329,17 +395,11 @@ async fn interface_default_override_and_rejected_targets() -> Result<()> {
             )?,
             2,
         ),
-        (
-            target(
-                "StaticReceiver",
-                Some(MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                false,
-            )?,
-            0,
-        ),
     ];
     for (receiver, error_kind) in bad_targets {
-        if error_kind != 0 || receiver.name() == "StaticReceiver" {
+        // Keep cache capacity available so rejected targets would be visible if cached.
+        let (frame, index) = caller(&thread, &child_interface)?;
+        if error_kind != 0 {
             receiver.set_interfaces(vec![child_interface.clone()])?;
         }
         for _ in 0..2 {
@@ -355,6 +415,38 @@ async fn interface_default_override_and_rejected_targets() -> Result<()> {
                 1 => assert!(matches!(result, Err(JavaError(AbstractMethodError(_))))),
                 _ => assert!(matches!(result, Err(JavaError(IllegalAccessError(_))))),
             }
+            let resolution = resolve_method_ref(&frame, index, InvokeKind::Interface).await?;
+            assert!(resolution.dispatch.get(&receiver).is_none());
+        }
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn interface_access_is_checked_before_abstractness() -> Result<()> {
+    let (vm, thread) = crate::test::thread().await?;
+    let interface = target(
+        "AbstractInterface",
+        Some(MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+        true,
+    )?;
+    thread.register_class(interface.clone()).await?;
+    for visibility in [MethodAccessFlags::empty(), MethodAccessFlags::PROTECTED] {
+        let parent = target(
+            "AbstractParent",
+            Some(visibility | MethodAccessFlags::ABSTRACT),
+            false,
+        )?;
+        parent.set_interfaces(vec![interface.clone()])?;
+        let receiver = target("ConcreteLeaf", None, false)?;
+        receiver.set_parent(Some(parent))?;
+        let (frame, index) = caller(&thread, &interface)?;
+        for _ in 0..2 {
+            let mut stack = arguments(&vm, Some(&receiver))?;
+            let result = frame
+                .process_async(&mut stack, &Instruction::Invokeinterface(index, 5))
+                .await;
+            assert!(matches!(result, Err(JavaError(IllegalAccessError(_)))));
             let resolution = resolve_method_ref(&frame, index, InvokeKind::Interface).await?;
             assert!(resolution.dispatch.get(&receiver).is_none());
         }

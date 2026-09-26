@@ -95,6 +95,25 @@ impl From<std::io::Error> for Error {
     }
 }
 
+impl From<ristretto_classloader::MethodResolutionError> for Error {
+    fn from(error: ristretto_classloader::MethodResolutionError) -> Self {
+        use ristretto_classloader::MethodResolutionError;
+
+        match error {
+            MethodResolutionError::NoSuchMethod(message) => {
+                JavaError::NoSuchMethodError(message).into()
+            }
+            MethodResolutionError::IncompatibleClassChange(message) => {
+                JavaError::IncompatibleClassChangeError(message).into()
+            }
+            MethodResolutionError::AbstractMethod(message) => {
+                JavaError::AbstractMethodError(message).into()
+            }
+            MethodResolutionError::ClassLoaderError(error) => error.into(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -104,5 +123,33 @@ mod test {
         let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
         let error = Error::from(io_error);
         assert_eq!(error.to_string(), "Internal error: file not found");
+    }
+
+    #[test]
+    fn test_method_resolution_error_conversion() {
+        use ristretto_classloader::MethodResolutionError;
+
+        let error = Error::from(MethodResolutionError::NoSuchMethod("missing".to_string()));
+        assert!(
+            matches!(error, Error::JavaError(JavaError::NoSuchMethodError(message)) if message == "missing")
+        );
+        let error = Error::from(MethodResolutionError::IncompatibleClassChange(
+            "conflict".to_string(),
+        ));
+        assert!(
+            matches!(error, Error::JavaError(JavaError::IncompatibleClassChangeError(message)) if message == "conflict")
+        );
+        let error = Error::from(MethodResolutionError::AbstractMethod(
+            "abstract".to_string(),
+        ));
+        assert!(
+            matches!(error, Error::JavaError(JavaError::AbstractMethodError(message)) if message == "abstract")
+        );
+        let error = Error::from(MethodResolutionError::ClassLoaderError(
+            ristretto_classloader::Error::PoisonedLock("metadata".to_string()),
+        ));
+        assert!(
+            matches!(error, Error::ClassLoaderError(ristretto_classloader::Error::PoisonedLock(message)) if message == "metadata")
+        );
     }
 }

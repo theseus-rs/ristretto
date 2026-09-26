@@ -182,14 +182,11 @@ pub async fn for_name_0<T: Thread + 'static>(
         };
 
         let class_loader_value = Value::Object(Some(class_loader_ref));
-        let class_loader_class = thread.class("java.lang.ClassLoader").await?;
-        let load_class_method = class_loader_class
-            .try_get_method("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;")?;
         let class_name_value = class_name.to_object(&thread).await?;
         let load_result = thread
-            .execute(
-                &class_loader_class,
-                &load_class_method,
+            .invoke(
+                "java/lang/ClassLoader",
+                "loadClass(Ljava/lang/String;)Ljava/lang/Class;",
                 &[class_loader_value, class_name_value],
             )
             .await;

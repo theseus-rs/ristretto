@@ -40,7 +40,7 @@ use crate::frame::Frame;
 use crate::method_ref_cache::{InvokeKind, MethodRefError, MethodRefErrorKind, ResolvedMethodRef};
 use crate::module_system::{ALL_UNNAMED, AccessCheckResult, ModuleSystem};
 use ristretto_classfile::Constant;
-use ristretto_classloader::{Class, Method};
+use ristretto_classloader::{Class, Method, ResolvedMethod};
 use std::sync::Arc;
 
 /// Resolves a method reference from the constant pool with JPMS access checking and caching.
@@ -122,11 +122,14 @@ pub async fn resolve_method_ref(
 
     // Look up the method in the class hierarchy
     // For interface methods, we allow abstract methods since dispatch happens on the receiver
-    let (resolved_class, method) = if invoke_kind == InvokeKind::Interface {
-        lookup_interface_method(&target_class, &method_name, &method_descriptor)?
+    let ResolvedMethod {
+        declaring_class: resolved_class,
+        method,
+    } = if invoke_kind == InvokeKind::Interface {
+        target_class.resolve_interface_method(&method_name, &method_descriptor)?
     } else {
         // First try normal method lookup
-        match lookup_method(&target_class, &method_name, &method_descriptor) {
+        match target_class.resolve_method(&method_name, &method_descriptor) {
             Ok(result) => result,
             Err(e) => {
                 // If lookup failed, check if this is a holder class with an intrinsic method
@@ -144,12 +147,15 @@ pub async fn resolve_method_ref(
                             &method_name,
                             &method_descriptor,
                         )?;
-                        (target_class.clone(), synthetic_method)
+                        ResolvedMethod {
+                            declaring_class: target_class.clone(),
+                            method: synthetic_method,
+                        }
                     } else {
-                        return Err(e);
+                        return Err(e.into());
                     }
                 } else {
-                    return Err(e);
+                    return Err(e.into());
                 }
             }
         }
@@ -338,168 +344,6 @@ fn should_enforce_jpms_access(caller_module: Option<&str>, target_module: Option
     true
 }
 
-/// Looks up a method in the class hierarchy.
-///
-/// This searches the class and its superclasses/interfaces for a method
-/// with the given name and descriptor.
-///
-/// # Errors
-///
-/// Returns `NoSuchMethodError` if the method is not found.
-pub fn lookup_method(
-    class: &Arc<Class>,
-    name: &str,
-    descriptor: &str,
-) -> Result<(Arc<Class>, Arc<Method>)> {
-    lookup_method_with_private(class, name, descriptor, true)
-}
-
-/// Select an override for virtual dispatch. Private receiver methods cannot override the
-/// resolved method (JVMS 5.4.5); resolved private methods are handled directly by the caller.
-pub(crate) fn lookup_virtual_method(
-    class: &Arc<Class>,
-    name: &str,
-    descriptor: &str,
-) -> Result<(Arc<Class>, Arc<Method>)> {
-    lookup_method_with_private(class, name, descriptor, false)
-}
-
-fn lookup_method_with_private(
-    class: &Arc<Class>,
-    name: &str,
-    descriptor: &str,
-    include_private: bool,
-) -> Result<(Arc<Class>, Arc<Method>)> {
-    // First check the class itself
-    if let Some(method) = class.method(name, descriptor)
-        && (include_private || !method.is_private())
-    {
-        return Ok((class.clone(), method));
-    }
-
-    // Search superclasses
-    let mut current = class.parent()?;
-    while let Some(parent) = current {
-        if let Some(method) = parent.method(name, descriptor)
-            && (include_private || !method.is_private())
-        {
-            return Ok((parent, method));
-        }
-        current = parent.parent()?;
-    }
-
-    // Collect every candidate before choosing: traversal order must not let a
-    // parent interface's default override a more specific subinterface method.
-    let mut interfaces = class.interfaces()?;
-    let mut parent = class.parent()?;
-    while let Some(current) = parent {
-        interfaces.extend(current.interfaces()?);
-        parent = current.parent()?;
-    }
-    let mut visited = std::collections::HashSet::new();
-    let mut candidates = Vec::new();
-    while let Some(interface) = interfaces.pop() {
-        if !visited.insert(interface.name().to_string()) {
-            continue;
-        }
-        interfaces.extend(interface.interfaces()?);
-        if let Some(method) = interface.method(name, descriptor)
-            && !method.is_private()
-            && !method.is_static()
-        {
-            candidates.push((interface, method));
-        }
-    }
-
-    let mut shadowed = std::collections::HashSet::new();
-    for (interface, _) in &candidates {
-        let mut parents = interface.interfaces()?;
-        let mut seen = std::collections::HashSet::new();
-        while let Some(parent) = parents.pop() {
-            if seen.insert(parent.name().to_string()) {
-                shadowed.insert(parent.name().to_string());
-                parents.extend(parent.interfaces()?);
-            }
-        }
-    }
-    candidates.retain(|(interface, _)| !shadowed.contains(interface.name()));
-    let mut concrete = candidates
-        .iter()
-        .filter(|(_, method)| !method.is_abstract());
-    if let Some(selected) = concrete.next() {
-        if concrete.next().is_some() {
-            return Err(crate::JavaError::IncompatibleClassChangeError(format!(
-                "Conflicting interface defaults for {name}{descriptor} in {}",
-                class.name()
-            ))
-            .into());
-        }
-        return Ok(selected.clone());
-    }
-    if let Some(selected) = candidates.into_iter().next() {
-        return Ok(selected);
-    }
-
-    Err(crate::JavaError::NoSuchMethodError(format!(
-        "Method {name}{descriptor} not found in class {}",
-        class.name()
-    ))
-    .into())
-}
-
-/// Looks up a method in an interface and its super-interfaces.
-///
-/// Unlike `lookup_method`, this allows abstract methods since interface dispatch
-/// happens at runtime on the receiver's actual class.
-///
-/// # Errors
-///
-/// Returns `NoSuchMethodError` if the method is not found.
-pub fn lookup_interface_method(
-    interface: &Arc<Class>,
-    name: &str,
-    descriptor: &str,
-) -> Result<(Arc<Class>, Arc<Method>)> {
-    // First check the interface itself
-    if let Some(method) = interface.method(name, descriptor) {
-        return Ok((interface.clone(), method));
-    }
-
-    // Search super-interfaces (including inherited ones)
-    let mut interfaces_to_check: Vec<Arc<Class>> = interface.interfaces()?;
-    let mut visited = std::collections::HashSet::new();
-    visited.insert(interface.name().to_string());
-
-    while let Some(super_interface) = interfaces_to_check.pop() {
-        // Skip if already visited
-        if !visited.insert(super_interface.name().to_string()) {
-            continue;
-        }
-
-        // Check for the method (abstract or default)
-        if let Some(method) = super_interface.method(name, descriptor) {
-            return Ok((super_interface, method));
-        }
-
-        // Add super-interfaces of this interface
-        interfaces_to_check.extend(super_interface.interfaces()?);
-    }
-
-    // For interfaces, also check java.lang.Object methods
-    // (interfaces implicitly inherit Object's public methods)
-    if let Ok(Some(object_class)) = interface.parent()
-        && let Some(method) = object_class.method(name, descriptor)
-    {
-        return Ok((object_class, method));
-    }
-
-    Err(crate::JavaError::NoSuchMethodError(format!(
-        "Method {name}{descriptor} not found in interface {}",
-        interface.name()
-    ))
-    .into())
-}
-
 /// Creates a cached JPMS access error.
 #[must_use]
 pub fn create_jpms_error(
@@ -650,9 +494,9 @@ mod tests {
     async fn test_lookup_method_found_in_class() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java.lang.String").await?;
-        let (resolved_class, method) = lookup_method(&class, "length", "()I")?;
-        assert_eq!(resolved_class.name(), "java/lang/String");
-        assert_eq!(method.name(), "length");
+        let resolved = class.resolve_method("length", "()I")?;
+        assert_eq!(resolved.declaring_class.name(), "java/lang/String");
+        assert_eq!(resolved.method.name(), "length");
         Ok(())
     }
 
@@ -661,9 +505,12 @@ mod tests {
         let vm = VM::default().await?;
         let class = vm.class("java.util.ArrayList").await?;
         // toString is defined in AbstractCollection
-        let (resolved_class, method) = lookup_method(&class, "toString", "()Ljava/lang/String;")?;
-        assert_eq!(resolved_class.name(), "java/util/AbstractCollection");
-        assert_eq!(method.name(), "toString");
+        let resolved = class.resolve_method("toString", "()Ljava/lang/String;")?;
+        assert_eq!(
+            resolved.declaring_class.name(),
+            "java/util/AbstractCollection"
+        );
+        assert_eq!(resolved.method.name(), "toString");
         Ok(())
     }
 
@@ -671,7 +518,7 @@ mod tests {
     async fn test_lookup_method_not_found() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java.lang.String").await?;
-        let result = lookup_method(&class, "nonExistentMethod", "()V");
+        let result = class.resolve_method("nonExistentMethod", "()V");
         assert!(result.is_err());
         Ok(())
     }

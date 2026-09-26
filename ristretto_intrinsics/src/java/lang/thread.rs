@@ -554,7 +554,9 @@ pub async fn start_0<T: Thread + 'static>(
         error!("Failed to set thread status to RUNNABLE: {error}");
     }
 
-    let run_method = thread_class.try_get_method("run", "()V")?;
+    let base_class = thread.class("java/lang/Thread").await?;
+    let base_run = base_class.resolve_method("run", "()V")?;
+    let run = thread_class.select_concrete_method(&base_run)?;
     let thread_value = thread_object.clone();
 
     // Create a new internal thread (Arc<Thread>) and register with the VM
@@ -571,7 +573,7 @@ pub async fn start_0<T: Thread + 'static>(
         let spawn_vm = vm.clone();
         let join_handle = tokio::spawn(async move {
             let result = spawn_thread
-                .execute(&thread_class, &run_method, &[thread_value])
+                .execute(&run.declaring_class, &run.method, &[thread_value])
                 .await;
 
             // Handle uncaught exceptions per JVM specification:
@@ -584,17 +586,13 @@ pub async fn start_0<T: Thread + 'static>(
 
                 // Try to call the thread's dispatchUncaughtException method
                 // which handles the full JVM dispatch chain
-                if let Ok(dispatch_method) = thread_class
-                    .try_get_method("dispatchUncaughtException", "(Ljava/lang/Throwable;)V")
-                {
-                    let _ = spawn_thread
-                        .execute(
-                            &thread_class,
-                            &dispatch_method,
-                            &[thread_ref, throwable_val],
-                        )
-                        .await;
-                }
+                let _ = spawn_thread
+                    .invoke(
+                        "java/lang/Thread",
+                        "dispatchUncaughtException(Ljava/lang/Throwable;)V",
+                        &[thread_ref, throwable_val],
+                    )
+                    .await;
             }
 
             // Cancelled tasks skip these Java heap updates; normal completion marks the
@@ -652,7 +650,7 @@ pub async fn start_0<T: Thread + 'static>(
         let spawn_thread_id = internal_thread_id;
         wasm_bindgen_futures::spawn_local(async move {
             let _ = spawn_thread
-                .execute(&thread_class, &run_method, &[thread_value])
+                .execute(&run.declaring_class, &run.method, &[thread_value])
                 .await;
 
             // Set thread status to TERMINATED and eetop to 0 after execution
@@ -685,7 +683,7 @@ pub async fn start_0<T: Thread + 'static>(
         let spawn_thread_id = internal_thread_id;
         tokio::task::spawn_local(async move {
             let _ = spawn_thread
-                .execute(&thread_class, &run_method, &[thread_value])
+                .execute(&run.declaring_class, &run.method, &[thread_value])
                 .await;
 
             if let Err(error) = set_thread_status(&thread_object, ThreadState::TERMINATED) {

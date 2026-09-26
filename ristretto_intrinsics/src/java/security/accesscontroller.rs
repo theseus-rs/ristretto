@@ -3,9 +3,27 @@ use ristretto_classfile::VersionSpecification::{Between, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::Thread;
-use ristretto_types::{Parameters, Result};
+use ristretto_types::{JavaObject, Parameters, Result};
+use ristretto_types::{Thread, method_resolution};
 use std::sync::Arc;
+
+/// The legacy native entry point validates a public, concrete instance run method before
+/// calling it. Use shared hierarchy resolution while preserving that JDK-specific validation.
+async fn run_action<T: Thread + 'static>(thread: &T, object: Value) -> Result<Option<Value>> {
+    let class = method_resolution::receiver_class(thread, &object).await?;
+    let resolved = class.resolve_method("run", "()Ljava/lang/Object;")?;
+    let method = &resolved.method;
+    if !method.is_public() || method.is_static() || method.is_abstract() {
+        let message = "No run method".to_object(thread).await?;
+        let exception = thread
+            .object("java/lang/InternalError", "Ljava/lang/String;", &[message])
+            .await?;
+        return Err(ristretto_types::Error::Throwable(exception));
+    }
+    thread
+        .execute(&resolved.declaring_class, method, &[object])
+        .await
+}
 
 #[intrinsic_method(
     "java/security/AccessController.doPrivileged(Ljava/security/PrivilegedAction;)Ljava/lang/Object;",
@@ -16,13 +34,7 @@ pub async fn do_privileged_1<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class_name = {
-        let object = object.as_object_ref()?;
-        object.class().name().to_string()
-    };
-    thread
-        .invoke(&class_name, "run()Ljava/lang/Object;", &[object])
-        .await
+    run_action(thread.as_ref(), object).await
 }
 
 #[intrinsic_method(
@@ -35,13 +47,7 @@ pub async fn do_privileged_2<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let _context = parameters.pop()?;
     let object = parameters.pop()?;
-    let class_name = {
-        let object = object.as_object_ref()?;
-        object.class().name().to_string()
-    };
-    thread
-        .invoke(&class_name, "run()Ljava/lang/Object;", &[object])
-        .await
+    run_action(thread.as_ref(), object).await
 }
 
 #[intrinsic_method(
@@ -53,13 +59,7 @@ pub async fn do_privileged_3<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class_name = {
-        let object = object.as_object_ref()?;
-        object.class().name().to_string()
-    };
-    thread
-        .invoke(&class_name, "run()Ljava/lang/Object;", &[object])
-        .await
+    run_action(thread.as_ref(), object).await
 }
 
 #[intrinsic_method(
@@ -72,13 +72,7 @@ pub async fn do_privileged_4<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let _context = parameters.pop()?;
     let object = parameters.pop()?;
-    let class_name = {
-        let object = object.as_object_ref()?;
-        object.class().name().to_string()
-    };
-    thread
-        .invoke(&class_name, "run()Ljava/lang/Object;", &[object])
-        .await
+    run_action(thread.as_ref(), object).await
 }
 
 #[intrinsic_method(

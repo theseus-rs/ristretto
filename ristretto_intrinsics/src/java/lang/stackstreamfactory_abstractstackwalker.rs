@@ -154,27 +154,14 @@ async fn call_stack_walk_impl<T: Thread + 'static>(
         .class("java/lang/StackStreamFactory$WalkerState")
         .await?;
 
-    // Look up `doStackWalk` on the walker's actual class, falling back to
-    // `AbstractStackWalker` (where the private method is declared).
-    let walker_class = {
-        let walker_ref = this.as_object_ref()?;
-        walker_ref.class().clone()
-    };
-    let abstract_walker_class = thread
+    // doStackWalk is a private VM callback, bound to AbstractStackWalker.
+    let dispatch_class = thread
         .class("java/lang/StackStreamFactory$AbstractStackWalker")
         .await?;
-    let (dispatch_class, do_stack_walk) = walker_class
+    let do_stack_walk = dispatch_class
         .methods()
         .into_iter()
-        .find(|m| m.name() == "doStackWalk")
-        .map(|m| (walker_class.clone(), m))
-        .or_else(|| {
-            abstract_walker_class
-                .methods()
-                .into_iter()
-                .find(|m| m.name() == "doStackWalk")
-                .map(|m| (abstract_walker_class.clone(), m))
-        })
+        .find(|method| method.name() == "doStackWalk")
         .ok_or_else(|| InternalError("doStackWalk method not found".to_string()))?;
 
     // Anchor must be a positive non-(-1) value; `consumeFrames()` checks

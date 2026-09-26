@@ -20,6 +20,7 @@ mod frame;
 pub mod handles;
 mod java_error;
 mod java_object;
+pub mod method_resolution;
 pub mod module_access;
 pub mod monitor;
 pub mod native_memory;

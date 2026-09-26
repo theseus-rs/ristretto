@@ -817,16 +817,10 @@ async fn invoke_via_method_handle<T: Thread + 'static>(
         bounds::index(elements, ordinal, "VarHandle access mode")?.clone()
     };
 
-    let var_handle_class = thread.class("java/lang/invoke/VarHandle").await?;
-    let to_method_handle = var_handle_class.try_get_method(
-        "toMethodHandle",
-        "(Ljava/lang/invoke/VarHandle$AccessMode;)Ljava/lang/invoke/MethodHandle;",
-    )?;
-
     let mh_result = thread
-        .execute(
-            &var_handle_class,
-            &to_method_handle,
+        .invoke(
+            "java/lang/invoke/VarHandle",
+            "toMethodHandle(Ljava/lang/invoke/VarHandle$AccessMode;)Ljava/lang/invoke/MethodHandle;",
             &[var_handle, access_mode_value],
         )
         .await?;

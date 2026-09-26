@@ -17,6 +17,7 @@ use ristretto_classfile::{FieldAccessFlags, FieldType, JavaStr, MethodAccessFlag
 use ristretto_classloader::{Class, ClassLoaderType, Method, Object, Reference, Value};
 use ristretto_intrinsics::get_monitor_id;
 use ristretto_macros::async_method;
+use ristretto_types::method_resolution;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, Weak};
@@ -957,13 +958,10 @@ impl Thread {
         let dot_name = class_name_str.replace('/', ".");
 
         let load_result = async {
-            let cl_class = self.class("java/lang/ClassLoader").await?;
-            let load_class_method =
-                cl_class.try_get_method("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;")?;
             let name_value: Value = dot_name.to_object(self).await?;
-            self.execute(
-                &cl_class,
-                &load_class_method,
+            self.invoke(
+                "java/lang/ClassLoader",
+                "loadClass(Ljava/lang/String;)Ljava/lang/Class;",
                 &[java_classloader, name_value],
             )
             .await
@@ -1207,8 +1205,8 @@ impl Thread {
         Ok(())
     }
 
-    /// Invoke a method.  To invoke a method on an object reference, the object reference must be
-    /// the first parameter in the parameters vector.
+    /// Resolve and invoke a method. Instance methods dispatch on the first parameter's run-time
+    /// class; private methods, constructors, and static methods execute their resolved declaration.
     ///
     /// # Errors
     ///
@@ -1228,8 +1226,19 @@ impl Thread {
         let index = method.find('(').unwrap_or_default();
         let name = &method[..index];
         let descriptor = &method[index..];
-        let method = class.try_get_method(name, descriptor)?;
-        self.execute(&class, &method, parameters).await
+        let resolved = class.resolve_method(name, descriptor)?;
+        let parameters = process_values(self, parameters).await?;
+        let target = if resolved.method.is_static() || name == "<init>" || name == "<clinit>" {
+            resolved
+        } else {
+            let receiver = parameters
+                .first()
+                .ok_or_else(|| InternalError("Missing receiver".into()))?;
+            let receiver_class = method_resolution::receiver_class(self, receiver).await?;
+            receiver_class.select_concrete_method(&resolved)?
+        };
+        self.execute(&target.declaring_class, &target.method, &parameters)
+            .await
     }
 
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be
