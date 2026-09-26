@@ -51,10 +51,49 @@ pub fn create_function_with_constant_pool(
 ///
 /// If there is an error creating the function
 pub fn create_function_with_exception_table(
+    constant_pool: ConstantPool,
+    descriptor: &str,
+    instructions: &[Instruction],
+    exception_table: Vec<ristretto_classfile::attributes::ExceptionTableEntry>,
+) -> Result<Function> {
+    let max_stack =
+        instructions.max_stack_with_exception_table(&constant_pool, &exception_table)?;
+    create_function_with_limits(
+        constant_pool,
+        descriptor,
+        instructions,
+        exception_table,
+        max_stack,
+    )
+}
+
+/// Builds an internal JIT fixture with an explicit stack limit. Reserved opcodes
+/// and the JIT's integer representation of legacy return addresses are not valid
+/// class-file bytecode and must not be passed through the class-file analyzer.
+///
+/// # Errors
+///
+/// Returns an error if the fixture cannot be compiled.
+pub fn create_internal_function(
+    descriptor: &str,
+    instructions: &[Instruction],
+    max_stack: u16,
+) -> Result<Function> {
+    create_function_with_limits(
+        ConstantPool::new(),
+        descriptor,
+        instructions,
+        Vec::new(),
+        max_stack,
+    )
+}
+
+fn create_function_with_limits(
     mut constant_pool: ConstantPool,
     descriptor: &str,
     instructions: &[Instruction],
     exception_table: Vec<ristretto_classfile::attributes::ExceptionTableEntry>,
+    test_max_stack: u16,
 ) -> Result<Function> {
     let class_name_index = constant_pool.add_class("Test")?;
     let code_index = constant_pool.add_utf8("Code")?;
@@ -67,7 +106,6 @@ pub fn create_function_with_exception_table(
         descriptor_index: test_descriptor_index,
         attributes: Vec::new(),
     };
-    let test_max_stack = instructions.max_stack(&constant_pool)?;
     let test_max_locals = instructions.max_locals(&constant_pool, &test_method)?;
     test_method.attributes.push(Attribute::Code {
         name_index: code_index,

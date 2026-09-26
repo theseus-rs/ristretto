@@ -1,4 +1,4 @@
-use crate::attributes::Instruction;
+use crate::attributes::{ExceptionTableEntry, Instruction};
 use crate::{ConstantPool, Result};
 
 /// Trait for calculating the maximum stack size required by a sequence of JVM bytecode
@@ -40,7 +40,11 @@ pub trait MaxStack {
     ///
     /// # Errors
     ///
-    /// if the stack size exceeds `u16::MAX`
+    /// Returns an error for stack underflow/overflow, inconsistent branch merge
+    /// heights, invalid control flow, or invalid instruction operands/descriptors.
+    /// This checks slot counts, not JVM operand types. Use the bytecode verifier
+    /// for complete verification. Exception handlers must be supplied through
+    /// [`Self::max_stack_with_exception_table`].
     ///
     /// # Examples
     ///
@@ -65,19 +69,38 @@ pub trait MaxStack {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     fn max_stack(&self, constant_pool: &ConstantPool<'_>) -> Result<u16>;
+
+    /// Calculates maximum stack depth including exception handlers. Handler ranges
+    /// and targets use logical instruction indices, just like branch operands.
+    /// Each handler starts with one exception-reference slot. Unreachable code is
+    /// excluded. Legacy `jsr`/`ret` subroutines are followed using their return
+    /// addresses; this API does not enforce class-file version restrictions.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for invalid exception tables, stack underflow/overflow,
+    /// incompatible merge heights, invalid branches/subroutine returns, recursive
+    /// subroutine calls, or invalid instruction operands/descriptors.
+    fn max_stack_with_exception_table(
+        &self,
+        constant_pool: &ConstantPool<'_>,
+        exception_table: &[ExceptionTableEntry],
+    ) -> Result<u16>;
 }
+
+mod analysis;
 
 impl MaxStack for [Instruction] {
     fn max_stack(&self, constant_pool: &ConstantPool<'_>) -> Result<u16> {
-        let mut max_stack_size = 0;
-        let mut stack: i32 = 0;
-        for instruction in self {
-            let stack_delta = i32::from(instruction.stack_delta(constant_pool)?);
-            stack = stack.saturating_add(stack_delta);
-            max_stack_size = max_stack_size.max(stack);
-        }
-        let max_stack_size = u16::try_from(max_stack_size)?;
-        Ok(max_stack_size)
+        self.max_stack_with_exception_table(constant_pool, &[])
+    }
+
+    fn max_stack_with_exception_table(
+        &self,
+        constant_pool: &ConstantPool<'_>,
+        exception_table: &[ExceptionTableEntry],
+    ) -> Result<u16> {
+        analysis::analyze(self, constant_pool, exception_table)
     }
 }
 
