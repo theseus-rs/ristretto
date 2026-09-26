@@ -1,5 +1,7 @@
 use crate::attributes::Instruction;
-use crate::{BaseType, ConstantPool, FieldType, Method, MethodAccessFlags, Result};
+use crate::{ConstantPool, Error, FieldType, Method, MethodAccessFlags, Result};
+
+mod metadata;
 
 /// Trait for calculating the maximum number of local variables needed by a method.
 ///
@@ -13,6 +15,8 @@ use crate::{BaseType, ConstantPool, FieldType, Method, MethodAccessFlags, Result
 ///     all other types occupy one slot.
 /// 3.  Any additional local variables declared and used within the method body.
 ///     Again, `long` and `double` types will use two slots.
+/// 4.  Local slots required by retained stack maps and local-variable debug tables
+///     in the method's `Code` attributes.
 ///
 /// The JVM uses `max_locals` to determine the size of the local variable array when a new
 /// stack frame is created for a method invocation.
@@ -27,6 +31,8 @@ use crate::{BaseType, ConstantPool, FieldType, Method, MethodAccessFlags, Result
 ///     determine the highest local variable index it uses.
 ///   - Update `max_locals` if this instruction uses a higher index than currently recorded.
 ///     For `long` and `double` types use `index` and `index + 1`.
+/// - Include local slots described by retained `StackMapTable`, `LocalVariableTable`,
+///   and `LocalVariableTypeTable` attributes.
 ///
 /// # Examples
 ///
@@ -82,25 +88,28 @@ pub trait MaxLocals {
     /// Calculates the maximum number of local variable slots required by the method's code.
     ///
     /// This value accounts for the `this` reference (for instance methods), method parameters,
-    /// and any local variables used by the instructions in the method body.
+    /// local variables used by the instructions, and retained code metadata.
     /// `long` and `double` types are correctly handled as occupying two local variable slots.
+    /// This sizes the local array; it does not perform full bytecode or metadata verification.
     ///
     /// # Arguments
     ///
     /// * `constant_pool`: A reference to the `ConstantPool` of the class file, used to parse
     ///   the method descriptor for parameter types.
     /// * `method`: A reference to the `Method` structure, used to access its access flags
-    ///   (to determine if it's static) and its descriptor index.
+    ///   (to determine if it's static), its descriptor index, and nested `Code` attributes.
+    ///   The previous `max_locals` value and previous instructions are not used.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     /// - The method descriptor index in the `method` is invalid or does not point to a
     ///   `CONSTANT_Utf8_info` in the `constant_pool`.
-    /// - Parsing the method descriptor fails.
+    /// - Parsing a method or local-variable descriptor fails, or parameters including
+    ///   `this` exceed the JVM limit of 255 slots.
+    /// - A retained stack map has an invalid frame kind or local-entry count.
     /// - Any instruction's `max_locals_index()` method returns an error (e.g., type conversion).
-    /// - The calculated `max_locals` value would exceed `u16::MAX` (although this is unlikely
-    ///   as individual local indices are `u16`).
+    /// - The calculated `max_locals` value would exceed `u16::MAX`.
     ///
     /// # Examples
     ///
@@ -146,40 +155,36 @@ pub trait MaxLocals {
 }
 
 impl MaxLocals for [Instruction] {
-    #[expect(clippy::bool_to_int_with_if)]
     fn max_locals(&self, constant_pool: &ConstantPool<'_>, method: &Method) -> Result<u16> {
-        let mut max_locals: u16 = if method.access_flags.contains(MethodAccessFlags::STATIC) {
-            // 'this' reference is not present in static methods
-            0
-        } else {
-            // 'this' reference for instance methods
-            1
-        };
-
         let method_descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
         let (parameters, _return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
-        for parameter in parameters {
-            match parameter {
-                FieldType::Base(BaseType::Double | BaseType::Long) => {
-                    // Double and long types take 2 slots each
-                    max_locals = max_locals.saturating_add(2);
-                }
-                _ => {
-                    // Other types take 1 slot each
-                    max_locals = max_locals.saturating_add(1);
-                }
-            }
+        // Keep verification entries separate: chop frames remove entries, and
+        // a long/double entry occupies two local slots.
+        let mut initial_locals = Vec::with_capacity(parameters.len() + 1);
+        if !method.access_flags.contains(MethodAccessFlags::STATIC) {
+            initial_locals.push(1);
+        }
+        initial_locals.extend(parameters.iter().map(FieldType::slot_count));
+        let mut max_locals = metadata::slot_count(&initial_locals)?;
+        if max_locals > 255 {
+            return Err(Error::InvalidMethodDescriptor(
+                method_descriptor.to_string(),
+            ));
         }
 
         for instruction in self {
             if let Some(local_index) = instruction.max_locals_index()? {
                 // Add 1 to convert from 0-based index to a count
-                let max_local_index = local_index.saturating_add(1);
+                let max_local_index = u16::try_from(u32::from(local_index) + 1)?;
                 max_locals = max_locals.max(max_local_index);
             }
         }
 
-        Ok(max_locals)
+        Ok(max_locals.max(metadata::max_locals(
+            constant_pool,
+            method,
+            &initial_locals,
+        )?))
     }
 }
 

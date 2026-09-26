@@ -57,6 +57,9 @@ pub enum Error {
     /// Invalid instruction offset
     #[error("Invalid instruction offset: {0}")]
     InvalidInstructionOffset(u32),
+    /// The instruction has no context-independent operand stack delta.
+    #[error("Instruction {0} has no context-independent stack delta")]
+    InvalidStackEffect(u8),
     /// Invalid magic number when reading a class file
     #[error("Invalid magic number: {0}")]
     InvalidMagicNumber(u32),
