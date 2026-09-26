@@ -85,7 +85,7 @@ console = "0.16.6"
 core-foundation-sys = "0.8.7"
 coreaudio-sys = { version = "0.2.18", features = ["audio_unit"] }
 cpal = "0.18.2"
-cranelift = "0.135.2"
+cranelift = "0.136.1"
 criterion = { version = "0.8.2", default-features = false }
 dashmap = "6.2.1"
 dirs = "7.0.0"
@@ -124,25 +124,25 @@ serde_json = "1.0.151"
 sha1 = "0.11.0"
 sha2 = "0.11.0"
 socket2 = "0.6.5"
-syn = "3.0.5"
+syn = "3.0.6"
 sysinfo = "0.39.6"
 sys-locale = "0.3.2"
 tar = "0.4.46"
 tempfile = "3.27.0"
 test-log = "0.2.21"
 ristretto_test_util = { path = "ristretto_test_util", version = "0.33.0" }
-thiserror = "2.0.20"
+thiserror = "2.0.21"
 thread-priority = "3.1.1"
 tokio = { version = "1.53.1", default-features = false, features = ["macros", "rt", "sync", "time"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 url = "2.5.8"
 walkdir = "2.5.0"
-wasm-bindgen-futures = "0.4.78"
+wasm-bindgen-futures = "0.4.79"
 whoami = "2.1.3"
 windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_Registry", "Win32_Security"] }
 wstd = "0.6.8"
-zerocopy = "0.8.57"
+zerocopy = "0.8.59"
 zip = { version = "8.6.0", default-features = false }
 
 [workspace.metadata.release]
