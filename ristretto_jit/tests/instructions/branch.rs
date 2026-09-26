@@ -1,4 +1,5 @@
 use crate::util::create_function;
+use crate::util::create_internal_function;
 use indexmap::IndexMap;
 use ristretto_classfile::attributes::{Instruction, LookupSwitch, TableSwitch};
 use ristretto_jit::{Result, Value};
@@ -369,6 +370,7 @@ fn goto_w() -> Result<()> {
 
 #[test]
 fn jsr_and_ret() -> Result<()> {
+    // Internal lowering stores the return address as an integer.
     let instructions = vec![
         Instruction::Jsr(2),
         Instruction::Ireturn,
@@ -376,7 +378,7 @@ fn jsr_and_ret() -> Result<()> {
         Instruction::Iconst_2,
         Instruction::Ret(0),
     ];
-    let function = create_function("()I", &instructions)?;
+    let function = create_internal_function("()I", &instructions, 1)?;
     let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(2));
     Ok(())
@@ -384,6 +386,7 @@ fn jsr_and_ret() -> Result<()> {
 
 #[test]
 fn jsr_w_and_ret_w() -> Result<()> {
+    // Internal lowering stores the return address as an integer.
     let instructions = vec![
         Instruction::Jsr_w(2),
         Instruction::Ireturn,
@@ -391,7 +394,7 @@ fn jsr_w_and_ret_w() -> Result<()> {
         Instruction::Iconst_2,
         Instruction::Ret_w(0),
     ];
-    let function = create_function("()I", &instructions)?;
+    let function = create_internal_function("()I", &instructions, 1)?;
     let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(2));
     Ok(())

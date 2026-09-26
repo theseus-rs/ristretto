@@ -105,12 +105,11 @@ pub(crate) fn instructions_from_byte_reader(
             })
     };
 
-    for (index, instruction) in instructions.iter_mut().enumerate() {
-        // Get the byte position for this instruction from the pairs array
-        let (instruction_byte_pos, _) = byte_to_instruction_pairs
-            .get(index)
-            .ok_or(InvalidInstructionOffset(u32::try_from(index)?))?;
-        let instruction_byte_pos = *instruction_byte_pos;
+    // Parsing appends one offset pair per instruction and checks both indices.
+    // Walk them together to reuse those indices without another bounds check.
+    for (&(instruction_byte_pos, instruction_position), instruction) in
+        byte_to_instruction_pairs.iter().zip(&mut instructions)
+    {
         match instruction {
             Instruction::Ifeq(offset)
             | Instruction::Ifne(offset)
@@ -147,7 +146,7 @@ pub(crate) fn instructions_from_byte_reader(
                 let instruction_default = i32::from(
                     lookup_byte(u16::try_from(default_offset)?)
                         .ok_or(InvalidInstructionOffset(default_offset))?,
-                ) - i32::try_from(index)?;
+                ) - i32::from(instruction_position);
                 table_switch.default = instruction_default;
 
                 for offset in &mut table_switch.offsets {
@@ -155,7 +154,7 @@ pub(crate) fn instructions_from_byte_reader(
                     let instruction_offset = i32::from(
                         lookup_byte(u16::try_from(byte_offset)?)
                             .ok_or(InvalidInstructionOffset(byte_offset))?,
-                    ) - i32::try_from(index)?;
+                    ) - i32::from(instruction_position);
                     *offset = instruction_offset;
                 }
             }
@@ -166,7 +165,7 @@ pub(crate) fn instructions_from_byte_reader(
                 let instruction_default = i32::from(
                     lookup_byte(u16::try_from(default_offset)?)
                         .ok_or(InvalidInstructionOffset(default_offset))?,
-                ) - i32::try_from(index)?;
+                ) - i32::from(instruction_position);
                 lookup_switch.default = instruction_default;
 
                 for (_match, offset) in &mut lookup_switch.pairs {
@@ -174,7 +173,7 @@ pub(crate) fn instructions_from_byte_reader(
                     let instruction_offset = i32::from(
                         lookup_byte(u16::try_from(byte_offset)?)
                             .ok_or(InvalidInstructionOffset(byte_offset))?,
-                    ) - i32::try_from(index)?;
+                    ) - i32::from(instruction_position);
                     *offset = instruction_offset;
                 }
             }
