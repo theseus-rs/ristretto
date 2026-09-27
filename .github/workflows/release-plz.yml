@@ -22,6 +22,8 @@ jobs:
           fetch-depth: 0
       - name: Install Rust toolchain
         run: rustup toolchain install --no-self-update
+      - name: Install Linux dependencies
+        run: .github/scripts/setup-linux.sh
       - name: Run release-plz
         uses: release-plz/action@v0.5
         with:
@@ -44,6 +46,8 @@ jobs:
           fetch-depth: 0
       - name: Install Rust toolchain
         run: rustup toolchain install --no-self-update
+      - name: Install Linux dependencies
+        run: .github/scripts/setup-linux.sh
       - name: Run release-plz
         uses: release-plz/action@v0.5
         with:
