@@ -1,4 +1,5 @@
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
+use crate::IntrinsicMethod;
 use crate::JavaError::{RuntimeException, StackOverflowError, UnsatisfiedLinkError, VerifyError};
 use crate::RustValue;
 use crate::configuration::{DEFAULT_MAX_JAVA_STACK_SIZE, JAVA_STACK_SLOT_SIZE, VerifyMode};
@@ -9,7 +10,6 @@ use crate::java_object::JavaObject;
 use crate::jit_runtime_helpers::ThreadRuntime;
 use crate::rust_value::process_values;
 use crate::{Frame, Result, VM, jit};
-use crate::{IntrinsicMethod, Parameters};
 
 use parking_lot::RwLock as ParkingRwLock;
 use ristretto_classfile::attributes::Attribute;
@@ -143,6 +143,9 @@ impl JavaStack {
         {
             return false;
         }
+        if let crate::frame::IntrinsicBinding::Resolved(intrinsic) = call.intrinsic {
+            return intrinsic.is_none();
+        }
         let identity = Arc::as_ptr(&call.method) as usize;
         let index = (identity >> 4) % self.interpreted_targets.len();
         let Some(slot) = self.interpreted_targets.get_mut(index) else {
@@ -178,6 +181,7 @@ impl JavaStack {
             method,
             parameters,
             has_return_type,
+            ..
         } = call;
         let slots = Frame::stack_slots_for(&method)?;
         let used_slots = self.checked_used_slots(slots, &class, &method)?;
@@ -1317,6 +1321,7 @@ impl Thread {
             depth: base_depth,
         };
         let call = MethodCall {
+            intrinsic: crate::frame::IntrinsicBinding::Unresolved,
             class: class.clone(),
             method: method.clone(),
             parameters: parameters.into(),
@@ -1335,6 +1340,7 @@ impl Thread {
         caller: Option<&mut FrameState>,
     ) -> Result<DispatchResult> {
         let MethodCall {
+            intrinsic,
             class,
             method,
             parameters,
@@ -1351,7 +1357,12 @@ impl Thread {
         let monitor_guard = MonitorGuard::new(sync_monitor, self.id);
 
         let method_registry = vm.method_registry();
-        let rust_method = method_registry.method(class_name, method_name, method_descriptor);
+        let rust_method = match intrinsic {
+            crate::frame::IntrinsicBinding::Resolved(method) => method,
+            crate::frame::IntrinsicBinding::Unresolved => method_registry
+                .method(class_name, method_name, method_descriptor)
+                .copied(),
+        };
         let jit_method = if rust_method.is_none() {
             if let Some(compiler) = vm.compiler() {
                 compiler.compile(&class, &method).await?
@@ -1377,7 +1388,7 @@ impl Thread {
             let Some(thread) = self.thread.upgrade() else {
                 return Err(InternalError("Call stack is not available".to_string()));
             };
-            let parameters = Parameters::new(parameters.into_values(caller)?);
+            let parameters = parameters.into_parameters(caller)?;
             let result = match rust_method {
                 IntrinsicMethod::Sync(function) => function(thread, parameters),
                 IntrinsicMethod::Async(function) => function(thread, parameters).await,
@@ -2183,6 +2194,7 @@ mod tests {
 
         assert_eq!(
             ExecutionResult::Call(MethodCall {
+                intrinsic: crate::frame::IntrinsicBinding::Unresolved,
                 class,
                 method,
                 parameters: vec![Value::Int(9)].into(),
@@ -2205,6 +2217,7 @@ mod tests {
             thread.execute(&class, &method, &[Value::Int(1)]).await?
         );
         let call = MethodCall {
+            intrinsic: crate::frame::IntrinsicBinding::Unresolved,
             class,
             method,
             parameters: vec![Value::Int(3)].into(),
@@ -2230,6 +2243,7 @@ mod tests {
         let class = recursive_test_class(&thread).await?;
         let method = class.try_get_method("recurse", "(I)I")?;
         let mut call = MethodCall {
+            intrinsic: crate::frame::IntrinsicBinding::Unresolved,
             class,
             method,
             parameters: vec![Value::Int(0)].into(),
@@ -2237,6 +2251,8 @@ mod tests {
         };
         let mut stack = JavaStack::new(64);
         assert!(stack.can_push_interpreted(&vm, &call));
+        assert!(stack.can_push_interpreted(&vm, &call));
+        call.intrinsic = crate::frame::IntrinsicBinding::Resolved(None);
         assert!(stack.can_push_interpreted(&vm, &call));
         let mut definition = call.method.definition().clone();
         definition.access_flags |= MethodAccessFlags::SYNCHRONIZED;
@@ -2248,6 +2264,7 @@ mod tests {
             call.method.return_type().cloned(),
         ));
         assert!(!stack.can_push_interpreted(&vm, &call));
+        call.intrinsic = crate::frame::IntrinsicBinding::Unresolved;
 
         call.class = thread.class("java/lang/Object").await?;
         let original = call.class.try_get_method("hashCode", "()I")?;
@@ -2262,6 +2279,12 @@ mod tests {
             original.return_type().cloned(),
         ));
         assert!(!stack.can_push_interpreted(&vm, &call));
+        assert!(!stack.can_push_interpreted(&vm, &call));
+        call.intrinsic = crate::frame::IntrinsicBinding::Resolved(
+            vm.method_registry()
+                .method(call.class.name(), "hashCode", "()I")
+                .copied(),
+        );
         assert!(!stack.can_push_interpreted(&vm, &call));
         Ok(())
     }
@@ -2536,6 +2559,28 @@ mod tests {
                 assert_eq!(descriptor.ends_with('V'), result?.is_none());
             }
             assert!(!monitor.is_owned_by(thread.id()));
+            // Repeat through a cached binding with arguments transferred from the caller stack.
+            let mut caller = FrameState::default();
+            caller.stack.reset(arguments.len());
+            for value in &arguments {
+                caller.stack.push(value.clone())?;
+            }
+            let call = MethodCall {
+                intrinsic: crate::frame::IntrinsicBinding::Resolved(intrinsic.copied()),
+                class: class.clone(),
+                method: method.clone(),
+                parameters: CallParameters::Stack(arguments.len()),
+                has_return_type: !descriptor.ends_with('V'),
+            };
+            let cached = thread.dispatch_method(call, Some(&mut caller)).await;
+            assert_eq!(
+                succeeds,
+                cached.is_ok(),
+                "cached {name}: {:?}",
+                cached.as_ref().err()
+            );
+            assert!(caller.stack.is_empty());
+            assert!(!monitor.is_owned_by(thread.id()));
             tokio::time::timeout(Duration::from_secs(1), monitor.acquire(thread.id() + 1))
                 .await
                 .map_err(|error| InternalError(error.to_string()))??;
@@ -2680,44 +2725,6 @@ mod tests {
         let object = thread.object("java/lang/Integer", "I", &[42]).await?;
         let value = object.as_i32()?;
         assert_eq!(42, value);
-        Ok(())
-    }
-
-    #[cfg(not(feature = "audio"))]
-    #[tokio::test]
-    async fn test_disabled_audio_returns_unsatisfied_link_error() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let mut constant_pool = ConstantPool::default();
-        let this_class =
-            constant_pool.add_class("com/sun/media/sound/DirectAudioDeviceProvider")?;
-        let name_index = constant_pool.add_utf8("nGetNumDevices")?;
-        let descriptor_index = constant_pool.add_utf8("()I")?;
-        let method = ristretto_classfile::Method {
-            access_flags: MethodAccessFlags::PUBLIC
-                | MethodAccessFlags::STATIC
-                | MethodAccessFlags::NATIVE,
-            name_index,
-            descriptor_index,
-            ..Default::default()
-        };
-        let class_file = ClassFile {
-            constant_pool,
-            this_class,
-            methods: vec![method],
-            ..Default::default()
-        };
-        let class = Class::from(None, class_file)?;
-        let method = class.try_get_method("nGetNumDevices", "()I")?;
-
-        let error = thread
-            .execute(&class, &method, &[] as &[Value])
-            .await
-            .expect_err("disabled audio intrinsic should fail");
-        assert!(matches!(
-            error,
-            crate::Error::JavaError(UnsatisfiedLinkError(message))
-                if message == "'com/sun/media/sound/DirectAudioDeviceProvider.nGetNumDevices()I'"
-        ));
         Ok(())
     }
 

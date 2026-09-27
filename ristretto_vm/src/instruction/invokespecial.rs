@@ -19,11 +19,13 @@ pub(crate) async fn invokespecial(
     let resolution = resolve_method_ref(frame, method_index, InvokeKind::Special).await?;
 
     instruction::receiver_class(stack.peek_at(resolution.param_count)?)?;
-    let target = resolution.select_special(frame.class())?;
+    let (target, intrinsic) =
+        resolution.select_special(frame.class(), frame.thread()?.vm()?.method_registry())?;
 
     // +1 for the receiver (this)
     let parameters = stack.drain_last(resolution.param_count + 1);
     Ok(ExecutionResult::Call(MethodCall {
+        intrinsic: crate::frame::IntrinsicBinding::Resolved(intrinsic),
         class: target.declaring_class,
         method: target.method,
         parameters: parameters.into(),

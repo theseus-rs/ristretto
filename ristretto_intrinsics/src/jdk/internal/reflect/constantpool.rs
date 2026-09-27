@@ -464,7 +464,7 @@ pub(crate) mod tests {
     };
     use ristretto_classloader::{Class, Object};
     use ristretto_types::VM;
-    use ristretto_vm::AsyncIntrinsicMethod;
+    use std::future::Future;
 
     pub async fn test_object() -> Result<(Arc<ristretto_vm::VM>, Arc<ristretto_vm::Thread>, Value)>
     {
@@ -557,7 +557,9 @@ pub(crate) mod tests {
         Ok((vm, thread, value))
     }
 
-    pub async fn get_class_at_test(get_class_at: AsyncIntrinsicMethod) -> Result<()> {
+    pub async fn get_class_at_test<F: Future<Output = Result<Option<Value>>>>(
+        get_class_at: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(8)]);
         let result = get_class_at(thread, parameters).await?.expect("value");
@@ -572,8 +574,8 @@ pub(crate) mod tests {
         get_class_at_test(get_class_at_0).await
     }
 
-    pub async fn get_class_at_if_loaded_test(
-        get_class_at_if_loaded: AsyncIntrinsicMethod,
+    pub async fn get_class_at_if_loaded_test<F: Future<Output = Result<Option<Value>>>>(
+        get_class_at_if_loaded: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(8)]);
@@ -615,7 +617,9 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    pub async fn get_double_at_test(get_double_at: AsyncIntrinsicMethod) -> Result<()> {
+    pub async fn get_double_at_test<F: Future<Output = Result<Option<Value>>>>(
+        get_double_at: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(13)]);
         let result = get_double_at(thread, parameters).await?.expect("value");
@@ -630,7 +634,9 @@ pub(crate) mod tests {
         get_double_at_test(get_double_at_0).await
     }
 
-    pub async fn get_field_at_test(get_field_at: AsyncIntrinsicMethod) -> Result<()> {
+    pub async fn get_field_at_test<F: Future<Output = Result<Option<Value>>>>(
+        get_field_at: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(20)]);
         let result = get_field_at(thread, parameters).await?.expect("value");
@@ -647,8 +653,8 @@ pub(crate) mod tests {
         get_field_at_test(get_field_at_0).await
     }
 
-    pub async fn get_field_at_if_loaded_test(
-        get_field_at_if_loaded: AsyncIntrinsicMethod,
+    pub async fn get_field_at_if_loaded_test<F: Future<Output = Result<Option<Value>>>>(
+        get_field_at_if_loaded: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(20)]);
@@ -668,7 +674,9 @@ pub(crate) mod tests {
         get_field_at_if_loaded_test(get_field_at_if_loaded_0).await
     }
 
-    pub async fn get_float_at_test(get_float_at: AsyncIntrinsicMethod) -> Result<()> {
+    pub async fn get_float_at_test<F: Future<Output = Result<Option<Value>>>>(
+        get_float_at: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(12)]);
         let result = get_float_at(thread, parameters).await?.expect("value");
@@ -683,7 +691,9 @@ pub(crate) mod tests {
         get_float_at_test(get_float_at_0).await
     }
 
-    pub async fn get_int_at_test(get_int_at: AsyncIntrinsicMethod) -> Result<()> {
+    pub async fn get_int_at_test<F: Future<Output = Result<Option<Value>>>>(
+        get_int_at: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(9)]);
         let result = get_int_at(thread, parameters).await?.expect("value");
@@ -697,7 +707,9 @@ pub(crate) mod tests {
         get_int_at_test(get_int_at_0).await
     }
 
-    pub async fn get_long_at_test(get_long_at: AsyncIntrinsicMethod) -> Result<()> {
+    pub async fn get_long_at_test<F: Future<Output = Result<Option<Value>>>>(
+        get_long_at: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(10)]);
         let result = get_long_at(thread, parameters).await?.expect("value");
@@ -711,8 +723,8 @@ pub(crate) mod tests {
         get_long_at_test(get_long_at_0).await
     }
 
-    pub async fn get_member_ref_info_at_field_test(
-        get_member_ref_info_at: AsyncIntrinsicMethod,
+    pub async fn get_member_ref_info_at_field_test<F: Future<Output = Result<Option<Value>>>>(
+        get_member_ref_info_at: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(20)]);
@@ -736,8 +748,8 @@ pub(crate) mod tests {
         get_member_ref_info_at_field_test(get_member_ref_info_at_0).await
     }
 
-    pub async fn get_member_ref_info_at_method_test(
-        get_member_ref_info_at: AsyncIntrinsicMethod,
+    pub async fn get_member_ref_info_at_method_test<F: Future<Output = Result<Option<Value>>>>(
+        get_member_ref_info_at: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(6)]);
@@ -761,7 +773,9 @@ pub(crate) mod tests {
         get_member_ref_info_at_method_test(get_member_ref_info_at_0).await
     }
 
-    pub async fn get_method_at_constructor_test(get_method_at: AsyncIntrinsicMethod) -> Result<()> {
+    pub async fn get_method_at_constructor_test<F: Future<Output = Result<Option<Value>>>>(
+        get_method_at: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(6)]);
         let result = get_method_at(thread, parameters).await?.expect("value");
@@ -776,7 +790,9 @@ pub(crate) mod tests {
         get_method_at_constructor_test(get_method_at_0).await
     }
 
-    pub async fn get_method_at_method_test(get_method_at: AsyncIntrinsicMethod) -> Result<()> {
+    pub async fn get_method_at_method_test<F: Future<Output = Result<Option<Value>>>>(
+        get_method_at: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(25)]);
         let result = get_method_at(thread, parameters).await?.expect("value");
@@ -793,8 +809,10 @@ pub(crate) mod tests {
         get_method_at_method_test(get_method_at_0).await
     }
 
-    pub async fn get_method_at_if_loaded_constructor_test(
-        get_method_at_if_loaded: AsyncIntrinsicMethod,
+    pub async fn get_method_at_if_loaded_constructor_test<
+        F: Future<Output = Result<Option<Value>>>,
+    >(
+        get_method_at_if_loaded: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(6)]);
@@ -812,8 +830,8 @@ pub(crate) mod tests {
         get_method_at_if_loaded_constructor_test(get_method_at_if_loaded_0).await
     }
 
-    pub async fn get_method_at_if_loaded_method_test(
-        get_method_at_if_loaded: AsyncIntrinsicMethod,
+    pub async fn get_method_at_if_loaded_method_test<F: Future<Output = Result<Option<Value>>>>(
+        get_method_at_if_loaded: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
     ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(25)]);
@@ -891,7 +909,9 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    pub async fn get_size_test(get_size: AsyncIntrinsicMethod) -> Result<()> {
+    pub async fn get_size_test<F: Future<Output = Result<Option<Value>>>>(
+        get_size: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_size(thread, parameters).await?.expect("value");
@@ -905,7 +925,9 @@ pub(crate) mod tests {
         get_size_test(get_size_0).await
     }
 
-    pub async fn get_string_at_test(get_string_at: AsyncIntrinsicMethod) -> Result<()> {
+    pub async fn get_string_at_test<F: Future<Output = Result<Option<Value>>>>(
+        get_string_at: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(16)]);
         let result = get_string_at(thread, parameters).await?.expect("value");
@@ -932,7 +954,9 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    pub async fn get_utf_8_at_test(get_utf_8_at: AsyncIntrinsicMethod) -> Result<()> {
+    pub async fn get_utf_8_at_test<F: Future<Output = Result<Option<Value>>>>(
+        get_utf_8_at: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
+    ) -> Result<()> {
         let (_vm, thread, object) = test_object().await?;
         let parameters = Parameters::new(vec![object, Value::Int(15)]);
         let result = get_utf_8_at(thread, parameters).await?.expect("value");

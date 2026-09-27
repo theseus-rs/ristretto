@@ -20,12 +20,8 @@ workspace = true
 [dependencies]
 ahash = { workspace = true }
 async-recursion = { workspace = true }
-bitflags = { workspace = true }
-byteorder = { workspace = true }
 dashmap = { workspace = true }
-flate2 = { workspace = true }
 indexmap = { workspace = true }
-jiff = { workspace = true }
 parking_lot = { workspace = true }
 portable-atomic = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.33.0" }
@@ -35,28 +31,17 @@ ristretto_intrinsics = { path = "../ristretto_intrinsics", version = "0.33.0", d
 ristretto_jit = { path = "../ristretto_jit", version = "0.33.0" }
 ristretto_macros = { path = "../ristretto_macros", version = "0.33.0" }
 ristretto_types = { path = "../ristretto_types", version = "0.33.0" }
-sys-locale = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 zerocopy = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-getrandom = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
 
-[target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dependencies]
-wasm-bindgen-futures = { workspace = true }
-
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-console = { workspace = true }
-dirs = { workspace = true }
-filetime = { workspace = true }
-getrandom = { workspace = true }
-os_info = { workspace = true }
 rayon = { workspace = true }
 sysinfo = { workspace = true }
 tokio = { workspace = true, features = ["fs", "time"] }
-whoami = { workspace = true }
 
 [target.'cfg(all(not(target_family = "wasm"), target_endian = "little", not(target_os = "dragonfly"), not(any(target_arch = "mips", target_arch = "mips64"))))'.dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread"] }
@@ -97,8 +82,6 @@ url = [
 ignored = [
     # used by async functions in proc macros
     "async-recursion",
-    # used by wasm target
-    "getrandom",
 ]
 
 [[bench]]
@@ -108,3 +91,7 @@ name = "vm"
 [[bench]]
 harness = false
 name = "compiler"
+
+[[bench]]
+harness = false
+name = "intrinsics"

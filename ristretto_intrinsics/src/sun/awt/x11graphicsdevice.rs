@@ -440,20 +440,7 @@ pub fn get_double_buffer_visuals_linux_ge_v11<T: Thread + 'static>(
 }
 
 #[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "sun/awt/X11GraphicsDevice.getNativeScaleFactor(I)D",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn get_native_scale_factor_linux_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _screen = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/awt/X11GraphicsDevice.getNativeScaleFactor(I)D".to_string(),
-    )
-    .into())
-}
+pub use get_native_scale_factor as get_native_scale_factor_linux_ge_v11;
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
@@ -493,20 +480,7 @@ pub fn init_xrandr_extension_linux_v11<T: Thread + 'static>(
 }
 
 #[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "sun/awt/X11GraphicsDevice.initXrandrExtension(Z)Z",
-    GreaterThanOrEqual(JAVA_17)
-)]
-pub fn init_xrandr_extension_linux_ge_v17_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _use_old_config_display_mode = parameters.pop_bool()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/awt/X11GraphicsDevice.initXrandrExtension(Z)Z".to_string(),
-    )
-    .into())
-}
+pub use init_xrandr_extension_linux_ge_v17_v1 as init_xrandr_extension_linux_ge_v17_v2;
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
@@ -524,20 +498,7 @@ pub fn is_dbesupported_linux_ge_v11<T: Thread + 'static>(
 }
 
 #[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "sun/awt/X11GraphicsDevice.pGetBounds(I)Ljava/awt/Rectangle;",
-    GreaterThanOrEqual(JAVA_17)
-)]
-pub fn p_get_bounds_linux_ge_v17<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _screen_num = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/awt/X11GraphicsDevice.pGetBounds(I)Ljava/awt/Rectangle;".to_string(),
-    )
-    .into())
-}
+pub use p_get_bounds as p_get_bounds_linux_ge_v17;
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/X11GraphicsDevice.resetNativeData(I)V", Equal(JAVA_11))]

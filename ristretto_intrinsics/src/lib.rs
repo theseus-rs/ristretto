@@ -34,6 +34,10 @@ pub mod apple;
 /// Filesystem helpers with platform-appropriate async backends.
 mod async_fs;
 mod bounds;
+mod registry;
+pub use registry::register;
+#[doc(hidden)]
+pub use registry::signatures_for_os;
 /// Methods from the COM-related packages
 pub mod com;
 /// Core Java standard library methods

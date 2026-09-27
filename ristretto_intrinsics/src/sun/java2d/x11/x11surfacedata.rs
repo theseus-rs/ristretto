@@ -180,20 +180,7 @@ pub fn xset_xor_mode_linux_ge_v11<T: Thread + 'static>(
 }
 
 #[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "sun/java2d/x11/X11SurfaceData.initIDs(Ljava/lang/Class;)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn init_ids_linux_ge_v11_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _xor_comp = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/java2d/x11/X11SurfaceData.initIDs(Ljava/lang/Class;)V".to_string(),
-    )
-    .into())
-}
+pub use init_ids_linux_ge_v11_v1 as init_ids_linux_ge_v11_v2;
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method(

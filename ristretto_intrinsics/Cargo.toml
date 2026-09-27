@@ -120,6 +120,9 @@ audio = [
 ]
 
 [dev-dependencies]
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true, features = ["full", "extra-traits"] }
 ristretto_test_util = { path = "../ristretto_test_util", version = "0.33.0" }
 ristretto_vm = { path = "../ristretto_vm", version = "0.33.0", default-features = false }
 tempfile = { workspace = true }
@@ -131,4 +134,12 @@ tokio = { workspace = true, features = ["rt-multi-thread"] }
 ignored = [
     # used by async functions in proc macros
     "async-recursion",
+    # used by build/registry.rs in the build script and registry generator tests
+    "proc-macro2",
 ]
+
+[build-dependencies]
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true, features = ["full", "extra-traits"] }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.33.0" }

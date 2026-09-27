@@ -42,6 +42,7 @@ pub(crate) async fn invokeinterface(
     };
     if let Some(target) = resolution.dispatch.get(&object_class) {
         return Ok(ExecutionResult::Call(MethodCall {
+            intrinsic: crate::frame::IntrinsicBinding::Resolved(target.intrinsic),
             class: target.class.clone(),
             method: target.method.clone(),
             parameters: parameters.into(),
@@ -103,13 +104,24 @@ pub(crate) async fn invokeinterface(
         .into());
     }
 
+    let intrinsic = thread
+        .vm()?
+        .method_registry()
+        .method(
+            resolved_class.name(),
+            resolved_method.name(),
+            resolved_method.descriptor(),
+        )
+        .copied();
     resolution.dispatch.store(ReceiverTarget {
+        intrinsic,
         receiver_class: object_class,
         class: resolved_class.clone(),
         method: resolved_method.clone(),
     });
 
     Ok(ExecutionResult::Call(MethodCall {
+        intrinsic: crate::frame::IntrinsicBinding::Resolved(intrinsic),
         class: resolved_class,
         method: resolved_method,
         parameters: parameters.into(),

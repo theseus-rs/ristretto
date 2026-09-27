@@ -802,6 +802,10 @@ pub async fn write_0<T: Thread + 'static>(
     "sun/nio/ch/SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J",
     GreaterThanOrEqual(JAVA_21)
 )]
+#[expect(
+    clippy::too_many_lines,
+    reason = "vectored write backends share argument and completion handling"
+)]
 pub async fn writev_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

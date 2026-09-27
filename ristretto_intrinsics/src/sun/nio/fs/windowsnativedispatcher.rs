@@ -883,30 +883,24 @@ pub async fn backup_read0<T: Thread + 'static>(
             "BackupRead0: invalid buffer address".to_string(),
         ));
     }
-    let result_context = if abort || context == 0 {
-        if context_handle != 0 {
-            contexts
-                .pointers
-                .lock()
-                .map_err(|_| InternalError("poisoned backup context map".to_string()))?
-                .remove(&context_handle);
+    let result_context = {
+        let mut pointers = contexts
+            .pointers
+            .lock()
+            .map_err(|_| InternalError("poisoned backup context map".to_string()))?;
+        if abort || context == 0 {
+            if context_handle != 0 {
+                pointers.remove(&context_handle);
+            }
+            0
+        } else if context_handle != 0 {
+            pointers.insert(context_handle, context);
+            context_handle
+        } else {
+            let new_handle = contexts.next.fetch_add(1, Ordering::Relaxed);
+            pointers.insert(new_handle, context);
+            new_handle
         }
-        0
-    } else if context_handle != 0 {
-        contexts
-            .pointers
-            .lock()
-            .map_err(|_| InternalError("poisoned backup context map".to_string()))?
-            .insert(context_handle, context);
-        context_handle
-    } else {
-        let new_handle = contexts.next.fetch_add(1, Ordering::Relaxed);
-        contexts
-            .pointers
-            .lock()
-            .map_err(|_| InternalError("poisoned backup context map".to_string()))?
-            .insert(new_handle, context);
-        new_handle
     };
     let mut guard = obj_gc.write();
     let Reference::Object(ref mut obj) = *guard else {

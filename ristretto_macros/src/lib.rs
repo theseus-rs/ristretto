@@ -9,7 +9,6 @@
 
 mod async_method;
 mod intrinsic;
-mod intrinsic_registry;
 
 extern crate proc_macro;
 
@@ -26,15 +25,14 @@ use proc_macro::TokenStream;
 /// The macro takes two arguments:
 /// 1. `signature`: A string literal representing the full method signature, including the class
 ///    name, method name, and method descriptor
-///    (e.g., `"java/lang/System.currentTimeMillis:()J"`).
+///    (e.g., `"java/lang/System.currentTimeMillis()J"`).
 /// 2. `version_specification`: A `ristretto_classfile::VersionSpecification` enum variant that
 ///    specifies the Java versions for which this intrinsic is applicable
 ///    (e.g., `VersionSpecification::Any` or `VersionSpecification::GreaterThanOrEqual(JAVA_17)`).
 ///
-/// The macro generates a static item that associates the full intrinsic identifier, the Rust
-/// function's name, and the version specification.  This static is only used for compile time
-/// verification of `signature` uniqueness within a source file and proper definition of the
-/// `version_specification` enum variant.
+///
+/// The macro validates the Java descriptor and type-checks the version expression.
+/// The intrinsics crate generates the typed registry and rejects overlapping registrations.
 ///
 /// # Examples
 ///
@@ -49,7 +47,7 @@ use proc_macro::TokenStream;
 /// }
 /// ```
 ///
-/// Async intrinsics automatically receive platform-aware recursive future boxing:
+/// Async bodies remain unboxed; the intrinsics registry supplies a platform-aware boxed adapter:
 ///
 /// ```text
 /// #[intrinsic_method("java/lang/Object.getClass()Ljava/lang/Class;", Any)]
@@ -62,10 +60,8 @@ use proc_macro::TokenStream;
 /// ```
 ///
 /// The macro detects the `async` declaration, rather than inferring it from the body.
-/// Async futures are `Send` on native targets and may be non-`Send` on WebAssembly.
-/// An existing `#[async_method]` immediately below this attribute is accepted without
-/// double boxing, but is unnecessary. The generated registration metadata preserves
-/// the intrinsic name, Rust function name, and Java version specification.
+/// Registry futures are `Send` on native targets and may be non-`Send` on WebAssembly.
+/// Use `#[async_method]` explicitly only when boxing is needed to break recursion.
 #[proc_macro_attribute]
 pub fn intrinsic_method(attributes: TokenStream, item: TokenStream) -> TokenStream {
     intrinsic::process(attributes.into(), item.into()).into()
@@ -92,23 +88,4 @@ pub fn intrinsic_method(attributes: TokenStream, item: TokenStream) -> TokenStre
 #[proc_macro_attribute]
 pub fn async_method(_attributes: TokenStream, item: TokenStream) -> TokenStream {
     async_method::process(item.into()).into()
-}
-
-/// A procedural macro that generates the intrinsic method registry at compile time.
-///
-/// This macro scans the `ristretto_intrinsics/src/` directory for functions annotated with
-/// `#[intrinsic_method]`, extracts their signatures and version specifications, and generates
-/// static `LazyLock<AHashMap>` registries for each supported Java version.
-///
-/// # Usage
-///
-/// ```text
-/// generate_intrinsic_registry!();
-/// ```
-///
-/// This generates static registry maps named `JAVA_8`, `JAVA_11`, `JAVA_17`, `JAVA_21`, and `JAVA_25`,
-/// each mapping method signatures to their intrinsic method implementations.
-#[proc_macro]
-pub fn generate_intrinsic_registry(input: TokenStream) -> TokenStream {
-    intrinsic_registry::process(input.into()).into()
 }

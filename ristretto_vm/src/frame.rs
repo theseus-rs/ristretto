@@ -37,11 +37,23 @@ use tracing::{Level, debug, event_enabled};
 /// Maximum number of bytecodes executed in one interpreter batch.
 pub(crate) const INSTRUCTION_BATCH_SIZE: usize = 256;
 
+/// Whether a call target has already been bound to its VM's intrinsic registry.
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) enum IntrinsicBinding {
+    /// Host calls and other uncached paths still require a lookup.
+    #[default]
+    Unresolved,
+    /// Cached implementation or a cached miss for the actual target.
+    Resolved(Option<crate::intrinsic_methods::IntrinsicMethod>),
+}
+
 /// A resolved Java method invocation that the thread trampoline must dispatch.
 #[derive(Debug)]
 pub(crate) struct MethodCall {
     pub(crate) class: Arc<Class>,
     pub(crate) method: Arc<Method>,
+    /// Intrinsic selected for this VM and actual dispatch target.
+    pub(crate) intrinsic: IntrinsicBinding,
     pub(crate) parameters: CallParameters,
     pub(crate) has_return_type: bool,
 }
@@ -212,6 +224,22 @@ impl CallParameters {
     pub(crate) fn into_values(self, caller: Option<&mut FrameState>) -> Result<Vec<Value>> {
         match self {
             Self::Owned(values) => Ok(values),
+            Self::Stack(count) => {
+                let caller = caller.ok_or_else(|| {
+                    InternalError("Missing caller for stack arguments".to_owned())
+                })?;
+                Ok(caller.stack.drain_values(count)?.collect())
+            }
+        }
+    }
+
+    /// Transfer ownership directly into inline intrinsic argument storage.
+    pub(crate) fn into_parameters(
+        self,
+        caller: Option<&mut FrameState>,
+    ) -> Result<crate::Parameters> {
+        match self {
+            Self::Owned(values) => Ok(crate::Parameters::new(values)),
             Self::Stack(count) => {
                 let caller = caller.ok_or_else(|| {
                     InternalError("Missing caller for stack arguments".to_owned())
@@ -1256,12 +1284,14 @@ mod tests {
     async fn test_method_call_equality() -> Result<()> {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let call = MethodCall {
+            intrinsic: IntrinsicBinding::Unresolved,
             class: frame.class().clone(),
             method: frame.method().clone(),
             parameters: vec![Value::Int(42)].into(),
             has_return_type: true,
         };
         let same_call = MethodCall {
+            intrinsic: IntrinsicBinding::Unresolved,
             class: frame.class().clone(),
             method: frame.method().clone(),
             parameters: vec![Value::Int(42)].into(),

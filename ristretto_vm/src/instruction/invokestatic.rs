@@ -27,6 +27,7 @@ pub(crate) async fn invokestatic(
 
     let parameters = stack.drain_last(resolution.param_count);
     Ok(ExecutionResult::Call(MethodCall {
+        intrinsic: crate::frame::IntrinsicBinding::Resolved(resolution.intrinsic),
         class: resolution.declaring_class.clone(),
         method: resolution.method.clone(),
         parameters: parameters.into(),

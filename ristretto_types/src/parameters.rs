@@ -3,19 +3,22 @@ use crate::Result;
 use ristretto_classloader::{Reference, Value};
 use ristretto_gc::Gc;
 use ristretto_gc::sync::RwLock;
+use smallvec::SmallVec;
 use std::fmt::Display;
 
 /// Parameters for Ristretto VM methods
 #[derive(Clone, Debug, Default)]
 pub struct Parameters {
-    parameters: Vec<Value>,
+    parameters: SmallVec<[Value; 4]>,
 }
 
 impl Parameters {
     /// Create parameters from a vector of values.
     #[must_use]
     pub fn new(parameters: Vec<Value>) -> Self {
-        Parameters { parameters }
+        Parameters {
+            parameters: SmallVec::from_vec(parameters),
+        }
     }
 
     /// Push a value onto the parameters.
@@ -169,9 +172,9 @@ impl Parameters {
         self.parameters.is_empty()
     }
 
-    /// Returns a reference to the inner Vec
+    /// Returns the parameters as a slice. Prefer `as_slice` in new code.
     #[must_use]
-    pub fn as_vec(&self) -> &Vec<Value> {
+    pub fn as_vec(&self) -> &[Value] {
         &self.parameters
     }
 
@@ -184,13 +187,21 @@ impl Parameters {
     /// Returns a cloned Vec
     #[must_use]
     pub fn to_vec(&self) -> Vec<Value> {
-        self.parameters.clone()
+        self.parameters.to_vec()
     }
 
     /// Consumes self and returns the Vec
     #[must_use]
     pub fn into_vec(self) -> Vec<Value> {
-        self.parameters
+        self.parameters.into_vec()
+    }
+}
+
+impl FromIterator<Value> for Parameters {
+    fn from_iter<I: IntoIterator<Item = Value>>(values: I) -> Self {
+        Self {
+            parameters: values.into_iter().collect(),
+        }
     }
 }
 
@@ -211,6 +222,21 @@ impl Display for Parameters {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn inline_arguments_spill_without_reordering() -> Result<()> {
+        let mut parameters: Parameters = (0..4).map(Value::Int).collect();
+        assert!(!parameters.parameters.spilled());
+        parameters.push_int(4);
+        assert!(parameters.parameters.spilled());
+        for expected in (0..5).rev() {
+            assert_eq!(parameters.pop_int()?, expected);
+        }
+        assert!(matches!(parameters.pop(), Err(ParametersUnderflow)));
+        let owned = Parameters::new(vec![Value::Int(7)]);
+        assert_eq!(owned.into_vec(), vec![Value::Int(7)]);
+        Ok(())
+    }
 
     #[test]
     fn test_new() {

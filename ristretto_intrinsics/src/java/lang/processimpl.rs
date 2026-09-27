@@ -1,11 +1,7 @@
-#[cfg(target_os = "windows")]
-use ristretto_classfile::JAVA_8;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::JAVA_11;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::VersionSpecification::Any;
-#[cfg(target_os = "windows")]
-use ristretto_classfile::VersionSpecification::Equal;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 #[cfg(not(target_family = "wasm"))]
@@ -545,104 +541,41 @@ fn parse_windows_command_line(cmdstr: &str) -> (String, String) {
 
 /// JDK 8 alias for `ProcessImpl.closeHandle(J)Z`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
-#[intrinsic_method("java/lang/ProcessImpl.closeHandle(J)Z", Equal(JAVA_8))]
-pub fn close_handle_windows_v8<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    close_handle(thread, parameters)
-}
+pub use close_handle as close_handle_windows_v8;
 
 /// JDK 8 alias for `ProcessImpl.create(...)J`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/lang/ProcessImpl.create(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[JZ)J",
-    Equal(JAVA_8)
-)]
-pub fn create_windows_v8<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    create(thread, parameters)
-}
+pub use create as create_windows_v8;
 
 /// JDK 8 alias for `ProcessImpl.getExitCodeProcess(J)I`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
-#[intrinsic_method("java/lang/ProcessImpl.getExitCodeProcess(J)I", Equal(JAVA_8))]
-pub fn get_exit_code_process_windows_v8<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    get_exit_code_process(thread, parameters)
-}
+pub use get_exit_code_process as get_exit_code_process_windows_v8;
 
 /// JDK 8 alias for `ProcessImpl.getStillActive()I`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
-#[intrinsic_method("java/lang/ProcessImpl.getStillActive()I", Equal(JAVA_8))]
-pub fn get_still_active_windows_v8<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    get_still_active(thread, parameters)
-}
+pub use get_still_active as get_still_active_windows_v8;
 
 /// JDK 8 alias for `ProcessImpl.isProcessAlive(J)Z`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
-#[intrinsic_method("java/lang/ProcessImpl.isProcessAlive(J)Z", Equal(JAVA_8))]
-pub fn is_process_alive_windows_v8<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    is_process_alive(thread, parameters)
-}
+pub use is_process_alive as is_process_alive_windows_v8;
 
 /// JDK 8 alias for `ProcessImpl.openForAtomicAppend(Ljava/lang/String;)J`;
 /// delegates to the modern implementation.
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/lang/ProcessImpl.openForAtomicAppend(Ljava/lang/String;)J",
-    Equal(JAVA_8)
-)]
-pub fn open_for_atomic_append_windows_v8<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    open_for_atomic_append(thread, parameters)
-}
+pub use open_for_atomic_append as open_for_atomic_append_windows_v8;
 
 /// JDK 8 alias for `ProcessImpl.terminateProcess(J)V`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
-#[intrinsic_method("java/lang/ProcessImpl.terminateProcess(J)V", Equal(JAVA_8))]
-pub fn terminate_process_windows_v8<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    terminate_process(thread, parameters)
-}
+pub use terminate_process as terminate_process_windows_v8;
 
 /// JDK 8 alias for `ProcessImpl.waitForInterruptibly(J)V`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
-#[intrinsic_method("java/lang/ProcessImpl.waitForInterruptibly(J)V", Equal(JAVA_8))]
-pub async fn wait_for_interruptibly_windows_v8<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    wait_for_interruptibly(thread, parameters).await
-}
+pub use wait_for_interruptibly as wait_for_interruptibly_windows_v8;
 
 /// JDK 8 alias for `ProcessImpl.waitForTimeoutInterruptibly(JJ)V`;
 /// delegates to the modern implementation.
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/lang/ProcessImpl.waitForTimeoutInterruptibly(JJ)V",
-    Equal(JAVA_8)
-)]
-pub async fn wait_for_timeout_interruptibly_windows_v8<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    wait_for_timeout_interruptibly(thread, parameters).await
-}
+pub use wait_for_timeout_interruptibly as wait_for_timeout_interruptibly_windows_v8;
 
 #[cfg(all(test, not(target_family = "wasm")))]
 mod tests {

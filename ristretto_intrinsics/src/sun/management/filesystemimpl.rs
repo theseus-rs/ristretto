@@ -53,32 +53,10 @@ pub fn is_security_supported0<T: Thread + 'static>(
 }
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method("sun/management/FileSystemImpl.init0()V", Equal(JAVA_8))]
-pub fn init0_windows_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(
-        JavaError::UnsatisfiedLinkError("sun/management/FileSystemImpl.init0()V".to_string())
-            .into(),
-    )
-}
+pub use init0 as init0_windows_v8;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/management/FileSystemImpl.isSecuritySupported0(Ljava/lang/String;)Z",
-    Equal(JAVA_8)
-)]
-pub fn is_security_supported0_windows_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/management/FileSystemImpl.isSecuritySupported0(Ljava/lang/String;)Z".to_string(),
-    )
-    .into())
-}
+pub use is_security_supported0 as is_security_supported0_windows_v8;
 
 #[cfg(test)]
 mod tests {

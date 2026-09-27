@@ -429,7 +429,6 @@ pub fn set_scoped_value_cache<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.sleep(J)V", LessThanOrEqual(JAVA_17))]
-#[cfg_attr(target_family = "wasm", expect(clippy::needless_pass_by_value))]
 pub async fn sleep<T: Thread + 'static>(
     #[cfg_attr(target_family = "wasm", expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -469,7 +468,6 @@ pub async fn sleep_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.sleepNanos0(J)V", GreaterThanOrEqual(JAVA_25))]
-#[cfg_attr(target_family = "wasm", expect(clippy::needless_pass_by_value))]
 pub async fn sleep_nanos_0<T: Thread + 'static>(
     #[cfg_attr(target_family = "wasm", expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,

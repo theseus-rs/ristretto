@@ -88,7 +88,7 @@ pub async fn drain<T: Thread + 'static>(
                 _ => break,
             }
         }
-        return Ok(Some(Value::from(any)));
+        Ok(Some(Value::from(any)))
     }
 
     #[cfg(target_family = "windows")]
@@ -170,7 +170,7 @@ pub async fn drain_1<T: Thread + 'static>(
         let result = super::posix::read_descriptor(fd, &mut byte)?;
         // OpenJDK's drain1 maps EAGAIN/EWOULDBLOCK to zero, unlike normal
         // reads where IOS_UNAVAILABLE (-2) is returned.
-        return Ok(Some(Value::Int(if result == -2 { 0 } else { result })));
+        Ok(Some(Value::Int(if result == -2 { 0 } else { result })))
     }
 
     #[cfg(target_family = "windows")]
@@ -446,10 +446,10 @@ pub async fn write_1<T: Thread + 'static>(
     {
         let fd = super::posix::raw_descriptor(&*vm, fd).await;
         let byte = byte_val.to_ne_bytes()[0];
-        return Ok(Some(Value::Int(super::posix::write_descriptor(
+        Ok(Some(Value::Int(super::posix::write_descriptor(
             fd,
             &[byte],
-        )?)));
+        )?)))
     }
 
     #[cfg(target_family = "windows")]

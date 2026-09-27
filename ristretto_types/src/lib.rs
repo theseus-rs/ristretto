@@ -18,6 +18,7 @@ mod assignable;
 mod error;
 mod frame;
 pub mod handles;
+mod intrinsic;
 mod java_error;
 mod java_object;
 pub mod method_resolution;
@@ -35,6 +36,10 @@ mod vm;
 pub use assignable::Assignable;
 pub use error::{Error, Result};
 pub use frame::Frame;
+pub use intrinsic::{
+    AsyncIntrinsicMethod, IntrinsicMetadata, IntrinsicMethod, IntrinsicRegistry,
+    SyncIntrinsicMethod, intrinsic_version_bit,
+};
 pub use java_error::JavaError;
 pub use java_object::JavaObject;
 pub use module_access::{

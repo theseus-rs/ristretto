@@ -85,40 +85,13 @@ pub fn notify_addr_change0<T: Thread + 'static>(
 }
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method("sun/net/dns/ResolverConfigurationImpl.init0()V", Any)]
-pub fn init0_windows<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/net/dns/ResolverConfigurationImpl.init0()V".to_string(),
-    )
-    .into())
-}
+pub use init0 as init0_windows;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method("sun/net/dns/ResolverConfigurationImpl.loadDNSconfig0()V", Any)]
-pub fn load_dnsconfig0_windows<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/net/dns/ResolverConfigurationImpl.loadDNSconfig0()V".to_string(),
-    )
-    .into())
-}
+pub use load_dnsconfig0 as load_dnsconfig0_windows;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method("sun/net/dns/ResolverConfigurationImpl.notifyAddrChange0()I", Any)]
-pub fn notify_addr_change0_windows<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/net/dns/ResolverConfigurationImpl.notifyAddrChange0()I".to_string(),
-    )
-    .into())
-}
+pub use notify_addr_change0 as notify_addr_change0_windows;
 
 #[cfg(all(test, any(target_family = "unix", target_os = "windows")))]
 mod tests {

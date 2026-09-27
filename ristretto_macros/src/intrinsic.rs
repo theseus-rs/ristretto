@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
+use quote::quote;
 use syn::parse::{Parse, ParseStream, Result as SynResult};
 use syn::{Expr, ItemFn, LitStr};
 
@@ -14,6 +14,9 @@ impl Parse for IntrinsicMethodArgs {
         let signature: LitStr = input.parse()?;
         input.parse::<syn::Token![,]>()?;
         let version_spec: Expr = input.parse()?;
+        if input.peek(syn::Token![,]) {
+            input.parse::<syn::Token![,]>()?;
+        }
         Ok(IntrinsicMethodArgs {
             signature,
             version_specification: version_spec,
@@ -28,6 +31,9 @@ pub(crate) fn process(attributes: TokenStream, item: TokenStream) -> TokenStream
         Err(error) => return error.to_compile_error(),
     };
     let signature_lit = &arguments.signature;
+    if let Err(message) = validate_signature(&signature_lit.value()) {
+        return syn::Error::new_spanned(signature_lit, message).to_compile_error();
+    }
     let version_specification_expr = &arguments.version_specification;
 
     let mut input_fn = match syn::parse2::<ItemFn>(item) {
@@ -43,6 +49,11 @@ pub(crate) fn process(attributes: TokenStream, item: TokenStream) -> TokenStream
                 clippy::unnecessary_wraps,
                 reason = "intrinsic registry entries share an owned-argument, fallible calling convention"
             )]
+        });
+    }
+    if input_fn.sig.asyncness.is_some() {
+        input_fn.attrs.push(syn::parse_quote! {
+            #[allow(clippy::unused_async, reason = "the declared async calling convention may suspend on other targets")]
         });
     }
     let returns_result = matches!(&input_fn.sig.output, syn::ReturnType::Type(_, ty)
@@ -62,43 +73,14 @@ pub(crate) fn process(attributes: TokenStream, item: TokenStream) -> TokenStream
             #[allow(clippy::missing_errors_doc, reason = "the intrinsic macro supplies the standard error contract")]
         });
     }
-    let fn_name = &input_fn.sig.ident;
-    let fn_vis = &input_fn.vis;
-
-    // Generate a unique identifier for the static registration item to ensure registrations do not
-    // conflict.
-    let constant_name = signature_lit
-        .value()
-        .replace(['/', '$', '.', '(', ')', ';', '['], "_");
-    let fn_name_str = fn_name.to_string();
-    let fn_name_clean = fn_name_str.strip_prefix("r#").unwrap_or(&fn_name_str);
-    let registration_ident = format_ident!("_{constant_name}_{fn_name_clean}_INTRINSIC_DATA");
-
-    let intrinsic_name_expr = quote! { #signature_lit };
-
-    // The generated static item will hold the intrinsic name, the function name, and the version
-    // specification. This verifies:
-    //
-    // 1. The intrinsic name registration will not conflict within a single source file, as the
-    //    identifier name generated based on the signature.
-    // 2. The version specification is a valid `ristretto_classfile::VersionSpecification`.
+    // Rust checks the version expression; the crate-owned generator checks active duplicates.
     let generated_registration_code = quote! {
-        #[doc(hidden)]
-        #[allow(non_upper_case_globals)]
-        #fn_vis static #registration_ident: (&'static str, &'static str, ristretto_classfile::VersionSpecification) =
-            (#intrinsic_name_expr, stringify!(#fn_name), #version_specification_expr);
+        const _: ristretto_classfile::VersionSpecification = #version_specification_expr;
     };
 
-    // Intrinsics own their boxing so callers need only one attribute. Consume the legacy
-    // paired attribute before applying the platform-aware transformation exactly once.
-    let function = if input_fn.sig.asyncness.is_some() {
-        input_fn
-            .attrs
-            .retain(|attribute| !attribute.path().is_ident("async_method"));
-        crate::async_method::process(quote! { #input_fn })
-    } else {
-        quote! { #input_fn }
-    };
+    // Ordinary async bodies stay unboxed. The typed registry boxes only at dispatch.
+    // An explicit async_method attribute remains available for recursive cycles.
+    let function = quote! { #input_fn };
 
     // Output the function definition and the generated registration logic.
     let output = quote! {
@@ -109,6 +91,28 @@ pub(crate) fn process(attributes: TokenStream, item: TokenStream) -> TokenStream
     };
 
     output
+}
+
+fn validate_signature(signature: &str) -> Result<(), String> {
+    let (owner, descriptor) = signature
+        .split_once('(')
+        .ok_or("missing method descriptor")?;
+    let (class, method) = owner
+        .rsplit_once('.')
+        .ok_or("missing class or method name")?;
+    if class.is_empty()
+        || class.split('/').any(str::is_empty)
+        || class.contains(['.', ';', '['])
+        || method.is_empty()
+        || method.contains(['/', '.', ';', '['])
+    {
+        return Err(format!("invalid intrinsic signature {signature}"));
+    }
+    ristretto_classfile::FieldType::parse_method_descriptor(
+        &ristretto_classfile::JavaStr::cow_from_str(&format!("({descriptor}")),
+    )
+    .map(|_| ())
+    .map_err(|error| error.to_string())
 }
 
 #[cfg(test)]
@@ -129,28 +133,46 @@ mod tests {
         .to_string();
 
         assert!(output.contains("pub fn hash_code"));
-        assert!(
-            output.contains("pub static _java_lang_Object_hashCode__I_hash_code_INTRINSIC_DATA")
-        );
-        assert!(output.contains("\"java/lang/Object.hashCode()I\""));
-        assert!(output.contains("stringify ! (hash_code)"));
+        assert!(output.contains("const _ : ristretto_classfile :: VersionSpecification"));
         assert!(output.contains("Any"));
         assert!(!output.contains("async_recursion"));
     }
 
     #[test]
-    fn process_boxes_async_functions_once_with_platform_bounds() {
-        for function in [
+    fn process_keeps_async_bodies_unboxed() {
+        let output = process(
+            quote! { "pkg/Example.run()I", Any },
             quote! { pub async fn run() -> u8 { 7 } },
+        )
+        .to_string();
+        assert!(!output.contains("async_recursion"));
+        assert!(!output.contains("Box"));
+        let recursive = process(
+            quote! { "pkg/Example.run()I", Any },
             quote! { #[async_method] pub async fn run() -> u8 { 7 } },
+        )
+        .to_string();
+        assert!(recursive.contains("async_method"));
+    }
+
+    #[test]
+    fn process_rejects_bad_descriptors() {
+        for attributes in [
+            quote! { "pkg/Example.run(Q)V", Any },
+            quote! { "pkg/Example.run()II", Any },
+            quote! { "run()V", Any },
         ] {
-            let output = process(quote! { "pkg/Example.run()I", Any }, function).to_string();
-            assert!(output.contains("pub async fn run"));
-            assert_eq!(output.matches("cfg_attr").count(), 2);
-            assert!(output.contains("? Send"));
-            assert!(!output.contains("# [async_method]"));
-            assert!(output.contains("_pkg_Example_run__I_run_INTRINSIC_DATA"));
+            assert!(
+                process(attributes, quote! { fn run() {} })
+                    .to_string()
+                    .contains("compile_error")
+            );
         }
+        assert!(
+            !process(quote! { "pkg/Example.run()V", Any }, quote! { fn run() {} })
+                .to_string()
+                .contains("compile_error")
+        );
     }
 
     #[test]
@@ -187,8 +209,7 @@ mod tests {
         .to_string();
 
         assert!(output.contains("fn r#type"));
-        assert!(output.contains("static _pkg_Example__init__I_V_type_INTRINSIC_DATA"));
-        assert!(output.contains("stringify ! (r#type)"));
+        assert!(output.contains("const _ : ristretto_classfile :: VersionSpecification"));
     }
 
     #[test]

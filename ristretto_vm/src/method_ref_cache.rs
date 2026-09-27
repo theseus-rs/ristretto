@@ -20,6 +20,7 @@
 
 use crate::Error::InternalError;
 use crate::JavaError::IllegalAccessError;
+use crate::intrinsic_methods::{IntrinsicMethod, MethodRegistry};
 use crate::reference_cache::ReferenceCache;
 use ristretto_classfile::{FieldType, JavaStr};
 use ristretto_classloader::{Class, Method, POLYMORPHIC_METHODS, ResolvedMethod};
@@ -49,11 +50,13 @@ pub struct ResolvedMethodRef {
     /// Checked receiver targets, published only after successful dispatch.
     pub dispatch: ReceiverCache,
     /// Successful special selection for this caller's symbolic reference.
-    special_target: OnceLock<ResolvedMethod>,
+    special_target: OnceLock<(ResolvedMethod, Option<IntrinsicMethod>)>,
     /// The class that declares the method.
     pub declaring_class: Arc<Class>,
     /// The resolved method.
     pub method: Arc<Method>,
+    /// Intrinsic bound to this actual target in the owning VM, including a cached miss.
+    pub intrinsic: Option<IntrinsicMethod>,
     /// The kind of invocation.
     pub invoke_kind: InvokeKind,
     /// Method name (cached for error messages).
@@ -91,6 +94,7 @@ impl ResolvedMethodRef {
         method: Arc<Method>,
         invoke_kind: InvokeKind,
         method_descriptor: String,
+        intrinsic: Option<IntrinsicMethod>,
     ) -> Self {
         let method_name = method.name().to_string();
 
@@ -118,6 +122,7 @@ impl ResolvedMethodRef {
             special_target: OnceLock::new(),
             declaring_class,
             method,
+            intrinsic,
             invoke_kind,
             method_name,
             method_descriptor,
@@ -128,7 +133,11 @@ impl ResolvedMethodRef {
     }
 
     /// Select after checking the receiver for null, and cache only successful selections.
-    pub(crate) fn select_special(&self, caller: &Arc<Class>) -> crate::Result<ResolvedMethod> {
+    pub(crate) fn select_special(
+        &self,
+        caller: &Arc<Class>,
+        registry: &MethodRegistry,
+    ) -> crate::Result<(ResolvedMethod, Option<IntrinsicMethod>)> {
         if let Some(target) = self.special_target.get() {
             return Ok(target.clone());
         }
@@ -139,7 +148,17 @@ impl ResolvedMethodRef {
         let target = self
             .referenced_class
             .select_special_method(caller, &resolved)?;
-        Ok(self.special_target.get_or_init(|| target).clone())
+        let intrinsic = registry
+            .method(
+                target.declaring_class.name(),
+                target.method.name(),
+                target.method.descriptor(),
+            )
+            .copied();
+        Ok(self
+            .special_target
+            .get_or_init(|| (target, intrinsic))
+            .clone())
     }
 }
 
@@ -182,6 +201,8 @@ pub struct ReceiverTarget {
     pub receiver_class: Arc<Class>,
     pub class: Arc<Class>,
     pub method: Arc<Method>,
+    /// Intrinsic bound to this actual target in the owning VM, including a cached miss.
+    pub intrinsic: Option<IntrinsicMethod>,
 }
 
 /// The first slot is monomorphic; three additional slots cover small polymorphic sites.

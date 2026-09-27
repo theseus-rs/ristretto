@@ -243,6 +243,64 @@ async fn receiver_identity_polymorphism_and_overflow() -> Result<()> {
 }
 
 #[tokio::test]
+async fn special_intrinsics_follow_selected_superclass_on_cold_and_cached_calls() -> Result<()> {
+    let (vm, thread) = crate::test::thread().await?;
+    let object = thread.class("java/lang/Object").await?;
+    for overrides in [false, true] {
+        let mut definition = target("HashCodeParent", None, false)?.class_file().clone();
+        if overrides {
+            let name_index = definition.constant_pool.add_utf8("hashCode")?;
+            let descriptor_index = definition.constant_pool.add_utf8("()I")?;
+            definition.methods.push(ristretto_classfile::Method {
+                access_flags: MethodAccessFlags::PUBLIC,
+                name_index,
+                descriptor_index,
+                ..Default::default()
+            });
+        }
+        let parent = Class::from(None, definition)?;
+        parent.set_parent(Some(object.clone()))?;
+        let (mut frame, _) = caller(&thread, &object)?;
+        frame.class().set_parent(Some(parent.clone()))?;
+        let pool = Arc::get_mut(frame.class_mut())
+            .expect("unique caller")
+            .constant_pool_mut();
+        let object_index = pool.add_class(object.name())?;
+        let index = pool.add_method_ref(object_index, "hashCode", "()I")?;
+        let instruction = Instruction::Invokespecial(index);
+        for cached in [false, true] {
+            let mut stack = OperandStack::with_max_size(1);
+            stack.push(Value::from_object(
+                vm.garbage_collector(),
+                Object::new(frame.class().clone())?,
+            ))?;
+            let result =
+                frame.process(&mut LocalVariables::new(vec![]), &mut stack, &instruction)?;
+            let result = match result {
+                InstructionResult::Sync(result) => {
+                    assert!(cached);
+                    result
+                }
+                InstructionResult::Async(instruction) => {
+                    assert!(!cached);
+                    frame.process_async(&mut stack, &instruction).await?
+                }
+            };
+            let ExecutionResult::Call(call) = result else {
+                panic!("expected method call");
+            };
+            let expected = if overrides { &parent } else { &object };
+            assert!(Arc::ptr_eq(&call.class, expected));
+            let IntrinsicBinding::Resolved(intrinsic) = call.intrinsic else {
+                panic!("selected intrinsic must be cached");
+            };
+            assert_eq!(intrinsic.is_some(), !overrides);
+        }
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn special_conflicts_check_null_before_selection_on_cold_and_cached_calls() -> Result<()> {
     let (vm, thread) = crate::test::thread().await?;
     let first = target("FirstDefault", Some(MethodAccessFlags::PUBLIC), true)?;

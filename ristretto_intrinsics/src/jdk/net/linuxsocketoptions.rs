@@ -197,7 +197,7 @@ pub async fn get_ip_dont_fragment_0<T: Thread + 'static>(
             "get option IP_DONTFRAGMENT failed",
         )
         .await?;
-        return Ok(Some(Value::from(value == libc::IP_PMTUDISC_DO)));
+        Ok(Some(Value::from(value == libc::IP_PMTUDISC_DO)))
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -225,7 +225,7 @@ pub async fn get_quick_ack_0<T: Thread + 'static>(
             "get option TCP_QUICKACK failed",
         )
         .await?;
-        return Ok(Some(Value::from(value != 0)));
+        Ok(Some(Value::from(value != 0)))
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -245,7 +245,7 @@ pub async fn get_so_peer_cred_0<T: Thread + 'static>(
     let fd = parameters.pop_int()?;
     #[cfg(target_os = "linux")]
     {
-        return Ok(Some(Value::Long(get_peer_credentials(&thread, fd).await?)));
+        Ok(Some(Value::Long(get_peer_credentials(&thread, fd).await?)))
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -273,7 +273,7 @@ pub async fn get_tcp_keep_alive_intvl_0<T: Thread + 'static>(
             "get option TCP_KEEPINTVL failed",
         )
         .await?;
-        return Ok(Some(Value::Int(value)));
+        Ok(Some(Value::Int(value)))
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -322,7 +322,7 @@ pub async fn get_tcp_keep_alive_time_0<T: Thread + 'static>(
             "get option TCP_KEEPIDLE failed",
         )
         .await?;
-        return Ok(Some(Value::Int(value)));
+        Ok(Some(Value::Int(value)))
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -395,7 +395,7 @@ pub async fn set_ip_dont_fragment_0<T: Thread + 'static>(
             "set option IP_DONTFRAGMENT failed",
         )
         .await?;
-        return Ok(None);
+        Ok(None)
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -425,7 +425,7 @@ pub async fn set_quick_ack_0<T: Thread + 'static>(
             "set option TCP_QUICKACK failed",
         )
         .await?;
-        return Ok(None);
+        Ok(None)
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -455,7 +455,7 @@ pub async fn set_tcp_keep_alive_intvl_0<T: Thread + 'static>(
             "set option TCP_KEEPINTVL failed",
         )
         .await?;
-        return Ok(None);
+        Ok(None)
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -508,7 +508,7 @@ pub async fn set_tcp_keep_alive_time_0<T: Thread + 'static>(
             "set option TCP_KEEPIDLE failed",
         )
         .await?;
-        return Ok(None);
+        Ok(None)
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -598,81 +598,16 @@ pub async fn set_tcpkeep_alive_probes0<T: Thread + 'static>(
 }
 
 #[cfg(target_os = "linux")]
-#[intrinsic_method("jdk/net/LinuxSocketOptions.getIncomingNapiId0(I)I", Equal(JAVA_17))]
-pub async fn get_incoming_napi_id0_linux_v17<T: Thread + 'static>(
-    thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let fd = parameters.pop_int()?;
-    let value = get_int_socket_option(
-        &thread,
-        fd,
-        libc::SOL_SOCKET,
-        libc::SO_INCOMING_NAPI_ID,
-        "get option SO_INCOMING_NAPI_ID failed",
-    )
-    .await?;
-    Ok(Some(Value::Int(value)))
-}
+pub use get_incoming_napi_id_0 as get_incoming_napi_id0_linux_v17;
 
 #[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "jdk/net/LinuxSocketOptions.getTcpkeepAliveProbes0(I)I",
-    Equal(JAVA_11)
-)]
-pub async fn get_tcpkeep_alive_probes0_linux_v11<T: Thread + 'static>(
-    thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let fd = parameters.pop_int()?;
-    let value = get_int_socket_option(
-        &thread,
-        fd,
-        libc::IPPROTO_TCP,
-        libc::TCP_KEEPCNT,
-        "get option TCP_KEEPCNT failed",
-    )
-    .await?;
-    Ok(Some(Value::Int(value)))
-}
+pub use get_tcpkeep_alive_probes0 as get_tcpkeep_alive_probes0_linux_v11;
 
 #[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "jdk/net/LinuxSocketOptions.incomingNapiIdSupported0()Z",
-    Equal(JAVA_17)
-)]
-pub fn incoming_napi_id_supported0_linux_v17<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Ok(Some(Value::from(socket_option_supported(
-        libc::SOL_SOCKET,
-        libc::SO_INCOMING_NAPI_ID,
-    ))))
-}
+pub use incoming_napi_id_supported_0 as incoming_napi_id_supported0_linux_v17;
 
 #[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "jdk/net/LinuxSocketOptions.setTcpkeepAliveProbes0(II)V",
-    Equal(JAVA_11)
-)]
-pub async fn set_tcpkeep_alive_probes0_linux_v11<T: Thread + 'static>(
-    thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let value = parameters.pop_int()?;
-    let fd = parameters.pop_int()?;
-    set_int_socket_option(
-        &thread,
-        fd,
-        libc::IPPROTO_TCP,
-        libc::TCP_KEEPCNT,
-        value,
-        "set option TCP_KEEPCNT failed",
-    )
-    .await?;
-    Ok(None)
-}
+pub use set_tcpkeep_alive_probes0 as set_tcpkeep_alive_probes0_linux_v11;
 
 #[cfg(all(test, not(target_family = "wasm")))]
 mod tests {

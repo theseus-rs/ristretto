@@ -406,204 +406,40 @@ pub fn write_pipe<T: Thread + 'static>(
 }
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/tools/attach/VirtualMachineImpl.closePipe(J)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn close_pipe_windows_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _h_pipe = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/tools/attach/VirtualMachineImpl.closePipe(J)V".to_string(),
-    )
-    .into())
-}
+pub use close_pipe as close_pipe_windows_ge_v11;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/tools/attach/VirtualMachineImpl.closeProcess(J)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn close_process_windows_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _h_process = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/tools/attach/VirtualMachineImpl.closeProcess(J)V".to_string(),
-    )
-    .into())
-}
+pub use close_process as close_process_windows_ge_v11;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/tools/attach/VirtualMachineImpl.connectPipe(J)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn connect_pipe_windows_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _h_pipe = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/tools/attach/VirtualMachineImpl.connectPipe(J)V".to_string(),
-    )
-    .into())
-}
+pub use connect_pipe as connect_pipe_windows_ge_v11;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/tools/attach/VirtualMachineImpl.createPipe(ILjava/lang/String;)J",
-    Equal(JAVA_25)
-)]
-pub fn create_pipe_windows_v25<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _pipename = parameters.pop_reference()?;
-    let _ver = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/tools/attach/VirtualMachineImpl.createPipe(ILjava/lang/String;)J".to_string(),
-    )
-    .into())
-}
+pub use create_pipe as create_pipe_windows_v25;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/tools/attach/VirtualMachineImpl.createPipe(Ljava/lang/String;)J",
-    Between(JAVA_11, JAVA_21)
-)]
-pub fn create_pipe_windows_v11_v21_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _pipename = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/tools/attach/VirtualMachineImpl.createPipe(Ljava/lang/String;)J".to_string(),
-    )
-    .into())
-}
+pub use create_pipe_windows_v11_v21_v1 as create_pipe_windows_v11_v21_v2;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/tools/attach/VirtualMachineImpl.enqueue(J[BILjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
-    Equal(JAVA_25)
-)]
-pub fn enqueue_windows_v25<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _args = parameters.pop_reference()?;
-    let _pipename = parameters.pop_reference()?;
-    let _cmd = parameters.pop_reference()?;
-    let _ver = parameters.pop_int()?;
-    let _stub = parameters.pop_reference()?;
-    let _handle = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError("sun/tools/attach/VirtualMachineImpl.enqueue(J[BILjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V".to_string()).into())
-}
+pub use enqueue as enqueue_windows_v25;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/tools/attach/VirtualMachineImpl.enqueue(J[BLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
-    Between(JAVA_11, JAVA_21)
-)]
-pub fn enqueue_windows_v11_v21_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _args = parameters.pop_reference()?;
-    let _pipename = parameters.pop_reference()?;
-    let _cmd = parameters.pop_reference()?;
-    let _stub = parameters.pop_reference()?;
-    let _handle = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError("sun/tools/attach/VirtualMachineImpl.enqueue(J[BLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V".to_string()).into())
-}
+pub use enqueue_windows_v11_v21_v1 as enqueue_windows_v11_v21_v2;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/tools/attach/VirtualMachineImpl.generateStub()[B",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn generate_stub_windows_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/tools/attach/VirtualMachineImpl.generateStub()[B".to_string(),
-    )
-    .into())
-}
+pub use generate_stub as generate_stub_windows_ge_v11;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/tools/attach/VirtualMachineImpl.init()V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn init_windows_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(
-        JavaError::UnsatisfiedLinkError("sun/tools/attach/VirtualMachineImpl.init()V".to_string())
-            .into(),
-    )
-}
+pub use init as init_windows_ge_v11;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/tools/attach/VirtualMachineImpl.openProcess(I)J",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn open_process_windows_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _pid = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/tools/attach/VirtualMachineImpl.openProcess(I)J".to_string(),
-    )
-    .into())
-}
+pub use open_process as open_process_windows_ge_v11;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/tools/attach/VirtualMachineImpl.readPipe(J[BII)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn read_pipe_windows_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _ba_len = parameters.pop_int()?;
-    let _off = parameters.pop_int()?;
-    let _ba = parameters.pop_reference()?;
-    let _h_pipe = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/tools/attach/VirtualMachineImpl.readPipe(J[BII)I".to_string(),
-    )
-    .into())
-}
+pub use read_pipe as read_pipe_windows_ge_v11;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/tools/attach/VirtualMachineImpl.writePipe(J[BII)V",
-    Equal(JAVA_25)
-)]
-pub fn write_pipe_windows_v25<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _length = parameters.pop_int()?;
-    let _offset = parameters.pop_int()?;
-    let _buffer = parameters.pop_reference()?;
-    let _h_pipe = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/tools/attach/VirtualMachineImpl.writePipe(J[BII)V".to_string(),
-    )
-    .into())
-}
+pub use write_pipe as write_pipe_windows_v25;
 
 #[cfg(all(test, not(target_family = "wasm")))]
 mod tests {

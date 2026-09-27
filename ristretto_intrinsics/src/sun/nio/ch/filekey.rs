@@ -32,7 +32,6 @@ use std::sync::Arc;
     "sun/nio/ch/FileKey.init(Ljava/io/FileDescriptor;)V",
     LessThanOrEqual(JAVA_21)
 )]
-#[cfg_attr(target_family = "wasm", expect(clippy::needless_pass_by_value))]
 pub async fn init_0<T: Thread + 'static>(
     #[cfg_attr(target_family = "wasm", expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
@@ -43,10 +42,10 @@ pub async fn init_0<T: Thread + 'static>(
     #[cfg(target_family = "wasm")]
     {
         let _ = (fd_value, this);
-        return Err(JavaError::UnsupportedOperationException(
+        Err(JavaError::UnsupportedOperationException(
             "File keys are not available on WebAssembly".to_string(),
         )
-        .into());
+        .into())
     }
 
     #[cfg(not(target_family = "wasm"))]

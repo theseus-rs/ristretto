@@ -54,35 +54,10 @@ pub fn is_security_supported0<T: Thread + 'static>(
 }
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "jdk/internal/agent/FileSystemImpl.init0()V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn init0_windows_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(
-        JavaError::UnsatisfiedLinkError("jdk/internal/agent/FileSystemImpl.init0()V".to_string())
-            .into(),
-    )
-}
+pub use init0 as init0_windows_ge_v11;
 
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "jdk/internal/agent/FileSystemImpl.isSecuritySupported0(Ljava/lang/String;)Z",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn is_security_supported0_windows_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _str = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "jdk/internal/agent/FileSystemImpl.isSecuritySupported0(Ljava/lang/String;)Z".to_string(),
-    )
-    .into())
-}
+pub use is_security_supported0 as is_security_supported0_windows_ge_v11;
 
 #[cfg(test)]
 mod tests {

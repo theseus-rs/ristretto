@@ -167,12 +167,18 @@ pub async fn resolve_method_ref(
     // Cache the successful resolution
     // For polymorphic methods, we must use the call site descriptor from the constant pool, not the
     // method's declared descriptor, as each call site may have a different signature.
+    let intrinsic = thread
+        .vm()?
+        .method_registry()
+        .method(resolved_class.name(), method.name(), method.descriptor())
+        .copied();
     let resolved_ref = Arc::new(ResolvedMethodRef::new(
         target_class,
         resolved_class,
         method,
         invoke_kind,
         method_descriptor.to_string(),
+        intrinsic,
     ));
     Ok(entry.store(resolved_ref))
 }
@@ -428,6 +434,57 @@ fn create_synthetic_intrinsic_method(
 mod tests {
     use super::*;
     use crate::VM;
+
+    #[tokio::test]
+    async fn test_resolution_caches_intrinsics_misses_and_declaring_class() -> Result<()> {
+        use crate::{IntrinsicMethod, Thread};
+        use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool};
+
+        let vm = VM::default().await?;
+        let thread = Thread::new(&Arc::downgrade(&vm), 1);
+        let mut constants = ConstantPool::default();
+        let this_class = constants.add_class("IntrinsicBindingTest")?;
+        let super_class = constants.add_class("java/lang/Object")?;
+        let float = constants.add_class("java/lang/Float")?;
+        let string = constants.add_class("java/lang/String")?;
+        let list = constants.add_class("java/util/ArrayList")?;
+        let sync = constants.add_method_ref(float, "floatToRawIntBits", "(F)I")?;
+        let missing = constants.add_method_ref(string, "length", "()I")?;
+        let inherited = constants.add_method_ref(list, "getClass", "()Ljava/lang/Class;")?;
+        let caller = Class::from(
+            None,
+            ClassFile {
+                access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER,
+                this_class,
+                super_class,
+                constant_pool: constants,
+                ..Default::default()
+            },
+        )?;
+        let method = create_synthetic_intrinsic_method("IntrinsicBindingTest", "call", "()V")?;
+        let frame = Frame::new(&Arc::downgrade(&thread), &caller, &method);
+        let first = resolve_method_ref(&frame, sync, InvokeKind::Static).await?;
+        assert!(matches!(first.intrinsic, Some(IntrinsicMethod::Sync(_))));
+        let second = resolve_method_ref(&frame, sync, InvokeKind::Static).await?;
+        assert!(Arc::ptr_eq(&first, &second));
+        // A successful static resolution must not bypass validation for a different opcode.
+        assert!(
+            resolve_method_ref(&frame, sync, InvokeKind::Virtual)
+                .await
+                .is_err()
+        );
+        let first = resolve_method_ref(&frame, missing, InvokeKind::Virtual).await?;
+        assert!(first.intrinsic.is_none());
+        let second = resolve_method_ref(&frame, missing, InvokeKind::Virtual).await?;
+        assert!(Arc::ptr_eq(&first, &second));
+        let inherited = resolve_method_ref(&frame, inherited, InvokeKind::Virtual).await?;
+        assert_eq!(inherited.declaring_class.name(), "java/lang/Object");
+        assert!(matches!(
+            inherited.intrinsic,
+            Some(IntrinsicMethod::Async(_))
+        ));
+        Ok(())
+    }
 
     #[test]
     fn test_should_enforce_jpms_access_unnamed() {

@@ -3250,6 +3250,8 @@ dependencies = [
  "os_pipe",
  "parking_lot",
  "portable-atomic",
+ "proc-macro2",
+ "quote",
  "ristretto_classfile",
  "ristretto_classloader",
  "ristretto_gc",
@@ -3258,6 +3260,7 @@ dependencies = [
  "ristretto_types",
  "ristretto_vm",
  "socket2",
+ "syn 3.0.6",
  "sys-locale",
  "sysinfo",
  "tempfile",
@@ -3326,14 +3329,11 @@ dependencies = [
 name = "ristretto_macros"
 version = "0.33.0"
 dependencies = [
- "ahash",
  "async-recursion",
  "proc-macro2",
  "quote",
  "ristretto_classfile",
  "syn 3.0.6",
- "tempfile",
- "walkdir",
 ]
 
 [[package]]
@@ -3395,13 +3395,13 @@ version = "0.33.0"
 dependencies = [
  "ahash",
  "bitflags 2.13.2",
- "parking_lot",
  "portable-atomic",
  "ristretto_classfile",
  "ristretto_classloader",
  "ristretto_gc",
  "ristretto_jit",
  "ristretto_test_util",
+ "smallvec",
  "socket2",
  "tempfile",
  "thiserror 2.0.21",
@@ -3415,18 +3415,9 @@ version = "0.33.0"
 dependencies = [
  "ahash",
  "async-recursion",
- "bitflags 2.13.2",
- "byteorder",
- "console",
  "criterion",
  "dashmap",
- "dirs 7.0.0",
- "filetime",
- "flate2",
- "getrandom 0.3.4",
  "indexmap",
- "jiff",
- "os_info",
  "parking_lot",
  "portable-atomic",
  "rayon",
@@ -3439,7 +3430,6 @@ dependencies = [
  "ristretto_macros",
  "ristretto_resolver",
  "ristretto_types",
- "sys-locale",
  "sysinfo",
  "tempfile",
  "thiserror 2.0.21",
@@ -3447,8 +3437,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "walkdir",
- "wasm-bindgen-futures",
- "whoami",
  "zerocopy",
 ]
 

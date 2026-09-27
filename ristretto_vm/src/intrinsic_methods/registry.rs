@@ -1,35 +1,16 @@
+use crate::Result;
 use crate::intrinsic_methods::intrinsics;
 use crate::thread::Thread;
-use crate::{Parameters, Result};
 use ahash::AHashMap;
 use ristretto_classfile::Version;
-use ristretto_classloader::Value;
-use ristretto_types::BoxFuture;
-use std::sync::Arc;
 use tracing::error;
 
-/// Function pointer for an intrinsic that completes synchronously.
-pub type SyncIntrinsicMethod = fn(Arc<Thread>, Parameters) -> Result<Option<Value>>;
-
-/// Function pointer for an intrinsic that may suspend, with platform-appropriate future bounds.
-pub type AsyncIntrinsicMethod =
-    fn(Arc<Thread>, Parameters) -> BoxFuture<'static, Result<Option<Value>>>;
-
-/// A Java intrinsic implemented in Rust, either synchronously or asynchronously.
-///
-/// Synchronous implementations return directly without allocating or polling a future.
-/// Asynchronous implementations use the platform's [`BoxFuture`] bounds: `Send` on
-/// native targets, and no `Send` requirement on WebAssembly.
-///
-/// The registry selects the variant from the intrinsic function's `async` declaration.
-/// Match the variant to invoke a method; this replaces the former async function-pointer alias.
-#[derive(Clone, Copy, Debug)]
-pub enum IntrinsicMethod {
-    /// A function that completes synchronously.
-    Sync(SyncIntrinsicMethod),
-    /// A function that may suspend while executing.
-    Async(AsyncIntrinsicMethod),
-}
+/// Synchronous intrinsic specialized for this VM.
+pub type SyncIntrinsicMethod = ristretto_types::SyncIntrinsicMethod<Thread>;
+/// Suspending intrinsic specialized for this VM.
+pub type AsyncIntrinsicMethod = ristretto_types::AsyncIntrinsicMethod<Thread>;
+/// Typed intrinsic implementation specialized for this VM.
+pub type IntrinsicMethod = ristretto_types::IntrinsicMethod<Thread>;
 
 /// Registry for mapping Java intrinsic methods to their Rust implementations.
 ///
@@ -55,34 +36,26 @@ pub enum IntrinsicMethod {
 /// This forms a fully qualified method signature like `java/lang/Object.hashCode()I`.
 #[derive(Debug)]
 pub struct MethodRegistry {
-    methods: &'static AHashMap<&'static str, IntrinsicMethod>,
+    registry: &'static ristretto_types::IntrinsicRegistry<Thread>,
 }
 
 impl MethodRegistry {
-    /// Creates a new method registry configured for the specified Java major version.
+    /// Select the compiler-confirmed registry for a supported Java release family.
     ///
-    /// This constructor initializes an empty registry that will be configured for the specified
-    /// Java major version. The version determines which set of native methods will be registered
-    /// when `initialize()` is called.
-    ///
-    /// # Arguments
-    ///
-    /// `java_major_version` - The major Java version number (e.g., 8, 11, 17, 21, 24)
-    ///
-    /// # Returns
-    ///
-    /// A new empty `MethodRegistry` configured for the specified Java version.
-    #[inline]
-    #[must_use]
-    pub fn new(version: &Version) -> Self {
-        let methods: &'static AHashMap<&'static str, IntrinsicMethod> = match version.major() {
-            69.. => &intrinsics::JAVA_25,
-            65.. => &intrinsics::JAVA_21,
-            61.. => &intrinsics::JAVA_17,
-            55.. => &intrinsics::JAVA_11,
-            _ => &intrinsics::JAVA_8,
+    /// # Errors
+    /// Reports conflicting active registrations.
+    pub fn new(version: &Version) -> Result<Self> {
+        let registry = match version.major() {
+            69.. => &*intrinsics::JAVA_25_REGISTRY,
+            65.. => &*intrinsics::JAVA_21_REGISTRY,
+            61.. => &*intrinsics::JAVA_17_REGISTRY,
+            55.. => &*intrinsics::JAVA_11_REGISTRY,
+            _ => &*intrinsics::JAVA_8_REGISTRY,
         };
-        MethodRegistry { methods }
+        let registry = registry
+            .as_ref()
+            .map_err(|error| crate::Error::InternalError(error.to_string()))?;
+        Ok(Self { registry })
     }
 
     /// Returns a reference to the map of all registered intrinsic methods.
@@ -91,39 +64,14 @@ impl MethodRegistry {
     /// methods. The keys of the map are method signatures, while the values are the
     /// `IntrinsicMethod` function pointers.
     pub(crate) fn methods(&self) -> &'static AHashMap<&'static str, IntrinsicMethod> {
-        self.methods
+        self.registry.methods()
     }
 
-    /// Returns the set of intrinsic method signatures that *would* be registered for the given
-    /// Java major version on the given target OS, regardless of the host platform on which the
-    /// VM was compiled.
-    ///
-    /// This is intended for cross OS introspection from tests; the slice is plain string data
-    /// (no function pointers) so it is always populated, including for OSes the current host is
-    /// not actually compiled for.
-    ///
-    /// `os` accepts `"macos"`, `"linux"`, or `"windows"`. Any other value yields an empty slice.
+    /// Registration signatures for cross-OS coverage tests.
     #[cfg(test)]
     #[must_use]
     pub fn signatures_for_os(version: &Version, os: &str) -> &'static [&'static str] {
-        match (version.major(), os) {
-            (69.., "macos") => intrinsics::JAVA_25_MACOS_SIGNATURES,
-            (69.., "linux") => intrinsics::JAVA_25_LINUX_SIGNATURES,
-            (69.., "windows") => intrinsics::JAVA_25_WINDOWS_SIGNATURES,
-            (65.., "macos") => intrinsics::JAVA_21_MACOS_SIGNATURES,
-            (65.., "linux") => intrinsics::JAVA_21_LINUX_SIGNATURES,
-            (65.., "windows") => intrinsics::JAVA_21_WINDOWS_SIGNATURES,
-            (61.., "macos") => intrinsics::JAVA_17_MACOS_SIGNATURES,
-            (61.., "linux") => intrinsics::JAVA_17_LINUX_SIGNATURES,
-            (61.., "windows") => intrinsics::JAVA_17_WINDOWS_SIGNATURES,
-            (55.., "macos") => intrinsics::JAVA_11_MACOS_SIGNATURES,
-            (55.., "linux") => intrinsics::JAVA_11_LINUX_SIGNATURES,
-            (55.., "windows") => intrinsics::JAVA_11_WINDOWS_SIGNATURES,
-            (_, "macos") => intrinsics::JAVA_8_MACOS_SIGNATURES,
-            (_, "linux") => intrinsics::JAVA_8_LINUX_SIGNATURES,
-            (_, "windows") => intrinsics::JAVA_8_WINDOWS_SIGNATURES,
-            _ => &[],
-        }
+        ristretto_intrinsics::signatures_for_os(version, os)
     }
 
     /// Looks up a intrinsic method implementation by its fully qualified signature.
@@ -131,7 +79,8 @@ impl MethodRegistry {
     /// This method attempts to find an intrinsic method implementation by its Java class name,
     /// method name, and method descriptor. If found, it returns a reference to the
     /// `IntrinsicMethod` function; otherwise, it returns `None`.
-    pub(crate) fn method(
+    #[must_use]
+    pub fn method(
         &self,
         class_name: &str,
         method_name: &str,
@@ -180,7 +129,7 @@ impl MethodRegistry {
                 );
                 return None;
             };
-            self.methods.get(method_signature)
+            self.registry.methods().get(method_signature)
         } else {
             // Slow path: fall back to heap allocation for unusually long signatures
             let mut method_signature = String::with_capacity(
@@ -190,7 +139,7 @@ impl MethodRegistry {
             method_signature.push('.');
             method_signature.push_str(method_name);
             method_signature.push_str(method_descriptor);
-            self.methods.get(method_signature.as_str())
+            self.registry.methods().get(method_signature.as_str())
         }
     }
 }
@@ -212,7 +161,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_method() -> Result<()> {
-        let method_registry = MethodRegistry::new(&JAVA_21);
+        let method_registry = MethodRegistry::new(&JAVA_21).expect("valid registry");
         let result = method_registry.method("java/lang/Object", "hashCode", "()I");
         assert!(result.is_some());
         Ok(())
@@ -220,7 +169,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_method_not_found() -> Result<()> {
-        let method_registry = MethodRegistry::new(&JAVA_21);
+        let method_registry = MethodRegistry::new(&JAVA_21).expect("valid registry");
         let result = method_registry.method("foo", "hashCode", "()I");
         assert!(result.is_none());
         Ok(())
@@ -232,41 +181,17 @@ mod tests {
         const CLASS: &str = "java/net/PlainDatagramSocketImpl";
         const DESCRIPTOR: &str = "(Ljava/net/DatagramPacket;)V";
 
-        let java_8 = MethodRegistry::new(&JAVA_8);
+        let java_8 = MethodRegistry::new(&JAVA_8).expect("valid registry");
         assert!(java_8.method(CLASS, "send", DESCRIPTOR).is_some());
         assert!(java_8.method(CLASS, "send0", DESCRIPTOR).is_none());
 
-        let java_11 = MethodRegistry::new(&JAVA_11);
+        let java_11 = MethodRegistry::new(&JAVA_11).expect("valid registry");
         assert!(java_11.method(CLASS, "send", DESCRIPTOR).is_some());
         assert!(java_11.method(CLASS, "send0", DESCRIPTOR).is_some());
 
-        let java_17 = MethodRegistry::new(&JAVA_17);
+        let java_17 = MethodRegistry::new(&JAVA_17).expect("valid registry");
         assert!(java_17.method(CLASS, "send", DESCRIPTOR).is_none());
         assert!(java_17.method(CLASS, "send0", DESCRIPTOR).is_some());
-    }
-
-    #[cfg(feature = "audio")]
-    #[test]
-    fn test_audio_method_registered() {
-        let method_registry = MethodRegistry::new(&JAVA_21);
-        let result = method_registry.method(
-            "com/sun/media/sound/DirectAudioDeviceProvider",
-            "nGetNumDevices",
-            "()I",
-        );
-        assert!(result.is_some());
-    }
-
-    #[cfg(not(feature = "audio"))]
-    #[test]
-    fn test_audio_method_not_registered() {
-        let method_registry = MethodRegistry::new(&JAVA_21);
-        let result = method_registry.method(
-            "com/sun/media/sound/DirectAudioDeviceProvider",
-            "nGetNumDevices",
-            "()I",
-        );
-        assert!(result.is_none());
     }
 
     /// Get all the intrinsic methods for a given Java runtime targeting the specified OS / arch.

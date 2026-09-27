@@ -160,9 +160,11 @@ pub(crate) mod tests {
     use super::*;
     use ristretto_classloader::Reference;
     use ristretto_types::JavaObject;
-    use ristretto_vm::AsyncIntrinsicMethod;
+    use std::future::Future;
 
-    pub async fn new_instance_test(new_instance: AsyncIntrinsicMethod) -> Result<()> {
+    pub async fn new_instance_test<F: Future<Output = Result<Option<Value>>>>(
+        new_instance: impl Fn(Arc<ristretto_vm::Thread>, Parameters) -> F,
+    ) -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
         let integer_class = thread.class("java/lang/Integer").await?;
         let integer_class_object = integer_class.to_object(&thread).await?;

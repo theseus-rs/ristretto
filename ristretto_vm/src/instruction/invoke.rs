@@ -62,13 +62,14 @@ pub(crate) fn try_invoke(
         return Ok(None);
     };
     let receiver_count = usize::from(kind != InvokeKind::Static);
-    let (class, method) = if kind == InvokeKind::Static {
+    let (class, method, intrinsic) = if kind == InvokeKind::Static {
         if !resolution.declaring_class.is_initialized()? {
             return Ok(None);
         }
         (
             resolution.declaring_class.clone(),
             resolution.method.clone(),
+            resolution.intrinsic,
         )
     } else {
         let receiver = stack.peek_at(resolution.param_count)?;
@@ -82,22 +83,29 @@ pub(crate) fn try_invoke(
                 _ => return Err(InternalError("Expected object reference".to_string())),
             }
             if kind == InvokeKind::Special {
-                let target = resolution.select_special(frame.class())?;
-                (target.declaring_class, target.method)
+                let (target, intrinsic) = resolution
+                    .select_special(frame.class(), frame.thread()?.vm()?.method_registry())?;
+                (target.declaring_class, target.method, intrinsic)
             } else {
                 (
                     resolution.declaring_class.clone(),
                     resolution.method.clone(),
+                    resolution.intrinsic,
                 )
             }
         } else {
             let Some(target) = receiver_target(receiver, &resolution.dispatch)? else {
                 return Ok(None);
             };
-            (target.class.clone(), target.method.clone())
+            (
+                target.class.clone(),
+                target.method.clone(),
+                target.intrinsic,
+            )
         }
     };
     Ok(Some(ExecutionResult::Call(MethodCall {
+        intrinsic: crate::frame::IntrinsicBinding::Resolved(intrinsic),
         class,
         method,
         parameters: CallParameters::Stack(resolution.param_count + receiver_count),

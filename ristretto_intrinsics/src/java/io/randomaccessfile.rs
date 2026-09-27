@@ -186,11 +186,11 @@ pub async fn open_0<T: Thread + 'static>(
         let _ = thread;
         let _ = mode;
         let _ = file_descriptor;
-        return Err(RuntimeException(
+        Err(RuntimeException(
             "java.io.RandomAccessFile.open0(Ljava/lang/String;I)V is not supported on WebAssembly"
                 .to_string(),
         )
-        .into());
+        .into())
     }
 
     #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]

@@ -263,19 +263,7 @@ pub fn init_glx_linux_ge_v11<T: Thread + 'static>(
 }
 
 #[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "sun/awt/X11GraphicsEnvironment.initNativeData()V",
-    GreaterThanOrEqual(JAVA_17)
-)]
-pub fn init_native_data_linux_ge_v17<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/awt/X11GraphicsEnvironment.initNativeData()V".to_string(),
-    )
-    .into())
-}
+pub use init_native_data as init_native_data_linux_ge_v17;
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method(

@@ -67,65 +67,15 @@ pub fn invoke_virtual<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeVirtual([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
 }
 
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn get_reference_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
-}
+pub use get_reference as get_reference_ge_v11;
 
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.invokeInterface([Ljava/lang/Object;)Ljava/lang/Object;",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn invoke_interface_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeInterface([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
-}
+pub use invoke_interface as invoke_interface_ge_v11;
 
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.invokeSpecial([Ljava/lang/Object;)Ljava/lang/Object;",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn invoke_special_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeSpecial([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
-}
+pub use invoke_special as invoke_special_ge_v11;
 
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.invokeStatic([Ljava/lang/Object;)Ljava/lang/Object;",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn invoke_static_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeStatic([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
-}
+pub use invoke_static as invoke_static_ge_v11;
 
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.invokeVirtual([Ljava/lang/Object;)Ljava/lang/Object;",
-    GreaterThanOrEqual(JAVA_11)
-)]
-pub fn invoke_virtual_ge_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeVirtual([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
-}
+pub use invoke_virtual as invoke_virtual_ge_v11;
 
 #[cfg(test)]
 mod tests {

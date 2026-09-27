@@ -44,8 +44,12 @@ pub(crate) async fn invokevirtual(
         declaring_class: resolution.declaring_class.clone(),
         method: resolution.method.clone(),
     };
-    let target = if resolved.method.is_private() {
-        resolved
+    let (class, method, intrinsic) = if resolution.method.is_private() {
+        (
+            resolution.declaring_class.clone(),
+            resolution.method.clone(),
+            resolution.intrinsic,
+        )
     } else {
         let object_class = if let Some(class) = receiver_class(receiver)? {
             class
@@ -55,6 +59,7 @@ pub(crate) async fn invokevirtual(
         };
         if let Some(target) = resolution.dispatch.get(&object_class) {
             return Ok(ExecutionResult::Call(MethodCall {
+                intrinsic: crate::frame::IntrinsicBinding::Resolved(target.intrinsic),
                 class: target.class.clone(),
                 method: target.method.clone(),
                 parameters: parameters.into(),
@@ -89,17 +94,28 @@ pub(crate) async fn invokevirtual(
             ))
             .into());
         }
+        let intrinsic = thread
+            .vm()?
+            .method_registry()
+            .method(
+                target.declaring_class.name(),
+                target.method.name(),
+                target.method.descriptor(),
+            )
+            .copied();
         resolution.dispatch.store(ReceiverTarget {
+            intrinsic,
             receiver_class: object_class,
             class: target.declaring_class.clone(),
             method: target.method.clone(),
         });
-        target
+        (target.declaring_class, target.method, intrinsic)
     };
 
     Ok(ExecutionResult::Call(MethodCall {
-        class: target.declaring_class,
-        method: target.method,
+        intrinsic: crate::frame::IntrinsicBinding::Resolved(intrinsic),
+        class,
+        method,
         parameters: parameters.into(),
         has_return_type: resolution.has_return_type,
     }))

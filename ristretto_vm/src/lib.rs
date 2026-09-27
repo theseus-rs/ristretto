@@ -70,7 +70,9 @@ mod frame;
 mod instruction;
 mod intrinsic_methods;
 
-pub use intrinsic_methods::{AsyncIntrinsicMethod, IntrinsicMethod, SyncIntrinsicMethod};
+pub use intrinsic_methods::{
+    AsyncIntrinsicMethod, IntrinsicMethod, MethodRegistry, SyncIntrinsicMethod,
+};
 mod java_object;
 mod jit;
 mod jit_runtime_helpers;

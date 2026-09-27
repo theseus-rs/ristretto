@@ -34,6 +34,12 @@ zip = { workspace = true, features = ["deflate"] }
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
 reqwest = { workspace = true, features = ["rustls"] }
 
+[package.metadata.cargo-machete]
+ignored = [
+    # enables the wasm_js backend for ahash's transitive getrandom dependency
+    "getrandom",
+]
+
 [[bench]]
 harness = false
 name = "class_file"

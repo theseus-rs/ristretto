@@ -170,7 +170,7 @@ impl VM {
                 Self::create_class_loader(&configuration, &bootstrap_class_loader).await?;
             startup_trace!("[vm] system class loader");
 
-            let method_registry = MethodRegistry::new(&java_class_file_version);
+            let method_registry = MethodRegistry::new(&java_class_file_version)?;
             startup_trace!("[vm] method registry");
 
             let compiler = Self::create_compiler(&configuration);
