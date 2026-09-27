@@ -19,7 +19,7 @@ workspace = true
 [dependencies]
 proc-macro2 = { workspace = true }
 quote = { workspace = true }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.33.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.34.0" }
 syn = { workspace = true, features = ["full", "extra-traits"] }
 
 [dev-dependencies]
