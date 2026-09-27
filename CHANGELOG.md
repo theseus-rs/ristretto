@@ -7,6 +7,177 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_javac` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.33.0...ristretto_javac-v0.34.1) - 2026-09-27
+
+### Other
+- ristretto-v0.34.0
+
+## `ristretto_java` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/v0.33.0...v0.34.1) - 2026-09-27
+
+### Added
+- implement com/sun/imageio/plugins/jpeg
+- add additional JVM languages to the playground
+- add an in-browser Java 8-25 playground
+
+### Fixed
+- intrinsic feature handling
+- correct class file byte reader
+- correct stack slot accounting and analyze max stack across control flow and exception handlers
+- method resolution
+
+### Other
+- ristretto-v0.34.0
+- Merge pull request #819 from theseus-rs/update-java-versions
+- update documentation
+- reuse call-frame storage and eliminate cached call argument allocations
+- update Java versions
+- optimize shared bytecode dispatch
+- cache field layouts, resolved field access, and class verification
+- Merge pull request #807 from theseus-rs/optimize-class-fields
+- eliminate intermediate hierarchy allocation when collecting object fields
+- Merge pull request #803 from theseus-rs/impl-jpeg-support
+- update to Rust 1.98.1
+- correct tests
+- avoid future allocations for synchronous intrinsics
+- limit system calls on initialization
+- update to cranelift=0.135.1
+- update Cargo.toml dependencies
+- optimize JIT runtime contexts
+- implement field and method reference caching
+- batch instructions
+
+## `ristretto_resolver` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_resolver-v0.33.0...ristretto_resolver-v0.34.1) - 2026-09-27
+
+### Other
+- ristretto-v0.34.0
+- update to Rust 1.98.1
+
+## `ristretto_pom` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.33.0...ristretto_pom-v0.34.1) - 2026-09-27
+
+### Other
+- reuse call-frame storage and eliminate cached call argument allocations
+
+## `ristretto_vm` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.33.0...ristretto_vm-v0.34.1) - 2026-09-27
+
+### Added
+- add additional JVM languages to the playground
+- add an in-browser Java 8-25 playground
+
+### Fixed
+- intrinsic feature handling
+- method resolution
+
+### Other
+- ristretto-v0.34.0
+- optimize shared bytecode dispatch
+- correct tests
+- avoid future allocations for synchronous intrinsics
+- reuse call-frame storage and eliminate cached call argument allocations
+- optimize JIT runtime contexts
+- cache field layouts, resolved field access, and class verification
+- implement field and method reference caching
+- batch instructions
+- update to Rust 1.98.1
+
+## `ristretto_intrinsics` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.33.0...ristretto_intrinsics-v0.34.1) - 2026-09-27
+
+### Added
+- add additional JVM languages to the playground
+- implement com/sun/imageio/plugins/jpeg
+
+### Fixed
+- intrinsic feature handling
+
+### Other
+- ristretto-v0.34.0
+- Merge pull request #819 from theseus-rs/update-java-versions
+- update Java versions
+- correct tests
+- avoid future allocations for synchronous intrinsics
+- reuse call-frame storage and eliminate cached call argument allocations
+- cache field layouts, resolved field access, and class verification
+- limit system calls on initialization
+- Merge pull request #803 from theseus-rs/impl-jpeg-support
+- update to cranelift=0.135.1
+- update to Rust 1.98.1
+
+## `ristretto_types` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.33.0...ristretto_types-v0.34.1) - 2026-09-27
+
+### Added
+- add additional JVM languages to the playground
+- add an in-browser Java 8-25 playground
+
+### Fixed
+- intrinsic feature handling
+- method resolution
+
+### Other
+- ristretto-v0.34.0
+- update to Rust 1.98.1
+
+## `ristretto_jit` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.33.0...ristretto_jit-v0.34.1) - 2026-09-27
+
+### Fixed
+- correct stack slot accounting and analyze max stack across control flow and exception handlers
+
+### Other
+- ristretto-v0.34.0
+- reuse call-frame storage and eliminate cached call argument allocations
+
+## `ristretto_macros` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.33.0...ristretto_macros-v0.34.1) - 2026-09-27
+
+### Fixed
+- intrinsic feature handling
+
+### Other
+- ristretto-v0.34.0
+- avoid future allocations for synchronous intrinsics
+
+## `ristretto_classloader` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.33.0...ristretto_classloader-v0.34.1) - 2026-09-27
+
+### Added
+- implement com/sun/imageio/plugins/jpeg
+
+### Other
+- ristretto-v0.34.0
+- Merge pull request #819 from theseus-rs/update-java-versions
+- update Java versions
+- optimize shared bytecode dispatch
+- reuse call-frame storage and eliminate cached call argument allocations
+- cache field layouts, resolved field access, and class verification
+- Merge pull request #807 from theseus-rs/optimize-class-fields
+- eliminate intermediate hierarchy allocation when collecting object fields
+- Merge pull request #803 from theseus-rs/impl-jpeg-support
+- update to Rust 1.98.1
+
+## `ristretto_jimage` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.34.0...ristretto_jimage-v0.34.1) - 2026-09-27
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_gc` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.33.0...ristretto_gc-v0.34.1) - 2026-09-27
+
+### Added
+- implement com/sun/imageio/plugins/jpeg
+
+### Other
+- Merge pull request #803 from theseus-rs/impl-jpeg-support
+
+## `ristretto_classfile` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.33.0...ristretto_classfile-v0.34.1) - 2026-09-27
+
+### Added
+- implement com/sun/imageio/plugins/jpeg
+
+### Fixed
+- intrinsic feature handling
+- correct class file byte reader
+- correct stack slot accounting and analyze max stack across control flow and exception handlers
+
+### Other
+- Merge pull request #819 from theseus-rs/update-java-versions
+- update documentation
+- reuse call-frame storage and eliminate cached call argument allocations
+
 ## `ristretto_javac` - [0.34.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.33.0...ristretto_javac-v0.34.0) - 2026-09-27
 
 ### Other
