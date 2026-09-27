@@ -9,7 +9,7 @@
 //!
 //! # Bytecode Verification
 //!
-//! The new `bytecode` module provides a 100% JVMS-compliant bytecode verifier with:
+//! The new `bytecode` module provides a JVM bytecode verifier with:
 //! - Rigorous type system implementation ([JVMS §4.10.1.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.2))
 //! - Complete instruction coverage (all 200+ opcodes)
 //! - Optimized dataflow analysis using dense vectors
@@ -22,7 +22,7 @@
 
 /// New modular bytecode verification implementation.
 ///
-/// This module provides a 100% JVMS-compliant bytecode verifier organized into:
+/// This module provides a JVM bytecode verifier organized into:
 /// - `type_system`: Rigorous verification type system
 /// - `frame`: Optimized stack frame for dataflow analysis
 /// - `control_flow`: CFG construction and StackMapTable validation

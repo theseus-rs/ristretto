@@ -127,6 +127,8 @@ impl<'a> ClassFile<'a> {
     ///
     /// # Errors
     /// Returns a `VerificationError` if the verification fails.
+    /// This checks structure and static constraints. For bytecode dataflow checks,
+    /// use [`crate::verifiers::bytecode::verify_class`] with a verification context.
     pub fn verify(&self) -> Result<()> {
         verifier::verify(self).map_err(crate::Error::from)
     }

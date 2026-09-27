@@ -1,6 +1,6 @@
 //! # Bytecode Verification Module
 //!
-//! This module implements a 100% compliant JVM bytecode verifier according to
+//! This module implements a JVM bytecode verifier according to
 //! JVMS Chapter 4 (The class File Format) and Chapter 5 (Loading, Linking, and Initializing).
 //!
 //! # Architecture
