@@ -11,7 +11,7 @@ use std::sync::Arc;
 const VERSION_CLASS: &str = "sun.misc.Version";
 
 /// Parse a Java version string of the form `"<feature>.<update>.<build>[.<revision>]"`
-/// (e.g. `"8.502.07.1"`) into the components used by `sun.misc.Version`:
+/// (e.g. `"8.504.01.1"`) into the components used by `sun.misc.Version`:
 /// `(major, minor, micro, update, build)`.
 ///
 /// For Java 8 the reported triple is always `1.8.0`; the second component of the version string
@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn test_parse_version_java8() {
-        assert_eq!(parse_version("8.502.07.1"), (1, 8, 0, 502, 7));
+        assert_eq!(parse_version("8.504.01.1"), (1, 8, 0, 504, 1));
     }
 
     #[test]
