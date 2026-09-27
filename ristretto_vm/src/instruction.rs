@@ -88,7 +88,7 @@ pub(crate) use invokestatic::*;
 pub(crate) use invokevirtual::*;
 pub(crate) use ldc::*;
 pub(crate) use long::*;
-pub(crate) use method_resolver::{lookup_method, resolve_method_ref};
+pub(crate) use method_resolver::resolve_method_ref;
 pub(crate) use monitor::*;
 pub(crate) use nop::*;
 pub(crate) use object::*;

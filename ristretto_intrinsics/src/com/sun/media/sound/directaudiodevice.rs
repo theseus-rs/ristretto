@@ -143,11 +143,10 @@ pub async fn n_get_formats<T: ristretto_types::Thread + 'static>(
     let channels_list: &[i32] = &[1, 2];
 
     let vector_class = thread.class("java/util/Vector").await?;
-    let add_method = vector_class
-        .method("addElement", "(Ljava/lang/Object;)V")
-        .ok_or_else(|| {
-            ristretto_types::Error::InternalError("Vector.addElement not found".to_string())
-        })?;
+    let add_method = vector_class.resolve_method("addElement", "(Ljava/lang/Object;)V")?;
+
+    let receiver_class = vector.as_object_ref()?.class().clone();
+    let add_method = receiver_class.select_concrete_method(&add_method)?;
 
     for &sample_rate in sample_rates {
         for &bits in bit_depths {
@@ -169,7 +168,11 @@ pub async fn n_get_formats<T: ristretto_types::Thread + 'static>(
                     .await?;
 
                 thread
-                    .execute(&vector_class, &add_method, &[vector.clone(), format])
+                    .execute(
+                        &add_method.declaring_class,
+                        &add_method.method,
+                        &[vector.clone(), format],
+                    )
                     .await?;
             }
         }

@@ -12,7 +12,9 @@ use ristretto_classfile::{
     MethodAccessFlags, ReferenceKind,
 };
 use ristretto_classloader::Error::IllegalAccessError;
-use ristretto_classloader::{Class, Method, Reference, Value};
+use ristretto_classloader::{
+    Class, Method, MethodResolutionError, Reference, ResolvedMethod, Value,
+};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
@@ -1385,7 +1387,7 @@ async fn resolve_method<T: Thread + 'static>(
     flags: i32,
     class: &Arc<Class>,
 ) -> Result<Option<Value>> {
-    let _reference_kind = get_reference_kind(flags)?;
+    let reference_kind = get_reference_kind(flags)?;
     let method_type = {
         let member_self = member_self.as_object_ref()?;
         member_self.value("type")?
@@ -1460,24 +1462,8 @@ async fn resolve_method<T: Thread + 'static>(
             false,
         ),
         _ => {
-            // Resolve inherited class methods too (constructors are never inherited).
-            let mut declaring_class = class.clone();
-            let declared = loop {
-                match declaring_class.try_get_method(&method_name, &method_descriptor) {
-                    Ok(method) => break Ok(method),
-                    Err(error) => {
-                        if method_name == "<init>" || declaring_class.is_interface() {
-                            break Err(error);
-                        }
-                        let Some(parent) = declaring_class.parent()? else {
-                            break Err(error);
-                        };
-                        declaring_class = parent;
-                    }
-                }
-            };
-            match declared {
-                Ok(m) => (declaring_class, m, false),
+            match class.resolve_method(&method_name, &method_descriptor) {
+                Ok(target) => (target.declaring_class, target.method, false),
                 Err(_)
                     if method_name.starts_with("lambda$") && class.name() == "java/lang/Object" =>
                 {
@@ -1547,41 +1533,6 @@ async fn resolve_method<T: Thread + 'static>(
                         )));
                     }
                 }
-                Err(_) if class.is_interface() => {
-                    // Per JVMS §5.4.3.4, when resolving an interface method, also
-                    // check java.lang.Object for public instance methods (e.g.,
-                    // toString, hashCode, equals). Then check parent interfaces.
-                    let object_class = thread.class("java/lang/Object").await?;
-                    if let Ok(m) = object_class.try_get_method(&method_name, &method_descriptor) {
-                        (object_class, m, false)
-                    } else {
-                        // Search super-interfaces for the method
-                        let mut found = None;
-                        let mut ifaces_to_check: Vec<Arc<Class>> = class.interfaces()?;
-                        let mut visited = std::collections::HashSet::new();
-                        visited.insert(class.name().to_string());
-                        while let Some(iface) = ifaces_to_check.pop() {
-                            if !visited.insert(iface.name().to_string()) {
-                                continue;
-                            }
-                            if let Ok(m) = iface.try_get_method(&method_name, &method_descriptor) {
-                                found = Some((iface, m));
-                                break;
-                            }
-                            ifaces_to_check.extend(iface.interfaces()?);
-                        }
-                        if let Some((found_class, found_method)) = found {
-                            (found_class, found_method, false)
-                        } else {
-                            return Err(ristretto_classloader::Error::MethodNotFound {
-                                class_name: class.name().to_string(),
-                                method_name: method_name.clone(),
-                                method_descriptor: method_descriptor.clone(),
-                            }
-                            .into());
-                        }
-                    }
-                }
                 Err(_) => {
                     return Err(NoSuchMethodError(format!(
                         "{}.{}{}",
@@ -1624,7 +1575,30 @@ async fn resolve_method<T: Thread + 'static>(
 
     let modifiers = i32::from(method_access_flags.bits());
     let flags = flags | modifiers;
-    let declaring_class = resolved_class.to_object(thread).await?;
+    // These handles defer conflicting defaults to invocation. Keep the symbolic
+    // target instead of exposing an arbitrary default as the declaring class.
+    // Virtual calls can still succeed when the receiver provides an override.
+    let needs_conflict_target = match reference_kind {
+        ReferenceKind::InvokeSpecial => true,
+        ReferenceKind::InvokeVirtual => !class.is_interface(),
+        _ => false,
+    };
+    let deferred_conflict = needs_conflict_target
+        && matches!(
+            class.select_special_method(
+                class,
+                &ResolvedMethod {
+                    declaring_class: resolved_class.clone(),
+                    method: method.clone(),
+                },
+            ),
+            Err(MethodResolutionError::IncompatibleClassChange(_))
+        );
+    let declaring_class = if deferred_conflict {
+        class.to_object(thread).await?
+    } else {
+        resolved_class.to_object(thread).await?
+    };
     {
         // vmindex is used by OpenJDK MethodHandle implementation.
         // For methods, it's typically a vtable index or similar.

@@ -5,11 +5,10 @@ use crate::JavaError::{
 use crate::Result;
 use crate::assignable::Assignable;
 use crate::frame::{ExecutionResult, Frame, MethodCall};
-use crate::instruction::method_resolver::lookup_virtual_method;
 use crate::instruction::{receiver_class, resolve_method_ref};
 use crate::method_ref_cache::{InvokeKind, ReceiverTarget};
 use crate::operand_stack::OperandStack;
-use ristretto_classloader::Value;
+use ristretto_classloader::{ResolvedMethod, Value};
 
 /// Invokeinterface instruction implementation.
 ///
@@ -65,18 +64,14 @@ pub(crate) async fn invokeinterface(
     }
 
     // A resolved private method is invoked directly; it cannot be overridden.
-    let (resolved_class, resolved_method) = if resolution.method.is_private() {
-        (
-            resolution.declaring_class.clone(),
-            resolution.method.clone(),
-        )
-    } else {
-        lookup_virtual_method(
-            &object_class,
-            &resolution.method_name,
-            &resolution.method_descriptor,
-        )?
+    let resolved = ResolvedMethod {
+        declaring_class: resolution.declaring_class.clone(),
+        method: resolution.method.clone(),
     };
+    let ResolvedMethod {
+        declaring_class: resolved_class,
+        method: resolved_method,
+    } = object_class.select_method(&resolved)?;
 
     if resolved_method.is_static() {
         return Err(IncompatibleClassChangeError(format!(
@@ -87,7 +82,7 @@ pub(crate) async fn invokeinterface(
         .into());
     }
 
-    // Check resolved method accessibility
+    // Check selected method accessibility before abstractness, as required by JVMS 6.5.
     // JVMS 6.5 permits private interface methods, including nestmate calls.
     // Member access was checked during resolution.
     if !resolved_method.is_public() && !resolved_method.is_private() {

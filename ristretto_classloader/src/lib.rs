@@ -74,7 +74,10 @@ pub mod runtime;
 mod tls;
 mod value;
 
-pub use class::{Class, InitializationAction, InitializationState, POLYMORPHIC_METHODS};
+pub use class::{
+    Class, InitializationAction, InitializationState, MethodResolutionError, POLYMORPHIC_METHODS,
+    ResolvedMethod,
+};
 pub use class_loader::ClassLoader;
 pub use class_loader_type::ClassLoaderType;
 pub use class_path::ClassPath;

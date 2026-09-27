@@ -81,10 +81,15 @@ pub(crate) fn try_invoke(
                 Value::Object(None) => return Err(NullPointerException(None).into()),
                 _ => return Err(InternalError("Expected object reference".to_string())),
             }
-            (
-                resolution.declaring_class.clone(),
-                resolution.method.clone(),
-            )
+            if kind == InvokeKind::Special {
+                let target = resolution.select_special(frame.class())?;
+                (target.declaring_class, target.method)
+            } else {
+                (
+                    resolution.declaring_class.clone(),
+                    resolution.method.clone(),
+                )
+            }
         } else {
             let Some(target) = receiver_target(receiver, &resolution.dispatch)? else {
                 return Ok(None);

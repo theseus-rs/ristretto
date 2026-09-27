@@ -152,7 +152,7 @@ use crate::thread::Thread;
 use crate::{JavaObject, Result};
 use ristretto_classfile::attributes::{Attribute, BootstrapMethod};
 use ristretto_classfile::{Constant, ConstantPool, FieldType, JavaStr, ReferenceKind};
-use ristretto_classloader::{Class, Method, Reference, Value};
+use ristretto_classloader::{Class, Method, Reference, ResolvedMethod, Value};
 use ristretto_intrinsics::call_method_handle_target;
 use std::borrow::Cow;
 use std::sync::Arc;
@@ -260,8 +260,10 @@ async fn resolve_bootstrap_method<'a>(
     let bootstrap_method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
     let bootstrap_method_name = bootstrap_method_name.to_str_lossy();
     let bootstrap_method_descriptor = bootstrap_method_descriptor.to_str_lossy();
-    let bootstrap_method =
-        bootstrap_class.try_get_method(&bootstrap_method_name, &bootstrap_method_descriptor)?;
+    let ResolvedMethod {
+        declaring_class: bootstrap_class,
+        method: bootstrap_method,
+    } = bootstrap_class.resolve_method(&bootstrap_method_name, &bootstrap_method_descriptor)?;
 
     // 2.4 Validate bootstrap method signature matches required pattern:
     //     (MethodHandles.Lookup, String, MethodType|TypeDescriptor, ...additionalArgs) -> CallSite|Object
@@ -1088,12 +1090,10 @@ async fn validate_call_site(
 
     // Only validate CallSite.type() for CallSite results (not for MethodHandle)
     if is_call_site {
-        let type_method =
-            call_site_class.try_get_method("type", "()Ljava/lang/invoke/MethodType;")?;
         let call_site_type = thread
-            .try_execute(
-                &call_site_class,
-                &type_method,
+            .try_invoke(
+                "java/lang/invoke/CallSite",
+                "type()Ljava/lang/invoke/MethodType;",
                 std::slice::from_ref(call_site),
             )
             .await?;
@@ -1174,17 +1174,11 @@ pub(crate) async fn invokedynamic(
         .is_assignable_from(&thread, &object_class)
         .await?
     {
-        // It's a CallSite; extract the target MethodHandle
-        // Subclasses may inherit getTarget from MutableCallSite or ConstantCallSite.
-        let (target_class, get_target_method) = crate::instruction::lookup_method(
-            &object_class,
-            "getTarget",
-            "()Ljava/lang/invoke/MethodHandle;",
-        )?;
+        // Resolve against CallSite, then select on the actual receiver.
         thread
-            .try_execute(
-                &target_class,
-                &get_target_method,
+            .try_invoke(
+                "java/lang/invoke/CallSite",
+                "getTarget()Ljava/lang/invoke/MethodHandle;",
                 &[call_site_or_method_handle],
             )
             .await?

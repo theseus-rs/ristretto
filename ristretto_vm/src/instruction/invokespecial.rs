@@ -19,12 +19,13 @@ pub(crate) async fn invokespecial(
     let resolution = resolve_method_ref(frame, method_index, InvokeKind::Special).await?;
 
     instruction::receiver_class(stack.peek_at(resolution.param_count)?)?;
+    let target = resolution.select_special(frame.class())?;
 
     // +1 for the receiver (this)
     let parameters = stack.drain_last(resolution.param_count + 1);
     Ok(ExecutionResult::Call(MethodCall {
-        class: resolution.declaring_class.clone(),
-        method: resolution.method.clone(),
+        class: target.declaring_class,
+        method: target.method,
         parameters: parameters.into(),
         has_return_type: resolution.has_return_type,
     }))

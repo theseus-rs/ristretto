@@ -277,10 +277,12 @@ pub async fn init_properties<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let properties = parameters.pop()?;
     let properties_class = thread.class("java.util.Properties").await?;
-    let set_property_method = properties_class.try_get_method(
+    let set_property_method = properties_class.resolve_method(
         "setProperty",
         "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
     )?;
+    let receiver_class = properties.as_object_ref()?.class().clone();
+    let set_property_method = receiver_class.select_concrete_method(&set_property_method)?;
     let system_properties = &mut properties::system(&thread).await?;
 
     for (key, value) in system_properties.iter() {
@@ -288,7 +290,11 @@ pub async fn init_properties<T: Thread + 'static>(
         let value = value.clone();
         let parameters = vec![properties.clone(), key, value];
         thread
-            .execute(&properties_class, &set_property_method, &parameters)
+            .execute(
+                &set_property_method.declaring_class,
+                &set_property_method.method,
+                &parameters,
+            )
             .await?;
     }
     // Configuration properties model command-line -D options. Install them after the platform
@@ -299,7 +305,11 @@ pub async fn init_properties<T: Thread + 'static>(
         let value = value.to_object(&thread).await?;
         let parameters = vec![properties.clone(), key, value];
         thread
-            .execute(&properties_class, &set_property_method, &parameters)
+            .execute(
+                &set_property_method.declaring_class,
+                &set_property_method.method,
+                &parameters,
+            )
             .await?;
     }
     Ok(Some(properties))

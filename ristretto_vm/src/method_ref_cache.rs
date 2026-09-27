@@ -22,7 +22,7 @@ use crate::Error::InternalError;
 use crate::JavaError::IllegalAccessError;
 use crate::reference_cache::ReferenceCache;
 use ristretto_classfile::{FieldType, JavaStr};
-use ristretto_classloader::{Class, Method, POLYMORPHIC_METHODS};
+use ristretto_classloader::{Class, Method, POLYMORPHIC_METHODS, ResolvedMethod};
 use std::sync::{Arc, OnceLock};
 
 /// The kind of method invocation.
@@ -48,6 +48,8 @@ pub struct ResolvedMethodRef {
     pub referenced_class: Arc<Class>,
     /// Checked receiver targets, published only after successful dispatch.
     pub dispatch: ReceiverCache,
+    /// Successful special selection for this caller's symbolic reference.
+    special_target: OnceLock<ResolvedMethod>,
     /// The class that declares the method.
     pub declaring_class: Arc<Class>,
     /// The resolved method.
@@ -113,6 +115,7 @@ impl ResolvedMethodRef {
         Self {
             referenced_class,
             dispatch: ReceiverCache::default(),
+            special_target: OnceLock::new(),
             declaring_class,
             method,
             invoke_kind,
@@ -122,6 +125,21 @@ impl ResolvedMethodRef {
             param_count,
             has_return_type,
         }
+    }
+
+    /// Select after checking the receiver for null, and cache only successful selections.
+    pub(crate) fn select_special(&self, caller: &Arc<Class>) -> crate::Result<ResolvedMethod> {
+        if let Some(target) = self.special_target.get() {
+            return Ok(target.clone());
+        }
+        let resolved = ResolvedMethod {
+            declaring_class: self.declaring_class.clone(),
+            method: self.method.clone(),
+        };
+        let target = self
+            .referenced_class
+            .select_special_method(caller, &resolved)?;
+        Ok(self.special_target.get_or_init(|| target).clone())
     }
 }
 
