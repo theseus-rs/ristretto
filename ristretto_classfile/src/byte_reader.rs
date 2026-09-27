@@ -54,13 +54,13 @@ impl<'a> ByteReader<'a> {
     /// Returns a reference to an array of exactly `N` bytes.
     #[inline]
     fn read_array<const N: usize>(&mut self) -> crate::Result<&[u8; N]> {
-        let end = self.pos + N;
-        if end > self.data.len() {
-            return Err(EOF_ERR);
-        }
-        // SAFETY: We just verified that pos..end is within bounds and the slice has exactly N bytes
-        #[expect(unsafe_code)]
-        let array = unsafe { &*self.data.as_ptr().add(self.pos).cast::<[u8; N]>() };
+        let end = self.pos.checked_add(N).ok_or(EOF_ERR)?;
+        let array = self
+            .data
+            .get(self.pos..end)
+            .ok_or(EOF_ERR)?
+            .try_into()
+            .map_err(|_| EOF_ERR)?;
         self.pos = end;
         Ok(array)
     }
@@ -160,13 +160,8 @@ impl<'a> ByteReader<'a> {
     /// Returns `UnexpectedEof` if fewer than `len` bytes remain.
     #[inline]
     pub fn read_bytes(&mut self, len: usize) -> crate::Result<&'a [u8]> {
-        let end = self.pos + len;
-        if end > self.data.len() {
-            return Err(EOF_ERR);
-        }
-        // SAFETY: We just verified end <= data.len()
-        #[expect(unsafe_code)]
-        let slice = unsafe { self.data.get_unchecked(self.pos..end) };
+        let end = self.pos.checked_add(len).ok_or(EOF_ERR)?;
+        let slice = self.data.get(self.pos..end).ok_or(EOF_ERR)?;
         self.pos = end;
         Ok(slice)
     }
@@ -188,7 +183,7 @@ impl<'a> ByteReader<'a> {
     /// Returns `UnexpectedEof` if fewer than `len` bytes remain.
     #[inline]
     pub fn skip(&mut self, len: usize) -> crate::Result<()> {
-        let end = self.pos + len;
+        let end = self.pos.checked_add(len).ok_or(EOF_ERR)?;
         if end > self.data.len() {
             return Err(EOF_ERR);
         }
@@ -1390,5 +1385,17 @@ mod tests {
     fn test_eof_error_display() {
         let err = Error::UnexpectedEof;
         assert_eq!(format!("{err}"), "Unexpected end of input");
+    }
+
+    #[test]
+    fn byte_reader_arithmetic_is_checked() {
+        let mut reader = ByteReader::new(&[1, 2]);
+        reader.set_position(usize::MAX);
+        assert!(reader.read_u16().is_err());
+        assert!(reader.read_u8().is_err());
+        assert!(reader.skip(1).is_err());
+        reader.set_position(1);
+        assert!(reader.read_bytes(usize::MAX).is_err());
+        assert_eq!(reader.position(), 1);
     }
 }
