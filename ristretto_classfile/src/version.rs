@@ -56,6 +56,10 @@ pub const JAVA_23: Version = Version::Java23 { minor: 0 };
 pub const JAVA_24: Version = Version::Java24 { minor: 0 };
 /// Constants representing the Java version 25.
 pub const JAVA_25: Version = Version::Java25 { minor: 0 };
+/// Java 26 class file version.
+pub const JAVA_26: Version = Version::Java26 { minor: 0 };
+/// Java 27 class file version.
+pub const JAVA_27: Version = Version::Java27 { minor: 0 };
 
 /// Minor version number that indicates a Java preview release.
 ///
@@ -131,6 +135,8 @@ pub enum Version {
     Java23 { minor: u16 },
     Java24 { minor: u16 },
     Java25 { minor: u16 },
+    Java26 { minor: u16 },
+    Java27 { minor: u16 },
 }
 
 impl Version {
@@ -189,6 +195,8 @@ impl Version {
             67 => Version::Java23 { minor },
             68 => Version::Java24 { minor },
             69 => Version::Java25 { minor },
+            70 => Version::Java26 { minor },
+            71 => Version::Java27 { minor },
             _ => return Err(InvalidVersion { major, minor }),
         };
 
@@ -237,6 +245,8 @@ impl Version {
             Version::Java23 { .. } => 67,
             Version::Java24 { .. } => 68,
             Version::Java25 { .. } => 69,
+            Version::Java26 { .. } => 70,
+            Version::Java27 { .. } => 71,
         }
     }
 
@@ -284,7 +294,9 @@ impl Version {
             | Version::Java22 { minor, .. }
             | Version::Java23 { minor, .. }
             | Version::Java24 { minor, .. }
-            | Version::Java25 { minor, .. } => *minor,
+            | Version::Java25 { minor, .. }
+            | Version::Java26 { minor, .. }
+            | Version::Java27 { minor, .. } => *minor,
         }
     }
 
@@ -430,6 +442,7 @@ impl Version {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
+        Self::from(self.major(), self.minor())?;
         bytes.write_u16::<BigEndian>(self.minor())?;
         bytes.write_u16::<BigEndian>(self.major())?;
         Ok(())
@@ -511,6 +524,8 @@ impl fmt::Display for Version {
             Version::Java23 { .. } => write!(f, "Java 23"),
             Version::Java24 { .. } => write!(f, "Java 24"),
             Version::Java25 { .. } => write!(f, "Java 25"),
+            Version::Java26 { .. } => write!(f, "Java 26"),
+            Version::Java27 { .. } => write!(f, "Java 27"),
         }
     }
 }
@@ -604,7 +619,7 @@ mod test {
     use super::*;
 
     const MIN_MAJOR: u16 = 45;
-    const MAX_MAJOR: u16 = 69;
+    const MAX_MAJOR: u16 = 71;
 
     #[test]
     fn all_known_versions() -> Result<()> {

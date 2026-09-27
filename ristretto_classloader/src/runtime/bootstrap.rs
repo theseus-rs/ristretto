@@ -20,19 +20,19 @@ use tracing::{debug, warn};
 pub const DEFAULT_JAVA_VERSION: &str = JAVA_25_VERSION;
 
 /// Java 8 LTS version
-pub const JAVA_8_VERSION: &str = "8.502.07.1";
+pub const JAVA_8_VERSION: &str = "8.504.01.1";
 
 /// Java 11 LTS version
-pub const JAVA_11_VERSION: &str = "11.0.32.9.1";
+pub const JAVA_11_VERSION: &str = "11.0.32.12.1";
 
 /// Java 17 LTS version
-pub const JAVA_17_VERSION: &str = "17.0.20.8.1";
+pub const JAVA_17_VERSION: &str = "17.0.20.12.1";
 
 /// Java 21 LTS version
-pub const JAVA_21_VERSION: &str = "21.0.12.8.1";
+pub const JAVA_21_VERSION: &str = "21.0.12.12.1";
 
 /// Java 25 LTS version (also the default)
-pub const JAVA_25_VERSION: &str = "25.0.4.7.1";
+pub const JAVA_25_VERSION: &str = "25.0.4.10.1";
 
 /// Array of all supported Java LTS versions for iteration in tests
 pub const ALL_LTS_VERSIONS: &[&str] = &[
@@ -80,7 +80,7 @@ pub async fn default_class_loader() -> Result<(PathBuf, String, Arc<ClassLoader>
 /// 1. `RISTRETTO_JDK_<MAJOR>_HOME` — points directly at the JDK home for the requested major
 ///    version (e.g. `RISTRETTO_JDK_25_HOME=/jdks/25`).
 /// 2. `RISTRETTO_JDKS_DIR` — points at a directory containing one entry per full version string
-///    (e.g. `<dir>/25.0.4.7.1`).
+///    (e.g. `<dir>/25.0.4.10.1`).
 /// 3. `RISTRETTO_JDK_HOME` — generic fallback pointing at any JDK.
 ///
 /// # Errors

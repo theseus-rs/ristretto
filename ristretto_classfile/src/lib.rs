@@ -8,7 +8,7 @@
 //! Implementation of the [JVM Class File Format](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html)
 //! that is used to read, write and verify Java classes.
 //!
-//! Supports reading, writing, and verifying class files for any version of Java version up to 25.
+//! Supports reading, writing, and verifying class files for any version of Java version up to 27.
 //!
 //! ## Examples
 //!
@@ -127,6 +127,6 @@ pub use verifiers::VerifyMode;
 pub use version::{
     JAVA_1_0_2, JAVA_1_1, JAVA_1_2, JAVA_1_3, JAVA_1_4, JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9,
     JAVA_10, JAVA_11, JAVA_12, JAVA_13, JAVA_14, JAVA_15, JAVA_16, JAVA_17, JAVA_18, JAVA_19,
-    JAVA_20, JAVA_21, JAVA_22, JAVA_23, JAVA_24, JAVA_25, JAVA_PREVIEW_MINOR_VERSION, Version,
-    VersionSpecification,
+    JAVA_20, JAVA_21, JAVA_22, JAVA_23, JAVA_24, JAVA_25, JAVA_26, JAVA_27,
+    JAVA_PREVIEW_MINOR_VERSION, Version, VersionSpecification,
 };
