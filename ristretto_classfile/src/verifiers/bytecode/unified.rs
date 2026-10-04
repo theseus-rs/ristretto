@@ -19,6 +19,7 @@
 //!
 //! - [JVMS §4.10 - Verification of class Files](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10)
 
+use crate::JAVA_6;
 use crate::attributes::Attribute;
 use crate::class_file::ClassFile;
 use crate::method::Method;
@@ -178,6 +179,7 @@ fn verify_with_fast_path<C: VerificationContext>(
         FastPathResult::Success => Ok(Some(VerificationResult::success(
             VerificationPath::FastPath,
         ))),
+        FastPathResult::Failed(_) if class_file.version.major() == JAVA_6.major() => Ok(None),
         FastPathResult::Failed(e) => Err(e),
         FastPathResult::NeedsFallback(_) => Ok(None),
     }
