@@ -576,6 +576,17 @@ fn duplicate_source_file() {
 }
 
 #[test]
+fn duplicate_nest_members() {
+    let mut c = base();
+    let idx = c.constant_pool.add_utf8("NestMembers").unwrap();
+    c.attributes.push(Attribute::NestMembers {
+        name_index: idx,
+        class_indexes: vec![c.super_class, c.super_class],
+    });
+    check(c, None, true);
+}
+
+#[test]
 fn wrong_constant_value_type() {
     let mut class = base();
     let name_index = class.constant_pool.add_utf8("x").unwrap();
