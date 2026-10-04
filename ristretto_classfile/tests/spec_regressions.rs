@@ -254,3 +254,18 @@ fn chop_frame_removes_a_category_two_local() {
     );
     check(class, Some(method), true);
 }
+
+#[test]
+fn initial_frame_overridden() {
+    let mut c = base();
+    let m = method(
+        &mut c,
+        "f",
+        "(I)V",
+        1,
+        1,
+        vec![Fload_0, Pop, Return],
+        Some(vec![full(0, vec![T::Float], vec![])]),
+    );
+    check(c, Some(m), false);
+}
