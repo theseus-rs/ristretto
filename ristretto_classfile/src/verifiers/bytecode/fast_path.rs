@@ -998,6 +998,14 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             }
 
             handler_frame.this_uninitialized = current_frame.this_uninitialized;
+            super::constraints::invalidate_constructor_receiver(
+                self.class_file,
+                self.code,
+                offset,
+                current_frame,
+                &mut handler_frame,
+            )?;
+
             // Push exception type
             handler_frame.push(exception_type)?;
 
@@ -2204,6 +2212,48 @@ mod tests {
             invalid_pc_verify.verify(),
             FastPathResult::Failed(_)
         ));
+    }
+
+    #[test]
+    fn test_fast_path_exception_handler_validates_invokespecial() {
+        let mut class_file = create_mock_class_file();
+        let ordinary_method = class_file
+            .constant_pool
+            .add_method_ref(class_file.this_class, "ordinary", "()V")
+            .unwrap();
+        let context = MockContext::PERMISSIVE;
+        let config = VerifierConfig::default();
+        for (index, valid) in [(0, false), (ordinary_method, true)] {
+            let method = method_with(
+                MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                4,
+                vec![Instruction::Invokespecial(index), Instruction::Return],
+                1,
+                1,
+                Vec::new(),
+                vec![ExceptionTableEntry {
+                    range_pc: 0..1,
+                    handler_pc: 1,
+                    catch_type: 0,
+                }],
+            );
+            let verifier = fast_verifier(&class_file, &method, &context, &config);
+            let mut current = Frame::new(1, 1);
+            current.locals = vec![VerificationType::Integer];
+            let mut anchors = vec![None, None];
+            let mut worklist = Vec::new();
+            let result =
+                verifier.process_exception_handlers(0, &current, &mut anchors, &mut worklist);
+            if valid {
+                result.unwrap();
+                assert_eq!(anchors[1].as_ref().unwrap().locals, current.locals);
+                assert_eq!(worklist, vec![1]);
+            } else {
+                assert!(result.is_err());
+                assert!(anchors.iter().all(Option::is_none));
+                assert!(worklist.is_empty());
+            }
+        }
     }
 
     #[test]
