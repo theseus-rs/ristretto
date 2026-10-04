@@ -150,6 +150,14 @@ fn missing_code() {
 }
 
 #[test]
+fn duplicate_methods() {
+    let mut c = base();
+    let m = method(&mut c, "f", "()V", 0, 0, vec![Return], None);
+    c.methods.push(m.clone());
+    check(c, Some(m), false);
+}
+
+#[test]
 fn duplicate_code() {
     let mut c = base();
     let mut m = method(&mut c, "f", "()V", 0, 0, vec![Return], None);
@@ -780,6 +788,22 @@ fn instance_256_parameter_slots() {
     let mut m = method(&mut c, "f", &desc, 0, 256, vec![Return], None);
     m.access_flags = MethodAccessFlags::PUBLIC;
     check(c, Some(m), false);
+}
+
+#[test]
+fn duplicate_fields() {
+    let mut c = base();
+    let n = c.constant_pool.add_utf8("x").unwrap();
+    let d = c.constant_pool.add_utf8("I").unwrap();
+    let f = Field {
+        access_flags: FieldAccessFlags::PUBLIC,
+        name_index: n,
+        descriptor_index: d,
+        field_type: FieldType::Base(BaseType::Int),
+        attributes: vec![],
+    };
+    c.fields = vec![f.clone(), f];
+    check(c, None, false);
 }
 
 #[test]
