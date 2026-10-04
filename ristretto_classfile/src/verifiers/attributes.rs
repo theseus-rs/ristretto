@@ -1063,7 +1063,7 @@ mod tests {
             name_index: 2,
             max_stack: 0,
             max_locals: 1,
-            code: vec![],
+            code: vec![Instruction::Return],
             exception_table: vec![],
             attributes: vec![],
         };
@@ -1101,7 +1101,7 @@ mod tests {
             name_index: 2,
             max_stack: 0,
             max_locals: 1,
-            code: vec![],
+            code: vec![Instruction::Return],
             exception_table: vec![],
             attributes: vec![line_number_table],
         };
