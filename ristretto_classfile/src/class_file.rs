@@ -173,7 +173,13 @@ impl<'a> ClassFile<'a> {
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> Result<ClassFile<'static>> {
         let mut reader = ByteReader::new(bytes);
-        Self::parse_from_reader(&mut reader)
+        let class_file = Self::parse_from_reader(&mut reader)?;
+        if reader.remaining() != 0 {
+            return Err(crate::Error::IoError(
+                "Extra bytes after class file".to_string(),
+            ));
+        }
+        Ok(class_file)
     }
 
     /// Parse a `ClassFile` directly from a byte slice, borrowing string data where possible.
@@ -187,7 +193,13 @@ impl<'a> ClassFile<'a> {
     /// Returns an error if the bytes do not represent a valid class file.
     pub fn from_slice(data: &'a [u8]) -> Result<ClassFile<'a>> {
         let mut reader = ByteReader::new(data);
-        Self::from_byte_reader(&mut reader)
+        let class_file = Self::from_byte_reader(&mut reader)?;
+        if reader.remaining() != 0 {
+            return Err(crate::Error::IoError(
+                "Extra bytes after class file".to_string(),
+            ));
+        }
+        Ok(class_file)
     }
 
     /// Parse from a `ByteReader` and return a `ClassFile<'static>` by converting all
