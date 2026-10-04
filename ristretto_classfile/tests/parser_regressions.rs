@@ -102,3 +102,16 @@ fn attribute_payload_lengths_are_enforced() {
     ];
     assert!(Attribute::from_bytes(&pool, &mut ByteReader::new(&bytes)).is_err());
 }
+
+#[test]
+fn source_debug_extension_preserves_unpaired_surrogates() {
+    let mut pool = ConstantPool::new();
+    pool.add_utf8("SourceDebugExtension").unwrap();
+    let bytes = [0, 1, 0, 0, 0, 3, 0xed, 0xa0, 0x80];
+    let attr = Attribute::from_bytes(&pool, &mut ByteReader::new(&bytes)).unwrap();
+    let mut out = Vec::new();
+    attr.to_bytes(&mut out).unwrap();
+    assert_eq!(out, bytes);
+    assert!(ristretto_classfile::mutf8::from_bytes(&[0]).is_err());
+    assert!(ristretto_classfile::mutf8::from_bytes_cow(&[0]).is_err());
+}
