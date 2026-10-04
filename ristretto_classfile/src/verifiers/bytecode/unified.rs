@@ -147,6 +147,8 @@ pub fn verify_method<C: VerificationContext>(
         ));
     }
 
+    super::constraints::verify_static(class_file, method)?;
+
     // Determine verification strategy
     let major_version = class_file.version.major();
     let use_fast_path = !config.use_inference() && config.requires_stackmap(major_version);

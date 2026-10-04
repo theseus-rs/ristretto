@@ -903,7 +903,8 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 let class_name = resolver.resolve_class(*index)?;
                 handlers::references::handle_checkcast(frame, &class_name)?;
             }
-            Instruction::Instanceof(_) => {
+            Instruction::Instanceof(index) => {
+                resolver.resolve_class(*index)?;
                 handlers::references::handle_instanceof(frame)?;
             }
             Instruction::Arraylength => {
