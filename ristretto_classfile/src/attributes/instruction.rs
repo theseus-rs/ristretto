@@ -1694,6 +1694,9 @@ impl Instruction {
                 let default = bytes.read_i32()?;
                 let low = bytes.read_i32()?;
                 let high = bytes.read_i32()?;
+                if high < low {
+                    return Err(InvalidInstruction(code));
+                }
                 let mut offsets = Vec::new();
                 for _ in low..=high {
                     let offset = bytes.read_i32()?;
@@ -1715,9 +1718,17 @@ impl Instruction {
                 }
                 let default = bytes.read_i32()?;
                 let npairs = bytes.read_i32()?;
+                if npairs < 0 {
+                    return Err(InvalidInstruction(code));
+                }
                 let mut pairs = IndexMap::new();
+                let mut previous = None;
                 for _ in 0..npairs {
                     let match_ = bytes.read_i32()?;
+                    if previous.is_some_and(|key| key >= match_) {
+                        return Err(InvalidInstruction(code));
+                    }
+                    previous = Some(match_);
                     let offset = bytes.read_i32()?;
                     pairs.insert(match_, offset);
                 }
@@ -1871,6 +1882,12 @@ impl Instruction {
             Instruction::Jsr(value) => Self::write_offset(bytes, *value)?,
             Instruction::Ret(value) => bytes.write_u8(*value)?,
             Instruction::Tableswitch(table_switch) => {
+                if i64::from(table_switch.high) - i64::from(table_switch.low) + 1
+                    != i64::try_from(table_switch.offsets.len())?
+                    || table_switch.high < table_switch.low
+                {
+                    return Err(InvalidInstruction(170));
+                }
                 let position = i32::try_from(bytes.position())?;
                 let padding = (4 - (position % 4)) % 4;
                 for _ in 0..padding {
@@ -1884,6 +1901,14 @@ impl Instruction {
                 }
             }
             Instruction::Lookupswitch(lookup_switch) => {
+                if lookup_switch
+                    .pairs
+                    .keys()
+                    .zip(lookup_switch.pairs.keys().skip(1))
+                    .any(|(a, b)| a >= b)
+                {
+                    return Err(InvalidInstruction(171));
+                }
                 let position = i32::try_from(bytes.position())?;
                 let padding = (4 - (position % 4)) % 4;
                 for _ in 0..padding {
