@@ -205,7 +205,7 @@ pub fn handle_dstore(frame: &mut Frame, index: u16) -> Result<()> {
 /// - [JVMS §6.5.astore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore)
 pub fn handle_astore(frame: &mut Frame, index: u16) -> Result<()> {
     let ty = frame.pop()?;
-    if !ty.is_reference() {
+    if !ty.is_reference() && !matches!(ty, VerificationType::ReturnAddress(_)) {
         return Err(VerifyError::VerifyError(format!(
             "astore: expected reference on stack, got {ty}"
         )));
