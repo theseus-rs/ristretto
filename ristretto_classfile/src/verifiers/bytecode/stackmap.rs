@@ -250,7 +250,7 @@ fn decode_frame(
 
         StackFrame::SameLocals1StackItemFrame { stack, .. }
         | StackFrame::SameLocals1StackItemFrameExtended { stack, .. } => {
-            let stack_types = convert_verification_types(stack, class_file)?;
+            let stack_types = expand_locals(stack, class_file)?;
             (
                 FrameType::SameLocals1StackItem,
                 current_locals.to_vec(),
@@ -264,8 +264,17 @@ fn decode_frame(
 
             // Remove k locals from the end, accounting for category 2 types
             let mut removed = 0;
-            while removed < k && !new_locals.is_empty() {
-                new_locals.pop();
+            while removed < k {
+                let last = new_locals.pop().ok_or_else(|| {
+                    VerifyError::ClassFormatError("Chop frame removes too many locals".to_string())
+                })?;
+                if last == VerificationType::Top
+                    && new_locals
+                        .last()
+                        .is_some_and(VerificationType::is_category2)
+                {
+                    new_locals.pop();
+                }
                 removed += 1;
             }
 
@@ -289,7 +298,7 @@ fn decode_frame(
 
         StackFrame::FullFrame { locals, stack, .. } => {
             let new_locals = expand_locals(locals, class_file)?;
-            let stack_types = convert_verification_types(stack, class_file)?;
+            let stack_types = expand_locals(stack, class_file)?;
             (FrameType::Full, new_locals, stack_types)
         }
     };
@@ -457,6 +466,37 @@ mod tests {
         assert_eq!(frame.frame_type, FrameType::Chop(1));
         // Should have removed one local
         assert_eq!(frame.locals.len(), 2);
+    }
+
+    #[test]
+    fn test_decode_chop_frame_rejects_excessive_removal() {
+        let class_file = create_test_class_file();
+        for (locals, frame_type) in [
+            (vec![], 250),
+            (vec![VerificationType::Integer], 249),
+            (vec![VerificationType::Long, VerificationType::Top], 249),
+            (
+                vec![
+                    VerificationType::Integer,
+                    VerificationType::Double,
+                    VerificationType::Top,
+                ],
+                248,
+            ),
+        ] {
+            let mut initial_frame = Frame::new(locals.len(), 0);
+            initial_frame.locals = locals;
+            let stack_frames = [StackFrame::ChopFrame {
+                frame_type,
+                offset_delta: 0,
+            }];
+
+            assert!(matches!(
+                DecodedStackMapTable::decode(&stack_frames, &initial_frame, &class_file, 0),
+                Err(VerifyError::ClassFormatError(message))
+                    if message == "Chop frame removes too many locals"
+            ));
+        }
     }
 
     #[test]
