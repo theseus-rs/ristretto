@@ -725,3 +725,31 @@ fn java8_private_interface_method_is_valid() {
     method.access_flags = MethodAccessFlags::PRIVATE;
     check(class, Some(method), true);
 }
+
+#[test]
+fn class_initializer_ignores_ordinary_method_flags() {
+    let mut class = base();
+    let mut method = method(&mut class, "<clinit>", "()V", 0, 0, vec![Return], None);
+    method.access_flags = MethodAccessFlags::all();
+    check(class.clone(), Some(method.clone()), true);
+    method.attributes.clear();
+    check(class, Some(method), false);
+}
+
+#[test]
+fn legacy_class_initializer_has_no_receiver_and_can_have_parameters() {
+    for descriptor in ["()V", "(I)V"] {
+        let mut class = base();
+        class.version = JAVA_5;
+        let (locals, code) = if descriptor == "()V" {
+            (0, vec![Return])
+        } else {
+            (1, vec![Iload_0, Pop, Return])
+        };
+        let mut method = method(&mut class, "<clinit>", descriptor, 1, locals, code, None);
+        method.access_flags = MethodAccessFlags::empty();
+        check(class.clone(), Some(method.clone()), true);
+        class.version = JAVA_7;
+        check(class, Some(method), false);
+    }
+}
