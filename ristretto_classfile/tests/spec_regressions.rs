@@ -563,6 +563,17 @@ fn catch_non_throwable() {
 }
 
 #[test]
+fn valid_empty_permitted() {
+    let mut c = base();
+    let idx = c.constant_pool.add_utf8("PermittedSubclasses").unwrap();
+    c.attributes.push(Attribute::PermittedSubclasses {
+        name_index: idx,
+        class_indexes: vec![],
+    });
+    check(c, None, true);
+}
+
+#[test]
 fn duplicate_source_file() {
     let mut c = base();
     let idx = c.constant_pool.add_utf8("SourceFile").unwrap();
@@ -580,6 +591,17 @@ fn duplicate_nest_members() {
     let mut c = base();
     let idx = c.constant_pool.add_utf8("NestMembers").unwrap();
     c.attributes.push(Attribute::NestMembers {
+        name_index: idx,
+        class_indexes: vec![c.super_class, c.super_class],
+    });
+    check(c, None, true);
+}
+
+#[test]
+fn duplicate_permitted_members() {
+    let mut c = base();
+    let idx = c.constant_pool.add_utf8("PermittedSubclasses").unwrap();
+    c.attributes.push(Attribute::PermittedSubclasses {
         name_index: idx,
         class_indexes: vec![c.super_class, c.super_class],
     });
