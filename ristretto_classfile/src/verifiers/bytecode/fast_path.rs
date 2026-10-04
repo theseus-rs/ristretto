@@ -575,17 +575,15 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 .code_info
                 .index_at(*succ_offset)
                 .ok_or(VerifyError::VerifyError("Invalid successor".to_string()))?;
-            if Self::is_visited(&state.visited, succ_index, "successor")? {
-                continue;
-            }
-
             self.handle_successor(
                 succ_index,
                 *succ_offset,
                 next_frame,
                 &mut state.anchor_states,
             )?;
-            state.worklist.push(succ_index);
+            if !Self::is_visited(&state.visited, succ_index, "successor")? {
+                state.worklist.push(succ_index);
+            }
         }
         Ok(())
     }
