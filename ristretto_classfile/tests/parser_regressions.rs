@@ -4,9 +4,9 @@
     clippy::indexing_slicing,
     reason = "test fixtures and byte-level mutations"
 )]
-use ristretto_classfile::ConstantPool;
 use ristretto_classfile::attributes::{AnnotationElement, Attribute, Instruction};
 use ristretto_classfile::byte_reader::ByteReader;
+use ristretto_classfile::{Constant, ConstantPool};
 
 #[test]
 fn byte_reader_arithmetic_is_checked() {
@@ -28,6 +28,32 @@ fn deeply_nested_annotations_return_an_error() {
     }
     bytes.extend_from_slice(&[b'I', 0, 1]);
     assert!(AnnotationElement::from_bytes(&mut ByteReader::new(&bytes)).is_err());
+}
+
+#[test]
+fn constant_pool_count_and_slot_width_are_checked() {
+    let bytes = [0, 2, 5, 0, 0, 0, 0, 0, 0, 0, 1];
+    assert!(ConstantPool::from_bytes(&mut ByteReader::new(&bytes)).is_err());
+    let mut pool = ConstantPool::new();
+    let index = pool.add_long(42).unwrap();
+    let other = pool.add_integer(7).unwrap();
+    assert!(pool.set(index, Constant::Integer(1)).is_err());
+    assert_eq!(pool.try_get(other).unwrap(), &Constant::Integer(7));
+    let mut pool = ConstantPool::new();
+    for _ in 0..65534 {
+        pool.add_integer(0).unwrap();
+    }
+    assert!(pool.add_integer(1).is_err());
+    let mut bytes = Vec::new();
+    pool.to_bytes(&mut bytes).unwrap();
+    assert_eq!(
+        ConstantPool::from_bytes(&mut ByteReader::new(&bytes))
+            .unwrap()
+            .len(),
+        65534
+    );
+    pool.push(Constant::Integer(1));
+    assert!(pool.to_bytes(&mut Vec::new()).is_err());
 }
 
 fn code(pool: &mut ConstantPool<'_>, instructions: Vec<Instruction>) -> Attribute {

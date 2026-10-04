@@ -27,14 +27,29 @@ pub(crate) async fn get_bytes(
             .map_err(|error| Error::ParseError(error.to_string()))?;
         header_map.insert(name, value);
     }
-    let response = crate::tls::reqwest_client()?
-        .get(url)
-        .headers(header_map)
-        .query(query)
-        .send()
-        .await?
-        .error_for_status()?;
-    Ok(response.bytes().await?.to_vec())
+    let client = crate::tls::reqwest_client()?;
+    let mut retries = 0_u32;
+    loop {
+        let response = client
+            .get(url)
+            .headers(header_map.clone())
+            .query(query)
+            .send()
+            .await?
+            .error_for_status()?;
+        match response.bytes().await {
+            Ok(bytes) => return Ok(bytes.to_vec()),
+            // A server can close a large archive download before the body is complete. Retry the
+            // whole GET so that a partial response is never returned to the archive extractor.
+            Err(error) if retries < 2 => {
+                retries += 1;
+                tracing::warn!(%error, retries, "Retrying incomplete runtime download");
+                tokio::time::sleep(std::time::Duration::from_millis(100 * u64::from(retries)))
+                    .await;
+            }
+            Err(error) => return Err(error.into()),
+        }
+    }
 }
 
 /// Issue an HTTP GET and deserialize the response body as JSON.
@@ -177,5 +192,83 @@ fn resolve_redirect(base: &str, location: &str) -> String {
         format!("{}/{}", &base[..slash], location)
     } else {
         location.to_string()
+    }
+}
+
+#[cfg(all(test, not(target_family = "wasm")))]
+mod tests {
+    #![expect(
+        clippy::panic_in_result_fn,
+        reason = "tests assert HTTP results after fallible local server setup"
+    )]
+
+    use super::*;
+    use std::time::Duration;
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::TcpListener;
+
+    const TRUNCATED: &[u8] =
+        b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\nConnection: close\r\n\r\npar";
+    const COMPLETE: &[u8] =
+        b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\nConnection: close\r\n\r\nfull";
+
+    async fn serve_responses(listener: &TcpListener, responses: &[&[u8]]) -> std::io::Result<()> {
+        for response in responses {
+            let (stream, _) = listener.accept().await?;
+            let mut stream = BufReader::new(stream);
+            loop {
+                let mut line = String::new();
+                if stream.read_line(&mut line).await? == 0 || line == "\r\n" {
+                    break;
+                }
+            }
+            stream.get_mut().write_all(response).await?;
+            stream.get_mut().shutdown().await?;
+        }
+        Ok(())
+    }
+
+    async fn fetch_responses(
+        responses: &[&[u8]],
+    ) -> std::result::Result<Result<Vec<u8>>, Box<dyn std::error::Error>> {
+        let listener = TcpListener::bind("127.0.0.1:0").await?;
+        let url = format!("http://{}/archive", listener.local_addr()?);
+        let headers = Headers::new();
+        let (result, server) = tokio::time::timeout(Duration::from_secs(5), async {
+            tokio::join!(
+                get_bytes(&url, &headers, &[]),
+                serve_responses(&listener, responses)
+            )
+        })
+        .await?;
+        server?;
+        Ok(result)
+    }
+
+    #[tokio::test]
+    async fn test_retry_truncated_body() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        assert_eq!(fetch_responses(&[TRUNCATED, COMPLETE]).await??, b"full");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_truncated_body_retry_limit() -> std::result::Result<(), Box<dyn std::error::Error>>
+    {
+        assert!(matches!(
+            fetch_responses(&[TRUNCATED; 3]).await?,
+            Err(Error::RequestError(_))
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_http_error_is_not_retried() -> std::result::Result<(), Box<dyn std::error::Error>>
+    {
+        let response = b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+        assert!(matches!(
+            fetch_responses(&[response]).await?,
+            Err(Error::RequestError(_))
+        ));
+        Ok(())
     }
 }
