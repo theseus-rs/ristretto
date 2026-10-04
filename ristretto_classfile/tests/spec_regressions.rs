@@ -864,6 +864,14 @@ fn valid_handler_byte_index_mismatch() {
 }
 
 #[test]
+fn valid_v50_inference_fallback() {
+    let mut c = base();
+    c.version = JAVA_6;
+    let m = method(&mut c, "f", "()V", 0, 0, vec![Goto(1), Return], None);
+    check(c, Some(m), true);
+}
+
+#[test]
 fn static_final_constructor() {
     let mut c = base();
     let mut m = method(&mut c, "<init>", "()V", 0, 0, vec![Return], None);

@@ -179,6 +179,7 @@ fn verify_with_fast_path<C: VerificationContext>(
         FastPathResult::Success => Ok(Some(VerificationResult::success(
             VerificationPath::FastPath,
         ))),
+        FastPathResult::Failed(_) if class_file.version.major() == 50 => Ok(None),
         FastPathResult::Failed(e) => Err(e),
         FastPathResult::NeedsFallback(_) => Ok(None),
     }
