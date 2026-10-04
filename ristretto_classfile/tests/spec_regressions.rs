@@ -509,3 +509,21 @@ fn compact_frame_requires_promotion() {
     );
     check(c, Some(m), true);
 }
+
+#[test]
+fn frames_at_zero_and_one() {
+    let mut c = base();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        0,
+        0,
+        vec![Nop, Return],
+        Some(vec![
+            StackFrame::SameFrame { frame_type: 0 },
+            StackFrame::SameFrame { frame_type: 0 },
+        ]),
+    );
+    check(c, Some(m), true);
+}
