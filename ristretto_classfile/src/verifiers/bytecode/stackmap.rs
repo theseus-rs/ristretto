@@ -110,6 +110,15 @@ impl DecodedStackMapTable {
         let mut offsets = Vec::with_capacity(stack_frames.len());
 
         let mut current_locals = initial_frame.locals.clone();
+        while current_locals.last() == Some(&VerificationType::Top)
+            && !current_locals
+                .iter()
+                .rev()
+                .nth(1)
+                .is_some_and(VerificationType::is_category2)
+        {
+            current_locals.pop();
+        }
         let mut prev_offset: Option<u16> = None;
 
         for stack_frame in stack_frames {
@@ -447,7 +456,7 @@ mod tests {
         let frame = table.get(5).unwrap();
         assert_eq!(frame.frame_type, FrameType::Chop(1));
         // Should have removed one local
-        assert_eq!(frame.locals.len(), initial_frame.locals.len() - 1);
+        assert_eq!(frame.locals.len(), 2);
     }
 
     #[test]
