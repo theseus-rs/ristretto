@@ -530,6 +530,53 @@ fn catch_non_throwable() {
 }
 
 #[test]
+fn invalid_methodtype_descriptor() {
+    let mut c = base();
+    c.constant_pool.add_method_type("not-a-method").unwrap();
+    check(c, None, false);
+}
+
+#[test]
+fn class_initializer_name_and_type_in_enclosing_method() {
+    let mut c = base();
+    let method_index = c
+        .constant_pool
+        .add_name_and_type("<clinit>", "()V")
+        .unwrap();
+    c.attributes.push(Attribute::EnclosingMethod {
+        name_index: c.constant_pool.add_utf8("EnclosingMethod").unwrap(),
+        class_index: c.super_class,
+        method_index,
+    });
+    check(c, None, true);
+}
+
+#[test]
+fn class_initializer_method_reference_is_rejected() {
+    let mut c = base();
+    c.constant_pool
+        .add_method_ref(c.super_class, "<clinit>", "()V")
+        .unwrap();
+    check(c, None, false);
+}
+
+#[test]
+fn invalid_newinvokespecial_handle() {
+    let mut c = base();
+    let r = c
+        .constant_pool
+        .add_method_ref(c.super_class, "toString", "()Ljava/lang/String;")
+        .unwrap();
+    c.constant_pool
+        .add(Constant::MethodHandle {
+            reference_kind: ReferenceKind::NewInvokeSpecial,
+            reference_index: r,
+        })
+        .unwrap();
+    check(c, None, false);
+}
+
+#[test]
 fn duplicate_real_interfaces() {
     let mut c = base();
     let serial = c.constant_pool.add_class("java/io/Serializable").unwrap();
