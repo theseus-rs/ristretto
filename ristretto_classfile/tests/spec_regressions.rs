@@ -321,3 +321,49 @@ fn unchecked_dead_code() {
     let m = method(&mut c, "f", "()V", 0, 0, vec![Return, Pop, Return], None);
     check(c, Some(m), false);
 }
+
+#[test]
+fn overwritten_long_local() {
+    let mut c = base();
+    c.version = JAVA_5;
+    let m = method(
+        &mut c,
+        "f",
+        "(I)V",
+        2,
+        3,
+        vec![
+            Lconst_0,
+            Lstore_1,
+            Iload_0,
+            Ifeq(7),
+            Iconst_0,
+            Istore_2,
+            Goto(9),
+            Fconst_0,
+            Fstore_2,
+            Lload_1,
+            Pop2,
+            Return,
+        ],
+        None,
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
+fn overwritten_long_slot_cannot_be_restored_by_stackmap() {
+    let mut class = base();
+    let method = method(
+        &mut class,
+        "f",
+        "()V",
+        2,
+        2,
+        vec![
+            Lconst_0, Lstore_0, Iconst_0, Istore_1, Nop, Lload_0, Pop2, Return,
+        ],
+        Some(vec![full(4, vec![T::Long], vec![])]),
+    );
+    check(class, Some(method), false);
+}
