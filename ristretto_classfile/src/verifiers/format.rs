@@ -45,7 +45,24 @@ pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
     let name = class.class_name()?;
     class_name(name, false)?;
     let module = class.access_flags.contains(ClassAccessFlags::MODULE);
-    if !module {
+    if module {
+        if class.version.major() < 53
+            || class.access_flags != ClassAccessFlags::MODULE
+            || name != "module-info"
+            || class.super_class != 0
+            || !class.interfaces.is_empty()
+            || !class.fields.is_empty()
+            || !class.methods.is_empty()
+            || class
+                .attributes
+                .iter()
+                .filter(|a| matches!(a, Attribute::Module { .. }))
+                .count()
+                != 1
+        {
+            return Err(invalid("Invalid module-info class"));
+        }
+    } else {
         if (class.super_class == 0) != (name == "java/lang/Object") {
             return Err(invalid("Only java/lang/Object may have no superclass"));
         }
@@ -92,6 +109,7 @@ pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
         }
     }
     verify_constants(class)?;
+    verify_module_tables(class)?;
     Ok(())
 }
 
@@ -324,9 +342,13 @@ fn verify_fields(class: &ClassFile<'_>) -> Result<()> {
 
 fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
     let pool = &class.constant_pool;
+    let module = class.access_flags.contains(ClassAccessFlags::MODULE);
     for constant in pool {
         match constant {
             Constant::Class(index) => class_name(pool.try_get_utf8(*index)?, true)?,
+            Constant::Module(_) | Constant::Package(_) if !module => {
+                return Err(invalid("Module and Package constants require ACC_MODULE"));
+            }
             Constant::MethodType(index) => {
                 FieldType::parse_method_descriptor(pool.try_get_utf8(*index)?)?;
             }
@@ -410,6 +432,86 @@ fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
                 }
             }
             _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn unique_names<'a>(
+    indexes: impl IntoIterator<Item = u16>,
+    resolve: impl Fn(u16) -> crate::Result<&'a JavaStr>,
+) -> Result<()> {
+    let mut names = HashSet::new();
+    for index in indexes {
+        if !names.insert(resolve(index)?) {
+            return Err(invalid("Duplicate module table entry"));
+        }
+    }
+    Ok(())
+}
+
+fn verify_module_tables(class: &ClassFile<'_>) -> Result<()> {
+    use crate::attributes::{ModuleAccessFlags, RequiresFlags};
+    let pool = &class.constant_pool;
+    for attribute in &class.attributes {
+        if let Attribute::Module {
+            module_name_index,
+            flags,
+            requires,
+            exports,
+            opens,
+            uses,
+            provides,
+            ..
+        } = attribute
+        {
+            let name = pool.try_get_module(*module_name_index)?;
+            unique_names(requires.iter().map(|r| r.index), |i| pool.try_get_module(i))?;
+            if name == "java.base" {
+                if !requires.is_empty() {
+                    return Err(invalid("java.base must have no requires entries"));
+                }
+            } else {
+                let base = requires
+                    .iter()
+                    .find(|r| pool.try_get_module(r.index).is_ok_and(|n| n == "java.base"));
+                let Some(base) = base else {
+                    return Err(invalid("Module must require java.base"));
+                };
+                if base.flags.contains(RequiresFlags::SYNTHETIC)
+                    || (class.version.major() >= 54
+                        && base.flags.contains(RequiresFlags::STATIC_PHASE))
+                {
+                    return Err(invalid("Invalid flags on java.base dependency"));
+                }
+            }
+            if flags.contains(ModuleAccessFlags::OPEN) && !opens.is_empty() {
+                return Err(invalid("Open module must have an empty opens table"));
+            }
+            unique_names(exports.iter().map(|e| e.index), |i| pool.try_get_package(i))?;
+            for export in exports {
+                unique_names(export.to_index.iter().copied(), |i| pool.try_get_module(i))?;
+            }
+            unique_names(opens.iter().map(|e| e.index), |i| pool.try_get_package(i))?;
+            for open in opens {
+                unique_names(open.to_index.iter().copied(), |i| pool.try_get_module(i))?;
+            }
+            unique_names(uses.iter().copied(), |i| pool.try_get_class(i))?;
+            unique_names(provides.iter().map(|p| p.index), |i| pool.try_get_class(i))?;
+            for provider in provides {
+                if provider.with_index.is_empty() {
+                    return Err(invalid("Module provider must name an implementation"));
+                }
+                unique_names(provider.with_index.iter().copied(), |i| {
+                    pool.try_get_class(i)
+                })?;
+            }
+        }
+        if let Attribute::ModulePackages {
+            package_indexes, ..
+        } = attribute
+        {
+            unique_names(package_indexes.iter().copied(), |i| pool.try_get_package(i))?;
         }
     }
     Ok(())
