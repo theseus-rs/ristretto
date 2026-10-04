@@ -888,6 +888,18 @@ fn module_constant_in_ordinary_class() {
 }
 
 #[test]
+fn valid_ignored_misplaced_constantvalue() {
+    let mut c = base();
+    let n = c.constant_pool.add_utf8("ConstantValue").unwrap();
+    let v = c.constant_pool.add_integer(0).unwrap();
+    c.attributes.push(Attribute::ConstantValue {
+        name_index: n,
+        constant_value_index: v,
+    });
+    check(c, None, true);
+}
+
+#[test]
 fn unvalidated_attribute_name_index() {
     let mut c = base();
     let mut m = method(&mut c, "f", "()V", 0, 0, vec![Return], None);
