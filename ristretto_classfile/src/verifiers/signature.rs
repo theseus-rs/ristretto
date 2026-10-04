@@ -47,6 +47,8 @@ struct SignatureParser<'a> {
     input: &'a str,
     pos: usize,
     context: SignatureContext,
+    depth: usize,
+    referenced_variables: AHashSet<String>,
 }
 
 impl<'a> SignatureParser<'a> {
@@ -55,6 +57,8 @@ impl<'a> SignatureParser<'a> {
             input,
             pos: 0,
             context: SignatureContext::new(),
+            depth: 0,
+            referenced_variables: AHashSet::new(),
         }
     }
 
@@ -85,6 +89,18 @@ impl<'a> SignatureParser<'a> {
         }
     }
 
+    fn validate_variables(&self) -> Result<()> {
+        for name in &self.referenced_variables {
+            if !self.context.has_type_variable(name) {
+                return Err(VerificationError {
+                    context: "Signature".to_string(),
+                    message: format!("Undefined type variable '{name}'"),
+                });
+            }
+        }
+        Ok(())
+    }
+
     fn is_eof(&self) -> bool {
         self.pos >= self.input.len()
     }
@@ -93,11 +109,10 @@ impl<'a> SignatureParser<'a> {
     fn parse_identifier(&mut self) -> Result<String> {
         let start = self.pos;
         while let Some(c) = self.peek() {
-            if c.is_alphanumeric() || c == '_' || c == '$' {
-                self.advance();
-            } else {
+            if ".;[/<>:".contains(c) {
                 break;
             }
+            self.advance();
         }
         if start == self.pos {
             return Err(VerificationError {
@@ -112,11 +127,10 @@ impl<'a> SignatureParser<'a> {
     fn parse_class_name(&mut self) -> Result<String> {
         let start = self.pos;
         while let Some(c) = self.peek() {
-            if c.is_alphanumeric() || c == '_' || c == '$' || c == '/' {
-                self.advance();
-            } else {
+            if ".;[<>:".contains(c) {
                 break;
             }
+            self.advance();
         }
         if start == self.pos {
             return Err(VerificationError {
@@ -124,7 +138,14 @@ impl<'a> SignatureParser<'a> {
                 message: format!("Expected class name at position {start}"),
             });
         }
-        Ok(self.input[start..self.pos].to_string())
+        let name = &self.input[start..self.pos];
+        if name.split('/').any(str::is_empty) {
+            return Err(VerificationError {
+                context: "Signature".to_string(),
+                message: "Invalid class name".to_string(),
+            });
+        }
+        Ok(name.to_string())
     }
 
     /// Parse type parameters: `<TypeParameter+>`
@@ -149,6 +170,7 @@ impl<'a> SignatureParser<'a> {
     /// Parse a single type parameter: `Identifier ClassBound InterfaceBound*`
     fn parse_type_parameter(&mut self) -> Result<TypeParameter> {
         let name = self.parse_identifier()?;
+        self.context.add_type_variable(&name);
         self.expect(':')?;
 
         // ClassBound is optional but the colon is required
@@ -173,6 +195,19 @@ impl<'a> SignatureParser<'a> {
 
     /// Parse a field type signature
     fn parse_field_type_signature(&mut self) -> Result<String> {
+        if self.depth >= 64 {
+            return Err(VerificationError {
+                context: "Signature".to_string(),
+                message: "Signature nesting exceeds 64 levels".to_string(),
+            });
+        }
+        self.depth += 1;
+        let result = self.parse_field_type_inner();
+        self.depth -= 1;
+        result
+    }
+
+    fn parse_field_type_inner(&mut self) -> Result<String> {
         let start = self.pos;
         match self.peek() {
             Some('L') => self.parse_class_type_signature()?,
@@ -266,13 +301,7 @@ impl<'a> SignatureParser<'a> {
         let name = self.parse_identifier()?;
         self.expect(';')?;
 
-        // Validate that the type variable is declared
-        if !self.context.has_type_variable(&name) {
-            return Err(VerificationError {
-                context: "Signature".to_string(),
-                message: format!("Undefined type variable '{name}'"),
-            });
-        }
+        self.referenced_variables.insert(name);
         Ok(())
     }
 
@@ -321,7 +350,18 @@ impl<'a> SignatureParser<'a> {
 ///
 /// # Errors
 /// Returns an error if the signature is malformed or contains undefined type variables.
-pub(crate) fn verify_class_signature(signature: &str) -> Result<()> {
+pub fn verify_class_signature(signature: &str) -> Result<()> {
+    verify_class_signature_with_context(signature, &[])
+}
+
+/// Validate a class signature with type variables declared by its enclosing class.
+///
+/// # Errors
+/// Returns an error for malformed grammar or undeclared type variables.
+pub fn verify_class_signature_with_context(
+    signature: &str,
+    enclosing_type_params: &[String],
+) -> Result<()> {
     if signature.is_empty() {
         return Err(VerificationError {
             context: "Signature".to_string(),
@@ -330,6 +370,9 @@ pub(crate) fn verify_class_signature(signature: &str) -> Result<()> {
     }
 
     let mut parser = SignatureParser::new(signature);
+    for parameter in enclosing_type_params {
+        parser.context.add_type_variable(parameter);
+    }
 
     // Optional type parameters
     if parser.peek() == Some('<') {
@@ -344,7 +387,7 @@ pub(crate) fn verify_class_signature(signature: &str) -> Result<()> {
         parser.parse_class_type_signature()?;
     }
 
-    Ok(())
+    parser.validate_variables()
 }
 
 /// Verify a method signature.
@@ -353,7 +396,18 @@ pub(crate) fn verify_class_signature(signature: &str) -> Result<()> {
 ///
 /// # Errors
 /// Returns an error if the signature is malformed or contains undefined type variables.
-pub(crate) fn verify_method_signature(signature: &str) -> Result<()> {
+pub fn verify_method_signature(signature: &str) -> Result<()> {
+    verify_method_signature_with_context(signature, &[])
+}
+
+/// Validate a method signature with the enclosing class's type variable names.
+///
+/// # Errors
+/// Returns an error for invalid grammar or undeclared type variables.
+pub fn verify_method_signature_with_context(
+    signature: &str,
+    class_type_params: &[String],
+) -> Result<()> {
     if signature.is_empty() {
         return Err(VerificationError {
             context: "Signature".to_string(),
@@ -362,6 +416,9 @@ pub(crate) fn verify_method_signature(signature: &str) -> Result<()> {
     }
 
     let mut parser = SignatureParser::new(signature);
+    for parameter in class_type_params {
+        parser.context.add_type_variable(parameter);
+    }
 
     // Optional type parameters
     if parser.peek() == Some('<') {
@@ -393,7 +450,7 @@ pub(crate) fn verify_method_signature(signature: &str) -> Result<()> {
         });
     }
 
-    Ok(())
+    parser.validate_variables()
 }
 
 /// Verify a field signature.
@@ -402,7 +459,7 @@ pub(crate) fn verify_method_signature(signature: &str) -> Result<()> {
 ///
 /// # Errors
 /// Returns an error if the signature is malformed or contains undefined type variables.
-pub(crate) fn verify_field_signature(signature: &str, class_type_params: &[String]) -> Result<()> {
+pub fn verify_field_signature(signature: &str, class_type_params: &[String]) -> Result<()> {
     if signature.is_empty() {
         return Err(VerificationError {
             context: "Signature".to_string(),
@@ -429,7 +486,7 @@ pub(crate) fn verify_field_signature(signature: &str, class_type_params: &[Strin
         });
     }
 
-    Ok(())
+    parser.validate_variables()
 }
 
 #[cfg(test)]
@@ -678,7 +735,7 @@ mod tests {
             .to_string();
         assert!(message.contains("Expected identifier"));
 
-        let message = SignatureParser::new("!")
+        let message = SignatureParser::new(";")
             .parse_class_name()
             .unwrap_err()
             .to_string();
@@ -732,5 +789,23 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(message.contains("Unexpected characters at end of field signature"));
+    }
+}
+
+#[cfg(test)]
+mod regression_tests {
+    use super::verify_class_signature;
+
+    #[test]
+    fn signature_recursive_bound_refers_to_its_own_parameter() {
+        assert!(
+            verify_class_signature("<T:Ljava/lang/Comparable<TT;>;>Ljava/lang/Object;").is_ok()
+        );
+    }
+
+    #[test]
+    fn signature_forward_bound_refers_to_later_parameter() {
+        assert!(verify_class_signature("<T:TU;U:Ljava/lang/Object;>Ljava/lang/Object;").is_ok());
+        assert!(verify_class_signature("<T:TU;>Ljava/lang/Object;").is_err());
     }
 }
