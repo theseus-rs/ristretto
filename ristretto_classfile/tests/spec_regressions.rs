@@ -538,6 +538,26 @@ fn catch_non_throwable() {
 }
 
 #[test]
+fn wrong_constant_value_type() {
+    let mut class = base();
+    let name_index = class.constant_pool.add_utf8("x").unwrap();
+    let descriptor_index = class.constant_pool.add_utf8("I").unwrap();
+    let attribute_name = class.constant_pool.add_utf8("ConstantValue").unwrap();
+    let value_index = class.constant_pool.add_long(42).unwrap();
+    class.fields.push(Field {
+        access_flags: FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC,
+        name_index,
+        descriptor_index,
+        field_type: FieldType::Base(BaseType::Int),
+        attributes: vec![Attribute::ConstantValue {
+            name_index: attribute_name,
+            constant_value_index: value_index,
+        }],
+    });
+    check(class, None, false);
+}
+
+#[test]
 fn invalid_methodtype_descriptor() {
     let mut c = base();
     c.constant_pool.add_method_type("not-a-method").unwrap();
@@ -803,6 +823,21 @@ fn duplicate_fields() {
         attributes: vec![],
     };
     c.fields = vec![f.clone(), f];
+    check(c, None, false);
+}
+
+#[test]
+fn constructed_invalid_field_descriptor() {
+    let mut c = base();
+    let n = c.constant_pool.add_utf8("x").unwrap();
+    let d = c.constant_pool.add_utf8("garbage").unwrap();
+    c.fields.push(Field {
+        access_flags: FieldAccessFlags::PUBLIC,
+        name_index: n,
+        descriptor_index: d,
+        field_type: FieldType::Base(BaseType::Int),
+        attributes: vec![],
+    });
     check(c, None, false);
 }
 
