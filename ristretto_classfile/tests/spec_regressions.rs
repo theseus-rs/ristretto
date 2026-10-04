@@ -281,6 +281,63 @@ fn stackmap_overflow_discarded() {
 }
 
 #[test]
+fn handler_integer_stack() {
+    let mut c = base();
+    let mut m = method(
+        &mut c,
+        "f",
+        "()V",
+        1,
+        0,
+        vec![Nop, Return, Pop, Return],
+        Some(vec![full(2, vec![], vec![T::Integer])]),
+    );
+    if let Attribute::Code {
+        exception_table, ..
+    } = &mut m.attributes[0]
+    {
+        exception_table.push(ExceptionTableEntry {
+            range_pc: 0..1,
+            handler_pc: 2,
+            catch_type: 0,
+        });
+    }
+    check(c, Some(m), false);
+}
+
+#[test]
+fn catch_non_throwable() {
+    let mut c = base();
+    let object = c.super_class;
+    let mut m = method(
+        &mut c,
+        "f",
+        "()V",
+        1,
+        0,
+        vec![Nop, Return, Pop, Return],
+        Some(vec![full(
+            2,
+            vec![],
+            vec![T::Object {
+                cpool_index: object,
+            }],
+        )]),
+    );
+    if let Attribute::Code {
+        exception_table, ..
+    } = &mut m.attributes[0]
+    {
+        exception_table.push(ExceptionTableEntry {
+            range_pc: 0..1,
+            handler_pc: 2,
+            catch_type: c.super_class,
+        });
+    }
+    check(c, Some(m), false);
+}
+
+#[test]
 fn putfield_uninitialized_new() {
     let mut c = base();
     let r = c

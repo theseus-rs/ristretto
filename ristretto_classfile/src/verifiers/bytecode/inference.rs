@@ -545,6 +545,13 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                     .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
                 VerificationType::Object(JavaString::from(class_name))
             };
+            if !exception_type
+                .is_assignable_to(&VerificationType::java_lang_throwable(), self.context)?
+            {
+                return Err(VerifyError::VerifyError(
+                    "Exception handler catch type must extend Throwable".to_string(),
+                ));
+            }
             handler_frame.push(exception_type)?;
 
             // Merge with existing frame at handler
