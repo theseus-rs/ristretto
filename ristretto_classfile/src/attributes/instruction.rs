@@ -1694,6 +1694,9 @@ impl Instruction {
                 let default = bytes.read_i32()?;
                 let low = bytes.read_i32()?;
                 let high = bytes.read_i32()?;
+                if high < low {
+                    return Err(InvalidInstruction(code));
+                }
                 let mut offsets = Vec::new();
                 for _ in low..=high {
                     let offset = bytes.read_i32()?;
@@ -1715,9 +1718,17 @@ impl Instruction {
                 }
                 let default = bytes.read_i32()?;
                 let npairs = bytes.read_i32()?;
+                if npairs < 0 {
+                    return Err(InvalidInstruction(code));
+                }
                 let mut pairs = IndexMap::new();
+                let mut previous = None;
                 for _ in 0..npairs {
                     let match_ = bytes.read_i32()?;
+                    if previous.is_some_and(|key| key >= match_) {
+                        return Err(InvalidInstruction(code));
+                    }
+                    previous = Some(match_);
                     let offset = bytes.read_i32()?;
                     pairs.insert(match_, offset);
                 }
@@ -1871,6 +1882,12 @@ impl Instruction {
             Instruction::Jsr(value) => Self::write_offset(bytes, *value)?,
             Instruction::Ret(value) => bytes.write_u8(*value)?,
             Instruction::Tableswitch(table_switch) => {
+                if i64::from(table_switch.high) - i64::from(table_switch.low) + 1
+                    != i64::try_from(table_switch.offsets.len())?
+                    || table_switch.high < table_switch.low
+                {
+                    return Err(InvalidInstruction(170));
+                }
                 let position = i32::try_from(bytes.position())?;
                 let padding = (4 - (position % 4)) % 4;
                 for _ in 0..padding {
@@ -1884,6 +1901,14 @@ impl Instruction {
                 }
             }
             Instruction::Lookupswitch(lookup_switch) => {
+                if lookup_switch
+                    .pairs
+                    .keys()
+                    .zip(lookup_switch.pairs.keys().skip(1))
+                    .any(|(a, b)| a >= b)
+                {
+                    return Err(InvalidInstruction(171));
+                }
                 let position = i32::try_from(bytes.position())?;
                 let padding = (4 - (position % 4)) % 4;
                 for _ in 0..padding {
@@ -5081,6 +5106,46 @@ mod test {
     }
 
     #[test]
+    fn test_tableswitch_to_bytes_invalid_operands() {
+        for (low, high, offsets) in [
+            (2, 1, vec![]),
+            (1, 2, vec![0]),
+            (1, 1, vec![0, 0]),
+            (i32::MIN, i32::MAX, vec![]),
+        ] {
+            let instruction = Instruction::Tableswitch(Box::new(TableSwitch {
+                default: 0,
+                low,
+                high,
+                offsets,
+            }));
+            assert!(matches!(
+                instruction.to_bytes(&mut Cursor::new(Vec::new())),
+                Err(InvalidInstruction(170))
+            ));
+        }
+    }
+
+    #[test]
+    fn test_tableswitch_boundary_round_trip() -> Result<()> {
+        for key in [i32::MIN, i32::MAX] {
+            let instruction = Instruction::Tableswitch(Box::new(TableSwitch {
+                default: -1,
+                low: key,
+                high: key,
+                offsets: vec![0],
+            }));
+            let mut bytes = Cursor::new(Vec::new());
+            instruction.to_bytes(&mut bytes)?;
+            assert_eq!(
+                instruction,
+                Instruction::from_bytes(&mut ByteReader::new(bytes.get_ref()))?
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
     fn test_lookupswitch() -> Result<()> {
         let instruction = Instruction::Lookupswitch(Box::new(LookupSwitch {
             default: 42,
@@ -5104,6 +5169,33 @@ mod test {
         assert_eq!(-1, instruction.stack_delta(&ConstantPool::new())?);
         assert_eq!(None, instruction.max_locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
+    }
+
+    #[test]
+    fn test_lookupswitch_to_bytes_unordered_keys() {
+        let instruction = Instruction::Lookupswitch(Box::new(LookupSwitch {
+            default: 0,
+            pairs: IndexMap::from([(2, 0), (1, 0)]),
+        }));
+        assert!(matches!(
+            instruction.to_bytes(&mut Cursor::new(Vec::new())),
+            Err(InvalidInstruction(171))
+        ));
+    }
+
+    #[test]
+    fn test_lookupswitch_ordered_keys_round_trip() -> Result<()> {
+        let instruction = Instruction::Lookupswitch(Box::new(LookupSwitch {
+            default: -1,
+            pairs: IndexMap::from([(i32::MIN, 0), (0, 1), (i32::MAX, 2)]),
+        }));
+        let mut bytes = Cursor::new(Vec::new());
+        instruction.to_bytes(&mut bytes)?;
+        assert_eq!(
+            instruction,
+            Instruction::from_bytes(&mut ByteReader::new(bytes.get_ref()))?
+        );
+        Ok(())
     }
 
     #[test]

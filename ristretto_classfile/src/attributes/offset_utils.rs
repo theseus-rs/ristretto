@@ -388,7 +388,7 @@ mod tests {
             default: 42,
             low: 0,
             high: 0,
-            offsets: vec![],
+            offsets: vec![0],
         }))];
         let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
