@@ -209,6 +209,16 @@ impl<'a> ByteReader<'a> {
         })
     }
 
+    pub(crate) fn nested<T>(
+        &mut self,
+        parse: impl FnOnce(&mut Self) -> crate::Result<T>,
+    ) -> crate::Result<T> {
+        self.depth = self.next_depth()?;
+        let result = parse(self);
+        self.depth -= 1;
+        result
+    }
+
     fn next_depth(&self) -> crate::Result<u16> {
         if self.depth >= 64 {
             return Err(crate::Error::IoError(
