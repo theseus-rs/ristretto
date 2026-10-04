@@ -208,13 +208,13 @@ pub fn handle_newarray(frame: &mut Frame, atype: &ArrayType) -> Result<()> {
         )));
     }
 
-    // Determine component type
+    // Preserve the exact primitive component type, including boolean, byte, char, and short.
     let component = match atype {
-        ArrayType::Boolean
-        | ArrayType::Byte
-        | ArrayType::Char
-        | ArrayType::Short
-        | ArrayType::Int => VerificationType::Integer,
+        ArrayType::Boolean => VerificationType::Boolean,
+        ArrayType::Byte => VerificationType::Byte,
+        ArrayType::Char => VerificationType::Char,
+        ArrayType::Short => VerificationType::Short,
+        ArrayType::Int => VerificationType::Integer,
         ArrayType::Float => VerificationType::Float,
         ArrayType::Long => VerificationType::Long,
         ArrayType::Double => VerificationType::Double,

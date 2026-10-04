@@ -378,7 +378,14 @@ fn convert_single_type(
                 .constant_pool
                 .try_get_class(*cpool_index)
                 .map_err(|error| VerifyError::ClassFormatError(error.to_string()))?;
-            Ok(VerificationType::Object(JavaString::from(name)))
+            // Stack maps encode array references as Object entries; decode their component types.
+            if name.as_bytes().first() == Some(&b'[') {
+                Ok(VerificationType::from_field_type(
+                    &crate::FieldType::parse_java_str(name)?,
+                ))
+            } else {
+                Ok(VerificationType::Object(JavaString::from(name)))
+            }
         }
         ClassFileVerificationType::Uninitialized { offset } => {
             Ok(VerificationType::Uninitialized(*offset))
