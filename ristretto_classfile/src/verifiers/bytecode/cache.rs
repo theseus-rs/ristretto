@@ -49,6 +49,8 @@ pub struct MethodKey<'a> {
     pub method_name: Cow<'a, JavaStr>,
     /// Method descriptor.
     pub descriptor: Cow<'a, JavaStr>,
+    /// Exact class, method, configuration and context identity for result reuse.
+    pub scope: Cow<'a, [u8]>,
 }
 
 /// Wrapper type for zero-allocation cache lookups.
@@ -69,6 +71,7 @@ impl Equivalent<MethodKey<'static>> for MethodKeyLookup<'_, '_> {
         self.0.class_name == key.class_name
             && self.0.method_name == key.method_name
             && self.0.descriptor == key.descriptor
+            && self.0.scope == key.scope
     }
 }
 
@@ -83,12 +86,14 @@ impl MethodKey<'static> {
             class_name: Cow::Owned(class_name.into()),
             method_name: Cow::Owned(method_name.into()),
             descriptor: Cow::Owned(descriptor.into()),
+            scope: Cow::Borrowed(&[]),
         }
     }
 }
 
 impl<'a> MethodKey<'a> {
     /// Creates a method key by borrowing from `&JavaStr` references.
+    #[must_use]
     pub fn borrowed(
         class_name: &'a JavaStr,
         method_name: &'a JavaStr,
@@ -98,16 +103,19 @@ impl<'a> MethodKey<'a> {
             class_name: Cow::Borrowed(class_name),
             method_name: Cow::Borrowed(method_name),
             descriptor: Cow::Borrowed(descriptor),
+            scope: Cow::Borrowed(&[]),
         }
     }
 
     /// Converts this key into an owned `MethodKey<'static>` suitable for cache storage.
     /// Only allocates when the `Cow` fields are borrowed; owned fields are moved.
+    #[must_use]
     pub fn into_owned(self) -> MethodKey<'static> {
         MethodKey {
             class_name: Cow::Owned(self.class_name.into_owned()),
             method_name: Cow::Owned(self.method_name.into_owned()),
             descriptor: Cow::Owned(self.descriptor.into_owned()),
+            scope: Cow::Owned(self.scope.into_owned()),
         }
     }
 }

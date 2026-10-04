@@ -20,6 +20,13 @@ pub struct MemberAccess<'a> {
 
 /// A trait that allows the verifier to resolve type relationships without knowing about the VM.
 pub trait VerificationContext {
+    /// Identity of the class-loading environment and its current hierarchy revision.
+    /// Return `None` (the default) to disable reuse of verification results. A token
+    /// must change whenever any resolution or access-check result can change.
+    fn cache_token(&self) -> Option<u64> {
+        None
+    }
+
     /// Validate member access using resolved flags and loader identities.
     /// Override this hook to enforce contextual constraints such as protected receiver
     /// access; the default leaves member resolution and access checking to the VM.

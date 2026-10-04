@@ -33,7 +33,7 @@ bitflags! {
         const VERBOSE = 0b0000_0001;
         /// Enable tracing of all verification steps.
         const TRACE = 0b0000_0010;
-        /// Cache verification results.
+        /// Request result caching from integrations that supply a verification cache.
         const CACHE_RESULTS = 0b0000_0100;
         /// Allow JSR/RET instructions.
         const ALLOW_JSR_RET = 0b0000_1000;
