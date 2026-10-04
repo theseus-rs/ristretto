@@ -367,3 +367,51 @@ fn overwritten_long_slot_cannot_be_restored_by_stackmap() {
     );
     check(class, Some(method), false);
 }
+
+#[test]
+fn uninitialized_constructor() {
+    let mut c = base();
+    let mut m = method(&mut c, "<init>", "()V", 0, 1, vec![Return], None);
+    m.access_flags = MethodAccessFlags::PUBLIC;
+    check(c, Some(m), false);
+}
+
+#[test]
+fn constructor_cannot_hide_uninitialized_this_by_overwriting_local_zero() {
+    let mut class = base();
+    let mut method = method(
+        &mut class,
+        "<init>",
+        "()V",
+        1,
+        1,
+        vec![Aconst_null, Astore_0, Return],
+        None,
+    );
+    method.access_flags = MethodAccessFlags::PUBLIC;
+    check(class, Some(method), false);
+}
+
+#[test]
+fn constructor_stack_map_cannot_clear_initialization_state() {
+    let mut class = base();
+    let mut method = method(
+        &mut class,
+        "<init>",
+        "()V",
+        1,
+        1,
+        vec![Aconst_null, Astore_0, Return],
+        Some(vec![full(2, vec![T::Null], vec![])]),
+    );
+    method.access_flags = MethodAccessFlags::PUBLIC;
+    class.methods.push(method);
+
+    let error = verify_class(&class, &Context, &VerifierConfig::strict()).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("Constructor initialization state mismatch"),
+        "{error}"
+    );
+}
