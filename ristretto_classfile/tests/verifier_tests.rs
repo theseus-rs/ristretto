@@ -133,7 +133,7 @@ fn create_method_with_descriptor(
 }
 
 #[test]
-fn test_class_verify_reports_attribute_errors() -> Result<()> {
+fn test_class_verify_ignores_misplaced_attributes_and_reports_invalid_indexes() -> Result<()> {
     let mut class_file = create_test_class_file(Version::Java8 { minor: 0 })?;
     class_file.attributes.push(Attribute::Code {
         name_index: 5,
@@ -143,7 +143,7 @@ fn test_class_verify_reports_attribute_errors() -> Result<()> {
         exception_table: vec![],
         attributes: vec![],
     });
-    assert!(class_file.verify().is_err());
+    assert!(class_file.verify().is_ok());
 
     let mut class_file = create_test_class_file(Version::Java9 { minor: 0 })?;
     class_file.attributes.push(Attribute::Module {

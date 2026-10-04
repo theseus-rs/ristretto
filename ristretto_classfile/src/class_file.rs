@@ -211,6 +211,7 @@ impl<'a> ClassFile<'a> {
         }
 
         let version = Version::from_bytes(reader)?;
+        reader.class_major_version = version.major();
         let constant_pool = ConstantPool::from_bytes(reader)?.into_owned();
         let access_flags = ClassAccessFlags::from_bits_truncate(reader.read_u16()?);
         let this_class = reader.read_u16()?;
@@ -239,7 +240,11 @@ impl<'a> ClassFile<'a> {
         let attribute_count = reader.read_u16()? as usize;
         let mut attributes = Vec::with_capacity(attribute_count);
         for _ in 0..attribute_count {
-            let attribute = Attribute::from_bytes(&constant_pool, reader)?;
+            let attribute = Attribute::from_bytes_in(
+                &constant_pool,
+                reader,
+                crate::attributes::attribute::AttributeLocation::Class,
+            )?;
             attributes.push(attribute);
         }
 
@@ -265,6 +270,7 @@ impl<'a> ClassFile<'a> {
         }
 
         let version = Version::from_bytes(reader)?;
+        reader.class_major_version = version.major();
         let constant_pool = ConstantPool::from_bytes(reader)?;
         let access_flags = ClassAccessFlags::from_bits_truncate(reader.read_u16()?);
         let this_class = reader.read_u16()?;
@@ -293,7 +299,11 @@ impl<'a> ClassFile<'a> {
         let attribute_count = reader.read_u16()? as usize;
         let mut attributes = Vec::with_capacity(attribute_count);
         for _ in 0..attribute_count {
-            let attribute = Attribute::from_bytes(&constant_pool, reader)?;
+            let attribute = Attribute::from_bytes_in(
+                &constant_pool,
+                reader,
+                crate::attributes::attribute::AttributeLocation::Class,
+            )?;
             attributes.push(attribute);
         }
 
