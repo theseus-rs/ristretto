@@ -205,6 +205,11 @@ fn test_class_verify_accepts_attribute_optional_indexes() -> Result<()> {
         }],
     });
 
+    assert!(class_file.verify().is_ok());
+    let mut class_file = create_test_class_file(Version::Java9 { minor: 0 })?;
+    class_file.this_class = class_file.constant_pool.add_class("module-info")?;
+    class_file.access_flags = ClassAccessFlags::MODULE;
+    class_file.super_class = 0;
     let module_index = class_file.constant_pool.add_module("test.module")?;
     let module_version_index = class_file.constant_pool.add_utf8("1.0")?;
     class_file.attributes.push(Attribute::Module {
@@ -213,7 +218,7 @@ fn test_class_verify_accepts_attribute_optional_indexes() -> Result<()> {
         flags: ModuleAccessFlags::empty(),
         version_index: 0,
         requires: vec![Requires {
-            index: module_index,
+            index: class_file.constant_pool.add_module("java.base")?,
             flags: RequiresFlags::empty(),
             version_index: module_version_index,
         }],
