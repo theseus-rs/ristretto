@@ -58,7 +58,7 @@ ristretto_test_util = { workspace = true }
 tokio = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
-tokio = { workspace = true, features = ["rt-multi-thread"] }
+tokio = { workspace = true, features = ["io-util", "net", "rt-multi-thread"] }
 
 [features]
 default = ["tls-rustls-ring"]
