@@ -187,6 +187,10 @@ impl AnnotationElement {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<AnnotationElement> {
+        bytes.nested(Self::parse)
+    }
+
+    fn parse(bytes: &mut ByteReader<'_>) -> Result<AnnotationElement> {
         let tag = bytes.read_u8()?;
 
         let element = match tag {
