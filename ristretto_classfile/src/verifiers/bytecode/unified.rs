@@ -340,12 +340,13 @@ mod tests {
         constant_pool.add(Constant::utf8("()V")).unwrap();
         constant_pool.add(Constant::utf8("Code")).unwrap();
 
+        constant_pool.add_class("java/lang/Object").unwrap();
         ClassFile {
             version: Version::Java8 { minor: 0 },
             constant_pool,
             access_flags: crate::ClassAccessFlags::PUBLIC,
             this_class: this_class_index,
-            super_class: 0,
+            super_class: 7,
             interfaces: vec![],
             fields: vec![],
             methods: vec![],
