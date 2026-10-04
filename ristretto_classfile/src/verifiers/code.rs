@@ -220,7 +220,7 @@ pub(crate) fn verify(
         }
     }
 
-    Ok(code_length)
+    Ok(num_inst_u16)
 }
 
 #[cfg(test)]
