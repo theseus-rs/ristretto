@@ -114,6 +114,20 @@ fn stack_underflow() {
 }
 
 #[test]
+fn wrong_void_return() {
+    let mut c = base();
+    let m = method(&mut c, "f", "()I", 0, 0, vec![Return], None);
+    check(c, Some(m), false);
+}
+
+#[test]
+fn wrong_typed_return() {
+    let mut c = base();
+    let m = method(&mut c, "f", "()V", 1, 0, vec![Iconst_0, Ireturn], None);
+    check(c, Some(m), false);
+}
+
+#[test]
 fn uninitialized_constructor() {
     let mut c = base();
     let mut m = method(&mut c, "<init>", "()V", 0, 1, vec![Return], None);
