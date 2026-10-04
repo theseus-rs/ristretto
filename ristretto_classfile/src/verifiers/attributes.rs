@@ -33,7 +33,19 @@ pub(crate) fn verify(
     attributes: &[Attribute],
     context: AttributeContext,
 ) -> Result<()> {
+    let location = match context {
+        AttributeContext::Class => crate::attributes::attribute::AttributeLocation::Class,
+        AttributeContext::Field(_) => crate::attributes::attribute::AttributeLocation::Field,
+        AttributeContext::Method(_) => crate::attributes::attribute::AttributeLocation::Method,
+        AttributeContext::Code(..) => crate::attributes::attribute::AttributeLocation::Code,
+        AttributeContext::RecordComponent => {
+            crate::attributes::attribute::AttributeLocation::RecordComponent
+        }
+    };
     for attribute in attributes {
+        if !location.recognizes(attribute.name().as_bytes()) {
+            continue;
+        }
         match attribute {
             Attribute::ConstantValue {
                 constant_value_index,
@@ -1019,10 +1031,7 @@ mod tests {
         assert!(verify(&class_file, std::slice::from_ref(&attribute), context).is_ok());
 
         assert_eq!(
-            Err(VerificationError {
-                context: "ConstantValue Attribute".to_string(),
-                message: "ConstantValue attribute only allowed in Field context".to_string(),
-            }),
+            Ok(()),
             verify(
                 &class_file,
                 std::slice::from_ref(&attribute),
@@ -1090,7 +1099,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
 
         let line_number_table = Attribute::LineNumberTable {
@@ -1132,7 +1141,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&method)
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
@@ -1155,7 +1164,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
 
         let attribute_invalid_index = Attribute::Exceptions {
@@ -1207,7 +1216,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
 
         // Invalid class_info_index
@@ -1281,7 +1290,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
 
         let attribute_invalid_class = Attribute::EnclosingMethod {
@@ -1326,7 +1335,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Code(&method, 0)
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
@@ -1349,7 +1358,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Code(&method, 0)
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
 
         let attribute_invalid = Attribute::Signature {
@@ -1380,7 +1389,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
 
         let attribute_invalid = Attribute::SourceFile {
@@ -1416,7 +1425,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
@@ -1458,7 +1467,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
 
         let attribute_invalid = Attribute::LineNumberTable {
@@ -1510,7 +1519,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
 
         let attribute_range = Attribute::LocalVariableTable {
@@ -1595,7 +1604,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
 
         let attribute_range = Attribute::LocalVariableTypeTable {
@@ -1665,7 +1674,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Code(&method, 0)
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
@@ -1834,7 +1843,7 @@ mod tests {
 
         assert!(matches!(
             verify(&ClassFile::default(), &[attribute], AttributeContext::Class),
-            Err(VerificationError { .. })
+            Ok(())
         ));
 
         let class_file = create_class_file(vec![
@@ -1879,7 +1888,7 @@ mod tests {
 
         assert!(matches!(
             verify(&class_file, &[attribute], AttributeContext::Class),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
@@ -1910,7 +1919,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
 
         let attribute_invalid_ref = Attribute::BootstrapMethods {
@@ -1960,7 +1969,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
 
         let attribute_invalid = Attribute::MethodParameters {
@@ -2091,7 +2100,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
@@ -2113,7 +2122,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
@@ -2135,7 +2144,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
@@ -2157,7 +2166,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
@@ -2179,7 +2188,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
@@ -2205,7 +2214,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
@@ -2227,7 +2236,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
@@ -3686,7 +3695,7 @@ mod tests {
                 })],
                 class_context,
             ),
-            Err(VerificationError { .. })
+            Ok(())
         ));
     }
 
