@@ -395,6 +395,32 @@ impl StackFrame {
         Ok(frame)
     }
 
+    pub(crate) fn validate(&self) -> Result<()> {
+        let valid = match self {
+            Self::SameFrame { frame_type } => *frame_type <= 63,
+            Self::SameLocals1StackItemFrame { frame_type, stack } => {
+                (64..=127).contains(frame_type) && stack.len() == 1
+            }
+            Self::SameLocals1StackItemFrameExtended {
+                frame_type, stack, ..
+            } => *frame_type == 247 && stack.len() == 1,
+            Self::ChopFrame { frame_type, .. } => (248..=250).contains(frame_type),
+            Self::SameFrameExtended { frame_type, .. } => *frame_type == 251,
+            Self::AppendFrame {
+                frame_type, locals, ..
+            } => {
+                (252..=254).contains(frame_type)
+                    && locals.len() == usize::from(frame_type.saturating_sub(251))
+            }
+            Self::FullFrame { frame_type, .. } => *frame_type == 255,
+        };
+        if valid {
+            Ok(())
+        } else {
+            Err(InvalidStackFrameType(self.frame_type()))
+        }
+    }
+
     /// Serialize the stack frame to bytes.
     ///
     /// This method writes the stack frame to a byte stream according to the JVM specification.
@@ -425,6 +451,7 @@ impl StackFrame {
     /// - If writing to the byte stream fails.
     #[expect(clippy::match_same_arms)]
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
+        self.validate()?;
         match self {
             StackFrame::SameFrame { frame_type } => {
                 bytes.write_u8(*frame_type)?;
