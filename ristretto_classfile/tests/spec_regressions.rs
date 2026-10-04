@@ -509,3 +509,35 @@ fn compact_frame_requires_promotion() {
     );
     check(c, Some(m), true);
 }
+
+#[test]
+fn checkcast_initializes_object() {
+    let mut c = base();
+    let a = c.constant_pool.add_class("java/lang/Object").unwrap();
+    let m = method(
+        &mut c,
+        "f",
+        "()Ljava/lang/Object;",
+        1,
+        0,
+        vec![New(a), Checkcast(a), Areturn],
+        None,
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
+fn monitor_uninitialized() {
+    let mut c = base();
+    let a = c.constant_pool.add_class("java/lang/Object").unwrap();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        1,
+        0,
+        vec![New(a), Monitorenter, Return],
+        None,
+    );
+    check(c, Some(m), true);
+}
