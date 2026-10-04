@@ -675,7 +675,7 @@ mod tests {
 
         let raw_error = std::io::Error::from_raw_os_error(22);
         let message = open_error_message(&raw_error);
-        assert!(!message.is_empty());
+        assert_ne!(message, "");
         assert!(!message.contains("(os error"));
         assert!(!message.ends_with('.'));
 

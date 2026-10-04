@@ -159,7 +159,7 @@ mod tests {
 
         assert!(package_names.contains(&"java.lang".to_string()));
         // The count depends on how many classes the boot loader has loaded in this test context
-        assert!(!package_names.is_empty());
+        assert_ne!(package_names, [] as [String; 0]);
         Ok(())
     }
 

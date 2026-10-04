@@ -160,12 +160,7 @@ public class Main {
         assert_eq!(Some(0), response.code);
         let result = response.events.last().ok_or("missing error")?;
         assert_eq!("error", result["type"]);
-        assert!(
-            !result["message"]
-                .as_str()
-                .ok_or("missing message")?
-                .is_empty()
-        );
+        assert_ne!(result["message"].as_str().ok_or("missing message")?, "");
         assert!(output(&response.events, "stderr")?.contains(diagnostic));
     }
 

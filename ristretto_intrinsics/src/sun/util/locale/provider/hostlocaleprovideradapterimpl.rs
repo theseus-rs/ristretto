@@ -2628,7 +2628,7 @@ mod tests {
     }
 
     fn assert_non_empty_string(value: &Value) {
-        assert!(!value.as_string().expect("string").is_empty());
+        assert_ne!(value.as_string().expect("string"), "");
     }
 
     #[test]
@@ -2752,7 +2752,7 @@ mod tests {
     async fn test_get_default_locale() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = value(get_default_locale(thread, Parameters::new(vec![Value::Int(0)])).await);
-        assert!(!result.as_string().expect("string").is_empty());
+        assert_ne!(result.as_string().expect("string"), "");
     }
 
     #[tokio::test]

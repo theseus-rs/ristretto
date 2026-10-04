@@ -697,7 +697,7 @@ mod tests {
             Ordering::Greater
         );
         assert_eq!(compare_lists(&[], &[numeric]), Ordering::Less);
-        assert!(materialize_list(99, &[]).is_empty());
+        assert_eq!(materialize_list(99, &[]), [] as [MavenItem; 0]);
         let mut empty: [Vec<ArenaItem>; 0] = [];
         push_arena_item(&mut empty, ArenaItem::Numeric("1".to_string()));
         assert_eq!(normalize_qualifier("z", true), "z");

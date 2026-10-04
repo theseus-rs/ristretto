@@ -2227,7 +2227,7 @@ mod tests {
     fn test_as_bytes_empty_array() {
         let reference = Reference::from(Vec::<i32>::new());
         let bytes = reference.as_bytes().expect("should return bytes");
-        assert!(bytes.is_empty());
+        assert_eq!(bytes, [] as [u8; 0]);
     }
 
     #[tokio::test]
@@ -2344,7 +2344,7 @@ mod tests {
     fn test_as_bytes_mut_empty_array() {
         let mut reference = Reference::from(Vec::<i32>::new());
         let bytes = reference.as_bytes_mut().expect("should return bytes");
-        assert!(bytes.is_empty());
+        assert_eq!(bytes, [] as [u8; 0]);
     }
 
     #[tokio::test]

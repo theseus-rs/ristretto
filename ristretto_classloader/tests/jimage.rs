@@ -47,7 +47,7 @@ async fn test_image_for_all_java_lts_versions() -> Result<()> {
         // Verify that we can iterate all resources
         for resource in &image {
             let resource = resource?;
-            assert!(!resource.name().is_empty());
+            assert_ne!(resource.name(), "");
         }
     }
     Ok(())
@@ -83,7 +83,7 @@ async fn test_image_iterator() -> Result<()> {
     let mut iterator_count = 0;
     for resource in &image {
         let resource = resource?;
-        assert!(!resource.full_name().is_empty());
+        assert_ne!(resource.full_name(), "");
         iterator_count += 1;
     }
     assert_eq!(iterator_count, total_resources);

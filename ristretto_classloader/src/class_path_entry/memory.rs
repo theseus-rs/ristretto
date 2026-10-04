@@ -145,7 +145,7 @@ mod tests {
         let memory = Memory::new("test");
 
         assert_eq!(OsStr::new("test"), memory.name());
-        assert!(memory.class_names().await?.is_empty());
+        assert_eq!(memory.class_names().await?, [] as [String; 0]);
         Ok(())
     }
 
@@ -154,7 +154,7 @@ mod tests {
         let memory = Memory::default();
 
         assert_eq!(OsStr::new(""), memory.name());
-        assert!(memory.class_names().await?.is_empty());
+        assert_eq!(memory.class_names().await?, [] as [String; 0]);
         Ok(())
     }
 

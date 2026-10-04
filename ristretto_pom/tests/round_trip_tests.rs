@@ -881,7 +881,10 @@ fn test_round_trip_comprehensive_pom() -> Result<()> {
     assert!(p1.ci_management.is_some());
     assert!(!p1.properties.is_empty());
     assert!(p1.dependency_management.is_some());
-    assert!(!p1.dependencies.dependencies.is_empty());
+    assert_ne!(
+        p1.dependencies.dependencies,
+        [] as [ristretto_pom::Dependency; 0]
+    );
     assert!(p1.repositories.is_some());
     assert!(p1.build.is_some());
     assert!(p1.profiles.is_some());
@@ -950,7 +953,10 @@ fn test_round_trip_empty_dependencies() -> Result<()> {
 </project>
 ";
     let (p1, p2) = round_trip_pom(xml)?;
-    assert!(p1.dependencies.dependencies.is_empty());
+    assert_eq!(
+        p1.dependencies.dependencies,
+        [] as [ristretto_pom::Dependency; 0]
+    );
     assert_eq!(p1, p2);
     Ok(())
 }
@@ -967,7 +973,10 @@ fn test_round_trip_self_closing_dependencies() -> Result<()> {
 </project>
 ";
     let (p1, p2) = round_trip_pom(xml)?;
-    assert!(p1.dependencies.dependencies.is_empty());
+    assert_eq!(
+        p1.dependencies.dependencies,
+        [] as [ristretto_pom::Dependency; 0]
+    );
     assert_eq!(p1, p2);
     Ok(())
 }

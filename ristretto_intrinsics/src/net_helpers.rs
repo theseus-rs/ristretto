@@ -941,17 +941,13 @@ mod tests {
             vec![IpAddr::V4(Ipv4Addr::new(192, 0, 2, 1))],
             lookup_addresses("192.0.2.1").await?
         );
-        assert!(!lookup_addresses("localhost").await?.is_empty());
+        assert_ne!(lookup_addresses("localhost").await?, [] as [IpAddr; 0]);
         assert!(
             lookup_addresses("definitely-not-a-host.invalid")
                 .await
                 .is_err()
         );
-        assert!(
-            !reverse_lookup(IpAddr::V4(Ipv4Addr::LOCALHOST))
-                .await?
-                .is_empty()
-        );
+        assert_ne!(reverse_lookup(IpAddr::V4(Ipv4Addr::LOCALHOST)).await?, "");
         let _unknown_reverse = reverse_lookup(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 1))).await;
 
         assert!(is_reachable(InetAddressValue::V4(Ipv4Addr::LOCALHOST), None, 0, 1).await?);

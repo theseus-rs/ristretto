@@ -548,7 +548,7 @@ mod tests {
         )
         .unwrap_err()
         .to_string();
-        assert!(!error.is_empty());
+        assert_ne!(error, "");
     }
 
     #[test]

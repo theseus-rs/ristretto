@@ -425,7 +425,7 @@ mod tests {
         let frame = table.get(10).unwrap();
         assert_eq!(frame.offset, 10);
         assert_eq!(frame.frame_type, FrameType::Same);
-        assert!(frame.stack.is_empty());
+        assert_eq!(frame.stack, [] as [VerificationType; 0]);
     }
 
     #[test]

@@ -536,7 +536,7 @@ mod tests {
 
         // Test Clone
         let desc_clone = desc.clone();
-        assert!(desc_clone.parameters.is_empty());
+        assert_eq!(desc_clone.parameters, [] as [FieldType; 0]);
         assert!(desc_clone.return_type.is_none());
     }
 

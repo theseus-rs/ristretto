@@ -673,7 +673,7 @@ mod scm_tests {
             "<issueManagement><url>https://example.test/issues</url></issueManagement>",
         )
         .expect("issue management without an optional system");
-        assert!(without_system.system.is_empty());
+        assert_eq!(without_system.system, "");
         assert_eq!(without_system.url, "https://example.test/issues");
     }
 
@@ -698,7 +698,7 @@ mod scm_tests {
             quick_xml::de::from_str("<ciManagement><system>Jenkins</system></ciManagement>")
                 .expect("CI management without an optional URL");
         assert_eq!(without_url.system, "Jenkins");
-        assert!(without_url.url.is_empty());
+        assert_eq!(without_url.url, "");
     }
 
     #[test]

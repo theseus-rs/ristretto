@@ -630,7 +630,7 @@ mod tests {
         let class_name = value.as_reference()?.class_name()?;
         let elements: Vec<Value> = value.try_into()?;
         assert_eq!(class_name, "java/lang/String");
-        assert!(!elements.is_empty());
+        assert_ne!(elements, [] as [Value; 0]);
         Ok(())
     }
 

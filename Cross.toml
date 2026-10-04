@@ -143,7 +143,7 @@ image = "ghcr.io/cross-rs/x86_64-pc-windows-gnu:edge"
 image = "ghcr.io/cross-rs/x86_64-unknown-netbsd:edge"
 pre-build = [
     "apt-get update && apt-get install --assume-yes xz-utils",
-    "curl --fail --location --retry 3 https://cdn.NetBSD.org/pub/NetBSD/NetBSD-9.3/amd64/binary/sets/base.tar.xz --output /tmp/netbsd-base.tar.xz",
+    "curl --fail --location --retry 3 https://archive.netbsd.org/pub/NetBSD-archive/NetBSD-9.3/amd64/binary/sets/base.tar.xz --output /tmp/netbsd-base.tar.xz",
     "echo '7e7dbf02c7b9d09a37a6ce49ad8ce1a0bfcb9a4a3a104866a724d6f0c449949ad95bbf741b7580d252701820fa70eaff49fb6af0db234eae0bf0d4c6a298578a  /tmp/netbsd-base.tar.xz' | sha512sum --check",
     "tar --extract --xz --file /tmp/netbsd-base.tar.xz --directory /tmp ./lib/libkvm.so.6.0",
     "cp /tmp/lib/libkvm.so.6.0 $CROSS_SYSROOT/lib/ && ln --symbolic --force libkvm.so.6.0 $CROSS_SYSROOT/lib/libkvm.so",

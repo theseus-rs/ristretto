@@ -353,7 +353,7 @@ mod tests {
         assert_eq!(field.access_flags(), &FieldAccessFlags::PUBLIC);
         assert_eq!(field.field_type(), &FieldType::Base(BaseType::Int));
         assert_eq!(field.name(), "test");
-        assert!(field.attributes.is_empty());
+        assert_eq!(field.attributes, [] as [Attribute; 0]);
     }
 
     #[test]

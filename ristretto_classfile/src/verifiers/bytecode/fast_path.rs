@@ -2224,7 +2224,7 @@ mod tests {
         no_match_verifier
             .process_exception_handlers(0, &Frame::new(1, 1), &mut anchors, &mut worklist)
             .unwrap();
-        assert!(worklist.is_empty());
+        assert_eq!(worklist, [] as [usize; 0]);
     }
 
     #[test]

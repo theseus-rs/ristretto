@@ -836,7 +836,7 @@ mod tests {
     fn test_split_null_terminated_empty() {
         let bytes: Vec<i8> = vec![];
         let result: Vec<String> = split_null_terminated(&bytes);
-        assert!(result.is_empty());
+        assert_eq!(result, [] as [String; 0]);
     }
 
     #[test]
@@ -866,7 +866,7 @@ mod tests {
     #[test]
     fn test_extract_null_separated_strings_none() {
         let result = extract_null_separated_strings(None);
-        assert!(result.is_empty());
+        assert_eq!(result, [] as [String; 0]);
     }
 
     #[test]
@@ -899,7 +899,7 @@ mod tests {
             ristretto_gc::sync::RwLock::new(Reference::from(vec![1i32, 2, 3])),
         );
         let result = extract_null_separated_strings(Some(&gc_ref));
-        assert!(result.is_empty());
+        assert_eq!(result, [] as [String; 0]);
     }
 
     #[cfg(target_os = "windows")]

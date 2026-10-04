@@ -14,7 +14,6 @@ impl CompiledClasses {
     }
 
     /// Iterate over generated classes in binary-name order.
-    #[must_use]
     pub fn iter(&self) -> impl ExactSizeIterator<Item = (&str, &[u8])> {
         self.0
             .iter()

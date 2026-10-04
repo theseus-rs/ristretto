@@ -55,7 +55,7 @@ mod tests {
         assert_eq!(frame.locals.len(), 2);
         assert_eq!(frame.locals[0], VerificationType::Top);
         assert_eq!(frame.locals[1], VerificationType::Top);
-        assert!(frame.stack.is_empty());
+        assert_eq!(frame.stack, [] as [VerificationType; 0]);
         assert_eq!(frame.max_stack, 5);
     }
 
@@ -75,7 +75,7 @@ mod tests {
 
         let val = frame.pop()?;
         assert_eq!(val, VerificationType::Integer);
-        assert!(frame.stack.is_empty());
+        assert_eq!(frame.stack, [] as [VerificationType; 0]);
 
         Ok(())
     }
