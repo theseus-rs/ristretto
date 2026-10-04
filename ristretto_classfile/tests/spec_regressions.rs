@@ -129,6 +129,21 @@ fn valid_branch_stackmap() {
 }
 
 #[test]
+fn oversized_frame_truncated() {
+    let mut c = base();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        0,
+        0,
+        vec![Return],
+        Some(vec![full(0, vec![T::Integer], vec![T::Integer])]),
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
 fn valid_long_stackmap() {
     let mut c = base();
     let m = method(
@@ -163,6 +178,21 @@ fn valid_append_frame() {
         }]),
     );
     check(c, Some(m), true);
+}
+
+#[test]
+fn stackmap_overflow_discarded() {
+    let mut c = base();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        0,
+        0,
+        vec![Nop, Return],
+        Some(vec![full(1, vec![], vec![T::Integer])]),
+    );
+    check(c, Some(m), false);
 }
 
 #[test]

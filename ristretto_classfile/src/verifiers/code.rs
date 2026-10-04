@@ -179,6 +179,7 @@ pub(crate) fn verify(
             has_stack_map = true;
             let mut current_frame_index = -1i32;
             for (i, frame) in frames.iter().enumerate() {
+                frame.validate()?;
                 // After parsing, offset_delta is in instruction indices, not byte offsets
                 let offset_delta = i32::from(frame.offset_delta());
                 let frame_index = if i == 0 {
