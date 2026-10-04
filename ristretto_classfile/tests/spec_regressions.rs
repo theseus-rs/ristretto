@@ -107,6 +107,34 @@ fn baseline() {
 }
 
 #[test]
+fn missing_super() {
+    let mut c = base();
+    c.super_class = 0;
+    check(c, None, false);
+}
+
+#[test]
+fn self_super() {
+    let mut c = base();
+    c.super_class = c.this_class;
+    check(c, None, false);
+}
+
+#[test]
+fn array_this() {
+    let mut c = base();
+    c.this_class = c.constant_pool.add_class("[I").unwrap();
+    check(c, None, false);
+}
+
+#[test]
+fn duplicate_interfaces() {
+    let mut c = base();
+    c.interfaces = vec![c.super_class, c.super_class];
+    check(c, None, false);
+}
+
+#[test]
 fn invalid_method_name_descriptor() {
     let mut c = base();
     let m = method(&mut c, "bad/name", "invalid", 0, 0, vec![], None);
@@ -499,6 +527,14 @@ fn catch_non_throwable() {
         });
     }
     check(c, Some(m), false);
+}
+
+#[test]
+fn duplicate_real_interfaces() {
+    let mut c = base();
+    let serial = c.constant_pool.add_class("java/io/Serializable").unwrap();
+    c.interfaces = vec![serial, serial];
+    check(c, None, false);
 }
 
 #[test]
