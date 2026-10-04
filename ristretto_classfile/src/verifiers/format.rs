@@ -206,6 +206,38 @@ fn verify_attributes(
                     verify_attributes(class, &record.attributes, L::RecordComponent)?;
                 }
             }
+            Attribute::BootstrapMethods { methods, .. } => {
+                for bootstrap in methods {
+                    if !matches!(
+                        pool.try_get(bootstrap.bootstrap_method_ref)?,
+                        Constant::MethodHandle {
+                            reference_kind: ReferenceKind::InvokeStatic
+                                | ReferenceKind::NewInvokeSpecial,
+                            ..
+                        }
+                    ) {
+                        return Err(invalid(
+                            "Bootstrap method must be an invokestatic or newinvokespecial method handle",
+                        ));
+                    }
+                    for argument in &bootstrap.arguments {
+                        if !matches!(
+                            pool.try_get(*argument)?,
+                            Constant::Integer(_)
+                                | Constant::Float(_)
+                                | Constant::Long(_)
+                                | Constant::Double(_)
+                                | Constant::String(_)
+                                | Constant::Class(_)
+                                | Constant::MethodHandle { .. }
+                                | Constant::MethodType(_)
+                                | Constant::Dynamic { .. }
+                        ) {
+                            return Err(invalid("Bootstrap argument must be a loadable constant"));
+                        }
+                    }
+                }
+            }
             Attribute::RuntimeVisibleTypeAnnotations {
                 type_annotations, ..
             }
