@@ -144,6 +144,21 @@ fn initial_frame_overridden() {
 }
 
 #[test]
+fn top_local_promoted() {
+    let mut c = base();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        1,
+        1,
+        vec![Nop, Nop, Iload_0, Pop, Return],
+        Some(vec![full(2, vec![T::Integer], vec![])]),
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
 fn valid_branch_stackmap() {
     let mut c = base();
     let m = method(
