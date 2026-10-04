@@ -530,6 +530,29 @@ fn catch_non_throwable() {
 }
 
 #[test]
+fn invalid_methodtype_descriptor() {
+    let mut c = base();
+    c.constant_pool.add_method_type("not-a-method").unwrap();
+    check(c, None, false);
+}
+
+#[test]
+fn invalid_newinvokespecial_handle() {
+    let mut c = base();
+    let r = c
+        .constant_pool
+        .add_method_ref(c.super_class, "toString", "()Ljava/lang/String;")
+        .unwrap();
+    c.constant_pool
+        .add(Constant::MethodHandle {
+            reference_kind: ReferenceKind::NewInvokeSpecial,
+            reference_index: r,
+        })
+        .unwrap();
+    check(c, None, false);
+}
+
+#[test]
 fn duplicate_real_interfaces() {
     let mut c = base();
     let serial = c.constant_pool.add_class("java/io/Serializable").unwrap();
