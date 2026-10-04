@@ -1791,12 +1791,16 @@ impl Instruction {
             199 => Instruction::Ifnonnull(Self::read_offset(bytes, current_position)?),
             200 => {
                 let offset = bytes.read_i32()?;
-                let position = current_position + offset;
+                let position = current_position
+                    .checked_add(offset)
+                    .ok_or(InvalidInstruction(code))?;
                 Instruction::Goto_w(position)
             }
             201 => {
                 let offset = bytes.read_i32()?;
-                let position = current_position + offset;
+                let position = current_position
+                    .checked_add(offset)
+                    .ok_or(InvalidInstruction(code))?;
                 Instruction::Jsr_w(position)
             }
             202 => Instruction::Breakpoint,
@@ -1922,12 +1926,16 @@ impl Instruction {
             Instruction::Ifnonnull(value) => Self::write_offset(bytes, *value)?,
             Instruction::Goto_w(value) => {
                 let current_position = i32::try_from(bytes.position())? - 1;
-                let offset = *value - current_position;
+                let offset = value
+                    .checked_sub(current_position)
+                    .ok_or(InvalidInstruction(self.code()))?;
                 bytes.write_i32::<BigEndian>(offset)?;
             }
             Instruction::Jsr_w(value) => {
                 let current_position = i32::try_from(bytes.position())? - 1;
-                let offset = *value - current_position;
+                let offset = value
+                    .checked_sub(current_position)
+                    .ok_or(InvalidInstruction(self.code()))?;
                 bytes.write_i32::<BigEndian>(offset)?;
             }
             // Wide instructions
