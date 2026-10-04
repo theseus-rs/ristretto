@@ -1,5 +1,4 @@
 use crate::FieldType;
-use crate::JAVA_6;
 use crate::attributes::Attribute;
 use crate::attributes::ExceptionTableEntry;
 use crate::attributes::Instruction;
@@ -200,7 +199,7 @@ pub(crate) fn verify(
     }
 
     // Verify that all jump targets have a corresponding StackFrame (if StackMapTable is present and version >= 50)
-    if class_file.version >= JAVA_6 {
+    if class_file.version.major() >= 51 {
         if !jump_target_indices.is_empty() && !has_stack_map {
             return Err(VerificationError {
                 context: "Code Attribute".to_string(),
