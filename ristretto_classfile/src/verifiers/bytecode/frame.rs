@@ -52,6 +52,9 @@ pub struct Frame {
 
     /// Maximum stack size (for overflow checking).
     max_stack: usize,
+
+    /// Constructor initialization state, independent of local variable contents.
+    pub this_uninitialized: bool,
 }
 
 impl Frame {
@@ -71,6 +74,7 @@ impl Frame {
             locals: vec![VerificationType::Top; max_locals],
             stack: Vec::with_capacity(max_stack),
             max_stack,
+            this_uninitialized: false,
         }
     }
 
@@ -86,6 +90,7 @@ impl Frame {
             locals,
             stack: Vec::with_capacity(max_stack),
             max_stack,
+            this_uninitialized: false,
         }
     }
 
@@ -446,7 +451,8 @@ impl Frame {
             )));
         }
 
-        let mut changed = false;
+        let mut changed = !self.this_uninitialized && other.this_uninitialized;
+        self.this_uninitialized |= other.this_uninitialized;
 
         // Merge locals
         for (target, source) in self.locals.iter_mut().zip(&other.locals) {
@@ -487,6 +493,9 @@ impl Frame {
         uninitialized: &VerificationType,
         initialized: &VerificationType,
     ) {
+        if *uninitialized == VerificationType::UninitializedThis {
+            self.this_uninitialized = false;
+        }
         for local in &mut self.locals {
             if local == uninitialized {
                 *local = initialized.clone();
