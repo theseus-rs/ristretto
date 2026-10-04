@@ -62,6 +62,11 @@ pub enum VerificationType {
     /// # JVMS Reference
     /// All these types are treated as `int` for verification purposes.
     Integer,
+    /// Narrow primitive types used only as array components.
+    Boolean,
+    Byte,
+    Char,
+    Short,
 
     /// Float type; single precision floating point.
     Float,
@@ -286,7 +291,13 @@ impl VerificationType {
                 BaseType::Double => Self::Double,
             },
             FieldType::Object(class_name) => Self::Object(class_name.clone()),
-            FieldType::Array(component) => Self::Array(Box::new(Self::from_field_type(component))),
+            FieldType::Array(component) => Self::Array(Box::new(match component.as_ref() {
+                FieldType::Base(BaseType::Boolean) => Self::Boolean,
+                FieldType::Base(BaseType::Byte) => Self::Byte,
+                FieldType::Base(BaseType::Char) => Self::Char,
+                FieldType::Base(BaseType::Short) => Self::Short,
+                other => Self::from_field_type(other),
+            })),
         }
     }
 
@@ -307,10 +318,14 @@ impl VerificationType {
     /// Returns an error if the type code is invalid.
     pub fn from_array_type_code(atype: u8) -> Result<Self> {
         match atype {
-            4 | 5 | 8 | 9 | 10 => Ok(Self::Integer), // T_BOOLEAN, T_CHAR, T_BYTE, T_SHORT, T_INT
-            6 => Ok(Self::Float),                    // T_FLOAT
-            7 => Ok(Self::Double),                   // T_DOUBLE
-            11 => Ok(Self::Long),                    // T_LONG
+            4 => Ok(Self::Boolean),
+            5 => Ok(Self::Char),
+            8 => Ok(Self::Byte),
+            9 => Ok(Self::Short),
+            10 => Ok(Self::Integer),
+            6 => Ok(Self::Float),  // T_FLOAT
+            7 => Ok(Self::Double), // T_DOUBLE
+            11 => Ok(Self::Long),  // T_LONG
             _ => Err(VerifyError::InvalidArrayTypeCode(atype)),
         }
     }
@@ -322,6 +337,10 @@ impl VerificationType {
     pub fn to_descriptor(&self) -> Option<String> {
         match self {
             Self::Integer => Some("I".to_string()),
+            Self::Boolean => Some("Z".to_string()),
+            Self::Byte => Some("B".to_string()),
+            Self::Char => Some("C".to_string()),
+            Self::Short => Some("S".to_string()),
             Self::Float => Some("F".to_string()),
             Self::Long => Some("J".to_string()),
             Self::Double => Some("D".to_string()),
@@ -391,7 +410,7 @@ impl VerificationType {
             // Array-to-Array assignability (covariance for reference arrays)
             (VerificationType::Array(source_comp), VerificationType::Array(target_comp)) => {
                 // Primitive arrays are only assignable to the same type
-                if source_comp.is_integer()
+                if source_comp.is_primitive()
                     || source_comp.is_category2()
                     || matches!(source_comp.as_ref(), VerificationType::Float)
                 {
@@ -479,10 +498,10 @@ impl VerificationType {
             // Array-to-Array merge
             (VerificationType::Array(comp1), VerificationType::Array(comp2)) => {
                 // For primitive arrays, if they differ, merge to Object
-                if comp1.is_integer()
+                if comp1.is_primitive()
                     || comp1.is_category2()
                     || matches!(comp1.as_ref(), VerificationType::Float)
-                    || comp2.is_integer()
+                    || comp2.is_primitive()
                     || comp2.is_category2()
                     || matches!(comp2.as_ref(), VerificationType::Float)
                 {
@@ -507,11 +526,31 @@ impl VerificationType {
     }
 }
 
+impl VerificationType {
+    fn is_primitive(&self) -> bool {
+        matches!(
+            self,
+            Self::Integer
+                | Self::Boolean
+                | Self::Byte
+                | Self::Char
+                | Self::Short
+                | Self::Float
+                | Self::Long
+                | Self::Double
+        )
+    }
+}
+
 impl Display for VerificationType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             VerificationType::Top => write!(f, "top"),
             VerificationType::Integer => write!(f, "int"),
+            VerificationType::Boolean => write!(f, "boolean"),
+            VerificationType::Byte => write!(f, "byte"),
+            VerificationType::Char => write!(f, "char"),
+            VerificationType::Short => write!(f, "short"),
             VerificationType::Float => write!(f, "float"),
             VerificationType::Long => write!(f, "long"),
             VerificationType::Double => write!(f, "double"),
@@ -839,9 +878,15 @@ mod tests {
             VerificationType::Array(Box::new(VerificationType::Integer))
         );
 
-        for code in [4, 5, 8, 9, 10] {
+        for (code, expected) in [
+            (4, VerificationType::Boolean),
+            (5, VerificationType::Char),
+            (8, VerificationType::Byte),
+            (9, VerificationType::Short),
+            (10, VerificationType::Integer),
+        ] {
             assert_eq!(
-                VerificationType::Integer,
+                expected,
                 VerificationType::from_array_type_code(code).unwrap()
             );
         }
