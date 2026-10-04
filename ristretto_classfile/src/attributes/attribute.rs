@@ -1215,8 +1215,11 @@ impl Attribute {
                             offset_delta
                         } else {
                             last_byte_offset
-                                .saturating_add(offset_delta)
-                                .saturating_add(1)
+                                .checked_add(offset_delta)
+                                .and_then(|offset| offset.checked_add(1))
+                                .ok_or(InvalidInstructionOffset(
+                                    u32::from(last_byte_offset) + u32::from(offset_delta) + 1,
+                                ))?
                         };
 
                         let instruction_offset =
@@ -1720,8 +1723,13 @@ impl Attribute {
                             offset_delta
                         } else {
                             last_instruction_offset
-                                .saturating_add(offset_delta)
-                                .saturating_add(1)
+                                .checked_add(offset_delta)
+                                .and_then(|offset| offset.checked_add(1))
+                                .ok_or(InvalidInstructionOffset(
+                                    u32::from(last_instruction_offset)
+                                        + u32::from(offset_delta)
+                                        + 1,
+                                ))?
                         };
 
                         let byte_offset = *instruction_to_byte_map
@@ -1729,7 +1737,7 @@ impl Attribute {
                             .ok_or(InvalidInstructionOffset(u32::from(instruction_offset)))?;
                         // Calculate the byte delta offset from the last instruction offset
                         // subtracting 1 to account for the current instruction.
-                        let byte_delta_offset = if last_byte_offset == 0 {
+                        let byte_delta_offset = if first_frame {
                             first_frame = false;
                             byte_offset
                         } else {
@@ -2086,7 +2094,7 @@ mod test {
             handler_pc: 0,
             catch_type: 4,
         };
-        let mut attribute = Attribute::Code {
+        let attribute = Attribute::Code {
             name_index: 1,
             max_stack: 2,
             max_locals: 3,
@@ -2111,7 +2119,7 @@ mod test {
         let expected_bytes = [
             0, 1, 0, 0, 0, 83, 0, 2, 0, 3, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 177, 0, 1, 0, 0, 0,
             1, 0, 0, 0, 4, 0, 3, 0, 2, 0, 0, 0, 2, 0, 42, 0, 3, 0, 0, 0, 6, 0, 1, 0, 0, 0, 1, 0, 4,
-            0, 0, 0, 28, 0, 7, 0, 66, 5, 247, 0, 0, 5, 248, 0, 0, 251, 0, 0, 252, 0, 0, 5, 255, 0,
+            0, 0, 0, 28, 0, 7, 0, 65, 5, 247, 0, 0, 5, 248, 0, 0, 251, 0, 0, 252, 0, 0, 5, 255, 0,
             0, 0, 1, 5, 0, 1, 1,
         ];
         let expected = indoc! {"\
@@ -2166,14 +2174,6 @@ mod test {
         assert_eq!(expected_bytes, &bytes[..]);
         let mut reader = ByteReader::new(&expected_bytes);
 
-        // Adjust the frame_type offest before comparing
-        if let Attribute::Code { attributes, .. } = &mut attribute
-            && let Some(Attribute::StackMapTable { frames, .. }) = attributes.get_mut(2)
-            && let Some(StackFrame::SameLocals1StackItemFrame { frame_type, .. }) =
-                frames.get_mut(1)
-        {
-            *frame_type = 66; // Update to match the expected frame type
-        }
         let code_attribute = Attribute::from_bytes(&constant_pool, &mut reader)?;
         assert_eq!(attribute, code_attribute);
         Ok(())
