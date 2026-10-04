@@ -435,7 +435,9 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
         let mut local_index = 0;
 
         // For non-static methods, local 0 is 'this'
-        if !self.method.access_flags.contains(MethodAccessFlags::STATIC) {
+        if !self.method.access_flags.contains(MethodAccessFlags::STATIC)
+            && self.method_name != "<clinit>"
+        {
             if self.method_name == "<init>" && self.current_class != "java/lang/Object" {
                 frame.this_uninitialized = true;
                 frame.set_local(local_index, VerificationType::UninitializedThis)?;

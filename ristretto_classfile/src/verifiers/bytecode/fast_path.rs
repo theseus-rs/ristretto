@@ -304,7 +304,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         let mut local_index = 0;
 
         // For non-static methods, local 0 is 'this'
-        if !method.access_flags.contains(MethodAccessFlags::STATIC) {
+        if !method.access_flags.contains(MethodAccessFlags::STATIC) && method_name != "<clinit>" {
             if method_name == "<init>" && current_class != "java/lang/Object" {
                 frame.this_uninitialized = true;
                 frame.set_local(local_index, VerificationType::UninitializedThis)?;

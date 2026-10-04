@@ -35,7 +35,12 @@ pub(crate) fn verify(
         && let Ok((parameters, _)) = FieldType::parse_method_descriptor(descriptor)
     {
         let mut required_locals = 0;
-        if !method.access_flags.contains(MethodAccessFlags::STATIC) {
+        if !method.access_flags.contains(MethodAccessFlags::STATIC)
+            && !class_file
+                .constant_pool
+                .try_get_utf8(method.name_index)
+                .is_ok_and(|name| name == "<clinit>")
+        {
             required_locals += 1;
         }
         for param in parameters {
