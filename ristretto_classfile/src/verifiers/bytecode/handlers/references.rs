@@ -631,7 +631,7 @@ pub fn handle_checkcast(frame: &mut Frame, class_name: &str) -> Result<()> {
     let objectref = frame.pop()?;
 
     // Must be a reference type
-    if !objectref.is_reference() {
+    if !objectref.is_initialized_reference() {
         return Err(VerifyError::VerifyError(format!(
             "checkcast: expected reference, got {objectref}"
         )));
