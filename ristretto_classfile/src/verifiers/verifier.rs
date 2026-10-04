@@ -27,6 +27,7 @@ pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
     nest::verify(class_file)?;
     permitted_subclasses::verify(class_file)?;
     record::verify(class_file)?;
+    super::format::verify(class_file)?;
     Ok(())
 }
 
