@@ -5,7 +5,7 @@
     reason = "test fixtures and byte-level mutations"
 )]
 use ristretto_classfile::ConstantPool;
-use ristretto_classfile::attributes::{Attribute, Instruction};
+use ristretto_classfile::attributes::{AnnotationElement, Attribute, Instruction};
 use ristretto_classfile::byte_reader::ByteReader;
 
 #[test]
@@ -18,6 +18,16 @@ fn byte_reader_arithmetic_is_checked() {
     reader.set_position(1);
     assert!(reader.read_bytes(usize::MAX).is_err());
     assert_eq!(reader.position(), 1);
+}
+
+#[test]
+fn deeply_nested_annotations_return_an_error() {
+    let mut bytes = Vec::new();
+    for _ in 0..30000 {
+        bytes.extend_from_slice(&[b'[', 0, 1]);
+    }
+    bytes.extend_from_slice(&[b'I', 0, 1]);
+    assert!(AnnotationElement::from_bytes(&mut ByteReader::new(&bytes)).is_err());
 }
 
 fn code(pool: &mut ConstantPool<'_>, instructions: Vec<Instruction>) -> Attribute {
