@@ -4,6 +4,7 @@ use crate::attributes::Attribute;
 use crate::{
     BaseType, ClassAccessFlags, ClassFile, FieldType, JavaStr, Method, MethodAccessFlags, Version,
 };
+use std::collections::HashSet;
 
 fn invalid(message: &str) -> VerifyError {
     VerifyError::ClassFormatError(message.to_string())
@@ -21,10 +22,52 @@ fn member_name(name: &JavaStr, method: bool) -> Result<()> {
     Ok(())
 }
 
+fn class_name(name: &JavaStr, arrays: bool) -> Result<()> {
+    if arrays && name.as_bytes().starts_with(b"[") {
+        FieldType::parse_java_str(name)?;
+        return Ok(());
+    }
+    for part in name.as_bytes().split(|b| *b == b'/') {
+        if part.is_empty() || part.iter().any(|b| b".;[".contains(b)) {
+            return Err(invalid("Invalid internal class name"));
+        }
+    }
+    Ok(())
+}
+
 pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
     Version::from(class.version.major(), class.version.minor())?;
     if class.constant_pool.len() > 65534 {
         return Err(invalid("Constant pool exceeds u2 count"));
+    }
+    let pool = &class.constant_pool;
+    let name = class.class_name()?;
+    class_name(name, false)?;
+    let module = class.access_flags.contains(ClassAccessFlags::MODULE);
+    if !module {
+        if (class.super_class == 0) != (name == "java/lang/Object") {
+            return Err(invalid("Only java/lang/Object may have no superclass"));
+        }
+        if class.super_class != 0 {
+            let parent = pool.try_get_class(class.super_class)?;
+            class_name(parent, false)?;
+            if parent == name {
+                return Err(invalid("Class cannot be its own superclass"));
+            }
+            if class.access_flags.contains(ClassAccessFlags::INTERFACE)
+                && parent != "java/lang/Object"
+            {
+                return Err(invalid("Interface superclass must be java/lang/Object"));
+            }
+        }
+    }
+    let mut interfaces = HashSet::new();
+    for index in &class.interfaces {
+        let interface = pool.try_get_class(*index)?;
+        class_name(interface, false)?;
+        if !interfaces.insert(interface) {
+            return Err(invalid("Duplicate interface"));
+        }
     }
     for method in &class.methods {
         verify_method(class, method)?;

@@ -19,10 +19,12 @@
 //!
 //! let mut constant_pool = ConstantPool::default();
 //! let this_class = constant_pool.add_class("Foo")?;
+//! let super_class = constant_pool.add_class("java/lang/Object")?;
 //! let class_file = ClassFile {
 //!     version: JAVA_21,
 //!     constant_pool,
 //!     this_class,
+//!     super_class,
 //!     ..Default::default()
 //! };
 //! class_file.verify()?;
