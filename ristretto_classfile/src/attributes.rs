@@ -47,7 +47,7 @@ mod array_type;
 
 /// The core `Attribute` structure, serving as a base for all specific class file attributes.
 /// It typically holds the attribute name index and its raw byte data.
-mod attribute;
+pub(crate) mod attribute;
 
 /// Represents entries in the `BootstrapMethods` attribute, used for `invokedynamic` instructions.
 mod bootstrap_method;
