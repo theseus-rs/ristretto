@@ -1749,17 +1749,31 @@ impl Attribute {
                         match frame {
                             StackFrame::SameFrame { .. } => {
                                 // SameFrame uses the offset as the frame type
-                                new_frames.push(StackFrame::SameFrame {
-                                    frame_type: u8::try_from(byte_delta_offset)?,
+                                new_frames.push(if byte_delta_offset <= 63 {
+                                    StackFrame::SameFrame {
+                                        frame_type: u8::try_from(byte_delta_offset)?,
+                                    }
+                                } else {
+                                    StackFrame::SameFrameExtended {
+                                        frame_type: 251,
+                                        offset_delta: byte_delta_offset,
+                                    }
                                 });
                             }
                             StackFrame::SameLocals1StackItemFrame { stack, .. } => {
                                 // SameLocals1StackItemFrame requires that the 64 is added to the
                                 // delta offset as it is used as the frame type.
-                                let byte_delta_offset = byte_delta_offset.saturating_add(64);
-                                new_frames.push(StackFrame::SameLocals1StackItemFrame {
-                                    frame_type: u8::try_from(byte_delta_offset)?,
-                                    stack: stack.clone(),
+                                new_frames.push(if byte_delta_offset <= 63 {
+                                    StackFrame::SameLocals1StackItemFrame {
+                                        frame_type: u8::try_from(byte_delta_offset + 64)?,
+                                        stack: stack.clone(),
+                                    }
+                                } else {
+                                    StackFrame::SameLocals1StackItemFrameExtended {
+                                        frame_type: 247,
+                                        offset_delta: byte_delta_offset,
+                                        stack: stack.clone(),
+                                    }
                                 });
                             }
                             StackFrame::AppendFrame {
