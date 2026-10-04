@@ -184,7 +184,7 @@ pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
     code: &[Instruction],
     instruction: &Instruction,
     frame: &Frame,
-    _context: &C,
+    context: &C,
 ) -> Result<()> {
     let resolver = ConstantPoolResolver::new(class);
     match instruction {
@@ -217,6 +217,28 @@ pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
                         }
                     }
                     _ => return Err(invalid("Constructor requires an uninitialized receiver")),
+                }
+            } else {
+                let current = class.class_name()?;
+                let target = VerificationType::Object(current.to_owned());
+                if !receiver(frame, &descriptor)?.is_assignable_to(&target, context)? {
+                    return Err(invalid(
+                        "invokespecial receiver must be assignable to the current class",
+                    ));
+                }
+                let current = current.to_str_lossy();
+                let direct_interface = class.interfaces.iter().any(|index| {
+                    resolver
+                        .resolve_class(*index)
+                        .is_ok_and(|name| name == owner)
+                });
+                if owner != current
+                    && !direct_interface
+                    && !context.is_subclass(&current, &owner)?
+                {
+                    return Err(invalid(
+                        "invokespecial owner must be the current class, a superclass, or a direct superinterface",
+                    ));
                 }
             }
         }
