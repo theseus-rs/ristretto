@@ -841,6 +841,29 @@ fn unvalidated_attribute_name_index() {
 }
 
 #[test]
+fn invalid_type_annotation_path_context() {
+    let mut c = base();
+    let n = c
+        .constant_pool
+        .add_utf8("RuntimeVisibleTypeAnnotations")
+        .unwrap();
+    let t = c.constant_pool.add_utf8("LDeprecated;").unwrap();
+    c.attributes.push(Attribute::RuntimeVisibleTypeAnnotations {
+        name_index: n,
+        type_annotations: vec![TypeAnnotation {
+            target_type: TargetType::Empty { target_type: 0x13 },
+            type_path: vec![TargetPath {
+                type_path_kind: 255,
+                type_argument_index: 5,
+            }],
+            type_index: t,
+            elements: vec![],
+        }],
+    });
+    check(c, None, false);
+}
+
+#[test]
 fn large_logical_branch_sizing() {
     let mut c = base();
     let mut code = vec![Iinc(0, 0); 18000];
