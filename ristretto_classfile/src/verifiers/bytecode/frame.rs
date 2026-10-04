@@ -300,6 +300,15 @@ impl Frame {
                 self.locals.len()
             )));
         }
+        if idx > 0
+            && self
+                .locals
+                .get(idx - 1)
+                .is_some_and(VerificationType::is_category2)
+            && let Some(previous) = self.locals.get_mut(idx - 1)
+        {
+            *previous = VerificationType::Top;
+        }
         let max = self.locals.len();
         let local = self.locals.get_mut(idx).ok_or_else(|| {
             VerifyError::VerifyError(format!(
@@ -329,6 +338,15 @@ impl Frame {
             return Err(VerifyError::VerifyError(format!(
                 "Local variable index {index} + 1 out of bounds for category 2 type"
             )));
+        }
+        if idx > 0
+            && self
+                .locals
+                .get(idx - 1)
+                .is_some_and(VerificationType::is_category2)
+            && let Some(previous) = self.locals.get_mut(idx - 1)
+        {
+            *previous = VerificationType::Top;
         }
         let max = self.locals.len();
         let first = self.locals.get_mut(idx).ok_or_else(|| {
