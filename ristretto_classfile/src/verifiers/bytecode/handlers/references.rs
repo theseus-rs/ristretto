@@ -183,7 +183,12 @@ impl<'a> ConstantPoolResolver<'a> {
 /// # References
 ///
 /// - [JVMS §6.5.new](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.new)
-pub fn handle_new(frame: &mut Frame, offset: u16, _class_name: &str) -> Result<()> {
+pub fn handle_new(frame: &mut Frame, offset: u16, class_name: &str) -> Result<()> {
+    if class_name.starts_with('[') {
+        return Err(VerifyError::VerifyError(
+            "new cannot allocate an array".to_string(),
+        ));
+    }
     // Push an uninitialized reference
     frame.push(VerificationType::Uninitialized(offset))
 }
@@ -235,6 +240,11 @@ pub fn handle_newarray(frame: &mut Frame, atype: &ArrayType) -> Result<()> {
 ///
 /// - [JVMS §6.5.anewarray](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.anewarray)
 pub fn handle_anewarray(frame: &mut Frame, class_name: &str) -> Result<()> {
+    if class_name.bytes().take_while(|&b| b == b'[').count() >= 255 {
+        return Err(VerifyError::VerifyError(
+            "anewarray exceeds 255 dimensions".to_string(),
+        ));
+    }
     let count = frame.pop()?;
     if count != VerificationType::Integer {
         return Err(VerifyError::VerifyError(format!(
@@ -265,6 +275,13 @@ pub fn handle_anewarray(frame: &mut Frame, class_name: &str) -> Result<()> {
 ///
 /// - [JVMS §6.5.multianewarray](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray)
 pub fn handle_multianewarray(frame: &mut Frame, class_name: &str, dimensions: u8) -> Result<()> {
+    if dimensions == 0
+        || usize::from(dimensions) > class_name.bytes().take_while(|&b| b == b'[').count()
+    {
+        return Err(VerifyError::VerifyError(
+            "Invalid multianewarray dimensions".to_string(),
+        ));
+    }
     // Pop 'dimensions' int values
     for _ in 0..dimensions {
         let count = frame.pop()?;
@@ -438,7 +455,7 @@ pub fn handle_invoke<C: VerificationContext>(
     is_static: bool,
     context: &C,
 ) -> Result<Option<VerificationType>> {
-    if method_name == "<init>" {
+    if method_name == "<init>" || method_name == "<clinit>" {
         return Err(VerifyError::VerifyError(
             "<init> may only be invoked by invokespecial".to_string(),
         ));
