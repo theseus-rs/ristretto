@@ -136,6 +136,28 @@ fn uninitialized_constructor() {
 }
 
 #[test]
+fn byte_array_as_int_array() {
+    let mut c = base();
+    let m = method(&mut c, "f", "([B)[I", 1, 1, vec![Aload_0, Areturn], None);
+    check(c, Some(m), false);
+}
+
+#[test]
+fn iaload_byte_array() {
+    let mut c = base();
+    let m = method(
+        &mut c,
+        "f",
+        "([B)I",
+        2,
+        1,
+        vec![Aload_0, Iconst_0, Iaload, Ireturn],
+        None,
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
 fn backedge_type_mismatch() {
     let mut c = base();
     let m = method(
@@ -250,6 +272,26 @@ fn valid_append_frame() {
             offset_delta: 2,
             locals: vec![T::Integer],
         }]),
+    );
+    check(c, Some(m), true);
+}
+
+#[test]
+fn valid_array_stackmap() {
+    let mut c = base();
+    let array = c.constant_pool.add_class("[I").unwrap();
+    let m = method(
+        &mut c,
+        "f",
+        "([I)I",
+        2,
+        1,
+        vec![Aload_0, Iconst_0, Iaload, Ireturn],
+        Some(vec![full(
+            0,
+            vec![T::Object { cpool_index: array }],
+            vec![],
+        )]),
     );
     check(c, Some(m), true);
 }
