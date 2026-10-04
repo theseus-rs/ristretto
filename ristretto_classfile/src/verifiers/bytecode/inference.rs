@@ -227,7 +227,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
 
             // Execute instruction
             let (next_frame, successors, _falls_through) =
-                self.execute_instruction(offset, index, instruction, frame)?;
+                self.execute_instruction(offset, index, instruction, frame.clone())?;
 
             // Propagate to successors
             for successor_offset in successors {
@@ -252,7 +252,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
             }
 
             // Process exception handlers
-            self.process_exception_handlers(offset, &next_frame, &mut frames, &mut worklist)?;
+            self.process_exception_handlers(offset, &frame, &mut frames, &mut worklist)?;
         }
 
         Ok(())
