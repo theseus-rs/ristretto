@@ -18,7 +18,6 @@ use crate::verifiers::error::VerifyError::{
 /// - The `PermittedSubclasses` attribute may appear at most once in a class.
 /// - A class with `PermittedSubclasses` must not be final.
 /// - Each entry in `class_indexes` must be a valid `CONSTANT_Class_info`.
-/// - No duplicate entries are allowed.
 ///
 /// # Errors
 /// Returns an error if the `PermittedSubclasses` attribute is invalid.
@@ -45,33 +44,13 @@ pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
             }
 
             // Verify each class index
-            let mut seen_indexes = std::collections::HashSet::new();
-            for (i, &class_index) in class_indexes.iter().enumerate() {
+            for &class_index in class_indexes {
                 // Verify index points to a valid CONSTANT_Class_info
                 match class_file.constant_pool.get(class_index) {
                     Some(Constant::Class(_)) => {}
                     Some(_) => return Err(InvalidConstantPoolIndexType(class_index)),
                     None => return Err(InvalidConstantPoolIndex(class_index)),
                 }
-
-                // Check for duplicates
-                if !seen_indexes.insert(class_index) {
-                    return Err(VerificationError {
-                        context: "PermittedSubclasses".to_string(),
-                        message: format!(
-                            "Duplicate class index {class_index} at position {i} in PermittedSubclasses"
-                        ),
-                    });
-                }
-            }
-
-            // PermittedSubclasses must have at least one entry
-            if class_indexes.is_empty() {
-                return Err(VerificationError {
-                    context: "PermittedSubclasses".to_string(),
-                    message: "PermittedSubclasses must have at least one permitted subclass"
-                        .to_string(),
-                });
             }
         }
     }
@@ -127,8 +106,7 @@ mod tests {
     fn test_permitted_subclasses_empty() {
         let class_file = create_class_file_with_permitted_subclasses(vec![], false);
 
-        let message = verify(&class_file).unwrap_err().to_string();
-        assert!(message.contains("at least one"));
+        assert!(verify(&class_file).is_ok());
     }
 
     #[test]
@@ -161,8 +139,7 @@ mod tests {
             class_indexes: vec![class_index, class_index],
         });
 
-        let message = verify(&class_file).unwrap_err().to_string();
-        assert!(message.contains("Duplicate"));
+        assert!(verify(&class_file).is_ok());
     }
 
     #[test]
