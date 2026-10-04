@@ -898,6 +898,28 @@ fn unvalidated_attribute_name_index() {
 }
 
 #[test]
+fn bad_local_variable_index() {
+    let mut class = base();
+    let mut test_method = method(&mut class, "f", "()V", 0, 0, vec![Return], None);
+    let table_name = class.constant_pool.add_utf8("LocalVariableTable").unwrap();
+    let variable_name = class.constant_pool.add_utf8("x").unwrap();
+    let descriptor_index = class.constant_pool.add_utf8("J").unwrap();
+    if let Attribute::Code { attributes, .. } = &mut test_method.attributes[0] {
+        attributes.push(Attribute::LocalVariableTable {
+            name_index: table_name,
+            variables: vec![LocalVariableTable {
+                start_pc: 0,
+                length: 1,
+                name_index: variable_name,
+                descriptor_index,
+                index: 65535,
+            }],
+        });
+    }
+    check(class, Some(test_method), false);
+}
+
+#[test]
 fn invalid_type_annotation_path_context() {
     let mut c = base();
     let n = c
