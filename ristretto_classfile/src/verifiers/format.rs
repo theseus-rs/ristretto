@@ -70,8 +70,16 @@ pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
             return Err(invalid("Duplicate interface"));
         }
     }
+    verify_fields(class)?;
+    let mut methods = HashSet::new();
     for method in &class.methods {
         verify_method(class, method)?;
+        if !methods.insert((
+            pool.try_get_utf8(method.name_index)?,
+            pool.try_get_utf8(method.descriptor_index)?,
+        )) {
+            return Err(invalid("Duplicate method name and descriptor"));
+        }
     }
     verify_constants(class)?;
     Ok(())
@@ -150,6 +158,20 @@ pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()
         return Err(invalid("Invalid number of Code attributes"));
     }
     super::bytecode::constraints::verify_static(class, method)?;
+    Ok(())
+}
+
+fn verify_fields(class: &ClassFile<'_>) -> Result<()> {
+    let pool = &class.constant_pool;
+    let mut fields = HashSet::new();
+    for field in &class.fields {
+        let name = pool.try_get_utf8(field.name_index)?;
+        member_name(name, false)?;
+        let descriptor = pool.try_get_utf8(field.descriptor_index)?;
+        if !fields.insert((name, descriptor)) {
+            return Err(invalid("Duplicate field name and descriptor"));
+        }
+    }
     Ok(())
 }
 

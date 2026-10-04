@@ -540,12 +540,13 @@ fn test_verify_class_all_methods() -> Result<()> {
 
     // Add multiple methods
     let method1 = create_static_void_method(vec![Instruction::Return], 0, 0);
-    let method2 = create_static_void_method(
+    let mut method2 = create_static_void_method(
         vec![Instruction::Iconst_0, Instruction::Pop, Instruction::Return],
         1,
         0,
     );
 
+    method2.name_index = class_file.constant_pool.add_utf8("test2")?;
     class_file.methods = vec![method1, method2];
 
     let config = VerifierConfig::default();
