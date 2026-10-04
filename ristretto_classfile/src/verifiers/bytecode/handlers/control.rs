@@ -295,11 +295,17 @@ pub fn dispatch_control<C: VerificationContext>(
             | Instruction::Freturn
             | Instruction::Dreturn
             | Instruction::Areturn
-    ) && frame.this_uninitialized
-    {
-        return Err(VerifyError::VerifyError(
-            "Constructor returns before this is initialized".to_string(),
-        ));
+    ) {
+        if frame.this_uninitialized {
+            return Err(VerifyError::VerifyError(
+                "Constructor returns before this is initialized".to_string(),
+            ));
+        }
+        if matches!(instruction, Instruction::Return) != expected_return.is_none() {
+            return Err(VerifyError::VerifyError(
+                "Return opcode does not match method descriptor".to_string(),
+            ));
+        }
     }
     match instruction {
         // Unconditional branches (no stack effect)
@@ -712,7 +718,7 @@ mod tests {
         let handled = dispatch_control(
             &Instruction::Ireturn,
             &mut frame,
-            None,
+            Some(&FieldType::Base(BaseType::Int)),
             JAVA_8.major(),
             &ctx,
         )
@@ -729,7 +735,7 @@ mod tests {
         let handled = dispatch_control(
             &Instruction::Lreturn,
             &mut frame,
-            None,
+            Some(&FieldType::Base(BaseType::Long)),
             JAVA_8.major(),
             &ctx,
         )
@@ -746,7 +752,7 @@ mod tests {
         let handled = dispatch_control(
             &Instruction::Freturn,
             &mut frame,
-            None,
+            Some(&FieldType::Base(BaseType::Float)),
             JAVA_8.major(),
             &ctx,
         )
@@ -763,7 +769,7 @@ mod tests {
         let handled = dispatch_control(
             &Instruction::Dreturn,
             &mut frame,
-            None,
+            Some(&FieldType::Base(BaseType::Double)),
             JAVA_8.major(),
             &ctx,
         )
@@ -780,7 +786,7 @@ mod tests {
         let handled = dispatch_control(
             &Instruction::Areturn,
             &mut frame,
-            None,
+            Some(&FieldType::Object(JavaString::from("java/lang/Object"))),
             JAVA_8.major(),
             &ctx,
         )
