@@ -295,11 +295,17 @@ pub fn dispatch_control<C: VerificationContext>(
             | Instruction::Freturn
             | Instruction::Dreturn
             | Instruction::Areturn
-    ) && frame.this_uninitialized
-    {
-        return Err(VerifyError::VerifyError(
-            "Constructor returns before this is initialized".to_string(),
-        ));
+    ) {
+        if frame.this_uninitialized {
+            return Err(VerifyError::VerifyError(
+                "Constructor returns before this is initialized".to_string(),
+            ));
+        }
+        if matches!(instruction, Instruction::Return) != expected_return.is_none() {
+            return Err(VerifyError::VerifyError(
+                "Return opcode does not match method descriptor".to_string(),
+            ));
+        }
     }
     match instruction {
         // Unconditional branches (no stack effect)
@@ -694,7 +700,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
-        let handled = dispatch_control(&Instruction::Ireturn, &mut frame, None, 52, &ctx).unwrap();
+        let handled = dispatch_control(
+            &Instruction::Ireturn,
+            &mut frame,
+            Some(&FieldType::Base(BaseType::Int)),
+            52,
+            &ctx,
+        )
+        .unwrap();
         assert!(handled);
     }
 
@@ -704,7 +717,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push_category2(VerificationType::Long).unwrap();
 
-        let handled = dispatch_control(&Instruction::Lreturn, &mut frame, None, 52, &ctx).unwrap();
+        let handled = dispatch_control(
+            &Instruction::Lreturn,
+            &mut frame,
+            Some(&FieldType::Base(BaseType::Long)),
+            52,
+            &ctx,
+        )
+        .unwrap();
         assert!(handled);
     }
 
@@ -714,7 +734,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Float).unwrap();
 
-        let handled = dispatch_control(&Instruction::Freturn, &mut frame, None, 52, &ctx).unwrap();
+        let handled = dispatch_control(
+            &Instruction::Freturn,
+            &mut frame,
+            Some(&FieldType::Base(BaseType::Float)),
+            52,
+            &ctx,
+        )
+        .unwrap();
         assert!(handled);
     }
 
@@ -724,7 +751,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push_category2(VerificationType::Double).unwrap();
 
-        let handled = dispatch_control(&Instruction::Dreturn, &mut frame, None, 52, &ctx).unwrap();
+        let handled = dispatch_control(
+            &Instruction::Dreturn,
+            &mut frame,
+            Some(&FieldType::Base(BaseType::Double)),
+            52,
+            &ctx,
+        )
+        .unwrap();
         assert!(handled);
     }
 
@@ -734,7 +768,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
-        let handled = dispatch_control(&Instruction::Areturn, &mut frame, None, 52, &ctx).unwrap();
+        let handled = dispatch_control(
+            &Instruction::Areturn,
+            &mut frame,
+            Some(&FieldType::Object(JavaString::from("java/lang/Object"))),
+            52,
+            &ctx,
+        )
+        .unwrap();
         assert!(handled);
     }
 
