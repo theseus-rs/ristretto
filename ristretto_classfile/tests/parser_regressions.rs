@@ -5,7 +5,8 @@
     reason = "test fixtures and byte-level mutations"
 )]
 use ristretto_classfile::attributes::{
-    AnnotationElement, Attribute, Instruction, StackFrame, VerificationType,
+    AnnotationElement, Attribute, ExceptionTableEntry, Instruction, LocalVariableTable, StackFrame,
+    VerificationType,
 };
 use ristretto_classfile::byte_reader::ByteReader;
 use ristretto_classfile::{Constant, ConstantPool};
@@ -103,6 +104,109 @@ fn attribute_payload_lengths_are_enforced() {
         0, 1, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 1, 177, 0, 0, 0, 0, 0,
     ];
     assert!(Attribute::from_bytes(&pool, &mut ByteReader::new(&bytes)).is_err());
+}
+
+#[test]
+fn code_metadata_relocates_after_instruction_width_changes() {
+    let mut pool = ConstantPool::new();
+    let local_name = pool.add_utf8("x").unwrap();
+    let descriptor = pool.add_utf8("I").unwrap();
+    let table_name = pool.add_utf8("LocalVariableTable").unwrap();
+    let frames_name = pool.add_utf8("StackMapTable").unwrap();
+    let class_index = pool.add_class("java/lang/Object").unwrap();
+    let mut attr = code(
+        &mut pool,
+        vec![
+            Instruction::Bipush(0),
+            Instruction::Pop,
+            Instruction::New(class_index),
+            Instruction::Pop,
+            Instruction::Return,
+        ],
+    );
+    if let Attribute::Code {
+        exception_table,
+        attributes,
+        ..
+    } = &mut attr
+    {
+        exception_table.push(ExceptionTableEntry {
+            range_pc: 0..5,
+            handler_pc: 4,
+            catch_type: 0,
+        });
+        attributes.push(Attribute::LocalVariableTable {
+            name_index: table_name,
+            variables: vec![LocalVariableTable {
+                start_pc: 1,
+                length: 4,
+                name_index: local_name,
+                descriptor_index: descriptor,
+                index: 0,
+            }],
+        });
+        attributes.push(Attribute::StackMapTable {
+            name_index: frames_name,
+            frames: vec![StackFrame::FullFrame {
+                frame_type: 255,
+                offset_delta: 3,
+                locals: vec![],
+                stack: vec![VerificationType::Uninitialized { offset: 2 }],
+            }],
+        });
+    }
+    // Inspect nested attributes outside Code parsing so offsets remain raw byte offsets.
+    // A round trip alone cannot detect a parser and writer sharing the same wrong units.
+    let check_encoded_offsets = |bytes: &[u8], local_start: u16, allocation: u16| {
+        let mut reader = ByteReader::new(bytes);
+        reader.skip(10).unwrap();
+        let code_length = usize::try_from(reader.read_u32().unwrap()).unwrap();
+        reader.skip(code_length).unwrap();
+        let handlers = usize::from(reader.read_u16().unwrap());
+        reader.skip(handlers * 8).unwrap();
+        assert_eq!(reader.read_u16().unwrap(), 2);
+        assert_eq!(
+            Attribute::from_bytes(&pool, &mut reader).unwrap(),
+            Attribute::LocalVariableTable {
+                name_index: table_name,
+                variables: vec![LocalVariableTable {
+                    start_pc: local_start,
+                    length: 6,
+                    name_index: local_name,
+                    descriptor_index: descriptor,
+                    index: 0,
+                }],
+            }
+        );
+        assert_eq!(
+            Attribute::from_bytes(&pool, &mut reader).unwrap(),
+            Attribute::StackMapTable {
+                name_index: frames_name,
+                frames: vec![StackFrame::FullFrame {
+                    frame_type: 255,
+                    offset_delta: allocation + 3,
+                    locals: vec![],
+                    stack: vec![VerificationType::Uninitialized { offset: allocation }],
+                }],
+            }
+        );
+    };
+    let mut bytes = Vec::new();
+    attr.to_bytes(&mut bytes).unwrap();
+    check_encoded_offsets(&bytes, 2, 3);
+    let mut parsed = Attribute::from_bytes(&pool, &mut ByteReader::new(&bytes)).unwrap();
+    assert_eq!(parsed, attr);
+    if let Attribute::Code { code, .. } = &mut parsed {
+        code[0] = Instruction::Sipush(0);
+    }
+    let mut changed = Vec::new();
+    parsed.to_bytes(&mut changed).unwrap();
+    check_encoded_offsets(&changed, 3, 4);
+    assert_eq!(changed.len(), bytes.len() + 1);
+    assert_eq!(
+        Attribute::from_bytes(&pool, &mut ByteReader::new(&changed)).unwrap(),
+        parsed
+    );
 }
 
 #[test]
