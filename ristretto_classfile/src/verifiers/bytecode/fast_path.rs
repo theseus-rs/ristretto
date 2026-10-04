@@ -1006,6 +1006,13 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 &mut handler_frame,
             )?;
 
+            if !exception_type
+                .is_assignable_to(&VerificationType::java_lang_throwable(), self.context)?
+            {
+                return Err(VerifyError::VerifyError(
+                    "Exception handler catch type must extend Throwable".to_string(),
+                ));
+            }
             // Push exception type
             handler_frame.push(exception_type)?;
 
@@ -1014,15 +1021,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 let expected =
                     self.stack_map_table
                         .to_frame(decoded, self.max_locals, self.max_stack);
-                // Validate handler frame compatibility
-                // Note: We're lenient here; just check stack has exception type
-                if expected.stack.len() != 1 {
-                    let message = format!(
-                        "Exception handler at {} should have exactly one stack item",
-                        handler.handler_pc
-                    );
-                    return Err(VerifyError::VerifyError(message));
-                }
+                self.validate_frame_compatibility(&handler_frame, &expected, handler.handler_pc)?;
                 let anchor_state = anchor_states.get_mut(handler_index).ok_or_else(|| {
                     VerifyError::VerifyError(format!("Invalid handler index {handler_index}"))
                 })?;
