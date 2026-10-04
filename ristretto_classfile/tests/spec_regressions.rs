@@ -538,6 +538,19 @@ fn catch_non_throwable() {
 }
 
 #[test]
+fn duplicate_source_file() {
+    let mut c = base();
+    let idx = c.constant_pool.add_utf8("SourceFile").unwrap();
+    let val = c.constant_pool.add_utf8("Audit.java").unwrap();
+    let a = Attribute::SourceFile {
+        name_index: idx,
+        source_file_index: val,
+    };
+    c.attributes = vec![a.clone(), a];
+    check(c, None, false);
+}
+
+#[test]
 fn wrong_constant_value_type() {
     let mut class = base();
     let name_index = class.constant_pool.add_utf8("x").unwrap();
@@ -815,6 +828,16 @@ fn constructed_invalid_field_descriptor() {
         attributes: vec![],
     });
     check(c, None, false);
+}
+
+#[test]
+fn unvalidated_attribute_name_index() {
+    let mut c = base();
+    let mut m = method(&mut c, "f", "()V", 0, 0, vec![Return], None);
+    if let Attribute::Code { name_index, .. } = &mut m.attributes[0] {
+        *name_index = 0;
+    }
+    check(c, Some(m), false);
 }
 
 #[test]
