@@ -179,6 +179,27 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
         // Validate exception table
         validate_exception_table(self.exception_table, &self.code_info)?;
 
+        if self.code.iter().any(|i| {
+            matches!(
+                i,
+                Instruction::Jsr(_)
+                    | Instruction::Jsr_w(_)
+                    | Instruction::Ret(_)
+                    | Instruction::Ret_w(_)
+            )
+        }) {
+            if self.major_version >= 51
+                || !self
+                    .config
+                    .flags
+                    .contains(super::config::VerifierFlags::ALLOW_JSR_RET)
+            {
+                return Err(VerifyError::VerifyError(
+                    "Legacy subroutines are disabled".to_string(),
+                ));
+            }
+            return self.verify_subroutines();
+        }
         // Create initial frame
         let initial_frame = self.create_initial_frame()?;
 
@@ -258,6 +279,153 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
             self.process_exception_handlers(offset, &frame, &mut frames, &mut worklist)?;
         }
 
+        Ok(())
+    }
+
+    /// Analyze each legacy subroutine in its calling context, keeping return addresses distinct.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "worklist propagation retains subroutine calling contexts"
+    )]
+    fn verify_subroutines(&self) -> Result<()> {
+        use std::collections::HashMap;
+        type State = (u16, Vec<(u16, u16)>);
+        let mut frames: HashMap<State, Frame> = HashMap::new();
+        let entry = (0, Vec::new());
+        frames.insert(entry.clone(), self.create_initial_frame()?);
+        let mut pending = vec![entry];
+        let limit = self
+            .config
+            .max_inference_iterations
+            .saturating_mul(self.code.len().max(1));
+        let mut iterations = 0;
+        while let Some((offset, calls)) = pending.pop() {
+            iterations += 1;
+            if iterations > limit {
+                return Err(VerifyError::VerifyError(
+                    "Subroutine inference exceeded iteration limit".to_string(),
+                ));
+            }
+            let before = frames
+                .get(&(offset, calls.clone()))
+                .cloned()
+                .ok_or_else(|| VerifyError::VerifyError("Missing subroutine frame".to_string()))?;
+            let instruction = self.code.get(usize::from(offset)).ok_or_else(|| {
+                VerifyError::VerifyError("Invalid subroutine instruction".to_string())
+            })?;
+            let mut output = before.clone();
+            let mut next_calls = calls.clone();
+            let successors = match instruction {
+                Instruction::Jsr(_) | Instruction::Jsr_w(_) => {
+                    if before
+                        .locals
+                        .iter()
+                        .chain(&before.stack)
+                        .any(VerificationType::is_uninitialized)
+                    {
+                        return Err(VerifyError::VerifyError(
+                            "jsr cannot execute with an uninitialized reference".to_string(),
+                        ));
+                    }
+                    let target = match instruction {
+                        Instruction::Jsr(target) => *target,
+                        Instruction::Jsr_w(target) => u16::try_from(*target)?,
+                        _ => {
+                            return Err(VerifyError::VerifyError("Invalid subroutine".to_string()));
+                        }
+                    };
+                    let next = offset.checked_add(1).ok_or_else(|| {
+                        VerifyError::VerifyError("Invalid subroutine return address".to_string())
+                    })?;
+                    if next >= self.code_info.code_length()
+                        || calls.iter().any(|(entry, _)| *entry == target)
+                    {
+                        return Err(VerifyError::VerifyError(
+                            "Recursive subroutine or invalid return address".to_string(),
+                        ));
+                    }
+                    output.push(VerificationType::ReturnAddress(next))?;
+                    next_calls.push((target, next));
+                    vec![target]
+                }
+                Instruction::Ret(index) => {
+                    let (_, target) = next_calls.pop().ok_or_else(|| {
+                        VerifyError::VerifyError("ret outside a subroutine".to_string())
+                    })?;
+                    if *output.get_local(u16::from(*index))?
+                        != VerificationType::ReturnAddress(target)
+                    {
+                        return Err(VerifyError::VerifyError("Invalid ret local".to_string()));
+                    }
+                    vec![target]
+                }
+                Instruction::Ret_w(index) => {
+                    let (_, target) = next_calls.pop().ok_or_else(|| {
+                        VerifyError::VerifyError("ret outside a subroutine".to_string())
+                    })?;
+                    if *output.get_local(*index)? != VerificationType::ReturnAddress(target) {
+                        return Err(VerifyError::VerifyError("Invalid ret local".to_string()));
+                    }
+                    vec![target]
+                }
+                _ => {
+                    let (after, successors, _) =
+                        self.execute_instruction(offset, usize::from(offset), instruction, output)?;
+                    output = after;
+                    successors
+                }
+            };
+            let mut edges: Vec<_> = successors
+                .into_iter()
+                .map(|pc| ((pc, next_calls.clone()), output.clone()))
+                .collect();
+            for handler in self.exception_table {
+                if !handler.range_pc.contains(&offset) {
+                    continue;
+                }
+                let mut frame = before.clone();
+                frame.clear_stack();
+                super::constraints::invalidate_constructor_receiver(
+                    self.class_file,
+                    self.code,
+                    offset,
+                    &before,
+                    &mut frame,
+                )?;
+                let exception = if handler.catch_type == 0 {
+                    VerificationType::java_lang_throwable()
+                } else {
+                    VerificationType::Object(
+                        self.class_file
+                            .constant_pool
+                            .try_get_class(handler.catch_type)?
+                            .to_owned(),
+                    )
+                };
+                if !exception
+                    .is_assignable_to(&VerificationType::java_lang_throwable(), self.context)?
+                {
+                    return Err(VerifyError::VerifyError("Invalid catch type".to_string()));
+                }
+                frame.push(exception)?;
+                edges.push(((handler.handler_pc, calls.clone()), frame));
+            }
+            for (key, frame) in edges {
+                if usize::from(key.0) >= self.code.len() {
+                    return Err(VerifyError::VerifyError(
+                        "Invalid subroutine target".to_string(),
+                    ));
+                }
+                if let Some(existing) = frames.get_mut(&key) {
+                    if existing.merge(&frame, self.context)? {
+                        pending.push(key);
+                    }
+                } else {
+                    frames.insert(key.clone(), frame);
+                    pending.push(key);
+                }
+            }
+        }
         Ok(())
     }
 

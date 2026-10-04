@@ -11,7 +11,7 @@
 //!
 //! The new `bytecode` module provides a JVM bytecode verifier with:
 //! - Rigorous type system implementation ([JVMS §4.10.1.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.2))
-//! - Complete instruction coverage (all 200+ opcodes)
+//! - Instruction type checking, including legacy subroutines
 //! - Optimized dataflow analysis using dense vectors
 //! - Comprehensive error reporting
 //!
