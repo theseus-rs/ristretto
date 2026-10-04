@@ -234,3 +234,13 @@ fn code_metadata_relocates_after_instruction_width_changes() {
         parsed
     );
 }
+
+#[test]
+fn oversized_constructed_code_is_not_serialized() {
+    let mut pool = ConstantPool::new();
+    assert!(
+        code(&mut pool, vec![Instruction::Nop; 65536])
+            .to_bytes(&mut Vec::new())
+            .is_err()
+    );
+}
