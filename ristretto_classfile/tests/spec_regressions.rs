@@ -415,3 +415,80 @@ fn constructor_stack_map_cannot_clear_initialization_state() {
         "{error}"
     );
 }
+
+#[test]
+fn wrong_constructor_owner() {
+    let mut c = base();
+    let a = c.constant_pool.add_class("java/lang/Object").unwrap();
+    let b = c.constant_pool.add_class("java/lang/String").unwrap();
+    let nat = c.constant_pool.add_name_and_type("<init>", "()V").unwrap();
+    let init = c
+        .constant_pool
+        .add(Constant::MethodRef {
+            class_index: b,
+            name_and_type_index: nat,
+        })
+        .unwrap();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        1,
+        0,
+        vec![New(a), Invokespecial(init), Return],
+        None,
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
+fn putfield_uninitialized_new() {
+    let mut c = base();
+    let r = c
+        .constant_pool
+        .add_field_ref(c.super_class, "x", "I")
+        .unwrap();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        2,
+        0,
+        vec![New(4), Iconst_0, Putfield(r), Return],
+        None,
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
+fn valid_constructor_calls_own_method() {
+    let mut c = base();
+    let init = c
+        .constant_pool
+        .add_method_ref(c.super_class, "<init>", "()V")
+        .unwrap();
+    let call = c
+        .constant_pool
+        .add_method_ref(c.this_class, "f", "()V")
+        .unwrap();
+    let mut f = method(&mut c, "f", "()V", 0, 1, vec![Return], None);
+    f.access_flags = MethodAccessFlags::PUBLIC;
+    c.methods.push(f);
+    let mut m = method(
+        &mut c,
+        "<init>",
+        "()V",
+        1,
+        1,
+        vec![
+            Aload_0,
+            Invokespecial(init),
+            Aload_0,
+            Invokevirtual(call),
+            Return,
+        ],
+        None,
+    );
+    m.access_flags = MethodAccessFlags::PUBLIC;
+    check(c, Some(m), true);
+}

@@ -63,6 +63,7 @@
 //! - [JVMS §4.10.2 - Verification by Type Inference](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.2)
 
 // Core verification components
+pub(crate) mod constraints;
 pub(crate) mod control_flow;
 pub(crate) mod frame;
 pub(crate) mod handlers;
