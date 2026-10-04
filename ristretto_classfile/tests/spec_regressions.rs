@@ -129,6 +129,24 @@ fn valid_branch_stackmap() {
 }
 
 #[test]
+fn valid_long_stackmap() {
+    let mut c = base();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        2,
+        0,
+        vec![Lconst_0, Nop, Pop2, Return],
+        Some(vec![StackFrame::SameLocals1StackItemFrame {
+            frame_type: 65,
+            stack: vec![T::Long],
+        }]),
+    );
+    check(c, Some(m), true);
+}
+
+#[test]
 fn valid_append_frame() {
     let mut c = base();
     let m = method(
@@ -190,4 +208,22 @@ fn large_logical_branch_sizing() {
         }]),
     );
     check(c, Some(m), true);
+}
+
+#[test]
+fn chop_frame_removes_a_category_two_local() {
+    let mut class = base();
+    let method = method(
+        &mut class,
+        "f",
+        "(IJ)V",
+        1,
+        3,
+        vec![Nop, Iload_0, Pop, Return],
+        Some(vec![StackFrame::ChopFrame {
+            frame_type: 250,
+            offset_delta: 1,
+        }]),
+    );
+    check(class, Some(method), true);
 }
