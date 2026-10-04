@@ -3,6 +3,8 @@
 pub struct ByteReader<'a> {
     data: &'a [u8],
     pos: usize,
+    depth: u16,
+    pub(crate) class_major_version: u16,
 }
 
 /// Shared static error for unexpected end of input.
@@ -13,7 +15,12 @@ impl<'a> ByteReader<'a> {
     #[inline]
     #[must_use]
     pub fn new(data: &'a [u8]) -> Self {
-        Self { data, pos: 0 }
+        Self {
+            data,
+            pos: 0,
+            depth: 0,
+            class_major_version: u16::MAX,
+        }
     }
 
     /// Returns the current position in the byte stream.
@@ -189,6 +196,26 @@ impl<'a> ByteReader<'a> {
         }
         self.pos = end;
         Ok(())
+    }
+
+    /// Bounds both the byte range and nesting of recursively encoded attributes.
+    pub(crate) fn read_nested(&mut self, len: usize) -> crate::Result<ByteReader<'a>> {
+        let depth = self.next_depth()?;
+        Ok(ByteReader {
+            data: self.read_bytes(len)?,
+            pos: 0,
+            depth,
+            class_major_version: self.class_major_version,
+        })
+    }
+
+    fn next_depth(&self) -> crate::Result<u16> {
+        if self.depth >= 64 {
+            return Err(crate::Error::IoError(
+                "Class file nesting exceeds 64 levels".to_string(),
+            ));
+        }
+        Ok(self.depth + 1)
     }
 }
 

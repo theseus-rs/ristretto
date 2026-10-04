@@ -692,6 +692,8 @@ impl Attribute {
         };
 
         let info_length = bytes.read_u32()?;
+        let mut info = bytes.read_nested(info_length as usize)?;
+        let bytes = &mut info;
         let attribute = match attribute_name.as_bytes() {
             b"ConstantValue" => {
                 if info_length != 2 {
@@ -1075,6 +1077,9 @@ impl Attribute {
                 Attribute::Unknown { name_index, info }
             }
         };
+        if bytes.remaining() != 0 {
+            return Err(InvalidAttributeLength(info_length));
+        }
         Ok(attribute)
     }
 
@@ -1878,7 +1883,7 @@ mod test {
         let expected_bytes = [0, 1, 0, 0, 0, 64];
 
         assert_eq!(
-            Err(InvalidAttributeLength(64)),
+            Err(crate::Error::UnexpectedEof),
             Attribute::from_bytes(&constant_pool, &mut ByteReader::new(&expected_bytes))
         );
         Ok(())
