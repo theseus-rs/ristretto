@@ -17,7 +17,6 @@ use crate::verifiers::error::VerifyError::{
 /// - A class file must not have both `NestHost` and `NestMembers` attributes.
 /// - `NestHost.host_class_index` must be a valid `CONSTANT_Class_info`.
 /// - Each entry in `NestMembers.class_indexes` must be a valid `CONSTANT_Class_info`.
-/// - No duplicates are allowed in `NestMembers.class_indexes`.
 ///
 /// # Errors
 /// Returns an error if the nest attributes are invalid or inconsistent.
@@ -67,21 +66,12 @@ pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
                 }
 
                 // Verify each class index
-                let mut seen_indexes = std::collections::HashSet::new();
                 for (i, &class_index) in class_indexes.iter().enumerate() {
                     verify_class_index(
                         class_file,
                         class_index,
                         &format!("NestMembers.class_indexes[{i}]"),
                     )?;
-
-                    // Check for duplicates
-                    if !seen_indexes.insert(class_index) {
-                        return Err(VerificationError {
-                            context: "NestMembers".to_string(),
-                            message: format!("Duplicate class index {class_index} in NestMembers"),
-                        });
-                    }
                 }
             }
             _ => {}
@@ -225,8 +215,7 @@ mod tests {
             class_indexes: vec![class_index, class_index],
         });
 
-        let message = verify(&class_file).unwrap_err().to_string();
-        assert!(message.contains("Duplicate"));
+        assert!(verify(&class_file).is_ok());
     }
 
     #[test]
