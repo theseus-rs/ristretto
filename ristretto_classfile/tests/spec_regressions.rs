@@ -491,6 +491,16 @@ fn int_dynamic_constant() {
 }
 
 #[test]
+fn valid_long_legacy_method() {
+    let mut c = base();
+    c.version = JAVA_5;
+    let mut code = vec![Nop; 1001];
+    code.push(Return);
+    let m = method(&mut c, "f", "()V", 0, 0, code, None);
+    check(c, Some(m), true);
+}
+
+#[test]
 fn stackmap_overflow_discarded() {
     let mut c = base();
     let m = method(

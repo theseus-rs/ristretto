@@ -194,7 +194,10 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
         worklist.add(0);
 
         let mut iterations = 0;
-        let max_iterations = self.config.max_inference_iterations;
+        let max_iterations = self
+            .config
+            .max_inference_iterations
+            .saturating_mul(self.code.len().max(1));
 
         while let Some(index) = worklist.pop() {
             iterations += 1;
