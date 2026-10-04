@@ -410,6 +410,28 @@ fn catch_non_throwable() {
 }
 
 #[test]
+fn null_throw_control() {
+    let mut c = base();
+    let m = method(&mut c, "f", "()V", 1, 0, vec![Aconst_null, Athrow], None);
+    check(c, Some(m), true);
+}
+
+#[test]
+fn throw_non_throwable() {
+    let mut c = base();
+    let m = method(
+        &mut c,
+        "f",
+        "(Ljava/lang/Object;)V",
+        1,
+        1,
+        vec![Aload_0, Athrow],
+        None,
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
 fn monitor_uninitialized() {
     let mut c = base();
     let a = c.constant_pool.add_class("java/lang/Object").unwrap();

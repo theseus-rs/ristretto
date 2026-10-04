@@ -40,13 +40,9 @@ pub fn handle_athrow<C: VerificationContext>(frame: &mut Frame, context: &C) -> 
     if !objectref.is_null() {
         let throwable = VerificationType::java_lang_throwable();
         if !objectref.is_assignable_to(&throwable, context)? {
-            // We can't always verify this statically without class hierarchy info
-            // So we just check it's a reference type
-            if matches!(&objectref, VerificationType::Array(_)) {
-                let message = "athrow: arrays are not throwable".to_string();
-                return Err(VerifyError::VerifyError(message));
-            }
-            // Object types are assumed valid; runtime class loading enforces the hierarchy.
+            return Err(VerifyError::VerifyError(
+                "athrow requires an initialized Throwable reference".to_string(),
+            ));
         }
     }
 
@@ -158,7 +154,7 @@ mod tests {
             result
                 .unwrap_err()
                 .to_string()
-                .contains("arrays are not throwable")
+                .contains("athrow requires an initialized Throwable reference")
         );
     }
 
@@ -178,7 +174,7 @@ mod tests {
             result
                 .unwrap_err()
                 .to_string()
-                .contains("arrays are not throwable")
+                .contains("athrow requires an initialized Throwable reference")
         );
     }
 
@@ -196,14 +192,13 @@ mod tests {
             result
                 .unwrap_err()
                 .to_string()
-                .contains("arrays are not throwable")
+                .contains("athrow requires an initialized Throwable reference")
         );
     }
 
     #[test]
-    fn test_athrow_with_strict_context_object_assumed_valid() {
-        // Even with strict context, Object types are assumed valid
-        // (will be checked at runtime)
+    fn test_athrow_with_strict_context_rejects_non_throwable() {
+        // Unrelated reference types must be rejected during verification.
         let ctx = MockContext::STRICT;
         let mut frame = Frame::new(5, 10);
         frame
@@ -212,8 +207,7 @@ mod tests {
             )))
             .unwrap();
 
-        // Should succeed because we assume Object types are valid
-        handle_athrow(&mut frame, &ctx).unwrap();
+        assert!(handle_athrow(&mut frame, &ctx).is_err());
     }
 
     #[test]
