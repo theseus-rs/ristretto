@@ -15,10 +15,8 @@ use crate::verifiers::error::VerifyError::{
 ///
 /// According to [JVMS §4.7.30](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.30):
 /// - The `Record` attribute may appear at most once.
-/// - It must only appear in a class that has `ACC_FINAL` set (records are implicitly final).
 /// - Each component's `name_index` must be a valid `CONSTANT_Utf8_info`.
 /// - Each component's `descriptor_index` must be a valid `CONSTANT_Utf8_info`.
-/// - Component names must be unique.
 /// - Component descriptors must be valid field descriptors.
 ///
 /// # Errors
@@ -37,7 +35,6 @@ pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
             has_record = true;
 
             // Verify each record component
-            let mut component_names = std::collections::HashSet::new();
 
             for (i, record_component) in records.iter().enumerate() {
                 // Verify name_index points to a valid CONSTANT_Utf8_info
@@ -73,16 +70,6 @@ pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
                         context: "Record".to_string(),
                         message: format!(
                             "Invalid field descriptor '{descriptor}' for record component '{component_name}' at index {i}"
-                        ),
-                    });
-                }
-
-                // Check for duplicate component names
-                if !component_names.insert(component_name.clone()) {
-                    return Err(VerificationError {
-                        context: "Record".to_string(),
-                        message: format!(
-                            "Duplicate record component name '{component_name}' at index {i}"
                         ),
                     });
                 }
@@ -137,42 +124,7 @@ fn verify_component_attributes(
 
 /// Check if a string is a valid field descriptor according to [JVMS §4.3.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.3.2).
 fn is_valid_field_descriptor(descriptor: &str) -> bool {
-    if descriptor.is_empty() {
-        return false;
-    }
-
-    let mut chars = descriptor.chars().peekable();
-    parse_field_type(&mut chars) && chars.peek().is_none()
-}
-
-/// Parse a field type from a character iterator.
-fn parse_field_type(chars: &mut std::iter::Peekable<std::str::Chars>) -> bool {
-    match chars.next() {
-        Some('B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 'Z') => true,
-        Some('L') => {
-            // Object type: L<classname>;
-            let mut found_semicolon = false;
-            let mut class_name_len = 0;
-            for c in chars.by_ref() {
-                if c == ';' {
-                    found_semicolon = true;
-                    break;
-                }
-                // Valid class name characters
-                if !c.is_alphanumeric() && c != '/' && c != '_' && c != '$' {
-                    return false;
-                }
-                class_name_len += 1;
-            }
-            // Class name must not be empty
-            found_semicolon && class_name_len > 0
-        }
-        Some('[') => {
-            // Array type
-            parse_field_type(chars)
-        }
-        _ => false,
-    }
+    crate::FieldType::parse_java_str(&crate::JavaStr::cow_from_str(descriptor)).is_ok()
 }
 
 #[cfg(test)]
@@ -334,8 +286,7 @@ mod tests {
             records: vec![component1, component2],
         });
 
-        let message = verify(&class_file).unwrap_err().to_string();
-        assert!(message.contains("Duplicate record component name"));
+        assert!(verify(&class_file).is_ok());
     }
 
     #[test]
@@ -484,7 +435,7 @@ mod tests {
         assert!(!is_valid_field_descriptor("X"));
         assert!(!is_valid_field_descriptor("Ljava/lang/String")); // missing semicolon
         assert!(!is_valid_field_descriptor("L;")); // empty class name
-        assert!(!is_valid_field_descriptor("Lbad-name;"));
+        assert!(is_valid_field_descriptor("Lbad-name;"));
         assert!(!is_valid_field_descriptor("[")); // array with no type
         assert!(!is_valid_field_descriptor("II")); // extra characters
     }

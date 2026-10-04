@@ -609,6 +609,23 @@ fn duplicate_permitted_members() {
 }
 
 #[test]
+fn valid_record_unusual_name() {
+    let mut c = base();
+    let idx = c.constant_pool.add_utf8("Record").unwrap();
+    let n = c.constant_pool.add_utf8("x").unwrap();
+    let d = c.constant_pool.add_utf8("Lfoo-bar;").unwrap();
+    c.attributes.push(Attribute::Record {
+        name_index: idx,
+        records: vec![Record {
+            name_index: n,
+            descriptor_index: d,
+            attributes: vec![],
+        }],
+    });
+    check(c, None, true);
+}
+
+#[test]
 fn wrong_constant_value_type() {
     let mut class = base();
     let name_index = class.constant_pool.add_utf8("x").unwrap();
@@ -1051,6 +1068,24 @@ fn compact_frame_requires_promotion() {
         Some(vec![StackFrame::SameFrame { frame_type: 63 }]),
     );
     check(c, Some(m), true);
+}
+
+#[test]
+fn duplicate_record_components() {
+    let mut c = base();
+    let n = c.constant_pool.add_utf8("Record").unwrap();
+    let name = c.constant_pool.add_utf8("x").unwrap();
+    let desc = c.constant_pool.add_utf8("I").unwrap();
+    let rec = Record {
+        name_index: name,
+        descriptor_index: desc,
+        attributes: vec![],
+    };
+    c.attributes.push(Attribute::Record {
+        name_index: n,
+        records: vec![rec.clone(), rec],
+    });
+    check(c, None, true);
 }
 
 #[test]
