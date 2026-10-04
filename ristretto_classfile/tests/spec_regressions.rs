@@ -1551,3 +1551,13 @@ fn jsr_rejects_uninitialized_references_in_locals_and_stack() {
         check(class, Some(method), false);
     }
 }
+
+#[test]
+fn valid_long_legacy_method() {
+    let mut c = base();
+    c.version = JAVA_5;
+    let mut code = vec![Nop; 1001];
+    code.push(Return);
+    let m = method(&mut c, "f", "()V", 0, 0, code, None);
+    check(c, Some(m), true);
+}
