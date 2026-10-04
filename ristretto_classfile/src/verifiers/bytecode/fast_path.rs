@@ -998,6 +998,14 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             }
 
             handler_frame.this_uninitialized = current_frame.this_uninitialized;
+            super::constraints::invalidate_constructor_receiver(
+                self.class_file,
+                self.code,
+                offset,
+                current_frame,
+                &mut handler_frame,
+            )?;
+
             // Push exception type
             handler_frame.push(exception_type)?;
 

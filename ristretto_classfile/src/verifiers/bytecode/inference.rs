@@ -526,6 +526,14 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
             }
 
             handler_frame.this_uninitialized = current_frame.this_uninitialized;
+            super::constraints::invalidate_constructor_receiver(
+                self.class_file,
+                self.code,
+                offset,
+                current_frame,
+                &mut handler_frame,
+            )?;
+
             // Push exception type
             let exception_type = if handler.catch_type == 0 {
                 VerificationType::java_lang_throwable()

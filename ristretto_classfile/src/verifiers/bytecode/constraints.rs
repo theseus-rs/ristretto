@@ -102,3 +102,25 @@ pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
     }
     Ok(())
 }
+
+/// A failed constructor call makes aliases of its receiver unusable in a handler.
+pub(super) fn invalidate_constructor_receiver(
+    class: &ClassFile<'_>,
+    code: &[Instruction],
+    offset: u16,
+    before: &Frame,
+    handler: &mut Frame,
+) -> Result<()> {
+    if let Some(Instruction::Invokespecial(index)) = code.get(usize::from(offset)) {
+        let (_, name, descriptor) = ConstantPoolResolver::new(class).resolve_method_ref(*index)?;
+        if name == "<init>" {
+            let object = receiver(before, &descriptor)?;
+            for local in &mut handler.locals {
+                if local == object {
+                    *local = VerificationType::Top;
+                }
+            }
+        }
+    }
+    Ok(())
+}
