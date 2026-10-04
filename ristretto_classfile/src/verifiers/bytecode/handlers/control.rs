@@ -287,6 +287,21 @@ pub fn dispatch_control<C: VerificationContext>(
     major_version: u16,
     context: &C,
 ) -> Result<bool> {
+    if matches!(
+        instruction,
+        Instruction::Return
+            | Instruction::Ireturn
+            | Instruction::Lreturn
+            | Instruction::Freturn
+            | Instruction::Dreturn
+            | Instruction::Areturn
+    ) {
+        if frame.this_uninitialized {
+            return Err(VerifyError::VerifyError(
+                "Constructor returns before this is initialized".to_string(),
+            ));
+        }
+    }
     match instruction {
         // Unconditional branches (no stack effect)
         Instruction::Goto(_) | Instruction::Goto_w(_) => {}

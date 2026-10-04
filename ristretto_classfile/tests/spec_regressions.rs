@@ -114,6 +114,14 @@ fn stack_underflow() {
 }
 
 #[test]
+fn uninitialized_constructor() {
+    let mut c = base();
+    let mut m = method(&mut c, "<init>", "()V", 0, 1, vec![Return], None);
+    m.access_flags = MethodAccessFlags::PUBLIC;
+    check(c, Some(m), false);
+}
+
+#[test]
 fn backedge_type_mismatch() {
     let mut c = base();
     let m = method(
@@ -335,6 +343,22 @@ fn overwritten_long_slot_cannot_be_restored_by_stackmap() {
         ],
         Some(vec![full(4, vec![T::Long], vec![])]),
     );
+    check(class, Some(method), false);
+}
+
+#[test]
+fn constructor_cannot_hide_uninitialized_this_by_overwriting_local_zero() {
+    let mut class = base();
+    let mut method = method(
+        &mut class,
+        "<init>",
+        "()V",
+        1,
+        1,
+        vec![Aconst_null, Astore_0, Return],
+        None,
+    );
+    method.access_flags = MethodAccessFlags::PUBLIC;
     check(class, Some(method), false);
 }
 

@@ -305,7 +305,8 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
 
         // For non-static methods, local 0 is 'this'
         if !method.access_flags.contains(MethodAccessFlags::STATIC) {
-            if method_name == "<init>" {
+            if method_name == "<init>" && current_class != "java/lang/Object" {
+                frame.this_uninitialized = true;
                 frame.set_local(local_index, VerificationType::UninitializedThis)?;
             } else {
                 let this_type = VerificationType::Object(JavaString::from(current_class));
@@ -716,6 +717,11 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         expected: &Frame,
         offset: u16,
     ) -> Result<()> {
+        if computed.this_uninitialized && !expected.this_uninitialized {
+            return Err(VerifyError::VerifyError(format!(
+                "Constructor initialization state mismatch at offset {offset}"
+            )));
+        }
         // Stack depths must match
         if computed.stack.len() != expected.stack.len() {
             let computed_len = computed.stack.len();
@@ -988,6 +994,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 }
             }
 
+            handler_frame.this_uninitialized = current_frame.this_uninitialized;
             // Push exception type
             handler_frame.push(exception_type)?;
 
