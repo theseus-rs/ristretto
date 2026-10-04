@@ -159,6 +159,13 @@ fn top_local_promoted() {
 }
 
 #[test]
+fn unchecked_dead_code() {
+    let mut c = base();
+    let m = method(&mut c, "f", "()V", 0, 0, vec![Return, Pop, Return], None);
+    check(c, Some(m), false);
+}
+
+#[test]
 fn valid_branch_stackmap() {
     let mut c = base();
     let m = method(
