@@ -467,6 +467,49 @@ fn putfield_uninitialized_new() {
 }
 
 #[test]
+fn valid_int_condy() {
+    let mut class = base();
+    let owner_index = class.constant_pool.add_class("java/lang/Integer").unwrap();
+    let reference_index = class
+        .constant_pool
+        .add_method_ref(owner_index, "toString", "(I)Ljava/lang/String;")
+        .unwrap();
+    let handle_index = class
+        .constant_pool
+        .add(Constant::MethodHandle {
+            reference_kind: ReferenceKind::InvokeStatic,
+            reference_index,
+        })
+        .unwrap();
+    let bn = class.constant_pool.add_utf8("BootstrapMethods").unwrap();
+    class.attributes.push(Attribute::BootstrapMethods {
+        name_index: bn,
+        methods: vec![BootstrapMethod {
+            bootstrap_method_ref: handle_index,
+            arguments: vec![],
+        }],
+    });
+    let nat = class.constant_pool.add_name_and_type("x", "I").unwrap();
+    let dynamic_index = class
+        .constant_pool
+        .add(Constant::Dynamic {
+            bootstrap_method_attr_index: 0,
+            name_and_type_index: nat,
+        })
+        .unwrap();
+    let test_method = method(
+        &mut class,
+        "f",
+        "()I",
+        1,
+        0,
+        vec![Ldc_w(dynamic_index), Ireturn],
+        None,
+    );
+    check(class, Some(test_method), true);
+}
+
+#[test]
 fn valid_handler_byte_index_mismatch() {
     let mut c = base();
     let mut m = method(
