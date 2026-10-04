@@ -509,3 +509,14 @@ fn compact_frame_requires_promotion() {
     );
     check(c, Some(m), true);
 }
+
+#[test]
+fn duplicate_nest_members() {
+    let mut c = base();
+    let idx = c.constant_pool.add_utf8("NestMembers").unwrap();
+    c.attributes.push(Attribute::NestMembers {
+        name_index: idx,
+        class_indexes: vec![c.super_class, c.super_class],
+    });
+    check(c, None, true);
+}
