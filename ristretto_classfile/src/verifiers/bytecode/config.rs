@@ -143,7 +143,7 @@ pub struct VerifierConfig {
     /// Boolean flags for verification options.
     pub flags: VerifierFlags,
 
-    /// Maximum iterations for type inference (slow path).
+    /// Maximum type inference iterations per instruction.
     ///
     /// Prevents infinite loops in malformed bytecode.
     /// Default is 1000.
