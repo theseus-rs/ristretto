@@ -227,6 +227,7 @@ pub fn to_utf16(input: &[u8]) -> Result<Vec<u16>> {
 /// # Errors
 /// Returns an error if the byte sequence is not valid Modified UTF-8.
 pub fn from_bytes(input: &[u8]) -> Result<String> {
+    validate(input)?;
     // if let Ok(s) = std::str::from_utf8(input) {
     //     return Ok(s.to_owned());
     // }
@@ -262,6 +263,7 @@ pub fn from_bytes(input: &[u8]) -> Result<String> {
 /// Returns an error if the input contains invalid MUTF-8 sequences.
 pub fn from_bytes_cow(input: &[u8]) -> Result<std::borrow::Cow<'_, str>> {
     use std::borrow::Cow;
+    validate(input)?;
 
     // Fast path: if all bytes are ASCII, return a zero-copy borrowed &str.
     if input.is_ascii() {
