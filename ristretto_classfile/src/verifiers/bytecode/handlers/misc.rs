@@ -147,10 +147,17 @@ pub fn handle_ldc(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) -> 
         Constant::MethodType { .. } => frame.push(VerificationType::Object(JavaString::from(
             "java/lang/invoke/MethodType",
         ))),
-        Constant::Dynamic { .. } => {
-            // Dynamic constant; would need to resolve to determine type
-            // For now, push Object
-            frame.push(VerificationType::java_lang_object())
+        Constant::Dynamic {
+            name_and_type_index,
+            ..
+        } => {
+            let ty = dynamic_type(class_file, *name_and_type_index)?;
+            if ty.is_category2() {
+                return Err(VerifyError::VerifyError(
+                    "ldc cannot load a category 2 dynamic constant".to_string(),
+                ));
+            }
+            frame.push(ty)
         }
         _ => Err(VerifyError::VerifyError(format!(
             "ldc: unsupported constant type at index {index}"
@@ -176,10 +183,29 @@ pub fn handle_ldc2_w(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) 
     match constant {
         Constant::Long(_) => frame.push_category2(VerificationType::Long),
         Constant::Double(_) => frame.push_category2(VerificationType::Double),
+        Constant::Dynamic {
+            name_and_type_index,
+            ..
+        } => {
+            let ty = dynamic_type(class_file, *name_and_type_index)?;
+            if !ty.is_category2() {
+                return Err(VerifyError::VerifyError(
+                    "ldc2_w requires a category 2 dynamic constant".to_string(),
+                ));
+            }
+            frame.push_category2(ty)
+        }
         _ => Err(VerifyError::VerifyError(format!(
             "ldc2_w: expected long or double constant at index {index}"
         ))),
     }
+}
+
+fn dynamic_type(class_file: &ClassFile<'_>, index: u16) -> Result<VerificationType> {
+    let (_, descriptor) = class_file.constant_pool.try_get_name_and_type(index)?;
+    let descriptor = class_file.constant_pool.try_get_utf8(*descriptor)?;
+    let ty = crate::FieldType::parse_java_str(descriptor)?;
+    Ok(VerificationType::from_field_type(&ty))
 }
 
 /// Handles `monitorenter` - enter monitor.
@@ -544,6 +570,7 @@ mod tests {
                 reference_index: name_and_type,
             })
             .unwrap();
+        let name_and_type = constant_pool.add_name_and_type("value", "I").unwrap();
         let dynamic = constant_pool
             .add(Constant::Dynamic {
                 bootstrap_method_attr_index: 0,
@@ -569,7 +596,7 @@ mod tests {
         );
 
         handle_ldc(&mut frame, &class_file, dynamic).unwrap();
-        assert_eq!(frame.pop().unwrap(), VerificationType::java_lang_object());
+        assert_eq!(frame.pop().unwrap(), VerificationType::Integer);
     }
 
     #[test]
