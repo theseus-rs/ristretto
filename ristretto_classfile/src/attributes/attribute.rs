@@ -1181,7 +1181,11 @@ impl Attribute {
         let attributes_count = bytes.read_u16()?;
         let mut attributes = Vec::with_capacity(attributes_count as usize);
         for _ in 0..attributes_count {
-            let attribute = Attribute::from_bytes(constant_pool, bytes)?;
+            let mut attribute = Attribute::from_bytes(constant_pool, bytes)?;
+            super::code_offsets::relocate(&mut attribute, |offset| {
+                lookup_byte_offset(byte_to_instruction_pairs, offset)
+                    .ok_or(InvalidInstructionOffset(u32::from(offset)))
+            })?;
             match attribute {
                 Attribute::LineNumberTable {
                     name_index,
@@ -1675,6 +1679,14 @@ impl Attribute {
         let attributes_length = u16::try_from(attributes.len())?;
         bytes.write_u16::<BigEndian>(attributes_length)?;
         for attribute in attributes {
+            let mut relocated = attribute.clone();
+            super::code_offsets::relocate(&mut relocated, |offset| {
+                instruction_to_byte_map
+                    .get(&offset)
+                    .copied()
+                    .ok_or(InvalidInstructionOffset(u32::from(offset)))
+            })?;
+            let attribute = &relocated;
             match attribute {
                 Attribute::LineNumberTable {
                     name_index,
