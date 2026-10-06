@@ -398,7 +398,7 @@ pub fn handle_caload<C: VerificationContext>(frame: &mut Frame, _context: &C) ->
     }
 
     let array_type = frame.pop()?;
-    verify_array_of(&array_type, &VerificationType::Integer, "caload")?; // char is int in verification
+    verify_array_of(&array_type, &VerificationType::Char, "caload")?; // char is int in verification
 
     frame.push(VerificationType::Integer)
 }
@@ -421,7 +421,7 @@ pub fn handle_saload<C: VerificationContext>(frame: &mut Frame, _context: &C) ->
     }
 
     let array_type = frame.pop()?;
-    verify_array_of(&array_type, &VerificationType::Integer, "saload")?; // short is int in verification
+    verify_array_of(&array_type, &VerificationType::Short, "saload")?; // short is int in verification
 
     frame.push(VerificationType::Integer)
 }
@@ -648,7 +648,7 @@ pub fn handle_castore<C: VerificationContext>(frame: &mut Frame, _context: &C) -
     }
 
     let array_type = frame.pop()?;
-    verify_array_of(&array_type, &VerificationType::Integer, "castore")
+    verify_array_of(&array_type, &VerificationType::Char, "castore")
 }
 
 /// Handles `sastore` - store short into array.
@@ -676,7 +676,7 @@ pub fn handle_sastore<C: VerificationContext>(frame: &mut Frame, _context: &C) -
     }
 
     let array_type = frame.pop()?;
-    verify_array_of(&array_type, &VerificationType::Integer, "sastore")
+    verify_array_of(&array_type, &VerificationType::Short, "sastore")
 }
 
 /// Verifies that a type is an array of the expected component type.
@@ -713,7 +713,10 @@ fn verify_byte_or_boolean_array(array_type: &VerificationType, instruction: &str
     match array_type {
         VerificationType::Array(component) => {
             // Both byte and boolean are represented as Integer in verification
-            if **component != VerificationType::Integer {
+            if !matches!(
+                **component,
+                VerificationType::Byte | VerificationType::Boolean
+            ) {
                 return Err(VerifyError::VerifyError(format!(
                     "{instruction}: expected byte[] or boolean[], got array of {component}"
                 )));
@@ -1551,7 +1554,7 @@ mod tests {
 
         // byte[] is represented as Integer[] in verification
         frame
-            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .push(VerificationType::Array(Box::new(VerificationType::Byte)))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
@@ -1600,7 +1603,7 @@ mod tests {
 
         // char[] is represented as Integer[] in verification
         frame
-            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .push(VerificationType::Array(Box::new(VerificationType::Char)))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
@@ -1635,7 +1638,7 @@ mod tests {
 
         // short[] is represented as Integer[] in verification
         frame
-            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .push(VerificationType::Array(Box::new(VerificationType::Short)))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
@@ -1962,7 +1965,7 @@ mod tests {
 
         // byte[] is represented as Integer[] in verification
         frame
-            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .push(VerificationType::Array(Box::new(VerificationType::Byte)))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
         frame.push(VerificationType::Integer).unwrap();
@@ -2020,7 +2023,7 @@ mod tests {
 
         // char[] is represented as Integer[] in verification
         frame
-            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .push(VerificationType::Array(Box::new(VerificationType::Char)))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
         frame.push(VerificationType::Integer).unwrap();
@@ -2078,7 +2081,7 @@ mod tests {
 
         // short[] is represented as Integer[] in verification
         frame
-            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .push(VerificationType::Array(Box::new(VerificationType::Short)))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
         frame.push(VerificationType::Integer).unwrap();
@@ -2392,7 +2395,7 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
-            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .push(VerificationType::Array(Box::new(VerificationType::Byte)))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
@@ -2405,7 +2408,7 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
-            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .push(VerificationType::Array(Box::new(VerificationType::Char)))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
@@ -2418,7 +2421,7 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
-            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .push(VerificationType::Array(Box::new(VerificationType::Short)))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
@@ -2503,7 +2506,7 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
-            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .push(VerificationType::Array(Box::new(VerificationType::Byte)))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
         frame.push(VerificationType::Integer).unwrap();
@@ -2517,7 +2520,7 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
-            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .push(VerificationType::Array(Box::new(VerificationType::Char)))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
         frame.push(VerificationType::Integer).unwrap();
@@ -2531,7 +2534,7 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
-            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .push(VerificationType::Array(Box::new(VerificationType::Short)))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
         frame.push(VerificationType::Integer).unwrap();
