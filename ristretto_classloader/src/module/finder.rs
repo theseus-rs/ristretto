@@ -555,13 +555,13 @@ mod tests {
     fn test_empty_finder() {
         let finder = EmptyModuleFinder;
         assert!(finder.find("java.base").is_none());
-        assert!(finder.find_all().is_empty());
+        assert_eq!(finder.find_all(), [] as [ModuleReference; 0]);
     }
 
     #[test]
     fn test_finder_chain() {
         let chain = ModuleFinderChain::new();
         assert!(chain.find("java.base").is_none());
-        assert!(chain.find_all().is_empty());
+        assert_eq!(chain.find_all(), [] as [ModuleReference; 0]);
     }
 }

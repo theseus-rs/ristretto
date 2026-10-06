@@ -11,8 +11,8 @@ fn test_module_descriptor_new() {
     let desc = ModuleDescriptor::new("com.example.mymodule".to_string());
     assert_eq!(desc.name, "com.example.mymodule");
     assert!(!desc.is_open());
-    assert!(desc.requires.is_empty());
-    assert!(desc.exports.is_empty());
+    assert_eq!(desc.requires, [] as [Requires; 0]);
+    assert_eq!(desc.exports, [] as [Exports; 0]);
 }
 
 #[test]

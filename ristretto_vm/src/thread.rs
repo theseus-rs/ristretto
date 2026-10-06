@@ -699,7 +699,6 @@ impl Thread {
     /// # Errors
     ///
     /// if the class cannot be loaded or initialized
-    #[expect(clippy::multiple_bound_locations)]
     #[async_method]
     pub async fn class<S: AsRef<str> + Send>(&self, class_name: S) -> Result<Arc<Class>> {
         let class_name = class_name.as_ref();

@@ -255,7 +255,7 @@ mod tests {
         let (version, file_name, archive) = get_runtime_archive(expected_version).await?;
         assert_eq!(expected_version, version);
         assert!(file_name.contains(expected_version));
-        assert!(!archive.is_empty());
+        assert_ne!(archive, [] as [u8; 0]);
         Ok(())
     }
 
@@ -270,7 +270,7 @@ mod tests {
         let (version, file_name, archive) = get_runtime_archive(&partial_version).await?;
         assert!(version.starts_with(&partial_version));
         assert!(file_name.contains(&partial_version));
-        assert!(!archive.is_empty());
+        assert_ne!(archive, [] as [u8; 0]);
         Ok(())
     }
 
@@ -281,7 +281,7 @@ mod tests {
         let (version, file_name, archive) = get_runtime_archive(major_version).await?;
         assert!(version.starts_with(major_version));
         assert!(file_name.contains(major_version));
-        assert!(!archive.is_empty());
+        assert_ne!(archive, [] as [u8; 0]);
         Ok(())
     }
 
@@ -291,7 +291,7 @@ mod tests {
         let (version, _file_name, archive) = get_runtime_archive("*").await?;
         let expected_major_version = DEFAULT_MAJOR_VERSION.to_string();
         assert!(version.starts_with(expected_major_version.as_str()));
-        assert!(!archive.is_empty());
+        assert_ne!(archive, [] as [u8; 0]);
         Ok(())
     }
 
@@ -313,7 +313,7 @@ mod tests {
     async fn test_download_archive() -> Result<()> {
         let version = JAVA_21_VERSION;
         let (_file_name, archive) = download_archive(version).await?;
-        assert!(!archive.is_empty());
+        assert_ne!(archive, [] as [u8; 0]);
         Ok(())
     }
 

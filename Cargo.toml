@@ -42,7 +42,7 @@ edition = "2024"
 keywords = ["java", "jvm"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/theseus-rs/ristretto"
-rust-version = "1.97.1"
+rust-version = "1.99.0"
 version = "0.34.0"
 
 [workspace.lints.rust]
@@ -75,7 +75,7 @@ unwrap_used = "deny"
 ahash = "0.8.12"
 anstyle = "1.0.14"
 anyhow = "1.0.104"
-async-recursion = "1.1.1"
+async-recursion = "1.2.0"
 bitflags = "2.13.2"
 bytes = "1.12.1"
 bytemuck = "1.25.2"
@@ -85,7 +85,7 @@ console = "0.16.6"
 core-foundation-sys = "0.8.7"
 coreaudio-sys = { version = "0.2.18", features = ["audio_unit"] }
 cpal = "0.18.2"
-cranelift = "0.136.1"
+cranelift = "0.136.2"
 criterion = { version = "0.8.2", default-features = false }
 dashmap = "6.2.1"
 dirs = "7.0.0"
@@ -134,7 +134,7 @@ test-log = "0.2.21"
 ristretto_test_util = { path = "ristretto_test_util", version = "0.34.0" }
 thiserror = "2.0.21"
 thread-priority = "3.1.1"
-tokio = { version = "1.53.1", default-features = false, features = ["macros", "rt", "sync", "time"] }
+tokio = { version = "1.53.2", default-features = false, features = ["macros", "rt", "sync", "time"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 url = "2.5.8"

@@ -3908,8 +3908,9 @@ mod checksum_tests {
             Some("explicit")
         );
         context.inactive_profiles.insert("explicit".to_string());
-        assert!(
-            active_profiles(&Project::new("g", "a", "1"), "jar", &context, &properties).is_empty()
+        assert_eq!(
+            active_profiles(&Project::new("g", "a", "1"), "jar", &context, &properties),
+            [] as [&Profile; 0]
         );
     }
 
@@ -4531,12 +4532,12 @@ mod checksum_tests {
             relocation: None,
             repository_id: Some("missing".to_string()),
         };
-        assert!(
+        assert_eq!(
             session
                 .artifacts_for(NodeId(0), &unavailable, &[])
                 .await
-                .expect("empty artifact selection")
-                .is_empty()
+                .expect("empty artifact selection"),
+            [] as [ResolvedArtifact; 0]
         );
     }
 

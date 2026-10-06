@@ -1064,7 +1064,7 @@ async fn lists_versions_and_downloads_to_file_destination() -> Result<()> {
         .resolve_and_download(&request, &FileDestination::new(destination.path()))
         .await?;
     assert_eq!(report.artifacts.len(), 4);
-    assert!(report.diagnostics.is_empty());
+    assert_eq!(report.diagnostics, [] as [String; 0]);
     for downloaded in report.artifacts {
         assert!(downloaded.output.is_file());
         assert_eq!(

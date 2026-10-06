@@ -143,7 +143,7 @@ mod tests {
         }
 
         assert!(package_names.contains(&"java/lang".to_string()));
-        assert!(!package_names.is_empty());
+        assert_ne!(package_names, [] as [String; 0]);
         Ok(())
     }
 }

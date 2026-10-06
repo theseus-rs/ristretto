@@ -31,7 +31,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
 
         let empty: [Value; 0] = [];
-        assert!(process_values(&thread, &empty).await?.is_empty());
+        assert_eq!(process_values(&thread, &empty).await?, [] as [Value; 0]);
 
         let strings = ["hello"];
         let values = process_values(&thread, &strings).await?;

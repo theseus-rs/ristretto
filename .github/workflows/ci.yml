@@ -177,7 +177,7 @@ jobs:
           RUST_BACKTRACE: 1
           RUST_LOG: info
           RUSTC_BOOTSTRAP: 1
-          CARGO_TARGET_WASM32_WASIP2_RUNNER: "wasmtime -W max-wasm-stack=8388608 -S http -S inherit-network -S allow-ip-name-lookup --dir=. --dir=${{ github.workspace }}::${{ github.workspace }} --env=HOME=/home --dir=${{ runner.temp }}::/home --env=TMPDIR=/tmp --dir=/tmp::/tmp"
+          CARGO_TARGET_WASM32_WASIP2_RUNNER: "wasmtime -W max-wasm-stack=8388608 -S http -S inherit-network -S allow-ip-name-lookup --env=GITHUB_TOKEN --dir=. --dir=${{ github.workspace }}::${{ github.workspace }} --env=HOME=/home --dir=${{ runner.temp }}::/home --env=TMPDIR=/tmp --dir=/tmp::/tmp"
         run: |
           cargo test --workspace --tests --target ${{ matrix.target }} -- --test-threads=1
 
@@ -308,7 +308,25 @@ jobs:
           RUST_LOG: info
           RUST_LOG_SPAN_EVENTS: full
         run: |
-          cargo llvm-cov --profile release-tests --workspace --lcov --output-path lcov.info
+          cargo llvm-cov --profile release-tests --workspace --no-report
+
+      - name: Network test coverage
+        if: ${{ matrix.platform == 'macos-arm' }}
+        env:
+          CARGO_TERM_COLOR: always
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          RUST_BACKTRACE: 1
+          RUST_LOG: info
+        run: |
+          cargo llvm-cov --profile release-tests --no-report -p ristretto_classloader --lib -- \
+            runtime::util::tests --ignored --test-threads=1
+          cargo llvm-cov report --profile release-tests --lcov --output-path lcov.info
+
+      - name: Set up Python for Codecov
+        if: ${{ matrix.platform == 'macos-arm' }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
 
       - name: Upload to codecov.io
         if: ${{ matrix.platform == 'macos-arm' }}
@@ -316,6 +334,8 @@ jobs:
         with:
           files: lcov.info
           fail_ci_if_error: true
+          # Use the supported PyPI distribution when cli.codecov.io has TLS failures.
+          use_pypi: true
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

@@ -646,12 +646,12 @@ mod test {
     fn test_parse_method_descriptor() -> Result<()> {
         let (parameters, return_type) =
             FieldType::parse_method_descriptor(JavaStr::try_from_str("()V")?)?;
-        assert!(parameters.is_empty());
+        assert_eq!(parameters, [] as [FieldType; 0]);
         assert_eq!(return_type, None);
 
         let (parameters, return_type) =
             FieldType::parse_method_descriptor(JavaStr::try_from_str("()I")?)?;
-        assert!(parameters.is_empty());
+        assert_eq!(parameters, [] as [FieldType; 0]);
         assert_eq!(return_type, Some(FieldType::Base(BaseType::Int)));
 
         let (parameters, return_type) =

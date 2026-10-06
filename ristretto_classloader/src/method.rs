@@ -290,11 +290,11 @@ mod tests {
         assert_eq!(method.name(), "test");
         assert_eq!(method.descriptor(), "()V");
         assert_eq!(method.signature(), "test()V");
-        assert!(method.parameters().is_empty());
+        assert_eq!(method.parameters().as_slice(), []);
         assert_eq!(method.return_type(), None);
         assert_eq!(method.max_stack, 1);
         assert_eq!(method.max_locals, 2);
-        assert!(method.code.is_empty());
+        assert_eq!(method.code, [] as [Instruction; 0]);
         assert_eq!(method.line_number(0), 0);
         Ok(())
     }

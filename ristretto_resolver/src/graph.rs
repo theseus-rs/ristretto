@@ -525,10 +525,9 @@ mod tests {
                 .is_some_and(|explanation| explanation.contains("VersionSelected"))
         );
         assert!(resolution.explain(NodeId(99)).is_none());
-        assert!(
-            resolution
-                .paths_to(&ArtifactKey::new("org.example", "missing")?)
-                .is_empty()
+        assert_eq!(
+            resolution.paths_to(&ArtifactKey::new("org.example", "missing")?),
+            [] as [Vec<NodeId>; 0]
         );
 
         let repositories = resolution.repositories.clone();

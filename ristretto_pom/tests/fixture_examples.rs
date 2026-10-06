@@ -97,13 +97,19 @@ fn test_jsoup() -> Result<()> {
     assert!(project.build.is_some());
     let build = project.build.unwrap();
     assert!(build.plugins.is_some());
-    assert!(!build.plugins.unwrap().plugins.is_empty());
+    assert_ne!(
+        build.plugins.unwrap().plugins,
+        [] as [ristretto_pom::Plugin; 0]
+    );
 
     assert!(project.profiles.is_some());
     let profiles = project.profiles.unwrap();
     assert_eq!(profiles.profiles.len(), 3);
 
-    assert!(!project.dependencies.dependencies.is_empty());
+    assert_ne!(
+        project.dependencies.dependencies,
+        [] as [ristretto_pom::Dependency; 0]
+    );
     assert_eq!(project.dependencies.dependencies.len(), 6);
 
     Ok(())

@@ -483,7 +483,7 @@ mod tests {
         let addr = allocate(&mem, 4);
         assert_eq!(mem.try_read_bytes(addr, usize::MAX), None);
         assert_eq!(mem.read_with(addr, usize::MAX, |_| 42), None);
-        assert!(mem.read_bytes(0x9999_0000, usize::MAX).is_empty());
+        assert_eq!(mem.read_bytes(0x9999_0000, usize::MAX), [] as [u8; 0]);
     }
 
     #[test]

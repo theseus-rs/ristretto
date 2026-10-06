@@ -329,7 +329,7 @@ fn test_empty_dependencies() {
     let result = parse_xml(xml);
     assert!(result.is_ok());
     let project = result.unwrap();
-    assert!(project.dependencies.dependencies.is_empty());
+    assert_eq!(project.dependencies.dependencies, [] as [Dependency; 0]);
 }
 
 #[test]
@@ -346,7 +346,7 @@ fn test_empty_dependencies_full_tag() {
     let result = parse_xml(xml);
     assert!(result.is_ok());
     let project = result.unwrap();
-    assert!(project.dependencies.dependencies.is_empty());
+    assert_eq!(project.dependencies.dependencies, [] as [Dependency; 0]);
 }
 
 #[test]

@@ -889,7 +889,7 @@ mod tests {
             .expect("threads");
         let threads: Vec<Value> = value.try_into()?;
         // At least one thread should exist (the main thread)
-        assert!(!threads.is_empty());
+        assert_ne!(threads, [] as [Value; 0]);
         Ok(())
     }
 

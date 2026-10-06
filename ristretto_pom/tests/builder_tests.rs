@@ -41,7 +41,7 @@ fn build_and_dependency_collection_paths() {
 
     let empty_exclusions = Exclusions::new();
     let exclusions = Exclusions::from_vec(vec![Exclusion::new("com.example", "excluded")]);
-    assert!(empty_exclusions.exclusions.is_empty());
+    assert_eq!(empty_exclusions.exclusions, [] as [Exclusion; 0]);
     assert_eq!(exclusions.exclusions[0].artifact_id, "excluded");
 }
 
