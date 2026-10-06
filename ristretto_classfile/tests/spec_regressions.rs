@@ -771,6 +771,48 @@ fn chop_frame_removes_a_category_two_local() {
 }
 
 #[test]
+fn invokespecial_receiver_must_be_assignable_to_current_class() {
+    for (descriptor, valid) in [("(Ljava/lang/Object;)V", false), ("(LAudit;)V", true)] {
+        let mut class = base();
+        let index = class
+            .constant_pool
+            .add_method_ref(class.super_class, "toString", "()Ljava/lang/String;")
+            .unwrap();
+        let method = method(
+            &mut class,
+            "f",
+            descriptor,
+            1,
+            1,
+            vec![Aload_0, Invokespecial(index), Pop, Return],
+            None,
+        );
+        check(class, Some(method), valid);
+    }
+}
+
+#[test]
+fn invokespecial_owner_must_be_above_current_class() {
+    let mut class = base();
+    let other = class.constant_pool.add_class("Other").unwrap();
+    let index = class
+        .constant_pool
+        .add_method_ref(other, "f", "()V")
+        .unwrap();
+    // null is assignable to both Audit and Other, but Other is not a valid owner.
+    let method = method(
+        &mut class,
+        "f",
+        "()V",
+        1,
+        0,
+        vec![Aconst_null, Invokespecial(index), Return],
+        None,
+    );
+    check(class, Some(method), false);
+}
+
+#[test]
 fn class_literals_require_version_49() {
     let mut class = base();
     let index = class.this_class;
