@@ -9,7 +9,7 @@ use ristretto_classfile::attributes::{
     VerificationType,
 };
 use ristretto_classfile::byte_reader::ByteReader;
-use ristretto_classfile::{Constant, ConstantPool};
+use ristretto_classfile::{ClassFile, Constant, ConstantPool};
 
 #[test]
 fn byte_reader_arithmetic_is_checked() {
@@ -104,6 +104,14 @@ fn attribute_payload_lengths_are_enforced() {
         0, 1, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 1, 177, 0, 0, 0, 0, 0,
     ];
     assert!(Attribute::from_bytes(&pool, &mut ByteReader::new(&bytes)).is_err());
+}
+
+#[test]
+fn trailing_class_data_is_rejected_by_both_parsers() {
+    let mut bytes = include_bytes!("../../classes/Minimum.class").to_vec();
+    bytes.push(0);
+    assert!(ClassFile::from_bytes(&bytes).is_err());
+    assert!(ClassFile::from_slice(&bytes).is_err());
 }
 
 #[test]
