@@ -179,6 +179,10 @@ pub(crate) fn verify_static(class: &ClassFile<'_>, method: &Method) -> Result<()
 }
 
 /// Validate constructor receiver identity before an instruction changes the frame.
+#[expect(
+    clippy::too_many_lines,
+    reason = "receiver and constructor constraints"
+)]
 pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
     class: &ClassFile<'_>,
     code: &[Instruction],
@@ -187,6 +191,52 @@ pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
     context: &C,
 ) -> Result<()> {
     let resolver = ConstantPoolResolver::new(class);
+    let member = match instruction {
+        Instruction::Getfield(i)
+        | Instruction::Putfield(i)
+        | Instruction::Getstatic(i)
+        | Instruction::Putstatic(i) => Some(resolver.resolve_field_ref(*i)?),
+        Instruction::Invokevirtual(i)
+        | Instruction::Invokeinterface(i, _)
+        | Instruction::Invokespecial(i)
+        | Instruction::Invokestatic(i) => Some(resolver.resolve_method_ref(*i)?),
+        _ => None,
+    };
+    if let Some((owner, name, descriptor)) = member {
+        let current = class.class_name()?.to_str_lossy();
+        let object = match instruction {
+            Instruction::Getfield(_) => Some(frame.peek()?),
+            Instruction::Putfield(_) => {
+                let ty = FieldType::parse_java_str(&crate::JavaStr::cow_from_str(&descriptor))?;
+                Some(
+                    frame.peek_at(if VerificationType::from_field_type(&ty).is_category2() {
+                        2
+                    } else {
+                        1
+                    })?,
+                )
+            }
+            Instruction::Invokevirtual(_)
+            | Instruction::Invokeinterface(..)
+            | Instruction::Invokespecial(_) => Some(receiver(frame, &descriptor)?),
+            _ => None,
+        };
+        let receiver_type = object.and_then(|ty| {
+            if *ty == VerificationType::UninitializedThis {
+                Some(format!("L{current};"))
+            } else {
+                ty.to_descriptor()
+            }
+        });
+        context.verify_member_access(&crate::verifiers::context::MemberAccess {
+            current_class: &current,
+            owner: &owner,
+            name: &name,
+            descriptor: &descriptor,
+            receiver: receiver_type.as_deref(),
+            instruction,
+        })?;
+    }
     match instruction {
         Instruction::Invokespecial(index) => {
             let (owner, name, descriptor) = resolver.resolve_method_ref(*index)?;
