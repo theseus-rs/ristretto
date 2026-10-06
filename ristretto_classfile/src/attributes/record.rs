@@ -14,15 +14,10 @@ use std::fmt;
 /// use ristretto_classfile::{ConstantPool, Result};
 /// use ristretto_classfile::byte_reader::ByteReader;
 ///
-/// let attribute = Attribute::ConstantValue {
-///     name_index: 1, // Index in constant pool for "ConstantValue"
-///     constant_value_index: 42, // Index in constant pool for the actual constant
-/// };
 /// let mut constant_pool = ConstantPool::default();
-/// // Add necessary constants for the attribute to be valid during serialization,
-/// // especially if the attribute itself needs to resolve names from the pool.
-/// // For ConstantValue, name_index refers to "ConstantValue" UTF8 string.
-/// let _name_idx = constant_pool.add_utf8("ConstantValue")?;
+/// let name_index = constant_pool.add_utf8("Signature")?;
+/// let signature_index = constant_pool.add_utf8("Ljava/lang/String;")?;
+/// let attribute = Attribute::Signature { name_index, signature_index };
 ///
 /// let record = Record {
 ///     name_index: 2, // Index to a Utf8 for record component name
@@ -95,7 +90,11 @@ impl Record {
         let attributes_count = bytes.read_u16()? as usize;
         let mut attributes = Vec::with_capacity(attributes_count);
         for _ in 0..attributes_count {
-            let attribute = Attribute::from_bytes(constant_pool, bytes)?;
+            let attribute = Attribute::from_bytes_in(
+                constant_pool,
+                bytes,
+                crate::attributes::attribute::AttributeLocation::RecordComponent,
+            )?;
             attributes.push(attribute);
         }
         let record = Record {
@@ -209,9 +208,9 @@ mod test {
 
     #[test]
     fn test_serialization() -> Result<()> {
-        let attribute = Attribute::ConstantValue {
+        let attribute = Attribute::Unknown {
             name_index: 1,
-            constant_value_index: 42,
+            info: vec![0, 42],
         };
         let mut constant_pool = ConstantPool::default();
         constant_pool.add_utf8("ConstantValue")?;
