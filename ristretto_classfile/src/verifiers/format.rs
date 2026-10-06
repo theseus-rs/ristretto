@@ -218,6 +218,7 @@ fn verify_attributes(
             return Err(invalid("Duplicate attribute"));
         }
         match attribute {
+            Attribute::Code { .. } => verify_code_metadata(class, attribute)?,
             Attribute::Record { records, .. } => {
                 for record in records {
                     member_name(pool.try_get_utf8(record.name_index)?, false)?;
@@ -436,6 +437,89 @@ fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
             _ => {}
         }
     }
+    Ok(())
+}
+
+fn verify_code_metadata(class: &ClassFile<'_>, attribute: &Attribute) -> Result<()> {
+    use crate::attributes::attribute::AttributeLocation as L;
+    let pool = &class.constant_pool;
+    let Attribute::Code {
+        code,
+        max_locals,
+        attributes,
+        exception_table,
+        ..
+    } = attribute
+    else {
+        return Ok(());
+    };
+    verify_attributes(class, attributes, L::Code)?;
+    let count = u16::try_from(code.len())?;
+    for handler in exception_table {
+        if handler.range_pc.start >= handler.range_pc.end
+            || handler.range_pc.end > count
+            || handler.handler_pc >= count
+        {
+            return Err(invalid("Invalid exception handler range"));
+        }
+    }
+    for nested in attributes {
+        match nested {
+            Attribute::LocalVariableTable { variables, .. } => {
+                for local in variables {
+                    let ty = FieldType::parse_java_str(pool.try_get_utf8(local.descriptor_index)?)?;
+                    let width = if matches!(ty, FieldType::Base(BaseType::Long | BaseType::Double))
+                    {
+                        2
+                    } else {
+                        1
+                    };
+                    if u32::from(local.index) + width > u32::from(*max_locals)
+                        || local.start_pc >= count
+                        || u32::from(local.start_pc) + u32::from(local.length) > u32::from(count)
+                    {
+                        return Err(invalid("Invalid LocalVariableTable range or local index"));
+                    }
+                }
+            }
+            Attribute::LocalVariableTypeTable { variable_types, .. } => {
+                for local in variable_types {
+                    if local.index >= *max_locals
+                        || local.start_pc >= count
+                        || u32::from(local.start_pc) + u32::from(local.length) > u32::from(count)
+                    {
+                        return Err(invalid(
+                            "Invalid LocalVariableTypeTable range or local index",
+                        ));
+                    }
+                }
+            }
+            Attribute::StackMapTable { frames, .. } => {
+                for frame in frames {
+                    use crate::attributes::StackFrame as F;
+                    let (locals, stack): (&[_], &[_]) = match frame {
+                        F::FullFrame { locals, stack, .. } => (locals, stack),
+                        F::AppendFrame { locals, .. } => (locals, &[]),
+                        F::SameLocals1StackItemFrame { stack, .. }
+                        | F::SameLocals1StackItemFrameExtended { stack, .. } => (&[], stack),
+                        _ => (&[], &[]),
+                    };
+                    for ty in locals.iter().chain(stack) {
+                        if let crate::attributes::VerificationType::Uninitialized { offset } = ty
+                            && !matches!(
+                                code.get(usize::from(*offset)),
+                                Some(crate::attributes::Instruction::New(_))
+                            )
+                        {
+                            return Err(invalid("Stack map uninitialized type must refer to new"));
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
     Ok(())
 }
 
