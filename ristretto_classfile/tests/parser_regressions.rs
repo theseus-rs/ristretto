@@ -4,7 +4,9 @@
     clippy::indexing_slicing,
     reason = "test fixtures and byte-level mutations"
 )]
-use ristretto_classfile::attributes::{AnnotationElement, Attribute, Instruction};
+use ristretto_classfile::attributes::{
+    AnnotationElement, Attribute, Instruction, StackFrame, VerificationType,
+};
 use ristretto_classfile::byte_reader::ByteReader;
 use ristretto_classfile::{Constant, ConstantPool};
 
@@ -101,4 +103,28 @@ fn attribute_payload_lengths_are_enforced() {
         0, 1, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 1, 177, 0, 0, 0, 0, 0,
     ];
     assert!(Attribute::from_bytes(&pool, &mut ByteReader::new(&bytes)).is_err());
+}
+
+#[test]
+fn malformed_constructed_stack_frames_are_not_serialized() {
+    for frame in [
+        StackFrame::SameFrame { frame_type: 64 },
+        StackFrame::SameLocals1StackItemFrame {
+            frame_type: 64,
+            stack: vec![VerificationType::Integer, VerificationType::Integer],
+        },
+        StackFrame::AppendFrame {
+            frame_type: 252,
+            offset_delta: 0,
+            locals: vec![],
+        },
+    ] {
+        assert!(frame.to_bytes(&mut Vec::new()).is_err());
+    }
+    let mut pool = ConstantPool::new();
+    assert!(
+        code(&mut pool, vec![Instruction::Nop; 65536])
+            .to_bytes(&mut Vec::new())
+            .is_err()
+    );
 }

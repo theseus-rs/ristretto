@@ -52,6 +52,7 @@ pub(crate) mod field_access_flags;
 
 /// Validates field definitions within a class file.
 pub(crate) mod fields;
+mod format;
 
 /// Defines stack frames used in bytecode verification.
 pub(crate) mod frame;

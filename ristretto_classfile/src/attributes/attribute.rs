@@ -714,6 +714,9 @@ impl Attribute {
                 let max_locals = bytes.read_u16()?;
 
                 let code_length = bytes.read_u32()?;
+                if !(1..=65535).contains(&code_length) {
+                    return Err(InvalidAttributeLength(code_length));
+                }
                 let code_slice = bytes.read_bytes(code_length as usize)?;
                 let (byte_to_instruction_pairs, instructions) =
                     offset_utils::instructions_from_bytes(&mut ByteReader::new(code_slice))?;
@@ -1222,6 +1225,9 @@ impl Attribute {
                 let (instruction_to_byte_map, code_bytes) =
                     offset_utils::instructions_to_bytes(code)?;
                 let code_length = u32::try_from(code_bytes.len())?;
+                if !(1..=65535).contains(&code_length) {
+                    return Err(InvalidAttributeLength(code_length));
+                }
                 bytes.write_u32::<BigEndian>(code_length)?;
                 bytes.extend_from_slice(code_bytes.as_slice());
 
