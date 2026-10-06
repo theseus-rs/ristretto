@@ -218,7 +218,16 @@ pub fn verify_method_cached<C: VerificationContext>(
         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
     // Zero-allocation lookup: borrow directly from the constant pool's JavaStr references
-    let key = MethodKey::borrowed(class_name, method_name, descriptor);
+    let Some(context_token) = context.cache_token() else {
+        return verify_method(class_file, method, context, config);
+    };
+    let mut scope = Vec::new();
+    class_file.to_bytes(&mut scope)?;
+    method.to_bytes(&mut scope)?;
+    scope.extend_from_slice(&context_token.to_be_bytes());
+    scope.extend_from_slice(format!("{config:?}").as_bytes());
+    let mut key = MethodKey::borrowed(class_name, method_name, descriptor);
+    key.scope = std::borrow::Cow::Owned(scope);
 
     // Check cache
     if let Some(cached) = cache.get_result(&key) {
@@ -412,6 +421,39 @@ mod tests {
         let result = result.unwrap();
         assert!(result.success);
         assert_eq!(result.path_used, VerificationPath::Skipped);
+    }
+
+    #[test]
+    fn cache_revalidates_changed_code_and_configuration() {
+        let class = create_mock_class_file();
+        let mut method = Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![Attribute::Code {
+                name_index: 5,
+                max_stack: 0,
+                max_locals: 0,
+                code: vec![Instruction::Return],
+                exception_table: vec![],
+                attributes: vec![],
+            }],
+        };
+        let cache = VerificationCache::new(true);
+        let config = VerifierConfig::strict();
+        let context = MockContext::PERMISSIVE;
+        assert!(verify_method_cached(&class, &method, &context, &config, &cache).is_ok());
+        if let Attribute::Code { code, .. } = &mut method.attributes[0] {
+            *code = vec![Instruction::Pop, Instruction::Return];
+        }
+        assert!(verify_method_cached(&class, &method, &context, &config, &cache).is_err());
+        if let Attribute::Code { code, .. } = &mut method.attributes[0] {
+            *code = vec![Instruction::Return];
+        }
+        let config = VerifierConfig::strict()
+            .with_fallback_strategy(FallbackStrategy::AlwaysInference)
+            .with_max_inference_iterations(0);
+        assert!(verify_method_cached(&class, &method, &context, &config, &cache).is_err());
     }
 
     #[test]
