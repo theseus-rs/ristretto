@@ -905,9 +905,17 @@ impl Attribute {
             b"SourceDebugExtension" => {
                 let debug_extension_bytes = bytes.read_bytes(info_length as usize)?;
                 let debug_extension = mutf8::from_bytes(debug_extension_bytes)?;
-                Attribute::SourceDebugExtension {
-                    name_index,
-                    debug_extension,
+                if mutf8::to_bytes(&debug_extension)? == debug_extension_bytes {
+                    Attribute::SourceDebugExtension {
+                        name_index,
+                        debug_extension,
+                    }
+                } else {
+                    // Rust String cannot represent isolated UTF-16 surrogates. Preserve the bytes.
+                    Attribute::Unknown {
+                        name_index,
+                        info: debug_extension_bytes.to_vec(),
+                    }
                 }
             }
             b"LineNumberTable" => {
