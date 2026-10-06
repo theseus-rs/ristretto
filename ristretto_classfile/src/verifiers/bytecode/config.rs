@@ -161,7 +161,7 @@ impl Default for VerifierConfig {
         Self {
             verify_mode: VerifyMode::default(),
             fallback_strategy: FallbackStrategy::default(),
-            flags: VerifierFlags::STRICT_EXCEPTION_HANDLERS,
+            flags: VerifierFlags::STRICT_EXCEPTION_HANDLERS | VerifierFlags::ALLOW_JSR_RET,
             max_inference_iterations: 1000,
             stackmap_required_version: 50, // Java 6
         }
@@ -185,7 +185,7 @@ impl VerifierConfig {
         Self {
             verify_mode: VerifyMode::All,
             fallback_strategy: FallbackStrategy::Strict,
-            flags: VerifierFlags::STRICT_EXCEPTION_HANDLERS,
+            flags: VerifierFlags::STRICT_EXCEPTION_HANDLERS | VerifierFlags::ALLOW_JSR_RET,
             ..Default::default()
         }
     }

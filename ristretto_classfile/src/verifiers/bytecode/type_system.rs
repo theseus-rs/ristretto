@@ -98,6 +98,9 @@ pub enum VerificationType {
     /// This allows tracking which uninitialized reference becomes which initialized type.
     Uninitialized(u16),
 
+    /// Return instruction index used by legacy jsr/ret subroutines.
+    ReturnAddress(u16),
+
     /// Object reference type.
     ///
     /// Contains the internal class name (e.g., "java/lang/String").
@@ -546,6 +549,7 @@ impl Display for VerificationType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             VerificationType::Top => write!(f, "top"),
+            VerificationType::ReturnAddress(offset) => write!(f, "returnAddress({offset})"),
             VerificationType::Integer => write!(f, "int"),
             VerificationType::Boolean => write!(f, "boolean"),
             VerificationType::Byte => write!(f, "byte"),

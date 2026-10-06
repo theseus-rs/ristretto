@@ -58,8 +58,12 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
         None => "void".to_string(),
     };
 
-    // Verify each return instruction matches the expected return type
-    for instruction in code {
+    // Return compatibility is a type-checking constraint on reachable instructions.
+    let reachable = reachable_instructions(method, code)?;
+    for (index, instruction) in code.iter().enumerate() {
+        if !reachable.contains(&u16::try_from(index)?) {
+            continue;
+        }
         match instruction {
             Instruction::Return
                 // void return; method must return void
@@ -140,6 +144,55 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
     }
 
     Ok(())
+}
+
+fn reachable_instructions(
+    method: &Method,
+    code: &[Instruction],
+) -> Result<std::collections::HashSet<u16>> {
+    let length = u16::try_from(code.len())?;
+    let info =
+        crate::verifiers::bytecode::control_flow::CodeInfo::new((0..length).collect(), length);
+    let mut reachable = std::collections::HashSet::new();
+    let mut pending = vec![0];
+    for attribute in &method.attributes {
+        if let Attribute::Code {
+            exception_table, ..
+        } = attribute
+        {
+            pending.extend(exception_table.iter().map(|h| h.handler_pc));
+        }
+    }
+    while let Some(pc) = pending.pop() {
+        if !reachable.insert(pc) {
+            continue;
+        }
+        if let Some(instruction) = code.get(usize::from(pc)) {
+            match instruction {
+                Instruction::Jsr(target) => {
+                    pending.push(*target);
+                    pending.push(pc.saturating_add(1));
+                }
+                Instruction::Jsr_w(target) => {
+                    pending.push(u16::try_from(*target)?);
+                    pending.push(pc.saturating_add(1));
+                }
+                _ => {
+                    if let Ok((successors, _)) =
+                        crate::verifiers::bytecode::control_flow::compute_successors(
+                            pc,
+                            instruction,
+                            pc.saturating_add(1),
+                            &info,
+                        )
+                    {
+                        pending.extend(successors);
+                    }
+                }
+            }
+        }
+    }
+    Ok(reachable)
 }
 
 fn code_attribute_instructions(attribute: &Attribute) -> Option<&[Instruction]> {
