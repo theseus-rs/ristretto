@@ -119,6 +119,7 @@ pub fn verify_method<C: VerificationContext>(
     if method
         .access_flags
         .intersects(MethodAccessFlags::NATIVE | MethodAccessFlags::ABSTRACT)
+        && class_file.constant_pool.try_get_utf8(method.name_index)? != "<clinit>"
     {
         // Verify they don't have Code attribute
         let has_code = method
