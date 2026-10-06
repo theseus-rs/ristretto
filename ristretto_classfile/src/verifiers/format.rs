@@ -70,9 +70,19 @@ pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
             return Err(invalid("Duplicate interface"));
         }
     }
+    verify_attributes(
+        class,
+        &class.attributes,
+        crate::attributes::attribute::AttributeLocation::Class,
+    )?;
     verify_fields(class)?;
     let mut methods = HashSet::new();
     for method in &class.methods {
+        verify_attributes(
+            class,
+            &method.attributes,
+            crate::attributes::attribute::AttributeLocation::Method,
+        )?;
         verify_method(class, method)?;
         if !methods.insert((
             pool.try_get_utf8(method.name_index)?,
@@ -161,10 +171,53 @@ pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()
     Ok(())
 }
 
+fn verify_attributes(
+    class: &ClassFile<'_>,
+    attributes: &[Attribute],
+    location: crate::attributes::attribute::AttributeLocation,
+) -> Result<()> {
+    use crate::attributes::attribute::AttributeLocation as L;
+    let pool = &class.constant_pool;
+    let mut names = HashSet::new();
+    for attribute in attributes {
+        let name = pool.try_get_utf8(attribute.name_index())?;
+        if matches!(attribute, Attribute::Unknown { .. }) {
+            continue;
+        }
+        if name != attribute.name() {
+            return Err(invalid("Attribute name index disagrees with its contents"));
+        }
+        if !location.recognizes(name.as_bytes()) {
+            continue;
+        }
+        if !matches!(
+            attribute,
+            Attribute::LineNumberTable { .. }
+                | Attribute::LocalVariableTable { .. }
+                | Attribute::LocalVariableTypeTable { .. }
+        ) && !names.insert(name)
+        {
+            return Err(invalid("Duplicate attribute"));
+        }
+        if let Attribute::Record { records, .. } = attribute {
+            for record in records {
+                member_name(pool.try_get_utf8(record.name_index)?, false)?;
+                verify_attributes(class, &record.attributes, L::RecordComponent)?;
+            }
+        }
+    }
+    Ok(())
+}
+
 fn verify_fields(class: &ClassFile<'_>) -> Result<()> {
     let pool = &class.constant_pool;
     let mut fields = HashSet::new();
     for field in &class.fields {
+        verify_attributes(
+            class,
+            &field.attributes,
+            crate::attributes::attribute::AttributeLocation::Field,
+        )?;
         let name = pool.try_get_utf8(field.name_index)?;
         member_name(name, false)?;
         let descriptor = pool.try_get_utf8(field.descriptor_index)?;
