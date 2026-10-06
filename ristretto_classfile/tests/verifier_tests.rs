@@ -65,12 +65,13 @@ fn create_test_class_file(version: Version) -> Result<ClassFile<'static>> {
     constant_pool.add(Constant::utf8("()V"))?;
     constant_pool.add(Constant::utf8("Code"))?;
 
+    let super_class = constant_pool.add_class("java/lang/Object")?;
     Ok(ClassFile {
         version,
         constant_pool,
         access_flags: ClassAccessFlags::PUBLIC,
         this_class: this_class_index,
-        super_class: 0,
+        super_class,
         interfaces: vec![],
         fields: vec![],
         methods: vec![],
