@@ -718,7 +718,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             .enumerate()
         {
             // Top is compatible with anything
-            if *comp_type == VerificationType::Top || *exp_type == VerificationType::Top {
+            if *exp_type == VerificationType::Top {
                 continue;
             }
 
