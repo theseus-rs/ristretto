@@ -1,6 +1,7 @@
 //! Regression cases discovered by differential class-file verification against `OpenJDK`.
 #![expect(
     clippy::unwrap_used,
+    clippy::indexing_slicing,
     reason = "small generated class-file test fixtures"
 )]
 use ristretto_classfile::attributes::*;
@@ -68,8 +69,21 @@ fn method(
         }],
     }
 }
+fn full(
+    offset_delta: u16,
+    locals: Vec<VerificationType>,
+    stack: Vec<VerificationType>,
+) -> StackFrame {
+    StackFrame::FullFrame {
+        frame_type: 255,
+        offset_delta,
+        locals,
+        stack,
+    }
+}
 
 use Instruction::*;
+use VerificationType as T;
 
 fn check(mut class: ClassFile<'static>, method: Option<Method>, valid: bool) {
     if let Some(method) = method {
@@ -111,6 +125,31 @@ fn valid_branch_stackmap() {
         vec![Goto(1), Return],
         Some(vec![StackFrame::SameFrame { frame_type: 1 }]),
     );
+    check(c, Some(m), true);
+}
+
+#[test]
+fn valid_handler_byte_index_mismatch() {
+    let mut c = base();
+    let mut m = method(
+        &mut c,
+        "f",
+        "()V",
+        1,
+        0,
+        vec![Bipush(0), Pop, Return, Pop, Return],
+        Some(vec![full(3, vec![], vec![T::Object { cpool_index: 4 }])]),
+    );
+    if let Attribute::Code {
+        exception_table, ..
+    } = &mut m.attributes[0]
+    {
+        exception_table.push(ExceptionTableEntry {
+            range_pc: 0..2,
+            handler_pc: 3,
+            catch_type: 0,
+        });
+    }
     check(c, Some(m), true);
 }
 
