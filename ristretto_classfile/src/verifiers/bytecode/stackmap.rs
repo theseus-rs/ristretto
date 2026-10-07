@@ -202,6 +202,11 @@ impl DecodedStackMapTable {
     #[must_use]
     pub fn to_frame(&self, decoded: &DecodedFrame, max_locals: u16, max_stack: u16) -> Frame {
         let mut frame = Frame::new(max_locals as usize, max_stack as usize);
+        frame.this_uninitialized = decoded
+            .locals
+            .iter()
+            .chain(&decoded.stack)
+            .any(|ty| *ty == VerificationType::UninitializedThis);
 
         // Copy locals, padding with Top if needed
         for (i, ty) in decoded.locals.iter().enumerate() {
