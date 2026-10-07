@@ -428,10 +428,10 @@ fn test_java8_with_stackmap_uses_fast_path() -> Result<()> {
     ];
 
     // Create StackMapTable for the branch target at instruction index 4.
-    // The bytecode offset is 6 because ifeq is 3 bytes wide.
+    // The API stores instruction indices; serialization converts them to byte offsets.
     // SameFrame type 0-63 means offset_delta = frame_type
     let stack_map_frames = vec![
-        StackFrame::SameFrame { frame_type: 6 }, // Frame at offset 6 (return)
+        StackFrame::SameFrame { frame_type: 4 }, // Frame at instruction 4 (return)
     ];
 
     let code_attribute = Attribute::Code {

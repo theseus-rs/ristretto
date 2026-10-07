@@ -12,7 +12,6 @@ use crate::verifiers::error::VerifyError::{
     InvalidInstructionOffset, InvalidStackFrameOffset, VerificationError,
 };
 use ahash::AHashSet;
-use std::io::Cursor;
 
 /// Verify the `Code` attribute.
 ///
@@ -60,11 +59,14 @@ pub(crate) fn verify(
 
     // Calculate code byte length (needed for return value)
     // We need to serialize to compute the actual byte length
-    let mut cursor = Cursor::new(Vec::new());
-    for instruction in code {
-        instruction.to_bytes(&mut cursor)?;
+    let (_, bytes) = crate::attributes::offset_utils::instructions_to_bytes(code)?;
+    let code_length = u16::try_from(bytes.len())?;
+    if code_length == 0 {
+        return Err(VerificationError {
+            context: "Code".to_string(),
+            message: "Code must not be empty".to_string(),
+        });
     }
-    let code_length = u16::try_from(cursor.position())?;
 
     let num_instructions = code.len();
     let num_inst_u16 = u16::try_from(num_instructions)?;
