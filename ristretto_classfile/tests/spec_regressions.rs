@@ -374,6 +374,32 @@ fn overwritten_long_local() {
 }
 
 #[test]
+fn handler_uses_post_instruction_locals() {
+    let mut c = base();
+    c.version = JAVA_5;
+    let mut m = method(
+        &mut c,
+        "f",
+        "()V",
+        1,
+        1,
+        vec![Iconst_0, Istore_0, Return, Pop, Iload_0, Pop, Return],
+        None,
+    );
+    if let Attribute::Code {
+        exception_table, ..
+    } = &mut m.attributes[0]
+    {
+        exception_table.push(ExceptionTableEntry {
+            range_pc: 1..2,
+            handler_pc: 3,
+            catch_type: 0,
+        });
+    }
+    check(c, Some(m), false);
+}
+
+#[test]
 fn valid_constructor_calls_own_method() {
     let mut c = base();
     let init = c
