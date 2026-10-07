@@ -37,7 +37,7 @@ bitflags! {
         const CACHE_RESULTS = 0b0000_0100;
         /// Allow JSR/RET instructions.
         const ALLOW_JSR_RET = 0b0000_1000;
-        /// Strict exception handler type checking.
+        /// Retained for compatibility; exception handler type checking is always enforced.
         const STRICT_EXCEPTION_HANDLERS = 0b0001_0000;
     }
 }
