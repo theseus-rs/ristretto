@@ -357,11 +357,7 @@ pub fn handle_putfield<C: VerificationContext>(
 
     // For putfield on uninitialized 'this', the objectref can be UninitializedThis
     // when setting fields in a constructor before calling super()
-    if !matches!(
-        objectref,
-        VerificationType::UninitializedThis | VerificationType::Uninitialized(_)
-    ) && !objectref.is_null()
-    {
+    if !matches!(objectref, VerificationType::UninitializedThis) && !objectref.is_null() {
         let expected = VerificationType::Object(JavaString::from(class_name));
         if !objectref.is_assignable_to(&expected, context)? {
             return Err(VerifyError::VerifyError(format!(
@@ -505,6 +501,7 @@ pub fn handle_invokespecial<C: VerificationContext>(
     class_name: &str,
     method_name: &str,
     descriptor: &str,
+    current_class: &str,
     context: &C,
 ) -> Result<()> {
     let descriptor = JavaStr::cow_from_str(descriptor);
@@ -538,7 +535,7 @@ pub fn handle_invokespecial<C: VerificationContext>(
                 frame.initialize_object(&VerificationType::Uninitialized(*offset), &initialized);
             }
             VerificationType::UninitializedThis => {
-                let initialized = VerificationType::Object(JavaString::from(class_name));
+                let initialized = VerificationType::Object(JavaString::from(current_class));
                 frame.initialize_object(&VerificationType::UninitializedThis, &initialized);
             }
             _ => {
@@ -1352,7 +1349,7 @@ mod tests {
         assert!(handle_invoke(&mut frame, "Test", "test", "invalid", true, &ctx).is_err());
 
         let mut frame = Frame::new(1, 1);
-        assert!(handle_invokespecial(&mut frame, "Test", "test", "invalid", &ctx).is_err());
+        assert!(handle_invokespecial(&mut frame, "Test", "test", "invalid", "Test", &ctx).is_err());
 
         let mut frame = Frame::new(1, 1);
         assert!(handle_invokedynamic(&mut frame, "invalid", &ctx).is_err());
@@ -1638,7 +1635,15 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Uninitialized(0)).unwrap();
 
-        handle_invokespecial(&mut frame, "java/lang/Object", "<init>", "()V", &ctx).unwrap();
+        handle_invokespecial(
+            &mut frame,
+            "java/lang/Object",
+            "<init>",
+            "()V",
+            "java/lang/Object",
+            &ctx,
+        )
+        .unwrap();
         // After constructor, the object should be initialized
         assert!(frame.is_stack_empty());
     }
@@ -1649,7 +1654,15 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::UninitializedThis).unwrap();
 
-        handle_invokespecial(&mut frame, "java/lang/Object", "<init>", "()V", &ctx).unwrap();
+        handle_invokespecial(
+            &mut frame,
+            "java/lang/Object",
+            "<init>",
+            "()V",
+            "java/lang/Object",
+            &ctx,
+        )
+        .unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1660,7 +1673,7 @@ mod tests {
         frame.push(VerificationType::Uninitialized(0)).unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
-        handle_invokespecial(&mut frame, "Test", "<init>", "(I)V", &ctx).unwrap();
+        handle_invokespecial(&mut frame, "Test", "<init>", "(I)V", "Test", &ctx).unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1670,7 +1683,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
-        let result = handle_invokespecial(&mut frame, "java/lang/Object", "<init>", "()V", &ctx);
+        let result = handle_invokespecial(
+            &mut frame,
+            "java/lang/Object",
+            "<init>",
+            "()V",
+            "java/lang/Object",
+            &ctx,
+        );
         assert!(result.is_err());
         assert!(
             result
@@ -1686,7 +1706,15 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
-        handle_invokespecial(&mut frame, "java/lang/Object", "privateMethod", "()V", &ctx).unwrap();
+        handle_invokespecial(
+            &mut frame,
+            "java/lang/Object",
+            "privateMethod",
+            "()V",
+            "java/lang/Object",
+            &ctx,
+        )
+        .unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1696,7 +1724,15 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
-        handle_invokespecial(&mut frame, "java/lang/Object", "privateMethod", "()I", &ctx).unwrap();
+        handle_invokespecial(
+            &mut frame,
+            "java/lang/Object",
+            "privateMethod",
+            "()I",
+            "java/lang/Object",
+            &ctx,
+        )
+        .unwrap();
         assert_eq!(*frame.peek().unwrap(), VerificationType::Integer);
     }
 
@@ -1707,7 +1743,7 @@ mod tests {
         frame.push(VerificationType::Uninitialized(0)).unwrap();
         frame.push(VerificationType::Float).unwrap();
 
-        let result = handle_invokespecial(&mut frame, "Test", "<init>", "(I)V", &ctx);
+        let result = handle_invokespecial(&mut frame, "Test", "<init>", "(I)V", "Test", &ctx);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
@@ -1720,8 +1756,14 @@ mod tests {
             .push(VerificationType::Object(JavaString::from("other/Class")))
             .unwrap();
 
-        let result =
-            handle_invokespecial(&mut frame, "java/lang/String", "privateMethod", "()V", &ctx);
+        let result = handle_invokespecial(
+            &mut frame,
+            "java/lang/String",
+            "privateMethod",
+            "()V",
+            "java/lang/String",
+            &ctx,
+        );
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
@@ -1910,12 +1952,28 @@ mod tests {
         special_argument
             .push_category2(VerificationType::Long)
             .unwrap();
-        handle_invokespecial(&mut special_argument, "TestClass", "<init>", "(J)V", &ctx).unwrap();
+        handle_invokespecial(
+            &mut special_argument,
+            "TestClass",
+            "<init>",
+            "(J)V",
+            "TestClass",
+            &ctx,
+        )
+        .unwrap();
         assert!(special_argument.is_stack_empty());
 
         let mut special_return = Frame::new(5, 10);
         special_return.push(VerificationType::Null).unwrap();
-        handle_invokespecial(&mut special_return, "TestClass", "special", "()J", &ctx).unwrap();
+        handle_invokespecial(
+            &mut special_return,
+            "TestClass",
+            "special",
+            "()J",
+            "TestClass",
+            &ctx,
+        )
+        .unwrap();
         assert_eq!(
             special_return.pop_category2().unwrap(),
             VerificationType::Long
