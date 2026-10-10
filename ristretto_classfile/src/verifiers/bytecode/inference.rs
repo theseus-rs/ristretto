@@ -42,7 +42,6 @@ use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
 use crate::{FieldType, JavaString};
-use std::io::Cursor;
 
 /// Type inference verifier using iterative dataflow analysis.
 ///
@@ -122,20 +121,9 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                 VerifyError::ClassFormatError("Method has no Code attribute".to_string())
             })?;
 
-        // Build instruction offset map
-        let mut instruction_offsets = Vec::with_capacity(code.len());
-        let mut cursor = Cursor::new(Vec::new());
-
-        for instruction in code {
-            let offset = u16::try_from(cursor.position())?;
-            instruction_offsets.push(offset);
-            instruction
-                .to_bytes(&mut cursor)
-                .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
-        }
-        let code_length = u16::try_from(cursor.position())?;
-
-        let code_info = CodeInfo::new(instruction_offsets, code_length);
+        crate::attributes::offset_utils::instructions_to_bytes(code)?;
+        let length = u16::try_from(code.len())?;
+        let code_info = CodeInfo::new((0..length).collect(), length);
 
         // Get class and method names
         let current_class = class_file

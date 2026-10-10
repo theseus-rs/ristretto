@@ -41,7 +41,6 @@ use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
 use ahash::AHashSet;
-use std::io::Cursor;
 
 /// Extracted components from a Code attribute.
 type CodeAttributeParts<'a> = (
@@ -212,18 +211,9 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
 
     /// Builds the code info structure from instructions.
     fn build_code_info(code: &[Instruction]) -> Result<CodeInfo> {
-        let mut instruction_offsets = Vec::with_capacity(code.len());
-        let mut cursor = Cursor::new(Vec::new());
-
-        for instruction in code {
-            let offset = u16::try_from(cursor.position())?;
-            instruction_offsets.push(offset);
-            instruction
-                .to_bytes(&mut cursor)
-                .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
-        }
-        let code_length = u16::try_from(cursor.position())?;
-        Ok(CodeInfo::new(instruction_offsets, code_length))
+        crate::attributes::offset_utils::instructions_to_bytes(code)?;
+        let length = u16::try_from(code.len())?;
+        Ok(CodeInfo::new((0..length).collect(), length))
     }
 
     /// Extracts method information from the constant pool.
@@ -1336,7 +1326,7 @@ mod tests {
             0,
             vec![Attribute::StackMapTable {
                 name_index: 5,
-                frames: vec![StackFrame::SameFrame { frame_type: 3 }],
+                frames: vec![StackFrame::SameFrame { frame_type: 1 }],
             }],
             Vec::new(),
         );
