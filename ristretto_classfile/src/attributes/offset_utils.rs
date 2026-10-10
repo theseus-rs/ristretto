@@ -181,6 +181,10 @@ pub(crate) fn instructions_from_byte_reader(
         }
     }
 
+    byte_to_instruction_pairs.push((
+        u16::try_from(total_len)?,
+        u16::try_from(instructions.len())?,
+    ));
     Ok((byte_to_instruction_pairs, instructions))
 }
 
@@ -332,6 +336,10 @@ pub(crate) fn instructions_to_bytes(
 
         instruction.to_bytes(&mut bytes)?;
     }
+    instruction_to_byte_map.insert(
+        u16::try_from(instructions.len())?,
+        u16::try_from(bytes.position())?,
+    );
     Ok((instruction_to_byte_map, bytes.into_inner()))
 }
 
