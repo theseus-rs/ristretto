@@ -1609,6 +1609,7 @@ impl Attribute {
                     let mut last_instruction_offset: u16 = 0;
                     let mut new_frames = Vec::new();
                     for frame in frames {
+                        frame.validate()?;
                         let offset_delta = frame.offset_delta();
                         let instruction_offset = if first_frame {
                             offset_delta
