@@ -30,20 +30,25 @@ pub(crate) async fn get_bytes(
     let client = crate::tls::reqwest_client()?;
     let mut retries = 0_u32;
     loop {
-        let response = client
+        let result = match client
             .get(url)
             .headers(header_map.clone())
             .query(query)
             .send()
-            .await?
-            .error_for_status()?;
-        match response.bytes().await {
+            .await
+        {
+            Ok(response) => response.error_for_status()?.bytes().await,
+            Err(error) => Err(error),
+        };
+        match result {
             Ok(bytes) => return Ok(bytes.to_vec()),
-            // A server can close a large archive download before the body is complete. Retry the
-            // whole GET so that a partial response is never returned to the archive extractor.
-            Err(error) if retries < 2 => {
+            // Connections can fail before the headers arrive or before the body is complete.
+            // Retry the whole GET so that partial archives are never returned to the extractor.
+            Err(error)
+                if retries < 2 && (error.is_request() || error.is_body() || error.is_decode()) =>
+            {
                 retries += 1;
-                tracing::warn!(%error, retries, "Retrying incomplete runtime download");
+                tracing::warn!(%error, retries, "Retrying failed runtime download");
                 tokio::time::sleep(std::time::Duration::from_millis(100 * u64::from(retries)))
                     .await;
             }
@@ -211,6 +216,7 @@ mod tests {
         b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\nConnection: close\r\n\r\npar";
     const COMPLETE: &[u8] =
         b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\nConnection: close\r\n\r\nfull";
+    const CLOSED: &[u8] = b"";
 
     async fn serve_responses(listener: &TcpListener, responses: &[&[u8]]) -> std::io::Result<()> {
         for response in responses {
@@ -256,6 +262,22 @@ mod tests {
     {
         assert!(matches!(
             fetch_responses(&[TRUNCATED; 3]).await?,
+            Err(Error::RequestError(_))
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_retry_closed_connection() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        assert_eq!(fetch_responses(&[CLOSED, COMPLETE]).await??, b"full");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_closed_connection_retry_limit()
+    -> std::result::Result<(), Box<dyn std::error::Error>> {
+        assert!(matches!(
+            fetch_responses(&[CLOSED; 3]).await?,
             Err(Error::RequestError(_))
         ));
         Ok(())

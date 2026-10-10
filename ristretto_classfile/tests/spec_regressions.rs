@@ -141,6 +141,25 @@ fn valid_branch_stackmap() {
 }
 
 #[test]
+fn valid_append_frame() {
+    let mut c = base();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        1,
+        1,
+        vec![Iconst_0, Istore_0, Nop, Iload_0, Pop, Return],
+        Some(vec![StackFrame::AppendFrame {
+            frame_type: 252,
+            offset_delta: 2,
+            locals: vec![T::Integer],
+        }]),
+    );
+    check(c, Some(m), true);
+}
+
+#[test]
 fn valid_handler_byte_index_mismatch() {
     let mut c = base();
     let mut m = method(
