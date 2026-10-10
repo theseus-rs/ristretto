@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_javac` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.34.0...ristretto_javac-v0.34.1) - 2026-10-10
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_java` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/v0.34.0...v0.34.1) - 2026-10-10
+
+### Fixed
+- bound recursive annotation parsing
+- bound attribute parsing to its declared payload
+
+### Other
+- update Cargo.toml dependencies
+- update Rust to 1.99.0
+
+## `ristretto_resolver` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_resolver-v0.34.0...ristretto_resolver-v0.34.1) - 2026-10-10
+
+### Other
+- update Rust to 1.99.0
+
+## `ristretto_pom` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.34.0...ristretto_pom-v0.34.1) - 2026-10-10
+
+### Other
+- update Rust to 1.99.0
+
+## `ristretto_vm` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.34.0...ristretto_vm-v0.34.1) - 2026-10-10
+
+### Other
+- update Rust to 1.99.0
+
+## `ristretto_intrinsics` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.34.0...ristretto_intrinsics-v0.34.1) - 2026-10-10
+
+### Other
+- update Rust to 1.99.0
+
+## `ristretto_types` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.34.0...ristretto_types-v0.34.1) - 2026-10-10
+
+### Other
+- update Rust to 1.99.0
+
+## `ristretto_jit` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.34.0...ristretto_jit-v0.34.1) - 2026-10-10
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_macros` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.34.0...ristretto_macros-v0.34.1) - 2026-10-10
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classloader` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.34.0...ristretto_classloader-v0.34.1) - 2026-10-10
+
+### Other
+- update Rust to 1.99.0
+
+## `ristretto_classfile` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.34.0...ristretto_classfile-v0.34.1) - 2026-10-10
+
+### Fixed
+- bound recursive annotation parsing
+- bound attribute parsing to its declared payload
+
+### Other
+- update Rust to 1.99.0
+
 ## `ristretto_javac` - [0.34.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.33.0...ristretto_javac-v0.34.0) - 2026-09-27
 
 ### Other
