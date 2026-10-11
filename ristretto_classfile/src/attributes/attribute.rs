@@ -2,7 +2,7 @@ use crate::Error::InvalidInstructionOffset;
 use crate::attributes::bootstrap_method::BootstrapMethod;
 use crate::attributes::inner_class::InnerClass;
 use crate::attributes::line_number::LineNumber;
-use crate::attributes::offset_utils::{self, lookup_byte_offset, lookup_byte_offset_le};
+use crate::attributes::offset_utils::{self, lookup_byte_offset};
 use crate::attributes::parameter_annotation::ParameterAnnotation;
 use crate::attributes::{
     Annotation, AnnotationElement, ExceptionTableEntry, Exports, Instruction, LocalVariableTable,
@@ -728,7 +728,7 @@ impl Attribute {
                                 exception.range_pc.start,
                             )))?;
                     exception.range_pc.end =
-                        lookup_byte_offset_le(&byte_to_instruction_pairs, exception.range_pc.end)
+                        lookup_byte_offset(&byte_to_instruction_pairs, exception.range_pc.end)
                             .ok_or(InvalidInstructionOffset(u32::from(exception.range_pc.end)))?;
                     exception.handler_pc =
                         lookup_byte_offset(&byte_to_instruction_pairs, exception.handler_pc)
@@ -1235,10 +1235,8 @@ impl Attribute {
                             exception.range_pc.start,
                         )))?;
                     exception.range_pc.end = instruction_to_byte_map
-                        .iter()
-                        .filter(|&(&k, _)| k <= exception.range_pc.end)
-                        .max_by_key(|&(&k, _)| k)
-                        .map(|(_, &v)| v)
+                        .get(&exception.range_pc.end)
+                        .copied()
                         .ok_or(InvalidInstructionOffset(u32::from(exception.range_pc.end)))?;
                     exception.handler_pc = *instruction_to_byte_map
                         .get(&exception.handler_pc)
