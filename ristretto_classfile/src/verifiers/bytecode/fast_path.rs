@@ -453,6 +453,9 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 let anchor = anchor_states.get_mut(index).ok_or_else(|| {
                     VerifyError::VerifyError(format!("Invalid stack map index {index}"))
                 })?;
+                if index == 0 {
+                    self.validate_frame_compatibility(initial_frame, &frame, 0)?;
+                }
                 *anchor = Some(frame);
             }
         }
