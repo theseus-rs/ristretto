@@ -47,7 +47,8 @@ jobs:
 
         include:
           - platform: linux-arm
-            os: ubuntu-26.04-arm
+            # Match the Ubuntu ARM image used by the release builds.
+            os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
           - platform: linux-riscv64
             os: ubuntu-latest
