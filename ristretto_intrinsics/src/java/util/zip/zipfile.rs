@@ -690,7 +690,7 @@ pub fn open<T: Thread + 'static>(
         })?;
 
         let name_bytes = file.name_raw().to_vec();
-        let extra_bytes = file.extra_data().map_or_else(Vec::new, <[u8]>::to_vec);
+        let extra_bytes = file.extra_data().unwrap_or_default();
         let comment_bytes = file.comment().as_bytes().to_vec();
         let compressed_size = file.compressed_size();
         let uncompressed_size = file.size();

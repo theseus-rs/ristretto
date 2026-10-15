@@ -331,7 +331,9 @@ impl ModulePathFinder {
             let file = archive
                 .by_index(entry_index)
                 .map_err(|error| ModuleError::IoError(error.to_string()))?;
-            let name = file.name();
+            let name = file
+                .name()
+                .map_err(|error| ModuleError::IoError(error.to_string()))?;
             if name.to_ascii_lowercase().ends_with(".class")
                 && !name.starts_with("META-INF/")
                 && let Some(last_slash) = name.rfind('/')

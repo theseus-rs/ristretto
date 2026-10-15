@@ -257,7 +257,14 @@ fn decode_pack200(java_home: &Path, packed: &[u8]) -> Result<VecDeque<UnpackedEn
         })?;
         let modification_time = modification_time(file.last_modified());
         entries.push_back(UnpackedEntry {
-            name: file.name().to_string(),
+            name: file
+                .name()
+                .map_err(|error| {
+                    JavaError::IoException(format!(
+                        "Could not read Pack200 entry {index} name: {error}"
+                    ))
+                })?
+                .into_owned(),
             data,
             modification_time,
             deflated: file.compression() == zip::CompressionMethod::Deflated,
