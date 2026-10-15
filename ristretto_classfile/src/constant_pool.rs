@@ -108,6 +108,12 @@ impl<'a> ConstantPool<'a> {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn add(&mut self, constant: Constant<'a>) -> Result<u16> {
+        let slots = if matches!(constant, Constant::Long(_) | Constant::Double(_)) {
+            2
+        } else {
+            1
+        };
+        u16::try_from(self.constants.len() + slots)?;
         // Logically the index is self.len() + 1.  However, since the constant pool is one based a
         // placeholder is added as the first entry, we can just use the length of the constants
         // vector to obtain the new index value.
@@ -194,6 +200,13 @@ impl<'a> ConstantPool<'a> {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn set(&mut self, index: u16, constant: Constant<'a>) -> Result<()> {
+        let previous = self.try_get(index)?;
+        let wide = |value: &Constant<'_>| matches!(value, Constant::Long(_) | Constant::Double(_));
+        if wide(previous) != wide(&constant) {
+            return Err(crate::Error::IoError(
+                "Replacing a constant cannot change its slot width".to_string(),
+            ));
+        }
         let constant_entry = self.constants.get_mut(index as usize);
         match constant_entry {
             Some(entry @ ConstantEntry::Constant(_)) => {
@@ -292,6 +305,11 @@ impl<'a> ConstantPool<'a> {
         while constants.len() < target_len {
             let constant = Constant::from_bytes(bytes)?;
             let add_placeholder = matches!(constant, Constant::Long(_) | Constant::Double(_));
+            if add_placeholder && constants.len() + 1 >= target_len {
+                return Err(crate::Error::IoError(
+                    "Two-slot constant exceeds constant_pool_count".to_string(),
+                ));
+            }
             constants.push(ConstantEntry::Constant(constant));
             if add_placeholder {
                 constants.push(ConstantEntry::Placeholder);
@@ -338,7 +356,7 @@ impl<'a> ConstantPool<'a> {
     ///
     /// If there are more than 65,534 constants in the pool.
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
-        let constant_pool_count = u16::try_from(self.len())? + 1;
+        let constant_pool_count = u16::try_from(self.constants.len())?;
         bytes.write_u16::<BigEndian>(constant_pool_count)?;
         for constant_entry in &self.constants {
             if let ConstantEntry::Constant(constant) = constant_entry {
