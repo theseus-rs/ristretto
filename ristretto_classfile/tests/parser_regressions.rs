@@ -56,6 +56,26 @@ fn constant_pool_count_and_slot_width_are_checked() {
     assert!(pool.to_bytes(&mut Vec::new()).is_err());
 }
 
+#[test]
+fn switches_reject_invalid_ranges_counts_and_key_order() {
+    let cases: &[&[u8]] = &[
+        &[171, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255],
+        &[170, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1],
+        &[
+            171, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+        ],
+        &[
+            171, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+        ],
+    ];
+    for bytes in cases {
+        assert!(Instruction::from_bytes(&mut ByteReader::new(bytes)).is_err());
+    }
+    let mut reader = ByteReader::new(&[0, 200, 127, 255, 255, 255]);
+    reader.read_u8().unwrap();
+    assert!(Instruction::from_bytes(&mut reader).is_err());
+}
+
 fn code(pool: &mut ConstantPool<'_>, instructions: Vec<Instruction>) -> Attribute {
     Attribute::Code {
         name_index: pool.add_utf8("Code").unwrap(),
