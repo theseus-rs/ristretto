@@ -136,7 +136,7 @@ impl Jar {
         let mut classes = Vec::new();
         for i in 0..zip_archive.len() {
             let file = zip_archive.by_index(i)?;
-            let file_name = file.name();
+            let file_name = file.name()?;
             if file_name.ends_with("class") {
                 let mut class_name = file_name.replace(".class", "");
                 if is_module {

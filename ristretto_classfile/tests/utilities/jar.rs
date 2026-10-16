@@ -12,8 +12,8 @@ pub fn verify(jar_bytes: Vec<u8>) -> Result<()> {
         let mut file = archive
             .by_index(i)
             .map_err(|error| IoError(error.to_string()))?;
-        let file_name = file.name().to_string();
-        if !Path::new(&file_name)
+        let file_name = file.name().map_err(|error| IoError(error.to_string()))?;
+        if !Path::new(file_name.as_ref())
             .extension()
             .is_some_and(|extension| extension.eq_ignore_ascii_case("class"))
         {
