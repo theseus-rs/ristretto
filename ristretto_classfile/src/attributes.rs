@@ -95,7 +95,7 @@ mod module_access_flags;
 mod nested_class_access_flags;
 
 /// Utilities for working with bytecode offsets, often used in parsing or manipulating code attributes.
-mod offset_utils;
+pub(crate) mod offset_utils;
 
 /// Represents `opens` declarations in a `Module` attribute, specifying packages opened by a Java module.
 mod opens;
