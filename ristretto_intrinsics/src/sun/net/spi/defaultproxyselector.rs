@@ -38,7 +38,8 @@ pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(None)
+    // No native system-proxy detection exists; returning false keeps DefaultProxySelector on its property-based fallback instead of receiving null in a boolean slot.
+    Ok(Some(Value::Int(0)))
 }
 
 #[cfg(test)]
@@ -75,7 +76,7 @@ mod tests {
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = init(thread, Parameters::default())?;
-        assert_eq!(result, None);
+        assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
 }
