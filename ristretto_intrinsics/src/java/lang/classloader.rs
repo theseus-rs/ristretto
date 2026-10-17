@@ -154,13 +154,11 @@ async fn class_object_from_bytes<T: Thread + 'static>(
         // TODO: implement setting the source file
     }
 
-    // Honor the explicit hidden-class flag even for names without $$ (LambdaForm$MH,
-    // for example). Distinct definitions must not overwrite each other's methods.
-    // Preserve the legacy naming convention for generated classes as well.
-    let class_name = class_file.class_name()?.to_string();
-    let is_hidden_like = is_hidden || class_name.contains("$$");
+    // Only an explicit hidden-class flag makes a definition hidden.
+    //
+    // Guessing from the class name (`$$` was previously treated as a hidden-class marker) breaks ordinary generated classes: Spring CGLIB names its enhanced configuration classes `X$$SpringCGLIB$$0`, and such a class must remain findable by name via `Class.forName`.
 
-    let class = if is_hidden_like {
+    let class = if is_hidden {
         let suffix = vm.next_hidden_class_suffix()?;
         Class::from_hidden(defining_class_loader, class_file, suffix)?
     } else {
