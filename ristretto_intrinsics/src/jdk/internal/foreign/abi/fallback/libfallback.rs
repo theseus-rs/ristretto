@@ -426,7 +426,8 @@ pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(None)
+    // ristretto has no FFI fallback library; report "not initialized" so callers stay on their pure-Java paths instead of receiving null in a boolean slot.
+    Ok(Some(Value::Int(0)))
 }
 
 #[intrinsic_method(
@@ -752,7 +753,7 @@ mod tests {
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = init(thread, Parameters::default())?;
-        assert_eq!(result, None);
+        assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
 
