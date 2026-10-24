@@ -1,4 +1,9 @@
-export const JAVA_VERSIONS = [8, 11, 17, 21, 25] as const;
+export const JAVA_8 = 8;
+export const JAVA_11 = 11;
+export const JAVA_17 = 17;
+export const JAVA_21 = 21;
+export const JAVA_25 = 25;
+export const JAVA_VERSIONS = [JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25] as const;
 export type JavaVersion = (typeof JAVA_VERSIONS)[number];
 export const isJavaVersion = (value: unknown): value is JavaVersion =>
   JAVA_VERSIONS.some((version) => version === value);

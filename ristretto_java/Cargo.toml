@@ -46,6 +46,11 @@ tokio = { workspace = true, features = ["rt"] }
 [target.'cfg(target_family = "wasm")'.dependencies]
 tokio = { workspace = true, features = ["rt"] }
 
+[dev-dependencies]
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.34.0" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.34.0" }
+tempfile = { workspace = true }
+
 [features]
 default = ["audio", "tls-rustls-ring"]
 audio = [

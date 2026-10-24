@@ -148,12 +148,12 @@ impl MethodRegistry {
 mod tests {
     use super::*;
     use crate::vm;
+    use ristretto_classfile::JAVA_21;
     #[cfg(target_family = "unix")]
     use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17};
-    use ristretto_classfile::{JAVA_21, JavaStr};
     use ristretto_classloader::runtime;
     use ristretto_classloader::{
-        JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION, JAVA_21_VERSION, JAVA_25_VERSION,
+        Class, JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION, JAVA_21_VERSION, JAVA_25_VERSION,
     };
     use std::sync::Mutex;
 
@@ -208,9 +208,10 @@ mod tests {
                 continue;
             }
 
-            let class = class_loader
-                .load(JavaStr::try_from_str(&class_name)?)
-                .await?;
+            // Construct one class at a time without retaining it in the loader's cache.
+            // Class::from also supplies the synthetic method-handle intrinsics we verify.
+            let class_file = class_path.read_class(&class_name).await?;
+            let class = Class::from(None, class_file)?;
             for method in class.methods() {
                 if method.is_native() {
                     let method_name = method.name();
@@ -291,6 +292,9 @@ mod tests {
         // intrinsic dispatch.
         if version_major >= 25 {
             required_methods.push("java/lang/Class.getModifiers()I".to_string());
+            // Java 25 update releases moved Reference.get()'s field access into get0().
+            // Keep the native entry registered when checking older Java 25 homes as well.
+            required_methods.push("java/lang/ref/Reference.get0()Ljava/lang/Object;".to_string());
         }
         // initSystemClassLoader is only a native method in Java 8 and earlier
         if version_major <= 8 {
