@@ -1,10 +1,50 @@
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+
+/** Notices for libraries bundled with Rust's WASI target, outside Cargo metadata. */
+export function toolchainLicenses(directory, compilerVersion) {
+  const manifest = JSON.parse(readFileSync(join(directory, 'toolchain.json'), 'utf8'));
+  const release = compilerVersion.match(/^release: (.+)$/m)?.[1];
+  const commit = compilerVersion.match(/^commit-hash: (.+)$/m)?.[1];
+  if (release !== manifest.rust.release || commit !== manifest.rust.commit) {
+    throw new Error(
+      `Toolchain notices cover rustc ${manifest.rust.release} (${manifest.rust.commit}), ` +
+        `but the build uses ${release ?? 'unknown'} (${commit ?? 'unknown'}). ` +
+        'Refresh web/licenses as described in web/licenses/README.md.',
+    );
+  }
+  const sections = [];
+  for (const component of manifest.components) {
+    sections.push(
+      `\n=== ${component.name} ===\nLicense: ${component.license}\n` +
+        `Source: ${component.repository}/tree/${component.revision}`,
+    );
+    for (const { path, sha256 } of component.files) {
+      const file = join(directory, component.directory, path);
+      const bytes = readFileSync(file);
+      if (createHash('sha256').update(bytes).digest('hex') !== sha256) {
+        throw new Error(`Toolchain notice checksum mismatch: ${file}`);
+      }
+      sections.push(`\n--- ${component.directory}/${path} ---\n${bytes.toString('utf8')}`);
+    }
+  }
+  return sections.join('\n\n') + '\n';
+}
 
 /** Collect the actual installed licenses alongside the distributed binaries. */
 export function licenses(root, playground) {
   const sections = ['Ristretto Java playground — dependency licenses and notices'];
+  sections.push(
+    toolchainLicenses(
+      join(playground, 'licenses'),
+      execFileSync(process.env.RUSTC ?? 'rustc', ['--version', '--verbose'], {
+        cwd: root,
+        encoding: 'utf8',
+      }),
+    ),
+  );
   function include(name, directory, license, repository, explicit) {
     const files = new Set();
     function scan(path, depth = 0) {
