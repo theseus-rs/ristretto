@@ -1,0 +1,87 @@
+{
+  "rust": {
+    "release": "1.99.1",
+    "commit": "58cf8f9c35b355199727627d07ae34a4e2846d67"
+  },
+  "components": [
+    {
+      "name": "Rust standard library 1.99.1",
+      "directory": "rust",
+      "repository": "https://github.com/rust-lang/rust",
+      "revision": "58cf8f9c35b355199727627d07ae34a4e2846d67",
+      "license": "Apache-2.0 OR MIT",
+      "files": [
+        {
+          "path": "COPYRIGHT",
+          "sha256": "172020dbfd5b53a226dfde77616190a48dcff519b0bc0e6deb91a8450782c4af"
+        },
+        {
+          "path": "LICENSE-MIT",
+          "sha256": "b71bd43a069ca0641a9ecfe585ca7b3c53b5cc1608f8b68321168698e28b5ea1"
+        },
+        {
+          "path": "LICENSE-APACHE",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+        }
+      ]
+    },
+    {
+      "name": "wasi-libc (wasi-sdk 33)",
+      "directory": "wasi-libc",
+      "repository": "https://github.com/WebAssembly/wasi-libc",
+      "revision": "161b3195fc2558d2b1ba3eb9ffae3b2b47407623",
+      "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT; third-party notices below",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "2711a8b5a5cdfef0e639f96c1aca12ae23d7d64a02d0507f1bdf14d2b27bbc3a"
+        },
+        {
+          "path": "LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "path": "LICENSE-APACHE-LLVM",
+          "sha256": "268872b9816f90fd8e85db5a28d33f8150ebb8dd016653fb39ef1f94f2686bc5"
+        },
+        {
+          "path": "LICENSE-MIT",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        },
+        {
+          "path": "libc-bottom-half/cloudlibc/LICENSE",
+          "sha256": "c8b789cf5a746611e6300a0cc7750dbf92b61912a709d04e639245f7290656d0"
+        },
+        {
+          "path": "libc-top-half/musl/COPYRIGHT",
+          "sha256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af"
+        },
+        {
+          "path": "fts/musl-fts/COPYING",
+          "sha256": "55af87e4017668f54467a3380e7ebbac5e672d8c763bfe95e6fc882a6fdc4046"
+        },
+        {
+          "path": "dlmalloc/NOTICE",
+          "sha256": "da52583f07b5f00a5ffcce044ad858528e2e1ab1eeffeee954269e49873ef60c"
+        }
+      ]
+    },
+    {
+      "name": "LLVM runtime libraries (wasi-sdk 33)",
+      "directory": "llvm",
+      "repository": "https://github.com/llvm/llvm-project",
+      "revision": "4434dabb69916856b824f68a64b029c67175e532",
+      "license": "Apache-2.0 WITH LLVM-exception; third-party notices below",
+      "files": [
+        {
+          "path": "compiler-rt/LICENSE.TXT",
+          "sha256": "1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d"
+        },
+        {
+          "path": "libunwind/LICENSE.TXT",
+          "sha256": "b5efebcaca80879234098e52d1725e6d9eb8fb96a19fce625d39184b705f7b6d"
+        }
+      ]
+    }
+  ]
+}

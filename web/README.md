@@ -26,6 +26,11 @@ library JARs pinned in `languages.json`, verifies their hashes, and builds the s
 using the native Java 25 toolchain. JARs are cached in `~/.ristretto/languages`; set
 `PLAYGROUND_LANGUAGE_CACHE` to override this directory.
 
+The generated `runtime/THIRD_PARTY_LICENSES.txt` includes Cargo and npm dependency
+notices, JDK and language notices, and the checked-in Rust/WASI toolchain notices.
+When upgrading Rust, refresh [the toolchain notices](licenses/README.md) alongside
+`rust-toolchain.toml`; the build rejects notices for a different compiler revision.
+
 ```sh
 rustup target add wasm32-wasip2
 cd web
