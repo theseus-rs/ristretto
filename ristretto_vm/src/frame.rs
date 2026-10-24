@@ -542,7 +542,9 @@ impl Frame {
         value: Option<Value>,
         has_return_type: bool,
     ) -> Result<()> {
-        if has_return_type && let Some(value) = value {
+        if has_return_type {
+            // An intrinsic returning `None` for a non-void method denotes a null reference (for example, `TimeZone.getSystemGMTOffsetID`, whose native contract already documents null as its "no fixed offset" result); pushing it keeps the caller's operand stack balanced.
+            let value = value.unwrap_or(Value::Object(None));
             state.stack.push(value)?;
         }
         self.program_counter
