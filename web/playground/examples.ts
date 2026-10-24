@@ -1,4 +1,4 @@
-import type { Target } from '../shared/protocol';
+import type { JavaVersion, Target } from '../shared/protocol';
 export type Example = { title: string; minimumVersion: number; source: string };
 const javaExamples = {
   hello: {
@@ -57,6 +57,67 @@ public class Main {
 `,
   },
 } as const;
+
+const java25Examples: Record<string, Example> = {
+  hello: {
+    title: 'Hello, world',
+    minimumVersion: 25,
+    source: `void main() {
+    IO.println("Hello, world! ☕");
+
+    String language = "Java";
+    int cups = 3;
+
+    for (int i = 1; i <= cups; i++) {
+        IO.println("Cup " + i + " of " + language);
+    }
+}
+`,
+  },
+  collections: {
+    title: 'Collections & streams',
+    minimumVersion: 25,
+    source: `void main() {
+    List<String> coffees = List.of("Espresso", "Ristretto", "Latte");
+
+    coffees.stream()
+        .sorted()
+        .map(String::toUpperCase)
+        .forEach(IO::println);
+}
+`,
+  },
+  records: {
+    title: 'Records & pattern matching',
+    minimumVersion: 25,
+    source: `record Coffee(String name, int shots) {}
+
+void main() {
+    Object order = new Coffee("Ristretto", 2);
+
+    String description = switch (order) {
+        case Coffee(var name, var shots) ->
+            name + " with " + shots + " shots";
+        default -> "Something new";
+    };
+
+    IO.println(description);
+}
+`,
+  },
+};
+
+export function examplesFor(target: Target, javaVersion: JavaVersion): Record<string, Example> {
+  return target === 'java' && javaVersion === 25 ? java25Examples : examples[target];
+}
+
+/** Switch built-in examples between source styles while preserving edited drafts. */
+export function javaSourceForVersion(source: string, example: string, version: JavaVersion) {
+  if (source === examples.java[example]?.source || source === java25Examples[example]?.source) {
+    return examplesFor('java', version)[example].source;
+  }
+  return source;
+}
 
 const script = (title: string, source: string): Example => ({ title, source, minimumVersion: 25 });
 const scalaHello = 'println("Hello, world! ☕")\nfor (i <- 1 to 3) println(s"Cup $i of Scala")\n';

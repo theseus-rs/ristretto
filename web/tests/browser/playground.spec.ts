@@ -16,6 +16,9 @@ test('compiles and runs Java 25 locally, including examples and cached offline e
   const requests: string[] = [];
   page.on('request', (request) => requests.push(`${request.method()} ${request.url()}`));
   await page.goto('./');
+  await expect(page.getByRole('textbox', { name: 'Java source code' })).toContainText(
+    'void main()',
+  );
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeDisabled({
     timeout: 755_000,

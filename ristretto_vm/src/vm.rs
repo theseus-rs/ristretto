@@ -13,7 +13,9 @@ use crate::string_pool::StringPool;
 use crate::thread::Thread;
 use crate::{Configuration, ConfigurationBuilder, Result, startup_trace};
 use ahash::AHashMap;
-use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_21, JAVA_PREVIEW_MINOR_VERSION, Version};
+use ristretto_classfile::{
+    ClassAccessFlags, JAVA_8, JAVA_17, JAVA_21, JAVA_PREVIEW_MINOR_VERSION, Version,
+};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
     Class, ClassLoader, ClassLoaderType, ClassPath, ClassPathEntry, Object, Reference, Value,
@@ -854,8 +856,10 @@ impl VM {
         .await
     }
 
-    /// Invoke the main method of the main class associated with the VM. The main method must have
-    /// the signature `public static void main(String[] args)`.
+    /// Invoke the main method of the main class associated with the VM. Before Java 25, the
+    /// signature must be `public static void main(String[] args)`. Java 25 and later also allow
+    /// non-private static or instance methods, preferring `main(String[])` over `main()`.
+    /// Instance entry points require a non-private no-argument constructor on the main class.
     ///
     /// # Errors
     ///
@@ -871,22 +875,44 @@ impl VM {
                 return Err(InternalError("No main class specified".into()));
             };
             let main_class = self.class(&main_class_name).await?;
-            let Some(main_method) = main_class.main_method() else {
+            let Some(mut target) = main_class.resolve_main_method(self.java_major_version)? else {
                 return Err(InternalError(format!(
                     "No main method found for {main_class_name}"
                 )));
             };
 
             let thread = self.primordial_thread().await?;
-            let string_parameter =
-                ristretto_types::JavaObject::to_object(parameters, &*thread).await?;
+            let mut arguments = Vec::with_capacity(2);
+            if !target.method.is_static() {
+                if main_class.is_interface()
+                    || main_class
+                        .class_file()
+                        .access_flags
+                        .contains(ClassAccessFlags::ABSTRACT)
+                {
+                    return Err(InternalError(format!(
+                        "Cannot instantiate main class {main_class_name}"
+                    )));
+                }
 
-            self.invoke(
-                &main_class_name,
-                main_method.signature(),
-                &[string_parameter],
-            )
-            .await
+                let constructor = main_class.object_initializer("()V");
+                if constructor.is_none_or(|constructor| constructor.is_private()) {
+                    return Err(InternalError(format!(
+                        "No non-private no-argument constructor found for {main_class_name}"
+                    )));
+                }
+                arguments.push(thread.object(main_class_name, "", &[] as &[Value]).await?);
+                // Separately compiled hierarchies can expose an abstract entry point.
+                target = main_class.select_concrete_method(&target)?;
+            }
+
+            if target.method.descriptor() == "([Ljava/lang/String;)V" {
+                arguments.push(ristretto_types::JavaObject::to_object(parameters, &*thread).await?);
+            }
+
+            thread
+                .execute(&target.declaring_class, &target.method, &arguments)
+                .await
         })
         .await
     }
@@ -1200,7 +1226,11 @@ impl ristretto_types::VM for VM {
 mod tests {
     use super::*;
     use crate::configuration::{ConfigurationBuilder, ModuleExport, ModuleOpens, ModuleRead};
-    use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_25};
+    use ristretto_classfile::attributes::{Attribute, Instruction};
+    use ristretto_classfile::{
+        BaseType, ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, FieldType, JAVA_25,
+        MethodAccessFlags,
+    };
     use ristretto_classloader::{ClassPath, ClassPathEntry, DEFAULT_JAVA_VERSION};
     use std::path::PathBuf;
 
@@ -1286,6 +1316,118 @@ mod tests {
         let vm = VM::new(configuration).await?;
         let main_class = vm.main_class().expect("main class");
         assert_eq!("HelloWorld", main_class);
+        Ok(())
+    }
+
+    async fn instance_main_vm(
+        constructor_flags: Option<MethodAccessFlags>,
+        constructor_body: Vec<Instruction>,
+    ) -> Result<Arc<VM>> {
+        let mut constant_pool = ConstantPool::new();
+        let this_class = constant_pool.add_class("InstanceMain")?;
+        let super_class = constant_pool.add_class("java/lang/Object")?;
+        let super_constructor = constant_pool.add_method_ref(super_class, "<init>", "()V")?;
+        let argument_count = constant_pool.add_field_ref(this_class, "argumentCount", "I")?;
+        let code_name = constant_pool.add_utf8("Code")?;
+        let code_attribute = |code| Attribute::Code {
+            name_index: code_name,
+            max_stack: 1,
+            max_locals: 2,
+            code,
+            exception_table: Vec::new(),
+            attributes: Vec::new(),
+        };
+        let mut methods = vec![ristretto_classfile::Method {
+            access_flags: MethodAccessFlags::empty(),
+            name_index: constant_pool.add_utf8("main")?,
+            descriptor_index: constant_pool.add_utf8("([Ljava/lang/String;)V")?,
+            attributes: vec![code_attribute(vec![
+                Instruction::Aload_1,
+                Instruction::Arraylength,
+                Instruction::Putstatic(argument_count),
+                Instruction::Return,
+            ])],
+        }];
+        if let Some(flags) = constructor_flags {
+            let mut code = vec![
+                Instruction::Aload_0,
+                Instruction::Invokespecial(super_constructor),
+            ];
+            code.extend(constructor_body);
+            code.push(Instruction::Return);
+            methods.push(ristretto_classfile::Method {
+                access_flags: flags,
+                name_index: constant_pool.add_utf8("<init>")?,
+                descriptor_index: constant_pool.add_utf8("()V")?,
+                attributes: vec![code_attribute(code)],
+            });
+        }
+        let fields = vec![ristretto_classfile::Field {
+            access_flags: FieldAccessFlags::STATIC,
+            name_index: constant_pool.add_utf8("argumentCount")?,
+            descriptor_index: constant_pool.add_utf8("I")?,
+            field_type: FieldType::Base(BaseType::Int),
+            attributes: Vec::new(),
+        }];
+        let class_file = ClassFile {
+            version: JAVA_8,
+            constant_pool,
+            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER,
+            this_class,
+            super_class,
+            fields,
+            methods,
+            ..Default::default()
+        };
+        let memory = ristretto_classloader::Memory::new("instance-main-test");
+        let mut bytes = Vec::new();
+        class_file.to_bytes(&mut bytes)?;
+        memory.add_class(&bytes).await?;
+        let configuration = ConfigurationBuilder::new()
+            .class_path(ClassPath::new(vec![ClassPathEntry::Memory(memory)]))
+            .main_class("InstanceMain")
+            .java_version("25")
+            .interpreted(true)
+            .build()?;
+        VM::new(configuration).await
+    }
+
+    #[tokio::test]
+    async fn test_invoke_main_instance_arguments() -> Result<()> {
+        let vm = instance_main_vm(Some(MethodAccessFlags::empty()), Vec::new()).await?;
+        assert!(vm.invoke_main(&["first", "second"]).await?.is_none());
+        let class = vm.class("InstanceMain").await?;
+        assert_eq!(class.static_value("argumentCount")?, Value::Int(2));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_invoke_main_requires_accessible_constructor() -> Result<()> {
+        for flags in [None, Some(MethodAccessFlags::PRIVATE)] {
+            let vm = instance_main_vm(flags, Vec::new()).await?;
+            let result = vm.invoke_main(&[] as &[&str]).await;
+            assert!(matches!(
+                result,
+                Err(InternalError(message))
+                    if message == "No non-private no-argument constructor found for InstanceMain"
+            ));
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_invoke_main_propagates_constructor_exception() -> Result<()> {
+        let vm = instance_main_vm(
+            Some(MethodAccessFlags::PUBLIC),
+            vec![Instruction::Aconst_null, Instruction::Athrow],
+        )
+        .await?;
+        assert!(matches!(
+            vm.invoke_main(&["argument"]).await,
+            Err(crate::Error::Throwable(_))
+        ));
+        let class = vm.class("InstanceMain").await?;
+        assert_eq!(class.static_value("argumentCount")?, Value::Int(0));
         Ok(())
     }
 

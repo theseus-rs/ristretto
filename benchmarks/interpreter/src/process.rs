@@ -364,18 +364,26 @@ mod tests {
     async fn timeout_kills_the_vm_below_the_time_wrapper() -> Result<()> {
         let pid_file = tempfile::NamedTempFile::new()?;
         let script = format!(
-            "echo $$ > '{}'; exec /bin/sleep 60",
+            "echo $$ > '{}'; printf 'H\\n'; read -r start; printf 'R\\n'; read -r start; exec /bin/sleep 60",
             pid_file.path().display()
         );
         let result = run_fork(
             &shell(&script),
             &Environment::new(),
             Path::new("."),
-            Duration::from_millis(150),
+            // Process startup can exceed 150 ms on busy CI runners. Complete the handshake
+            // and time out inside a sample so the PID is written before cleanup is tested.
+            Duration::from_secs(5),
             1,
         )
         .await;
-        assert!(result.is_err());
+        assert!(
+            result.as_ref().is_err_and(|error| {
+                let message = error.to_string();
+                message.contains("VM sample timed out") || message.contains("VM output timed out")
+            }),
+            "Expected a protocol timeout, got {result:?}"
+        );
         let pid = std::fs::read_to_string(pid_file.path())?
             .trim()
             .parse::<i32>()?;
