@@ -1,5 +1,33 @@
 import { expect, test } from '@playwright/test';
 
+test('Java 25 examples use compact main methods and preserve edited drafts', async ({ page }) => {
+  await page.goto('./');
+  const version = page.getByLabel('Java version');
+  const editor = page.getByRole('textbox', { name: 'Java source code' });
+  await expect(version).toHaveValue('25');
+  for (const example of ['hello', 'collections', 'records']) {
+    await page.getByLabel('Start with').selectOption(example);
+    await expect(editor).toContainText('void main()');
+    await expect(editor).not.toContainText('public class Main');
+    await version.selectOption('21');
+    await expect(editor).toContainText('public static void main(String[] args)');
+    await version.selectOption('25');
+    await expect(editor).toContainText('void main()');
+  }
+  await expect(page.locator('#main-help')).toContainText('compact source files');
+  const custom = 'void main() { IO.println("saved draft"); }';
+  await editor.fill(custom);
+  await version.selectOption('8');
+  await expect(editor).toHaveText(custom);
+  await page.getByLabel('Language').selectOption('kotlin');
+  await page.getByLabel('Language').selectOption('java');
+  await expect(editor).toHaveText(custom);
+  await version.selectOption('25');
+  await page.reload();
+  await expect(version).toHaveValue('25');
+  await expect(editor).toHaveText(custom);
+});
+
 test('Cmd and Ctrl Enter run once without changing the source', async ({ page }) => {
   await page.goto('./');
   const editor = page.getByRole('textbox', { name: 'Java source code' });

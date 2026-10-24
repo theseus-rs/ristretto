@@ -8,7 +8,7 @@ import { editorTheme } from '../shared/editor-theme';
 import { siteHeader, initializeSiteHeader } from '../shared/site-header';
 import { initializeAppearance, selectedTheme } from '../shared/appearance';
 import { loadWorker } from '../shared/worker-client';
-import { examples } from './examples';
+import { examples, examplesFor, javaSourceForVersion } from './examples';
 import {
   COMPILE_TIMEOUT,
   LOAD_TIMEOUT,
@@ -87,7 +87,14 @@ let target = executionTarget(language, state.scalaVersion);
 languagePicker.value = language;
 scalaPicker.value = state.scalaVersion;
 versionPicker.value = String(state.javaVersion);
-const initialSource = state.drafts[target]?.source ?? examples[target].hello.source;
+function draftSource() {
+  const draft = state.drafts[target];
+  const source = draft?.source ?? examplesFor(target, state.javaVersion).hello.source;
+  return target === 'java'
+    ? javaSourceForVersion(source, draft?.example ?? 'hello', state.javaVersion)
+    : source;
+}
+const initialSource = draftSource();
 className.value = state.drafts[target]?.className ?? 'Main';
 let saveTimer: ReturnType<typeof setTimeout>;
 function rememberDraft() {
@@ -416,11 +423,13 @@ function updateVersion() {
   compileButton.textContent = language === 'java' ? 'Compile' : 'Check';
   element('main-help').textContent =
     language === 'java'
-      ? 'Use a public static void main(String[] args) entry point. Set Main class to its fully qualified name when using a package.'
+      ? version === 25
+        ? 'Java 25 supports compact source files: write void main() without a class declaration and use IO.println(). Main class sets the file name. Explicit classes and classic main methods also work; use a fully qualified Main class when declaring a package.'
+        : 'Use a public static void main(String[] args) entry point. Set Main class to its fully qualified name when using a package.'
       : 'Write a script with top-level statements, imports, and definitions. No main function is needed. External dependency directives and additional source files are unavailable.';
   updateFilename();
   for (const option of examplePicker.options) {
-    const example = examples[target][option.value];
+    const example = examplesFor(target, state.javaVersion)[option.value];
     option.disabled = language === 'java' && example.minimumVersion > version;
     option.textContent =
       example.title + (option.disabled ? ` (Java ${example.minimumVersion}+)` : '');
@@ -434,7 +443,9 @@ function updateFilename() {
 }
 function populateExamples() {
   examplePicker.replaceChildren(
-    ...Object.entries(examples[target]).map(([key, example]) => new Option(example.title, key)),
+    ...Object.entries(examplesFor(target, state.javaVersion)).map(
+      ([key, example]) => new Option(example.title, key),
+    ),
   );
   const selected = state.drafts[target]?.example;
   examplePicker.value = selected && examples[target][selected] ? selected : 'hello';
@@ -449,7 +460,7 @@ function switchLanguage() {
     changes: {
       from: 0,
       to: editor.state.doc.length,
-      insert: draft?.source ?? examples[target].hello.source,
+      insert: draftSource(),
     },
     effects: [
       languageCompartment.reconfigure(languageSupport(language)),
@@ -474,6 +485,12 @@ populateExamples();
 updateVersion();
 languagePicker.onchange = scalaPicker.onchange = switchLanguage;
 versionPicker.onchange = () => {
+  const source = javaSourceForVersion(
+    editor.state.doc.toString(),
+    examplePicker.value,
+    Number(versionPicker.value) as JavaVersion,
+  );
+  editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: source } });
   updateVersion();
   save();
 };
@@ -490,7 +507,7 @@ className.oninput = () => {
   save();
 };
 examplePicker.onchange = () => {
-  const example = examples[target][examplePicker.value];
+  const example = examplesFor(target, state.javaVersion)[examplePicker.value];
   editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: example.source } });
   className.value = 'Main';
   updateFilename();

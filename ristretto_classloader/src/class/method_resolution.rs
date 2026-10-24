@@ -35,6 +35,58 @@ pub enum MethodResolutionError {
 }
 
 impl Class {
+    /// Select the launch entry point for the given Java runtime version.
+    /// Java 25 and later prefer a non-private `main(String[])` over `main()`, including
+    /// inherited methods. Earlier runtimes require the classic public static entry point.
+    ///
+    /// # Errors
+    /// Returns an error if hierarchy metadata is unavailable or interface defaults conflict.
+    pub fn resolve_main_method(
+        self: &Arc<Self>,
+        java_major_version: u16,
+    ) -> Result<Option<ResolvedMethod>, MethodResolutionError> {
+        if java_major_version < 25 {
+            return Ok(self
+                .main_method_candidate("([Ljava/lang/String;)V")?
+                .filter(|target| target.method.is_public() && target.method.is_static()));
+        }
+
+        for descriptor in ["([Ljava/lang/String;)V", "()V"] {
+            if let Some(target) = self.main_method_candidate(descriptor)? {
+                return Ok(Some(target));
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// Find a declared or inherited candidate without treating private superclass methods
+    /// or static interface methods as inherited members of the launch class.
+    fn main_method_candidate(
+        self: &Arc<Self>,
+        descriptor: &str,
+    ) -> Result<Option<ResolvedMethod>, MethodResolutionError> {
+        let mut current = Some(self.clone());
+        let mut same_package = true;
+        while let Some(class) = current {
+            // Package access is lost if any intermediate superclass is in another package.
+            same_package = same_package && self.same_runtime_package(&class)?;
+            if let Some(method) = class.method("main", descriptor)
+                && !method.is_private()
+                && (same_package
+                    || method.is_public()
+                    || method.access_flags().contains(MethodAccessFlags::PROTECTED))
+            {
+                return Ok(Some(ResolvedMethod {
+                    declaring_class: class,
+                    method,
+                }));
+            }
+            current = class.parent()?;
+        }
+        interface_method(self, "main", descriptor)
+    }
+
     /// Resolve a method in this linked class hierarchy, preserving its declaring class.
     /// Unlike [`Class::method`], this searches ancestors and interface defaults.
     /// Constructors and class initializers are never inherited.
@@ -399,6 +451,154 @@ mod tests {
     use super::*;
     use crate::{ClassLoader, ClassPath};
     use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool};
+
+    fn launch_class(methods: &[(&str, MethodAccessFlags)]) -> crate::Result<Arc<Class>> {
+        let mut constant_pool = ConstantPool::new();
+        let this_class = constant_pool.add_class("LaunchTest")?;
+        let methods = methods
+            .iter()
+            .map(|(descriptor, flags)| {
+                Ok(ristretto_classfile::Method {
+                    access_flags: *flags,
+                    name_index: constant_pool.add_utf8("main")?,
+                    descriptor_index: constant_pool.add_utf8(descriptor)?,
+                    ..Default::default()
+                })
+            })
+            .collect::<crate::Result<Vec<_>>>()?;
+        Class::from(
+            None,
+            ClassFile {
+                version: ristretto_classfile::JAVA_8,
+                constant_pool,
+                this_class,
+                methods,
+                ..Default::default()
+            },
+        )
+    }
+
+    #[test]
+    fn main_method_candidates_follow_runtime_version() -> Result<(), MethodResolutionError> {
+        for access in [
+            MethodAccessFlags::PUBLIC,
+            MethodAccessFlags::PROTECTED,
+            MethodAccessFlags::empty(),
+            MethodAccessFlags::PRIVATE,
+        ] {
+            for static_flag in [MethodAccessFlags::empty(), MethodAccessFlags::STATIC] {
+                for descriptor in ["()V", "([Ljava/lang/String;)V"] {
+                    let flags = access | static_flag;
+                    let class = launch_class(&[(descriptor, flags)])?;
+                    for version in [8, 11, 17, 21, 24, 25, 26] {
+                        let expected = if version >= 25 {
+                            !flags.contains(MethodAccessFlags::PRIVATE)
+                        } else {
+                            descriptor == "([Ljava/lang/String;)V"
+                                && flags
+                                    .contains(MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC)
+                        };
+                        assert_eq!(
+                            class.resolve_main_method(version)?.is_some(),
+                            expected,
+                            "Java {version}: {flags} main{descriptor}"
+                        );
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn main_method_prefers_arguments_and_skips_invalid_candidates()
+    -> Result<(), MethodResolutionError> {
+        for flags in [MethodAccessFlags::empty(), MethodAccessFlags::STATIC] {
+            let class = launch_class(&[
+                ("()V", MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
+                ("([Ljava/lang/String;)V", flags),
+            ])?;
+            let target = class.resolve_main_method(25)?.expect("entry point");
+            assert_eq!(target.method.descriptor(), "([Ljava/lang/String;)V");
+        }
+        for (descriptor, flags) in [
+            ("([Ljava/lang/String;)V", MethodAccessFlags::PRIVATE),
+            ("([Ljava/lang/String;)I", MethodAccessFlags::PUBLIC),
+            ("(Ljava/lang/String;)V", MethodAccessFlags::PUBLIC),
+        ] {
+            let invalid = launch_class(&[(descriptor, flags)])?;
+            assert!(invalid.resolve_main_method(25)?.is_none());
+            let fallback =
+                launch_class(&[(descriptor, flags), ("()V", MethodAccessFlags::PUBLIC)])?;
+            let target = fallback.resolve_main_method(25)?.expect("entry point");
+            assert_eq!(target.method.descriptor(), "()V");
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn main_method_respects_inheritance_access() -> Result<(), MethodResolutionError> {
+        for flags in [
+            MethodAccessFlags::PUBLIC,
+            MethodAccessFlags::PROTECTED,
+            MethodAccessFlags::empty(),
+            MethodAccessFlags::PRIVATE,
+        ] {
+            let base = class("pkg/Base", None, None, &[("main", flags)])?;
+            let child = class("pkg/Child", Some(&base), None, &[])?;
+            assert_eq!(
+                child.resolve_main_method(25)?.is_some(),
+                !flags.contains(MethodAccessFlags::PRIVATE)
+            );
+            let foreign = class("other/Foreign", Some(&child), None, &[])?;
+            let reentry = class("pkg/Reentry", Some(&foreign), None, &[])?;
+            for launch_class in [foreign, reentry] {
+                let target = launch_class.resolve_main_method(25)?;
+                assert_eq!(
+                    target.is_some(),
+                    flags.intersects(MethodAccessFlags::PUBLIC | MethodAccessFlags::PROTECTED)
+                );
+                if let Some(target) = target {
+                    assert!(Arc::ptr_eq(&target.declaring_class, &base));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn classic_main_is_inherited_on_all_runtime_versions() -> Result<(), MethodResolutionError> {
+        let base = launch_class(&[(
+            "([Ljava/lang/String;)V",
+            MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+        )])?;
+        let child = class("Child", Some(&base), None, &[])?;
+        for version in [8, 11, 17, 21, 24, 25, 26] {
+            let target = child.resolve_main_method(version)?.expect("inherited main");
+            assert!(Arc::ptr_eq(&target.declaring_class, &base));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn main_method_inherits_defaults_but_not_interface_statics() -> Result<(), MethodResolutionError>
+    {
+        for flags in [
+            MethodAccessFlags::PUBLIC,
+            MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+        ] {
+            let base = interface("EntryPoint", vec![], &[("main", flags)])?;
+            let child = class("Child", None, None, &[])?;
+            child.set_interfaces(vec![base.clone()])?;
+            assert!(base.resolve_main_method(25)?.is_some());
+            assert_eq!(
+                child.resolve_main_method(25)?.is_some(),
+                !flags.contains(MethodAccessFlags::STATIC)
+            );
+            assert!(child.resolve_main_method(21)?.is_none());
+        }
+        Ok(())
+    }
 
     fn class(
         name: &str,
