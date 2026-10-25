@@ -9,6 +9,8 @@ Choose Java, Kotlin, Groovy, Scala, or Clojure using **Language**. Java supports
 JDK 8, 11, 17, 21, and 25; Scala offers 2.13 and 3. The other languages use Java 25 automatically,
 while hiding the Java version selector and preserving your Java version choice. Kotlin, Groovy, Scala, and Clojure accept scripts with
 top-level statements. Each language and Scala generation retains its own draft and examples.
+Java 25 examples use JEP 512 compact source files with `void main()` and `IO.println()`.
+Switching Java versions adapts unedited examples and preserves custom code.
 
 **Compile** checks Java. **Check** compiles Kotlin, Groovy, and Scala scripts without running
 the script body. Clojure Check validates reader syntax only, with reader evaluation disabled;

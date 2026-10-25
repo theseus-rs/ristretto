@@ -1421,7 +1421,8 @@ impl Class {
         self.methods.values().cloned().collect()
     }
 
-    /// Get the main method.
+    /// Get the classic public static main method declared by this class.
+    /// Use [`Class::resolve_main_method`] for version-aware launch entry point selection.
     #[must_use]
     pub fn main_method(&self) -> Option<Arc<Method>> {
         let method = self.method("main", "([Ljava/lang/String;)V")?;

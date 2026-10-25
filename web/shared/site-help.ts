@@ -1,7 +1,7 @@
 const playgroundHelp = `
   <section class="help-section">
     <h3>Write, check, run</h3>
-    <p id="main-help">Use a <code>public static void main(String[] args)</code> entry point. Set Main class to its fully qualified name when using a package.</p>
+    <p id="main-help">Java 25 supports compact source files with <code>void main()</code> and <code>IO.println()</code>. Earlier versions use <code>public static void main(String[] args)</code> inside a class.</p>
     <p>Compile checks Java source. Check validates scripts without running their bodies; Clojure Check validates reader syntax only. Run starts a fresh program, including any compilation, and checks execution errors.</p>
     <div class="help-shortcut"><span>Run your code</span><kbd>⌘ / Ctrl + Enter</kbd></div>
   </section>
