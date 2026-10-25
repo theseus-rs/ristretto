@@ -1,6 +1,6 @@
 use anstyle::{AnsiColor, Style};
 use clap::builder::Styles;
-use clap::{ArgAction, ArgGroup, Parser, ValueEnum};
+use clap::{ArgAction, ArgGroup, CommandFactory, Parser, ValueEnum};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::io::{self, Write};
@@ -72,8 +72,16 @@ pub struct XOptions {
 ))]
 #[clap(styles=STYLES)]
 pub struct Arguments {
-    #[arg(help = "the main class to execute")]
+    #[arg(help = "the main class or Java source file to execute")]
     pub mainclass: Option<String>,
+
+    #[arg(
+        long = "source",
+        help = "launch a source file using the specified Java release",
+        requires = "mainclass",
+        conflicts_with_all = ["jar", "module"]
+    )]
+    pub source: Option<String>,
 
     #[arg(
         long = "jar",
@@ -101,14 +109,14 @@ pub struct Arguments {
         short = 'p',
         long = "module-path",
         help = "module path for modular JARs",
-        value_delimiter = ':'
+        value_delimiter = if cfg!(windows) { ';' } else { ':' }
     )]
     pub module_path: Option<Vec<OsString>>,
 
     #[arg(
         long = "upgrade-module-path",
         help = "upgrade module path",
-        value_delimiter = ':'
+        value_delimiter = if cfg!(windows) { ';' } else { ':' }
     )]
     pub upgrade_module_path: Option<Vec<OsString>>,
 
@@ -133,11 +141,7 @@ pub struct Arguments {
     )]
     pub add_reads: Option<Vec<String>>,
 
-    #[arg(
-        long = "add-exports",
-        help = "add exports (SOURCE/PACKAGE=TARGET,...)",
-        value_delimiter = ','
-    )]
+    #[arg(long = "add-exports", help = "add exports (SOURCE/PACKAGE=TARGET,...)")]
     pub add_exports: Option<Vec<String>>,
 
     #[arg(
@@ -147,17 +151,16 @@ pub struct Arguments {
     )]
     pub add_opens: Option<Vec<String>>,
 
-    #[arg(
-        long = "patch-module",
-        help = "patch module (MODULE=PATH,...)",
-        value_delimiter = ','
-    )]
+    #[arg(long = "patch-module", help = "patch module (MODULE=PATH)")]
     pub patch_module: Option<Vec<String>>,
 
     #[arg(short = 'D', help = "define a system property")]
     pub properties: Option<Vec<String>>,
 
-    #[arg(help = "additional parameters to pass to the main class")]
+    #[arg(
+        help = "additional parameters to pass to the main class",
+        allow_hyphen_values = true
+    )]
     pub parameters: Option<Vec<String>>,
 
     #[arg(
@@ -184,7 +187,21 @@ impl Arguments {
 
     /// Preprocesses the command line arguments to replace short options with long options.
     fn preprocess_args(mut arguments: Vec<OsString>) -> Vec<OsString> {
-        for argument in &mut arguments {
+        let command = Self::command();
+        let mut option_value = false;
+        let mut target_index = None;
+        for (index, argument) in arguments.iter_mut().enumerate().skip(1) {
+            if option_value {
+                option_value = false;
+                continue;
+            }
+            if argument == "--" {
+                break;
+            }
+            if !argument.to_string_lossy().starts_with('-') {
+                target_index = Some(index);
+                break;
+            }
             match argument.as_os_str() {
                 s if s == OsStr::new("-help") => *argument = OsString::from("-h"),
                 s if s == OsStr::new("-cp") => *argument = OsString::from("--cp"),
@@ -202,6 +219,29 @@ impl Arguments {
                 }
                 _ => {}
             }
+            // Everything after the launch target belongs to the Java application.
+            if matches!(argument.to_str(), Some("--jar" | "-m" | "--module")) {
+                break;
+            }
+            let Some(option) = argument.to_str() else {
+                continue;
+            };
+            option_value = command.get_arguments().any(|arg| {
+                let matches = if let Some(long) = option.strip_prefix("--") {
+                    arg.get_long() == Some(long)
+                        || arg
+                            .get_all_aliases()
+                            .is_some_and(|aliases| aliases.contains(&long))
+                } else {
+                    arg.get_short()
+                        .is_some_and(|short| option == format!("-{short}"))
+                };
+                matches && arg.get_action().takes_values()
+            });
+        }
+        if let Some(index) = target_index {
+            // Stop clap from consuming recognized options belonging to the program.
+            arguments.insert(index, OsString::from("--"));
         }
         arguments
     }
@@ -243,4 +283,44 @@ pub fn print_x_help() {
         literal_style.render(),
         literal_style.render_reset()
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ristretto_classfile::JAVA_25;
+
+    #[test]
+    fn preserve_source_program_arguments() -> Result<(), clap::Error> {
+        let source_version = JAVA_25.java().to_string();
+        let arguments = [
+            "java",
+            "-cp",
+            "libs",
+            "-Xint",
+            "--source",
+            source_version.as_str(),
+            "Hello.java",
+            "--version",
+            "-version",
+            "-cp",
+            "a b",
+        ]
+        .map(OsString::from)
+        .to_vec();
+        let cli = Arguments::try_parse_from(Arguments::preprocess_args(arguments))?;
+        assert_eq!(Some("Hello.java"), cli.mainclass.as_deref());
+        assert_eq!(Some(source_version.as_str()), cli.source.as_deref());
+        assert!(cli.x_options.interpreted);
+        assert_eq!(
+            Some(vec![
+                "--version".into(),
+                "-version".into(),
+                "-cp".into(),
+                "a b".into()
+            ]),
+            cli.parameters
+        );
+        Ok(())
+    }
 }

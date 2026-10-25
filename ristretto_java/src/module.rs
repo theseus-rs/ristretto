@@ -58,7 +58,13 @@ pub fn apply_module_configuration(
     if let Some(export_arguments) = cli.add_exports.take() {
         for export_argument in export_arguments {
             if let Some(export) = parse_export(&export_argument) {
-                builder = builder.add_export(export);
+                for target in export.target.split(',') {
+                    builder = builder.add_export(ModuleExport::new(
+                        &export.source,
+                        &export.package,
+                        target,
+                    ));
+                }
             }
         }
     }
@@ -257,9 +263,15 @@ mod tests {
             "--add-reads",
             "valid=read,invalid",
             "--add-exports",
-            "valid/pkg=target,invalid,also/invalid",
+            "valid/pkg=target",
+            "--add-exports",
+            "invalid",
+            "--add-exports",
+            "also/invalid",
             "--patch-module",
-            "valid=/path,invalid",
+            "valid=/path",
+            "--patch-module",
+            "invalid",
         ];
         let mut cli = Arguments::parse_from(args);
         let builder = ConfigurationBuilder::new();
