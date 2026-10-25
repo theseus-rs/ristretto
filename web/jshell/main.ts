@@ -239,7 +239,7 @@ function finish() {
   if (focusOnReady && !closed) editor.focus();
   focusOnReady = false;
 }
-function abandon(message: string, state = 'error') {
+function abandon(message?: string, state = 'error') {
   generation++;
   requestId++;
   worker?.terminate();
@@ -247,7 +247,8 @@ function abandon(message: string, state = 'error') {
   continuation = false;
   closed = true;
   hideCompletions();
-  append(`|  ${message}\n|  Use Start session to continue with a fresh state.\n`, 'stderr');
+  if (message) append(`|  ${message}\n`, 'stderr');
+  append('|  Use Start session to continue with a fresh state.\n', 'stderr');
   finish();
   setStatus('Session ended', state);
 }
@@ -298,7 +299,7 @@ function receive(event: Event) {
       );
       break;
     case 'error':
-      abandon(event.message);
+      abandon(event.reported ? undefined : event.message);
       break;
   }
 }

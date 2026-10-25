@@ -52,7 +52,8 @@ export type Event =
       filename?: string;
     }
   | { id: number; type: 'completions'; anchor: number; suggestions: string[] }
-  | { id: number; type: 'error'; message: string };
+  // A reported error has already been handled by Java; only update the failure state.
+  | { id: number; type: 'error'; message: string; reported?: boolean };
 
 export const LOAD_TIMEOUT = 120_000;
 export const COMPILE_TIMEOUT = 600_000;

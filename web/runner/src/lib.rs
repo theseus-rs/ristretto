@@ -193,18 +193,7 @@ async fn execute(
             .build()?;
         let vm = VM::new(config).await?;
         if let Err(error) = vm.invoke_main(&[] as &[&str]).await {
-            if let ristretto_vm::Error::Throwable(ref throwable) = error {
-                // Calling the Java method preserves the exception's message and source locations.
-                let _result = vm
-                    .invoke(
-                        "java.lang.Throwable",
-                        "printStackTrace()V",
-                        std::slice::from_ref(throwable),
-                    )
-                    .await;
-            }
-            // A throwable belongs to this VM's heap; preserve its message before dropping it.
-            return Err(error.to_string().into());
+            return report_vm_error(id, &vm, error).await;
         }
     }
     emit(&json!({"id": id, "type": "done"}))?;
@@ -278,18 +267,43 @@ async fn execute_script(
     }
     .await;
     if let Err(error) = result {
-        if let ristretto_vm::Error::Throwable(ref throwable) = error {
-            let _result = vm
-                .invoke(
-                    "java.lang.Throwable",
-                    "printStackTrace()V",
-                    std::slice::from_ref(throwable),
-                )
-                .await;
-        }
-        return Err(error.to_string().into());
+        return report_vm_error(id, &vm, error).await;
     }
     emit(&json!({"id": id, "type": "done"}))?;
+    Ok(())
+}
+
+/// Finish a failed request without asking the UI to repeat Java's exception report.
+async fn report_vm_error(
+    id: u32,
+    vm: &VM,
+    error: ristretto_vm::Error,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // A throwable belongs to this VM's heap; format it before the VM is dropped.
+    let message = error.to_string();
+    let reported = if let ristretto_vm::Error::Throwable(throwable) = error {
+        let result = async {
+            let thread = vm
+                .try_invoke(
+                    "java.lang.Thread",
+                    "currentThread()Ljava/lang/Thread;",
+                    &[] as &[ristretto_vm::Value],
+                )
+                .await?;
+            // Java supplies the thread name, stack trace, causes, and custom handlers.
+            vm.invoke(
+                "java.lang.Thread",
+                "dispatchUncaughtException(Ljava/lang/Throwable;)V",
+                &[thread, throwable],
+            )
+            .await
+        }
+        .await;
+        result.is_ok()
+    } else {
+        false
+    };
+    emit(&json!({"id": id, "type": "error", "message": message, "reported": reported}))?;
     Ok(())
 }
 
@@ -449,17 +463,7 @@ async fn execute_jshell(
             }
         }
         Err(error) => {
-            if let ristretto_vm::Error::Throwable(ref throwable) = error {
-                let _result = session
-                    .vm
-                    .invoke(
-                        "java.lang.Throwable",
-                        "printStackTrace()V",
-                        std::slice::from_ref(throwable),
-                    )
-                    .await;
-            }
-            return Err(error.to_string().into());
+            return report_vm_error(id, &session.vm, error).await;
         }
     }
     Ok(())

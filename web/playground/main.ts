@@ -373,7 +373,7 @@ async function start(action: Request['action']) {
           );
           break;
         case 'error':
-          append(`\n${event.message}\n`, 'stderr');
+          if (!event.reported) append(`\n${event.message}\n`, 'stderr');
           finish('Could not complete · try again', 'error');
           break;
       }
