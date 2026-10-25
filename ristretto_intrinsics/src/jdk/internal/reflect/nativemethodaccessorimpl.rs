@@ -19,10 +19,7 @@ pub async fn invoke_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let mut arguments: Vec<Value> = parameters.pop()?.try_into()?;
-    let object = parameters.pop_reference()?;
-    if let Some(object) = object {
-        arguments.insert(0, Value::from(object));
-    }
+    let object = parameters.pop()?;
     let method = parameters.pop()?;
     let (name, class_object, parameter_types, return_type, modifiers) = {
         let method = method.as_object_ref()?;
@@ -58,13 +55,11 @@ pub async fn invoke_0<T: Thread + 'static>(
     let target = if access_flags.contains(MethodAccessFlags::STATIC) {
         resolved
     } else {
-        let receiver = arguments
-            .first()
-            .ok_or(ristretto_types::JavaError::NullPointerException(None))?;
-        if receiver.is_null() {
+        if object.is_null() {
             return Err(ristretto_types::JavaError::NullPointerException(None).into());
         }
-        let receiver_class = method_resolution::receiver_class(thread.as_ref(), receiver).await?;
+        let receiver_class = method_resolution::receiver_class(thread.as_ref(), &object).await?;
+        arguments.insert(0, object);
         receiver_class.select_concrete_method(&resolved)?
     };
     let result = thread
@@ -105,7 +100,7 @@ pub(crate) mod tests {
             .invoke(
                 "java.lang.Class",
                 "getDeclaredMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;",
-                &[integer_class_object, method_name, arguments],
+                &[integer_class_object.clone(), method_name, arguments],
             )
             .await?
             .expect("method");
@@ -113,12 +108,15 @@ pub(crate) mod tests {
         let string_parameter = "42".to_object(&thread).await?;
         let reference = Reference::try_from((class, vec![string_parameter]))?;
         let parameters = Value::new_object(vm.garbage_collector(), reference);
-        let parameters = Parameters::new(vec![method, Value::Object(None), parameters]);
-        let value = invoke(thread, parameters)
-            .await?
-            .expect("integer")
-            .as_i32()?;
-        assert_eq!(42, value);
+        // Method.invoke ignores its receiver for static methods, even when non-null.
+        for receiver in [Value::Object(None), integer_class_object] {
+            let parameters = Parameters::new(vec![method.clone(), receiver, parameters.clone()]);
+            let value = invoke(thread.clone(), parameters)
+                .await?
+                .expect("integer")
+                .as_i32()?;
+            assert_eq!(42, value);
+        }
         Ok(())
     }
 

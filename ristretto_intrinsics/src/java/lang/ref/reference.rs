@@ -1,5 +1,5 @@
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
-use ristretto_classfile::{JAVA_11, JAVA_17};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
@@ -16,6 +16,19 @@ pub fn clear_0<T: Thread + 'static>(
     let mut object = object.as_object_mut()?;
     object.set_value("referent", Value::Object(None))?;
     Ok(None)
+}
+
+#[intrinsic_method(
+    "java/lang/ref/Reference.get0()Ljava/lang/Object;",
+    GreaterThanOrEqual(JAVA_25)
+)]
+pub fn get_0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let reference = parameters.pop()?;
+    let reference = reference.as_object_ref()?;
+    Ok(Some(reference.value("referent")?))
 }
 
 #[intrinsic_method(
@@ -81,6 +94,31 @@ pub async fn wait_for_reference_pending_list<T: Thread + 'static>(
 mod tests {
     use super::*;
     use ristretto_types::JavaObject;
+
+    #[tokio::test]
+    async fn test_get_0_preserves_identity_and_observes_clear() -> Result<()> {
+        let (vm, thread) = crate::test::java25_thread().await?;
+        let value = "referent".to_object(&thread).await?;
+        let reference = vm
+            .object(
+                "java/lang/ref/WeakReference",
+                "Ljava/lang/Object;",
+                std::slice::from_ref(&value),
+            )
+            .await?;
+        let result = get_0(thread.clone(), Parameters::new(vec![reference.clone()]))?;
+        assert!(matches!(
+            (&result, &value),
+            (Some(Value::Object(Some(actual))), Value::Object(Some(expected)))
+                if Gc::ptr_eq(actual, expected)
+        ));
+        clear_0(thread.clone(), Parameters::new(vec![reference.clone()]))?;
+        assert_eq!(
+            get_0(thread, Parameters::new(vec![reference]))?,
+            Some(Value::Object(None))
+        );
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_clear_0() -> Result<()> {

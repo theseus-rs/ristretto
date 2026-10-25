@@ -12,6 +12,7 @@
 mod argument;
 mod logging;
 mod module;
+mod source;
 mod version;
 
 use argument::{Arguments, VerifyMode as CliVerifyMode};
@@ -97,7 +98,16 @@ async fn common_main(mut cli: Arguments) -> Result<()> {
         configuration_builder = configuration_builder.java_version(java_version);
     }
 
-    if let Some(ref main_class) = cli.mainclass {
+    let source_file = source::file(&cli);
+    let source_arguments = source::compiler_arguments(&cli);
+    if let Some(ref source_version) = cli.source {
+        configuration_builder =
+            configuration_builder.add_system_property("jdk.internal.javac.source", source_version);
+    }
+
+    if let Some(ref main_class) = cli.mainclass
+        && source_file.is_none()
+    {
         configuration_builder = configuration_builder.main_class(main_class);
     } else if let Some(ref jar) = cli.jar {
         configuration_builder = configuration_builder.jar(PathBuf::from(jar));
@@ -149,8 +159,18 @@ async fn common_main(mut cli: Arguments) -> Result<()> {
     startup_trace!("[cli] vm created");
 
     let parameters = cli.parameters.unwrap_or_default();
-    let result = match vm.invoke_main(&parameters).await {
-        Ok(_) => Ok(()),
+    let execution = if let Some(source_file) = source_file {
+        vm.invoke_source(
+            std::path::Path::new(&source_file),
+            &parameters,
+            &source_arguments,
+        )
+        .await
+    } else {
+        vm.invoke_main(&parameters).await.map(|_| ())
+    };
+    let result = match execution {
+        Ok(()) => Ok(()),
         Err(error) => process_error(error),
     };
 

@@ -21,7 +21,12 @@ public class Test {
             try {
                 Socket client = serverSocket.accept();
                 client.setOOBInline(true);
+                client.setSoTimeout(30000);
+                // Tell the sender that urgent data will be delivered inline.
+                client.getOutputStream().write(1);
                 urgentData.set(client.getInputStream().read());
+                // Keep the sender open until the urgent byte has been consumed.
+                client.getOutputStream().write(1);
                 client.close();
                 serverSocket.close();
             } catch (Exception e) {
@@ -29,8 +34,6 @@ public class Test {
             }
         });
         serverThread.start();
-
-        Thread.sleep(100);
 
         // Test client Socket options
         Socket socket = new Socket("127.0.0.1", port);
@@ -69,10 +72,19 @@ public class Test {
         // OOB inline
         socket.setOOBInline(true);
         System.out.println("OOB inline: " + socket.getOOBInline());
+        if (socket.getInputStream().read() != 1) {
+            throw new AssertionError("Server did not enable inline urgent data");
+        }
         socket.sendUrgentData('A');
+        if (socket.getInputStream().read() != 1) {
+            throw new AssertionError("Server did not acknowledge urgent data");
+        }
 
         socket.close();
         serverThread.join();
+        if (urgentData.get() != 'A') {
+            throw new AssertionError("Expected urgent byte A, got " + urgentData.get());
+        }
         System.out.println("Urgent data: " + (char) urgentData.get());
         System.out.println("=== TCP Options Test Complete ===");
     }
