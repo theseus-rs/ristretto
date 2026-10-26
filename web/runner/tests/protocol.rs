@@ -89,6 +89,62 @@ fn request_errors(workspace: &Path, java_home: &Path) -> Result<(), Box<dyn Erro
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn uncaught_exceptions_are_reported_once_and_remain_failures() -> Result<(), Box<dyn Error>> {
+    let (java_home, _, _) = ristretto_classloader::runtime::default_class_loader().await?;
+    let directory = tempfile::tempdir()?;
+    for (body, diagnostic) in [
+        (
+            "throw new RuntimeException(\"x\");",
+            "Exception in thread \"main\" java.lang.RuntimeException: x\n\tat example.Main.main(Main.java:4)\n",
+        ),
+        (
+            "Thread.currentThread().setName(\"renamed\"); throw new RuntimeException(\"x\");",
+            "Exception in thread \"renamed\" java.lang.RuntimeException: x\n\tat example.Main.main(Main.java:4)\n",
+        ),
+        (
+            "Thread.currentThread().setUncaughtExceptionHandler((thread, error) -> System.err.println(\"handled: \" + error.getMessage())); throw new RuntimeException(\"x\");",
+            "handled: x\n",
+        ),
+    ] {
+        let source = format!(
+            "package example;\npublic class Main {{\n    public static void main(String[] args) {{\n        {body}\n    }}\n}}"
+        );
+        let response = request(directory.path(), &java_home, 25, "run", &source)?;
+        assert_eq!(Some(0), response.code);
+        // Java uses platform-specific line endings when printing exception reports.
+        assert_eq!(
+            diagnostic,
+            output(&response.events, "stderr")?.replace("\r\n", "\n")
+        );
+        assert_eq!("", output(&response.events, "stdout")?);
+        let errors = response
+            .events
+            .iter()
+            .filter(|event| event["type"] == "error")
+            .collect::<Vec<_>>();
+        assert_eq!(1, errors.len());
+        let result = response.events.last().ok_or("missing error")?;
+        assert_eq!("error", result["type"]);
+        assert_eq!(42, result["id"]);
+        assert_eq!(true, result["reported"]);
+        assert!(!response.events.iter().any(|event| event["type"] == "done"));
+    }
+
+    // Reporting failures and VM errors still need a visible protocol diagnostic.
+    for source in [
+        "package example; public class Main { public static void main(String[] args) { Thread.currentThread().setUncaughtExceptionHandler((thread, error) -> { throw new IllegalStateException(\"handler failed\"); }); throw new RuntimeException(\"x\"); } }",
+        "package example; public class Main {}",
+    ] {
+        let response = request(directory.path(), &java_home, 25, "run", source)?;
+        let result = response.events.last().ok_or("missing error")?;
+        assert_eq!("error", result["type"]);
+        assert_ne!(Some(true), result["reported"].as_bool());
+        assert_ne!(result["message"].as_str().ok_or("missing message")?, "");
+    }
+    Ok(())
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn runner_protocol_covers_requests_compilation_execution_and_limits()
 -> Result<(), Box<dyn Error>> {
     let (java_home, _, _) = ristretto_classloader::runtime::default_class_loader().await?;

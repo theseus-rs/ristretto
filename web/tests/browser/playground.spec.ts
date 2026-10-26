@@ -98,7 +98,9 @@ test('reports compilation and runtime errors and recovers after stopping a progr
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'error', {
     timeout: 755_000,
   });
-  await expect(page.getByLabel('Console output')).toContainText('test failure');
+  expect(await page.getByLabel('Console output').textContent()).toBe(
+    'Exception in thread "main" java.lang.IllegalStateException: test failure\n\tat Main.main(Main.java:1)\n',
+  );
   await expect(page.locator('#elapsed')).toHaveText(/^Compile: \d+\.\d{2}s · Run: \d+\.\d{2}s$/);
 
   await source(

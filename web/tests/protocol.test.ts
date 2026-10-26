@@ -35,6 +35,15 @@ test('flushes incomplete output at termination instead of losing it', () => {
   ]);
 });
 
+test('preserves an already reported failure after flushing its output', () => {
+  const events: Event[] = [];
+  const decoder = new EventDecoder((event) => events.push(event));
+  const failure: Event = { id: 2, type: 'error', message: 'fallback', reported: true };
+  for (const event of [{ id: 2, type: 'output', stream: 'stderr', bytes: [0xe2] }, failure])
+    decoder.push(new TextEncoder().encode(JSON.stringify(event) + '\n'));
+  assert.deepEqual(events, [{ id: 2, type: 'output', stream: 'stderr', text: '�' }, failure]);
+});
+
 test('flushes each shell response before accepting output for the next request', () => {
   const events: Event[] = [];
   const decoder = new EventDecoder((event) => events.push(event));
