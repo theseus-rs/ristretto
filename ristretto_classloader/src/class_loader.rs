@@ -14,6 +14,33 @@ use tokio::sync::RwLock;
 /// Synchronous lock for module configuration to avoid async overhead on every class load.
 type ModuleConfigLock = ristretto_gc::sync::RwLock<Option<Arc<ResolvedConfiguration>>>;
 
+/// Convert a `Class::getName` hidden name to the VM's internal hidden name.
+///
+/// Hidden classes are exposed as `{binary_name}/0x{suffix}` and registered internally as `{internal_name}+0x{suffix}`. Normal class names are not affected.
+fn hidden_internal_name(class_name: &JavaStr) -> Option<JavaString> {
+    const SUFFIX_LENGTH: usize = 16;
+    const MARKER_LENGTH: usize = 3;
+    let bytes = class_name.as_bytes();
+    let suffix_start = bytes.len().checked_sub(SUFFIX_LENGTH)?;
+    let marker_start = suffix_start.checked_sub(MARKER_LENGTH)?;
+    let suffix = bytes.get(suffix_start..)?;
+    if !suffix.iter().all(u8::is_ascii_hexdigit) {
+        return None;
+    }
+    if bytes.get(marker_start..suffix_start)? != b"/0x" {
+        return None;
+    }
+    let mut internal_name = Vec::with_capacity(bytes.len() + 1);
+    for &byte in bytes.get(..marker_start)? {
+        internal_name.push(if byte == b'.' { b'/' } else { byte });
+    }
+    internal_name.extend_from_slice(b"+0x");
+    internal_name.extend_from_slice(suffix);
+    // SAFETY: class_name is valid MUTF-8, and replacing ASCII '.' with ASCII '/' plus replacing the ASCII "/0x" marker with "+0x" preserves MUTF-8 validity.
+    #[expect(unsafe_code)]
+    Some(unsafe { JavaString::from_mutf8_unchecked(internal_name) })
+}
+
 /// Implementation of a Java class loader.
 ///
 /// # References
@@ -115,7 +142,9 @@ impl ClassLoader {
     /// if the class file cannot be read.
     pub async fn load_with_status(&self, class_name: &JavaStr) -> Result<(Arc<Class>, bool)> {
         let class_name_internal: Cow<'_, JavaStr> =
-            if memchr::memchr(b'.', class_name.as_bytes()).is_none() {
+            if let Some(hidden_name) = hidden_internal_name(class_name) {
+                Cow::Owned(hidden_name)
+            } else if memchr::memchr(b'.', class_name.as_bytes()).is_none() {
                 Cow::Borrowed(class_name)
             } else {
                 // '.' and '/' are both single-byte ASCII; replacing one with
@@ -737,5 +766,22 @@ mod tests {
         );
         assert_eq!(ClassLoader::package_from_class_name("MyClass"), "");
         assert_eq!(ClassLoader::package_from_class_name("a/b/c/D"), "a/b/c");
+    }
+
+    #[test]
+    fn test_hidden_internal_name() -> Result<()> {
+        let normal = JavaStr::try_from_str("java/lang/String")?;
+        assert_eq!(hidden_internal_name(normal), None);
+
+        let internal = JavaStr::try_from_str("java/lang/String+0x000000000000002a")?;
+        assert_eq!(hidden_internal_name(internal), None);
+
+        let public = JavaStr::try_from_str("java.lang.String/0x000000000000002a")?;
+        let hidden = hidden_internal_name(public).expect("hidden name");
+        assert_eq!(hidden.to_str_lossy(), "java/lang/String+0x000000000000002a");
+
+        let malformed = JavaStr::try_from_str("java.lang.String/0x00000000000000zz")?;
+        assert_eq!(hidden_internal_name(malformed), None);
+        Ok(())
     }
 }

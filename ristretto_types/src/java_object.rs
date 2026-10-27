@@ -408,7 +408,7 @@ fn to_class_object<'a, T: Thread + 'static>(
         }
 
         // Build class name and get class loader object
-        let class_name = class.name().replace('/', ".");
+        let class_name = class.public_name();
         let name = class_name.to_object(thread).await?;
         let class_loader_object = match class.class_loader()? {
             Some(class_loader) => to_class_loader_object(thread, &class_loader).await?,
