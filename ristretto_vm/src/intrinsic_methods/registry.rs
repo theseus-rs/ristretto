@@ -287,14 +287,17 @@ mod tests {
                 );
             }
         }
+        // JDK-8352565 backported Reference.get0() to 21.0.13 and 25.0.5. VersionSpecification
+        // tracks major versions only, so whitelist the entry for 21+ while older update releases
+        // in that range do not declare the native method.
+        if version_major >= 21 {
+            required_methods.push("java/lang/ref/Reference.get0()Ljava/lang/Object;".to_string());
+        }
         // Ristretto-specific intrinsic needed to mask ACC_SUPER from class modifiers; the
         // JDK exposes this as a non-native method in Java 25+, but we still require the
         // intrinsic dispatch.
         if version_major >= 25 {
             required_methods.push("java/lang/Class.getModifiers()I".to_string());
-            // Java 25 update releases moved Reference.get()'s field access into get0().
-            // Keep the native entry registered when checking older Java 25 homes as well.
-            required_methods.push("java/lang/ref/Reference.get0()Ljava/lang/Object;".to_string());
         }
         // initSystemClassLoader is only a native method in Java 8 and earlier
         if version_major <= 8 {
