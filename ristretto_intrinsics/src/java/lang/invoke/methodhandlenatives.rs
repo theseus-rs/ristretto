@@ -18,11 +18,11 @@ use ristretto_classloader::{
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
-use ristretto_types::JavaError::NoSuchMethodError;
+use ristretto_types::JavaError::{NoSuchFieldError, NoSuchMethodError};
 use ristretto_types::Parameters;
 use ristretto_types::Thread;
 use ristretto_types::VM;
-use ristretto_types::{JavaObject, Result};
+use ristretto_types::{Error, JavaObject, Result};
 use std::sync::Arc;
 
 bitflags! {
@@ -1311,7 +1311,18 @@ async fn search_all_loaded_interfaces<T: Thread + 'static>(
     Ok(None)
 }
 
-/// Resolve a member name to a method, field, or constructor.
+/// Returns null for a speculative miss and propagates the error otherwise.
+///
+/// Resolution is treated as a probe, so callers expect a null `MemberName` instead of an exception.
+fn resolution_failure(speculative_resolve: bool, error: Error) -> Result<Option<Value>> {
+    if speculative_resolve {
+        Ok(None)
+    } else {
+        Err(error)
+    }
+}
+
+/// Resolves a member name to a method, field, or constructor.
 ///
 /// # Errors
 /// Returns an error if the member cannot be resolved.
@@ -1456,11 +1467,15 @@ async fn resolve_method<T: Thread + 'static>(
         | "java/lang/invoke/DirectMethodHandle$Holder"
         | "java/lang/invoke/Invokers$Holder"
         | "java/lang/invoke/MethodHandle"
-        | "java/lang/invoke/VarHandle" => (
-            class.clone(),
-            resolve_holder_methods(class.clone(), &method_name, &method_descriptor)?,
-            false,
-        ),
+        | "java/lang/invoke/VarHandle" => {
+            let holder = class.clone();
+            let method = resolve_holder_methods(holder, &method_name, &method_descriptor);
+            let method = match method {
+                Ok(method) => method,
+                Err(error) => return resolution_failure(speculative_resolve, error),
+            };
+            (class.clone(), method, false)
+        }
         _ => {
             match class.resolve_method(&method_name, &method_descriptor) {
                 Ok(target) => (target.declaring_class, target.method, false),
@@ -1489,10 +1504,10 @@ async fn resolve_method<T: Thread + 'static>(
                         // which already have appropriate access, so skip access check
                         (found_class, found_method, true)
                     } else {
-                        return Err(InternalError(format!(
-                            "Lambda method not found: {}.{method_name}{method_descriptor}",
-                            class.name()
-                        )));
+                        let missing = format!("{}.{method_name}{method_descriptor}", class.name());
+                        let message = format!("Lambda method not found: {missing}");
+                        let error = InternalError(message);
+                        return resolution_failure(speculative_resolve, error);
                     }
                 }
                 Err(_) if class.name() == "java/lang/Object" => {
@@ -1527,20 +1542,16 @@ async fn resolve_method<T: Thread + 'static>(
                         }
                         (found_class, found_method, false)
                     } else {
-                        return Err(InternalError(format!(
-                            "Interface method not found: {}.{method_name}{method_descriptor}",
-                            class.name()
-                        )));
+                        let missing = format!("{}.{method_name}{method_descriptor}", class.name());
+                        let message = format!("Interface method not found: {missing}");
+                        let error = InternalError(message);
+                        return resolution_failure(speculative_resolve, error);
                     }
                 }
                 Err(_) => {
-                    return Err(NoSuchMethodError(format!(
-                        "{}.{}{}",
-                        class.name(),
-                        method_name,
-                        method_descriptor
-                    ))
-                    .into());
+                    let missing = format!("{}.{method_name}{method_descriptor}", class.name());
+                    let error = NoSuchMethodError(missing);
+                    return resolution_failure(speculative_resolve, error.into());
                 }
             }
         }
@@ -1628,7 +1639,16 @@ async fn resolve_field<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let _reference_kind = get_reference_kind(flags)?;
     let field_name = name.as_string()?;
-    let field = class.declared_field(&field_name)?;
+    let field = match class.declared_field(&field_name) {
+        Ok(field) => field,
+        Err(ristretto_classloader::Error::FieldNotFound { .. }) => {
+            // A missing field is a linkage error; the JDK turns it into NoSuchFieldException.
+            let missing = format!("{}.{field_name}", class.name());
+            let error = NoSuchFieldError(missing);
+            return resolution_failure(speculative_resolve, error.into());
+        }
+        Err(error) => return Err(error.into()),
+    };
     let field_access_flags = field.access_flags();
     if !check_field_access(caller, class, *field_access_flags, lookup_mode_flags)? {
         return if speculative_resolve {
@@ -2488,6 +2508,137 @@ mod tests {
 
         let result = resolve_2(thread, parameters).await?;
         assert!(result.is_some());
+        Ok(())
+    }
+
+    async fn member_name<T: Thread + 'static>(
+        thread: &Arc<T>,
+        class_name: &str,
+        name: &str,
+        flags: i32,
+        field: bool,
+    ) -> Result<Value> {
+        let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
+        let mut member_name = Object::new(member_name_class)?;
+        let class = thread.class(class_name).await?;
+        let class_object = class.to_object(thread).await?;
+        member_name.set_value("clazz", class_object)?;
+        member_name.set_value("name", name.to_object(thread).await?)?;
+        let method_type = if field {
+            Value::Object(None)
+        } else {
+            "()V".to_object(thread).await?
+        };
+        member_name.set_value("type", method_type)?;
+        member_name.set_value("flags", Value::Int(flags))?;
+        Ok(Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(member_name),
+        ))
+    }
+
+    #[tokio::test]
+    async fn test_resolve_missing_members() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let method_flags = MemberNameFlags::IS_METHOD.bits()
+            | (i32::from(ReferenceKind::InvokeVirtual.kind()) << 24);
+
+        let holder = member_name(
+            &thread,
+            "java/lang/invoke/MethodHandle",
+            "absent",
+            method_flags,
+            false,
+        )
+        .await?;
+        assert!(
+            resolve(
+                thread.clone(),
+                holder,
+                None,
+                &LookupModeFlags::TRUSTED,
+                true
+            )
+            .await?
+            .is_none()
+        );
+
+        let holder = member_name(
+            &thread,
+            "java/lang/invoke/MethodHandle",
+            "absent",
+            method_flags,
+            false,
+        )
+        .await?;
+        assert!(
+            resolve(
+                thread.clone(),
+                holder,
+                None,
+                &LookupModeFlags::TRUSTED,
+                false
+            )
+            .await
+            .is_err()
+        );
+
+        let method =
+            member_name(&thread, "java/lang/Integer", "absent", method_flags, false).await?;
+        assert!(
+            resolve(
+                thread.clone(),
+                method,
+                None,
+                &LookupModeFlags::TRUSTED,
+                true
+            )
+            .await?
+            .is_none()
+        );
+
+        let method =
+            member_name(&thread, "java/lang/Integer", "absent", method_flags, false).await?;
+        assert!(
+            resolve(
+                thread.clone(),
+                method,
+                None,
+                &LookupModeFlags::TRUSTED,
+                false
+            )
+            .await
+            .is_err()
+        );
+
+        let field_flags =
+            MemberNameFlags::IS_FIELD.bits() | (i32::from(ReferenceKind::GetField.kind()) << 24);
+        let field = member_name(&thread, "java/lang/Integer", "absent", field_flags, true).await?;
+        assert!(
+            resolve(thread.clone(), field, None, &LookupModeFlags::TRUSTED, true)
+                .await?
+                .is_none()
+        );
+
+        let field = member_name(&thread, "java/lang/Integer", "absent", field_flags, true).await?;
+        assert!(
+            resolve(
+                thread.clone(),
+                field,
+                None,
+                &LookupModeFlags::TRUSTED,
+                false
+            )
+            .await
+            .is_err()
+        );
+
+        assert!(
+            resolution_failure(true, InternalError("speculative".to_string()))
+                .unwrap()
+                .is_none()
+        );
+        assert!(resolution_failure(false, InternalError("non-speculative".to_string())).is_err());
         Ok(())
     }
 }
