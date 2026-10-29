@@ -2,7 +2,7 @@
 
 use crate::{BoxFuture, Error, Parameters, Result};
 use ahash::AHashMap;
-use ristretto_classfile::Version;
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25, Version};
 use ristretto_classloader::Value;
 use std::sync::Arc;
 
@@ -53,10 +53,10 @@ impl IntrinsicMetadata {
 #[must_use]
 pub fn intrinsic_version_bit(version: &Version) -> u8 {
     match version.major() {
-        69.. => 16,
-        65.. => 8,
-        61.. => 4,
-        55.. => 2,
+        major if major >= JAVA_25.major() => 16,
+        major if major >= JAVA_21.major() => 8,
+        major if major >= JAVA_17.major() => 4,
+        major if major >= JAVA_11.major() => 2,
         _ => 1,
     }
 }

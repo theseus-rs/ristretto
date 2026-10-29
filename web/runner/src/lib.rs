@@ -3,6 +3,7 @@
 //! The component receives JSON requests and reads a Java runtime mounted at /jdk.
 //! stdout carries JSON events; Java output is encoded as bytes so split UTF-8 writes survive.
 
+use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_vm::{ClassPath, ClassPathEntry, Compiler, ConfigurationBuilder, Memory, VM};
 use serde::Deserialize;
 use serde_json::json;
@@ -155,7 +156,10 @@ async fn execute(
     request: &Request,
     paths: &RuntimePaths,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !matches!(request.java_version, 8 | 11 | 17 | 21 | 25) {
+    if ![JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25]
+        .iter()
+        .any(|version| request.java_version == version.java())
+    {
         return Err("Unsupported Java version".into());
     }
     let id = request.id;
@@ -204,7 +208,7 @@ async fn execute_script(
     request: &Request,
     paths: &RuntimePaths,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if request.java_version != 25 {
+    if request.java_version != JAVA_25.java() {
         return Err("Scripts require the bundled Java 25 runtime".into());
     }
     if !matches!(request.action, Action::Check | Action::Run) {
@@ -387,7 +391,7 @@ async fn execute_jshell(
     request: &Request,
     paths: &RuntimePaths,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if request.java_version < 11 {
+    if request.java_version < JAVA_11.java() {
         return Err("JShell requires Java 11 or newer in this playground".into());
     }
     let id = request.id;

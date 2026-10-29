@@ -5,7 +5,7 @@ use crate::{Class, ClassLoader, ClassLoaderType, ClassPath, Result};
 #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use flate2::bufread::GzDecoder;
 use ristretto_classfile::Error::IoError;
-use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2};
+use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2, JAVA_8};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Weak};
 #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
@@ -266,7 +266,7 @@ fn is_complete_installation(version: &str, os: &str, installation_dir: &Path) ->
     }
 
     let java_home = java_home_for_os(os, installation_dir.to_path_buf());
-    if util::parse_major_version(version) <= 8 {
+    if util::parse_major_version(version) <= JAVA_8.java() {
         return Ok(java_home.join("jre").join("lib").join("rt.jar").is_file());
     }
 
@@ -375,7 +375,7 @@ fn create_primitive_class(class_loader: &Weak<ClassLoader>, primitive: &str) -> 
 ///
 /// An error will be returned if the class path cannot be determined.
 fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
-    let class_path = if util::parse_major_version(version) <= 8 {
+    let class_path = if util::parse_major_version(version) <= JAVA_8.java() {
         let library_path = installation_dir.join("jre").join("lib");
         let mut class_path = Vec::with_capacity(2);
         let resources_jar_path = library_path.join("resources.jar");

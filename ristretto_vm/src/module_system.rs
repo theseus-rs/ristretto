@@ -22,6 +22,7 @@ use crate::Configuration;
 use crate::JavaError::{IllegalAccessError, InaccessibleObjectException};
 use crate::Result;
 use ahash::{AHashMap, AHashSet};
+use ristretto_classfile::JAVA_8;
 use ristretto_classloader::Value;
 use ristretto_classloader::module::{
     AccessCheck, ModuleFinder, ModuleFinderChain, ModulePathFinder, ModuleSource,
@@ -129,7 +130,7 @@ impl ModuleSystem {
         let resolver = Self::build_resolver(configuration, &mut module_system);
 
         // For Java 8 and earlier, there's no module system; use configuration with overrides only
-        if java_major_version <= 8 {
+        if java_major_version <= JAVA_8.java() {
             debug!("Java 8 or earlier; module system disabled");
             module_system.resolved_configuration =
                 Arc::new(Self::create_fallback_configuration(configuration));
@@ -1210,6 +1211,7 @@ mod tests {
     use super::*;
     use crate::ModuleRead;
     use crate::configuration::{ConfigurationBuilder, ModuleExport, ModuleOpens};
+    use ristretto_classfile::JAVA_21;
 
     #[test]
     fn test_new_module_system() {
@@ -1225,10 +1227,10 @@ mod tests {
     async fn test_classpath_configuration_is_reused() {
         let configuration = ConfigurationBuilder::new().build().unwrap();
         let java_home = tempfile::tempdir().unwrap();
-        let first = ModuleSystem::new(&configuration, java_home.path(), 21)
+        let first = ModuleSystem::new(&configuration, java_home.path(), JAVA_21.java())
             .await
             .unwrap();
-        let second = ModuleSystem::new(&configuration, java_home.path(), 21)
+        let second = ModuleSystem::new(&configuration, java_home.path(), JAVA_21.java())
             .await
             .unwrap();
         assert!(Arc::ptr_eq(
@@ -1641,7 +1643,8 @@ mod tests {
             .build()
             .unwrap();
 
-        let module_system = ModuleSystem::new(&configuration, &PathBuf::new(), 21).await;
+        let module_system =
+            ModuleSystem::new(&configuration, &PathBuf::new(), JAVA_21.java()).await;
         assert!(module_system.is_ok());
 
         let module_system = module_system.unwrap();
@@ -1681,7 +1684,8 @@ mod tests {
             .build()
             .unwrap();
 
-        let module_system = ModuleSystem::new(&configuration, &PathBuf::new(), 21).await;
+        let module_system =
+            ModuleSystem::new(&configuration, &PathBuf::new(), JAVA_21.java()).await;
         assert!(module_system.is_ok());
 
         let module_system = module_system.unwrap();
@@ -1711,7 +1715,7 @@ mod tests {
         let configuration = ConfigurationBuilder::new().build().unwrap();
 
         // Java 8 should use fallback configuration
-        let module_system = ModuleSystem::new(&configuration, &PathBuf::new(), 8).await;
+        let module_system = ModuleSystem::new(&configuration, &PathBuf::new(), JAVA_8.java()).await;
         assert!(module_system.is_ok());
 
         let module_system = module_system.unwrap();
@@ -1765,7 +1769,8 @@ mod tests {
             .add_read(ModuleRead::new("my.module", "java.sql"))
             .build()?;
 
-        let module_system = ModuleSystem::new(&configuration, &PathBuf::new(), 21).await?;
+        let module_system =
+            ModuleSystem::new(&configuration, &PathBuf::new(), JAVA_21.java()).await?;
         assert!(module_system.can_read("my.module", "java.sql"));
         assert!(!module_system.can_read("my.module", "java.xml"));
         Ok(())
@@ -1777,7 +1782,8 @@ mod tests {
             .add_export(ModuleExport::new("java.base", "java.lang", "my.module"))
             .build()?;
 
-        let module_system = ModuleSystem::new(&configuration, &PathBuf::new(), 21).await?;
+        let module_system =
+            ModuleSystem::new(&configuration, &PathBuf::new(), JAVA_21.java()).await?;
         assert!(module_system.is_exported("java.base", "java.lang", "my.module"));
         assert!(!module_system.is_exported("java.base", "java.lang", "other.module"));
         Ok(())
@@ -1793,7 +1799,8 @@ mod tests {
             ))
             .build()?;
 
-        let module_system = ModuleSystem::new(&configuration, &PathBuf::new(), 21).await?;
+        let module_system =
+            ModuleSystem::new(&configuration, &PathBuf::new(), JAVA_21.java()).await?;
         assert!(module_system.is_opened("java.base", "java.lang.reflect", "my.module"));
         assert!(!module_system.is_opened("java.base", "java.lang.reflect", "other.module"));
         Ok(())
@@ -1812,7 +1819,8 @@ mod tests {
             ))
             .build()?;
 
-        let module_system = ModuleSystem::new(&configuration, &PathBuf::new(), 21).await?;
+        let module_system =
+            ModuleSystem::new(&configuration, &PathBuf::new(), JAVA_21.java()).await?;
 
         // Check reads
         assert!(module_system.can_read("my.module", "java.sql"));
