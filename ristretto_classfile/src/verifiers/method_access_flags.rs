@@ -4,6 +4,7 @@ use crate::method::Method;
 use crate::method_access_flags::MethodAccessFlags;
 use crate::verifiers::error::Result;
 use crate::verifiers::error::VerifyError::InvalidMethodAccessFlags;
+use crate::{JAVA_1_2, JAVA_16};
 
 /// Verify the method `MethodAccessFlags`.
 ///
@@ -40,7 +41,8 @@ pub(crate) fn verify(class_file: &ClassFile<'_>, method: &Method) -> Result<()> 
             return Err(InvalidMethodAccessFlags(access_flags.bits()));
         }
 
-        let strict_disallowed = (46..=60).contains(&class_file.version.major())
+        let strict_disallowed = (JAVA_1_2.major()..=JAVA_16.major())
+            .contains(&class_file.version.major())
             && access_flags.contains(MethodAccessFlags::STRICT);
         strict_disallowed
             .then_some(InvalidMethodAccessFlags(access_flags.bits()))

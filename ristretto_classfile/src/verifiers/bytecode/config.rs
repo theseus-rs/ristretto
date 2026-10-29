@@ -21,6 +21,7 @@
 //!
 //! - [JVM Tool Interface: Verification](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10)
 
+use crate::JAVA_6;
 use std::fmt;
 
 use bitflags::bitflags;
@@ -163,7 +164,7 @@ impl Default for VerifierConfig {
             fallback_strategy: FallbackStrategy::default(),
             flags: VerifierFlags::STRICT_EXCEPTION_HANDLERS,
             max_inference_iterations: 1000,
-            stackmap_required_version: 50, // Java 6
+            stackmap_required_version: JAVA_6.major(),
         }
     }
 }
@@ -297,6 +298,7 @@ impl VerifierConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{JAVA_5, JAVA_8, JAVA_21};
 
     #[test]
     fn test_default_config() {
@@ -352,10 +354,10 @@ mod tests {
     #[test]
     fn test_requires_stackmap() {
         let config = VerifierConfig::default();
-        assert!(!config.requires_stackmap(49)); // Java 5
-        assert!(config.requires_stackmap(50)); // Java 6
-        assert!(config.requires_stackmap(52)); // Java 8
-        assert!(config.requires_stackmap(65)); // Java 21
+        assert!(!config.requires_stackmap(JAVA_5.major()));
+        assert!(config.requires_stackmap(JAVA_6.major()));
+        assert!(config.requires_stackmap(JAVA_8.major()));
+        assert!(config.requires_stackmap(JAVA_21.major()));
     }
 
     #[test]

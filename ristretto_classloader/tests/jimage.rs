@@ -9,7 +9,7 @@
 //! make use of the class loader utilities for locating the `JImage` files without cyclical
 //! dependencies.
 
-use ristretto_classfile::ClassFile;
+use ristretto_classfile::{ClassFile, JAVA_8};
 use ristretto_classloader::ALL_LTS_VERSIONS;
 use ristretto_classloader::runtime::{default_class_loader, version_class_loader};
 use ristretto_jimage::{Image, Result};
@@ -29,9 +29,9 @@ async fn test_image_for_all_java_lts_versions() -> Result<()> {
         let major_version = version
             .split('.')
             .next()
-            .and_then(|version| version.parse::<u32>().ok())
+            .and_then(|version| version.parse::<u16>().ok())
             .expect("major version");
-        if major_version <= 8 {
+        if major_version <= JAVA_8.java() {
             continue;
         }
         let (java_home, _java_version, _class_loader) =

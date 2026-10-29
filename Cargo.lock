@@ -3344,6 +3344,7 @@ dependencies = [
 name = "ristretto_playground"
 version = "0.34.0"
 dependencies = [
+ "ristretto_classfile",
  "ristretto_classloader",
  "ristretto_vm",
  "serde",

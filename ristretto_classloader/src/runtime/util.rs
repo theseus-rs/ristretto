@@ -4,6 +4,8 @@ use crate::runtime::http;
 use crate::runtime::models::Release;
 #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use crate::{Error, Result};
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+use ristretto_classfile::{JAVA_8, JAVA_11};
 use std::env;
 #[cfg(not(target_family = "wasm"))]
 use std::env::consts;
@@ -12,7 +14,7 @@ use tracing::debug;
 #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use tracing::warn;
 
-const DEFAULT_MAJOR_VERSION: u64 = 21;
+const DEFAULT_MAJOR_VERSION: u16 = 21;
 const GITHUB_API_VERSION_HEADER: &str = "X-GitHub-Api-Version";
 const GITHUB_API_VERSION: &str = "2022-11-28";
 
@@ -74,7 +76,7 @@ pub(crate) async fn get_runtime_archive_for(
     }
 
     let version_parts = version.chars().filter(|&c| c == '.').count() + 1;
-    if major_version == 8 && version_parts == 4 || version_parts == 5 {
+    if major_version == JAVA_8.java() && version_parts == 4 || version_parts == 5 {
         let (file_name, archive) = download_archive_for(version, os, arch).await?;
         return Ok((version.to_string(), file_name, archive));
     }
@@ -173,7 +175,7 @@ pub(crate) async fn download_archive_for(
         }
         "windows" => {
             let major_version = parse_major_version(version);
-            let arch = if arch == "x86" && major_version <= 11 {
+            let arch = if arch == "x86" && major_version <= JAVA_11.java() {
                 "x86"
             } else {
                 "x64"
@@ -237,10 +239,11 @@ async fn get_release_versions(major_version: &str) -> Result<Vec<String>> {
     Ok(releases)
 }
 
-/// Parse the major version from a version string. Returns 0 if the major version cannot be parsed.
-pub(crate) fn parse_major_version(version: &str) -> u64 {
+/// Parse the major version from a version string. Returns 0 if the major version cannot be parsed
+/// as a `u16`.
+pub(crate) fn parse_major_version(version: &str) -> u16 {
     let major_part = version.split('.').next().unwrap_or("0");
-    major_part.parse::<u64>().unwrap_or(0)
+    major_part.parse::<u16>().unwrap_or(0)
 }
 
 #[cfg(all(test, not(all(target_family = "wasm", target_os = "unknown"))))]
@@ -331,6 +334,8 @@ mod tests {
     fn test_parse_major_version() {
         assert_eq!(11, parse_major_version("11"));
         assert_eq!(8, parse_major_version("8.472.08.1"));
+        assert_eq!(u16::MAX, parse_major_version("65535.0.1"));
+        assert_eq!(0, parse_major_version("65536.0.1"));
         assert_eq!(0, parse_major_version(""));
         assert_eq!(0, parse_major_version("a"));
     }
