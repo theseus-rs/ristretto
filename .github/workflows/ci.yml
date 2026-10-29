@@ -230,6 +230,7 @@ jobs:
           RUST_BACKTRACE: 1
           RUST_LOG: info
         run: |
+          cargo test --profile release-tests -p ristretto_classfile --test java8_runtime_test -- --ignored --test-threads=1
           cargo test --profile release-tests -p ristretto_classloader runtime::util::tests -- --ignored --test-threads=1
           cargo test --profile release-tests -p ristretto_classloader object::tests::test_as_string_java8 -- --ignored --test-threads=1
           cargo test --profile release-tests -p ristretto_classloader --test runtime -- --ignored --test-threads=1
