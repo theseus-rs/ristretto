@@ -3,6 +3,8 @@ members = ["cargo:."]
 
 # Config for 'dist'
 [dist]
+# Skip checking whether the specified configuration files are up to date
+allow-dirty = ["ci"]
 # Whether to embed dependency information using cargo-auditable
 cargo-auditable = false
 # Whether to use cargo-cyclonedx to generate an SBOM
