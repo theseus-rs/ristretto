@@ -42,9 +42,7 @@ test('follows the system and remembers a local theme override without changing c
   await expect(root).toHaveAttribute('data-theme', 'dark');
 });
 
-test('uses balanced side margins on wide and mobile screens in both themes', async ({
-  page,
-}, testInfo) => {
+test('fills the width on wide and mobile screens in both themes', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto('./');
   for (const width of [1920, 390]) {
@@ -55,9 +53,8 @@ test('uses balanced side margins on wide and mobile screens in both themes', asy
         .getByRole('region', { name: 'Programming playground' })
         .boundingBox();
       expect(bounds).not.toBeNull();
-      const margin = width > 900 ? 32 : 16;
-      expect(bounds!.x).toBeCloseTo(margin, 0);
-      expect(width - bounds!.x - bounds!.width).toBeCloseTo(margin, 0);
+      expect(bounds!.x).toBeCloseTo(0, 0);
+      expect(bounds!.width).toBeCloseTo(width, 0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
         width,
       );

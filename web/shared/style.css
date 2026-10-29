@@ -181,7 +181,6 @@ main {
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  padding: 20px 32px 24px;
 }
 .status-dot {
   display: inline-block;
@@ -208,13 +207,8 @@ main {
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  border: 1px solid var(--border);
-  border-radius: 13px;
   overflow: hidden;
   background: var(--surface);
-  box-shadow:
-    0 10px 40px var(--shadow),
-    0 1px 2px var(--shadow);
 }
 .workbench > :not(.panes, .shell-scroll) {
   flex-shrink: 0;
@@ -733,9 +727,6 @@ progress::-moz-progress-bar {
     grid-column: 2;
     grid-row: 1;
   }
-  main {
-    padding: 16px;
-  }
   .panes {
     flex: none;
     grid-template-columns: 1fr;
@@ -782,9 +773,6 @@ progress::-moz-progress-bar {
   }
   .github-link span {
     font-size: 21px;
-  }
-  main {
-    padding: 12px 16px 16px;
   }
   .toolbar {
     padding: 12px;

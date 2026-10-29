@@ -152,9 +152,8 @@ test('shares theme and navigation with Java and fits desktop and mobile screens'
   for (const width of [1920, 390]) {
     await page.setViewportSize({ width, height: 900 });
     const bounds = await page.getByRole('region', { name: 'JShell terminal' }).boundingBox();
-    const margin = width > 900 ? 32 : 16;
-    expect(bounds!.x).toBeCloseTo(margin, 0);
-    expect(width - bounds!.x - bounds!.width).toBeCloseTo(margin, 0);
+    expect(bounds!.x).toBeCloseTo(0, 0);
+    expect(bounds!.width).toBeCloseTo(width, 0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
     );
