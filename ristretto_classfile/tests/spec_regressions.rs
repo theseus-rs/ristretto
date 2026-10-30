@@ -126,6 +126,21 @@ fn stack_underflow() {
 }
 
 #[test]
+fn backedge_type_mismatch() {
+    let mut c = base();
+    let m = method(
+        &mut c,
+        "f",
+        "(I)V",
+        1,
+        1,
+        vec![Iload_0, Pop, Fconst_0, Fstore_0, Goto(0)],
+        Some(vec![StackFrame::SameFrame { frame_type: 0 }]),
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
 fn valid_branch_stackmap() {
     let mut c = base();
     let m = method(
