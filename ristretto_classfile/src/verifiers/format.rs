@@ -168,8 +168,42 @@ fn verify_fields(class: &ClassFile<'_>) -> Result<()> {
         let name = pool.try_get_utf8(field.name_index)?;
         member_name(name, false)?;
         let descriptor = pool.try_get_utf8(field.descriptor_index)?;
+        let ty = FieldType::parse_java_str(descriptor)?;
+        if ty != field.field_type {
+            return Err(invalid("Field type disagrees with descriptor"));
+        }
         if !fields.insert((name, descriptor)) {
             return Err(invalid("Duplicate field name and descriptor"));
+        }
+        for attribute in &field.attributes {
+            if let Attribute::ConstantValue {
+                constant_value_index,
+                ..
+            } = attribute
+            {
+                let valid = match (&ty, pool.try_get(*constant_value_index)?) {
+                    (
+                        FieldType::Base(
+                            BaseType::Boolean
+                            | BaseType::Byte
+                            | BaseType::Char
+                            | BaseType::Short
+                            | BaseType::Int,
+                        ),
+                        Constant::Integer(_),
+                    )
+                    | (FieldType::Base(BaseType::Long), Constant::Long(_))
+                    | (FieldType::Base(BaseType::Double), Constant::Double(_))
+                    | (FieldType::Base(BaseType::Float), Constant::Float(_)) => true,
+                    (FieldType::Object(name), Constant::String(_)) => name == "java/lang/String",
+                    _ => false,
+                };
+                if !valid {
+                    return Err(invalid(
+                        "ConstantValue type disagrees with field descriptor",
+                    ));
+                }
+            }
         }
     }
     Ok(())
