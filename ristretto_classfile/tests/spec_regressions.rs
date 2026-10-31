@@ -956,3 +956,102 @@ fn instance_invocation_parameter_limit_includes_receiver() {
     );
     check(class, Some(method), false);
 }
+
+#[test]
+fn invalid_method_name_descriptor() {
+    let mut c = base();
+    let m = method(&mut c, "bad/name", "invalid", 0, 0, vec![], None);
+    check(c, Some(m), false);
+}
+
+#[test]
+fn missing_code() {
+    let mut c = base();
+    let mut m = method(&mut c, "f", "()V", 0, 0, vec![Return], None);
+    m.attributes.clear();
+    check(c, Some(m), false);
+}
+
+#[test]
+fn duplicate_code() {
+    let mut c = base();
+    let mut m = method(&mut c, "f", "()V", 0, 0, vec![Return], None);
+    m.attributes.push(m.attributes[0].clone());
+    check(c, Some(m), false);
+}
+
+#[test]
+fn native_code() {
+    let mut c = base();
+    let mut m = method(&mut c, "f", "()V", 0, 0, vec![Return], None);
+    m.access_flags |= MethodAccessFlags::NATIVE;
+    check(c, Some(m), false);
+}
+
+#[test]
+fn empty_code() {
+    let mut c = base();
+    let m = method(&mut c, "f", "()V", 0, 0, vec![], None);
+    check(c, Some(m), false);
+}
+
+#[test]
+fn int_dynamic_constant() {
+    let mut c = base();
+    let nat = c.constant_pool.add_name_and_type("x", "I").unwrap();
+    let d = c
+        .constant_pool
+        .add(Constant::Dynamic {
+            bootstrap_method_attr_index: 0,
+            name_and_type_index: nat,
+        })
+        .unwrap();
+    let m = method(&mut c, "f", "()I", 1, 0, vec![Ldc_w(d), Ireturn], None);
+    check(c, Some(m), false);
+}
+
+#[test]
+fn static_final_constructor() {
+    let mut c = base();
+    let mut m = method(&mut c, "<init>", "()V", 0, 0, vec![Return], None);
+    m.access_flags |= MethodAccessFlags::FINAL;
+    check(c, Some(m), false);
+}
+
+#[test]
+fn invalid_clinit() {
+    let mut c = base();
+    let mut m = method(&mut c, "<clinit>", "(I)V", 0, 2, vec![Return], None);
+    m.access_flags = MethodAccessFlags::PUBLIC;
+    check(c, Some(m), false);
+}
+
+#[test]
+fn static_interface_pre_java8() {
+    let mut c = base();
+    c.version = JAVA_7;
+    c.access_flags =
+        ClassAccessFlags::PUBLIC | ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT;
+    let m = method(&mut c, "f", "()V", 0, 0, vec![Return], None);
+    check(c, Some(m), false);
+}
+
+#[test]
+fn instance_256_parameter_slots() {
+    let mut c = base();
+    let desc = format!("({})V", "I".repeat(255));
+    let mut m = method(&mut c, "f", &desc, 0, 256, vec![Return], None);
+    m.access_flags = MethodAccessFlags::PUBLIC;
+    check(c, Some(m), false);
+}
+
+#[test]
+fn java8_private_interface_method_is_valid() {
+    let mut class = base();
+    class.version = JAVA_8;
+    class.access_flags =
+        ClassAccessFlags::PUBLIC | ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT;
+    let mut method = method(&mut class, "f", "()V", 0, 1, vec![Return], None);
+    method.access_flags = MethodAccessFlags::PRIVATE;
+    check(class, Some(method), true);
+}

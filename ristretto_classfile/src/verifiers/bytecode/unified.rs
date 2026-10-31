@@ -115,6 +115,7 @@ pub fn verify_method<C: VerificationContext>(
     context: &C,
     config: &VerifierConfig,
 ) -> Result<VerificationResult> {
+    crate::verifiers::format::verify_method(class_file, method)?;
     // Native and abstract methods should not have Code attribute
     if method
         .access_flags
@@ -147,8 +148,6 @@ pub fn verify_method<C: VerificationContext>(
             "Method has no Code attribute".to_string(),
         ));
     }
-
-    super::constraints::verify_static(class_file, method)?;
 
     // Determine verification strategy
     let major_version = class_file.version.major();
@@ -257,6 +256,7 @@ pub fn verify_class<C: VerificationContext>(
     context: &C,
     config: &VerifierConfig,
 ) -> Result<Vec<VerificationResult>> {
+    class_file.verify()?;
     let mut results = Vec::with_capacity(class_file.methods.len());
 
     for method in &class_file.methods {
@@ -278,6 +278,7 @@ pub fn verify_class_cached<C: VerificationContext>(
     config: &VerifierConfig,
     cache: &VerificationCache,
 ) -> Result<Vec<VerificationResult>> {
+    class_file.verify()?;
     let mut results = Vec::with_capacity(class_file.methods.len());
 
     for method in &class_file.methods {
@@ -624,7 +625,7 @@ mod tests {
         bad_native_name.name_index = 999;
         assert!(matches!(
             verify_method(&class_file, &bad_native_name, &context, &config),
-            Err(VerifyError::ClassFormatError(_))
+            Err(VerifyError::InvalidConstantPoolIndex(_))
         ));
     }
 
