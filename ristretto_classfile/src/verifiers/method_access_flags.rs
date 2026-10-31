@@ -11,6 +11,14 @@ use crate::{JAVA_1_2, JAVA_16};
 /// # Errors
 /// Returns `InvalidMethodAccessFlags` if the access flags are invalid.
 pub(crate) fn verify(class_file: &ClassFile<'_>, method: &Method) -> Result<()> {
+    // JVMS 4.6 exempts class initializers from the ordinary flag combinations.
+    if class_file
+        .constant_pool
+        .try_get_utf8(method.name_index)
+        .is_ok_and(|name| name == "<clinit>")
+    {
+        return Ok(());
+    }
     let access_flags = method.access_flags;
     let public_set = access_flags.contains(MethodAccessFlags::PUBLIC);
     let protected_set = access_flags.contains(MethodAccessFlags::PROTECTED);
