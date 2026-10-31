@@ -2,6 +2,13 @@ use crate::verifiers::error;
 
 /// A trait that allows the verifier to resolve type relationships without knowing about the VM.
 pub trait VerificationContext {
+    /// Identity of the class-loading environment and its current hierarchy revision.
+    /// Return `None` (the default) to disable reuse of verification results. A token
+    /// must change whenever any resolution or access-check result can change.
+    fn cache_token(&self) -> Option<u64> {
+        None
+    }
+
     /// Checks if a class is a subclass of another.
     ///
     /// # Errors
