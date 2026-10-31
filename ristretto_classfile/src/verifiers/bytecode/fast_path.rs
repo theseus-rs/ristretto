@@ -279,14 +279,12 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             let offset = code_info.offset_at(index).unwrap_or(0);
             let next_offset = code_info.offset_at(index + 1).unwrap_or(code_length);
 
-            if let Ok((successors, _)) =
+            if let Ok((successors, falls_through)) =
                 compute_successors(offset, instruction, next_offset, code_info)
             {
-                for succ in successors {
-                    if succ != next_offset {
-                        jump_targets.insert(succ);
-                    }
-                }
+                // A conditional branch lists its explicit target before fallthrough.
+                let explicit_count = successors.len().saturating_sub(usize::from(falls_through));
+                jump_targets.extend(successors.into_iter().take(explicit_count));
             }
         }
 
@@ -386,6 +384,31 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             }
         }
 
+        for (index, instruction) in self.code.iter().enumerate() {
+            if index + 1 < self.code.len()
+                && matches!(
+                    instruction,
+                    Instruction::Goto(_)
+                        | Instruction::Goto_w(_)
+                        | Instruction::Return
+                        | Instruction::Ireturn
+                        | Instruction::Lreturn
+                        | Instruction::Freturn
+                        | Instruction::Dreturn
+                        | Instruction::Areturn
+                        | Instruction::Athrow
+                        | Instruction::Tableswitch(_)
+                        | Instruction::Lookupswitch(_)
+                )
+                && !self
+                    .stack_map_table
+                    .has_frame_at(u16::try_from(index + 1).unwrap_or(u16::MAX))
+            {
+                return FastPathResult::Failed(VerifyError::VerifyError(
+                    "Missing frame after control transfer".to_string(),
+                ));
+            }
+        }
         // Perform the actual verification
         let initial_frame = self.initial_frame.clone();
         match self.verify_with_stackmaps(&initial_frame) {
@@ -427,7 +450,12 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     fn verify_with_stackmaps(&mut self, initial_frame: &Frame) -> Result<()> {
         let mut state = StackMapWorkState {
             anchor_states: self.initialize_anchor_states(initial_frame)?,
-            worklist: vec![0],
+            worklist: self
+                .stack_map_table
+                .frames()
+                .map(|f| usize::from(f.offset))
+                .chain(std::iter::once(0))
+                .collect(),
             visited: vec![false; self.code_info.instruction_count()],
         };
 
@@ -1922,7 +1950,7 @@ mod tests {
             fast_verifier(&class_file, &duplicate_target_method, &context, &strict);
         assert!(matches!(
             duplicate_target_verifier.verify(),
-            FastPathResult::Success
+            FastPathResult::Failed(_)
         ));
     }
 
