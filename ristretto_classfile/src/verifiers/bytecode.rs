@@ -70,7 +70,7 @@ pub(crate) mod handlers;
 pub(crate) mod type_system;
 
 // fast optimization modules
-pub(crate) mod cache;
+pub mod cache;
 pub(crate) mod config;
 pub(crate) mod diagnostics;
 pub(crate) mod fast_path;
@@ -80,6 +80,10 @@ pub(crate) mod unified;
 pub(crate) mod verifier;
 
 // Re-export main entry points
+pub use cache::VerificationCache;
 pub use config::{FallbackStrategy, VerifierConfig, VerifierFlags, VerifyMode};
-pub use unified::{VerificationPath, VerificationResult, verify_class, verify_method};
+pub use unified::{
+    VerificationPath, VerificationResult, verify_class, verify_class_cached, verify_method,
+    verify_method_cached,
+};
 pub use verifier::verify;

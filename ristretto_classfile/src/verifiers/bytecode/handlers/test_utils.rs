@@ -23,6 +23,9 @@ impl MockContext {
 }
 
 impl VerificationContext for MockContext {
+    fn cache_token(&self) -> Option<u64> {
+        Some(u64::from(self.checks_pass))
+    }
     fn is_subclass(&self, _: &str, _: &str) -> Result<bool> {
         Ok(self.checks_pass)
     }
