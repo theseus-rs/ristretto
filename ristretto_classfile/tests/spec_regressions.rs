@@ -509,3 +509,47 @@ fn compact_frame_requires_promotion() {
     );
     check(c, Some(m), true);
 }
+
+#[test]
+fn member_access_context_can_reject_protected_receiver() {
+    struct Deny;
+    impl VerificationContext for Deny {
+        fn is_subclass(&self, _: &str, _: &str) -> VResult<bool> {
+            Ok(true)
+        }
+        fn is_assignable(&self, _: &str, _: &str) -> VResult<bool> {
+            Ok(true)
+        }
+        fn common_superclass(&self, _: &str, _: &str) -> VResult<String> {
+            Ok("java/lang/Object".into())
+        }
+        #[expect(
+            clippy::panic_in_result_fn,
+            reason = "assert the symbolic member supplied to this test context"
+        )]
+        fn verify_member_access(
+            &self,
+            access: &verifiers::context::MemberAccess<'_>,
+        ) -> VResult<()> {
+            assert_eq!(access.name, "x");
+            Err(VerifyError::VerifyError("inaccessible member".into()))
+        }
+    }
+    let mut class = base();
+    let index = class
+        .constant_pool
+        .add_field_ref(class.this_class, "x", "I")
+        .unwrap();
+    let method = method(
+        &mut class,
+        "f",
+        "(LAudit;)I",
+        1,
+        1,
+        vec![Aload_0, Getfield(index), Ireturn],
+        None,
+    );
+    let result =
+        verifiers::bytecode::verify_method(&class, &method, &Deny, &VerifierConfig::strict());
+    assert!(result.is_err());
+}
