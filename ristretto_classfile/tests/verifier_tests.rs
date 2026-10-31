@@ -180,9 +180,9 @@ fn test_class_verify_accepts_attribute_optional_indexes() -> Result<()> {
 
     let parameter_name = class_file.constant_pool.add_utf8("value")?;
     class_file.methods.push(Method {
-        access_flags: MethodAccessFlags::PUBLIC,
+        access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
         name_index: 3,
-        descriptor_index: 4,
+        descriptor_index: class_file.constant_pool.add_utf8("(I)V")?,
         attributes: vec![Attribute::MethodParameters {
             name_index: 0,
             parameters: vec![MethodParameter {
