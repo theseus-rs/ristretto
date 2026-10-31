@@ -774,3 +774,25 @@ fn invokespecial_owner_must_be_above_current_class() {
     );
     check(class, Some(method), false);
 }
+
+#[test]
+fn null_throw_control() {
+    let mut c = base();
+    let m = method(&mut c, "f", "()V", 1, 0, vec![Aconst_null, Athrow], None);
+    check(c, Some(m), true);
+}
+
+#[test]
+fn throw_non_throwable() {
+    let mut c = base();
+    let m = method(
+        &mut c,
+        "f",
+        "(Ljava/lang/Object;)V",
+        1,
+        1,
+        vec![Aload_0, Athrow],
+        None,
+    );
+    check(c, Some(m), false);
+}
