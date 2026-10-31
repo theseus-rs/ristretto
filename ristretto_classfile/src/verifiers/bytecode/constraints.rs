@@ -26,14 +26,72 @@ fn receiver<'a>(frame: &'a Frame, descriptor: &str) -> Result<&'a VerificationTy
     frame.peek_at(slots)
 }
 
-/// Validate constructor receiver identity before an instruction changes the frame.
+/// Validate contextual access to the member referenced by an instruction.
+fn verify_member_access<C: crate::verifiers::context::VerificationContext>(
+    class: &ClassFile<'_>,
+    instruction: &Instruction,
+    frame: &Frame,
+    context: &C,
+) -> Result<()> {
+    let resolver = ConstantPoolResolver::new(class);
+    let member = match instruction {
+        Instruction::Getfield(i)
+        | Instruction::Putfield(i)
+        | Instruction::Getstatic(i)
+        | Instruction::Putstatic(i) => Some(resolver.resolve_field_ref(*i)?),
+        Instruction::Invokevirtual(i)
+        | Instruction::Invokeinterface(i, _)
+        | Instruction::Invokespecial(i)
+        | Instruction::Invokestatic(i) => Some(resolver.resolve_method_ref(*i)?),
+        _ => None,
+    };
+    if let Some((owner, name, descriptor)) = member {
+        let current = class.class_name()?.to_str_lossy();
+        let object = match instruction {
+            Instruction::Getfield(_) => Some(frame.peek()?),
+            Instruction::Putfield(_) => {
+                let ty = FieldType::parse_java_str(&crate::JavaStr::cow_from_str(&descriptor))?;
+                Some(
+                    frame.peek_at(if VerificationType::from_field_type(&ty).is_category2() {
+                        2
+                    } else {
+                        1
+                    })?,
+                )
+            }
+            Instruction::Invokevirtual(_)
+            | Instruction::Invokeinterface(..)
+            | Instruction::Invokespecial(_) => Some(receiver(frame, &descriptor)?),
+            _ => None,
+        };
+        let receiver_type = object.and_then(|ty| {
+            if *ty == VerificationType::UninitializedThis {
+                Some(format!("L{current};"))
+            } else {
+                ty.to_descriptor()
+            }
+        });
+        context.verify_member_access(&crate::verifiers::context::MemberAccess {
+            current_class: &current,
+            owner: &owner,
+            name: &name,
+            descriptor: &descriptor,
+            receiver: receiver_type.as_deref(),
+            instruction,
+        })?;
+    }
+    Ok(())
+}
+
+/// Validate member access and constructor receiver identity before an instruction changes the frame.
 pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
     class: &ClassFile<'_>,
     code: &[Instruction],
     instruction: &Instruction,
     frame: &Frame,
-    _context: &C,
+    context: &C,
 ) -> Result<()> {
+    verify_member_access(class, instruction, frame, context)?;
     let resolver = ConstantPoolResolver::new(class);
     match instruction {
         Instruction::Invokespecial(index) => {
