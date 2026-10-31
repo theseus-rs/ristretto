@@ -4,7 +4,9 @@
     clippy::indexing_slicing,
     reason = "test fixtures and byte-level mutations"
 )]
-use ristretto_classfile::attributes::{AnnotationElement, Attribute, Instruction};
+use ristretto_classfile::attributes::{
+    AnnotationElement, Attribute, Instruction, StackFrame, VerificationType,
+};
 use ristretto_classfile::byte_reader::ByteReader;
 use ristretto_classfile::{ClassFile, Constant, ConstantPool};
 
@@ -109,4 +111,22 @@ fn trailing_class_data_is_rejected_by_both_parsers() {
     bytes.push(0);
     assert!(ClassFile::from_bytes(&bytes).is_err());
     assert!(ClassFile::from_slice(&bytes).is_err());
+}
+
+#[test]
+fn malformed_constructed_stack_frames_are_not_serialized() {
+    for frame in [
+        StackFrame::SameFrame { frame_type: 64 },
+        StackFrame::SameLocals1StackItemFrame {
+            frame_type: 64,
+            stack: vec![VerificationType::Integer, VerificationType::Integer],
+        },
+        StackFrame::AppendFrame {
+            frame_type: 252,
+            offset_delta: 0,
+            locals: vec![],
+        },
+    ] {
+        assert!(frame.to_bytes(&mut Vec::new()).is_err());
+    }
 }
