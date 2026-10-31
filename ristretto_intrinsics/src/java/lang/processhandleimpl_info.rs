@@ -31,7 +31,8 @@ pub async fn info_0<T: Thread + 'static>(
 
         let pid_usize = usize::try_from(pid)?;
         let sys_pid = Pid::from(pid_usize);
-        let mut system = System::new_all();
+        let mut system = System::new_all()
+            .map_err(|error| ristretto_types::Error::InternalError(error.to_string()))?;
         system.refresh_processes(ProcessesToUpdate::Some(&[sys_pid]), true);
 
         if let Some(process) = system.process(sys_pid) {

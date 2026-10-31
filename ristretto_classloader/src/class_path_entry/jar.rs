@@ -324,7 +324,8 @@ mod tests {
     use super::*;
     use crate::Error::ClassFileError;
     use crate::class_path_entry::manifest::{MAIN_CLASS, MANIFEST_VERSION};
-    use ristretto_classfile::{ConstantPool, JAVA_17};
+    use ristretto_classfile::attributes::{Attribute, ModuleAccessFlags, Requires, RequiresFlags};
+    use ristretto_classfile::{ClassAccessFlags, ConstantPool, JAVA_17};
     use std::fs;
     #[cfg(not(target_family = "wasm"))]
     use std::io::BufRead;
@@ -440,10 +441,27 @@ mod tests {
         let jar_path = temp_dir.path().join("module.jar");
         let mut constant_pool = ConstantPool::new();
         let this_class = constant_pool.add_class("module-info")?;
+        let module = Attribute::Module {
+            name_index: constant_pool.add_utf8("Module")?,
+            module_name_index: constant_pool.add_module("test.module")?,
+            flags: ModuleAccessFlags::empty(),
+            version_index: 0,
+            requires: vec![Requires {
+                index: constant_pool.add_module("java.base")?,
+                flags: RequiresFlags::MANDATED,
+                version_index: 0,
+            }],
+            exports: Vec::new(),
+            opens: Vec::new(),
+            uses: Vec::new(),
+            provides: Vec::new(),
+        };
         let module_info = ClassFile {
             version: JAVA_17,
             constant_pool,
+            access_flags: ClassAccessFlags::MODULE,
             this_class,
+            attributes: vec![module],
             ..Default::default()
         };
         let mut module_info_bytes = Vec::new();

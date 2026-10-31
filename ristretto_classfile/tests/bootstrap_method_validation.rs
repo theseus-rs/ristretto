@@ -1,4 +1,4 @@
-//! Bootstrap tables require invocation handles and loadable constant arguments.
+//! Bootstrap methods require valid invocation handles and loadable constant arguments.
 #![expect(
     clippy::panic_in_result_fn,
     reason = "regression tests use assertions with fallible fixture setup"
