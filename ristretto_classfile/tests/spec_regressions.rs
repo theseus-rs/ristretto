@@ -1289,3 +1289,54 @@ fn legacy_class_initializer_has_no_receiver_and_can_have_parameters() {
         check(class, Some(method), false);
     }
 }
+
+#[test]
+fn invalid_module() {
+    let mut c = base();
+    c.access_flags = ClassAccessFlags::MODULE | ClassAccessFlags::PUBLIC;
+    check(c, None, false);
+}
+
+#[test]
+fn module_constant_in_ordinary_class() {
+    let mut c = base();
+    let idx = c.constant_pool.add_utf8("x").unwrap();
+    c.constant_pool.add(Constant::Module(idx)).unwrap();
+    check(c, None, false);
+}
+
+#[test]
+fn module_tables_require_java_base_and_unique_dependencies() {
+    let mut class = base();
+    class.this_class = class.constant_pool.add_class("module-info").unwrap();
+    class.super_class = 0;
+    class.access_flags = ClassAccessFlags::MODULE;
+    let name_index = class.constant_pool.add_utf8("Module").unwrap();
+    let module_name_index = class.constant_pool.add_module("example").unwrap();
+    let base_index = class.constant_pool.add_module("java.base").unwrap();
+    class.attributes.push(Attribute::Module {
+        name_index,
+        module_name_index,
+        flags: ModuleAccessFlags::empty(),
+        version_index: 0,
+        requires: vec![],
+        exports: vec![],
+        opens: vec![],
+        uses: vec![],
+        provides: vec![],
+    });
+    assert!(class.verify().is_err());
+    let base = Requires {
+        index: base_index,
+        flags: RequiresFlags::MANDATED,
+        version_index: 0,
+    };
+    if let Attribute::Module { requires, .. } = &mut class.attributes[0] {
+        requires.push(base.clone());
+    }
+    assert!(class.verify().is_ok());
+    if let Attribute::Module { requires, .. } = &mut class.attributes[0] {
+        requires.push(base);
+    }
+    assert!(class.verify().is_err());
+}
