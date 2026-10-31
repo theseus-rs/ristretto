@@ -234,3 +234,17 @@ fn code_metadata_relocates_after_instruction_width_changes() {
         parsed
     );
 }
+
+#[test]
+fn signature_checks_accept_context_and_recursive_bounds() {
+    use ristretto_classfile::verifiers::signature::{
+        verify_class_signature, verify_method_signature_with_context,
+    };
+    assert!(verify_class_signature("<T:Ljava/lang/Comparable<TT;>;>Ljava/lang/Object;").is_ok());
+    assert!(verify_class_signature("<T:TU;U:Ljava/lang/Object;>Ljava/lang/Object;").is_ok());
+    assert!(verify_class_signature("Lfoo-bar;").is_ok());
+    assert!(verify_method_signature_with_context("(TT;)TT;", &["T".into()]).is_ok());
+    assert!(verify_method_signature_with_context("(TU;)TT;", &["T".into()]).is_err());
+    let signature = format!("LBox<{}I>;", "[".repeat(30000));
+    assert!(verify_class_signature(&signature).is_err());
+}
