@@ -776,6 +776,13 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         instruction: &Instruction,
         frame: Frame,
     ) -> Result<(Frame, Vec<u16>, bool)> {
+        super::constraints::verify_state(
+            self.class_file,
+            self.code,
+            instruction,
+            &frame,
+            self.context,
+        )?;
         let mut next_frame = frame;
 
         // Calculate next offset for fallthrough
@@ -952,6 +959,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             class_name,
             method_name,
             descriptor,
+            &self.current_class,
             self.context,
         )
     }
