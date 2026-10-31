@@ -232,3 +232,5 @@ pub use verification_type::VerificationType;
 // /// assert_eq!(generic_attribute.attribute_name_index, 5);
 // /// assert_eq!(generic_attribute.info.len(), 4);
 // /// ```
+
+mod code_offsets;
