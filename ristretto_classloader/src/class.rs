@@ -457,7 +457,9 @@ impl Class {
     /// This is used for hidden classes which need unique names even though
     /// the class file contains a shared name.
     ///
-    /// The name will be formatted as `{original_name}+0x{suffix:016x}`.
+    /// The name will be formatted as `{original_name}+0x{suffix:016x}` internally, so
+    /// `Class::getName` can report `{binary_name}/0x{suffix:016x}` as required for hidden
+    /// classes by JEP 371.
     ///
     /// # Errors
     ///
@@ -617,6 +619,21 @@ impl Class {
     #[must_use]
     pub fn name(&self) -> &str {
         &self.name_str
+    }
+
+    /// Get the name returned by `Class::getName`.
+    ///
+    /// Normal classes use the binary name, that is, the internal name with `/` replaced by `.`.
+    /// A hidden class keeps its original binary name and appends `/` plus the hidden suffix, for example `java.lang.String/0x000000000000002a`, as required by JEP 371.
+    #[must_use]
+    pub fn public_name(&self) -> String {
+        let name = self.name();
+        if let Some((binary_name, suffix)) = name.rsplit_once("+0x") {
+            let binary_name = binary_name.replace('/', ".");
+            format!("{binary_name}/0x{suffix}")
+        } else {
+            name.replace('/', ".")
+        }
     }
 
     /// Get the class name as a `&JavaStr` reference.
@@ -944,12 +961,10 @@ impl Class {
 
     /// Determine if this class is a hidden class.
     ///
-    /// Hidden classes are created via `Class::from_hidden` and have unique names with a suffix in
-    /// the format `{original_name}+0x{suffix:016x}`. They cannot be found by name lookups and are
-    /// typically used for dynamically generated code like lambda expressions.
+    /// Hidden classes are created via `Class::from_hidden` and have unique names with a suffix in the format `{original_name}+0x{suffix:016x}`. They cannot be found by name lookups and are typically used for dynamically generated code like lambda expressions. `Class::getName` reports the JEP 371 form `{binary_name}/0x{suffix:016x}`.
     #[must_use]
     pub fn is_hidden(&self) -> bool {
-        self.name().contains("+0x")
+        self.name().rsplit_once("+0x").is_some()
     }
 
     /// Get the class file.
@@ -2428,6 +2443,7 @@ mod tests {
     async fn test_regular_class_is_not_hidden() -> Result<()> {
         let class = string_class().await?;
         assert!(!class.is_hidden());
+        assert_eq!(class.public_name(), "java.lang.String");
         Ok(())
     }
 
@@ -2447,8 +2463,12 @@ mod tests {
         // Verify it's marked as hidden
         assert!(hidden_class.is_hidden());
 
-        // Verify the name includes the suffix
+        // Verify the internal form and the JEP 371 public form
         assert_eq!(hidden_class.name(), "java/lang/String+0x000000000000002a");
+        assert_eq!(
+            hidden_class.public_name(),
+            "java.lang.String/0x000000000000002a"
+        );
         Ok(())
     }
 
