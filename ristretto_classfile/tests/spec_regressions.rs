@@ -1055,3 +1055,39 @@ fn java8_private_interface_method_is_valid() {
     method.access_flags = MethodAccessFlags::PRIVATE;
     check(class, Some(method), true);
 }
+
+#[test]
+fn missing_super() {
+    let mut c = base();
+    c.super_class = 0;
+    check(c, None, false);
+}
+
+#[test]
+fn self_super() {
+    let mut c = base();
+    c.super_class = c.this_class;
+    check(c, None, false);
+}
+
+#[test]
+fn array_this() {
+    let mut c = base();
+    c.this_class = c.constant_pool.add_class("[I").unwrap();
+    check(c, None, false);
+}
+
+#[test]
+fn duplicate_interfaces() {
+    let mut c = base();
+    c.interfaces = vec![c.super_class, c.super_class];
+    check(c, None, false);
+}
+
+#[test]
+fn duplicate_real_interfaces() {
+    let mut c = base();
+    let serial = c.constant_pool.add_class("java/io/Serializable").unwrap();
+    c.interfaces = vec![serial, serial];
+    check(c, None, false);
+}
