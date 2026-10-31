@@ -11,7 +11,7 @@
 //!
 //! - [JVMS §6.5 - Instructions](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5)
 
-use crate::JavaString;
+use crate::{JAVA_5, JavaString};
 
 use crate::attributes::Instruction;
 use crate::class_file::ClassFile;
@@ -140,7 +140,9 @@ pub fn handle_ldc(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) -> 
         Constant::Integer(_) => frame.push(VerificationType::Integer),
         Constant::Float(_) => frame.push(VerificationType::Float),
         Constant::String(_) => frame.push(VerificationType::java_lang_string()),
-        Constant::Class(_) => frame.push(VerificationType::java_lang_class()),
+        Constant::Class(_) if class_file.version.major() >= JAVA_5.major() => {
+            frame.push(VerificationType::java_lang_class())
+        }
         Constant::MethodHandle { .. } => frame.push(VerificationType::Object(JavaString::from(
             "java/lang/invoke/MethodHandle",
         ))),

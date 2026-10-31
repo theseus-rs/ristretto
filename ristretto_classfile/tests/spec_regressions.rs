@@ -839,3 +839,120 @@ fn valid_int_condy() {
     );
     check(class, Some(test_method), true);
 }
+
+#[test]
+fn invalid_instanceof_index() {
+    let mut c = base();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        1,
+        0,
+        vec![Aconst_null, Instanceof(65535), Pop, Return],
+        None,
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
+fn zero_multianewarray_dimensions() {
+    let mut c = base();
+    let a = c.constant_pool.add_class("[I").unwrap();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        1,
+        0,
+        vec![Multianewarray(a, 0), Pop, Return],
+        None,
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
+fn new_array_class() {
+    let mut c = base();
+    let a = c.constant_pool.add_class("[I").unwrap();
+    let m = method(&mut c, "f", "()V", 1, 0, vec![New(a), Pop, Return], None);
+    check(c, Some(m), false);
+}
+
+#[test]
+fn invokeinterface_wrong_tag_count() {
+    let mut c = base();
+    let r = c
+        .constant_pool
+        .add_method_ref(c.super_class, "toString", "()Ljava/lang/String;")
+        .unwrap();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        1,
+        0,
+        vec![Aconst_null, Invokeinterface(r, 0), Pop, Return],
+        None,
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
+fn invoke_clinit() {
+    let mut c = base();
+    let r = c
+        .constant_pool
+        .add_method_ref(c.super_class, "<clinit>", "()V")
+        .unwrap();
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        0,
+        0,
+        vec![Invokestatic(r), Return],
+        None,
+    );
+    check(c, Some(m), false);
+}
+
+#[test]
+fn class_literals_require_version_49() {
+    let mut class = base();
+    let index = class.this_class;
+    let method = method(
+        &mut class,
+        "f",
+        "()V",
+        1,
+        0,
+        vec![Ldc_w(index), Pop, Return],
+        None,
+    );
+    class.version = JAVA_1_4;
+    check(class.clone(), Some(method.clone()), false);
+    class.version = JAVA_5;
+    check(class, Some(method), true);
+}
+
+#[test]
+fn instance_invocation_parameter_limit_includes_receiver() {
+    let mut class = base();
+    let descriptor = format!("({})V", "I".repeat(255));
+    let index = class
+        .constant_pool
+        .add_method_ref(class.this_class, "target", descriptor.as_str())
+        .unwrap();
+    // Static constraints apply even to unreachable instructions.
+    let method = method(
+        &mut class,
+        "f",
+        "()V",
+        0,
+        0,
+        vec![Return, Invokevirtual(index)],
+        None,
+    );
+    check(class, Some(method), false);
+}
