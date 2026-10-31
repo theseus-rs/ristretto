@@ -29,8 +29,8 @@ workspace = true
 ahash = { workspace = true }
 anstyle = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
-ristretto_gc = { path = "../ristretto_gc", version = "0.34.0" }
-ristretto_vm = { path = "../ristretto_vm", version = "0.34.0", default-features = false }
+ristretto_gc = { path = "../ristretto_gc", version = "0.34.1" }
+ristretto_vm = { path = "../ristretto_vm", version = "0.34.1", default-features = false }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
@@ -47,8 +47,8 @@ tokio = { workspace = true, features = ["rt"] }
 tokio = { workspace = true, features = ["rt"] }
 
 [dev-dependencies]
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.34.0" }
-ristretto_classloader = { path = "../ristretto_classloader", version = "0.34.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.34.1" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.34.1" }
 tempfile = { workspace = true }
 
 [features]

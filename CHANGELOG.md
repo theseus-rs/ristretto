@@ -7,6 +7,158 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_javac` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.34.0...ristretto_javac-v0.34.1) - 2026-10-31
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_java` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/v0.34.0...v0.34.1) - 2026-10-31
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- invalidate category-two locals when their second slot is overwritten
+- verify stack-map blocks and require frames after control transfers
+- relocate local-variable, type-annotation and uninitialized offsets
+- reject promotion of unusable Top locals to concrete types
+- check explicit frame zero against the method entry state
+- validate stack-map tags, cardinality and frame bounds
+- reject trailing data in both class-file parsing entry points
+- account for category-two stack-map values and chop entries
+- validate incoming frames on already visited control-flow edges
+- exclude unused local padding when decoding append frames
+- retry incomplete runtime downloads
+- enforce constant-pool capacity and two-slot layout invariants
+- use logical instruction coordinates in bytecode verification
+- reject malformed switch ranges, counts and key order
+- enforce constant-pool capacity and two-slot layout invariants
+- check signed wide-branch offset arithmetic
+- bound recursive annotation parsing
+- bound attribute parsing to its declared payload
+- provide Reference.get0 on Java 21
+- push a return value for every non-void intrinsic call
+- stop treating $$ in class names as a hidden-class marker
+
+### Other
+- Merge pull request #911 from theseus-rs/code-metadata-relocation
+- Merge pull request #888 from theseus-rs/initial-frame-check
+- Merge pull request #885 from theseus-rs/category-two-stack-maps
+- Merge pull request #920 from theseus-rs/trailing-class-data
+- use java constants instead of literals
+- Merge pull request #881 from theseus-rs/switch-operands
+- update dependencies
+- update Rust to 1.99.0
+- update java versions
+- Merge pull request #944 from icefery/fix/cglib-generated-name
+- Merge branch 'main' into fix/intrinsic-null-return
+- Merge branch 'main' into fix/cglib-generated-name
+- update Cargo.toml dependencies
+
+## `ristretto_resolver` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_resolver-v0.34.0...ristretto_resolver-v0.34.1) - 2026-10-31
+
+### Other
+- update Rust to 1.99.0
+
+## `ristretto_pom` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.34.0...ristretto_pom-v0.34.1) - 2026-10-31
+
+### Other
+- update Rust to 1.99.0
+
+## `ristretto_vm` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.34.0...ristretto_vm-v0.34.1) - 2026-10-31
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- provide Reference.get0 on Java 21
+- push a return value for every non-void intrinsic call
+
+### Other
+- use java constants instead of literals
+- Merge branch 'main' into fix/intrinsic-null-return
+- update Rust to 1.99.0
+
+## `ristretto_intrinsics` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.34.0...ristretto_intrinsics-v0.34.1) - 2026-10-31
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- provide Reference.get0 on Java 21
+- push a return value for every non-void intrinsic call
+- stop treating $$ in class names as a hidden-class marker
+
+### Other
+- use java constants instead of literals
+- Merge pull request #944 from icefery/fix/cglib-generated-name
+- Merge branch 'main' into fix/intrinsic-null-return
+- Merge branch 'main' into fix/cglib-generated-name
+- update dependencies
+- update Rust to 1.99.0
+
+## `ristretto_types` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.34.0...ristretto_types-v0.34.1) - 2026-10-31
+
+### Other
+- use java constants instead of literals
+- update Rust to 1.99.0
+
+## `ristretto_jit` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.34.0...ristretto_jit-v0.34.1) - 2026-10-31
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_macros` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.34.0...ristretto_macros-v0.34.1) - 2026-10-31
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classloader` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.34.0...ristretto_classloader-v0.34.1) - 2026-10-31
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- retry incomplete runtime downloads
+
+### Other
+- update java versions
+- use java constants instead of literals
+- update dependencies
+- update Rust to 1.99.0
+
+## `ristretto_classfile` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.34.0...ristretto_classfile-v0.34.1) - 2026-10-31
+
+### Fixed
+- invalidate category-two locals when their second slot is overwritten
+- verify stack-map blocks and require frames after control transfers
+- relocate local-variable, type-annotation and uninitialized offsets
+- reject promotion of unusable Top locals to concrete types
+- check explicit frame zero against the method entry state
+- validate stack-map tags, cardinality and frame bounds
+- reject trailing data in both class-file parsing entry points
+- account for category-two stack-map values and chop entries
+- validate incoming frames on already visited control-flow edges
+- exclude unused local padding when decoding append frames
+- retry incomplete runtime downloads
+- enforce constant-pool capacity and two-slot layout invariants
+- use logical instruction coordinates in bytecode verification
+- reject malformed switch ranges, counts and key order
+- enforce constant-pool capacity and two-slot layout invariants
+- check signed wide-branch offset arithmetic
+- bound recursive annotation parsing
+- bound attribute parsing to its declared payload
+
+### Other
+- Merge pull request #911 from theseus-rs/code-metadata-relocation
+- Merge pull request #888 from theseus-rs/initial-frame-check
+- Merge pull request #885 from theseus-rs/category-two-stack-maps
+- Merge pull request #920 from theseus-rs/trailing-class-data
+- use java constants instead of literals
+- Merge pull request #881 from theseus-rs/switch-operands
+- update dependencies
+- update Rust to 1.99.0
+
 ## `ristretto_javac` - [0.34.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.33.0...ristretto_javac-v0.34.0) - 2026-09-27
 
 ### Other
