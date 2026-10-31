@@ -892,6 +892,28 @@ fn unvalidated_attribute_name_index() {
 }
 
 #[test]
+fn bad_local_variable_index() {
+    let mut class = base();
+    let mut test_method = method(&mut class, "f", "()V", 0, 0, vec![Return], None);
+    let table_name = class.constant_pool.add_utf8("LocalVariableTable").unwrap();
+    let variable_name = class.constant_pool.add_utf8("x").unwrap();
+    let descriptor_index = class.constant_pool.add_utf8("J").unwrap();
+    if let Attribute::Code { attributes, .. } = &mut test_method.attributes[0] {
+        attributes.push(Attribute::LocalVariableTable {
+            name_index: table_name,
+            variables: vec![LocalVariableTable {
+                start_pc: 0,
+                length: 1,
+                name_index: variable_name,
+                descriptor_index,
+                index: 65535,
+            }],
+        });
+    }
+    check(class, Some(test_method), false);
+}
+
+#[test]
 fn invalid_type_annotation_path_context() {
     let mut c = base();
     let n = c
@@ -912,4 +934,96 @@ fn invalid_type_annotation_path_context() {
         }],
     });
     check(c, None, false);
+}
+
+#[test]
+fn local_variable_ranges_use_instruction_indices() {
+    for generic in [false, true] {
+        for (start_pc, length, valid) in [
+            (0, 3, true),
+            (1, 2, true),
+            (2, 0, true),
+            (3, 0, false),
+            (0, 4, false),
+            (2, 2, false),
+            (2, u16::MAX, false),
+        ] {
+            let mut class = base();
+            let mut test_method = method(
+                &mut class,
+                "f",
+                "(Ljava/util/List;)V",
+                1,
+                1,
+                vec![Sipush(1), Pop, Return],
+                None,
+            );
+            let name_index = class.constant_pool.add_utf8("values").unwrap();
+            let attribute = if generic {
+                Attribute::LocalVariableTypeTable {
+                    name_index: class
+                        .constant_pool
+                        .add_utf8("LocalVariableTypeTable")
+                        .unwrap(),
+                    variable_types: vec![LocalVariableTypeTable {
+                        start_pc,
+                        length,
+                        name_index,
+                        signature_index: class
+                            .constant_pool
+                            .add_utf8("Ljava/util/List<Ljava/lang/String;>;")
+                            .unwrap(),
+                        index: 0,
+                    }],
+                }
+            } else {
+                Attribute::LocalVariableTable {
+                    name_index: class.constant_pool.add_utf8("LocalVariableTable").unwrap(),
+                    variables: vec![LocalVariableTable {
+                        start_pc,
+                        length,
+                        name_index,
+                        descriptor_index: class.constant_pool.add_utf8("Ljava/util/List;").unwrap(),
+                        index: 0,
+                    }],
+                }
+            };
+            if let Attribute::Code { attributes, .. } = &mut test_method.attributes[0] {
+                attributes.push(attribute);
+            }
+            check(class, Some(test_method), valid);
+        }
+    }
+}
+
+#[test]
+fn uninitialized_metadata_uses_instruction_indices() {
+    for (offset, valid) in [
+        (2, true),
+        (0, false),
+        (3, false),
+        (4, false),
+        (5, false),
+        (u16::MAX, false),
+    ] {
+        let mut class = base();
+        let object = class.constant_pool.add_class("java/lang/Object").unwrap();
+        let test_method = method(
+            &mut class,
+            "f",
+            "()V",
+            1,
+            0,
+            vec![Sipush(1), Pop, New(object), Pop, Return],
+            Some(vec![full(3, vec![], vec![T::Uninitialized { offset }])]),
+        );
+        class.methods.push(test_method);
+        let result = class.verify();
+        assert_eq!(result.is_ok(), valid, "offset {offset}: {result:?}");
+        if valid {
+            let mut bytes = Vec::new();
+            class.to_bytes(&mut bytes).unwrap();
+            ClassFile::from_bytes(&bytes).unwrap().verify().unwrap();
+        }
+    }
 }
