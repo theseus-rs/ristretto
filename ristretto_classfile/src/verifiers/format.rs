@@ -114,9 +114,9 @@ pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()
             return Err(invalid("Invalid constructor flags or descriptor"));
         }
     } else if name == "<clinit>" {
-        if descriptor != "()V"
+        if ret.is_some()
             || (class.version.major() >= JAVA_7.major()
-                && !flags.contains(MethodAccessFlags::STATIC))
+                && (!parameters.is_empty() || !flags.contains(MethodAccessFlags::STATIC)))
         {
             return Err(invalid("Invalid class initializer flags or descriptor"));
         }
@@ -164,7 +164,10 @@ pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()
         }
     }
     if code_count
-        != usize::from(!flags.intersects(MethodAccessFlags::ABSTRACT | MethodAccessFlags::NATIVE))
+        != usize::from(
+            name == "<clinit>"
+                || !flags.intersects(MethodAccessFlags::ABSTRACT | MethodAccessFlags::NATIVE),
+        )
     {
         return Err(invalid("Invalid number of Code attributes"));
     }
