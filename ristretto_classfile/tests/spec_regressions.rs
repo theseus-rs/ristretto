@@ -371,7 +371,7 @@ fn overwritten_long_slot_cannot_be_restored_by_stackmap() {
 #[test]
 fn uninitialized_constructor() {
     let mut c = base();
-    let mut m = method(&mut c, "<init>", "()V", 0, 1, vec![Return], None);
+    let mut m = method(&mut c, CONSTRUCTOR_NAME, "()V", 0, 1, vec![Return], None);
     m.access_flags = MethodAccessFlags::PUBLIC;
     check(c, Some(m), false);
 }
@@ -381,7 +381,7 @@ fn constructor_cannot_hide_uninitialized_this_by_overwriting_local_zero() {
     let mut class = base();
     let mut method = method(
         &mut class,
-        "<init>",
+        CONSTRUCTOR_NAME,
         "()V",
         1,
         1,
@@ -397,7 +397,7 @@ fn constructor_stack_map_cannot_clear_initialization_state() {
     let mut class = base();
     let mut method = method(
         &mut class,
-        "<init>",
+        CONSTRUCTOR_NAME,
         "()V",
         1,
         1,
@@ -421,7 +421,10 @@ fn wrong_constructor_owner() {
     let mut c = base();
     let a = c.constant_pool.add_class("java/lang/Object").unwrap();
     let b = c.constant_pool.add_class("java/lang/String").unwrap();
-    let nat = c.constant_pool.add_name_and_type("<init>", "()V").unwrap();
+    let nat = c
+        .constant_pool
+        .add_name_and_type(CONSTRUCTOR_NAME, "()V")
+        .unwrap();
     let init = c
         .constant_pool
         .add(Constant::MethodRef {
@@ -491,7 +494,7 @@ fn valid_constructor_calls_own_method() {
     let mut c = base();
     let init = c
         .constant_pool
-        .add_method_ref(c.super_class, "<init>", "()V")
+        .add_method_ref(c.super_class, CONSTRUCTOR_NAME, "()V")
         .unwrap();
     let call = c
         .constant_pool
@@ -502,7 +505,7 @@ fn valid_constructor_calls_own_method() {
     c.methods.push(f);
     let mut m = method(
         &mut c,
-        "<init>",
+        CONSTRUCTOR_NAME,
         "()V",
         1,
         1,
@@ -903,7 +906,7 @@ fn invoke_clinit() {
     let mut c = base();
     let r = c
         .constant_pool
-        .add_method_ref(c.super_class, "<clinit>", "()V")
+        .add_method_ref(c.super_class, CLASS_INITIALIZER_NAME, "()V")
         .unwrap();
     let m = method(
         &mut c,
@@ -1013,7 +1016,7 @@ fn int_dynamic_constant() {
 #[test]
 fn static_final_constructor() {
     let mut c = base();
-    let mut m = method(&mut c, "<init>", "()V", 0, 0, vec![Return], None);
+    let mut m = method(&mut c, CONSTRUCTOR_NAME, "()V", 0, 0, vec![Return], None);
     m.access_flags |= MethodAccessFlags::FINAL;
     check(c, Some(m), false);
 }
@@ -1021,7 +1024,15 @@ fn static_final_constructor() {
 #[test]
 fn invalid_clinit() {
     let mut c = base();
-    let mut m = method(&mut c, "<clinit>", "(I)V", 0, 2, vec![Return], None);
+    let mut m = method(
+        &mut c,
+        CLASS_INITIALIZER_NAME,
+        "(I)V",
+        0,
+        2,
+        vec![Return],
+        None,
+    );
     m.access_flags = MethodAccessFlags::PUBLIC;
     check(c, Some(m), false);
 }
@@ -1122,7 +1133,7 @@ fn class_initializer_name_and_type_in_enclosing_method() {
     let mut c = base();
     let method_index = c
         .constant_pool
-        .add_name_and_type("<clinit>", "()V")
+        .add_name_and_type(CLASS_INITIALIZER_NAME, "()V")
         .unwrap();
     c.attributes.push(Attribute::EnclosingMethod {
         name_index: c.constant_pool.add_utf8("EnclosingMethod").unwrap(),
@@ -1136,7 +1147,7 @@ fn class_initializer_name_and_type_in_enclosing_method() {
 fn class_initializer_method_reference_is_rejected() {
     let mut c = base();
     c.constant_pool
-        .add_method_ref(c.super_class, "<clinit>", "()V")
+        .add_method_ref(c.super_class, CLASS_INITIALIZER_NAME, "()V")
         .unwrap();
     check(c, None, false);
 }
@@ -1299,7 +1310,15 @@ fn invalid_type_annotation_path_context() {
 #[test]
 fn class_initializer_ignores_ordinary_method_flags() {
     let mut class = base();
-    let mut method = method(&mut class, "<clinit>", "()V", 0, 0, vec![Return], None);
+    let mut method = method(
+        &mut class,
+        CLASS_INITIALIZER_NAME,
+        "()V",
+        0,
+        0,
+        vec![Return],
+        None,
+    );
     method.access_flags = MethodAccessFlags::all();
     check(class.clone(), Some(method.clone()), true);
     method.attributes.clear();
@@ -1316,7 +1335,15 @@ fn legacy_class_initializer_has_no_receiver_and_can_have_parameters() {
         } else {
             (1, vec![Iload_0, Pop, Return])
         };
-        let mut method = method(&mut class, "<clinit>", descriptor, 1, locals, code, None);
+        let mut method = method(
+            &mut class,
+            CLASS_INITIALIZER_NAME,
+            descriptor,
+            1,
+            locals,
+            code,
+            None,
+        );
         method.access_flags = MethodAccessFlags::empty();
         check(class.clone(), Some(method.clone()), true);
         class.version = JAVA_7;

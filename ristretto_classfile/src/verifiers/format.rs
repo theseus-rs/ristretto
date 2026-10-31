@@ -2,8 +2,9 @@
 use super::error::{Result, VerifyError};
 use crate::attributes::Attribute;
 use crate::{
-    BaseType, ClassAccessFlags, ClassFile, Constant, FieldType, JAVA_7, JAVA_8, JAVA_9, JAVA_10,
-    JavaStr, Method, MethodAccessFlags, ReferenceKind, Version,
+    BaseType, CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, Constant,
+    FieldType, JAVA_7, JAVA_8, JAVA_9, JAVA_10, JavaStr, Method, MethodAccessFlags, ReferenceKind,
+    Version,
 };
 use std::collections::HashSet;
 
@@ -118,7 +119,7 @@ pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()
     let descriptor = class.constant_pool.try_get_utf8(method.descriptor_index)?;
     let (parameters, ret) = FieldType::parse_method_descriptor(descriptor)?;
     let flags = method.access_flags;
-    if name == "<init>" {
+    if name == CONSTRUCTOR_NAME {
         let disallowed = MethodAccessFlags::STATIC
             | MethodAccessFlags::FINAL
             | MethodAccessFlags::SYNCHRONIZED
@@ -131,7 +132,7 @@ pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()
         {
             return Err(invalid("Invalid constructor flags or descriptor"));
         }
-    } else if name == "<clinit>" {
+    } else if name == CLASS_INITIALIZER_NAME {
         if ret.is_some()
             || (class.version.major() >= JAVA_7.major()
                 && (!parameters.is_empty() || !flags.contains(MethodAccessFlags::STATIC)))
@@ -155,7 +156,8 @@ pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()
             }
         }
     }
-    let receiver = usize::from(!flags.contains(MethodAccessFlags::STATIC) && name != "<clinit>");
+    let receiver =
+        usize::from(!flags.contains(MethodAccessFlags::STATIC) && name != CLASS_INITIALIZER_NAME);
     let slots = receiver
         + parameters
             .iter()
@@ -183,7 +185,7 @@ pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()
     }
     if code_count
         != usize::from(
-            name == "<clinit>"
+            name == CLASS_INITIALIZER_NAME
                 || !flags.intersects(MethodAccessFlags::ABSTRACT | MethodAccessFlags::NATIVE),
         )
     {
@@ -365,11 +367,11 @@ fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
                 let descriptor = pool.try_get_utf8(*descriptor_index)?;
                 if descriptor.as_bytes().starts_with(b"(") {
                     let (_, ret) = FieldType::parse_method_descriptor(descriptor)?;
-                    if name == "<init>" {
+                    if name == CONSTRUCTOR_NAME {
                         if ret.is_some() {
                             return Err(invalid("Constructor descriptor must return void"));
                         }
-                    } else if name != "<clinit>" {
+                    } else if name != CLASS_INITIALIZER_NAME {
                         // Kotlin uses <clinit> in EnclosingMethod metadata. A NameAndType
                         // is not itself an invocation; method references are checked below.
                         member_name(name, true)?;
@@ -408,11 +410,11 @@ fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
             } => {
                 let (name, descriptor) = pool.try_get_name_and_type(*name_and_type_index)?;
                 let name = pool.try_get_utf8(*name)?;
-                if name != "<init>" || !matches!(constant, Constant::MethodRef { .. }) {
+                if name != CONSTRUCTOR_NAME || !matches!(constant, Constant::MethodRef { .. }) {
                     member_name(name, true)?;
                 }
                 let (_, ret) = FieldType::parse_method_descriptor(pool.try_get_utf8(*descriptor)?)?;
-                if name == "<init>" && ret.is_some() {
+                if name == CONSTRUCTOR_NAME && ret.is_some() {
                     return Err(invalid("Constructor reference must return void"));
                 }
             }
@@ -431,8 +433,9 @@ fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
                 {
                     let (name, _) = pool.try_get_name_and_type(*name_and_type_index)?;
                     let name = pool.try_get_utf8(*name)?;
-                    if (*reference_kind == ReferenceKind::NewInvokeSpecial) != (name == "<init>")
-                        || name == "<clinit>"
+                    if (*reference_kind == ReferenceKind::NewInvokeSpecial)
+                        != (name == CONSTRUCTOR_NAME)
+                        || name == CLASS_INITIALIZER_NAME
                     {
                         return Err(invalid("Illegal MethodHandle target name"));
                     }

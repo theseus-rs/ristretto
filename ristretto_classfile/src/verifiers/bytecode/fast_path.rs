@@ -21,7 +21,6 @@
 //!
 //! - [JVMS §4.10.1 - Verification by Type Checking](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1)
 
-use crate::FieldType;
 use crate::JavaStr;
 use crate::JavaString;
 use crate::attributes::{Attribute, ExceptionTableEntry, Instruction};
@@ -40,6 +39,7 @@ use crate::verifiers::bytecode::stackmap::DecodedStackMapTable;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
+use crate::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldType};
 use ahash::AHashSet;
 
 /// Extracted components from a Code attribute.
@@ -304,8 +304,10 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         let mut local_index = 0;
 
         // For non-static methods, local 0 is 'this'
-        if !method.access_flags.contains(MethodAccessFlags::STATIC) && method_name != "<clinit>" {
-            if method_name == "<init>" && current_class != "java/lang/Object" {
+        if !method.access_flags.contains(MethodAccessFlags::STATIC)
+            && method_name != CLASS_INITIALIZER_NAME
+        {
+            if method_name == CONSTRUCTOR_NAME && current_class != "java/lang/Object" {
                 frame.this_uninitialized = true;
                 frame.set_local(local_index, VerificationType::UninitializedThis)?;
             } else {
@@ -1121,7 +1123,7 @@ mod tests {
             .unwrap();
         let init_index = class_file
             .constant_pool
-            .add_method_ref(class_index, "<init>", "()V")
+            .add_method_ref(class_index, CONSTRUCTOR_NAME, "()V")
             .unwrap();
         let virtual_index = class_file
             .constant_pool
@@ -1289,7 +1291,7 @@ mod tests {
     #[test]
     fn test_fast_path_constructor_and_parameter_initial_frames() {
         let mut class_file = create_mock_class_file();
-        let init_name = class_file.constant_pool.add_utf8("<init>").unwrap();
+        let init_name = class_file.constant_pool.add_utf8(CONSTRUCTOR_NAME).unwrap();
         let descriptor = class_file
             .constant_pool
             .add_utf8("(JDLTestClass;)V")
@@ -1312,7 +1314,7 @@ mod tests {
             &constructor,
             &class_file,
             "TestClass",
-            "<init>",
+            CONSTRUCTOR_NAME,
             7,
             1,
         )

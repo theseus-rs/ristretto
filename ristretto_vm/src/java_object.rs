@@ -2,7 +2,7 @@ use crate::DefinedModule;
 use crate::Error::InternalError;
 use crate::Result;
 use crate::thread::Thread;
-use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_25, JavaStr};
+use ristretto_classfile::{CONSTRUCTOR_NAME, JAVA_8, JAVA_17, JAVA_25, JavaStr};
 use ristretto_classloader::{Class, ClassLoader, ClassLoaderType, Object, Reference, Value};
 use std::sync::Arc;
 
@@ -335,7 +335,7 @@ async fn to_class_loader_object(thread: &Thread, class_loader: &Arc<ClassLoader>
             .class("jdk.internal.loader.BuiltinClassLoader")
             .await?;
         let init_descriptor = "(Ljava/lang/String;Ljdk/internal/loader/BuiltinClassLoader;Ljdk/internal/loader/URLClassPath;)V";
-        let Some(init_method) = builtin_class.method("<init>", init_descriptor) else {
+        let Some(init_method) = builtin_class.method(CONSTRUCTOR_NAME, init_descriptor) else {
             return Err(InternalError(format!(
                 "No constructor found: BuiltinClassLoader.<init>{init_descriptor}"
             )));

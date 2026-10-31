@@ -1,7 +1,7 @@
 //! Method lookup and receiver selection over linked class hierarchies.
 
 use crate::{Class, Method, Value};
-use ristretto_classfile::{JAVA_25, MethodAccessFlags};
+use ristretto_classfile::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, JAVA_25, MethodAccessFlags};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -110,13 +110,13 @@ impl Class {
                     method,
                 });
             }
-            if name == "<init>" || name == "<clinit>" {
+            if name == CONSTRUCTOR_NAME || name == CLASS_INITIALIZER_NAME {
                 break;
             }
             current = candidate.parent()?;
         }
-        if name != "<init>"
-            && name != "<clinit>"
+        if name != CONSTRUCTOR_NAME
+            && name != CLASS_INITIALIZER_NAME
             && let Some(target) = interface_resolution_candidate(self, name, descriptor)?
         {
             return Ok(target);
@@ -265,7 +265,7 @@ impl Class {
                 resolved.declaring_class.name()
             )));
         }
-        if name == "<init>" {
+        if name == CONSTRUCTOR_NAME {
             return concrete_method(resolved.clone());
         }
         let mut lookup = self.clone();
@@ -653,8 +653,8 @@ mod tests {
             None,
             &[
                 ("run", MethodAccessFlags::PUBLIC),
-                ("<init>", MethodAccessFlags::PUBLIC),
-                ("<clinit>", MethodAccessFlags::STATIC),
+                (CONSTRUCTOR_NAME, MethodAccessFlags::PUBLIC),
+                (CLASS_INITIALIZER_NAME, MethodAccessFlags::STATIC),
             ],
         )?;
         let leaf = class("Leaf", Some(&base), None, &[])?;
@@ -666,7 +666,7 @@ mod tests {
             &resolved.method,
             &base.try_get_method("run", "()V")?
         ));
-        for name in ["<init>", "<clinit>", "missing"] {
+        for name in [CONSTRUCTOR_NAME, CLASS_INITIALIZER_NAME, "missing"] {
             assert!(matches!(
                 leaf.resolve_method(name, "()V"),
                 Err(MethodResolutionError::NoSuchMethod(_))

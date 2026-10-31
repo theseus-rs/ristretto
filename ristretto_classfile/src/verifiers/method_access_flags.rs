@@ -4,7 +4,7 @@ use crate::method::Method;
 use crate::method_access_flags::MethodAccessFlags;
 use crate::verifiers::error::Result;
 use crate::verifiers::error::VerifyError::InvalidMethodAccessFlags;
-use crate::{JAVA_1_2, JAVA_16};
+use crate::{CLASS_INITIALIZER_NAME, JAVA_1_2, JAVA_16};
 
 /// Verify the method `MethodAccessFlags`.
 ///
@@ -15,7 +15,7 @@ pub(crate) fn verify(class_file: &ClassFile<'_>, method: &Method) -> Result<()> 
     if class_file
         .constant_pool
         .try_get_utf8(method.name_index)
-        .is_ok_and(|name| name == "<clinit>")
+        .is_ok_and(|name| name == CLASS_INITIALIZER_NAME)
     {
         return Ok(());
     }

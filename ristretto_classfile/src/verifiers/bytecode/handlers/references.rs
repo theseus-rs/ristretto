@@ -18,7 +18,7 @@ use crate::verifiers::bytecode::frame::Frame;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
-use crate::{FieldType, JavaString};
+use crate::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldType, JavaString};
 
 /// Context for resolving constant pool entries.
 #[derive(Debug)]
@@ -455,7 +455,7 @@ pub fn handle_invoke<C: VerificationContext>(
     is_static: bool,
     context: &C,
 ) -> Result<Option<VerificationType>> {
-    if method_name == "<init>" || method_name == "<clinit>" {
+    if method_name == CONSTRUCTOR_NAME || method_name == CLASS_INITIALIZER_NAME {
         return Err(VerifyError::VerifyError(
             "<init> may only be invoked by invokespecial".to_string(),
         ));
@@ -544,7 +544,7 @@ pub fn handle_invokespecial<C: VerificationContext>(
     // Pop objectref
     let objectref = frame.pop()?;
 
-    if method_name == "<init>" {
+    if method_name == CONSTRUCTOR_NAME {
         // Constructor call; initialize the object
         match &objectref {
             VerificationType::Uninitialized(offset) => {
@@ -1590,7 +1590,14 @@ mod tests {
             .push(VerificationType::Object(JavaString::from("other/Class")))
             .unwrap();
 
-        let result = handle_invoke(&mut frame, "java/lang/String", "<init>", "()V", false, &ctx);
+        let result = handle_invoke(
+            &mut frame,
+            "java/lang/String",
+            CONSTRUCTOR_NAME,
+            "()V",
+            false,
+            &ctx,
+        );
         assert!(result.is_err());
     }
 
@@ -1655,7 +1662,7 @@ mod tests {
         handle_invokespecial(
             &mut frame,
             "java/lang/Object",
-            "<init>",
+            CONSTRUCTOR_NAME,
             "()V",
             "java/lang/Object",
             &ctx,
@@ -1674,7 +1681,7 @@ mod tests {
         handle_invokespecial(
             &mut frame,
             "java/lang/Object",
-            "<init>",
+            CONSTRUCTOR_NAME,
             "()V",
             "java/lang/Object",
             &ctx,
@@ -1690,7 +1697,7 @@ mod tests {
         frame.push(VerificationType::Uninitialized(0)).unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
-        handle_invokespecial(&mut frame, "Test", "<init>", "(I)V", "Test", &ctx).unwrap();
+        handle_invokespecial(&mut frame, "Test", CONSTRUCTOR_NAME, "(I)V", "Test", &ctx).unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1703,7 +1710,7 @@ mod tests {
         let result = handle_invokespecial(
             &mut frame,
             "java/lang/Object",
-            "<init>",
+            CONSTRUCTOR_NAME,
             "()V",
             "java/lang/Object",
             &ctx,
@@ -1760,7 +1767,8 @@ mod tests {
         frame.push(VerificationType::Uninitialized(0)).unwrap();
         frame.push(VerificationType::Float).unwrap();
 
-        let result = handle_invokespecial(&mut frame, "Test", "<init>", "(I)V", "Test", &ctx);
+        let result =
+            handle_invokespecial(&mut frame, "Test", CONSTRUCTOR_NAME, "(I)V", "Test", &ctx);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
@@ -1972,7 +1980,7 @@ mod tests {
         handle_invokespecial(
             &mut special_argument,
             "TestClass",
-            "<init>",
+            CONSTRUCTOR_NAME,
             "(J)V",
             "TestClass",
             &ctx,

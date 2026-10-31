@@ -19,7 +19,8 @@ use ristretto_classfile::verifiers::bytecode::{
 use ristretto_classfile::verifiers::context::VerificationContext;
 use ristretto_classfile::verifiers::error::{Result, VerifyError};
 use ristretto_classfile::{
-    ClassAccessFlags, ClassFile, Constant, ConstantPool, Method, MethodAccessFlags, Version,
+    CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, Constant, ConstantPool, Method,
+    MethodAccessFlags, Version,
 };
 
 /// Mock verification context for testing.
@@ -739,7 +740,7 @@ fn test_type_mismatch_error_formats_null() -> Result<()> {
 #[test]
 fn test_type_mismatch_error_formats_uninitialized_this() -> Result<()> {
     let mut class_file = create_test_class_file(Version::Java5 { minor: 0 })?;
-    let init_name = class_file.constant_pool.add_utf8("<init>")?;
+    let init_name = class_file.constant_pool.add_utf8(CONSTRUCTOR_NAME)?;
     let method = create_method_with_descriptor(
         MethodAccessFlags::PUBLIC,
         init_name,

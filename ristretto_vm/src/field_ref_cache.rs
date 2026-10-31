@@ -8,7 +8,10 @@ use crate::instruction::method_resolver::check_jpms_access;
 use crate::reference_cache::ReferenceCache;
 use dashmap::DashMap;
 use ristretto_classfile::attributes::Attribute;
-use ristretto_classfile::{BaseType, ClassAccessFlags, FieldAccessFlags, FieldType};
+use ristretto_classfile::{
+    BaseType, CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, FieldAccessFlags,
+    FieldType,
+};
 use ristretto_classloader::{Class, Field, Object, Value};
 use std::sync::{Arc, OnceLock, RwLock};
 
@@ -86,9 +89,9 @@ impl ResolvedFieldRef {
                 || (self.declaring_class.class_file().version >= ristretto_classfile::JAVA_9
                     && frame.method().name()
                         != if self.is_static() {
-                            "<clinit>"
+                            CLASS_INITIALIZER_NAME
                         } else {
-                            "<init>"
+                            CONSTRUCTOR_NAME
                         }))
         {
             return Err(IllegalAccessError(format!(

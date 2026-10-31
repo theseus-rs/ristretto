@@ -6,7 +6,7 @@ use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
 use crate::verifiers::frame::Frame;
 use crate::verifiers::types::VerificationType;
-use crate::{JavaStr, JavaString, Method};
+use crate::{CONSTRUCTOR_NAME, JavaStr, JavaString, Method};
 use std::collections::{HashMap, VecDeque};
 use std::io::Cursor;
 
@@ -264,7 +264,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
 
         // 'this' reference
         if !self.method.access_flags.contains(MethodAccessFlags::STATIC) {
-            if method_name == "<init>" {
+            if method_name == CONSTRUCTOR_NAME {
                 frame.locals[local_index] = VerificationType::UninitializedThis;
             } else {
                 frame.locals[local_index] = VerificationType::Object(class_name.to_java_string());
@@ -771,7 +771,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
 
                 let objectref = next_frame.pop()?;
 
-                if method_name == "<init>" {
+                if method_name == CONSTRUCTOR_NAME {
                     match objectref {
                         VerificationType::Uninitialized(new_offset) => {
                             let initialized_type =

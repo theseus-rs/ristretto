@@ -1187,7 +1187,7 @@ impl Compiler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ristretto_classfile::JavaString;
+    use ristretto_classfile::{CLASS_INITIALIZER_NAME, JavaString};
 
     #[test]
     fn test_compiler_new() {
@@ -1220,7 +1220,7 @@ mod tests {
     #[test]
     fn test_function_name() {
         let class_name = "java/lang/Object";
-        let method_name = "<clinit>";
+        let method_name = CLASS_INITIALIZER_NAME;
         let function_name = Compiler::function_name(class_name, method_name);
         assert_eq!("java_lang_Object__clinit", function_name);
     }
