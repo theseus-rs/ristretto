@@ -199,11 +199,39 @@ fn verify_attributes(
         {
             return Err(invalid("Duplicate attribute"));
         }
-        if let Attribute::Record { records, .. } = attribute {
-            for record in records {
-                member_name(pool.try_get_utf8(record.name_index)?, false)?;
-                verify_attributes(class, &record.attributes, L::RecordComponent)?;
+        match attribute {
+            Attribute::Record { records, .. } => {
+                for record in records {
+                    member_name(pool.try_get_utf8(record.name_index)?, false)?;
+                    verify_attributes(class, &record.attributes, L::RecordComponent)?;
+                }
             }
+            Attribute::RuntimeVisibleTypeAnnotations {
+                type_annotations, ..
+            }
+            | Attribute::RuntimeInvisibleTypeAnnotations {
+                type_annotations, ..
+            } => {
+                for annotation in type_annotations {
+                    let target = annotation.target_type.target_type();
+                    let allowed = match location {
+                        L::Class => matches!(target, 0x00 | 0x10 | 0x11),
+                        L::Field | L::RecordComponent => target == 0x13,
+                        L::Method => matches!(target, 0x01 | 0x12 | 0x14..=0x17),
+                        L::Code => (0x40..=0x4b).contains(&target),
+                        L::Any => true,
+                    };
+                    if !allowed
+                        || annotation.type_path.iter().any(|p| {
+                            p.type_path_kind > 3
+                                || (p.type_path_kind != 3 && p.type_argument_index != 0)
+                        })
+                    {
+                        return Err(invalid("Invalid type annotation target or path"));
+                    }
+                }
+            }
+            _ => {}
         }
     }
     Ok(())
