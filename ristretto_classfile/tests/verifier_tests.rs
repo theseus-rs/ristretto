@@ -167,7 +167,7 @@ fn test_class_verify_accepts_module_main_class_attribute() -> Result<()> {
     let mut class_file = create_test_class_file(Version::Java9 { minor: 0 })?;
     let main_class_index = class_file.constant_pool.add_class("Main")?;
     class_file.attributes.push(Attribute::ModuleMainClass {
-        name_index: 0,
+        name_index: class_file.constant_pool.add_utf8("ModuleMainClass")?,
         main_class_index,
     });
 
@@ -185,7 +185,7 @@ fn test_class_verify_accepts_attribute_optional_indexes() -> Result<()> {
         name_index: 3,
         descriptor_index: class_file.constant_pool.add_utf8("(I)V")?,
         attributes: vec![Attribute::MethodParameters {
-            name_index: 0,
+            name_index: class_file.constant_pool.add_utf8("MethodParameters")?,
             parameters: vec![MethodParameter {
                 name_index: parameter_name,
                 access_flags: MethodAccessFlags::empty(),
@@ -196,7 +196,7 @@ fn test_class_verify_accepts_attribute_optional_indexes() -> Result<()> {
     let inner_class_index = class_file.constant_pool.add_class("TestClass$Inner")?;
     let inner_name_index = class_file.constant_pool.add_utf8("Inner")?;
     class_file.attributes.push(Attribute::InnerClasses {
-        name_index: 0,
+        name_index: class_file.constant_pool.add_utf8("InnerClasses")?,
         classes: vec![InnerClass {
             class_info_index: inner_class_index,
             outer_class_info_index: 0,
@@ -208,7 +208,7 @@ fn test_class_verify_accepts_attribute_optional_indexes() -> Result<()> {
     let module_index = class_file.constant_pool.add_module("test.module")?;
     let module_version_index = class_file.constant_pool.add_utf8("1.0")?;
     class_file.attributes.push(Attribute::Module {
-        name_index: 0,
+        name_index: class_file.constant_pool.add_utf8("Module")?,
         module_name_index: module_index,
         flags: ModuleAccessFlags::empty(),
         version_index: 0,
@@ -414,7 +414,7 @@ fn test_java8_with_stackmap_uses_fast_path() -> Result<()> {
     let mut class_file = create_test_class_file(Version::Java8 { minor: 0 })?;
 
     // Add constant pool entries for StackMapTable
-    class_file
+    let stack_map_name = class_file
         .constant_pool
         .add(Constant::utf8("StackMapTable"))?;
 
@@ -442,7 +442,7 @@ fn test_java8_with_stackmap_uses_fast_path() -> Result<()> {
         code,
         exception_table: vec![],
         attributes: vec![Attribute::StackMapTable {
-            name_index: 6,
+            name_index: stack_map_name,
             frames: stack_map_frames,
         }],
     };

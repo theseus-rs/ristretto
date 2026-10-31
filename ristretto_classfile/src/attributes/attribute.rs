@@ -31,6 +31,55 @@ const VERSION_55_0: Version = JAVA_11;
 const VERSION_60_0: Version = JAVA_16;
 const VERSION_61_0: Version = JAVA_17;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum AttributeLocation {
+    Any,
+    Class,
+    Field,
+    Method,
+    Code,
+    RecordComponent,
+}
+
+impl AttributeLocation {
+    pub(crate) fn recognizes(self, name: &[u8]) -> bool {
+        use AttributeLocation::{Any, Class, Code, Field, Method, RecordComponent};
+        if self == Any {
+            return true;
+        }
+        match name {
+            b"ConstantValue" => self == Field,
+            b"Code"
+            | b"Exceptions"
+            | b"RuntimeVisibleParameterAnnotations"
+            | b"RuntimeInvisibleParameterAnnotations"
+            | b"AnnotationDefault"
+            | b"MethodParameters" => self == Method,
+            b"StackMapTable"
+            | b"LineNumberTable"
+            | b"LocalVariableTable"
+            | b"LocalVariableTypeTable" => self == Code,
+            b"InnerClasses"
+            | b"EnclosingMethod"
+            | b"SourceFile"
+            | b"SourceDebugExtension"
+            | b"BootstrapMethods"
+            | b"Module"
+            | b"ModulePackages"
+            | b"ModuleMainClass"
+            | b"NestHost"
+            | b"NestMembers"
+            | b"Record"
+            | b"PermittedSubclasses" => self == Class,
+            b"Synthetic" | b"Deprecated" => matches!(self, Class | Field | Method),
+            b"Signature" | b"RuntimeVisibleAnnotations" | b"RuntimeInvisibleAnnotations" => {
+                matches!(self, Class | Field | Method | RecordComponent)
+            }
+            _ => true,
+        }
+    }
+}
+
 /// Represents a class file attribute as defined in the Java Virtual Machine Specification.
 ///
 /// Attributes are used to provide additional information about class files, fields, methods, and code.
@@ -516,6 +565,44 @@ pub enum Attribute {
 }
 
 impl Attribute {
+    /// Returns the constant pool index of this attribute's name.
+    #[must_use]
+    pub fn name_index(&self) -> u16 {
+        match self {
+            Self::ConstantValue { name_index, .. }
+            | Self::Code { name_index, .. }
+            | Self::StackMapTable { name_index, .. }
+            | Self::Exceptions { name_index, .. }
+            | Self::InnerClasses { name_index, .. }
+            | Self::EnclosingMethod { name_index, .. }
+            | Self::Synthetic { name_index, .. }
+            | Self::Signature { name_index, .. }
+            | Self::SourceFile { name_index, .. }
+            | Self::SourceDebugExtension { name_index, .. }
+            | Self::LineNumberTable { name_index, .. }
+            | Self::LocalVariableTable { name_index, .. }
+            | Self::LocalVariableTypeTable { name_index, .. }
+            | Self::Deprecated { name_index, .. }
+            | Self::RuntimeVisibleAnnotations { name_index, .. }
+            | Self::RuntimeInvisibleAnnotations { name_index, .. }
+            | Self::RuntimeVisibleParameterAnnotations { name_index, .. }
+            | Self::RuntimeInvisibleParameterAnnotations { name_index, .. }
+            | Self::RuntimeVisibleTypeAnnotations { name_index, .. }
+            | Self::RuntimeInvisibleTypeAnnotations { name_index, .. }
+            | Self::AnnotationDefault { name_index, .. }
+            | Self::BootstrapMethods { name_index, .. }
+            | Self::MethodParameters { name_index, .. }
+            | Self::Module { name_index, .. }
+            | Self::ModulePackages { name_index, .. }
+            | Self::ModuleMainClass { name_index, .. }
+            | Self::NestHost { name_index, .. }
+            | Self::NestMembers { name_index, .. }
+            | Self::Record { name_index, .. }
+            | Self::PermittedSubclasses { name_index, .. }
+            | Self::Unknown { name_index, .. } => *name_index,
+        }
+    }
+
     /// Returns the name of the Attribute as a static string.
     ///
     /// This method returns the standard name of the attribute type
