@@ -76,7 +76,7 @@ pub(crate) mod permitted_subclasses;
 pub(crate) mod record;
 
 /// Validates generic signature grammar and type variable references.
-pub(crate) mod signature;
+pub mod signature;
 
 /// Defines verification types used in bytecode verification.
 pub(crate) mod types;
