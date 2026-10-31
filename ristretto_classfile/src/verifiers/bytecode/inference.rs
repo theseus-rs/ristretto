@@ -265,7 +265,8 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
 
         // For non-static methods, local 0 is 'this'
         if !self.method.access_flags.contains(MethodAccessFlags::STATIC) {
-            if self.method_name == "<init>" {
+            if self.method_name == "<init>" && self.current_class != "java/lang/Object" {
+                frame.this_uninitialized = true;
                 frame.set_local(local_index, VerificationType::UninitializedThis)?;
             } else {
                 let this_type =
@@ -516,6 +517,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                 }
             }
 
+            handler_frame.this_uninitialized = current_frame.this_uninitialized;
             // Push exception type
             let exception_type = if handler.catch_type == 0 {
                 VerificationType::java_lang_throwable()
