@@ -99,7 +99,11 @@ impl Method {
         let attribute_count = bytes.read_u16()? as usize;
         let mut attributes = Vec::with_capacity(attribute_count);
         for _ in 0..attribute_count {
-            let attribute = Attribute::from_bytes(constant_pool, bytes)?;
+            let attribute = Attribute::from_bytes_in(
+                constant_pool,
+                bytes,
+                crate::attributes::attribute::AttributeLocation::Method,
+            )?;
             attributes.push(attribute);
         }
 
@@ -238,7 +242,11 @@ mod test {
         constant_pool.add_utf8("ConstantValue")?;
         let attribute_data = [0, 1, 0, 0, 0, 2, 4, 2].to_vec();
         let mut attribute_bytes = ByteReader::new(&attribute_data);
-        let attribute = Attribute::from_bytes(&constant_pool, &mut attribute_bytes)?;
+        let attribute = Attribute::from_bytes_in(
+            &constant_pool,
+            &mut attribute_bytes,
+            crate::attributes::attribute::AttributeLocation::Method,
+        )?;
         let method = Method {
             access_flags: MethodAccessFlags::PUBLIC,
             name_index: 1,

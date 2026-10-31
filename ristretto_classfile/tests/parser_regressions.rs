@@ -244,3 +244,28 @@ fn oversized_constructed_code_is_not_serialized() {
             .is_err()
     );
 }
+
+#[test]
+fn unknown_attribute_context_and_version_preserve_payload() {
+    let mut class = ClassFile::from_bytes(include_bytes!("../../classes/Minimum.class")).unwrap();
+    class.version = ristretto_classfile::JAVA_8;
+    let index = class.constant_pool.add_utf8("Code").unwrap();
+    class.attributes.push(Attribute::Unknown {
+        name_index: index,
+        info: vec![1, 2],
+    });
+    let future = class.constant_pool.add_utf8("Record").unwrap();
+    class.attributes.push(Attribute::Unknown {
+        name_index: future,
+        info: vec![255],
+    });
+    let mut bytes = Vec::new();
+    class.to_bytes(&mut bytes).unwrap();
+    let parsed = ClassFile::from_bytes(&bytes).unwrap();
+    assert!(
+        matches!(parsed.attributes.last(), Some(Attribute::Unknown { info, .. }) if info == &[255])
+    );
+    let mut result = Vec::new();
+    parsed.to_bytes(&mut result).unwrap();
+    assert_eq!(bytes, result);
+}
