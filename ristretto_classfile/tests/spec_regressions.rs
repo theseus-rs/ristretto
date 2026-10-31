@@ -1466,3 +1466,88 @@ fn uninitialized_metadata_uses_instruction_indices() {
         }
     }
 }
+
+#[test]
+fn valid_legacy_jsr() {
+    let mut c = base();
+    c.version = JAVA_5;
+    let m = method(
+        &mut c,
+        "f",
+        "()V",
+        1,
+        1,
+        vec![Jsr(2), Return, Astore_0, Ret(0)],
+        None,
+    );
+    check(c, Some(m), true);
+}
+
+#[test]
+fn valid_dead_return_legacy() {
+    let mut c = base();
+    c.version = JAVA_5;
+    let m = method(&mut c, "f", "()V", 0, 0, vec![Return, Ireturn], None);
+    check(c, Some(m), true);
+}
+
+#[test]
+fn legacy_subroutine_multiple_call_sites() {
+    let mut class = base();
+    class.version = JAVA_5;
+    let method = method(
+        &mut class,
+        "f",
+        "()V",
+        1,
+        1,
+        vec![Jsr(3), Jsr(3), Return, Astore_0, Ret(0)],
+        None,
+    );
+    check(class, Some(method), true);
+}
+
+#[test]
+fn legacy_subroutine_recursive_call_is_rejected() {
+    let mut class = base();
+    class.version = JAVA_5;
+    let method = method(
+        &mut class,
+        "f",
+        "()V",
+        1,
+        1,
+        vec![Jsr(2), Return, Astore_0, Jsr(2), Ret(0)],
+        None,
+    );
+    check(class, Some(method), false);
+}
+
+#[test]
+fn jsr_rejects_uninitialized_references_in_locals_and_stack() {
+    for keep_on_stack in [false, true] {
+        let mut class = base();
+        class.version = JAVA_5;
+        let code = if keep_on_stack {
+            vec![
+                New(class.super_class),
+                Jsr(4),
+                Pop,
+                Return,
+                Astore_1,
+                Ret(1),
+            ]
+        } else {
+            vec![
+                New(class.super_class),
+                Astore_0,
+                Jsr(4),
+                Return,
+                Astore_1,
+                Ret(1),
+            ]
+        };
+        let method = method(&mut class, "f", "()V", 2, 2, code, None);
+        check(class, Some(method), false);
+    }
+}
