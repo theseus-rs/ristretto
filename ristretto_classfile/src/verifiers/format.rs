@@ -2,7 +2,8 @@
 use super::error::{Result, VerifyError};
 use crate::attributes::Attribute;
 use crate::{
-    BaseType, ClassAccessFlags, ClassFile, FieldType, JavaStr, Method, MethodAccessFlags, Version,
+    BaseType, ClassAccessFlags, ClassFile, Constant, FieldType, JavaStr, Method, MethodAccessFlags,
+    ReferenceKind, Version,
 };
 use std::collections::HashSet;
 
@@ -72,6 +73,7 @@ pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
     for method in &class.methods {
         verify_method(class, method)?;
     }
+    verify_constants(class)?;
     Ok(())
 }
 
@@ -148,5 +150,100 @@ pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()
         return Err(invalid("Invalid number of Code attributes"));
     }
     super::bytecode::constraints::verify_static(class, method)?;
+    Ok(())
+}
+
+fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
+    let pool = &class.constant_pool;
+    for constant in pool {
+        match constant {
+            Constant::Class(index) => class_name(pool.try_get_utf8(*index)?, true)?,
+            Constant::MethodType(index) => {
+                FieldType::parse_method_descriptor(pool.try_get_utf8(*index)?)?;
+            }
+            Constant::NameAndType {
+                name_index,
+                descriptor_index,
+            } => {
+                let name = pool.try_get_utf8(*name_index)?;
+                let descriptor = pool.try_get_utf8(*descriptor_index)?;
+                if descriptor.as_bytes().starts_with(b"(") {
+                    let (_, ret) = FieldType::parse_method_descriptor(descriptor)?;
+                    if name == "<init>" {
+                        if ret.is_some() {
+                            return Err(invalid("Constructor descriptor must return void"));
+                        }
+                    } else if name != "<clinit>" {
+                        // Kotlin uses <clinit> in EnclosingMethod metadata. A NameAndType
+                        // is not itself an invocation; method references are checked below.
+                        member_name(name, true)?;
+                    }
+                } else {
+                    member_name(name, false)?;
+                    FieldType::parse_java_str(descriptor)?;
+                }
+            }
+            Constant::FieldRef {
+                name_and_type_index,
+                ..
+            }
+            | Constant::Dynamic {
+                name_and_type_index,
+                ..
+            } => {
+                let (name, descriptor) = pool.try_get_name_and_type(*name_and_type_index)?;
+                member_name(
+                    pool.try_get_utf8(*name)?,
+                    matches!(constant, Constant::Dynamic { .. }),
+                )?;
+                FieldType::parse_java_str(pool.try_get_utf8(*descriptor)?)?;
+            }
+            Constant::MethodRef {
+                name_and_type_index,
+                ..
+            }
+            | Constant::InterfaceMethodRef {
+                name_and_type_index,
+                ..
+            }
+            | Constant::InvokeDynamic {
+                name_and_type_index,
+                ..
+            } => {
+                let (name, descriptor) = pool.try_get_name_and_type(*name_and_type_index)?;
+                let name = pool.try_get_utf8(*name)?;
+                if name != "<init>" || !matches!(constant, Constant::MethodRef { .. }) {
+                    member_name(name, true)?;
+                }
+                let (_, ret) = FieldType::parse_method_descriptor(pool.try_get_utf8(*descriptor)?)?;
+                if name == "<init>" && ret.is_some() {
+                    return Err(invalid("Constructor reference must return void"));
+                }
+            }
+            Constant::MethodHandle {
+                reference_kind,
+                reference_index,
+            } => {
+                if let Constant::MethodRef {
+                    name_and_type_index,
+                    ..
+                }
+                | Constant::InterfaceMethodRef {
+                    name_and_type_index,
+                    ..
+                } = pool.try_get(*reference_index)?
+                {
+                    let (name, _) = pool.try_get_name_and_type(*name_and_type_index)?;
+                    let name = pool.try_get_utf8(*name)?;
+                    if (*reference_kind == ReferenceKind::NewInvokeSpecial) != (name == "<init>")
+                        || name == "<clinit>"
+                    {
+                        return Err(invalid("Illegal MethodHandle target name"));
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
     Ok(())
 }
