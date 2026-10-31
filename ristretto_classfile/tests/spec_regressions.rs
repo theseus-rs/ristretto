@@ -492,3 +492,20 @@ fn valid_constructor_calls_own_method() {
     m.access_flags = MethodAccessFlags::PUBLIC;
     check(c, Some(m), true);
 }
+
+#[test]
+fn compact_frame_requires_promotion() {
+    let mut c = base();
+    let mut code = vec![Iinc(0, 0); 63];
+    code.push(Return);
+    let m = method(
+        &mut c,
+        "f",
+        "(I)V",
+        0,
+        1,
+        code,
+        Some(vec![StackFrame::SameFrame { frame_type: 63 }]),
+    );
+    check(c, Some(m), true);
+}
