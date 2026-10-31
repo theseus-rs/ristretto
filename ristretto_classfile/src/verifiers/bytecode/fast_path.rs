@@ -530,13 +530,8 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             self.log_pre_instruction_frame(offset, &current_frame);
             let instruction = self.instruction_at(index)?;
 
-            let (next_frame, falls_through) = self.execute_instruction_step(
-                offset,
-                index,
-                instruction,
-                current_frame.clone(),
-                state,
-            )?;
+            let (next_frame, falls_through) =
+                self.execute_instruction_step(offset, index, instruction, &current_frame, state)?;
 
             if !falls_through {
                 break;
@@ -573,16 +568,16 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         offset: u16,
         index: usize,
         instruction: &Instruction,
-        current_frame: Frame,
+        current_frame: &Frame,
         state: &mut StackMapWorkState,
     ) -> Result<(Frame, bool)> {
         let next_offset = self.next_offset(index);
         let (next_frame, successors, falls_through) =
-            self.execute_instruction(offset, index, instruction, current_frame)?;
+            self.execute_instruction(offset, index, instruction, current_frame.clone())?;
 
         self.process_exception_handlers(
             offset,
-            &next_frame,
+            current_frame,
             &mut state.anchor_states,
             &mut state.worklist,
         )?;
