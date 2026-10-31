@@ -16,7 +16,7 @@ use crate::display::indent_lines;
 use crate::error::Error::{InvalidAttributeLength, InvalidAttributeNameIndex};
 use crate::error::Result;
 use crate::version::Version;
-use crate::{JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_11, JAVA_16, JAVA_17, mutf8};
+use crate::{JAVA_1_0_2, JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_11, JAVA_16, JAVA_17, mutf8};
 use ahash::AHashMap;
 use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
@@ -564,6 +564,30 @@ pub enum Attribute {
     Unknown { name_index: u16, info: Vec<u8> },
 }
 
+fn minimum_major_version(name: &[u8]) -> u16 {
+    match name {
+        b"EnclosingMethod"
+        | b"Signature"
+        | b"SourceDebugExtension"
+        | b"LocalVariableTypeTable"
+        | b"RuntimeVisibleAnnotations"
+        | b"RuntimeInvisibleAnnotations"
+        | b"RuntimeVisibleParameterAnnotations"
+        | b"RuntimeInvisibleParameterAnnotations"
+        | b"AnnotationDefault" => JAVA_5.major(),
+        b"StackMapTable" => JAVA_6.major(),
+        b"BootstrapMethods" => JAVA_7.major(),
+        b"RuntimeVisibleTypeAnnotations"
+        | b"RuntimeInvisibleTypeAnnotations"
+        | b"MethodParameters" => JAVA_8.major(),
+        b"Module" | b"ModulePackages" | b"ModuleMainClass" => JAVA_9.major(),
+        b"NestHost" | b"NestMembers" => JAVA_11.major(),
+        b"Record" => JAVA_16.major(),
+        b"PermittedSubclasses" => JAVA_17.major(),
+        _ => JAVA_1_0_2.major(),
+    }
+}
+
 impl Attribute {
     /// Returns the constant pool index of this attribute's name.
     #[must_use]
@@ -702,8 +726,8 @@ impl Attribute {
             Attribute::SourceFile { .. } => *version >= VERSION_45_3,
             Attribute::SourceDebugExtension { .. } => *version >= VERSION_49_0,
             Attribute::LineNumberTable { .. } => *version >= VERSION_45_3,
-            Attribute::LocalVariableTable { .. } => *version >= VERSION_49_0,
-            Attribute::LocalVariableTypeTable { .. } => *version >= VERSION_45_3,
+            Attribute::LocalVariableTable { .. } => *version >= VERSION_45_3,
+            Attribute::LocalVariableTypeTable { .. } => *version >= VERSION_49_0,
             Attribute::Deprecated { .. } => *version >= VERSION_45_3,
             Attribute::RuntimeVisibleAnnotations { .. } => *version >= VERSION_49_0,
             Attribute::RuntimeInvisibleAnnotations { .. } => *version >= VERSION_49_0,
@@ -768,10 +792,21 @@ impl Attribute {
     /// - Returns `InvalidAttributeNameIndex` if the name index is invalid in the constant pool.
     /// - Returns `InvalidAttributeLength` if the attribute length doesn't match the expected length.
     /// - Returns other errors if deserialization of specific attribute types fails.
-    #[expect(clippy::too_many_lines)]
     pub fn from_bytes(
         constant_pool: &ConstantPool<'_>,
         bytes: &mut ByteReader<'_>,
+    ) -> Result<Attribute> {
+        Self::from_bytes_in(constant_pool, bytes, AttributeLocation::Any)
+    }
+
+    #[expect(
+        clippy::too_many_lines,
+        reason = "dispatch over class-file attribute formats"
+    )]
+    pub(crate) fn from_bytes_in(
+        constant_pool: &ConstantPool<'_>,
+        bytes: &mut ByteReader<'_>,
+        location: AttributeLocation,
     ) -> Result<Attribute> {
         let name_index = bytes.read_u16()?;
         let Some(Constant::Utf8(attribute_name)) = constant_pool.get_unchecked(name_index) else {
@@ -781,7 +816,15 @@ impl Attribute {
         let info_length = bytes.read_u32()?;
         let mut info = bytes.read_nested(info_length as usize)?;
         let bytes = &mut info;
-        let attribute = match attribute_name.as_bytes() {
+        let name = attribute_name.as_bytes();
+        let name = if location.recognizes(name)
+            && bytes.class_major_version >= minimum_major_version(name)
+        {
+            name
+        } else {
+            &[]
+        };
+        let attribute = match name {
             b"ConstantValue" => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
@@ -1181,7 +1224,8 @@ impl Attribute {
         let attributes_count = bytes.read_u16()?;
         let mut attributes = Vec::with_capacity(attributes_count as usize);
         for _ in 0..attributes_count {
-            let mut attribute = Attribute::from_bytes(constant_pool, bytes)?;
+            let mut attribute =
+                Attribute::from_bytes_in(constant_pool, bytes, AttributeLocation::Code)?;
             super::code_offsets::relocate(&mut attribute, |offset| {
                 lookup_byte_offset(byte_to_instruction_pairs, offset)
                     .ok_or(InvalidInstructionOffset(u32::from(offset)))
@@ -1978,7 +2022,6 @@ impl fmt::Display for Attribute {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::JAVA_1_0_2;
     use crate::attributes::annotation_value_pair::AnnotationValuePair;
     use crate::attributes::nested_class_access_flags::NestedClassAccessFlags;
     use crate::attributes::{
@@ -2057,9 +2100,9 @@ mod test {
     #[expect(clippy::too_many_lines)]
     #[test]
     fn test_code() -> Result<()> {
-        let constant = Attribute::ConstantValue {
+        let constant = Attribute::Unknown {
             name_index: 2,
-            constant_value_index: 42,
+            info: vec![0, 42],
         };
         let line_number_table = Attribute::LineNumberTable {
             name_index: 3,
@@ -2149,7 +2192,7 @@ mod test {
                  7: nop
                  8: return
               [ExceptionTableEntry { range_pc: 0..2, handler_pc: 0, catch_type: 4 }]
-              ConstantValue { name_index: 2, constant_value_index: 42 }
+              Unknown { name_index: 2, info: [0, 42] }
               LineNumberTable:
                 line 1: 0
               StackMapTable: number_of_entries = 7
@@ -2447,7 +2490,7 @@ mod test {
             "LocalVariableTypeTable { name_index: 1, variable_types: [LocalVariableTypeTable { start_pc: 1, length: 2, name_index: 3, signature_index: 4, index: 5 }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
+        test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
     }
 
     #[test]
@@ -2797,9 +2840,9 @@ mod test {
 
     #[test]
     fn test_record() -> Result<()> {
-        let constant = Attribute::ConstantValue {
+        let constant = Attribute::Unknown {
             name_index: 1,
-            constant_value_index: 42,
+            info: vec![0, 42],
         };
         let record = Record {
             name_index: 2,
@@ -2824,7 +2867,7 @@ mod test {
         assert!(!attribute.valid_for_version(&VERSION_45_0));
 
         assert_eq!(
-            "Record { name_index: 4, records: [Record { name_index: 2, descriptor_index: 3, attributes: [ConstantValue { name_index: 1, constant_value_index: 42 }] }] }",
+            "Record { name_index: 4, records: [Record { name_index: 2, descriptor_index: 3, attributes: [Unknown { name_index: 1, info: [0, 42] }] }] }",
             attribute.to_string()
         );
 
