@@ -1,5 +1,5 @@
 use crate::FieldType;
-use crate::JAVA_6;
+use crate::JAVA_7;
 use crate::attributes::Attribute;
 use crate::attributes::ExceptionTableEntry;
 use crate::attributes::Instruction;
@@ -199,12 +199,16 @@ pub(crate) fn verify(
         }
     }
 
-    // Verify that all jump targets have a corresponding StackFrame (if StackMapTable is present and version >= 50)
-    if class_file.version >= JAVA_6 {
+    // Verify that all jump targets have a corresponding StackFrame for Java 7 and later.
+    if class_file.version.major() >= JAVA_7.major() {
         if !jump_target_indices.is_empty() && !has_stack_map {
             return Err(VerificationError {
                 context: "Code Attribute".to_string(),
-                message: "StackMapTable missing for class version >= 50.0".to_string(),
+                message: format!(
+                    "StackMapTable missing for class version >= {}.{}",
+                    JAVA_7.major(),
+                    JAVA_7.minor()
+                ),
             });
         }
 
