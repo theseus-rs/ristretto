@@ -19,7 +19,6 @@
 //!
 //! - [JVMS §4.10 - Verification of class Files](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10)
 
-use crate::JAVA_6;
 use crate::attributes::Attribute;
 use crate::class_file::ClassFile;
 use crate::method::Method;
@@ -31,6 +30,7 @@ use crate::verifiers::bytecode::fast_path::{FastPathResult, FastPathVerifier};
 use crate::verifiers::bytecode::inference::InferenceVerifier;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
+use crate::{CLASS_INITIALIZER_NAME, JAVA_6};
 
 /// Verification result with additional metadata.
 #[derive(Debug)]
@@ -120,7 +120,7 @@ pub fn verify_method<C: VerificationContext>(
     if method
         .access_flags
         .intersects(MethodAccessFlags::NATIVE | MethodAccessFlags::ABSTRACT)
-        && class_file.constant_pool.try_get_utf8(method.name_index)? != "<clinit>"
+        && class_file.constant_pool.try_get_utf8(method.name_index)? != CLASS_INITIALIZER_NAME
     {
         // Verify they don't have Code attribute
         let has_code = method

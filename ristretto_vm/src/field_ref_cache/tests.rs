@@ -28,9 +28,9 @@ fn definition(
         })
         .collect::<Result<Vec<_>>>()?;
     let mut methods = Vec::new();
-    for name in ["test", "<init>", "<clinit>"] {
+    for name in ["test", CONSTRUCTOR_NAME, CLASS_INITIALIZER_NAME] {
         methods.push(ristretto_classfile::Method {
-            access_flags: if name == "<clinit>" {
+            access_flags: if name == CLASS_INITIALIZER_NAME {
                 MethodAccessFlags::STATIC
             } else {
                 MethodAccessFlags::PUBLIC
@@ -235,7 +235,11 @@ async fn final_writes_are_checked_in_each_frame_on_cache_hits() -> Result<()> {
         let initializer = frame(
             &thread,
             caller.class(),
-            if is_static { "<clinit>" } else { "<init>" },
+            if is_static {
+                CLASS_INITIALIZER_NAME
+            } else {
+                CONSTRUCTOR_NAME
+            },
         )?;
         let resolved = resolve_field_ref(&initializer, index).await?;
         resolved.check_write(&initializer)?;

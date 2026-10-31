@@ -1,4 +1,3 @@
-use crate::FieldType;
 use crate::JAVA_7;
 use crate::attributes::Attribute;
 use crate::attributes::ExceptionTableEntry;
@@ -11,6 +10,7 @@ use crate::verifiers::error::Result;
 use crate::verifiers::error::VerifyError::{
     InvalidInstructionOffset, InvalidStackFrameOffset, VerificationError,
 };
+use crate::{CLASS_INITIALIZER_NAME, FieldType};
 use ahash::AHashSet;
 
 /// Verify the `Code` attribute.
@@ -40,7 +40,7 @@ pub(crate) fn verify(
             && !class_file
                 .constant_pool
                 .try_get_utf8(method.name_index)
-                .is_ok_and(|name| name == "<clinit>")
+                .is_ok_and(|name| name == CLASS_INITIALIZER_NAME)
         {
             required_locals += 1;
         }

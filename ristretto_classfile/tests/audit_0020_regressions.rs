@@ -7,7 +7,9 @@ use ristretto_classfile::attributes::{Attribute, ExceptionTableEntry, Instructio
 use ristretto_classfile::verifiers::bytecode::{VerifierConfig, verify_class};
 use ristretto_classfile::verifiers::context::VerificationContext;
 use ristretto_classfile::verifiers::error::Result as VerifyResult;
-use ristretto_classfile::{ClassAccessFlags, ClassFile, JAVA_5, Method, MethodAccessFlags, Result};
+use ristretto_classfile::{
+    CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, JAVA_5, Method, MethodAccessFlags, Result,
+};
 
 struct Context;
 impl VerificationContext for Context {
@@ -33,7 +35,7 @@ fn constructor_handler(retry_alias: Option<Instruction>) -> Result<ClassFile<'st
     class.super_class = class.constant_pool.add_class("java/lang/Object")?;
     let init = class
         .constant_pool
-        .add_method_ref(class.super_class, "<init>", "()V")?;
+        .add_method_ref(class.super_class, CONSTRUCTOR_NAME, "()V")?;
     let mut code = vec![
         New(class.super_class),
         Dup,
@@ -102,9 +104,10 @@ fn failed_super_constructor_handler_must_not_return() -> Result<()> {
         };
         class.this_class = class.constant_pool.add_class("ConstructorHandler")?;
         class.super_class = class.constant_pool.add_class("java/lang/Object")?;
-        let init = class
-            .constant_pool
-            .add_method_ref(class.super_class, "<init>", "()V")?;
+        let init =
+            class
+                .constant_pool
+                .add_method_ref(class.super_class, CONSTRUCTOR_NAME, "()V")?;
         let mut code = vec![Aload_0, Invokespecial(init), Return];
         if rethrow {
             code.push(Athrow);
@@ -113,7 +116,7 @@ fn failed_super_constructor_handler_must_not_return() -> Result<()> {
         }
         class.methods.push(Method {
             access_flags: MethodAccessFlags::PUBLIC,
-            name_index: class.constant_pool.add_utf8("<init>")?,
+            name_index: class.constant_pool.add_utf8(CONSTRUCTOR_NAME)?,
             descriptor_index: class.constant_pool.add_utf8("()V")?,
             attributes: vec![Attribute::Code {
                 name_index: class.constant_pool.add_utf8("Code")?,

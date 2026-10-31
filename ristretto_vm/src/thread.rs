@@ -13,7 +13,10 @@ use crate::{Frame, Result, VM, jit};
 
 use parking_lot::RwLock as ParkingRwLock;
 use ristretto_classfile::attributes::Attribute;
-use ristretto_classfile::{FieldAccessFlags, FieldType, JavaStr, MethodAccessFlags};
+use ristretto_classfile::{
+    CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldAccessFlags, FieldType, JavaStr,
+    MethodAccessFlags,
+};
 use ristretto_classloader::{Class, ClassLoaderType, Method, Object, Reference, Value};
 use ristretto_intrinsics::get_monitor_id;
 use ristretto_macros::async_method;
@@ -1231,7 +1234,10 @@ impl Thread {
         let descriptor = &method[index..];
         let resolved = class.resolve_method(name, descriptor)?;
         let parameters = process_values(self, parameters).await?;
-        let target = if resolved.method.is_static() || name == "<init>" || name == "<clinit>" {
+        let target = if resolved.method.is_static()
+            || name == CONSTRUCTOR_NAME
+            || name == CLASS_INITIALIZER_NAME
+        {
             resolved
         } else {
             let receiver = parameters
@@ -1740,7 +1746,7 @@ impl Thread {
         let class_name = class_name.as_ref();
         let descriptor = &format!("({})V", descriptor.as_ref());
         let class = self.class(class_name).await?;
-        let Some(constructor) = class.method("<init>", descriptor) else {
+        let Some(constructor) = class.method(CONSTRUCTOR_NAME, descriptor) else {
             return Err(InternalError(format!(
                 "No constructor found: {class_name}.<init>{descriptor}"
             )));
@@ -2613,7 +2619,7 @@ mod tests {
         let mut constant_pool = ConstantPool::default();
         let this_class = constant_pool.add_class("DelayedThread")?;
         let super_class = constant_pool.add_class("java/lang/Thread")?;
-        let constructor = constant_pool.add_method_ref(super_class, "<init>", "()V")?;
+        let constructor = constant_pool.add_method_ref(super_class, CONSTRUCTOR_NAME, "()V")?;
         let sleep = constant_pool.add_method_ref(super_class, "sleep", "(J)V")?;
         let delay = constant_pool.add_long(100)?;
         let descriptor = constant_pool.add_utf8("()V")?;
@@ -2621,7 +2627,7 @@ mod tests {
         let mut methods = Vec::new();
         for (name, code) in [
             (
-                "<init>",
+                CONSTRUCTOR_NAME,
                 vec![
                     Instruction::Aload_0,
                     Instruction::Invokespecial(constructor),

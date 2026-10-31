@@ -4,7 +4,10 @@ use super::handlers::references::ConstantPoolResolver;
 use super::type_system::VerificationType;
 use crate::attributes::{Attribute, Instruction};
 use crate::verifiers::error::{Result, VerifyError};
-use crate::{ClassFile, Constant, FieldType, JAVA_7, Method, MethodAccessFlags};
+use crate::{
+    CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassFile, Constant, FieldType, JAVA_7, Method,
+    MethodAccessFlags,
+};
 
 fn invalid(message: &str) -> VerifyError {
     VerifyError::VerifyError(message.to_string())
@@ -37,7 +40,7 @@ pub(crate) fn verify_static(class: &ClassFile<'_>, method: &Method) -> Result<()
         .iter()
         .filter(|a| matches!(a, Attribute::Code { .. }))
         .collect();
-    let needs_code = class.constant_pool.try_get_utf8(method.name_index)? == "<clinit>"
+    let needs_code = class.constant_pool.try_get_utf8(method.name_index)? == CLASS_INITIALIZER_NAME
         || !method
             .access_flags
             .intersects(MethodAccessFlags::ABSTRACT | MethodAccessFlags::NATIVE);
@@ -120,8 +123,9 @@ pub(crate) fn verify_static(class: &ClassFile<'_>, method: &Method) -> Result<()
                 ));
             }
             let (_, name, descriptor) = resolver.resolve_method_ref(index)?;
-            if name == "<clinit>"
-                || (name == "<init>" && !matches!(instruction, Instruction::Invokespecial(_)))
+            if name == CLASS_INITIALIZER_NAME
+                || (name == CONSTRUCTOR_NAME
+                    && !matches!(instruction, Instruction::Invokespecial(_)))
             {
                 return Err(invalid("Illegal invocation of a special method"));
             }
@@ -248,7 +252,7 @@ pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
     match instruction {
         Instruction::Invokespecial(index) => {
             let (owner, name, descriptor) = resolver.resolve_method_ref(*index)?;
-            if name == "<init>" {
+            if name == CONSTRUCTOR_NAME {
                 match receiver(frame, &descriptor)? {
                     VerificationType::Uninitialized(offset) => {
                         let Some(Instruction::New(class_index)) = code.get(usize::from(*offset))
@@ -341,7 +345,7 @@ pub(super) fn invalidate_constructor_receiver(
 ) -> Result<()> {
     if let Some(Instruction::Invokespecial(index)) = code.get(usize::from(offset)) {
         let (_, name, descriptor) = ConstantPoolResolver::new(class).resolve_method_ref(*index)?;
-        if name == "<init>" {
+        if name == CONSTRUCTOR_NAME {
             let object = receiver(before, &descriptor)?;
             for local in &mut handler.locals {
                 if local == object {
@@ -369,9 +373,10 @@ mod tests {
     #[test]
     fn constructor_requires_an_allocation_receiver() -> Result<()> {
         let mut class = class()?;
-        let constructor = class
-            .constant_pool
-            .add_method_ref(class.this_class, "<init>", "()V")?;
+        let constructor =
+            class
+                .constant_pool
+                .add_method_ref(class.this_class, CONSTRUCTOR_NAME, "()V")?;
         let code = [Instruction::Nop, Instruction::New(class.this_class)];
         for (receiver, valid) in [
             (VerificationType::Uninitialized(1), true),
@@ -400,7 +405,7 @@ mod tests {
         let constructor =
             class
                 .constant_pool
-                .add_method_ref(class.this_class, "<init>", "(JD)V")?;
+                .add_method_ref(class.this_class, CONSTRUCTOR_NAME, "(JD)V")?;
         let mut frame = Frame::new(0, 5);
         frame.push(VerificationType::Uninitialized(0))?;
         frame.push_category2(VerificationType::Long)?;
@@ -425,7 +430,10 @@ mod tests {
                     class.super_class = 0;
                 }
                 let owner = class.constant_pool.add_class(owner)?;
-                let constructor = class.constant_pool.add_method_ref(owner, "<init>", "()V")?;
+                let constructor =
+                    class
+                        .constant_pool
+                        .add_method_ref(owner, CONSTRUCTOR_NAME, "()V")?;
                 let mut frame = Frame::new(0, 1);
                 frame.push(VerificationType::UninitializedThis)?;
                 let result = verify_state(

@@ -2,7 +2,7 @@
 
 use ristretto_classfile::attributes::{Attribute, Instruction, LineNumber, MaxLocals, MaxStack};
 use ristretto_classfile::{
-    ClassAccessFlags, ClassFile, ConstantPool, JAVA_21, MethodAccessFlags, Result,
+    CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, ConstantPool, JAVA_21, MethodAccessFlags, Result,
 };
 use std::fs;
 
@@ -24,7 +24,7 @@ fn main() -> Result<()> {
 fn generate_class() -> Result<Vec<u8>> {
     let mut constant_pool = ConstantPool::default();
     let super_class = constant_pool.add_class("java/lang/Object")?;
-    let object_init = constant_pool.add_method_ref(super_class, "<init>", "()V")?;
+    let object_init = constant_pool.add_method_ref(super_class, CONSTRUCTOR_NAME, "()V")?;
     let system_class = constant_pool.add_class("java/lang/System")?;
     let println_field =
         constant_pool.add_field_ref(system_class, "out", "Ljava/io/PrintStream;")?;
@@ -135,7 +135,7 @@ mod test {
             .iter()
             .map(|method| class_file.constant_pool.try_get_utf8(method.name_index))
             .collect::<Result<Vec<_>>>()?;
-        assert_eq!(vec!["<init>", "main"], method_names);
+        assert_eq!(vec![CONSTRUCTOR_NAME, "main"], method_names);
         Ok(())
     }
 }

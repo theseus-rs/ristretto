@@ -7,6 +7,12 @@ use crate::method_access_flags::MethodAccessFlags;
 use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
 
+/// The name of a JVM class initialization method.
+pub const CLASS_INITIALIZER_NAME: &str = "<clinit>";
+
+/// The name of a JVM instance initialization method (constructor).
+pub const CONSTRUCTOR_NAME: &str = "<init>";
+
 /// Method.
 ///
 /// Represents a method in a Java class file, including its access flags, name, descriptor, and

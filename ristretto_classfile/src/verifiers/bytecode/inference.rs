@@ -41,7 +41,7 @@ use crate::verifiers::bytecode::handlers::references::ConstantPoolResolver;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
-use crate::{FieldType, JavaString};
+use crate::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldType, JavaString};
 
 /// Type inference verifier using iterative dataflow analysis.
 ///
@@ -441,9 +441,9 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
 
         // For non-static methods, local 0 is 'this'
         if !self.method.access_flags.contains(MethodAccessFlags::STATIC)
-            && self.method_name != "<clinit>"
+            && self.method_name != CLASS_INITIALIZER_NAME
         {
-            if self.method_name == "<init>" && self.current_class != "java/lang/Object" {
+            if self.method_name == CONSTRUCTOR_NAME && self.current_class != "java/lang/Object" {
                 frame.this_uninitialized = true;
                 frame.set_local(local_index, VerificationType::UninitializedThis)?;
             } else {
@@ -821,7 +821,7 @@ mod tests {
             .unwrap();
         let init_index = class_file
             .constant_pool
-            .add_method_ref(class_index, "<init>", "()V")
+            .add_method_ref(class_index, CONSTRUCTOR_NAME, "()V")
             .unwrap();
         let virtual_index = class_file
             .constant_pool
@@ -1115,7 +1115,7 @@ mod tests {
     #[test]
     fn test_constructor_and_parameter_initial_frames() {
         let mut class_file = create_mock_class_file();
-        let init_name = class_file.constant_pool.add_utf8("<init>").unwrap();
+        let init_name = class_file.constant_pool.add_utf8(CONSTRUCTOR_NAME).unwrap();
         let descriptor = class_file
             .constant_pool
             .add_utf8("(JDLTestClass;)V")

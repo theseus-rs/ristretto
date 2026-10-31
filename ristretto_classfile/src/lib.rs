@@ -122,7 +122,7 @@ pub use field::Field;
 pub use field_access_flags::FieldAccessFlags;
 pub use field_type::FieldType;
 pub use java_string::{JavaStr, JavaString};
-pub use method::Method;
+pub use method::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, Method};
 pub use method_access_flags::MethodAccessFlags;
 pub use reference_kind::ReferenceKind;
 pub use verifiers::VerifyMode;
