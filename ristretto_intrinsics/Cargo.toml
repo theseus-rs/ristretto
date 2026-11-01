@@ -28,11 +28,11 @@ jiff = { workspace = true }
 libjpeg-turbo-rs = { workspace = true }
 parking_lot = { workspace = true }
 portable-atomic = { workspace = true }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.34.0" }
-ristretto_classloader = { path = "../ristretto_classloader", version = "0.34.0", default-features = false }
-ristretto_gc = { path = "../ristretto_gc", version = "0.34.0" }
-ristretto_macros = { path = "../ristretto_macros", version = "0.34.0" }
-ristretto_types = { path = "../ristretto_types", version = "0.34.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.34.1" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.34.1", default-features = false }
+ristretto_gc = { path = "../ristretto_gc", version = "0.34.1" }
+ristretto_macros = { path = "../ristretto_macros", version = "0.34.1" }
+ristretto_types = { path = "../ristretto_types", version = "0.34.1" }
 sys-locale = { workspace = true }
 tracing = { workspace = true }
 zerocopy = { workspace = true }
@@ -123,7 +123,7 @@ audio = [
 proc-macro2 = { workspace = true }
 quote = { workspace = true }
 syn = { workspace = true, features = ["full", "extra-traits"] }
-ristretto_test_util = { path = "../ristretto_test_util", version = "0.34.0" }
+ristretto_test_util = { path = "../ristretto_test_util", version = "0.34.1" }
 # Keep this test-only dependency out of published manifests: the VM depends on this crate.
 ristretto_vm = { path = "../ristretto_vm", default-features = false }
 tempfile = { workspace = true }
@@ -143,4 +143,4 @@ ignored = [
 proc-macro2 = { workspace = true }
 quote = { workspace = true }
 syn = { workspace = true, features = ["full", "extra-traits"] }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.34.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.34.1" }

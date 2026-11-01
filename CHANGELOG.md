@@ -7,6 +7,266 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_javac` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.34.0...ristretto_javac-v0.34.1) - 2026-11-01
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_java` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/v0.34.0...v0.34.1) - 2026-11-01
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- preserve source debug payloads with isolated UTF-16 surrogates
+- validate modified UTF-8 before decoding
+- accept legal record component descriptors and repeated components
+- accept empty and duplicate PermittedSubclasses entries
+- accept duplicate NestMembers entries permitted by the specification
+- scale type-inference work limits with method length
+- implement context-sensitive legacy jsr and ret verification
+- respect attribute locations and class-file version gates
+- validate local-variable ranges and uninitialized stack-map offsets
+- validate module-info structure and module table invariants
+- validate bootstrap handle kinds and loadable arguments
+- honor special class-initializer flags and legacy descriptors
+- expose signature validation with enclosing and recursive type bounds
+- scope verification caching to exact inputs and context revisions
+- validate type-annotation context and type paths
+- validate attribute names and singleton cardinality
+- check field descriptors, cached field types and ConstantValue types
+- reject duplicate field and method signatures
+- validate constant-pool member names, descriptors and handle targets
+- correct zero-offset stack-map deltas and reject arithmetic overflow
+- validate class names, superclass rules and interface identity
+- validate method names, flags, parameters and Code cardinality
+- validate instruction operands including unreachable code
+- derive ldc and ldc2_w dynamic constant types from descriptors
+- require Throwable-compatible values for athrow
+- check invokespecial receiver and symbolic owner against the caller
+- preserve narrow primitive array component types
+- reject checkcast of an uninitialized object
+- enforce return-opcode compatibility in bytecode dispatch
+- check catch types and complete handler frame compatibility
+- expose resolved member access checks to the verification context
+- allow type-inference fallback for class-file version 50
+- promote compact stack-map frames when byte deltas exceed 63
+- invalidate constructor receiver aliases on exceptional paths
+- propagate the pre-instruction frame to exception handlers
+- enforce constructor receiver identity and uninitialized field access
+- track constructor initialization independently of local zero
+- invalidate category-two locals when their second slot is overwritten
+- verify stack-map blocks and require frames after control transfers
+- relocate local-variable, type-annotation and uninitialized offsets
+- reject promotion of unusable Top locals to concrete types
+- check explicit frame zero against the method entry state
+- validate stack-map tags, cardinality and frame bounds
+- reject trailing data in both class-file parsing entry points
+- account for category-two stack-map values and chop entries
+- validate incoming frames on already visited control-flow edges
+- exclude unused local padding when decoding append frames
+- retry incomplete runtime downloads
+- enforce constant-pool capacity and two-slot layout invariants
+- use logical instruction coordinates in bytecode verification
+- reject malformed switch ranges, counts and key order
+- enforce constant-pool capacity and two-slot layout invariants
+- check signed wide-branch offset arithmetic
+- bound recursive annotation parsing
+- bound attribute parsing to its declared payload
+- correct Corretto version ordering and platform specific archive selection
+- remove publish dependency cycle and add workspace publishing check
+- return null when speculative member resolution fails
+- provide Reference.get0 on Java 21
+- push a return value for every non-void intrinsic call
+- stop treating $$ in class names as a hidden-class marker
+
+### Other
+- update dependencies
+- centralize JVM initializer method names
+- Merge pull request #895 from theseus-rs/failed-constructor-aliases
+- Merge pull request #894 from theseus-rs/exception-input-state
+- Merge pull request #911 from theseus-rs/code-metadata-relocation
+- Merge pull request #888 from theseus-rs/initial-frame-check
+- Merge pull request #885 from theseus-rs/category-two-stack-maps
+- Merge pull request #920 from theseus-rs/trailing-class-data
+- use java constants instead of literals
+- Merge pull request #881 from theseus-rs/switch-operands
+- update dependencies
+- update Rust to 1.99.0
+- update java versions
+- update Cargo.toml dependencies
+- Merge branch 'main' into fix/speculative-membername
+- Merge pull request #958 from theseus-rs/workspace-publishing
+- Merge pull request #944 from icefery/fix/cglib-generated-name
+- Merge branch 'main' into fix/intrinsic-null-return
+- Merge branch 'main' into fix/cglib-generated-name
+
+## `ristretto_resolver` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_resolver-v0.34.0...ristretto_resolver-v0.34.1) - 2026-11-01
+
+### Other
+- update Rust to 1.99.0
+
+## `ristretto_pom` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.34.0...ristretto_pom-v0.34.1) - 2026-11-01
+
+### Other
+- update Rust to 1.99.0
+
+## `ristretto_vm` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.34.0...ristretto_vm-v0.34.1) - 2026-11-01
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- provide Reference.get0 on Java 21
+- push a return value for every non-void intrinsic call
+
+### Other
+- centralize JVM initializer method names
+- use java constants instead of literals
+- Merge branch 'main' into fix/intrinsic-null-return
+- update Rust to 1.99.0
+
+## `ristretto_intrinsics` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.34.0...ristretto_intrinsics-v0.34.1) - 2026-11-01
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- correct Corretto version ordering and platform specific archive selection
+- remove publish dependency cycle and add workspace publishing check
+- return null when speculative member resolution fails
+- provide Reference.get0 on Java 21
+- push a return value for every non-void intrinsic call
+- stop treating $$ in class names as a hidden-class marker
+
+### Other
+- Merge branch 'main' into fix/speculative-membername
+- update dependencies
+- Merge pull request #958 from theseus-rs/workspace-publishing
+- centralize JVM initializer method names
+- use java constants instead of literals
+- Merge pull request #944 from icefery/fix/cglib-generated-name
+- Merge branch 'main' into fix/intrinsic-null-return
+- Merge branch 'main' into fix/cglib-generated-name
+- update dependencies
+- update Rust to 1.99.0
+
+## `ristretto_types` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.34.0...ristretto_types-v0.34.1) - 2026-11-01
+
+### Other
+- use java constants instead of literals
+- update Rust to 1.99.0
+
+## `ristretto_jit` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.34.0...ristretto_jit-v0.34.1) - 2026-11-01
+
+### Other
+- centralize JVM initializer method names
+
+## `ristretto_macros` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.34.0...ristretto_macros-v0.34.1) - 2026-11-01
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classloader` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.34.0...ristretto_classloader-v0.34.1) - 2026-11-01
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- correct Corretto version ordering and platform specific archive selection
+- retry incomplete runtime downloads
+
+### Other
+- update dependencies
+- centralize JVM initializer method names
+- update java versions
+- use java constants instead of literals
+- update dependencies
+- update Rust to 1.99.0
+
+## `ristretto_jimage` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.34.0...ristretto_jimage-v0.34.1) - 2026-11-01
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_gc` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.34.0...ristretto_gc-v0.34.1) - 2026-11-01
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classfile` - [0.34.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.34.0...ristretto_classfile-v0.34.1) - 2026-11-01
+
+### Fixed
+- preserve source debug payloads with isolated UTF-16 surrogates
+- validate modified UTF-8 before decoding
+- accept legal record component descriptors and repeated components
+- accept empty and duplicate PermittedSubclasses entries
+- accept duplicate NestMembers entries permitted by the specification
+- scale type-inference work limits with method length
+- implement context-sensitive legacy jsr and ret verification
+- respect attribute locations and class-file version gates
+- validate local-variable ranges and uninitialized stack-map offsets
+- validate module-info structure and module table invariants
+- validate bootstrap handle kinds and loadable arguments
+- honor special class-initializer flags and legacy descriptors
+- expose signature validation with enclosing and recursive type bounds
+- scope verification caching to exact inputs and context revisions
+- validate type-annotation context and type paths
+- validate attribute names and singleton cardinality
+- check field descriptors, cached field types and ConstantValue types
+- reject duplicate field and method signatures
+- validate constant-pool member names, descriptors and handle targets
+- correct zero-offset stack-map deltas and reject arithmetic overflow
+- validate class names, superclass rules and interface identity
+- validate method names, flags, parameters and Code cardinality
+- validate instruction operands including unreachable code
+- derive ldc and ldc2_w dynamic constant types from descriptors
+- require Throwable-compatible values for athrow
+- check invokespecial receiver and symbolic owner against the caller
+- preserve narrow primitive array component types
+- reject checkcast of an uninitialized object
+- enforce return-opcode compatibility in bytecode dispatch
+- check catch types and complete handler frame compatibility
+- expose resolved member access checks to the verification context
+- allow type-inference fallback for class-file version 50
+- promote compact stack-map frames when byte deltas exceed 63
+- invalidate constructor receiver aliases on exceptional paths
+- propagate the pre-instruction frame to exception handlers
+- enforce constructor receiver identity and uninitialized field access
+- track constructor initialization independently of local zero
+- invalidate category-two locals when their second slot is overwritten
+- verify stack-map blocks and require frames after control transfers
+- relocate local-variable, type-annotation and uninitialized offsets
+- reject promotion of unusable Top locals to concrete types
+- check explicit frame zero against the method entry state
+- validate stack-map tags, cardinality and frame bounds
+- reject trailing data in both class-file parsing entry points
+- account for category-two stack-map values and chop entries
+- validate incoming frames on already visited control-flow edges
+- exclude unused local padding when decoding append frames
+- retry incomplete runtime downloads
+- enforce constant-pool capacity and two-slot layout invariants
+- use logical instruction coordinates in bytecode verification
+- reject malformed switch ranges, counts and key order
+- enforce constant-pool capacity and two-slot layout invariants
+- check signed wide-branch offset arithmetic
+- bound recursive annotation parsing
+- bound attribute parsing to its declared payload
+
+### Other
+- update dependencies
+- centralize JVM initializer method names
+- Merge pull request #895 from theseus-rs/failed-constructor-aliases
+- Merge pull request #894 from theseus-rs/exception-input-state
+- Merge pull request #911 from theseus-rs/code-metadata-relocation
+- Merge pull request #888 from theseus-rs/initial-frame-check
+- Merge pull request #885 from theseus-rs/category-two-stack-maps
+- Merge pull request #920 from theseus-rs/trailing-class-data
+- use java constants instead of literals
+- Merge pull request #881 from theseus-rs/switch-operands
+- update dependencies
+- update Rust to 1.99.0
+
 ## `ristretto_javac` - [0.34.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.33.0...ristretto_javac-v0.34.0) - 2026-09-27
 
 ### Other
