@@ -18,7 +18,7 @@ use crate::verifiers::bytecode::frame::Frame;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
-use crate::{FieldType, JavaString};
+use crate::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldType, JavaString};
 
 /// Context for resolving constant pool entries.
 #[derive(Debug)]
@@ -183,7 +183,12 @@ impl<'a> ConstantPoolResolver<'a> {
 /// # References
 ///
 /// - [JVMS §6.5.new](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.new)
-pub fn handle_new(frame: &mut Frame, offset: u16, _class_name: &str) -> Result<()> {
+pub fn handle_new(frame: &mut Frame, offset: u16, class_name: &str) -> Result<()> {
+    if class_name.starts_with('[') {
+        return Err(VerifyError::VerifyError(
+            "new cannot allocate an array".to_string(),
+        ));
+    }
     // Push an uninitialized reference
     frame.push(VerificationType::Uninitialized(offset))
 }
@@ -208,13 +213,13 @@ pub fn handle_newarray(frame: &mut Frame, atype: &ArrayType) -> Result<()> {
         )));
     }
 
-    // Determine component type
+    // Preserve the exact primitive component type, including boolean, byte, char, and short.
     let component = match atype {
-        ArrayType::Boolean
-        | ArrayType::Byte
-        | ArrayType::Char
-        | ArrayType::Short
-        | ArrayType::Int => VerificationType::Integer,
+        ArrayType::Boolean => VerificationType::Boolean,
+        ArrayType::Byte => VerificationType::Byte,
+        ArrayType::Char => VerificationType::Char,
+        ArrayType::Short => VerificationType::Short,
+        ArrayType::Int => VerificationType::Integer,
         ArrayType::Float => VerificationType::Float,
         ArrayType::Long => VerificationType::Long,
         ArrayType::Double => VerificationType::Double,
@@ -235,6 +240,11 @@ pub fn handle_newarray(frame: &mut Frame, atype: &ArrayType) -> Result<()> {
 ///
 /// - [JVMS §6.5.anewarray](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.anewarray)
 pub fn handle_anewarray(frame: &mut Frame, class_name: &str) -> Result<()> {
+    if class_name.bytes().take_while(|&b| b == b'[').count() >= 255 {
+        return Err(VerifyError::VerifyError(
+            "anewarray exceeds 255 dimensions".to_string(),
+        ));
+    }
     let count = frame.pop()?;
     if count != VerificationType::Integer {
         return Err(VerifyError::VerifyError(format!(
@@ -265,6 +275,13 @@ pub fn handle_anewarray(frame: &mut Frame, class_name: &str) -> Result<()> {
 ///
 /// - [JVMS §6.5.multianewarray](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray)
 pub fn handle_multianewarray(frame: &mut Frame, class_name: &str, dimensions: u8) -> Result<()> {
+    if dimensions == 0
+        || usize::from(dimensions) > class_name.bytes().take_while(|&b| b == b'[').count()
+    {
+        return Err(VerifyError::VerifyError(
+            "Invalid multianewarray dimensions".to_string(),
+        ));
+    }
     // Pop 'dimensions' int values
     for _ in 0..dimensions {
         let count = frame.pop()?;
@@ -357,11 +374,7 @@ pub fn handle_putfield<C: VerificationContext>(
 
     // For putfield on uninitialized 'this', the objectref can be UninitializedThis
     // when setting fields in a constructor before calling super()
-    if !matches!(
-        objectref,
-        VerificationType::UninitializedThis | VerificationType::Uninitialized(_)
-    ) && !objectref.is_null()
-    {
+    if !matches!(objectref, VerificationType::UninitializedThis) && !objectref.is_null() {
         let expected = VerificationType::Object(JavaString::from(class_name));
         if !objectref.is_assignable_to(&expected, context)? {
             return Err(VerifyError::VerifyError(format!(
@@ -442,7 +455,7 @@ pub fn handle_invoke<C: VerificationContext>(
     is_static: bool,
     context: &C,
 ) -> Result<Option<VerificationType>> {
-    if method_name == "<init>" {
+    if method_name == CONSTRUCTOR_NAME || method_name == CLASS_INITIALIZER_NAME {
         return Err(VerifyError::VerifyError(
             "<init> may only be invoked by invokespecial".to_string(),
         ));
@@ -505,6 +518,7 @@ pub fn handle_invokespecial<C: VerificationContext>(
     class_name: &str,
     method_name: &str,
     descriptor: &str,
+    current_class: &str,
     context: &C,
 ) -> Result<()> {
     let descriptor = JavaStr::cow_from_str(descriptor);
@@ -530,7 +544,7 @@ pub fn handle_invokespecial<C: VerificationContext>(
     // Pop objectref
     let objectref = frame.pop()?;
 
-    if method_name == "<init>" {
+    if method_name == CONSTRUCTOR_NAME {
         // Constructor call; initialize the object
         match &objectref {
             VerificationType::Uninitialized(offset) => {
@@ -538,7 +552,7 @@ pub fn handle_invokespecial<C: VerificationContext>(
                 frame.initialize_object(&VerificationType::Uninitialized(*offset), &initialized);
             }
             VerificationType::UninitializedThis => {
-                let initialized = VerificationType::Object(JavaString::from(class_name));
+                let initialized = VerificationType::Object(JavaString::from(current_class));
                 frame.initialize_object(&VerificationType::UninitializedThis, &initialized);
             }
             _ => {
@@ -634,7 +648,7 @@ pub fn handle_checkcast(frame: &mut Frame, class_name: &str) -> Result<()> {
     let objectref = frame.pop()?;
 
     // Must be a reference type
-    if !objectref.is_reference() {
+    if !objectref.is_initialized_reference() {
         return Err(VerifyError::VerifyError(format!(
             "checkcast: expected reference, got {objectref}"
         )));
@@ -1352,7 +1366,7 @@ mod tests {
         assert!(handle_invoke(&mut frame, "Test", "test", "invalid", true, &ctx).is_err());
 
         let mut frame = Frame::new(1, 1);
-        assert!(handle_invokespecial(&mut frame, "Test", "test", "invalid", &ctx).is_err());
+        assert!(handle_invokespecial(&mut frame, "Test", "test", "invalid", "Test", &ctx).is_err());
 
         let mut frame = Frame::new(1, 1);
         assert!(handle_invokedynamic(&mut frame, "invalid", &ctx).is_err());
@@ -1576,7 +1590,14 @@ mod tests {
             .push(VerificationType::Object(JavaString::from("other/Class")))
             .unwrap();
 
-        let result = handle_invoke(&mut frame, "java/lang/String", "<init>", "()V", false, &ctx);
+        let result = handle_invoke(
+            &mut frame,
+            "java/lang/String",
+            CONSTRUCTOR_NAME,
+            "()V",
+            false,
+            &ctx,
+        );
         assert!(result.is_err());
     }
 
@@ -1638,7 +1659,15 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Uninitialized(0)).unwrap();
 
-        handle_invokespecial(&mut frame, "java/lang/Object", "<init>", "()V", &ctx).unwrap();
+        handle_invokespecial(
+            &mut frame,
+            "java/lang/Object",
+            CONSTRUCTOR_NAME,
+            "()V",
+            "java/lang/Object",
+            &ctx,
+        )
+        .unwrap();
         // After constructor, the object should be initialized
         assert!(frame.is_stack_empty());
     }
@@ -1649,7 +1678,15 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::UninitializedThis).unwrap();
 
-        handle_invokespecial(&mut frame, "java/lang/Object", "<init>", "()V", &ctx).unwrap();
+        handle_invokespecial(
+            &mut frame,
+            "java/lang/Object",
+            CONSTRUCTOR_NAME,
+            "()V",
+            "java/lang/Object",
+            &ctx,
+        )
+        .unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1660,7 +1697,7 @@ mod tests {
         frame.push(VerificationType::Uninitialized(0)).unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
-        handle_invokespecial(&mut frame, "Test", "<init>", "(I)V", &ctx).unwrap();
+        handle_invokespecial(&mut frame, "Test", CONSTRUCTOR_NAME, "(I)V", "Test", &ctx).unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1670,7 +1707,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
-        let result = handle_invokespecial(&mut frame, "java/lang/Object", "<init>", "()V", &ctx);
+        let result = handle_invokespecial(
+            &mut frame,
+            "java/lang/Object",
+            CONSTRUCTOR_NAME,
+            "()V",
+            "java/lang/Object",
+            &ctx,
+        );
         assert!(result.is_err());
         assert!(
             result
@@ -1686,7 +1730,15 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
-        handle_invokespecial(&mut frame, "java/lang/Object", "privateMethod", "()V", &ctx).unwrap();
+        handle_invokespecial(
+            &mut frame,
+            "java/lang/Object",
+            "privateMethod",
+            "()V",
+            "java/lang/Object",
+            &ctx,
+        )
+        .unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1696,7 +1748,15 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
-        handle_invokespecial(&mut frame, "java/lang/Object", "privateMethod", "()I", &ctx).unwrap();
+        handle_invokespecial(
+            &mut frame,
+            "java/lang/Object",
+            "privateMethod",
+            "()I",
+            "java/lang/Object",
+            &ctx,
+        )
+        .unwrap();
         assert_eq!(*frame.peek().unwrap(), VerificationType::Integer);
     }
 
@@ -1707,7 +1767,8 @@ mod tests {
         frame.push(VerificationType::Uninitialized(0)).unwrap();
         frame.push(VerificationType::Float).unwrap();
 
-        let result = handle_invokespecial(&mut frame, "Test", "<init>", "(I)V", &ctx);
+        let result =
+            handle_invokespecial(&mut frame, "Test", CONSTRUCTOR_NAME, "(I)V", "Test", &ctx);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
@@ -1720,8 +1781,14 @@ mod tests {
             .push(VerificationType::Object(JavaString::from("other/Class")))
             .unwrap();
 
-        let result =
-            handle_invokespecial(&mut frame, "java/lang/String", "privateMethod", "()V", &ctx);
+        let result = handle_invokespecial(
+            &mut frame,
+            "java/lang/String",
+            "privateMethod",
+            "()V",
+            "java/lang/String",
+            &ctx,
+        );
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
@@ -1910,12 +1977,28 @@ mod tests {
         special_argument
             .push_category2(VerificationType::Long)
             .unwrap();
-        handle_invokespecial(&mut special_argument, "TestClass", "<init>", "(J)V", &ctx).unwrap();
+        handle_invokespecial(
+            &mut special_argument,
+            "TestClass",
+            CONSTRUCTOR_NAME,
+            "(J)V",
+            "TestClass",
+            &ctx,
+        )
+        .unwrap();
         assert!(special_argument.is_stack_empty());
 
         let mut special_return = Frame::new(5, 10);
         special_return.push(VerificationType::Null).unwrap();
-        handle_invokespecial(&mut special_return, "TestClass", "special", "()J", &ctx).unwrap();
+        handle_invokespecial(
+            &mut special_return,
+            "TestClass",
+            "special",
+            "()J",
+            "TestClass",
+            &ctx,
+        )
+        .unwrap();
         assert_eq!(
             special_return.pop_category2().unwrap(),
             VerificationType::Long

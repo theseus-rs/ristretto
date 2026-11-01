@@ -10,6 +10,7 @@ use std::io::Read;
 use tar::Archive;
 
 #[tokio::test]
+#[ignore = "requires downloading a Java 8 runtime"]
 async fn verify() -> Result<()> {
     let url = "https://corretto.aws/downloads/latest/amazon-corretto-8-x64-linux-jdk.tar.gz";
     let client = Client::new();

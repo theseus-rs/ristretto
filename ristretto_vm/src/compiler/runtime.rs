@@ -1,4 +1,5 @@
 use crate::{Configuration, Error};
+use ristretto_classfile::JAVA_8;
 use ristretto_classloader::runtime;
 use std::path::PathBuf;
 
@@ -9,7 +10,7 @@ pub(super) async fn java8_tools_jar(
         let (_, java_version, _) = runtime::home_class_loader(java_home).await?;
         (java_home.clone(), java_version)
     } else if let Some(java_version) = configuration.java_version() {
-        if java_major_version(java_version) != Some(8) {
+        if java_major_version(java_version) != Some(JAVA_8.java()) {
             return Ok(None);
         }
         let (java_home, java_version, _) = runtime::version_class_loader(java_version).await?;
@@ -18,7 +19,7 @@ pub(super) async fn java8_tools_jar(
         return Ok(None);
     };
 
-    if java_major_version(&java_version) != Some(8) {
+    if java_major_version(&java_version) != Some(JAVA_8.java()) {
         return Ok(None);
     }
     let tools_jar = java_home.join("lib").join("tools.jar");

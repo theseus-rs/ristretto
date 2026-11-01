@@ -5,7 +5,8 @@
 //!
 //! The type system supports all verification types:
 //! - Top: The universal supertype (used for second slot of category 2 types)
-//! - Integer: Represents int, boolean, byte, char, short
+//! - Integer: Represents int, boolean, byte, char, and short values in locals and on the operand stack
+//! - Boolean, Byte, Char, Short: Preserve narrow primitive types only as array components
 //! - Float: Single precision floating point
 //! - Long: 64-bit integer (category 2)
 //! - Double: Double precision floating point (category 2)
@@ -28,6 +29,8 @@ use crate::{BaseType, FieldType, JavaString};
 /// Represents the verification types used in the JVM bytecode verification process.
 ///
 /// These types correspond to the types defined in [JVMS §4.10.1.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.2) for stack map frames.
+/// The narrow primitive variants additionally preserve array component types; they are
+/// not separate verification types for values in locals or on the operand stack.
 /// The type system is designed for strict type checking during bytecode verification.
 ///
 /// # Type Categories
@@ -52,7 +55,7 @@ pub enum VerificationType {
     #[default]
     Top,
 
-    /// Integer type; represents all JVM integer types that use a single stack slot:
+    /// Integer type; represents these JVM types in locals and on the operand stack:
     /// - `int`
     /// - `boolean`
     /// - `byte`
@@ -60,8 +63,18 @@ pub enum VerificationType {
     /// - `short`
     ///
     /// # JVMS Reference
-    /// All these types are treated as `int` for verification purposes.
+    /// Values of these types are treated as `int` in locals and on the operand stack.
+    /// Array components retain their distinct primitive types.
     Integer,
+
+    /// Boolean type, used only as an array component; scalar values use `Integer`.
+    Boolean,
+    /// Byte type, used only as an array component; scalar values use `Integer`.
+    Byte,
+    /// Char type, used only as an array component; scalar values use `Integer`.
+    Char,
+    /// Short type, used only as an array component; scalar values use `Integer`.
+    Short,
 
     /// Float type; single precision floating point.
     Float,
@@ -92,6 +105,9 @@ pub enum VerificationType {
     /// The `u16` is the bytecode offset of the `new` instruction that created this object.
     /// This allows tracking which uninitialized reference becomes which initialized type.
     Uninitialized(u16),
+
+    /// Return instruction index used by legacy jsr/ret subroutines.
+    ReturnAddress(u16),
 
     /// Object reference type.
     ///
@@ -200,7 +216,10 @@ impl VerificationType {
         matches!(self, Self::Array(_))
     }
 
-    /// Returns `true` if this is an integer type (int, boolean, byte, char, short).
+    /// Returns `true` if this is `Integer`, the type for int, boolean, byte, char,
+    /// and short values in locals and on the operand stack.
+    ///
+    /// Returns `false` for the narrow primitive array component variants.
     #[inline]
     #[must_use]
     pub const fn is_integer(&self) -> bool {
@@ -264,6 +283,8 @@ impl VerificationType {
     /// Converts a `FieldType` to a `VerificationType`.
     ///
     /// This is used when parsing method descriptors to determine parameter and return types.
+    /// Scalar boolean, byte, char, and short types become `Integer`, while array
+    /// components retain their distinct primitive types, including in nested arrays.
     ///
     /// # Arguments
     ///
@@ -286,13 +307,19 @@ impl VerificationType {
                 BaseType::Double => Self::Double,
             },
             FieldType::Object(class_name) => Self::Object(class_name.clone()),
-            FieldType::Array(component) => Self::Array(Box::new(Self::from_field_type(component))),
+            FieldType::Array(component) => Self::Array(Box::new(match component.as_ref() {
+                FieldType::Base(BaseType::Boolean) => Self::Boolean,
+                FieldType::Base(BaseType::Byte) => Self::Byte,
+                FieldType::Base(BaseType::Char) => Self::Char,
+                FieldType::Base(BaseType::Short) => Self::Short,
+                other => Self::from_field_type(other),
+            })),
         }
     }
 
-    /// Converts a base type code to a `VerificationType`.
+    /// Converts a `newarray` type code to its primitive array component type.
     ///
-    /// Used for `newarray` instruction type codes.
+    /// Boolean, byte, char, and short components retain their distinct types.
     ///
     /// # Arguments
     ///
@@ -307,21 +334,31 @@ impl VerificationType {
     /// Returns an error if the type code is invalid.
     pub fn from_array_type_code(atype: u8) -> Result<Self> {
         match atype {
-            4 | 5 | 8 | 9 | 10 => Ok(Self::Integer), // T_BOOLEAN, T_CHAR, T_BYTE, T_SHORT, T_INT
-            6 => Ok(Self::Float),                    // T_FLOAT
-            7 => Ok(Self::Double),                   // T_DOUBLE
-            11 => Ok(Self::Long),                    // T_LONG
+            4 => Ok(Self::Boolean),
+            5 => Ok(Self::Char),
+            8 => Ok(Self::Byte),
+            9 => Ok(Self::Short),
+            10 => Ok(Self::Integer),
+            6 => Ok(Self::Float),  // T_FLOAT
+            7 => Ok(Self::Double), // T_DOUBLE
+            11 => Ok(Self::Long),  // T_LONG
             _ => Err(VerifyError::InvalidArrayTypeCode(atype)),
         }
     }
 
     /// Converts to a field type descriptor string.
     ///
-    /// This is the inverse of `from_field_type`.
+    /// Array component types are preserved. Scalar boolean, byte, char, and short
+    /// types normalized to `Integer` by `from_field_type` produce `I`.
+    /// Returns `None` for verification types without a field descriptor.
     #[must_use]
     pub fn to_descriptor(&self) -> Option<String> {
         match self {
             Self::Integer => Some("I".to_string()),
+            Self::Boolean => Some("Z".to_string()),
+            Self::Byte => Some("B".to_string()),
+            Self::Char => Some("C".to_string()),
+            Self::Short => Some("S".to_string()),
             Self::Float => Some("F".to_string()),
             Self::Long => Some("J".to_string()),
             Self::Double => Some("D".to_string()),
@@ -391,7 +428,7 @@ impl VerificationType {
             // Array-to-Array assignability (covariance for reference arrays)
             (VerificationType::Array(source_comp), VerificationType::Array(target_comp)) => {
                 // Primitive arrays are only assignable to the same type
-                if source_comp.is_integer()
+                if source_comp.is_primitive()
                     || source_comp.is_category2()
                     || matches!(source_comp.as_ref(), VerificationType::Float)
                 {
@@ -479,10 +516,10 @@ impl VerificationType {
             // Array-to-Array merge
             (VerificationType::Array(comp1), VerificationType::Array(comp2)) => {
                 // For primitive arrays, if they differ, merge to Object
-                if comp1.is_integer()
+                if comp1.is_primitive()
                     || comp1.is_category2()
                     || matches!(comp1.as_ref(), VerificationType::Float)
-                    || comp2.is_integer()
+                    || comp2.is_primitive()
                     || comp2.is_category2()
                     || matches!(comp2.as_ref(), VerificationType::Float)
                 {
@@ -507,11 +544,32 @@ impl VerificationType {
     }
 }
 
+impl VerificationType {
+    fn is_primitive(&self) -> bool {
+        matches!(
+            self,
+            Self::Integer
+                | Self::Boolean
+                | Self::Byte
+                | Self::Char
+                | Self::Short
+                | Self::Float
+                | Self::Long
+                | Self::Double
+        )
+    }
+}
+
 impl Display for VerificationType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             VerificationType::Top => write!(f, "top"),
+            VerificationType::ReturnAddress(offset) => write!(f, "returnAddress({offset})"),
             VerificationType::Integer => write!(f, "int"),
+            VerificationType::Boolean => write!(f, "boolean"),
+            VerificationType::Byte => write!(f, "byte"),
+            VerificationType::Char => write!(f, "char"),
+            VerificationType::Short => write!(f, "short"),
             VerificationType::Float => write!(f, "float"),
             VerificationType::Long => write!(f, "long"),
             VerificationType::Double => write!(f, "double"),
@@ -839,9 +897,15 @@ mod tests {
             VerificationType::Array(Box::new(VerificationType::Integer))
         );
 
-        for code in [4, 5, 8, 9, 10] {
+        for (code, expected) in [
+            (4, VerificationType::Boolean),
+            (5, VerificationType::Char),
+            (8, VerificationType::Byte),
+            (9, VerificationType::Short),
+            (10, VerificationType::Integer),
+        ] {
             assert_eq!(
-                VerificationType::Integer,
+                expected,
                 VerificationType::from_array_type_code(code).unwrap()
             );
         }

@@ -3,6 +3,8 @@ import java.io.DataOutputStream;
 
 /** Thread.start() must select the nearest inherited, non-private run() implementation. */
 public class Test {
+    private static final String CONSTRUCTOR_NAME = "<init>";
+
     public static class BaseThread extends Thread {
         public int result;
 
@@ -63,7 +65,7 @@ public class Test {
             out.writeByte(7); out.writeShort(1);                 // #2 Class name
             out.writeByte(1); out.writeUTF(parent);              // #3 Utf8 parent
             out.writeByte(7); out.writeShort(3);                 // #4 Class parent
-            out.writeByte(1); out.writeUTF("<init>");            // #5
+            out.writeByte(1); out.writeUTF(CONSTRUCTOR_NAME);            // #5
             out.writeByte(1); out.writeUTF("()V");               // #6
             out.writeByte(12); out.writeShort(5); out.writeShort(6); // #7 NameAndType <init>()V
             out.writeByte(10); out.writeShort(4); out.writeShort(7); // #8 Methodref parent.<init>

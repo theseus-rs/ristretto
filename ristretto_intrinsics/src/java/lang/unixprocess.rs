@@ -15,7 +15,8 @@ pub fn destroy_process<T: Thread + 'static>(
     let pid = parameters.pop_int()?;
     let pid = usize::try_from(pid)?;
     let pid = Pid::from(pid);
-    let mut system = System::new_all();
+    let mut system = System::new_all()
+        .map_err(|error| ristretto_types::Error::InternalError(error.to_string()))?;
     system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
 
     if let Some(process) = system.process(pid) {
@@ -53,7 +54,8 @@ pub fn wait_for_process_exit<T: Thread + 'static>(
     let pid = parameters.pop_int()?;
     let pid = usize::try_from(pid)?;
     let pid = Pid::from(pid);
-    let mut system = System::new_all();
+    let mut system = System::new_all()
+        .map_err(|error| ristretto_types::Error::InternalError(error.to_string()))?;
     system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
 
     let Some(process) = system.process(pid) else {

@@ -1,5 +1,4 @@
-use crate::FieldType;
-use crate::JAVA_6;
+use crate::JAVA_7;
 use crate::attributes::Attribute;
 use crate::attributes::ExceptionTableEntry;
 use crate::attributes::Instruction;
@@ -11,6 +10,7 @@ use crate::verifiers::error::Result;
 use crate::verifiers::error::VerifyError::{
     InvalidInstructionOffset, InvalidStackFrameOffset, VerificationError,
 };
+use crate::{CLASS_INITIALIZER_NAME, FieldType};
 use ahash::AHashSet;
 
 /// Verify the `Code` attribute.
@@ -36,7 +36,12 @@ pub(crate) fn verify(
         && let Ok((parameters, _)) = FieldType::parse_method_descriptor(descriptor)
     {
         let mut required_locals = 0;
-        if !method.access_flags.contains(MethodAccessFlags::STATIC) {
+        if !method.access_flags.contains(MethodAccessFlags::STATIC)
+            && !class_file
+                .constant_pool
+                .try_get_utf8(method.name_index)
+                .is_ok_and(|name| name == CLASS_INITIALIZER_NAME)
+        {
             required_locals += 1;
         }
         for param in parameters {
@@ -179,6 +184,7 @@ pub(crate) fn verify(
             has_stack_map = true;
             let mut current_frame_index = -1i32;
             for (i, frame) in frames.iter().enumerate() {
+                frame.validate()?;
                 // After parsing, offset_delta is in instruction indices, not byte offsets
                 let offset_delta = i32::from(frame.offset_delta());
                 let frame_index = if i == 0 {
@@ -198,12 +204,16 @@ pub(crate) fn verify(
         }
     }
 
-    // Verify that all jump targets have a corresponding StackFrame (if StackMapTable is present and version >= 50)
-    if class_file.version >= JAVA_6 {
+    // Verify that all jump targets have a corresponding StackFrame for Java 7 and later.
+    if class_file.version.major() >= JAVA_7.major() {
         if !jump_target_indices.is_empty() && !has_stack_map {
             return Err(VerificationError {
                 context: "Code Attribute".to_string(),
-                message: "StackMapTable missing for class version >= 50.0".to_string(),
+                message: format!(
+                    "StackMapTable missing for class version >= {}.{}",
+                    JAVA_7.major(),
+                    JAVA_7.minor()
+                ),
             });
         }
 
@@ -219,7 +229,7 @@ pub(crate) fn verify(
         }
     }
 
-    Ok(code_length)
+    Ok(num_inst_u16)
 }
 
 #[cfg(test)]

@@ -19,7 +19,8 @@ use ristretto_classfile::verifiers::bytecode::{
 use ristretto_classfile::verifiers::context::VerificationContext;
 use ristretto_classfile::verifiers::error::{Result, VerifyError};
 use ristretto_classfile::{
-    ClassAccessFlags, ClassFile, Constant, ConstantPool, Method, MethodAccessFlags, Version,
+    CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, Constant, ConstantPool, Method,
+    MethodAccessFlags, Version,
 };
 
 /// Mock verification context for testing.
@@ -65,12 +66,13 @@ fn create_test_class_file(version: Version) -> Result<ClassFile<'static>> {
     constant_pool.add(Constant::utf8("()V"))?;
     constant_pool.add(Constant::utf8("Code"))?;
 
+    let super_class = constant_pool.add_class("java/lang/Object")?;
     Ok(ClassFile {
         version,
         constant_pool,
         access_flags: ClassAccessFlags::PUBLIC,
         this_class: this_class_index,
-        super_class: 0,
+        super_class,
         interfaces: vec![],
         fields: vec![],
         methods: vec![],
@@ -132,7 +134,7 @@ fn create_method_with_descriptor(
 }
 
 #[test]
-fn test_class_verify_reports_attribute_errors() -> Result<()> {
+fn test_class_verify_ignores_misplaced_attributes_and_reports_invalid_indexes() -> Result<()> {
     let mut class_file = create_test_class_file(Version::Java8 { minor: 0 })?;
     class_file.attributes.push(Attribute::Code {
         name_index: 5,
@@ -142,7 +144,7 @@ fn test_class_verify_reports_attribute_errors() -> Result<()> {
         exception_table: vec![],
         attributes: vec![],
     });
-    assert!(class_file.verify().is_err());
+    assert!(class_file.verify().is_ok());
 
     let mut class_file = create_test_class_file(Version::Java9 { minor: 0 })?;
     class_file.attributes.push(Attribute::Module {
@@ -166,7 +168,7 @@ fn test_class_verify_accepts_module_main_class_attribute() -> Result<()> {
     let mut class_file = create_test_class_file(Version::Java9 { minor: 0 })?;
     let main_class_index = class_file.constant_pool.add_class("Main")?;
     class_file.attributes.push(Attribute::ModuleMainClass {
-        name_index: 0,
+        name_index: class_file.constant_pool.add_utf8("ModuleMainClass")?,
         main_class_index,
     });
 
@@ -180,11 +182,11 @@ fn test_class_verify_accepts_attribute_optional_indexes() -> Result<()> {
 
     let parameter_name = class_file.constant_pool.add_utf8("value")?;
     class_file.methods.push(Method {
-        access_flags: MethodAccessFlags::PUBLIC,
+        access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
         name_index: 3,
-        descriptor_index: 4,
+        descriptor_index: class_file.constant_pool.add_utf8("(I)V")?,
         attributes: vec![Attribute::MethodParameters {
-            name_index: 0,
+            name_index: class_file.constant_pool.add_utf8("MethodParameters")?,
             parameters: vec![MethodParameter {
                 name_index: parameter_name,
                 access_flags: MethodAccessFlags::empty(),
@@ -195,7 +197,7 @@ fn test_class_verify_accepts_attribute_optional_indexes() -> Result<()> {
     let inner_class_index = class_file.constant_pool.add_class("TestClass$Inner")?;
     let inner_name_index = class_file.constant_pool.add_utf8("Inner")?;
     class_file.attributes.push(Attribute::InnerClasses {
-        name_index: 0,
+        name_index: class_file.constant_pool.add_utf8("InnerClasses")?,
         classes: vec![InnerClass {
             class_info_index: inner_class_index,
             outer_class_info_index: 0,
@@ -204,15 +206,20 @@ fn test_class_verify_accepts_attribute_optional_indexes() -> Result<()> {
         }],
     });
 
+    assert!(class_file.verify().is_ok());
+    let mut class_file = create_test_class_file(Version::Java9 { minor: 0 })?;
+    class_file.this_class = class_file.constant_pool.add_class("module-info")?;
+    class_file.access_flags = ClassAccessFlags::MODULE;
+    class_file.super_class = 0;
     let module_index = class_file.constant_pool.add_module("test.module")?;
     let module_version_index = class_file.constant_pool.add_utf8("1.0")?;
     class_file.attributes.push(Attribute::Module {
-        name_index: 0,
+        name_index: class_file.constant_pool.add_utf8("Module")?,
         module_name_index: module_index,
         flags: ModuleAccessFlags::empty(),
         version_index: 0,
         requires: vec![Requires {
-            index: module_index,
+            index: class_file.constant_pool.add_module("java.base")?,
             flags: RequiresFlags::empty(),
             version_index: module_version_index,
         }],
@@ -413,7 +420,7 @@ fn test_java8_with_stackmap_uses_fast_path() -> Result<()> {
     let mut class_file = create_test_class_file(Version::Java8 { minor: 0 })?;
 
     // Add constant pool entries for StackMapTable
-    class_file
+    let stack_map_name = class_file
         .constant_pool
         .add(Constant::utf8("StackMapTable"))?;
 
@@ -441,7 +448,7 @@ fn test_java8_with_stackmap_uses_fast_path() -> Result<()> {
         code,
         exception_table: vec![],
         attributes: vec![Attribute::StackMapTable {
-            name_index: 6,
+            name_index: stack_map_name,
             frames: stack_map_frames,
         }],
     };
@@ -539,12 +546,13 @@ fn test_verify_class_all_methods() -> Result<()> {
 
     // Add multiple methods
     let method1 = create_static_void_method(vec![Instruction::Return], 0, 0);
-    let method2 = create_static_void_method(
+    let mut method2 = create_static_void_method(
         vec![Instruction::Iconst_0, Instruction::Pop, Instruction::Return],
         1,
         0,
     );
 
+    method2.name_index = class_file.constant_pool.add_utf8("test2")?;
     class_file.methods = vec![method1, method2];
 
     let config = VerifierConfig::default();
@@ -732,7 +740,7 @@ fn test_type_mismatch_error_formats_null() -> Result<()> {
 #[test]
 fn test_type_mismatch_error_formats_uninitialized_this() -> Result<()> {
     let mut class_file = create_test_class_file(Version::Java5 { minor: 0 })?;
-    let init_name = class_file.constant_pool.add_utf8("<init>")?;
+    let init_name = class_file.constant_pool.add_utf8(CONSTRUCTOR_NAME)?;
     let method = create_method_with_descriptor(
         MethodAccessFlags::PUBLIC,
         init_name,

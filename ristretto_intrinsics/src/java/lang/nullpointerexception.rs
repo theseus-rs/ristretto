@@ -840,12 +840,13 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_classfile::CONSTRUCTOR_NAME;
 
     #[tokio::test]
     async fn test_describe_source_local_without_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let source = Source::Local(5);
@@ -856,7 +857,7 @@ mod tests {
     async fn test_describe_source_this() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let source = Source::This;
@@ -867,7 +868,7 @@ mod tests {
     async fn test_describe_source_field_no_receiver() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let source = Source::Field("myField".to_string(), None);
@@ -878,7 +879,7 @@ mod tests {
     async fn test_describe_source_field_with_local_receiver() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let source = Source::Field("myField".to_string(), Some(Box::new(Source::Local(2))));
@@ -889,7 +890,7 @@ mod tests {
     async fn test_describe_source_field_with_this_receiver() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let source = Source::Field("myField".to_string(), Some(Box::new(Source::This)));
@@ -900,7 +901,7 @@ mod tests {
     async fn test_describe_source_field_with_unknown_receiver() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let source = Source::Field("myField".to_string(), Some(Box::new(Source::Unknown)));
@@ -911,7 +912,7 @@ mod tests {
     async fn test_describe_source_method_return() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let source = Source::MethodReturn("java/lang/String".to_string(), "getValue".to_string());
@@ -925,7 +926,7 @@ mod tests {
     async fn test_describe_source_method_return_simple_class() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let source = Source::MethodReturn("MyClass".to_string(), "doSomething".to_string());
@@ -939,7 +940,7 @@ mod tests {
     async fn test_describe_source_array_access() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let source = Source::ArrayAccess(None);
@@ -950,7 +951,7 @@ mod tests {
     async fn test_describe_source_constant() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let source = Source::Constant;
@@ -961,7 +962,7 @@ mod tests {
     async fn test_describe_source_unknown() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let source = Source::Unknown;
@@ -972,7 +973,7 @@ mod tests {
     async fn test_count_slots_no_params() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         assert_eq!(analyzer.count_slots("()V"), 0);
@@ -982,7 +983,7 @@ mod tests {
     async fn test_count_slots_single_int() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         assert_eq!(analyzer.count_slots("(I)V"), 1);
@@ -992,7 +993,7 @@ mod tests {
     async fn test_count_slots_single_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         assert_eq!(analyzer.count_slots("(J)V"), 2);
@@ -1002,7 +1003,7 @@ mod tests {
     async fn test_count_slots_single_double() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         assert_eq!(analyzer.count_slots("(D)V"), 2);
@@ -1012,7 +1013,7 @@ mod tests {
     async fn test_count_slots_object_param() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         assert_eq!(analyzer.count_slots("(Ljava/lang/String;)V"), 1);
@@ -1022,7 +1023,7 @@ mod tests {
     async fn test_count_slots_array_param() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         assert_eq!(analyzer.count_slots("([I)V"), 1);
@@ -1032,7 +1033,7 @@ mod tests {
     async fn test_count_slots_array_of_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         // An array of long takes 1 slot (the array reference)
@@ -1043,7 +1044,7 @@ mod tests {
     async fn test_count_slots_multiple_params() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         // int, long, Object = 1 + 2 + 1 = 4
@@ -1054,7 +1055,7 @@ mod tests {
     async fn test_count_slots_complex() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         // byte, char, double, float, int, long, short, boolean, Object
@@ -1066,7 +1067,7 @@ mod tests {
     async fn test_count_slots_invalid_descriptor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         // Invalid descriptor without opening paren
@@ -1077,7 +1078,7 @@ mod tests {
     async fn test_count_slots_2d_array() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         // 2D array of int takes 1 slot
@@ -1231,7 +1232,7 @@ mod tests {
     async fn test_get_local_name_returns_none() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         assert!(analyzer.get_local_name(0).is_none());
@@ -1243,7 +1244,7 @@ mod tests {
     async fn test_npe_analyzer_new() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
 
         // Just verify it can be created without panicking
         let _analyzer = NpeAnalyzer::new(thread, class, method);
@@ -1253,7 +1254,7 @@ mod tests {
     async fn test_analyze_returns_none_for_invalid_bci() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         // Very large BCI that doesn't exist
@@ -1265,7 +1266,7 @@ mod tests {
     async fn test_describe_source_field_with_field_receiver() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         // Field accessed through another field
@@ -1279,7 +1280,7 @@ mod tests {
     async fn test_describe_source_field_with_method_return_receiver() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let method_return = Source::MethodReturn("Class".to_string(), "getObj".to_string());
@@ -1292,7 +1293,7 @@ mod tests {
     async fn test_describe_source_field_with_array_access_receiver() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let array_access = Source::ArrayAccess(None);
@@ -1304,7 +1305,7 @@ mod tests {
     async fn test_describe_source_field_with_constant_receiver() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("java/lang/Object").await.expect("class");
-        let method = class.method("<init>", "()V").expect("method");
+        let method = class.method(CONSTRUCTOR_NAME, "()V").expect("method");
         let analyzer = NpeAnalyzer::new(thread, class, method);
 
         let constant = Source::Constant;

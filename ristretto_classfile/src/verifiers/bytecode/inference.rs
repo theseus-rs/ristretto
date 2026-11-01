@@ -41,7 +41,7 @@ use crate::verifiers::bytecode::handlers::references::ConstantPoolResolver;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
-use crate::{FieldType, JavaString};
+use crate::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldType, JavaString};
 
 /// Type inference verifier using iterative dataflow analysis.
 ///
@@ -179,6 +179,27 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
         // Validate exception table
         validate_exception_table(self.exception_table, &self.code_info)?;
 
+        if self.code.iter().any(|i| {
+            matches!(
+                i,
+                Instruction::Jsr(_)
+                    | Instruction::Jsr_w(_)
+                    | Instruction::Ret(_)
+                    | Instruction::Ret_w(_)
+            )
+        }) {
+            if self.major_version >= 51
+                || !self
+                    .config
+                    .flags
+                    .contains(super::config::VerifierFlags::ALLOW_JSR_RET)
+            {
+                return Err(VerifyError::VerifyError(
+                    "Legacy subroutines are disabled".to_string(),
+                ));
+            }
+            return self.verify_subroutines();
+        }
         // Create initial frame
         let initial_frame = self.create_initial_frame()?;
 
@@ -194,7 +215,10 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
         worklist.add(0);
 
         let mut iterations = 0;
-        let max_iterations = self.config.max_inference_iterations;
+        let max_iterations = self
+            .config
+            .max_inference_iterations
+            .saturating_mul(self.code.len().max(1));
 
         while let Some(index) = worklist.pop() {
             iterations += 1;
@@ -227,7 +251,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
 
             // Execute instruction
             let (next_frame, successors, _falls_through) =
-                self.execute_instruction(offset, index, instruction, frame)?;
+                self.execute_instruction(offset, index, instruction, frame.clone())?;
 
             // Propagate to successors
             for successor_offset in successors {
@@ -252,10 +276,162 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
             }
 
             // Process exception handlers
-            self.process_exception_handlers(offset, &next_frame, &mut frames, &mut worklist)?;
+            self.process_exception_handlers(offset, &frame, &mut frames, &mut worklist)?;
         }
 
         Ok(())
+    }
+
+    /// Analyze each legacy subroutine in its calling context, keeping return addresses distinct.
+    fn verify_subroutines(&self) -> Result<()> {
+        use std::collections::HashMap;
+        type State = (u16, Vec<(u16, u16)>);
+        let mut frames: HashMap<State, Frame> = HashMap::new();
+        let entry = (0, Vec::new());
+        frames.insert(entry.clone(), self.create_initial_frame()?);
+        let mut pending = vec![entry];
+        let limit = self
+            .config
+            .max_inference_iterations
+            .saturating_mul(self.code.len().max(1));
+        let mut iterations = 0;
+        while let Some((offset, calls)) = pending.pop() {
+            iterations += 1;
+            if iterations > limit {
+                return Err(VerifyError::VerifyError(
+                    "Subroutine inference exceeded iteration limit".to_string(),
+                ));
+            }
+            let before = frames
+                .get(&(offset, calls.clone()))
+                .cloned()
+                .ok_or_else(|| VerifyError::VerifyError("Missing subroutine frame".to_string()))?;
+            let mut next_calls = calls.clone();
+            let (output, successors) =
+                self.execute_subroutine_instruction(offset, before.clone(), &mut next_calls)?;
+            let mut edges: Vec<_> = successors
+                .into_iter()
+                .map(|pc| ((pc, next_calls.clone()), output.clone()))
+                .collect();
+            for handler in self.exception_table {
+                if !handler.range_pc.contains(&offset) {
+                    continue;
+                }
+                let mut frame = before.clone();
+                frame.clear_stack();
+                super::constraints::invalidate_constructor_receiver(
+                    self.class_file,
+                    self.code,
+                    offset,
+                    &before,
+                    &mut frame,
+                )?;
+                let exception = if handler.catch_type == 0 {
+                    VerificationType::java_lang_throwable()
+                } else {
+                    VerificationType::Object(
+                        self.class_file
+                            .constant_pool
+                            .try_get_class(handler.catch_type)?
+                            .to_owned(),
+                    )
+                };
+                if !exception
+                    .is_assignable_to(&VerificationType::java_lang_throwable(), self.context)?
+                {
+                    return Err(VerifyError::VerifyError("Invalid catch type".to_string()));
+                }
+                frame.push(exception)?;
+                edges.push(((handler.handler_pc, calls.clone()), frame));
+            }
+            for (key, frame) in edges {
+                if usize::from(key.0) >= self.code.len() {
+                    return Err(VerifyError::VerifyError(
+                        "Invalid subroutine target".to_string(),
+                    ));
+                }
+                if let Some(existing) = frames.get_mut(&key) {
+                    if existing.merge(&frame, self.context)? {
+                        pending.push(key);
+                    }
+                } else {
+                    frames.insert(key.clone(), frame);
+                    pending.push(key);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Executes an instruction, updating the subroutine calls and returning the frame and successors.
+    fn execute_subroutine_instruction(
+        &self,
+        offset: u16,
+        mut frame: Frame,
+        calls: &mut Vec<(u16, u16)>,
+    ) -> Result<(Frame, Vec<u16>)> {
+        let instruction = self.code.get(usize::from(offset)).ok_or_else(|| {
+            VerifyError::VerifyError("Invalid subroutine instruction".to_string())
+        })?;
+        let successors = match instruction {
+            Instruction::Jsr(_) | Instruction::Jsr_w(_) => {
+                if frame
+                    .locals
+                    .iter()
+                    .chain(&frame.stack)
+                    .any(VerificationType::is_uninitialized)
+                {
+                    return Err(VerifyError::VerifyError(
+                        "jsr cannot execute with an uninitialized reference".to_string(),
+                    ));
+                }
+                let target = match instruction {
+                    Instruction::Jsr(target) => *target,
+                    Instruction::Jsr_w(target) => u16::try_from(*target)?,
+                    _ => {
+                        return Err(VerifyError::VerifyError("Invalid subroutine".to_string()));
+                    }
+                };
+                let next = offset.checked_add(1).ok_or_else(|| {
+                    VerifyError::VerifyError("Invalid subroutine return address".to_string())
+                })?;
+                if next >= self.code_info.code_length()
+                    || calls.iter().any(|(entry, _)| *entry == target)
+                {
+                    return Err(VerifyError::VerifyError(
+                        "Recursive subroutine or invalid return address".to_string(),
+                    ));
+                }
+                frame.push(VerificationType::ReturnAddress(next))?;
+                calls.push((target, next));
+                vec![target]
+            }
+            Instruction::Ret(index) => {
+                let (_, target) = calls.pop().ok_or_else(|| {
+                    VerifyError::VerifyError("ret outside a subroutine".to_string())
+                })?;
+                if *frame.get_local(u16::from(*index))? != VerificationType::ReturnAddress(target) {
+                    return Err(VerifyError::VerifyError("Invalid ret local".to_string()));
+                }
+                vec![target]
+            }
+            Instruction::Ret_w(index) => {
+                let (_, target) = calls.pop().ok_or_else(|| {
+                    VerifyError::VerifyError("ret outside a subroutine".to_string())
+                })?;
+                if *frame.get_local(*index)? != VerificationType::ReturnAddress(target) {
+                    return Err(VerifyError::VerifyError("Invalid ret local".to_string()));
+                }
+                vec![target]
+            }
+            _ => {
+                let (after, successors, _) =
+                    self.execute_instruction(offset, usize::from(offset), instruction, frame)?;
+                frame = after;
+                successors
+            }
+        };
+        Ok((frame, successors))
     }
 
     /// Creates the initial frame for the method.
@@ -264,8 +440,11 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
         let mut local_index = 0;
 
         // For non-static methods, local 0 is 'this'
-        if !self.method.access_flags.contains(MethodAccessFlags::STATIC) {
-            if self.method_name == "<init>" {
+        if !self.method.access_flags.contains(MethodAccessFlags::STATIC)
+            && self.method_name != CLASS_INITIALIZER_NAME
+        {
+            if self.method_name == CONSTRUCTOR_NAME && self.current_class != "java/lang/Object" {
+                frame.this_uninitialized = true;
                 frame.set_local(local_index, VerificationType::UninitializedThis)?;
             } else {
                 let this_type =
@@ -313,6 +492,13 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
         instruction: &Instruction,
         frame: Frame,
     ) -> Result<(Frame, Vec<u16>, bool)> {
+        super::constraints::verify_state(
+            self.class_file,
+            self.code,
+            instruction,
+            &frame,
+            self.context,
+        )?;
         let mut next_frame = frame;
 
         // Calculate next offset for fallthrough
@@ -438,7 +624,8 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                 let class_name = resolver.resolve_class(*index)?;
                 handlers::references::handle_checkcast(frame, &class_name)?;
             }
-            Instruction::Instanceof(_) => {
+            Instruction::Instanceof(index) => {
+                resolver.resolve_class(*index)?;
                 handlers::references::handle_instanceof(frame)?;
             }
             Instruction::Arraylength => {
@@ -489,6 +676,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
             class_name,
             method_name,
             descriptor,
+            &self.current_class,
             self.context,
         )
     }
@@ -516,6 +704,15 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                 }
             }
 
+            handler_frame.this_uninitialized = current_frame.this_uninitialized;
+            super::constraints::invalidate_constructor_receiver(
+                self.class_file,
+                self.code,
+                offset,
+                current_frame,
+                &mut handler_frame,
+            )?;
+
             // Push exception type
             let exception_type = if handler.catch_type == 0 {
                 VerificationType::java_lang_throwable()
@@ -527,6 +724,13 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                     .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
                 VerificationType::Object(JavaString::from(class_name))
             };
+            if !exception_type
+                .is_assignable_to(&VerificationType::java_lang_throwable(), self.context)?
+            {
+                return Err(VerifyError::VerifyError(
+                    "Exception handler catch type must extend Throwable".to_string(),
+                ));
+            }
             handler_frame.push(exception_type)?;
 
             // Merge with existing frame at handler
@@ -617,7 +821,7 @@ mod tests {
             .unwrap();
         let init_index = class_file
             .constant_pool
-            .add_method_ref(class_index, "<init>", "()V")
+            .add_method_ref(class_index, CONSTRUCTOR_NAME, "()V")
             .unwrap();
         let virtual_index = class_file
             .constant_pool
@@ -911,7 +1115,7 @@ mod tests {
     #[test]
     fn test_constructor_and_parameter_initial_frames() {
         let mut class_file = create_mock_class_file();
-        let init_name = class_file.constant_pool.add_utf8("<init>").unwrap();
+        let init_name = class_file.constant_pool.add_utf8(CONSTRUCTOR_NAME).unwrap();
         let descriptor = class_file
             .constant_pool
             .add_utf8("(JDLTestClass;)V")
@@ -1273,6 +1477,47 @@ mod tests {
             .process_exception_handlers(0, &current, &mut frames, &mut worklist)
             .unwrap();
         assert!(!worklist.is_empty());
+    }
+
+    #[test]
+    fn test_exception_handler_validates_invokespecial() {
+        let mut class_file = create_mock_class_file();
+        let ordinary_method = class_file
+            .constant_pool
+            .add_method_ref(class_file.this_class, "ordinary", "()V")
+            .unwrap();
+        let context = MockContext::PERMISSIVE;
+        let config = VerifierConfig::default();
+        for (index, valid) in [(0, false), (ordinary_method, true)] {
+            let method = method_with(
+                MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                4,
+                vec![Instruction::Invokespecial(index), Instruction::Return],
+                1,
+                1,
+                vec![ExceptionTableEntry {
+                    range_pc: 0..1,
+                    handler_pc: 1,
+                    catch_type: 0,
+                }],
+            );
+            let verifier = inference_verifier(&class_file, &method, &context, &config);
+            let mut current = Frame::new(1, 1);
+            current.locals = vec![VerificationType::Integer];
+            let mut frames = vec![None, None];
+            let mut worklist = Worklist::new(2);
+            let result =
+                verifier.process_exception_handlers(0, &current, &mut frames, &mut worklist);
+            if valid {
+                result.unwrap();
+                assert_eq!(frames[1].as_ref().unwrap().locals, current.locals);
+                assert!(!worklist.is_empty());
+            } else {
+                assert!(result.is_err());
+                assert!(frames.iter().all(Option::is_none));
+                assert!(worklist.is_empty());
+            }
+        }
     }
 
     #[test]

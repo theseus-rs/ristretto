@@ -4,6 +4,7 @@
     reason = "integration tests use assertions in Result-returning async tests"
 )]
 
+use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_vm::{
     ClassPath, ClassPathEntry, CompiledClasses, Compiler, CompilerError, ConfigurationBuilder,
     JavaSource, Memory, VM,
@@ -156,7 +157,7 @@ async fn test_java8_bridge() -> TestResult {
         .get("Java8Source")
         .ok_or("Java 8 compiler returned no class")?;
     let class_file = ristretto_classfile::ClassFile::from_bytes(bytecode)?;
-    assert_eq!(ristretto_classfile::JAVA_8, class_file.version);
+    assert_eq!(JAVA_8, class_file.version);
     Ok(())
 }
 
@@ -174,7 +175,8 @@ fn assert_valid_classes(classes: &CompiledClasses) -> TestResult {
 
 #[tokio::test(flavor = "current_thread")]
 async fn test_compiler_lts_versions() -> TestResult {
-    for version in [8_u16, 11, 17, 21, 25] {
+    for version in [JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25] {
+        let version = version.java();
         eprintln!("Testing Java {version} compiler and runtime");
         let configuration = ConfigurationBuilder::new()
             .java_version(version.to_string())

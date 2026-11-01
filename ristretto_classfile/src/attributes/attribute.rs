@@ -16,7 +16,7 @@ use crate::display::indent_lines;
 use crate::error::Error::{InvalidAttributeLength, InvalidAttributeNameIndex};
 use crate::error::Result;
 use crate::version::Version;
-use crate::{JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_11, JAVA_16, JAVA_17, mutf8};
+use crate::{JAVA_1_0_2, JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_11, JAVA_16, JAVA_17, mutf8};
 use ahash::AHashMap;
 use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
@@ -30,6 +30,55 @@ const VERSION_53_0: Version = JAVA_9;
 const VERSION_55_0: Version = JAVA_11;
 const VERSION_60_0: Version = JAVA_16;
 const VERSION_61_0: Version = JAVA_17;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum AttributeLocation {
+    Any,
+    Class,
+    Field,
+    Method,
+    Code,
+    RecordComponent,
+}
+
+impl AttributeLocation {
+    pub(crate) fn recognizes(self, name: &[u8]) -> bool {
+        use AttributeLocation::{Any, Class, Code, Field, Method, RecordComponent};
+        if self == Any {
+            return true;
+        }
+        match name {
+            b"ConstantValue" => self == Field,
+            b"Code"
+            | b"Exceptions"
+            | b"RuntimeVisibleParameterAnnotations"
+            | b"RuntimeInvisibleParameterAnnotations"
+            | b"AnnotationDefault"
+            | b"MethodParameters" => self == Method,
+            b"StackMapTable"
+            | b"LineNumberTable"
+            | b"LocalVariableTable"
+            | b"LocalVariableTypeTable" => self == Code,
+            b"InnerClasses"
+            | b"EnclosingMethod"
+            | b"SourceFile"
+            | b"SourceDebugExtension"
+            | b"BootstrapMethods"
+            | b"Module"
+            | b"ModulePackages"
+            | b"ModuleMainClass"
+            | b"NestHost"
+            | b"NestMembers"
+            | b"Record"
+            | b"PermittedSubclasses" => self == Class,
+            b"Synthetic" | b"Deprecated" => matches!(self, Class | Field | Method),
+            b"Signature" | b"RuntimeVisibleAnnotations" | b"RuntimeInvisibleAnnotations" => {
+                matches!(self, Class | Field | Method | RecordComponent)
+            }
+            _ => true,
+        }
+    }
+}
 
 /// Represents a class file attribute as defined in the Java Virtual Machine Specification.
 ///
@@ -515,7 +564,69 @@ pub enum Attribute {
     Unknown { name_index: u16, info: Vec<u8> },
 }
 
+fn minimum_major_version(name: &[u8]) -> u16 {
+    match name {
+        b"EnclosingMethod"
+        | b"Signature"
+        | b"SourceDebugExtension"
+        | b"LocalVariableTypeTable"
+        | b"RuntimeVisibleAnnotations"
+        | b"RuntimeInvisibleAnnotations"
+        | b"RuntimeVisibleParameterAnnotations"
+        | b"RuntimeInvisibleParameterAnnotations"
+        | b"AnnotationDefault" => JAVA_5.major(),
+        b"StackMapTable" => JAVA_6.major(),
+        b"BootstrapMethods" => JAVA_7.major(),
+        b"RuntimeVisibleTypeAnnotations"
+        | b"RuntimeInvisibleTypeAnnotations"
+        | b"MethodParameters" => JAVA_8.major(),
+        b"Module" | b"ModulePackages" | b"ModuleMainClass" => JAVA_9.major(),
+        b"NestHost" | b"NestMembers" => JAVA_11.major(),
+        b"Record" => JAVA_16.major(),
+        b"PermittedSubclasses" => JAVA_17.major(),
+        _ => JAVA_1_0_2.major(),
+    }
+}
+
 impl Attribute {
+    /// Returns the constant pool index of this attribute's name.
+    #[must_use]
+    pub fn name_index(&self) -> u16 {
+        match self {
+            Self::ConstantValue { name_index, .. }
+            | Self::Code { name_index, .. }
+            | Self::StackMapTable { name_index, .. }
+            | Self::Exceptions { name_index, .. }
+            | Self::InnerClasses { name_index, .. }
+            | Self::EnclosingMethod { name_index, .. }
+            | Self::Synthetic { name_index, .. }
+            | Self::Signature { name_index, .. }
+            | Self::SourceFile { name_index, .. }
+            | Self::SourceDebugExtension { name_index, .. }
+            | Self::LineNumberTable { name_index, .. }
+            | Self::LocalVariableTable { name_index, .. }
+            | Self::LocalVariableTypeTable { name_index, .. }
+            | Self::Deprecated { name_index, .. }
+            | Self::RuntimeVisibleAnnotations { name_index, .. }
+            | Self::RuntimeInvisibleAnnotations { name_index, .. }
+            | Self::RuntimeVisibleParameterAnnotations { name_index, .. }
+            | Self::RuntimeInvisibleParameterAnnotations { name_index, .. }
+            | Self::RuntimeVisibleTypeAnnotations { name_index, .. }
+            | Self::RuntimeInvisibleTypeAnnotations { name_index, .. }
+            | Self::AnnotationDefault { name_index, .. }
+            | Self::BootstrapMethods { name_index, .. }
+            | Self::MethodParameters { name_index, .. }
+            | Self::Module { name_index, .. }
+            | Self::ModulePackages { name_index, .. }
+            | Self::ModuleMainClass { name_index, .. }
+            | Self::NestHost { name_index, .. }
+            | Self::NestMembers { name_index, .. }
+            | Self::Record { name_index, .. }
+            | Self::PermittedSubclasses { name_index, .. }
+            | Self::Unknown { name_index, .. } => *name_index,
+        }
+    }
+
     /// Returns the name of the Attribute as a static string.
     ///
     /// This method returns the standard name of the attribute type
@@ -615,8 +726,8 @@ impl Attribute {
             Attribute::SourceFile { .. } => *version >= VERSION_45_3,
             Attribute::SourceDebugExtension { .. } => *version >= VERSION_49_0,
             Attribute::LineNumberTable { .. } => *version >= VERSION_45_3,
-            Attribute::LocalVariableTable { .. } => *version >= VERSION_49_0,
-            Attribute::LocalVariableTypeTable { .. } => *version >= VERSION_45_3,
+            Attribute::LocalVariableTable { .. } => *version >= VERSION_45_3,
+            Attribute::LocalVariableTypeTable { .. } => *version >= VERSION_49_0,
             Attribute::Deprecated { .. } => *version >= VERSION_45_3,
             Attribute::RuntimeVisibleAnnotations { .. } => *version >= VERSION_49_0,
             Attribute::RuntimeInvisibleAnnotations { .. } => *version >= VERSION_49_0,
@@ -681,10 +792,21 @@ impl Attribute {
     /// - Returns `InvalidAttributeNameIndex` if the name index is invalid in the constant pool.
     /// - Returns `InvalidAttributeLength` if the attribute length doesn't match the expected length.
     /// - Returns other errors if deserialization of specific attribute types fails.
-    #[expect(clippy::too_many_lines)]
     pub fn from_bytes(
         constant_pool: &ConstantPool<'_>,
         bytes: &mut ByteReader<'_>,
+    ) -> Result<Attribute> {
+        Self::from_bytes_in(constant_pool, bytes, AttributeLocation::Any)
+    }
+
+    #[expect(
+        clippy::too_many_lines,
+        reason = "dispatch over class-file attribute formats"
+    )]
+    pub(crate) fn from_bytes_in(
+        constant_pool: &ConstantPool<'_>,
+        bytes: &mut ByteReader<'_>,
+        location: AttributeLocation,
     ) -> Result<Attribute> {
         let name_index = bytes.read_u16()?;
         let Some(Constant::Utf8(attribute_name)) = constant_pool.get_unchecked(name_index) else {
@@ -694,7 +816,15 @@ impl Attribute {
         let info_length = bytes.read_u32()?;
         let mut info = bytes.read_nested(info_length as usize)?;
         let bytes = &mut info;
-        let attribute = match attribute_name.as_bytes() {
+        let name = attribute_name.as_bytes();
+        let name = if location.recognizes(name)
+            && bytes.class_major_version >= minimum_major_version(name)
+        {
+            name
+        } else {
+            &[]
+        };
+        let attribute = match name {
             b"ConstantValue" => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
@@ -714,6 +844,9 @@ impl Attribute {
                 let max_locals = bytes.read_u16()?;
 
                 let code_length = bytes.read_u32()?;
+                if !(1..=65535).contains(&code_length) {
+                    return Err(InvalidAttributeLength(code_length));
+                }
                 let code_slice = bytes.read_bytes(code_length as usize)?;
                 let (byte_to_instruction_pairs, instructions) =
                     offset_utils::instructions_from_bytes(&mut ByteReader::new(code_slice))?;
@@ -815,9 +948,17 @@ impl Attribute {
             b"SourceDebugExtension" => {
                 let debug_extension_bytes = bytes.read_bytes(info_length as usize)?;
                 let debug_extension = mutf8::from_bytes(debug_extension_bytes)?;
-                Attribute::SourceDebugExtension {
-                    name_index,
-                    debug_extension,
+                if mutf8::to_bytes(&debug_extension)? == debug_extension_bytes {
+                    Attribute::SourceDebugExtension {
+                        name_index,
+                        debug_extension,
+                    }
+                } else {
+                    // Rust String cannot represent isolated UTF-16 surrogates. Preserve the bytes.
+                    Attribute::Unknown {
+                        name_index,
+                        info: debug_extension_bytes.to_vec(),
+                    }
                 }
             }
             b"LineNumberTable" => {
@@ -1091,7 +1232,12 @@ impl Attribute {
         let attributes_count = bytes.read_u16()?;
         let mut attributes = Vec::with_capacity(attributes_count as usize);
         for _ in 0..attributes_count {
-            let attribute = Attribute::from_bytes(constant_pool, bytes)?;
+            let mut attribute =
+                Attribute::from_bytes_in(constant_pool, bytes, AttributeLocation::Code)?;
+            super::code_offsets::relocate(&mut attribute, |offset| {
+                lookup_byte_offset(byte_to_instruction_pairs, offset)
+                    .ok_or(InvalidInstructionOffset(u32::from(offset)))
+            })?;
             match attribute {
                 Attribute::LineNumberTable {
                     name_index,
@@ -1121,8 +1267,11 @@ impl Attribute {
                             offset_delta
                         } else {
                             last_byte_offset
-                                .saturating_add(offset_delta)
-                                .saturating_add(1)
+                                .checked_add(offset_delta)
+                                .and_then(|offset| offset.checked_add(1))
+                                .ok_or(InvalidInstructionOffset(
+                                    u32::from(last_byte_offset) + u32::from(offset_delta) + 1,
+                                ))?
                         };
 
                         let instruction_offset =
@@ -1222,6 +1371,9 @@ impl Attribute {
                 let (instruction_to_byte_map, code_bytes) =
                     offset_utils::instructions_to_bytes(code)?;
                 let code_length = u32::try_from(code_bytes.len())?;
+                if !(1..=65535).contains(&code_length) {
+                    return Err(InvalidAttributeLength(code_length));
+                }
                 bytes.write_u32::<BigEndian>(code_length)?;
                 bytes.extend_from_slice(code_bytes.as_slice());
 
@@ -1582,6 +1734,14 @@ impl Attribute {
         let attributes_length = u16::try_from(attributes.len())?;
         bytes.write_u16::<BigEndian>(attributes_length)?;
         for attribute in attributes {
+            let mut relocated = attribute.clone();
+            super::code_offsets::relocate(&mut relocated, |offset| {
+                instruction_to_byte_map
+                    .get(&offset)
+                    .copied()
+                    .ok_or(InvalidInstructionOffset(u32::from(offset)))
+            })?;
+            let attribute = &relocated;
             match attribute {
                 Attribute::LineNumberTable {
                     name_index,
@@ -1609,13 +1769,19 @@ impl Attribute {
                     let mut last_instruction_offset: u16 = 0;
                     let mut new_frames = Vec::new();
                     for frame in frames {
+                        frame.validate()?;
                         let offset_delta = frame.offset_delta();
                         let instruction_offset = if first_frame {
                             offset_delta
                         } else {
                             last_instruction_offset
-                                .saturating_add(offset_delta)
-                                .saturating_add(1)
+                                .checked_add(offset_delta)
+                                .and_then(|offset| offset.checked_add(1))
+                                .ok_or(InvalidInstructionOffset(
+                                    u32::from(last_instruction_offset)
+                                        + u32::from(offset_delta)
+                                        + 1,
+                                ))?
                         };
 
                         let byte_offset = *instruction_to_byte_map
@@ -1623,7 +1789,7 @@ impl Attribute {
                             .ok_or(InvalidInstructionOffset(u32::from(instruction_offset)))?;
                         // Calculate the byte delta offset from the last instruction offset
                         // subtracting 1 to account for the current instruction.
-                        let byte_delta_offset = if last_byte_offset == 0 {
+                        let byte_delta_offset = if first_frame {
                             first_frame = false;
                             byte_offset
                         } else {
@@ -1635,17 +1801,31 @@ impl Attribute {
                         match frame {
                             StackFrame::SameFrame { .. } => {
                                 // SameFrame uses the offset as the frame type
-                                new_frames.push(StackFrame::SameFrame {
-                                    frame_type: u8::try_from(byte_delta_offset)?,
+                                new_frames.push(if byte_delta_offset <= 63 {
+                                    StackFrame::SameFrame {
+                                        frame_type: u8::try_from(byte_delta_offset)?,
+                                    }
+                                } else {
+                                    StackFrame::SameFrameExtended {
+                                        frame_type: 251,
+                                        offset_delta: byte_delta_offset,
+                                    }
                                 });
                             }
                             StackFrame::SameLocals1StackItemFrame { stack, .. } => {
                                 // SameLocals1StackItemFrame requires that the 64 is added to the
                                 // delta offset as it is used as the frame type.
-                                let byte_delta_offset = byte_delta_offset.saturating_add(64);
-                                new_frames.push(StackFrame::SameLocals1StackItemFrame {
-                                    frame_type: u8::try_from(byte_delta_offset)?,
-                                    stack: stack.clone(),
+                                new_frames.push(if byte_delta_offset <= 63 {
+                                    StackFrame::SameLocals1StackItemFrame {
+                                        frame_type: u8::try_from(byte_delta_offset + 64)?,
+                                        stack: stack.clone(),
+                                    }
+                                } else {
+                                    StackFrame::SameLocals1StackItemFrameExtended {
+                                        frame_type: 247,
+                                        offset_delta: byte_delta_offset,
+                                        stack: stack.clone(),
+                                    }
                                 });
                             }
                             StackFrame::AppendFrame {
@@ -1850,7 +2030,6 @@ impl fmt::Display for Attribute {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::JAVA_1_0_2;
     use crate::attributes::annotation_value_pair::AnnotationValuePair;
     use crate::attributes::nested_class_access_flags::NestedClassAccessFlags;
     use crate::attributes::{
@@ -1929,9 +2108,9 @@ mod test {
     #[expect(clippy::too_many_lines)]
     #[test]
     fn test_code() -> Result<()> {
-        let constant = Attribute::ConstantValue {
+        let constant = Attribute::Unknown {
             name_index: 2,
-            constant_value_index: 42,
+            info: vec![0, 42],
         };
         let line_number_table = Attribute::LineNumberTable {
             name_index: 3,
@@ -1980,7 +2159,7 @@ mod test {
             handler_pc: 0,
             catch_type: 4,
         };
-        let mut attribute = Attribute::Code {
+        let attribute = Attribute::Code {
             name_index: 1,
             max_stack: 2,
             max_locals: 3,
@@ -2005,7 +2184,7 @@ mod test {
         let expected_bytes = [
             0, 1, 0, 0, 0, 83, 0, 2, 0, 3, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 177, 0, 1, 0, 0, 0,
             1, 0, 0, 0, 4, 0, 3, 0, 2, 0, 0, 0, 2, 0, 42, 0, 3, 0, 0, 0, 6, 0, 1, 0, 0, 0, 1, 0, 4,
-            0, 0, 0, 28, 0, 7, 0, 66, 5, 247, 0, 0, 5, 248, 0, 0, 251, 0, 0, 252, 0, 0, 5, 255, 0,
+            0, 0, 0, 28, 0, 7, 0, 65, 5, 247, 0, 0, 5, 248, 0, 0, 251, 0, 0, 252, 0, 0, 5, 255, 0,
             0, 0, 1, 5, 0, 1, 1,
         ];
         let expected = indoc! {"\
@@ -2021,7 +2200,7 @@ mod test {
                  7: nop
                  8: return
               [ExceptionTableEntry { range_pc: 0..2, handler_pc: 0, catch_type: 4 }]
-              ConstantValue { name_index: 2, constant_value_index: 42 }
+              Unknown { name_index: 2, info: [0, 42] }
               LineNumberTable:
                 line 1: 0
               StackMapTable: number_of_entries = 7
@@ -2060,14 +2239,6 @@ mod test {
         assert_eq!(expected_bytes, &bytes[..]);
         let mut reader = ByteReader::new(&expected_bytes);
 
-        // Adjust the frame_type offest before comparing
-        if let Attribute::Code { attributes, .. } = &mut attribute
-            && let Some(Attribute::StackMapTable { frames, .. }) = attributes.get_mut(2)
-            && let Some(StackFrame::SameLocals1StackItemFrame { frame_type, .. }) =
-                frames.get_mut(1)
-        {
-            *frame_type = 66; // Update to match the expected frame type
-        }
         let code_attribute = Attribute::from_bytes(&constant_pool, &mut reader)?;
         assert_eq!(attribute, code_attribute);
         Ok(())
@@ -2327,7 +2498,7 @@ mod test {
             "LocalVariableTypeTable { name_index: 1, variable_types: [LocalVariableTypeTable { start_pc: 1, length: 2, name_index: 3, signature_index: 4, index: 5 }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
+        test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
     }
 
     #[test]
@@ -2677,9 +2848,9 @@ mod test {
 
     #[test]
     fn test_record() -> Result<()> {
-        let constant = Attribute::ConstantValue {
+        let constant = Attribute::Unknown {
             name_index: 1,
-            constant_value_index: 42,
+            info: vec![0, 42],
         };
         let record = Record {
             name_index: 2,
@@ -2704,7 +2875,7 @@ mod test {
         assert!(!attribute.valid_for_version(&VERSION_45_0));
 
         assert_eq!(
-            "Record { name_index: 4, records: [Record { name_index: 2, descriptor_index: 3, attributes: [ConstantValue { name_index: 1, constant_value_index: 42 }] }] }",
+            "Record { name_index: 4, records: [Record { name_index: 2, descriptor_index: 3, attributes: [Unknown { name_index: 1, info: [0, 42] }] }] }",
             attribute.to_string()
         );
 

@@ -1,8 +1,8 @@
 use crate::bounds;
 use crate::java::lang::invoke::methodhandlenatives::MemberNameFlags;
-use ristretto_classfile::JAVA_17;
 use ristretto_classfile::ReferenceKind;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
+use ristretto_classfile::{CONSTRUCTOR_NAME, JAVA_17};
 use ristretto_classloader::{Class, Object, ResolvedMethod, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -850,7 +850,7 @@ async fn invoke_special<T: Thread + 'static>(
     // - InvokeSpecial with <init>: If arguments is empty, treat as NewInvokeSpecial
     //   This handles the case where MethodHandle machinery uses InvokeSpecial for constructors
     let is_constructor_invocation =
-        is_constructor || (method_name == "<init>" && arguments.is_empty());
+        is_constructor || (method_name == CONSTRUCTOR_NAME && arguments.is_empty());
 
     if is_constructor_invocation {
         // Allocate object and invoke constructor
@@ -884,7 +884,7 @@ async fn invoke_special<T: Thread + 'static>(
             .object(target_class.name(), descriptor, arguments.as_slice())
             .await?;
         Ok(instance)
-    } else if method_name == "<init>" {
+    } else if method_name == CONSTRUCTOR_NAME {
         // InvokeSpecial with <init> and a receiver; complete initialization of existing object
         let receiver = arguments.remove(0);
         let method = target_class.try_get_method(method_name, method_descriptor)?;
@@ -1172,7 +1172,8 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
                         "()V".to_string()
                     };
 
-                    let method = target_class.try_get_method("<init>", &method_descriptor)?;
+                    let method =
+                        target_class.try_get_method(CONSTRUCTOR_NAME, &method_descriptor)?;
                     let mut call_arguments = vec![instance.clone()];
                     call_arguments.extend(arguments);
                     thread

@@ -12,8 +12,8 @@ use ristretto_classfile::VersionSpecification::{
 };
 use ristretto_classfile::attributes::{Attribute, InnerClass};
 use ristretto_classfile::{
-    ClassAccessFlags, FieldAccessFlags, FieldType, JAVA_8, JAVA_11, JAVA_17, JAVA_21,
-    MethodAccessFlags,
+    CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, FieldAccessFlags, FieldType,
+    JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodAccessFlags,
 };
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
 use ristretto_macros::intrinsic_method;
@@ -454,7 +454,7 @@ pub async fn get_declared_constructors_0<T: Thread + 'static>(
     let class_array = thread.class("[Ljava/lang/Class;").await?;
     let mut constructors = Vec::new();
     for (slot, method) in class.methods().iter().enumerate() {
-        if method.name() != "<init>" {
+        if method.name() != CONSTRUCTOR_NAME {
             continue;
         }
 
@@ -681,7 +681,7 @@ pub async fn get_declared_methods_0<T: Thread + 'static>(
     let mut methods = Vec::new();
     for (slot, method) in class.methods().iter().enumerate() {
         let method_name = method.name();
-        if ["<clinit>", "<init>"].contains(&method_name) {
+        if [CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME].contains(&method_name) {
             continue;
         }
 
@@ -2608,7 +2608,7 @@ mod tests {
 
         let init_method = Method {
             access_flags: MethodAccessFlags::PRIVATE,
-            name_index: cp.add_utf8("<init>")?,
+            name_index: cp.add_utf8(CONSTRUCTOR_NAME)?,
             descriptor_index: cp.add_utf8("()V")?,
             attributes: vec![code_attr],
         };

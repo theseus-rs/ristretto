@@ -101,6 +101,7 @@ pub async fn expand_stack_frame_info<T: Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_classfile::CONSTRUCTOR_NAME;
     use ristretto_classloader::{Object, Reference};
     use ristretto_types::VM;
 
@@ -145,7 +146,7 @@ mod tests {
         // Create StackFrameInfo and set classOrMemberName, name, and bci
         let mut sfi = Object::new(sfi_class)?;
         let _ = sfi.set_value("classOrMemberName", rmn_value);
-        let method_name = "<init>".to_object(&thread).await?;
+        let method_name = CONSTRUCTOR_NAME.to_object(&thread).await?;
         let _ = sfi.set_value("name", method_name);
         let _ = sfi.set_value("bci", Value::Int(0));
 
@@ -158,7 +159,7 @@ mod tests {
         // Verify the name field is still populated
         let this_ref = this.as_object_ref()?;
         if let Ok(name) = this_ref.value("name") {
-            assert_eq!("<init>", name.as_string()?);
+            assert_eq!(CONSTRUCTOR_NAME, name.as_string()?);
         }
         Ok(())
     }

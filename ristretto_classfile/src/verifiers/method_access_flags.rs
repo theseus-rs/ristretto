@@ -4,12 +4,21 @@ use crate::method::Method;
 use crate::method_access_flags::MethodAccessFlags;
 use crate::verifiers::error::Result;
 use crate::verifiers::error::VerifyError::InvalidMethodAccessFlags;
+use crate::{CLASS_INITIALIZER_NAME, JAVA_1_2, JAVA_16};
 
 /// Verify the method `MethodAccessFlags`.
 ///
 /// # Errors
 /// Returns `InvalidMethodAccessFlags` if the access flags are invalid.
 pub(crate) fn verify(class_file: &ClassFile<'_>, method: &Method) -> Result<()> {
+    // JVMS 4.6 exempts class initializers from the ordinary flag combinations.
+    if class_file
+        .constant_pool
+        .try_get_utf8(method.name_index)
+        .is_ok_and(|name| name == CLASS_INITIALIZER_NAME)
+    {
+        return Ok(());
+    }
     let access_flags = method.access_flags;
     let public_set = access_flags.contains(MethodAccessFlags::PUBLIC);
     let protected_set = access_flags.contains(MethodAccessFlags::PROTECTED);
@@ -40,7 +49,8 @@ pub(crate) fn verify(class_file: &ClassFile<'_>, method: &Method) -> Result<()> 
             return Err(InvalidMethodAccessFlags(access_flags.bits()));
         }
 
-        let strict_disallowed = (46..=60).contains(&class_file.version.major())
+        let strict_disallowed = (JAVA_1_2.major()..=JAVA_16.major())
+            .contains(&class_file.version.major())
             && access_flags.contains(MethodAccessFlags::STRICT);
         strict_disallowed
             .then_some(InvalidMethodAccessFlags(access_flags.bits()))

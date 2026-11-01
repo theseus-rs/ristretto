@@ -21,7 +21,6 @@
 //!
 //! - [JVMS §4.10.1 - Verification by Type Checking](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1)
 
-use crate::FieldType;
 use crate::JavaStr;
 use crate::JavaString;
 use crate::attributes::{Attribute, ExceptionTableEntry, Instruction};
@@ -40,6 +39,7 @@ use crate::verifiers::bytecode::stackmap::DecodedStackMapTable;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
+use crate::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldType};
 use ahash::AHashSet;
 
 /// Extracted components from a Code attribute.
@@ -279,14 +279,12 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             let offset = code_info.offset_at(index).unwrap_or(0);
             let next_offset = code_info.offset_at(index + 1).unwrap_or(code_length);
 
-            if let Ok((successors, _)) =
+            if let Ok((successors, falls_through)) =
                 compute_successors(offset, instruction, next_offset, code_info)
             {
-                for succ in successors {
-                    if succ != next_offset {
-                        jump_targets.insert(succ);
-                    }
-                }
+                // A conditional branch lists its explicit target before fallthrough.
+                let explicit_count = successors.len().saturating_sub(usize::from(falls_through));
+                jump_targets.extend(successors.into_iter().take(explicit_count));
             }
         }
 
@@ -306,8 +304,11 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         let mut local_index = 0;
 
         // For non-static methods, local 0 is 'this'
-        if !method.access_flags.contains(MethodAccessFlags::STATIC) {
-            if method_name == "<init>" {
+        if !method.access_flags.contains(MethodAccessFlags::STATIC)
+            && method_name != CLASS_INITIALIZER_NAME
+        {
+            if method_name == CONSTRUCTOR_NAME && current_class != "java/lang/Object" {
+                frame.this_uninitialized = true;
                 frame.set_local(local_index, VerificationType::UninitializedThis)?;
             } else {
                 let this_type = VerificationType::Object(JavaString::from(current_class));
@@ -386,6 +387,31 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             }
         }
 
+        for (index, instruction) in self.code.iter().enumerate() {
+            if index + 1 < self.code.len()
+                && matches!(
+                    instruction,
+                    Instruction::Goto(_)
+                        | Instruction::Goto_w(_)
+                        | Instruction::Return
+                        | Instruction::Ireturn
+                        | Instruction::Lreturn
+                        | Instruction::Freturn
+                        | Instruction::Dreturn
+                        | Instruction::Areturn
+                        | Instruction::Athrow
+                        | Instruction::Tableswitch(_)
+                        | Instruction::Lookupswitch(_)
+                )
+                && !self
+                    .stack_map_table
+                    .has_frame_at(u16::try_from(index + 1).unwrap_or(u16::MAX))
+            {
+                return FastPathResult::Failed(VerifyError::VerifyError(
+                    "Missing frame after control transfer".to_string(),
+                ));
+            }
+        }
         // Perform the actual verification
         let initial_frame = self.initial_frame.clone();
         match self.verify_with_stackmaps(&initial_frame) {
@@ -427,7 +453,12 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     fn verify_with_stackmaps(&mut self, initial_frame: &Frame) -> Result<()> {
         let mut state = StackMapWorkState {
             anchor_states: self.initialize_anchor_states(initial_frame)?,
-            worklist: vec![0],
+            worklist: self
+                .stack_map_table
+                .frames()
+                .map(|f| usize::from(f.offset))
+                .chain(std::iter::once(0))
+                .collect(),
             visited: vec![false; self.code_info.instruction_count()],
         };
 
@@ -453,6 +484,9 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 let anchor = anchor_states.get_mut(index).ok_or_else(|| {
                     VerifyError::VerifyError(format!("Invalid stack map index {index}"))
                 })?;
+                if index == 0 {
+                    self.validate_frame_compatibility(initial_frame, &frame, 0)?;
+                }
                 *anchor = Some(frame);
             }
         }
@@ -498,13 +532,8 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             self.log_pre_instruction_frame(offset, &current_frame);
             let instruction = self.instruction_at(index)?;
 
-            let (next_frame, falls_through) = self.execute_instruction_step(
-                offset,
-                index,
-                instruction,
-                current_frame.clone(),
-                state,
-            )?;
+            let (next_frame, falls_through) =
+                self.execute_instruction_step(offset, index, instruction, &current_frame, state)?;
 
             if !falls_through {
                 break;
@@ -541,16 +570,16 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         offset: u16,
         index: usize,
         instruction: &Instruction,
-        current_frame: Frame,
+        current_frame: &Frame,
         state: &mut StackMapWorkState,
     ) -> Result<(Frame, bool)> {
         let next_offset = self.next_offset(index);
         let (next_frame, successors, falls_through) =
-            self.execute_instruction(offset, index, instruction, current_frame)?;
+            self.execute_instruction(offset, index, instruction, current_frame.clone())?;
 
         self.process_exception_handlers(
             offset,
-            &next_frame,
+            current_frame,
             &mut state.anchor_states,
             &mut state.worklist,
         )?;
@@ -575,17 +604,15 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 .code_info
                 .index_at(*succ_offset)
                 .ok_or(VerifyError::VerifyError("Invalid successor".to_string()))?;
-            if Self::is_visited(&state.visited, succ_index, "successor")? {
-                continue;
-            }
-
             self.handle_successor(
                 succ_index,
                 *succ_offset,
                 next_frame,
                 &mut state.anchor_states,
             )?;
-            state.worklist.push(succ_index);
+            if !Self::is_visited(&state.visited, succ_index, "successor")? {
+                state.worklist.push(succ_index);
+            }
         }
         Ok(())
     }
@@ -687,6 +714,11 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         expected: &Frame,
         offset: u16,
     ) -> Result<()> {
+        if computed.this_uninitialized && !expected.this_uninitialized {
+            return Err(VerifyError::VerifyError(format!(
+                "Constructor initialization state mismatch at offset {offset}"
+            )));
+        }
         // Stack depths must match
         if computed.stack.len() != expected.stack.len() {
             let computed_len = computed.stack.len();
@@ -717,7 +749,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             .enumerate()
         {
             // Top is compatible with anything
-            if *comp_type == VerificationType::Top || *exp_type == VerificationType::Top {
+            if *exp_type == VerificationType::Top {
                 continue;
             }
 
@@ -741,6 +773,13 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         instruction: &Instruction,
         frame: Frame,
     ) -> Result<(Frame, Vec<u16>, bool)> {
+        super::constraints::verify_state(
+            self.class_file,
+            self.code,
+            instruction,
+            &frame,
+            self.context,
+        )?;
         let mut next_frame = frame;
 
         // Calculate next offset for fallthrough
@@ -866,7 +905,8 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 let class_name = resolver.resolve_class(*index)?;
                 handlers::references::handle_checkcast(frame, &class_name)?;
             }
-            Instruction::Instanceof(_) => {
+            Instruction::Instanceof(index) => {
+                resolver.resolve_class(*index)?;
                 handlers::references::handle_instanceof(frame)?;
             }
             Instruction::Arraylength => {
@@ -917,6 +957,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             class_name,
             method_name,
             descriptor,
+            &self.current_class,
             self.context,
         )
     }
@@ -959,6 +1000,22 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 }
             }
 
+            handler_frame.this_uninitialized = current_frame.this_uninitialized;
+            super::constraints::invalidate_constructor_receiver(
+                self.class_file,
+                self.code,
+                offset,
+                current_frame,
+                &mut handler_frame,
+            )?;
+
+            if !exception_type
+                .is_assignable_to(&VerificationType::java_lang_throwable(), self.context)?
+            {
+                return Err(VerifyError::VerifyError(
+                    "Exception handler catch type must extend Throwable".to_string(),
+                ));
+            }
             // Push exception type
             handler_frame.push(exception_type)?;
 
@@ -967,15 +1024,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 let expected =
                     self.stack_map_table
                         .to_frame(decoded, self.max_locals, self.max_stack);
-                // Validate handler frame compatibility
-                // Note: We're lenient here; just check stack has exception type
-                if expected.stack.len() != 1 {
-                    let message = format!(
-                        "Exception handler at {} should have exactly one stack item",
-                        handler.handler_pc
-                    );
-                    return Err(VerifyError::VerifyError(message));
-                }
+                self.validate_frame_compatibility(&handler_frame, &expected, handler.handler_pc)?;
                 let anchor_state = anchor_states.get_mut(handler_index).ok_or_else(|| {
                     VerifyError::VerifyError(format!("Invalid handler index {handler_index}"))
                 })?;
@@ -1074,7 +1123,7 @@ mod tests {
             .unwrap();
         let init_index = class_file
             .constant_pool
-            .add_method_ref(class_index, "<init>", "()V")
+            .add_method_ref(class_index, CONSTRUCTOR_NAME, "()V")
             .unwrap();
         let virtual_index = class_file
             .constant_pool
@@ -1242,7 +1291,7 @@ mod tests {
     #[test]
     fn test_fast_path_constructor_and_parameter_initial_frames() {
         let mut class_file = create_mock_class_file();
-        let init_name = class_file.constant_pool.add_utf8("<init>").unwrap();
+        let init_name = class_file.constant_pool.add_utf8(CONSTRUCTOR_NAME).unwrap();
         let descriptor = class_file
             .constant_pool
             .add_utf8("(JDLTestClass;)V")
@@ -1265,7 +1314,7 @@ mod tests {
             &constructor,
             &class_file,
             "TestClass",
-            "<init>",
+            CONSTRUCTOR_NAME,
             7,
             1,
         )
@@ -1921,7 +1970,7 @@ mod tests {
             fast_verifier(&class_file, &duplicate_target_method, &context, &strict);
         assert!(matches!(
             duplicate_target_verifier.verify(),
-            FastPathResult::Success
+            FastPathResult::Failed(_)
         ));
     }
 
@@ -2165,6 +2214,48 @@ mod tests {
             invalid_pc_verify.verify(),
             FastPathResult::Failed(_)
         ));
+    }
+
+    #[test]
+    fn test_fast_path_exception_handler_validates_invokespecial() {
+        let mut class_file = create_mock_class_file();
+        let ordinary_method = class_file
+            .constant_pool
+            .add_method_ref(class_file.this_class, "ordinary", "()V")
+            .unwrap();
+        let context = MockContext::PERMISSIVE;
+        let config = VerifierConfig::default();
+        for (index, valid) in [(0, false), (ordinary_method, true)] {
+            let method = method_with(
+                MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                4,
+                vec![Instruction::Invokespecial(index), Instruction::Return],
+                1,
+                1,
+                Vec::new(),
+                vec![ExceptionTableEntry {
+                    range_pc: 0..1,
+                    handler_pc: 1,
+                    catch_type: 0,
+                }],
+            );
+            let verifier = fast_verifier(&class_file, &method, &context, &config);
+            let mut current = Frame::new(1, 1);
+            current.locals = vec![VerificationType::Integer];
+            let mut anchors = vec![None, None];
+            let mut worklist = Vec::new();
+            let result =
+                verifier.process_exception_handlers(0, &current, &mut anchors, &mut worklist);
+            if valid {
+                result.unwrap();
+                assert_eq!(anchors[1].as_ref().unwrap().locals, current.locals);
+                assert_eq!(worklist, vec![1]);
+            } else {
+                assert!(result.is_err());
+                assert!(anchors.iter().all(Option::is_none));
+                assert_eq!(worklist, [] as [usize; 0]);
+            }
+        }
     }
 
     #[test]

@@ -1,7 +1,42 @@
 use crate::verifiers::error;
 
+/// A symbolic member access together with its verified receiver type.
+/// The context can resolve declaring classes, access flags, packages, and loader identities.
+#[derive(Debug)]
+pub struct MemberAccess<'a> {
+    /// Class whose bytecode is being verified.
+    pub current_class: &'a str,
+    /// Symbolic owner in the constant pool.
+    pub owner: &'a str,
+    /// Member name.
+    pub name: &'a str,
+    /// Member descriptor.
+    pub descriptor: &'a str,
+    /// Receiver descriptor, if this is an instance access with a non-null receiver.
+    pub receiver: Option<&'a str>,
+    /// Instruction performing the access.
+    pub instruction: &'a crate::attributes::Instruction,
+}
+
 /// A trait that allows the verifier to resolve type relationships without knowing about the VM.
 pub trait VerificationContext {
+    /// Validate member access using resolved flags and loader identities.
+    /// Override this hook to enforce contextual constraints such as protected receiver
+    /// access; the default leaves member resolution and access checking to the VM.
+    ///
+    /// # Errors
+    /// Returns an error when the member is inaccessible or resolution fails.
+    fn verify_member_access(&self, _access: &MemberAccess<'_>) -> error::Result<()> {
+        Ok(())
+    }
+
+    /// Identity of the class-loading environment and its current hierarchy revision.
+    /// Return `None` (the default) to disable reuse of verification results. A token
+    /// must change whenever any resolution or access-check result can change.
+    fn cache_token(&self) -> Option<u64> {
+        None
+    }
+
     /// Checks if a class is a subclass of another.
     ///
     /// # Errors

@@ -5,8 +5,8 @@ use ahash::AHashMap;
 use indexmap::IndexMap;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
-    ClassAccessFlags, ClassFile, Constant, ConstantPool, FieldAccessFlags, JavaStr, JavaString,
-    MethodAccessFlags,
+    CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, Constant, ConstantPool,
+    FieldAccessFlags, JavaStr, JavaString, MethodAccessFlags,
 };
 use std::borrow::Cow;
 use std::fmt::{Debug, Display};
@@ -1421,13 +1421,13 @@ impl Class {
     /// Get the class initializer method.
     #[must_use]
     pub fn class_initializer(&self) -> Option<Arc<Method>> {
-        self.method("<clinit>", "()V")
+        self.method(CLASS_INITIALIZER_NAME, "()V")
     }
 
     /// Get an object initializer method.
     #[must_use]
     pub fn object_initializer(&self, descriptor: &str) -> Option<Arc<Method>> {
-        self.method("<init>", descriptor)
+        self.method(CONSTRUCTOR_NAME, descriptor)
     }
 
     /// Get all methods.
@@ -2308,7 +2308,7 @@ mod tests {
     async fn test_class_initializer() -> Result<()> {
         let class = string_class().await?;
         let method = class.class_initializer().expect("class initializer");
-        assert_eq!("<clinit>", method.name());
+        assert_eq!(CLASS_INITIALIZER_NAME, method.name());
         assert_eq!("()V", method.descriptor());
         Ok(())
     }
@@ -2319,7 +2319,7 @@ mod tests {
         let method = class
             .object_initializer("()V")
             .expect("instant initializer");
-        assert_eq!("<init>", method.name());
+        assert_eq!(CONSTRUCTOR_NAME, method.name());
         assert_eq!("()V", method.descriptor());
         Ok(())
     }

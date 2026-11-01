@@ -1,4 +1,5 @@
 use crate::java::lang::class::get_class;
+use ristretto_classfile::CLASS_INITIALIZER_NAME;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
@@ -16,7 +17,7 @@ pub async fn has_static_initializer<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let class_object = parameters.pop()?;
     let class = get_class(&thread, &class_object).await?;
-    let has_initializer = class.method("<clinit>", "()V").is_some();
+    let has_initializer = class.method(CLASS_INITIALIZER_NAME, "()V").is_some();
     Ok(Some(Value::from(has_initializer)))
 }
 

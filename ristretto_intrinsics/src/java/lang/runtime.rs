@@ -36,7 +36,8 @@ pub fn free_memory<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     #[cfg(not(target_family = "wasm"))]
     {
-        let sys = System::new_all();
+        let sys = System::new_all()
+            .map_err(|error| ristretto_types::Error::InternalError(error.to_string()))?;
         let free_memory = sys.total_memory() - sys.used_memory();
         let free_memory = if free_memory > u64::try_from(i64::MAX)? {
             i64::MAX
@@ -65,7 +66,8 @@ pub fn max_memory<T: Thread + 'static>(
     #[cfg(not(target_family = "wasm"))]
     {
         // Bootstrap queries this value; avoid collecting unrelated CPU and process information.
-        let mut sys = System::new();
+        let mut sys = System::new()
+            .map_err(|error| ristretto_types::Error::InternalError(error.to_string()))?;
         sys.refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
         let total_memory = min(sys.total_memory(), u64::try_from(i64::MAX)?);
         let total_memory = i64::try_from(total_memory)?;
@@ -117,7 +119,8 @@ pub fn total_memory<T: Thread + 'static>(
     #[cfg(not(target_family = "wasm"))]
     {
         // TODO: This is not the correct implementation; should be the total memory of the JVM
-        let sys = System::new_all();
+        let sys = System::new_all()
+            .map_err(|error| ristretto_types::Error::InternalError(error.to_string()))?;
         let used_memory = sys.used_memory();
         let free_memory = if used_memory > u64::try_from(i64::MAX)? {
             i64::MAX

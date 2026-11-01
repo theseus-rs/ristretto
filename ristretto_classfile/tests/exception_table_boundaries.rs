@@ -1,4 +1,4 @@
-//! Exception-table boundaries must identify exact instruction boundaries.
+//! Exception-table ranges must align with instruction boundaries or the end of code.
 #![expect(
     clippy::panic_in_result_fn,
     reason = "regression tests use assertions with fallible fixture setup"

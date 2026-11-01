@@ -1231,8 +1231,8 @@ mod tests {
     use crate::configuration::{ConfigurationBuilder, ModuleExport, ModuleOpens, ModuleRead};
     use ristretto_classfile::attributes::{Attribute, Instruction};
     use ristretto_classfile::{
-        BaseType, ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, FieldType, JAVA_25,
-        MethodAccessFlags,
+        BaseType, CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags,
+        FieldType, JAVA_25, MethodAccessFlags,
     };
     use ristretto_classloader::{ClassPath, ClassPathEntry, DEFAULT_JAVA_VERSION};
     use std::path::PathBuf;
@@ -1329,7 +1329,8 @@ mod tests {
         let mut constant_pool = ConstantPool::new();
         let this_class = constant_pool.add_class("InstanceMain")?;
         let super_class = constant_pool.add_class("java/lang/Object")?;
-        let super_constructor = constant_pool.add_method_ref(super_class, "<init>", "()V")?;
+        let super_constructor =
+            constant_pool.add_method_ref(super_class, CONSTRUCTOR_NAME, "()V")?;
         let argument_count = constant_pool.add_field_ref(this_class, "argumentCount", "I")?;
         let code_name = constant_pool.add_utf8("Code")?;
         let code_attribute = |code| Attribute::Code {
@@ -1360,7 +1361,7 @@ mod tests {
             code.push(Instruction::Return);
             methods.push(ristretto_classfile::Method {
                 access_flags: flags,
-                name_index: constant_pool.add_utf8("<init>")?,
+                name_index: constant_pool.add_utf8(CONSTRUCTOR_NAME)?,
                 descriptor_index: constant_pool.add_utf8("()V")?,
                 attributes: vec![code_attribute(code)],
             });
