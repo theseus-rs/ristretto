@@ -1,0 +1,120 @@
+name: Benchmark Reports
+
+on:
+  workflow_run:
+    workflows: [ Benchmarks ]
+    types: [ completed ]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.id }}
+  cancel-in-progress: true
+
+jobs:
+  report:
+    name: Publish benchmark results
+    if: >-
+      github.repository == 'theseus-rs/ristretto' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.repository.full_name == github.repository &&
+      github.event.workflow_run.path == '.github/workflows/benchmarks.yml' &&
+      (github.event.workflow_run.event == 'pull_request' ||
+       (github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-26.04-arm
+    permissions:
+      actions: read # Download results from the triggering run.
+      checks: write # Let Bencher report the result on the benchmarked commit.
+      pull-requests: write # Resolve PR identity and publish Bencher comments.
+    steps:
+      # Never check out source code, restore build caches, or execute artifacts
+      # here: the successful benchmark run may have executed arbitrary fork code.
+      - name: Resolve benchmark context
+        id: context
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            if (run.event === 'push') {
+              core.setOutput('branch', 'main');
+              core.setOutput('publish', 'true');
+              return;
+            }
+
+            // workflow_run.pull_requests can be empty for forks. Resolve the PR
+            // through GitHub, never through metadata supplied in an artifact.
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              ...context.repo,
+              state: 'open',
+              head: `${run.head_repository.owner.login}:${run.head_branch}`,
+              per_page: 100,
+            });
+            const matches = pulls.filter(pr =>
+              pr.base.repo.full_name === context.payload.repository.full_name &&
+              pr.head.repo?.id === run.head_repository.id &&
+              pr.head.ref === run.head_branch &&
+              pr.head.sha === run.head_sha &&
+              (run.pull_requests.length === 0 ||
+               run.pull_requests.some(candidate => candidate.number === pr.number))
+            );
+            if (matches.length !== 1) {
+              core.notice('Skipping results without a unique, current open pull request.');
+              return;
+            }
+
+            const pr = matches[0];
+            // A fork branch named "main" must never update the main baseline.
+            core.setOutput('branch', `pr-${pr.number}`);
+            core.setOutput('number', pr.number);
+            core.setOutput('base', pr.base.ref);
+            core.setOutput('publish', 'true');
+
+      - name: Install benchmarking tools
+        if: steps.context.outputs.publish == 'true'
+        uses: bencherdev/bencher@7de3c69a85380826613050826b4bce062be2f07d # v0.6.16
+        with:
+          version: '0.6.16'
+
+      - name: Download benchmark results
+        if: steps.context.outputs.publish == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: benchmark-results-${{ github.event.workflow_run.run_attempt }}
+          path: ${{ runner.temp }}/benchmark-results
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Publish benchmark results
+        if: steps.context.outputs.publish == 'true'
+        env:
+          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+          BENCHER_PROJECT: theseus-rs-ristretto
+          BENCHER_ADAPTER: rust_criterion
+          # Preserve the existing Linux testbed when publishing saved results.
+          BENCHER_TESTBED: Linux
+          GH_TOKEN: ${{ github.token }}
+          BENCHMARK_BRANCH: ${{ steps.context.outputs.branch }}
+          BENCHMARK_SHA: ${{ github.event.workflow_run.head_sha }}
+          PR_NUMBER: ${{ steps.context.outputs.number }}
+          PR_BASE: ${{ steps.context.outputs.base }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(
+            --branch "$BENCHMARK_BRANCH"
+            --hash "$BENCHMARK_SHA"
+            --file "$RUNNER_TEMP/benchmark-results/benchmark-results.txt"
+          )
+          if [[ -n "$PR_NUMBER" ]]; then
+            args+=(
+              --ci-number "$PR_NUMBER"
+              --github-actions "$GH_TOKEN"
+              --start-point "$PR_BASE"
+              --start-point-clone-thresholds
+              --err
+            )
+          fi
+          # Read the artifact only as Criterion data; never use it as a command.
+          bencher run "${args[@]}"

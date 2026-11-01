@@ -71,7 +71,7 @@ jobs:
             option: -max_len=1
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Install Rust
         run: rustup toolchain install --no-self-update
       - name: Install cargo fuzz
