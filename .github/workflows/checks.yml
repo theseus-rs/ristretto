@@ -75,3 +75,14 @@ jobs:
         run: rustup toolchain install --component rustfmt --no-self-update
       - name: Check formatting
         run: cargo fmt --all --check
+
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Install Rust
+        run: rustup toolchain install --no-self-update
+      # Check packaging and publish order; compilation is covered by the check job.
+      - name: Check crate publishing
+        run: cargo publish --workspace --dry-run --no-verify --locked

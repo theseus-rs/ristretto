@@ -124,7 +124,8 @@ proc-macro2 = { workspace = true }
 quote = { workspace = true }
 syn = { workspace = true, features = ["full", "extra-traits"] }
 ristretto_test_util = { path = "../ristretto_test_util", version = "0.34.0" }
-ristretto_vm = { path = "../ristretto_vm", version = "0.34.0", default-features = false }
+# Keep this test-only dependency out of published manifests: the VM depends on this crate.
+ristretto_vm = { path = "../ristretto_vm", default-features = false }
 tempfile = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
