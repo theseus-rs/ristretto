@@ -110,9 +110,19 @@ impl DecodedStackMapTable {
         let mut offsets = Vec::with_capacity(stack_frames.len());
 
         let mut current_locals = initial_frame.locals.clone();
+        while current_locals.last() == Some(&VerificationType::Top)
+            && !current_locals
+                .iter()
+                .rev()
+                .nth(1)
+                .is_some_and(VerificationType::is_category2)
+        {
+            current_locals.pop();
+        }
         let mut prev_offset: Option<u16> = None;
 
         for stack_frame in stack_frames {
+            validate_frame_kind(stack_frame)?;
             let offset_delta = get_offset_delta(stack_frame);
 
             // Calculate actual offset
@@ -129,6 +139,13 @@ impl DecodedStackMapTable {
             // Decode the frame
             let (decoded, new_locals) =
                 decode_frame(offset, stack_frame, &current_locals, class_file, max_stack)?;
+            if decoded.locals.len() > initial_frame.locals.len()
+                || decoded.stack.len() > usize::from(max_stack)
+            {
+                return Err(VerifyError::ClassFormatError(
+                    "StackMapTable exceeds max_locals or max_stack".to_string(),
+                ));
+            }
 
             frames.insert(offset, decoded);
             offsets.push(offset);
@@ -185,6 +202,11 @@ impl DecodedStackMapTable {
     #[must_use]
     pub fn to_frame(&self, decoded: &DecodedFrame, max_locals: u16, max_stack: u16) -> Frame {
         let mut frame = Frame::new(max_locals as usize, max_stack as usize);
+        frame.this_uninitialized = decoded
+            .locals
+            .iter()
+            .chain(&decoded.stack)
+            .any(|ty| *ty == VerificationType::UninitializedThis);
 
         // Copy locals, padding with Top if needed
         for (i, ty) in decoded.locals.iter().enumerate() {
@@ -241,7 +263,7 @@ fn decode_frame(
 
         StackFrame::SameLocals1StackItemFrame { stack, .. }
         | StackFrame::SameLocals1StackItemFrameExtended { stack, .. } => {
-            let stack_types = convert_verification_types(stack, class_file)?;
+            let stack_types = expand_locals(stack, class_file)?;
             (
                 FrameType::SameLocals1StackItem,
                 current_locals.to_vec(),
@@ -255,8 +277,17 @@ fn decode_frame(
 
             // Remove k locals from the end, accounting for category 2 types
             let mut removed = 0;
-            while removed < k && !new_locals.is_empty() {
-                new_locals.pop();
+            while removed < k {
+                let last = new_locals.pop().ok_or_else(|| {
+                    VerifyError::ClassFormatError("Chop frame removes too many locals".to_string())
+                })?;
+                if last == VerificationType::Top
+                    && new_locals
+                        .last()
+                        .is_some_and(VerificationType::is_category2)
+                {
+                    new_locals.pop();
+                }
                 removed += 1;
             }
 
@@ -280,7 +311,7 @@ fn decode_frame(
 
         StackFrame::FullFrame { locals, stack, .. } => {
             let new_locals = expand_locals(locals, class_file)?;
-            let stack_types = convert_verification_types(stack, class_file)?;
+            let stack_types = expand_locals(stack, class_file)?;
             (FrameType::Full, new_locals, stack_types)
         }
     };
@@ -347,7 +378,14 @@ fn convert_single_type(
                 .constant_pool
                 .try_get_class(*cpool_index)
                 .map_err(|error| VerifyError::ClassFormatError(error.to_string()))?;
-            Ok(VerificationType::Object(JavaString::from(name)))
+            // Stack maps encode array references as Object entries; decode their component types.
+            if name.as_bytes().first() == Some(&b'[') {
+                Ok(VerificationType::from_field_type(
+                    &crate::FieldType::parse_java_str(name)?,
+                ))
+            } else {
+                Ok(VerificationType::Object(JavaString::from(name)))
+            }
         }
         ClassFileVerificationType::Uninitialized { offset } => {
             Ok(VerificationType::Uninitialized(*offset))
@@ -359,12 +397,52 @@ fn convert_single_type(
 fn get_offset_delta(frame: &StackFrame) -> u16 {
     match frame {
         StackFrame::SameFrame { frame_type } => u16::from(*frame_type),
-        StackFrame::SameLocals1StackItemFrame { frame_type, .. } => u16::from(*frame_type) - 64,
+        StackFrame::SameLocals1StackItemFrame { frame_type, .. } => {
+            u16::from(*frame_type).saturating_sub(64)
+        }
         StackFrame::SameLocals1StackItemFrameExtended { offset_delta, .. }
         | StackFrame::ChopFrame { offset_delta, .. }
         | StackFrame::SameFrameExtended { offset_delta, .. }
         | StackFrame::AppendFrame { offset_delta, .. }
         | StackFrame::FullFrame { offset_delta, .. } => *offset_delta,
+    }
+}
+
+fn validate_frame_kind(frame: &StackFrame) -> Result<()> {
+    let valid = match frame {
+        StackFrame::SameFrame { frame_type: 0..=63 }
+        | StackFrame::SameFrameExtended {
+            frame_type: 251, ..
+        }
+        | StackFrame::ChopFrame {
+            frame_type: 248..=250,
+            ..
+        }
+        | StackFrame::FullFrame {
+            frame_type: 255, ..
+        } => true,
+        StackFrame::SameLocals1StackItemFrame {
+            frame_type: 64..=127,
+            stack,
+        }
+        | StackFrame::SameLocals1StackItemFrameExtended {
+            frame_type: 247,
+            stack,
+            ..
+        } => stack.len() == 1,
+        StackFrame::AppendFrame {
+            frame_type: 252..=254,
+            locals,
+            ..
+        } => locals.len() == usize::from(frame.frame_type() - 251),
+        _ => false,
+    };
+    if valid {
+        Ok(())
+    } else {
+        Err(VerifyError::ClassFormatError(
+            "Invalid StackMapTable frame encoding".to_string(),
+        ))
     }
 }
 
@@ -410,6 +488,108 @@ mod tests {
     }
 
     #[test]
+    fn test_reject_invalid_frame_encodings_before_decoding_or_writing() {
+        let class_file = create_test_class_file();
+        let initial_frame = Frame::new(4, 4);
+        let invalid_frames = [
+            StackFrame::SameFrame { frame_type: 64 },
+            StackFrame::SameLocals1StackItemFrame {
+                frame_type: 63,
+                stack: vec![ClassFileVerificationType::Integer],
+            },
+            StackFrame::SameLocals1StackItemFrame {
+                frame_type: 128,
+                stack: vec![ClassFileVerificationType::Integer],
+            },
+            StackFrame::SameLocals1StackItemFrame {
+                frame_type: 64,
+                stack: vec![],
+            },
+            StackFrame::SameLocals1StackItemFrameExtended {
+                frame_type: 246,
+                offset_delta: 0,
+                stack: vec![ClassFileVerificationType::Integer],
+            },
+            StackFrame::SameLocals1StackItemFrameExtended {
+                frame_type: 247,
+                offset_delta: 0,
+                stack: vec![ClassFileVerificationType::Integer; 2],
+            },
+            StackFrame::ChopFrame {
+                frame_type: 251,
+                offset_delta: 0,
+            },
+            StackFrame::SameFrameExtended {
+                frame_type: 250,
+                offset_delta: 0,
+            },
+            StackFrame::AppendFrame {
+                frame_type: 251,
+                offset_delta: 0,
+                locals: vec![],
+            },
+            StackFrame::AppendFrame {
+                frame_type: 252,
+                offset_delta: 0,
+                locals: vec![],
+            },
+            StackFrame::AppendFrame {
+                frame_type: 254,
+                offset_delta: 0,
+                locals: vec![ClassFileVerificationType::Integer; 4],
+            },
+            StackFrame::FullFrame {
+                frame_type: 254,
+                offset_delta: 0,
+                locals: vec![],
+                stack: vec![],
+            },
+        ];
+
+        for stack_frame in invalid_frames {
+            let mut bytes = vec![42];
+            assert!(matches!(
+                stack_frame.to_bytes(&mut bytes),
+                Err(crate::Error::InvalidStackFrameType(tag)) if tag == stack_frame.frame_type()
+            ));
+            assert_eq!(
+                bytes,
+                [42],
+                "invalid frames must not write a partial encoding"
+            );
+            assert!(matches!(
+                DecodedStackMapTable::decode(&[stack_frame], &initial_frame, &class_file, 4),
+                Err(VerifyError::ClassFormatError(message))
+                    if message == "Invalid StackMapTable frame encoding"
+            ));
+        }
+    }
+
+    #[test]
+    fn test_decode_rejects_frames_exceeding_slot_limits() {
+        let class_file = create_test_class_file();
+        for (locals, stack, max_locals, max_stack) in [
+            (vec![ClassFileVerificationType::Integer], vec![], 0, 0),
+            (vec![ClassFileVerificationType::Long], vec![], 1, 0),
+            (vec![], vec![ClassFileVerificationType::Integer], 0, 0),
+            (vec![], vec![ClassFileVerificationType::Double], 0, 1),
+        ] {
+            let initial_frame = Frame::new(max_locals, usize::from(max_stack));
+            let stack_frames = [StackFrame::FullFrame {
+                frame_type: 255,
+                offset_delta: 0,
+                locals,
+                stack,
+            }];
+            assert!(matches!(
+                DecodedStackMapTable::decode(&stack_frames, &initial_frame, &class_file, max_stack),
+                Err(VerifyError::ClassFormatError(message))
+                    if message == "StackMapTable exceeds max_locals or max_stack"
+            ));
+        }
+    }
+
+    #[test]
     fn test_decode_same_frame() {
         let class_file = create_test_class_file();
         let initial_frame = Frame::new(2, 4);
@@ -447,7 +627,38 @@ mod tests {
         let frame = table.get(5).unwrap();
         assert_eq!(frame.frame_type, FrameType::Chop(1));
         // Should have removed one local
-        assert_eq!(frame.locals.len(), initial_frame.locals.len() - 1);
+        assert_eq!(frame.locals.len(), 2);
+    }
+
+    #[test]
+    fn test_decode_chop_frame_rejects_excessive_removal() {
+        let class_file = create_test_class_file();
+        for (locals, frame_type) in [
+            (vec![], 250),
+            (vec![VerificationType::Integer], 249),
+            (vec![VerificationType::Long, VerificationType::Top], 249),
+            (
+                vec![
+                    VerificationType::Integer,
+                    VerificationType::Double,
+                    VerificationType::Top,
+                ],
+                248,
+            ),
+        ] {
+            let mut initial_frame = Frame::new(locals.len(), 0);
+            initial_frame.locals = locals;
+            let stack_frames = [StackFrame::ChopFrame {
+                frame_type,
+                offset_delta: 0,
+            }];
+
+            assert!(matches!(
+                DecodedStackMapTable::decode(&stack_frames, &initial_frame, &class_file, 0),
+                Err(VerifyError::ClassFormatError(message))
+                    if message == "Chop frame removes too many locals"
+            ));
+        }
     }
 
     #[test]
@@ -475,7 +686,7 @@ mod tests {
     #[test]
     fn test_decode_all_frame_types_and_type_conversions() {
         let class_file = create_test_class_file();
-        let mut initial_frame = Frame::new(4, 4);
+        let mut initial_frame = Frame::new(12, 4);
         initial_frame.locals[0] = VerificationType::Integer;
 
         let stack_frames = vec![

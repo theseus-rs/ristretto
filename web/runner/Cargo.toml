@@ -13,6 +13,7 @@ crate-type = ["cdylib", "rlib"]
 workspace = true
 
 [dependencies]
+ristretto_classfile = { path = "../../ristretto_classfile" }
 ristretto_vm = { path = "../../ristretto_vm", default-features = false }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

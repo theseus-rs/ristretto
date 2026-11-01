@@ -27,6 +27,7 @@ fn read_class(args: &[String]) -> Result<ClassFile<'static>> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use ristretto_classfile::CONSTRUCTOR_NAME;
 
     #[test]
     fn test_read_class() -> Result<()> {
@@ -42,7 +43,7 @@ mod test {
             .iter()
             .map(|method| class_file.constant_pool.try_get_utf8(method.name_index))
             .collect::<ristretto_classfile::Result<Vec<_>>>()?;
-        assert_eq!(vec!["<init>", "main"], method_names);
+        assert_eq!(vec![CONSTRUCTOR_NAME, "main"], method_names);
         Ok(())
     }
 

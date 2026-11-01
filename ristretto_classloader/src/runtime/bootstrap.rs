@@ -5,7 +5,7 @@ use crate::{Class, ClassLoader, ClassLoaderType, ClassPath, Result};
 #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use flate2::bufread::GzDecoder;
 use ristretto_classfile::Error::IoError;
-use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2};
+use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2, JAVA_8};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Weak};
 #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
@@ -20,19 +20,19 @@ use tracing::{debug, warn};
 pub const DEFAULT_JAVA_VERSION: &str = JAVA_25_VERSION;
 
 /// Java 8 LTS version
-pub const JAVA_8_VERSION: &str = "8.504.01.1";
+pub const JAVA_8_VERSION: &str = "8.512.09.1";
 
 /// Java 11 LTS version
-pub const JAVA_11_VERSION: &str = "11.0.32.12.1";
+pub const JAVA_11_VERSION: &str = "11.0.33.0.10";
 
 /// Java 17 LTS version
-pub const JAVA_17_VERSION: &str = "17.0.20.12.1";
+pub const JAVA_17_VERSION: &str = "17.0.21.0.11";
 
 /// Java 21 LTS version
-pub const JAVA_21_VERSION: &str = "21.0.12.12.1";
+pub const JAVA_21_VERSION: &str = "21.0.13.0.11";
 
 /// Java 25 LTS version (also the default)
-pub const JAVA_25_VERSION: &str = "25.0.4.10.1";
+pub const JAVA_25_VERSION: &str = "25.0.5.0.10";
 
 /// Array of all supported Java LTS versions for iteration in tests
 pub const ALL_LTS_VERSIONS: &[&str] = &[
@@ -80,7 +80,7 @@ pub async fn default_class_loader() -> Result<(PathBuf, String, Arc<ClassLoader>
 /// 1. `RISTRETTO_JDK_<MAJOR>_HOME` — points directly at the JDK home for the requested major
 ///    version (e.g. `RISTRETTO_JDK_25_HOME=/jdks/25`).
 /// 2. `RISTRETTO_JDKS_DIR` — points at a directory containing one entry per full version string
-///    (e.g. `<dir>/25.0.4.10.1`).
+///    (e.g. `<dir>/25.0.5.0.10`).
 /// 3. `RISTRETTO_JDK_HOME` — generic fallback pointing at any JDK.
 ///
 /// # Errors
@@ -266,7 +266,7 @@ fn is_complete_installation(version: &str, os: &str, installation_dir: &Path) ->
     }
 
     let java_home = java_home_for_os(os, installation_dir.to_path_buf());
-    if util::parse_major_version(version) <= 8 {
+    if util::parse_major_version(version) <= JAVA_8.java() {
         return Ok(java_home.join("jre").join("lib").join("rt.jar").is_file());
     }
 
@@ -375,7 +375,7 @@ fn create_primitive_class(class_loader: &Weak<ClassLoader>, primitive: &str) -> 
 ///
 /// An error will be returned if the class path cannot be determined.
 fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
-    let class_path = if util::parse_major_version(version) <= 8 {
+    let class_path = if util::parse_major_version(version) <= JAVA_8.java() {
         let library_path = installation_dir.join("jre").join("lib");
         let mut class_path = Vec::with_capacity(2);
         let resources_jar_path = library_path.join("resources.jar");

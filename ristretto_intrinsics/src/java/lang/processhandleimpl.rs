@@ -31,7 +31,8 @@ pub fn destroy_0<T: Thread + 'static>(
         let pid = parameters.pop_long()?;
         let pid = usize::try_from(pid)?;
         let pid = Pid::from(pid);
-        let mut system = System::new_all();
+        let mut system = System::new_all()
+            .map_err(|error| ristretto_types::Error::InternalError(error.to_string()))?;
         system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
 
         let Some(process) = system.process(pid) else {
@@ -112,7 +113,8 @@ pub fn get_process_pids_0<T: Thread + 'static>(
         };
 
         let pid = parameters.pop_long()?;
-        let mut system = System::new_all();
+        let mut system = System::new_all()
+            .map_err(|error| ristretto_types::Error::InternalError(error.to_string()))?;
 
         let processes_length = if pid == 0 {
             system.refresh_processes(ProcessesToUpdate::All, true);
@@ -194,7 +196,8 @@ pub fn is_alive_0<T: Thread + 'static>(
         let pid = parameters.pop_long()?;
         let pid = usize::try_from(pid)?;
         let pid = Pid::from(pid);
-        let mut system = System::new_all();
+        let mut system = System::new_all()
+            .map_err(|error| ristretto_types::Error::InternalError(error.to_string()))?;
         system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
 
         let start_time = if let Some(process) = system.process(pid) {
@@ -229,7 +232,8 @@ pub fn parent_0<T: Thread + 'static>(
         let pid = parameters.pop_long()?;
         let pid = usize::try_from(pid)?;
         let pid = Pid::from(pid);
-        let mut system = System::new_all();
+        let mut system = System::new_all()
+            .map_err(|error| ristretto_types::Error::InternalError(error.to_string()))?;
         system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
 
         let Some(process) = system.process(pid) else {
@@ -267,20 +271,21 @@ pub async fn wait_for_process_exit_0<T: Thread + 'static>(
         let pid = parameters.pop_long()?;
         let pid_usize = usize::try_from(pid)?;
 
-        let exit_code = tokio::task::spawn_blocking(move || {
+        let exit_code = tokio::task::spawn_blocking(move || -> Result<i32> {
             let sys_pid = Pid::from(pid_usize);
-            let mut system = System::new_all();
+            let mut system = System::new_all()
+                .map_err(|error| ristretto_types::Error::InternalError(error.to_string()))?;
             system.refresh_processes(ProcessesToUpdate::Some(&[sys_pid]), true);
 
             let Some(process) = system.process(sys_pid) else {
-                return 0;
+                return Ok(0);
             };
 
             process.wait();
-            0
+            Ok(0)
         })
         .await
-        .map_err(|e| ristretto_types::Error::InternalError(e.to_string()))?;
+        .map_err(|e| ristretto_types::Error::InternalError(e.to_string()))??;
 
         Ok(Some(Value::Int(exit_code)))
     }
@@ -300,6 +305,152 @@ mod tests {
 
     #[cfg(not(target_family = "wasm"))]
     use std::process;
+    use std::time::Duration;
+
+    fn waiting_child() -> std::io::Result<tokio::process::Child> {
+        #[cfg(windows)]
+        let mut command = {
+            let mut command = tokio::process::Command::new("cmd.exe");
+            command.args(["/C", "set /p line="]);
+            command
+        };
+        #[cfg(not(windows))]
+        let mut command = {
+            let mut command = tokio::process::Command::new("/bin/sh");
+            command.args(["-c", "read line"]);
+            command
+        };
+        command
+            .stdin(process::Stdio::piped())
+            .stdout(process::Stdio::null())
+            .stderr(process::Stdio::null())
+            .kill_on_drop(true)
+            .spawn()
+    }
+
+    #[tokio::test]
+    async fn test_process_pids_and_parent() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let mut child = waiting_child().expect("child process");
+        let child_pid = i64::from(child.id().expect("child pid"));
+        let gc = thread.vm().expect("vm").garbage_collector().clone();
+        let pids = Value::new_object(&gc, Reference::from(vec![0i64]));
+        let parents = Value::new_object(&gc, Reference::from(vec![0i64]));
+        let starts = Value::new_object(&gc, Reference::from(vec![0i64]));
+        let result = get_process_pids_0(
+            thread.clone(),
+            Parameters::new(vec![
+                Value::Long(child_pid),
+                pids.clone(),
+                parents.clone(),
+                starts.clone(),
+            ]),
+        )
+        .expect("process information");
+        assert_eq!(result, Some(Value::Int(1)));
+        for (value, expected) in [(&pids, child_pid), (&parents, i64::from(process::id()))] {
+            assert_eq!(&*value.as_long_vec_ref().expect("long array"), &[expected]);
+        }
+        assert!(
+            starts
+                .as_long_vec_ref()
+                .expect("start times")
+                .iter()
+                .all(|start| *start > 0)
+        );
+        let result = parent_0(
+            thread.clone(),
+            Parameters::new(vec![Value::Long(child_pid), Value::Long(0)]),
+        )
+        .expect("parent pid");
+        assert_eq!(result, Some(Value::Long(i64::from(process::id()))));
+        let result = destroy_0(
+            thread,
+            Parameters::new(vec![
+                Value::Long(child_pid),
+                Value::Long(0),
+                Value::from(true),
+            ]),
+        )
+        .expect("destroy child");
+        assert_eq!(result, Some(Value::from(true)));
+        child.wait().await.expect("reap child");
+    }
+
+    #[tokio::test]
+    async fn test_get_all_process_pids() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let gc = thread.vm().expect("vm").garbage_collector().clone();
+        let pids = Value::new_object(&gc, Reference::from(vec![-1i64]));
+        let parents = Value::new_object(&gc, Reference::from(vec![0i64]));
+        let starts = Value::new_object(&gc, Reference::from(vec![0i64]));
+        let result = get_process_pids_0(
+            thread,
+            Parameters::new(vec![Value::Long(0), pids.clone(), parents, starts]),
+        )
+        .expect("process enumeration");
+        // The count includes processes beyond the capacity of the output arrays.
+        assert!(result.expect("process count").as_i32().expect("int") > 0);
+        let array = pids.as_long_vec_ref().expect("pids");
+        assert_eq!(array.len(), 1);
+        assert!(array.iter().all(|pid| *pid >= 0));
+    }
+
+    #[tokio::test]
+    async fn test_missing_process() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        // This is outside the PID range on the supported native test platforms.
+        let pid = Value::Long(i64::from(i32::MAX));
+        assert_eq!(
+            destroy_0(
+                thread.clone(),
+                Parameters::new(vec![pid.clone(), Value::Long(0), Value::from(true)]),
+            )
+            .expect("destroy missing process"),
+            Some(Value::from(false))
+        );
+        assert_eq!(
+            parent_0(
+                thread.clone(),
+                Parameters::new(vec![pid.clone(), Value::Long(0)]),
+            )
+            .expect("missing parent"),
+            Some(Value::Long(-1))
+        );
+        assert_eq!(
+            is_alive_0(thread.clone(), Parameters::new(vec![pid.clone()]))
+                .expect("missing process status"),
+            Some(Value::Long(-1))
+        );
+        assert_eq!(
+            wait_for_process_exit_0(thread, Parameters::new(vec![pid, Value::from(false)]),)
+                .await
+                .expect("wait for missing process"),
+            Some(Value::Int(0))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_wait_for_process_exit_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let mut child = waiting_child().expect("child process");
+        let pid = i64::from(child.id().expect("child pid"));
+        let input = child.stdin.take();
+        let release_child = async move {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            drop(input);
+        };
+        let (result, ()) = tokio::join!(
+            wait_for_process_exit_0(
+                thread,
+                Parameters::new(vec![Value::Long(pid), Value::from(true)]),
+            ),
+            release_child,
+        );
+        assert_eq!(result.expect("wait for child"), Some(Value::Int(0)));
+        // sysinfo may already have reaped the child on Unix.
+        let _ = child.wait().await;
+    }
 
     #[tokio::test]
     async fn test_get_current_pid_0() -> Result<()> {

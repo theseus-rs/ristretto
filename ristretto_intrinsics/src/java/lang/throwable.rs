@@ -1,5 +1,5 @@
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
-use ristretto_classfile::{JAVA_8, JAVA_11};
+use ristretto_classfile::{CONSTRUCTOR_NAME, JAVA_8, JAVA_11};
 use ristretto_classloader::{Object, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaObject;
@@ -74,7 +74,7 @@ pub async fn fill_in_stack_trace<T: Thread + 'static>(
             if method_name_str == "fillInStackTrace" {
                 continue;
             }
-            if method_name_str == "<init>"
+            if method_name_str == CONSTRUCTOR_NAME
                 && (Arc::ptr_eq(class, &throwable_class)
                     || throwable_class.is_subclass_of(class)?)
             {

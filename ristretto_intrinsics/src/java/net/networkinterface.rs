@@ -101,13 +101,16 @@ unsafe fn windows_wide_string(pointer: *const u16) -> String {
 fn interfaces() -> Vec<InterfaceData> {
     use sysinfo::{InterfaceOperationalState, Networks};
 
-    let networks = Networks::new_with_refreshed_list();
+    let Ok(networks) = Networks::new_with_refreshed_list() else {
+        return Vec::new();
+    };
     let mut entries: Vec<_> = networks.iter().collect();
     entries.sort_by_key(|(name, _)| (*name).clone());
     entries
         .into_iter()
         .enumerate()
         .map(|(position, (name, network))| {
+            let name = name.to_string_lossy().into_owned();
             let addresses: Vec<_> = network
                 .ip_networks()
                 .iter()
@@ -117,7 +120,9 @@ fn interfaces() -> Vec<InterfaceData> {
                         // OpenJDK associates enumerated IPv6 addresses with
                         // their NetworkInterface even when the kernel sockaddr
                         // carries a zero scope (including global addresses).
-                        IpAddr::V6(address) => InetAddressValue::V6(address, interface_index(name)),
+                        IpAddr::V6(address) => {
+                            InetAddressValue::V6(address, interface_index(&name))
+                        }
                     };
                     (address, network.prefix)
                 })
@@ -126,7 +131,7 @@ fn interfaces() -> Vec<InterfaceData> {
                 && addresses
                     .iter()
                     .all(|(address, _)| address.ip().is_loopback());
-            let flags = interface_flags(name);
+            let flags = interface_flags(&name);
             let loopback = flags.map_or(inferred_loopback, |flags| flags & flag_loopback() != 0);
             let up = flags.map_or_else(
                 || {
@@ -141,7 +146,7 @@ fn interfaces() -> Vec<InterfaceData> {
             );
             let mac =
                 (!network.mac_address().is_unspecified()).then(|| network.mac_address().0.to_vec());
-            let index = interface_index(name);
+            let index = interface_index(&name);
             InterfaceData {
                 name: name.clone(),
                 display_name: name.clone(),

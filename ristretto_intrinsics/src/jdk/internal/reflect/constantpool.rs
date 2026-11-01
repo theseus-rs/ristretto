@@ -1,6 +1,6 @@
 use crate::java::lang::class;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
-use ristretto_classfile::{Constant, FieldType, JAVA_11};
+use ristretto_classfile::{CONSTRUCTOR_NAME, Constant, FieldType, JAVA_11};
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
@@ -256,7 +256,7 @@ pub async fn get_method_at_0<T: Thread + 'static>(
     let reference = Reference::try_from((class, parameters_classes))?;
     let class_parameters = Value::new_object(thread.vm()?.garbage_collector(), reference);
 
-    let method = if method_name == "<init>" {
+    let method = if method_name == CONSTRUCTOR_NAME {
         thread
             .invoke(
                 "java.lang.Class",
@@ -471,7 +471,7 @@ pub(crate) mod tests {
         let (vm, thread) = crate::test::thread().await.expect("thread");
         let mut constant_pool = ConstantPool::default();
         let super_class = constant_pool.add_class("java/lang/Object")?;
-        let object_init = constant_pool.add_method_ref(super_class, "<init>", "()V")?;
+        let object_init = constant_pool.add_method_ref(super_class, CONSTRUCTOR_NAME, "()V")?;
         let this_class = constant_pool.add_class("TestClass")?;
         let _int = constant_pool.add_integer(1)?;
         let _long = constant_pool.add_long(2)?;
@@ -763,7 +763,7 @@ pub(crate) mod tests {
         let name = values.get(1).expect("name").as_string()?;
         let descriptor = values.get(2).expect("descriptor").as_string()?;
         assert_eq!("java/lang/Object", class_name);
-        assert_eq!("<init>", name);
+        assert_eq!(CONSTRUCTOR_NAME, name);
         assert_eq!("()V", descriptor);
         Ok(())
     }
@@ -904,7 +904,7 @@ pub(crate) mod tests {
         assert_eq!(2, values.len());
         let name = values.first().expect("name").as_string()?;
         let descriptor = values.get(1).expect("descriptor").as_string()?;
-        assert_eq!("<init>", name);
+        assert_eq!(CONSTRUCTOR_NAME, name);
         assert_eq!("()V", descriptor);
         Ok(())
     }

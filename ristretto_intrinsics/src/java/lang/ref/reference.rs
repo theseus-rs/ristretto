@@ -1,5 +1,5 @@
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
-use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_25};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
@@ -18,9 +18,10 @@ pub fn clear_0<T: Thread + 'static>(
     Ok(None)
 }
 
+// JDK-8352565 was backported to 21.0.13 and 25.0.5; earlier updates lack get0().
 #[intrinsic_method(
     "java/lang/ref/Reference.get0()Ljava/lang/Object;",
-    GreaterThanOrEqual(JAVA_25)
+    GreaterThanOrEqual(JAVA_21)
 )]
 pub fn get_0<T: Thread + 'static>(
     _thread: Arc<T>,

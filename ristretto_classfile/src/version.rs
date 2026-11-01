@@ -165,7 +165,7 @@ impl Version {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn from(major: u16, minor: u16) -> Result<Self> {
-        if major >= 56 && minor != 0 && minor != JAVA_PREVIEW_MINOR_VERSION {
+        if major >= JAVA_12.major() && minor != 0 && minor != JAVA_PREVIEW_MINOR_VERSION {
             return Err(InvalidVersion { major, minor });
         }
 
@@ -366,7 +366,7 @@ impl Version {
     /// ```
     #[must_use]
     pub fn is_preview(&self) -> bool {
-        self.major() >= 56 && self.minor() == JAVA_PREVIEW_MINOR_VERSION
+        self.major() >= JAVA_12.major() && self.minor() == JAVA_PREVIEW_MINOR_VERSION
     }
 
     /// Deserialize the major and minor version bytes.

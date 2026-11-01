@@ -13,6 +13,7 @@ pub(crate) struct Release {
     pub draft: bool,
     pub prerelease: bool,
     pub assets: Vec<Asset>,
+    pub body: Option<String>,
 }
 
 /// Represents a GitHub asset

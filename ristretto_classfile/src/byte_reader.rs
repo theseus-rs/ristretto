@@ -232,17 +232,17 @@ impl<'a> ByteReader<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Error;
+    use crate::{Error, JAVA_8, JAVA_21};
 
     #[test]
     fn test_nested_reader_depth_limit() -> crate::Result<()> {
         let mut reader = ByteReader::new(&[42]);
-        reader.class_major_version = 65;
+        reader.class_major_version = JAVA_21.major();
         for _ in 0..64 {
             reader = reader.read_nested(1)?;
             assert_eq!(reader.position(), 0);
             assert_eq!(reader.data(), &[42]);
-            assert_eq!(reader.class_major_version, 65);
+            assert_eq!(reader.class_major_version, JAVA_21.major());
         }
         assert!(matches!(
             reader.read_nested(1),
@@ -1399,7 +1399,7 @@ mod tests {
         let minor = reader.read_u16()?;
         assert_eq!(minor, 0);
         let major = reader.read_u16()?;
-        assert_eq!(major, 52); // Java 8
+        assert_eq!(major, JAVA_8.major());
         assert_eq!(reader.remaining(), 0);
         Ok(())
     }

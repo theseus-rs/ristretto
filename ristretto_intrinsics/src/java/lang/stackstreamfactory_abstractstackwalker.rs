@@ -1,6 +1,6 @@
 use crate::java::lang::invoke::methodhandlenatives::MemberNameFlags;
 use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan};
-use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25};
+use ristretto_classfile::{CONSTRUCTOR_NAME, JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::{Object, Reference, Value};
 use ristretto_gc::GarbageCollector;
 use ristretto_macros::intrinsic_method;
@@ -44,7 +44,7 @@ async fn build_frame_data<T: Thread + 'static>(
             member.set_value("clazz", class_mirror.clone())?;
             member.set_value("name", method_name.clone())?;
             member.set_value("type", descriptor.clone())?;
-            let member_kind = if method.name() == "<init>" {
+            let member_kind = if method.name() == CONSTRUCTOR_NAME {
                 MemberNameFlags::IS_CONSTRUCTOR
             } else {
                 MemberNameFlags::IS_METHOD

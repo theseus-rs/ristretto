@@ -21,6 +21,7 @@
 //!
 //! - [JVM Tool Interface: Verification](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10)
 
+use crate::JAVA_6;
 use std::fmt;
 
 use bitflags::bitflags;
@@ -33,11 +34,11 @@ bitflags! {
         const VERBOSE = 0b0000_0001;
         /// Enable tracing of all verification steps.
         const TRACE = 0b0000_0010;
-        /// Cache verification results.
+        /// Request result caching from integrations that supply a verification cache.
         const CACHE_RESULTS = 0b0000_0100;
         /// Allow JSR/RET instructions.
         const ALLOW_JSR_RET = 0b0000_1000;
-        /// Strict exception handler type checking.
+        /// Retained for compatibility; exception handler type checking is always enforced.
         const STRICT_EXCEPTION_HANDLERS = 0b0001_0000;
     }
 }
@@ -143,7 +144,7 @@ pub struct VerifierConfig {
     /// Boolean flags for verification options.
     pub flags: VerifierFlags,
 
-    /// Maximum iterations for type inference (slow path).
+    /// Maximum type inference iterations per instruction.
     ///
     /// Prevents infinite loops in malformed bytecode.
     /// Default is 1000.
@@ -161,9 +162,9 @@ impl Default for VerifierConfig {
         Self {
             verify_mode: VerifyMode::default(),
             fallback_strategy: FallbackStrategy::default(),
-            flags: VerifierFlags::STRICT_EXCEPTION_HANDLERS,
+            flags: VerifierFlags::STRICT_EXCEPTION_HANDLERS | VerifierFlags::ALLOW_JSR_RET,
             max_inference_iterations: 1000,
-            stackmap_required_version: 50, // Java 6
+            stackmap_required_version: JAVA_6.major(),
         }
     }
 }
@@ -185,7 +186,7 @@ impl VerifierConfig {
         Self {
             verify_mode: VerifyMode::All,
             fallback_strategy: FallbackStrategy::Strict,
-            flags: VerifierFlags::STRICT_EXCEPTION_HANDLERS,
+            flags: VerifierFlags::STRICT_EXCEPTION_HANDLERS | VerifierFlags::ALLOW_JSR_RET,
             ..Default::default()
         }
     }
@@ -297,6 +298,7 @@ impl VerifierConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{JAVA_5, JAVA_8, JAVA_21};
 
     #[test]
     fn test_default_config() {
@@ -352,10 +354,10 @@ mod tests {
     #[test]
     fn test_requires_stackmap() {
         let config = VerifierConfig::default();
-        assert!(!config.requires_stackmap(49)); // Java 5
-        assert!(config.requires_stackmap(50)); // Java 6
-        assert!(config.requires_stackmap(52)); // Java 8
-        assert!(config.requires_stackmap(65)); // Java 21
+        assert!(!config.requires_stackmap(JAVA_5.major()));
+        assert!(config.requires_stackmap(JAVA_6.major()));
+        assert!(config.requires_stackmap(JAVA_8.major()));
+        assert!(config.requires_stackmap(JAVA_21.major()));
     }
 
     #[test]

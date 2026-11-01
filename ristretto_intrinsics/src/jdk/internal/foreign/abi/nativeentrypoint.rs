@@ -8,8 +8,8 @@
 
 use parking_lot::RwLock as ParkingRwLock;
 use portable_atomic::{AtomicI64, Ordering};
-use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::{JAVA_21, JAVA_25};
 use ristretto_classloader::{Reference, Value};
 use ristretto_gc::sync::RwLock as GcRwLock;
 use ristretto_macros::intrinsic_method;
@@ -266,7 +266,9 @@ fn validate_stub(stub: &DowncallStub, java_major_version: u16) -> Result<()> {
         .zip(&stub.argument_moves)
         .enumerate()
     {
-        if argument_move.is_none() && (java_major_version < 25 || parameter != "java.lang.Object") {
+        if argument_move.is_none()
+            && (java_major_version < JAVA_25.java() || parameter != "java.lang.Object")
+        {
             return Err(InternalError(format!(
                 "missing VMStorage for downcall parameter {index} of type {parameter}"
             )));
@@ -613,13 +615,13 @@ mod tests {
             captured_state_mask: 0,
             needs_transition: false,
         };
-        assert!(validate_stub(&stub, 25).is_err());
+        assert!(validate_stub(&stub, JAVA_25.java()).is_err());
 
         let stub = DowncallStub {
             needs_return_buffer: true,
             ..stub
         };
-        assert!(validate_stub(&stub, 25).is_ok());
+        assert!(validate_stub(&stub, JAVA_25.java()).is_ok());
     }
 
     #[test]
@@ -636,8 +638,8 @@ mod tests {
             captured_state_mask: 0,
             needs_transition: false,
         };
-        assert!(validate_stub(&stub, 21).is_err());
-        assert!(validate_stub(&stub, 25).is_ok());
+        assert!(validate_stub(&stub, JAVA_21.java()).is_err());
+        assert!(validate_stub(&stub, JAVA_25.java()).is_ok());
 
         let stub = DowncallStub {
             method_type: MethodTypeDescriptor {
@@ -648,7 +650,7 @@ mod tests {
             return_moves: vec![None],
             ..stub
         };
-        assert!(validate_stub(&stub, 25).is_err());
+        assert!(validate_stub(&stub, JAVA_25.java()).is_err());
     }
 
     #[tokio::test]

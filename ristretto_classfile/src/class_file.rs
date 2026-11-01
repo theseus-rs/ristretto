@@ -173,7 +173,13 @@ impl<'a> ClassFile<'a> {
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> Result<ClassFile<'static>> {
         let mut reader = ByteReader::new(bytes);
-        Self::parse_from_reader(&mut reader)
+        let class_file = Self::parse_from_reader(&mut reader)?;
+        if reader.remaining() != 0 {
+            return Err(crate::Error::IoError(
+                "Extra bytes after class file".to_string(),
+            ));
+        }
+        Ok(class_file)
     }
 
     /// Parse a `ClassFile` directly from a byte slice, borrowing string data where possible.
@@ -187,7 +193,13 @@ impl<'a> ClassFile<'a> {
     /// Returns an error if the bytes do not represent a valid class file.
     pub fn from_slice(data: &'a [u8]) -> Result<ClassFile<'a>> {
         let mut reader = ByteReader::new(data);
-        Self::from_byte_reader(&mut reader)
+        let class_file = Self::from_byte_reader(&mut reader)?;
+        if reader.remaining() != 0 {
+            return Err(crate::Error::IoError(
+                "Extra bytes after class file".to_string(),
+            ));
+        }
+        Ok(class_file)
     }
 
     /// Parse from a `ByteReader` and return a `ClassFile<'static>` by converting all
@@ -199,6 +211,7 @@ impl<'a> ClassFile<'a> {
         }
 
         let version = Version::from_bytes(reader)?;
+        reader.class_major_version = version.major();
         let constant_pool = ConstantPool::from_bytes(reader)?.into_owned();
         let access_flags = ClassAccessFlags::from_bits_truncate(reader.read_u16()?);
         let this_class = reader.read_u16()?;
@@ -227,7 +240,11 @@ impl<'a> ClassFile<'a> {
         let attribute_count = reader.read_u16()? as usize;
         let mut attributes = Vec::with_capacity(attribute_count);
         for _ in 0..attribute_count {
-            let attribute = Attribute::from_bytes(&constant_pool, reader)?;
+            let attribute = Attribute::from_bytes_in(
+                &constant_pool,
+                reader,
+                crate::attributes::attribute::AttributeLocation::Class,
+            )?;
             attributes.push(attribute);
         }
 
@@ -253,6 +270,7 @@ impl<'a> ClassFile<'a> {
         }
 
         let version = Version::from_bytes(reader)?;
+        reader.class_major_version = version.major();
         let constant_pool = ConstantPool::from_bytes(reader)?;
         let access_flags = ClassAccessFlags::from_bits_truncate(reader.read_u16()?);
         let this_class = reader.read_u16()?;
@@ -281,7 +299,11 @@ impl<'a> ClassFile<'a> {
         let attribute_count = reader.read_u16()? as usize;
         let mut attributes = Vec::with_capacity(attribute_count);
         for _ in 0..attribute_count {
-            let attribute = Attribute::from_bytes(&constant_pool, reader)?;
+            let attribute = Attribute::from_bytes_in(
+                &constant_pool,
+                reader,
+                crate::attributes::attribute::AttributeLocation::Class,
+            )?;
             attributes.push(attribute);
         }
 

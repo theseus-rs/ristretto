@@ -52,6 +52,9 @@ pub struct Frame {
 
     /// Maximum stack size (for overflow checking).
     max_stack: usize,
+
+    /// Constructor initialization state, independent of local variable contents.
+    pub this_uninitialized: bool,
 }
 
 impl Frame {
@@ -71,6 +74,7 @@ impl Frame {
             locals: vec![VerificationType::Top; max_locals],
             stack: Vec::with_capacity(max_stack),
             max_stack,
+            this_uninitialized: false,
         }
     }
 
@@ -86,6 +90,7 @@ impl Frame {
             locals,
             stack: Vec::with_capacity(max_stack),
             max_stack,
+            this_uninitialized: false,
         }
     }
 
@@ -300,6 +305,15 @@ impl Frame {
                 self.locals.len()
             )));
         }
+        if idx > 0
+            && self
+                .locals
+                .get(idx - 1)
+                .is_some_and(VerificationType::is_category2)
+            && let Some(previous) = self.locals.get_mut(idx - 1)
+        {
+            *previous = VerificationType::Top;
+        }
         let max = self.locals.len();
         let local = self.locals.get_mut(idx).ok_or_else(|| {
             VerifyError::VerifyError(format!(
@@ -329,6 +343,15 @@ impl Frame {
             return Err(VerifyError::VerifyError(format!(
                 "Local variable index {index} + 1 out of bounds for category 2 type"
             )));
+        }
+        if idx > 0
+            && self
+                .locals
+                .get(idx - 1)
+                .is_some_and(VerificationType::is_category2)
+            && let Some(previous) = self.locals.get_mut(idx - 1)
+        {
+            *previous = VerificationType::Top;
         }
         let max = self.locals.len();
         let first = self.locals.get_mut(idx).ok_or_else(|| {
@@ -428,7 +451,8 @@ impl Frame {
             )));
         }
 
-        let mut changed = false;
+        let mut changed = !self.this_uninitialized && other.this_uninitialized;
+        self.this_uninitialized |= other.this_uninitialized;
 
         // Merge locals
         for (target, source) in self.locals.iter_mut().zip(&other.locals) {
@@ -469,6 +493,9 @@ impl Frame {
         uninitialized: &VerificationType,
         initialized: &VerificationType,
     ) {
+        if *uninitialized == VerificationType::UninitializedThis {
+            self.this_uninitialized = false;
+        }
         for local in &mut self.locals {
             if local == uninitialized {
                 *local = initialized.clone();

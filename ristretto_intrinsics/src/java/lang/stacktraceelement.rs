@@ -532,7 +532,7 @@ fn module_version<T: Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ristretto_classfile::JAVA_25;
+    use ristretto_classfile::{CONSTRUCTOR_NAME, JAVA_25};
     use ristretto_classloader::{Object, Reference};
     use ristretto_types::JavaObject;
 
@@ -1085,7 +1085,8 @@ mod tests {
     async fn test_init_stack_trace_elements_maps_bytecode_index_to_line() -> Result<()> {
         let (vm, thread) = crate::test::java21_thread().await?;
         let stack_trace = create_stack_trace_array(&vm, &thread, 1).await?;
-        let backtrace = create_backtrace_for_method(&vm, &thread, 1, "<init>", "()V").await?;
+        let backtrace =
+            create_backtrace_for_method(&vm, &thread, 1, CONSTRUCTOR_NAME, "()V").await?;
         let parameters = Parameters::new(vec![stack_trace.clone(), backtrace, Value::Int(1)]);
 
         init_stack_trace_elements_1(thread, parameters).await?;

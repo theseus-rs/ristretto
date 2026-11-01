@@ -10,12 +10,12 @@
 //!
 //! - [JVMS §6.5 - Instructions](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5)
 
-use crate::FieldType;
 use crate::attributes::Instruction;
 use crate::verifiers::bytecode::frame::Frame;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
+use crate::{FieldType, JAVA_7};
 
 /// Handles `return` - return void from method.
 ///
@@ -238,7 +238,7 @@ pub fn handle_lookupswitch(frame: &mut Frame) -> Result<()> {
 ///
 /// - [JVMS §4.9.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.9.1)
 pub fn reject_jsr(major_version: u16) -> Result<()> {
-    if major_version >= 51 {
+    if major_version >= JAVA_7.major() {
         Err(VerifyError::VerifyError(
             "jsr instruction is not allowed in class files version 51.0 or later".to_string(),
         ))
@@ -261,7 +261,7 @@ pub fn reject_jsr(major_version: u16) -> Result<()> {
 ///
 /// - [JVMS §4.9.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.9.1)
 pub fn reject_ret(major_version: u16) -> Result<()> {
-    if major_version >= 51 {
+    if major_version >= JAVA_7.major() {
         Err(VerifyError::VerifyError(
             "ret instruction is not allowed in class files version 51.0 or later".to_string(),
         ))
@@ -287,6 +287,26 @@ pub fn dispatch_control<C: VerificationContext>(
     major_version: u16,
     context: &C,
 ) -> Result<bool> {
+    if matches!(
+        instruction,
+        Instruction::Return
+            | Instruction::Ireturn
+            | Instruction::Lreturn
+            | Instruction::Freturn
+            | Instruction::Dreturn
+            | Instruction::Areturn
+    ) {
+        if frame.this_uninitialized {
+            return Err(VerifyError::VerifyError(
+                "Constructor returns before this is initialized".to_string(),
+            ));
+        }
+        if matches!(instruction, Instruction::Return) != expected_return.is_none() {
+            return Err(VerifyError::VerifyError(
+                "Return opcode does not match method descriptor".to_string(),
+            ));
+        }
+    }
     match instruction {
         // Unconditional branches (no stack effect)
         Instruction::Goto(_) | Instruction::Goto_w(_) => {}
@@ -325,6 +345,7 @@ mod tests {
     use crate::JavaString;
     use crate::attributes::{LookupSwitch, TableSwitch};
     use crate::verifiers::bytecode::handlers::test_utils::MockContext;
+    use crate::{JAVA_6, JAVA_8};
     use indexmap::IndexMap;
 
     #[test]
@@ -612,14 +633,14 @@ mod tests {
 
     #[test]
     fn test_reject_jsr_version_51_fails() {
-        let result = reject_jsr(51);
+        let result = reject_jsr(JAVA_7.major());
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not allowed"));
     }
 
     #[test]
     fn test_reject_jsr_version_52_fails() {
-        let result = reject_jsr(52);
+        let result = reject_jsr(JAVA_8.major());
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not allowed"));
     }
@@ -627,21 +648,21 @@ mod tests {
     #[test]
     fn test_reject_jsr_version_50_fails() {
         // Older version; still rejected in our implementation
-        let result = reject_jsr(50);
+        let result = reject_jsr(JAVA_6.major());
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not supported"));
     }
 
     #[test]
     fn test_reject_ret_version_51_fails() {
-        let result = reject_ret(51);
+        let result = reject_ret(JAVA_7.major());
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not allowed"));
     }
 
     #[test]
     fn test_reject_ret_version_50_fails() {
-        let result = reject_ret(50);
+        let result = reject_ret(JAVA_6.major());
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not supported"));
     }
@@ -651,7 +672,14 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        let handled = dispatch_control(&Instruction::Goto(10), &mut frame, None, 52, &ctx).unwrap();
+        let handled = dispatch_control(
+            &Instruction::Goto(10),
+            &mut frame,
+            None,
+            JAVA_8.major(),
+            &ctx,
+        )
+        .unwrap();
         assert!(handled);
     }
 
@@ -660,8 +688,14 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        let handled =
-            dispatch_control(&Instruction::Goto_w(1000), &mut frame, None, 52, &ctx).unwrap();
+        let handled = dispatch_control(
+            &Instruction::Goto_w(1000),
+            &mut frame,
+            None,
+            JAVA_8.major(),
+            &ctx,
+        )
+        .unwrap();
         assert!(handled);
     }
 
@@ -670,7 +704,8 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        let handled = dispatch_control(&Instruction::Return, &mut frame, None, 52, &ctx).unwrap();
+        let handled =
+            dispatch_control(&Instruction::Return, &mut frame, None, JAVA_8.major(), &ctx).unwrap();
         assert!(handled);
     }
 
@@ -680,7 +715,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
-        let handled = dispatch_control(&Instruction::Ireturn, &mut frame, None, 52, &ctx).unwrap();
+        let handled = dispatch_control(
+            &Instruction::Ireturn,
+            &mut frame,
+            Some(&FieldType::Base(BaseType::Int)),
+            JAVA_8.major(),
+            &ctx,
+        )
+        .unwrap();
         assert!(handled);
     }
 
@@ -690,7 +732,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push_category2(VerificationType::Long).unwrap();
 
-        let handled = dispatch_control(&Instruction::Lreturn, &mut frame, None, 52, &ctx).unwrap();
+        let handled = dispatch_control(
+            &Instruction::Lreturn,
+            &mut frame,
+            Some(&FieldType::Base(BaseType::Long)),
+            JAVA_8.major(),
+            &ctx,
+        )
+        .unwrap();
         assert!(handled);
     }
 
@@ -700,7 +749,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Float).unwrap();
 
-        let handled = dispatch_control(&Instruction::Freturn, &mut frame, None, 52, &ctx).unwrap();
+        let handled = dispatch_control(
+            &Instruction::Freturn,
+            &mut frame,
+            Some(&FieldType::Base(BaseType::Float)),
+            JAVA_8.major(),
+            &ctx,
+        )
+        .unwrap();
         assert!(handled);
     }
 
@@ -710,7 +766,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push_category2(VerificationType::Double).unwrap();
 
-        let handled = dispatch_control(&Instruction::Dreturn, &mut frame, None, 52, &ctx).unwrap();
+        let handled = dispatch_control(
+            &Instruction::Dreturn,
+            &mut frame,
+            Some(&FieldType::Base(BaseType::Double)),
+            JAVA_8.major(),
+            &ctx,
+        )
+        .unwrap();
         assert!(handled);
     }
 
@@ -720,7 +783,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
-        let handled = dispatch_control(&Instruction::Areturn, &mut frame, None, 52, &ctx).unwrap();
+        let handled = dispatch_control(
+            &Instruction::Areturn,
+            &mut frame,
+            Some(&FieldType::Object(JavaString::from("java/lang/Object"))),
+            JAVA_8.major(),
+            &ctx,
+        )
+        .unwrap();
         assert!(handled);
     }
 
@@ -740,7 +810,7 @@ mod tests {
             &Instruction::Tableswitch(Box::new(tableswitch)),
             &mut frame,
             None,
-            52,
+            JAVA_8.major(),
             &ctx,
         )
         .unwrap();
@@ -761,7 +831,7 @@ mod tests {
             &Instruction::Lookupswitch(Box::new(lookupswitch)),
             &mut frame,
             None,
-            52,
+            JAVA_8.major(),
             &ctx,
         )
         .unwrap();
@@ -773,7 +843,13 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        let result = dispatch_control(&Instruction::Jsr(10), &mut frame, None, 52, &ctx);
+        let result = dispatch_control(
+            &Instruction::Jsr(10),
+            &mut frame,
+            None,
+            JAVA_8.major(),
+            &ctx,
+        );
         assert!(result.is_err());
     }
 
@@ -782,7 +858,13 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        let result = dispatch_control(&Instruction::Jsr_w(1000), &mut frame, None, 52, &ctx);
+        let result = dispatch_control(
+            &Instruction::Jsr_w(1000),
+            &mut frame,
+            None,
+            JAVA_8.major(),
+            &ctx,
+        );
         assert!(result.is_err());
     }
 
@@ -791,7 +873,7 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        let result = dispatch_control(&Instruction::Ret(0), &mut frame, None, 52, &ctx);
+        let result = dispatch_control(&Instruction::Ret(0), &mut frame, None, JAVA_8.major(), &ctx);
         assert!(result.is_err());
     }
 
@@ -800,7 +882,13 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        let result = dispatch_control(&Instruction::Ret_w(0), &mut frame, None, 52, &ctx);
+        let result = dispatch_control(
+            &Instruction::Ret_w(0),
+            &mut frame,
+            None,
+            JAVA_8.major(),
+            &ctx,
+        );
         assert!(result.is_err());
     }
 
@@ -809,7 +897,8 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        let handled = dispatch_control(&Instruction::Nop, &mut frame, None, 52, &ctx).unwrap();
+        let handled =
+            dispatch_control(&Instruction::Nop, &mut frame, None, JAVA_8.major(), &ctx).unwrap();
         assert!(!handled);
     }
 }

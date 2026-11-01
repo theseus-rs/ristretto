@@ -48,7 +48,8 @@ jobs:
 
         include:
           - platform: linux-arm
-            os: ubuntu-26.04-arm
+            # Match the Ubuntu ARM image used by the release builds.
+            os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
           - platform: linux-riscv64
             os: ubuntu-latest
@@ -80,7 +81,7 @@ jobs:
 
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Rust
         run: rustup toolchain install --target ${{ matrix.target }} --no-self-update
@@ -230,6 +231,7 @@ jobs:
           RUST_BACKTRACE: 1
           RUST_LOG: info
         run: |
+          cargo test --profile release-tests -p ristretto_classfile --test java8_runtime_test -- --ignored --test-threads=1
           cargo test --profile release-tests -p ristretto_classloader runtime::util::tests -- --ignored --test-threads=1
           cargo test --profile release-tests -p ristretto_classloader object::tests::test_as_string_java8 -- --ignored --test-threads=1
           cargo test --profile release-tests -p ristretto_classloader --test runtime -- --ignored --test-threads=1

@@ -8,8 +8,8 @@ use ristretto_classfile::VersionSpecification::{
 };
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
-    Constant, ConstantPool, FieldAccessFlags, FieldType, JAVA_8, JAVA_11, JAVA_17, JavaStr,
-    MethodAccessFlags, ReferenceKind,
+    CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, Constant, ConstantPool, FieldAccessFlags, FieldType,
+    JAVA_8, JAVA_11, JAVA_17, JavaStr, MethodAccessFlags, ReferenceKind,
 };
 use ristretto_classloader::Error::IllegalAccessError;
 use ristretto_classloader::{
@@ -630,7 +630,7 @@ pub async fn get_members<T: Thread + 'static>(
         {
             for method in class.methods() {
                 let method_name = method.name();
-                let flags = if method_name == "<init>" {
+                let flags = if method_name == CONSTRUCTOR_NAME {
                     if !match_flags.contains(MemberNameFlags::IS_CONSTRUCTOR) {
                         continue;
                     }
@@ -639,7 +639,7 @@ pub async fn get_members<T: Thread + 'static>(
                     if !match_flags.contains(MemberNameFlags::IS_METHOD) {
                         continue;
                     }
-                    if method_name == "<clinit>" {
+                    if method_name == CLASS_INITIALIZER_NAME {
                         continue;
                     }
                     MemberNameFlags::IS_METHOD
@@ -908,7 +908,7 @@ async fn init_from_constructor<T: Thread + 'static>(
     };
 
     // Constructor name is always "<init>"
-    let name = "<init>".to_object(thread).await?;
+    let name = CONSTRUCTOR_NAME.to_object(thread).await?;
 
     // Return type is void
     let void_class = thread.class("void").await?;
