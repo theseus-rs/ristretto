@@ -1527,7 +1527,9 @@ pub fn get_load_average_0<T: Thread + 'static>(
 
     #[cfg(not(target_family = "wasm"))]
     let averages = {
-        let load_avg = sysinfo::System::load_average();
+        let Ok(load_avg) = sysinfo::System::load_average() else {
+            return Ok(Some(Value::Int(-1)));
+        };
         [load_avg.one, load_avg.five, load_avg.fifteen]
     };
     #[cfg(target_family = "wasm")]
@@ -2673,20 +2675,24 @@ mod tests {
     #[tokio::test]
     async fn test_get_load_average_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let loadavg = Reference::from(vec![0.0f64, 0.0, 0.0]);
+        let loadavg = Reference::from(vec![-1.0f64; 3]);
         let loadavg_value = Value::new_object(thread.vm()?.garbage_collector(), loadavg);
         let mut parameters = Parameters::default();
         parameters.push(loadavg_value.clone());
         parameters.push_int(3); // nelems
         let result = get_load_average_0(thread, parameters)?;
-        // Returns 3 indicating all 3 load averages were filled
-        assert_eq!(result, Some(Value::Int(3)));
-        // Verify load averages are non-negative (valid values)
         let guard = loadavg_value.as_reference()?;
         let Reference::DoubleArray(array) = &*guard else {
             panic!("Expected DoubleArray");
         };
-        assert!(array.iter().all(|average| *average >= 0.0));
+        if cfg!(windows) {
+            // sysinfo reports unsupported on Windows; preserve the caller's array.
+            assert_eq!(result, Some(Value::Int(-1)));
+            assert_eq!(array.as_ref(), &[-1.0; 3]);
+        } else {
+            assert_eq!(result, Some(Value::Int(3)));
+            assert!(array.iter().all(|average| *average >= 0.0));
+        }
         Ok(())
     }
 

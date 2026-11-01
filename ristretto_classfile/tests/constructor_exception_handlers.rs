@@ -1,4 +1,4 @@
-//! A constructor that throws must leave every saved receiver alias unusable.
+//! Constructor exception handlers must invalidate receiver aliases and reject uninitialized returns.
 #![expect(
     clippy::panic_in_result_fn,
     reason = "regression tests use assertions with fallible fixture setup"

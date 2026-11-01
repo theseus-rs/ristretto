@@ -424,7 +424,9 @@ pub fn get_space<T: Thread + 'static>(
 
     #[cfg(not(target_family = "wasm"))]
     let result = {
-        let disks = Disks::new_with_refreshed_list();
+        let Ok(disks) = Disks::new_with_refreshed_list() else {
+            return Ok(Some(Value::Long(0)));
+        };
         let disk = disks
             .iter()
             .find(|d| path.starts_with(d.mount_point()))

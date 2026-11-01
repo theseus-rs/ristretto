@@ -1,4 +1,4 @@
-//! Regression coverage added while reviewing the classfile patch series.
+//! Wide branch offsets must reject signed overflow and preserve valid boundaries.
 #![expect(
     clippy::panic_in_result_fn,
     reason = "regression tests use assertions with fallible fixture setup"
