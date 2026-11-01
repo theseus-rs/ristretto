@@ -60,8 +60,8 @@ fn constructor_handler(retry_alias: Option<Instruction>) -> Result<ClassFile<'st
             max_locals: 2,
             code,
             exception_table: vec![ExceptionTableEntry {
-                range_pc: 5..6,
-                handler_pc: 7,
+                range_pc: 7..10,
+                handler_pc: 11,
                 catch_type: 0,
             }],
             attributes: vec![],
@@ -124,8 +124,8 @@ fn failed_super_constructor_handler_must_not_return() -> Result<()> {
                 max_locals: 1,
                 code,
                 exception_table: vec![ExceptionTableEntry {
-                    range_pc: 1..2,
-                    handler_pc: 3,
+                    range_pc: 1..4,
+                    handler_pc: 5,
                     catch_type: 0,
                 }],
                 attributes: vec![],

@@ -4,6 +4,7 @@ use crate::class_path_entry::ClassPathEntry;
 use ristretto_classfile::ClassFile;
 use std::ffi::OsStr;
 use std::fmt::Display;
+use std::sync::Arc;
 use tracing::info;
 
 /// Represents a class path.
@@ -58,7 +59,9 @@ impl ClassPath {
     ///
     /// if the class file is not found or cannot be read.
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile<'static>> {
-        self.read_class_with_code_source(name, true).await
+        Ok(Arc::unwrap_or_clone(
+            self.read_class_with_code_source(name, true).await?,
+        ))
     }
 
     /// Read a class, optionally resolving its code source URL.
@@ -69,15 +72,17 @@ impl ClassPath {
         &self,
         name: S,
         include_code_source: bool,
-    ) -> Result<ClassFile<'static>> {
+    ) -> Result<Arc<ClassFile<'static>>> {
         let name = name.as_ref();
 
         for class_path_entry in self.iter() {
-            if let Ok(mut class_file) = class_path_entry.read_class(name).await {
+            if let Ok(mut class_file) = class_path_entry.read_class_shared(name).await {
                 let source = class_path_entry.name().to_string_lossy();
                 info!("load class {name} source: {source}");
                 if !include_code_source {
-                    class_file.code_source_url = None;
+                    if class_file.code_source_url.is_some() {
+                        Arc::make_mut(&mut class_file).code_source_url = None;
+                    }
                     return Ok(class_file);
                 }
                 let code_source_url = match class_path_entry {
@@ -103,7 +108,9 @@ impl ClassPath {
                     // corresponding protocol handler exists.
                     ClassPathEntry::Memory(_) => None,
                 };
-                class_file.code_source_url = code_source_url;
+                if class_file.code_source_url != code_source_url {
+                    Arc::make_mut(&mut class_file).code_source_url = code_source_url;
+                }
                 return Ok(class_file);
             }
         }

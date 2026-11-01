@@ -1,12 +1,11 @@
 use crate::Error::InvalidOperand;
 use crate::Result;
-use crate::frame::ExecutionResult;
 
 /// # References
 ///
 /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 #[inline]
-pub(crate) fn wide() -> Result<ExecutionResult> {
+pub(crate) fn wide() -> Result<()> {
     // The wide instruction is not directly used by this implementation.  The wide
     // versions of instructions are specifically enumerated in the instruction set.
     Err(InvalidOperand {

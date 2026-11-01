@@ -95,6 +95,19 @@ impl LocalVariables {
         }
     }
 
+    /// Increment an int in place with JVM wrapping semantics and a single slot/type check.
+    #[inline]
+    pub(crate) fn increment_int(&mut self, index: usize, increment: i32) -> Result<()> {
+        match self.locals.get_mut(index) {
+            Some(Value::Int(value)) => {
+                *value = value.wrapping_add(increment);
+                Ok(())
+            }
+            Some(value) => Err(invalid_type("int", value)),
+            None => Err(InvalidLocalVariableIndex(index)),
+        }
+    }
+
     /// Get a long from the local variables.
     ///
     /// # Errors

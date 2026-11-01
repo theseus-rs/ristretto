@@ -302,7 +302,7 @@ pub struct Class {
     /// Cached lossy UTF-8 conversion of the class name for APIs requiring `&str`.
     name_str: String,
     source_file: Option<String>,
-    class_file: ClassFile<'static>,
+    class_file: Arc<ClassFile<'static>>,
     parent: RwLock<Option<Arc<Class>>>,
     /// Published after linking; ancestor slots are a stable prefix of descendant layouts.
     field_layout: OnceLock<Box<[Arc<Field>]>>,
@@ -347,7 +347,15 @@ impl Class {
     /// if the class file cannot be read.
     pub fn from(
         class_loader: Option<Weak<ClassLoader>>,
-        mut class_file: ClassFile<'static>,
+        class_file: ClassFile<'static>,
+    ) -> Result<Arc<Self>> {
+        Self::from_shared(class_loader, Arc::new(class_file))
+    }
+
+    /// Share immutable classfile data; runtime class state remains private to this loader.
+    pub(crate) fn from_shared(
+        class_loader: Option<Weak<ClassLoader>>,
+        mut class_file: Arc<ClassFile<'static>>,
     ) -> Result<Arc<Self>> {
         let mut source_file = None;
 
@@ -366,7 +374,10 @@ impl Class {
         #[expect(clippy::single_match)]
         match class_file.class_name()?.to_str_lossy().as_ref() {
             "java/lang/invoke/MemberName" => {
-                Self::add_synthetic_fields(&mut class_file, &[("vmindex", "Ljava/lang/Object;")])?;
+                Self::add_synthetic_fields(
+                    Arc::make_mut(&mut class_file),
+                    &[("vmindex", "Ljava/lang/Object;")],
+                )?;
             }
             _ => {}
         }
@@ -388,8 +399,8 @@ impl Class {
         }
 
         let mut methods = IndexMap::new();
-        for class_file_method in &class_file.methods {
-            let method = Method::from(&class_file, class_file_method)?;
+        for index in 0..class_file.methods.len() {
+            let method = Method::from_shared(&class_file, index)?;
             let signature = method.signature();
             methods.insert(signature, Arc::new(method));
         }
@@ -397,7 +408,7 @@ impl Class {
         match class_file.class_name()?.to_str_lossy().as_ref() {
             "java/lang/invoke/DelegatingMethodHandle$Holder" => {
                 Self::add_synthetic_methods(
-                    &mut class_file,
+                    Arc::make_mut(&mut class_file),
                     &mut methods,
                     &[
                         ("delegate", "([Ljava/lang/Object;)Ljava/lang/Object;"),
@@ -407,7 +418,7 @@ impl Class {
             }
             "java/lang/invoke/DirectMethodHandle$Holder" => {
                 Self::add_synthetic_methods(
-                    &mut class_file,
+                    Arc::make_mut(&mut class_file),
                     &mut methods,
                     &[
                         ("getReference", "([Ljava/lang/Object;)Ljava/lang/Object;"),
@@ -420,7 +431,7 @@ impl Class {
             }
             "java/lang/invoke/Invokers$Holder" => {
                 Self::add_synthetic_methods(
-                    &mut class_file,
+                    Arc::make_mut(&mut class_file),
                     &mut methods,
                     &[("invoker", "([Ljava/lang/Object;)Ljava/lang/Object;")],
                 )?;
@@ -477,66 +488,7 @@ impl Class {
             .constant_pool
             .set(class_file.this_class, Constant::Class(hidden_name_index))?;
 
-        let mut source_file = None;
-
-        for attribute in &class_file.attributes {
-            if let Attribute::SourceFile {
-                source_file_index, ..
-            } = attribute
-            {
-                let constant_pool = &class_file.constant_pool;
-                let source_file_name = constant_pool.try_get_utf8(*source_file_index)?;
-                source_file = Some(source_file_name.to_rust_string());
-                break;
-            }
-        }
-
-        let mut static_fields = Vec::new();
-        let mut static_values = Vec::new();
-        let mut object_fields = Vec::new();
-        let constant_pool = &class_file.constant_pool;
-        for (index, class_field) in class_file.fields.iter().enumerate() {
-            let index = u16::try_from(index)?;
-            let field = Arc::new(Field::from(&class_file, index, class_field)?);
-            if field.access_flags().contains(FieldAccessFlags::STATIC) {
-                static_fields.push(field.clone());
-                let value = field.default_static_value(constant_pool)?;
-                static_values.push(Arc::new(RwLock::new(value)));
-            } else {
-                object_fields.push(field);
-            }
-        }
-
-        let mut methods = IndexMap::new();
-        for class_file_method in &class_file.methods {
-            let method = Method::from(&class_file, class_file_method)?;
-            let signature = method.signature();
-            methods.insert(signature, Arc::new(method));
-        }
-
-        let name = JavaString::from(hidden_name);
-        let name_str = name.to_str_lossy().into_owned();
-        let class = Arc::new(Self {
-            class_loader,
-            name,
-            name_str,
-            source_file,
-            class_file,
-            parent: RwLock::new(None),
-            field_layout: OnceLock::new(),
-            verification: OnceLock::new(),
-            interfaces: RwLock::new(Vec::new()),
-            static_fields,
-            static_values,
-            object_fields,
-            methods,
-            object: RwLock::new(None),
-            initialization_state: RwLock::new(InitializationState::NotInitialized),
-            initialized: AtomicBool::new(false),
-            initialization_notify: Notify::new(),
-            module_name: RwLock::new(None),
-        });
-        Ok(class)
+        Self::from(class_loader, class_file)
     }
 
     /// Add synthetic fields for the class. Ensures no duplicates are added.
@@ -1050,7 +1002,7 @@ impl Class {
     /// Get a mutable constant pool
     pub fn constant_pool_mut(&mut self) -> &mut ConstantPool<'static> {
         self.verification.take();
-        &mut self.class_file.constant_pool
+        &mut Arc::make_mut(&mut self.class_file).constant_pool
     }
 
     /// Verify this definition once, retaining both success and failure.
@@ -1899,6 +1851,57 @@ mod tests {
         assert!(!string_class.is_primitive());
         let int_class = load_class("int").await?;
         assert!(int_class.is_primitive());
+        Ok(())
+    }
+
+    #[test]
+    fn test_shared_definitions_keep_runtime_state_and_mutation_isolated() -> Result<()> {
+        let mut definition = ClassFile::default();
+        definition.this_class = definition.constant_pool.add_class("SharedDefinition")?;
+        let field_name = definition.constant_pool.add_utf8("counter")?;
+        let int_descriptor = definition.constant_pool.add_utf8("I")?;
+        definition.fields.push(ristretto_classfile::Field {
+            access_flags: FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC,
+            name_index: field_name,
+            descriptor_index: int_descriptor,
+            field_type: FieldType::parse("I")?,
+            attributes: vec![],
+        });
+        let method_name = definition.constant_pool.add_utf8("test")?;
+        let method_descriptor = definition.constant_pool.add_utf8("()V")?;
+        definition.methods.push(ristretto_classfile::Method {
+            name_index: method_name,
+            descriptor_index: method_descriptor,
+            attributes: vec![Attribute::Code {
+                name_index: 0,
+                max_stack: 0,
+                max_locals: 0,
+                code: vec![ristretto_classfile::attributes::Instruction::Return],
+                exception_table: vec![],
+                attributes: vec![],
+            }],
+            ..Default::default()
+        });
+        let definition = Arc::new(definition);
+        let mut first = Class::from_shared(None, definition.clone())?;
+        let second = Class::from_shared(None, definition.clone())?;
+        assert!(!Arc::ptr_eq(&first, &second));
+        assert!(Arc::ptr_eq(&first.class_file, &definition));
+        assert!(Arc::ptr_eq(&second.class_file, &definition));
+        let method = first.try_get_method("test", "()V")?;
+        let source_method = definition.methods.first().expect("method definition");
+        assert!(std::ptr::eq(method.definition(), source_method));
+        first.set_static_value("counter", Value::Int(9))?;
+        assert_eq!(second.static_value("counter")?, Value::Int(0));
+        let original_length = definition.constant_pool.len();
+        Arc::get_mut(&mut first)
+            .expect("unique runtime class")
+            .constant_pool_mut()
+            .add_integer(42)?;
+        assert_eq!(definition.constant_pool.len(), original_length);
+        assert_eq!(second.constant_pool().len(), original_length);
+        assert_eq!(first.constant_pool().len(), original_length + 1);
+        assert!(std::ptr::eq(method.definition(), source_method));
         Ok(())
     }
 

@@ -1,7 +1,7 @@
 use crate::Error::{JavaError, Throwable};
 use crate::JavaError::NullPointerException;
 use crate::assignable::Assignable;
-use crate::frame::{ExecutionResult, Frame};
+use crate::frame::Frame;
 use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use crate::{Error, Result};
@@ -11,7 +11,7 @@ use ristretto_classloader::Value;
 ///
 /// - [JVMS §6.5.athrow](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.athrow)
 #[inline]
-pub(crate) async fn athrow(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn athrow(stack: &mut OperandStack) -> Result<()> {
     let throwable = stack.pop()?;
     if throwable.is_null() {
         return Err(NullPointerException(Some("Cannot throw null".to_string())).into());
@@ -32,6 +32,10 @@ pub(crate) async fn process_throwable(
     stack: &mut OperandStack,
     throwable: Value,
 ) -> Result<usize> {
+    let exception_table = frame.method().exception_table();
+    if exception_table.is_empty() {
+        return Err(Throwable(throwable));
+    }
     let thread = frame.thread()?;
     let throwable_class = {
         let throwable_object = throwable.as_object_ref()?;
@@ -39,8 +43,6 @@ pub(crate) async fn process_throwable(
     };
     let class = frame.class();
     let constant_pool = class.constant_pool();
-    let method = frame.method();
-    let exception_table = method.exception_table();
     let program_counter = u16::try_from(frame.program_counter())?;
 
     for exception_table_entry in exception_table {

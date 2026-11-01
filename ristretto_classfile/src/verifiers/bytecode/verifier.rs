@@ -183,7 +183,7 @@ mod tests {
     fn test_verify_rejects_missing_stackmap_control_flow() {
         let class_file = create_mock_class_file();
         let method = method_with_code(
-            vec![Instruction::Goto(2), Instruction::Nop, Instruction::Return],
+            vec![Instruction::Goto(4), Instruction::Nop, Instruction::Return],
             0,
             0,
         );

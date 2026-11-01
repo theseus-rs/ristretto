@@ -11,8 +11,6 @@
 //! - [JVMS §4.9 - Constraints on Java Virtual Machine Code](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.9)
 //! - [JVMS §4.10.1 - Verification by Type Checking](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1)
 
-use ahash::AHashSet;
-
 use crate::attributes::{ExceptionTableEntry, Instruction, LookupSwitch, StackFrame, TableSwitch};
 use crate::verifiers::error::{Result, VerifyError};
 
@@ -25,8 +23,8 @@ pub struct CodeInfo {
     /// Mapping from instruction index to bytecode offset.
     instruction_offsets: Vec<u16>,
 
-    /// Set of valid instruction start offsets for O(1) lookup.
-    valid_offsets: AHashSet<u16>,
+    /// Compact bitmap of instruction starts for O(1) boundary checks.
+    valid_offsets: Vec<u64>,
 
     /// Total length of the code array in bytes.
     code_length: u16,
@@ -44,7 +42,15 @@ impl CodeInfo {
     /// * `code_length` - Total length of the code array
     #[must_use]
     pub fn new(instruction_offsets: Vec<u16>, code_length: u16) -> Self {
-        let valid_offsets: AHashSet<u16> = instruction_offsets.iter().copied().collect();
+        let mut valid_offsets = instruction_offsets
+            .iter()
+            .max()
+            .map_or_else(Vec::new, |offset| vec![0; usize::from(*offset) / 64 + 1]);
+        for &offset in &instruction_offsets {
+            if let Some(bits) = valid_offsets.get_mut(usize::from(offset) / 64) {
+                *bits |= 1_u64 << (offset % 64);
+            }
+        }
         let instruction_count = instruction_offsets.len();
         Self {
             instruction_offsets,
@@ -52,6 +58,44 @@ impl CodeInfo {
             code_length,
             instruction_count,
         }
+    }
+
+    /// Build instruction boundaries from a JVM code array.
+    ///
+    /// # Errors
+    /// Returns an error if encoding fails or code exceeds the JVM size limit.
+    pub fn from_code(code: &[Instruction]) -> Result<Self> {
+        let mut offsets = Vec::with_capacity(code.len());
+        let mut length = 0;
+        for instruction in code {
+            instruction.validate_encoding()?;
+            offsets.push(u16::try_from(length)?);
+            length += instruction.byte_len(length);
+            // Check each end before another instruction can overflow the accumulator.
+            u16::try_from(length)?;
+        }
+        let info = Self::new(offsets, u16::try_from(length)?);
+        for (&position, instruction) in info.instruction_offsets.iter().zip(code) {
+            for relative in instruction.branch_offsets() {
+                info.branch_target(position, relative)?;
+            }
+        }
+        Ok(info)
+    }
+
+    /// Resolve and validate a signed branch offset relative to its opcode.
+    ///
+    /// # Errors
+    /// Returns an error if the target is outside the code or inside an instruction.
+    pub fn branch_target(&self, offset: u16, relative: i32) -> Result<u16> {
+        let target = i64::from(offset) + i64::from(relative);
+        let target = u16::try_from(target).map_err(|_| {
+            VerifyError::VerifyError(format!("Branch target {target} is outside the code"))
+        })?;
+        if !self.is_valid_offset(target) {
+            return Err(VerifyError::InvalidInstructionOffset(u32::from(target)));
+        }
+        Ok(target)
     }
 
     /// Returns the bytecode offset for an instruction index.
@@ -80,7 +124,7 @@ impl CodeInfo {
     /// The instruction index, or `None` if not a valid instruction boundary.
     #[must_use]
     pub fn index_at(&self, offset: u16) -> Option<usize> {
-        self.instruction_offsets.iter().position(|&o| o == offset)
+        self.instruction_offsets.binary_search(&offset).ok()
     }
 
     /// Checks if an offset is a valid instruction boundary.
@@ -91,7 +135,9 @@ impl CodeInfo {
     #[inline]
     #[must_use]
     pub fn is_valid_offset(&self, offset: u16) -> bool {
-        self.valid_offsets.contains(&offset)
+        self.valid_offsets
+            .get(usize::from(offset) / 64)
+            .is_some_and(|bits| bits & (1_u64 << (offset % 64)) != 0)
     }
 
     /// Returns the total code length.
@@ -235,24 +281,11 @@ pub fn compute_successors(
     match instruction {
         // Unconditional branches
         Instruction::Goto(target) => {
-            successors.push(logical_target_to_offset(
-                usize::from(*target),
-                code_info,
-                "Goto target",
-            )?);
+            successors.push(code_info.branch_target(offset, i32::from(*target))?);
             falls_through = false;
         }
         Instruction::Goto_w(target) => {
-            let target = usize::try_from(*target).map_err(|_| {
-                VerifyError::VerifyError(format!(
-                    "Goto_w target: instruction index {target} out of range"
-                ))
-            })?;
-            successors.push(logical_target_to_offset(
-                target,
-                code_info,
-                "Goto_w target",
-            )?);
+            successors.push(code_info.branch_target(offset, *target)?);
             falls_through = false;
         }
 
@@ -284,11 +317,7 @@ pub fn compute_successors(
         | Instruction::If_acmpne(target)
         | Instruction::Ifnull(target)
         | Instruction::Ifnonnull(target) => {
-            successors.push(logical_target_to_offset(
-                usize::from(*target),
-                code_info,
-                "Conditional branch target",
-            )?);
+            successors.push(code_info.branch_target(offset, i32::from(*target))?);
             // Also falls through
         }
 
@@ -333,22 +362,9 @@ fn add_table_switch_successors(
     code_info: &CodeInfo,
     successors: &mut Vec<u16>,
 ) -> Result<()> {
-    let current_index = current_instruction_index(offset, code_info)?;
-    successors.push(relative_logical_target_to_offset(
-        current_index,
-        table.default,
-        code_info,
-        "tableswitch default",
-    )?);
-
-    for (i, &off) in table.offsets.iter().enumerate() {
-        let case_index = i32::try_from(i).unwrap_or(0);
-        successors.push(relative_logical_target_to_offset(
-            current_index,
-            off,
-            code_info,
-            &format!("tableswitch case {}", table.low + case_index),
-        )?);
+    successors.push(code_info.branch_target(offset, table.default)?);
+    for &relative in &table.offsets {
+        successors.push(code_info.branch_target(offset, relative)?);
     }
     Ok(())
 }
@@ -359,21 +375,9 @@ fn add_lookup_switch_successors(
     code_info: &CodeInfo,
     successors: &mut Vec<u16>,
 ) -> Result<()> {
-    let current_index = current_instruction_index(offset, code_info)?;
-    successors.push(relative_logical_target_to_offset(
-        current_index,
-        lookup.default,
-        code_info,
-        "lookupswitch default",
-    )?);
-
-    for (&key, &off) in &lookup.pairs {
-        successors.push(relative_logical_target_to_offset(
-            current_index,
-            off,
-            code_info,
-            &format!("lookupswitch case {key}"),
-        )?);
+    successors.push(code_info.branch_target(offset, lookup.default)?);
+    for &relative in lookup.pairs.values() {
+        successors.push(code_info.branch_target(offset, relative)?);
     }
     Ok(())
 }
@@ -391,41 +395,6 @@ fn add_fallthrough_successor(
     }
     successors.push(next_offset);
     Ok(())
-}
-
-fn logical_target_to_offset(
-    target_index: usize,
-    code_info: &CodeInfo,
-    context: &str,
-) -> Result<u16> {
-    code_info.offset_at(target_index).ok_or_else(|| {
-        VerifyError::VerifyError(format!(
-            "{context}: instruction index {target_index} out of bounds"
-        ))
-    })
-}
-
-fn current_instruction_index(offset: u16, code_info: &CodeInfo) -> Result<usize> {
-    code_info.index_at(offset).ok_or_else(|| {
-        VerifyError::VerifyError(format!(
-            "Current instruction offset {offset} is not an instruction boundary"
-        ))
-    })
-}
-
-fn relative_logical_target_to_offset(
-    current_index: usize,
-    relative: i32,
-    code_info: &CodeInfo,
-    context: &str,
-) -> Result<u16> {
-    let target_index = i64::try_from(current_index)? + i64::from(relative);
-    let target_index = usize::try_from(target_index).map_err(|_| {
-        VerifyError::VerifyError(format!(
-            "{context}: relative instruction target {target_index} out of range"
-        ))
-    })?;
-    logical_target_to_offset(target_index, code_info, context)
 }
 
 /// Decodes stack map table entries and returns frame information at each offset.
@@ -667,15 +636,15 @@ mod tests {
         let info = make_code_info();
 
         assert_eq!(
-            compute_successors(0, &Instruction::Goto(2), 1, &info).unwrap(),
+            compute_successors(0, &Instruction::Goto(3), 1, &info).unwrap(),
             (vec![3], false)
         );
         assert_eq!(
-            compute_successors(1, &Instruction::Goto_w(3), 3, &info).unwrap(),
+            compute_successors(1, &Instruction::Goto_w(5), 3, &info).unwrap(),
             (vec![6], false)
         );
         assert_eq!(
-            compute_successors(0, &Instruction::Ifeq(4), 1, &info).unwrap(),
+            compute_successors(0, &Instruction::Ifeq(10), 1, &info).unwrap(),
             (vec![10, 1], true)
         );
         assert_eq!(
@@ -688,10 +657,10 @@ mod tests {
         );
 
         let table = TableSwitch {
-            default: 3,
+            default: 6,
             low: 4,
             high: 5,
-            offsets: vec![1, 2],
+            offsets: vec![1, 3],
         };
         assert_eq!(
             compute_successors(0, &Instruction::Tableswitch(Box::new(table)), 1, &info).unwrap(),
@@ -700,8 +669,8 @@ mod tests {
 
         let mut pairs = IndexMap::new();
         pairs.insert(10, 1);
-        pairs.insert(20, 2);
-        let lookup = LookupSwitch { default: 3, pairs };
+        pairs.insert(20, 3);
+        let lookup = LookupSwitch { default: 6, pairs };
         assert_eq!(
             compute_successors(0, &Instruction::Lookupswitch(Box::new(lookup)), 1, &info).unwrap(),
             (vec![6, 1, 3], false)
@@ -795,7 +764,7 @@ mod tests {
         ] {
             assert_eq!(
                 compute_successors(0, &instruction, 1, &info).unwrap(),
-                (vec![6, 1], true)
+                (vec![3, 1], true)
             );
         }
     }
@@ -907,21 +876,54 @@ mod tests {
     }
 
     #[test]
-    fn test_logical_target_helpers() {
+    fn test_signed_byte_targets() {
         let info = make_code_info();
+        assert_eq!(info.branch_target(3, 7).unwrap(), 10);
+        assert_eq!(info.branch_target(3, -2).unwrap(), 1);
+        assert_eq!(info.branch_target(3, 0).unwrap(), 3);
+        assert!(info.branch_target(0, -1).is_err());
+        assert!(info.branch_target(0, 2).is_err());
+        assert!(info.branch_target(3, i32::MAX).is_err());
+        assert!(info.branch_target(3, i32::MIN).is_err());
+    }
 
-        assert_eq!(logical_target_to_offset(2, &info, "test").unwrap(), 3);
-        assert!(logical_target_to_offset(5, &info, "test").is_err());
-        assert_eq!(current_instruction_index(3, &info).unwrap(), 2);
-        assert!(current_instruction_index(2, &info).is_err());
+    #[test]
+    fn branch_validation_uses_byte_boundaries_without_narrowing_absolute_targets()
+    -> crate::Result<()> {
+        let mut backward = vec![Instruction::Nop; 32768];
+        backward.push(Instruction::Goto(i16::MIN));
+        let info = CodeInfo::from_code(&backward)?;
+        assert_eq!(info.branch_target(32768, i32::from(i16::MIN))?, 0);
+
+        let mut forward = vec![Instruction::Goto(i16::MAX)];
+        forward.extend(vec![Instruction::Nop; 32764]);
+        forward.push(Instruction::Return);
         assert_eq!(
-            relative_logical_target_to_offset(2, 2, &info, "test").unwrap(),
-            10
+            CodeInfo::from_code(&forward)?.branch_target(0, 32767)?,
+            32767
         );
-        assert_eq!(
-            relative_logical_target_to_offset(2, -1, &info, "test").unwrap(),
-            1
-        );
-        assert!(relative_logical_target_to_offset(0, -1, &info, "test").is_err());
+
+        let mut wide = vec![Instruction::Goto_w(40005)];
+        wide.extend(vec![Instruction::Nop; 40000]);
+        wide.push(Instruction::Goto_w(-40005));
+        let info = CodeInfo::from_code(&wide)?;
+        assert_eq!(info.branch_target(0, 40005)?, 40005);
+        assert_eq!(info.branch_target(40005, -40005)?, 0);
+
+        for code in [
+            vec![Instruction::Goto(1), Instruction::Return],
+            vec![Instruction::Goto(3)],
+            vec![Instruction::Goto(-1)],
+            vec![Instruction::Goto_w(i32::MAX)],
+            vec![Instruction::Goto_w(i32::MIN)],
+            vec![
+                Instruction::Goto(4),
+                Instruction::Iload_w(256),
+                Instruction::Return,
+            ],
+        ] {
+            assert!(CodeInfo::from_code(&code).is_err(), "{code:?}");
+        }
+        Ok(())
     }
 }

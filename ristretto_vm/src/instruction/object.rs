@@ -16,23 +16,19 @@ use std::sync::Arc;
 ///
 /// - [JVMS §6.5.aconst_null](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aconst_null)
 #[inline]
-pub(crate) fn aconst_null(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aconst_null(stack: &mut OperandStack) -> Result<()> {
     stack.push_object(None)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.aload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload)
 #[inline]
-pub(crate) fn aload(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-    index: u8,
-) -> Result<ExecutionResult> {
+pub(crate) fn aload(locals: &LocalVariables, stack: &mut OperandStack, index: u8) -> Result<()> {
     let object = locals.get_object(usize::from(index))?;
     stack.push_object(object)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
@@ -40,66 +36,70 @@ pub(crate) fn aload(
 /// - [JVMS §6.5.aload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload)
 /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 #[inline]
-pub(crate) fn aload_w(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-    index: u16,
-) -> Result<ExecutionResult> {
+pub(crate) fn aload_w(locals: &LocalVariables, stack: &mut OperandStack, index: u16) -> Result<()> {
     let object = locals.get_object(usize::from(index))?;
     stack.push_object(object)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.aload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n)
 #[inline]
-pub(crate) fn aload_0(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn aload_0(locals: &LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let object = locals.get_object(0)?;
     stack.push_object(object)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.aload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n)
 #[inline]
-pub(crate) fn aload_1(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn aload_1(locals: &LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let object = locals.get_object(1)?;
     stack.push_object(object)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.aload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n)
 #[inline]
-pub(crate) fn aload_2(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn aload_2(locals: &LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let object = locals.get_object(2)?;
     stack.push_object(object)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.aload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n)
 #[inline]
-pub(crate) fn aload_3(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn aload_3(locals: &LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let object = locals.get_object(3)?;
     stack.push_object(object)?;
-    Ok(Continue)
+    Ok(())
+}
+
+/// Legacy jsr return addresses use integer storage; verification restricts their use to astore/ret.
+#[inline]
+fn store_reference_or_return_address(
+    locals: &mut LocalVariables,
+    stack: &mut OperandStack,
+    index: usize,
+) -> Result<()> {
+    let value = stack.pop()?;
+    match value {
+        Value::Object(_) | Value::Int(_) => locals.set(index, value)?,
+        value => {
+            return Err(InvalidStackValue {
+                expected: "reference or returnAddress".to_string(),
+                actual: value.to_string(),
+            });
+        }
+    }
+    Ok(())
 }
 
 /// # References
@@ -110,10 +110,8 @@ pub(crate) fn astore(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
     index: u8,
-) -> Result<ExecutionResult> {
-    let value = stack.pop_object()?;
-    locals.set_object(usize::from(index), value)?;
-    Ok(Continue)
+) -> Result<()> {
+    store_reference_or_return_address(locals, stack, usize::from(index))
 }
 
 /// # References
@@ -125,69 +123,47 @@ pub(crate) fn astore_w(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
     index: u16,
-) -> Result<ExecutionResult> {
-    let value = stack.pop_object()?;
-    locals.set_object(usize::from(index), value)?;
-    Ok(Continue)
+) -> Result<()> {
+    store_reference_or_return_address(locals, stack, usize::from(index))
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.astore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n)
 #[inline]
-pub(crate) fn astore_0(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
-    let value = stack.pop_object()?;
-    locals.set_object(0, value)?;
-    Ok(Continue)
+pub(crate) fn astore_0(locals: &mut LocalVariables, stack: &mut OperandStack) -> Result<()> {
+    store_reference_or_return_address(locals, stack, 0)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.astore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n)
 #[inline]
-pub(crate) fn astore_1(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
-    let value = stack.pop_object()?;
-    locals.set_object(1, value)?;
-    Ok(Continue)
+pub(crate) fn astore_1(locals: &mut LocalVariables, stack: &mut OperandStack) -> Result<()> {
+    store_reference_or_return_address(locals, stack, 1)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.astore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n)
 #[inline]
-pub(crate) fn astore_2(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
-    let value = stack.pop_object()?;
-    locals.set_object(2, value)?;
-    Ok(Continue)
+pub(crate) fn astore_2(locals: &mut LocalVariables, stack: &mut OperandStack) -> Result<()> {
+    store_reference_or_return_address(locals, stack, 2)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.astore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n)
 #[inline]
-pub(crate) fn astore_3(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
-    let value = stack.pop_object()?;
-    locals.set_object(3, value)?;
-    Ok(Continue)
+pub(crate) fn astore_3(locals: &mut LocalVariables, stack: &mut OperandStack) -> Result<()> {
+    store_reference_or_return_address(locals, stack, 3)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.aaload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aaload)
 #[inline]
-pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aaload(stack: &mut OperandStack) -> Result<()> {
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
         return Err(NullPointerException(None).into());
@@ -221,14 +197,14 @@ pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
         });
     };
     stack.push_object(reference.clone())?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.aastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aastore)
 #[inline]
-pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn aastore(stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_object()?;
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
@@ -260,7 +236,7 @@ pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
         }
         .into());
     }
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
@@ -427,8 +403,7 @@ mod tests {
     #[test]
     fn test_aconst_null() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let result = aconst_null(stack)?;
-        assert_eq!(Continue, result);
+        aconst_null(stack)?;
         assert_eq!(Value::Object(None), stack.pop()?);
         Ok(())
     }
@@ -438,8 +413,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(1);
         locals.set_object(0, None)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = aload(&locals, stack, 0)?;
-        assert_eq!(Continue, result);
+        aload(&locals, stack, 0)?;
         assert!(stack.pop_object()?.is_none());
         Ok(())
     }
@@ -449,8 +423,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(1);
         locals.set_object(0, None)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = aload_w(&locals, stack, 0)?;
-        assert_eq!(Continue, result);
+        aload_w(&locals, stack, 0)?;
         assert!(stack.pop_object()?.is_none());
         Ok(())
     }
@@ -460,8 +433,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(1);
         locals.set_object(0, None)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = aload_0(&locals, stack)?;
-        assert_eq!(Continue, result);
+        aload_0(&locals, stack)?;
         assert!(stack.pop_object()?.is_none());
         Ok(())
     }
@@ -471,8 +443,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(2);
         locals.set_object(1, None)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = aload_1(&locals, stack)?;
-        assert_eq!(Continue, result);
+        aload_1(&locals, stack)?;
         assert!(stack.pop_object()?.is_none());
         Ok(())
     }
@@ -482,8 +453,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(3);
         locals.set_object(2, None)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = aload_2(&locals, stack)?;
-        assert_eq!(Continue, result);
+        aload_2(&locals, stack)?;
         assert!(stack.pop_object()?.is_none());
         Ok(())
     }
@@ -493,8 +463,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(4);
         locals.set_object(3, None)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = aload_3(&locals, stack)?;
-        assert_eq!(Continue, result);
+        aload_3(&locals, stack)?;
         assert!(stack.pop_object()?.is_none());
         Ok(())
     }
@@ -504,8 +473,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
-        let result = astore(locals, stack, 0)?;
-        assert_eq!(Continue, result);
+        astore(locals, stack, 0)?;
         assert!(locals.get_object(0)?.is_none());
         Ok(())
     }
@@ -515,8 +483,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
-        let result = astore_w(locals, stack, 0)?;
-        assert_eq!(Continue, result);
+        astore_w(locals, stack, 0)?;
         assert!(locals.get_object(0)?.is_none());
         Ok(())
     }
@@ -526,8 +493,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
-        let result = astore_0(locals, stack)?;
-        assert_eq!(Continue, result);
+        astore_0(locals, stack)?;
         assert!(locals.get_object(0)?.is_none());
         Ok(())
     }
@@ -537,8 +503,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(2);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
-        let result = astore_1(locals, stack)?;
-        assert_eq!(Continue, result);
+        astore_1(locals, stack)?;
         assert!(locals.get_object(1)?.is_none());
         Ok(())
     }
@@ -548,8 +513,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(3);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
-        let result = astore_2(locals, stack)?;
-        assert_eq!(Continue, result);
+        astore_2(locals, stack)?;
         assert!(locals.get_object(2)?.is_none());
         Ok(())
     }
@@ -559,8 +523,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(4);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
-        let result = astore_3(locals, stack)?;
-        assert_eq!(Continue, result);
+        astore_3(locals, stack)?;
         assert!(locals.get_object(3)?.is_none());
         Ok(())
     }
@@ -578,8 +541,7 @@ mod tests {
         let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
-        let result = aaload(stack)?;
-        assert_eq!(Continue, result);
+        aaload(stack)?;
         assert_eq!(object, stack.pop()?);
         Ok(())
     }
@@ -671,8 +633,7 @@ mod tests {
         stack.push(array)?;
         stack.push_int(0)?;
         stack.push(object)?;
-        let result = aastore(stack)?;
-        assert_eq!(Continue, result);
+        aastore(stack)?;
         Ok(())
     }
 

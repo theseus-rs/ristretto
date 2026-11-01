@@ -1,7 +1,7 @@
 use crate::Error::InvalidStackValue;
 use crate::JavaError::{ArrayIndexOutOfBoundsException, NullPointerException};
+use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Return;
-use crate::frame::{ExecutionResult, ExecutionResult::Continue};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{Result, Value};
@@ -11,32 +11,28 @@ use ristretto_classloader::Reference;
 ///
 /// - [JVMS §6.5.dconst_d](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dconst_d)
 #[inline]
-pub(crate) fn dconst_0(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dconst_0(stack: &mut OperandStack) -> Result<()> {
     stack.push_double(0f64)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dconst_d](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dconst_d)
 #[inline]
-pub(crate) fn dconst_1(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dconst_1(stack: &mut OperandStack) -> Result<()> {
     stack.push_double(1f64)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload)
 #[inline]
-pub(crate) fn dload(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-    index: u8,
-) -> Result<ExecutionResult> {
+pub(crate) fn dload(locals: &LocalVariables, stack: &mut OperandStack, index: u8) -> Result<()> {
     let value = locals.get_double(usize::from(index))?;
     stack.push_double(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
@@ -44,66 +40,50 @@ pub(crate) fn dload(
 /// - [JVMS §6.5.dload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload)
 /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 #[inline]
-pub(crate) fn dload_w(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-    index: u16,
-) -> Result<ExecutionResult> {
+pub(crate) fn dload_w(locals: &LocalVariables, stack: &mut OperandStack, index: u16) -> Result<()> {
     let value = locals.get_double(usize::from(index))?;
     stack.push_double(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n)
 #[inline]
-pub(crate) fn dload_0(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn dload_0(locals: &LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = locals.get_double(0)?;
     stack.push_double(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n)
 #[inline]
-pub(crate) fn dload_1(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn dload_1(locals: &LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = locals.get_double(1)?;
     stack.push_double(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n)
 #[inline]
-pub(crate) fn dload_2(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn dload_2(locals: &LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = locals.get_double(2)?;
     stack.push_double(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n)
 #[inline]
-pub(crate) fn dload_3(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn dload_3(locals: &LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = locals.get_double(3)?;
     stack.push_double(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
@@ -114,10 +94,10 @@ pub(crate) fn dstore(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
     index: u8,
-) -> Result<ExecutionResult> {
+) -> Result<()> {
     let value = stack.pop_double()?;
     locals.set_double(usize::from(index), value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
@@ -129,69 +109,57 @@ pub(crate) fn dstore_w(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
     index: u16,
-) -> Result<ExecutionResult> {
+) -> Result<()> {
     let value = stack.pop_double()?;
     locals.set_double(usize::from(index), value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n)
 #[inline]
-pub(crate) fn dstore_0(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn dstore_0(locals: &mut LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_double()?;
     locals.set_double(0, value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n)
 #[inline]
-pub(crate) fn dstore_1(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn dstore_1(locals: &mut LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_double()?;
     locals.set_double(1, value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n)
 #[inline]
-pub(crate) fn dstore_2(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn dstore_2(locals: &mut LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_double()?;
     locals.set_double(2, value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n)
 #[inline]
-pub(crate) fn dstore_3(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn dstore_3(locals: &mut LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_double()?;
     locals.set_double(3, value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.daload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.daload)
 #[inline]
-pub(crate) fn daload(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn daload(stack: &mut OperandStack) -> Result<()> {
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
         return Err(NullPointerException(None).into());
@@ -218,14 +186,14 @@ pub(crate) fn daload(stack: &mut OperandStack) -> Result<ExecutionResult> {
         .into());
     };
     stack.push_double(*value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dastore)
 #[inline]
-pub(crate) fn dastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dastore(stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_double()?;
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
@@ -254,79 +222,79 @@ pub(crate) fn dastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
         }
         .into());
     }
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dadd](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dadd)
 #[inline]
-pub(crate) fn dadd(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dadd(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
     stack.push_double(value1 + value2)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dsub](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dsub)
 #[inline]
-pub(crate) fn dsub(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dsub(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
     stack.push_double(value1 - value2)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dmul](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dmul)
 #[inline]
-pub(crate) fn dmul(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dmul(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
     stack.push_double(value1 * value2)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.ddiv](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ddiv)
 #[inline]
-pub(crate) fn ddiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn ddiv(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
     stack.push_double(value1 / value2)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.drem](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.drem)
 #[inline]
-pub(crate) fn drem(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn drem(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
     stack.push_double(value1 % value2)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dneg](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dneg)
 #[inline]
-pub(crate) fn dneg(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dneg(stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_double()?;
     stack.push_double(-value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dcmp_op](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dcmp_op)
 #[inline]
-pub(crate) fn dcmpl(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dcmpl(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
     let cmp = if f64::is_nan(value1) || f64::is_nan(value2) {
@@ -339,14 +307,14 @@ pub(crate) fn dcmpl(stack: &mut OperandStack) -> Result<ExecutionResult> {
         0
     };
     stack.push_int(cmp)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.dcmp_op](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dcmp_op)
 #[inline]
-pub(crate) fn dcmpg(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn dcmpg(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_double()?;
     let value1 = stack.pop_double()?;
     let cmp = if f64::is_nan(value1) || f64::is_nan(value2) || value1 > value2 {
@@ -357,7 +325,7 @@ pub(crate) fn dcmpg(stack: &mut OperandStack) -> Result<ExecutionResult> {
         0
     };
     stack.push_int(cmp)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
@@ -377,8 +345,7 @@ mod tests {
     #[test]
     fn test_dconst_0() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let result = dconst_0(stack)?;
-        assert_eq!(Continue, result);
+        dconst_0(stack)?;
         let value = stack.pop_double()? - 0f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -387,8 +354,7 @@ mod tests {
     #[test]
     fn test_dconst_1() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let result = dconst_1(stack)?;
-        assert_eq!(Continue, result);
+        dconst_1(stack)?;
         let value = stack.pop_double()? - 1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -399,8 +365,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(1);
         locals.set_double(0, 42.1)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = dload(&locals, stack, 0)?;
-        assert_eq!(Continue, result);
+        dload(&locals, stack, 0)?;
         let value = stack.pop_double()? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -411,8 +376,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(1);
         locals.set_double(0, 42.1)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = dload_w(&locals, stack, 0)?;
-        assert_eq!(Continue, result);
+        dload_w(&locals, stack, 0)?;
         let value = stack.pop_double()? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -423,8 +387,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(1);
         locals.set_double(0, 42.1)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = dload_0(&locals, stack)?;
-        assert_eq!(Continue, result);
+        dload_0(&locals, stack)?;
         let value = stack.pop_double()? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -435,8 +398,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(2);
         locals.set_double(1, 42.1)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = dload_1(&locals, stack)?;
-        assert_eq!(Continue, result);
+        dload_1(&locals, stack)?;
         let value = stack.pop_double()? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -447,8 +409,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(3);
         locals.set_double(2, 42.1)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = dload_2(&locals, stack)?;
-        assert_eq!(Continue, result);
+        dload_2(&locals, stack)?;
         let value = stack.pop_double()? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -459,8 +420,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(4);
         locals.set_double(3, 42.1)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = dload_3(&locals, stack)?;
-        assert_eq!(Continue, result);
+        dload_3(&locals, stack)?;
         let value = stack.pop_double()? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -471,8 +431,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_double(42.1)?;
-        let result = dstore(locals, stack, 0)?;
-        assert_eq!(Continue, result);
+        dstore(locals, stack, 0)?;
         let value = locals.get_double(0)? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -483,8 +442,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_double(42.1)?;
-        let result = dstore_w(locals, stack, 0)?;
-        assert_eq!(Continue, result);
+        dstore_w(locals, stack, 0)?;
         let value = locals.get_double(0)? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -495,8 +453,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_double(42.1)?;
-        let result = dstore_0(locals, stack)?;
-        assert_eq!(Continue, result);
+        dstore_0(locals, stack)?;
         let value = locals.get_double(0)? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -507,8 +464,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(2);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_double(42.1)?;
-        let result = dstore_1(locals, stack)?;
-        assert_eq!(Continue, result);
+        dstore_1(locals, stack)?;
         let value = locals.get_double(1)? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -519,8 +475,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(3);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_double(42.1)?;
-        let result = dstore_2(locals, stack)?;
-        assert_eq!(Continue, result);
+        dstore_2(locals, stack)?;
         let value = locals.get_double(2)? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -531,8 +486,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(4);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_double(42.1)?;
-        let result = dstore_3(locals, stack)?;
-        assert_eq!(Continue, result);
+        dstore_3(locals, stack)?;
         let value = locals.get_double(3)? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -546,8 +500,7 @@ mod tests {
         let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
-        let result = daload(stack)?;
-        assert_eq!(Continue, result);
+        daload(stack)?;
         let value = stack.pop_double()? - 42f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -625,8 +578,7 @@ mod tests {
         stack.push(array)?;
         stack.push_int(0)?;
         stack.push_double(42f64)?;
-        let result = dastore(stack)?;
-        assert_eq!(Continue, result);
+        dastore(stack)?;
         Ok(())
     }
 
@@ -702,8 +654,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1f64)?;
         stack.push_double(2f64)?;
-        let result = dadd(stack)?;
-        assert_eq!(Continue, result);
+        dadd(stack)?;
         let value = stack.pop_double()? - 3f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -714,8 +665,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(f64::MAX)?;
         stack.push_double(1f64)?;
-        let result = dadd(stack)?;
-        assert_eq!(Continue, result);
+        dadd(stack)?;
         let value = stack.pop_double()? - f64::MAX;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -726,8 +676,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(2f64)?;
         stack.push_double(1f64)?;
-        let result = dsub(stack)?;
-        assert_eq!(Continue, result);
+        dsub(stack)?;
         let value = stack.pop_double()? - 1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -738,8 +687,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(f64::MIN)?;
         stack.push_double(1f64)?;
-        let result = dsub(stack)?;
-        assert_eq!(Continue, result);
+        dsub(stack)?;
         let value = stack.pop_double()? - f64::MIN;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -750,8 +698,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(2f64)?;
         stack.push_double(3f64)?;
-        let result = dmul(stack)?;
-        assert_eq!(Continue, result);
+        dmul(stack)?;
         let value = stack.pop_double()? - 6f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -762,8 +709,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(6f64)?;
         stack.push_double(3f64)?;
-        let result = ddiv(stack)?;
-        assert_eq!(Continue, result);
+        ddiv(stack)?;
         let value = stack.pop_double()? - 2f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -774,8 +720,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1.0)?;
         stack.push_double(0.0)?;
-        let result = ddiv(stack)?;
-        assert_eq!(Continue, result);
+        ddiv(stack)?;
         // IEEE 754: 1.0 / 0.0 should produce positive infinity
         let value = stack.pop_double()?;
         assert!(value.is_infinite() && value.is_sign_positive());
@@ -787,8 +732,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1f64)?;
         stack.push_double(2f64)?;
-        let result = drem(stack)?;
-        assert_eq!(Continue, result);
+        drem(stack)?;
         let value = stack.pop_double()? - 1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -799,8 +743,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1.0)?;
         stack.push_double(0.0)?;
-        let result = drem(stack)?;
-        assert_eq!(Continue, result);
+        drem(stack)?;
         // IEEE 754: 1.0 % 0.0 should produce NaN
         let value = stack.pop_double()?;
         assert!(value.is_nan());
@@ -811,8 +754,7 @@ mod tests {
     fn test_dneg() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1f64)?;
-        let result = dneg(stack)?;
-        assert_eq!(Continue, result);
+        dneg(stack)?;
         let value = stack.pop_double()? + 1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())
@@ -823,8 +765,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1.0)?;
         stack.push_double(1.0)?;
-        let result = dcmpl(stack)?;
-        assert_eq!(Continue, result);
+        dcmpl(stack)?;
         assert_eq!(0, stack.pop_int()?);
         Ok(())
     }
@@ -834,8 +775,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1.0)?;
         stack.push_double(f64::NAN)?;
-        let result = dcmpl(stack)?;
-        assert_eq!(Continue, result);
+        dcmpl(stack)?;
         assert_eq!(-1, stack.pop_int()?);
         Ok(())
     }
@@ -845,8 +785,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(f64::NAN)?;
         stack.push_double(1.0)?;
-        let result = dcmpl(stack)?;
-        assert_eq!(Continue, result);
+        dcmpl(stack)?;
         assert_eq!(-1, stack.pop_int()?);
         Ok(())
     }
@@ -856,8 +795,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(2.0)?;
         stack.push_double(1.0)?;
-        let result = dcmpl(stack)?;
-        assert_eq!(Continue, result);
+        dcmpl(stack)?;
         assert_eq!(1, stack.pop_int()?);
         Ok(())
     }
@@ -867,8 +805,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1.0)?;
         stack.push_double(2.0)?;
-        let result = dcmpl(stack)?;
-        assert_eq!(Continue, result);
+        dcmpl(stack)?;
         assert_eq!(-1, stack.pop_int()?);
         Ok(())
     }
@@ -878,8 +815,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1.0)?;
         stack.push_double(1.0)?;
-        let result = dcmpg(stack)?;
-        assert_eq!(Continue, result);
+        dcmpg(stack)?;
         assert_eq!(0, stack.pop_int()?);
         Ok(())
     }
@@ -889,8 +825,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1.0)?;
         stack.push_double(f64::NAN)?;
-        let result = dcmpg(stack)?;
-        assert_eq!(Continue, result);
+        dcmpg(stack)?;
         assert_eq!(1, stack.pop_int()?);
         Ok(())
     }
@@ -900,8 +835,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(f64::NAN)?;
         stack.push_double(1.0)?;
-        let result = dcmpg(stack)?;
-        assert_eq!(Continue, result);
+        dcmpg(stack)?;
         assert_eq!(1, stack.pop_int()?);
         Ok(())
     }
@@ -911,8 +845,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(2.0)?;
         stack.push_double(1.0)?;
-        let result = dcmpg(stack)?;
-        assert_eq!(Continue, result);
+        dcmpg(stack)?;
         assert_eq!(1, stack.pop_int()?);
         Ok(())
     }
@@ -922,8 +855,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_double(1.0)?;
         stack.push_double(2.0)?;
-        let result = dcmpg(stack)?;
-        assert_eq!(Continue, result);
+        dcmpg(stack)?;
         assert_eq!(-1, stack.pop_int()?);
         Ok(())
     }

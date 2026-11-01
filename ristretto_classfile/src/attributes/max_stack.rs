@@ -71,7 +71,7 @@ pub trait MaxStack {
     fn max_stack(&self, constant_pool: &ConstantPool<'_>) -> Result<u16>;
 
     /// Calculates maximum stack depth including exception handlers. Handler ranges
-    /// and targets use logical instruction indices, just like branch operands.
+    /// and targets use absolute byte offsets; branch operands are signed relative byte offsets.
     /// Each handler starts with one exception-reference slot. Unreachable code is
     /// excluded. Legacy `jsr`/`ret` subroutines are followed using their return
     /// addresses; this API does not enforce class-file version restrictions.

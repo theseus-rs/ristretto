@@ -1,4 +1,5 @@
 //! Constraints shared by both bytecode verification algorithms.
+use super::control_flow::CodeInfo;
 use super::frame::Frame;
 use super::handlers::references::ConstantPoolResolver;
 use super::type_system::VerificationType;
@@ -55,7 +56,7 @@ pub(crate) fn verify_static(class: &ClassFile<'_>, method: &Method) -> Result<()
     else {
         return Ok(());
     };
-    let (_, bytes) = crate::attributes::offset_utils::instructions_to_bytes(code)?;
+    let bytes = Instruction::encode(code)?;
     if bytes.is_empty() || bytes.len() > 65535 {
         return Err(invalid("Invalid code length"));
     }
@@ -243,6 +244,7 @@ fn verify_member_access<C: crate::verifiers::context::VerificationContext>(
 pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
     class: &ClassFile<'_>,
     code: &[Instruction],
+    code_info: &CodeInfo,
     instruction: &Instruction,
     frame: &Frame,
     context: &C,
@@ -255,7 +257,9 @@ pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
             if name == CONSTRUCTOR_NAME {
                 match receiver(frame, &descriptor)? {
                     VerificationType::Uninitialized(offset) => {
-                        let Some(Instruction::New(class_index)) = code.get(usize::from(*offset))
+                        let Some(Instruction::New(class_index)) = code_info
+                            .index_at(*offset)
+                            .and_then(|index| code.get(index))
                         else {
                             return Err(invalid("Constructor receiver does not refer to new"));
                         };
@@ -339,11 +343,14 @@ pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
 pub(super) fn invalidate_constructor_receiver(
     class: &ClassFile<'_>,
     code: &[Instruction],
+    code_info: &CodeInfo,
     offset: u16,
     before: &Frame,
     handler: &mut Frame,
 ) -> Result<()> {
-    if let Some(Instruction::Invokespecial(index)) = code.get(usize::from(offset)) {
+    if let Some(Instruction::Invokespecial(index)) =
+        code_info.index_at(offset).and_then(|index| code.get(index))
+    {
         let (_, name, descriptor) = ConstantPoolResolver::new(class).resolve_method_ref(*index)?;
         if name == CONSTRUCTOR_NAME {
             let object = receiver(before, &descriptor)?;
@@ -377,11 +384,20 @@ mod tests {
             class
                 .constant_pool
                 .add_method_ref(class.this_class, CONSTRUCTOR_NAME, "()V")?;
-        let code = [Instruction::Nop, Instruction::New(class.this_class)];
+        let code = [
+            Instruction::Sipush(1),
+            Instruction::Pop,
+            Instruction::New(class.this_class),
+        ];
+        let code_info = CodeInfo::from_code(&code)?;
         for (receiver, valid) in [
-            (VerificationType::Uninitialized(1), true),
+            (VerificationType::Uninitialized(4), true),
             (VerificationType::Uninitialized(0), false),
+            (VerificationType::Uninitialized(1), false),
             (VerificationType::Uninitialized(2), false),
+            (VerificationType::Uninitialized(3), false),
+            (VerificationType::Uninitialized(5), false),
+            (VerificationType::Uninitialized(7), false),
             (VerificationType::Null, false),
             (VerificationType::java_lang_object(), false),
         ] {
@@ -390,6 +406,7 @@ mod tests {
             let result = verify_state(
                 &class,
                 &code,
+                &code_info,
                 &Instruction::Invokespecial(constructor),
                 &frame,
                 &MockContext::PERMISSIVE,
@@ -413,6 +430,7 @@ mod tests {
         verify_state(
             &class,
             &[Instruction::New(class.this_class)],
+            &CodeInfo::from_code(&[Instruction::New(class.this_class)])?,
             &Instruction::Invokespecial(constructor),
             &frame,
             &MockContext::STRICT,
@@ -439,6 +457,7 @@ mod tests {
                 let result = verify_state(
                     &class,
                     &[],
+                    &CodeInfo::from_code(&[])?,
                     &Instruction::Invokespecial(constructor),
                     &frame,
                     &MockContext::PERMISSIVE,
@@ -481,6 +500,7 @@ mod tests {
                 let result = verify_state(
                     &class,
                     &[],
+                    &CodeInfo::from_code(&[])?,
                     &Instruction::Putfield(field),
                     &frame,
                     &MockContext::PERMISSIVE,

@@ -149,8 +149,8 @@ fn valid_branch_stackmap() {
         "()V",
         0,
         0,
-        vec![Goto(1), Return],
-        Some(vec![StackFrame::SameFrame { frame_type: 1 }]),
+        vec![Goto(3), Return],
+        Some(vec![StackFrame::SameFrame { frame_type: 3 }]),
     );
     check(c, Some(m), true);
 }
@@ -232,15 +232,15 @@ fn valid_handler_byte_index_mismatch() {
         1,
         0,
         vec![Bipush(0), Pop, Return, Pop, Return],
-        Some(vec![full(3, vec![], vec![T::Object { cpool_index: 4 }])]),
+        Some(vec![full(4, vec![], vec![T::Object { cpool_index: 4 }])]),
     );
     if let Attribute::Code {
         exception_table, ..
     } = &mut m.attributes[0]
     {
         exception_table.push(ExceptionTableEntry {
-            range_pc: 0..2,
-            handler_pc: 3,
+            range_pc: 0..3,
+            handler_pc: 4,
             catch_type: 0,
         });
     }
@@ -248,10 +248,10 @@ fn valid_handler_byte_index_mismatch() {
 }
 
 #[test]
-fn large_logical_branch_sizing() {
+fn short_self_branch_after_large_byte_offset() {
     let mut c = base();
     let mut code = vec![Iinc(0, 0); 18000];
-    code.push(Goto(18000));
+    code.push(Goto(0));
     let m = method(
         &mut c,
         "f",
@@ -261,7 +261,7 @@ fn large_logical_branch_sizing() {
         code,
         Some(vec![StackFrame::SameFrameExtended {
             frame_type: 251,
-            offset_delta: 18000,
+            offset_delta: 54000,
         }]),
     );
     check(c, Some(m), true);
@@ -543,7 +543,7 @@ fn compact_frame_requires_promotion() {
 fn valid_v50_inference_fallback() {
     let mut c = base();
     c.version = JAVA_6;
-    let m = method(&mut c, "f", "()V", 0, 0, vec![Goto(1), Return], None);
+    let m = method(&mut c, "f", "()V", 0, 0, vec![Goto(3), Return], None);
     check(c, Some(m), true);
 }
 
@@ -1403,16 +1403,17 @@ fn module_tables_require_java_base_and_unique_dependencies() {
 }
 
 #[test]
-fn local_variable_ranges_use_instruction_indices() {
+fn local_variable_ranges_use_byte_offsets() {
     for generic in [false, true] {
         for (start_pc, length, valid) in [
-            (0, 3, true),
-            (1, 2, true),
-            (2, 0, true),
-            (3, 0, false),
-            (0, 4, false),
-            (2, 2, false),
-            (2, u16::MAX, false),
+            (0, 5, true),
+            (3, 2, true),
+            (4, 0, true),
+            (5, 0, false),
+            (0, 6, false),
+            (4, 2, false),
+            (1, 2, false),
+            (4, u16::MAX, false),
         ] {
             let mut class = base();
             let mut test_method = method(
@@ -1463,12 +1464,12 @@ fn local_variable_ranges_use_instruction_indices() {
 }
 
 #[test]
-fn uninitialized_metadata_uses_instruction_indices() {
+fn uninitialized_metadata_uses_byte_offsets() {
     for (offset, valid) in [
-        (2, true),
+        (4, true),
         (0, false),
         (3, false),
-        (4, false),
+        (2, false),
         (5, false),
         (u16::MAX, false),
     ] {
@@ -1481,7 +1482,7 @@ fn uninitialized_metadata_uses_instruction_indices() {
             1,
             0,
             vec![Sipush(1), Pop, New(object), Pop, Return],
-            Some(vec![full(3, vec![], vec![T::Uninitialized { offset }])]),
+            Some(vec![full(7, vec![], vec![T::Uninitialized { offset }])]),
         );
         class.methods.push(test_method);
         let result = class.verify();
@@ -1504,7 +1505,7 @@ fn valid_legacy_jsr() {
         "()V",
         1,
         1,
-        vec![Jsr(2), Return, Astore_0, Ret(0)],
+        vec![Jsr(4), Return, Astore_0, Ret(0)],
         None,
     );
     check(c, Some(m), true);
@@ -1528,7 +1529,7 @@ fn legacy_subroutine_multiple_call_sites() {
         "()V",
         1,
         1,
-        vec![Jsr(3), Jsr(3), Return, Astore_0, Ret(0)],
+        vec![Jsr(7), Jsr(4), Return, Astore_0, Ret(0)],
         None,
     );
     check(class, Some(method), true);

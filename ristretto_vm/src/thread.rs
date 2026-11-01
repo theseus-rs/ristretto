@@ -1484,7 +1484,7 @@ impl Thread {
 
     /// Execute ordinary calls and returns within one bounded synchronous stack borrow.
     /// No intrinsic or asynchronous handler runs under this lock. Stack walkers can observe
-    /// the complete frame chain between batches; every bytecode still publishes its PC.
+    /// the complete frame chain and exact bytecode PCs at every batch boundary.
     fn run_sync_interpreter(&self, vm: &VM, base_depth: usize) -> Result<InterpreterExit> {
         let debug = event_enabled!(Level::DEBUG);
         let mut stack = self.stack.write();
@@ -1578,7 +1578,7 @@ impl Thread {
                     }
                 }
                 Ok(ExecutionResult::Return(value)) => Ok(Some(value)),
-                Ok(ExecutionResult::ContinueAtPosition(_)) => {
+                Ok(ExecutionResult::ContinueAtInstruction(_)) => {
                     return Err(InternalError(
                         "Frame returned an unprocessed branch result".to_owned(),
                     ));
@@ -2082,7 +2082,7 @@ mod tests {
                 max_locals: 1,
                 code: vec![
                     Instruction::Iload_0,
-                    Instruction::Ifeq(9),
+                    Instruction::Ifeq(12),
                     Instruction::Iload_0,
                     Instruction::Iconst_1,
                     Instruction::Isub,
@@ -2114,8 +2114,8 @@ mod tests {
                     Instruction::Ireturn,
                 ],
                 exception_table: vec![ExceptionTableEntry {
-                    range_pc: 0..3,
-                    handler_pc: 3,
+                    range_pc: 0..7,
+                    handler_pc: 7,
                     catch_type: stack_overflow_error,
                 }],
                 attributes: Vec::new(),
@@ -2207,7 +2207,7 @@ mod tests {
             }),
             frame.execute_batch(&thread, &mut state).await?
         );
-        assert_eq!(5, frame.program_counter());
+        assert_eq!(7, frame.program_counter());
         Ok(())
     }
 

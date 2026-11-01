@@ -8,9 +8,9 @@ fn float_is_nan() -> Result<()> {
         Instruction::Fload_0,
         Instruction::Fload_0,
         Instruction::Fcmpl,
-        Instruction::Ifeq(6),
+        Instruction::Ifeq(7),
         Instruction::Iconst_1,
-        Instruction::Goto(7),
+        Instruction::Goto(4),
         Instruction::Iconst_0,
         Instruction::Ireturn,
     ];

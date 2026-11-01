@@ -52,6 +52,9 @@ pub(crate) mod attribute;
 /// Represents entries in the `BootstrapMethods` attribute, used for `invokedynamic` instructions.
 mod bootstrap_method;
 
+/// Validates instruction boundaries in metadata without changing byte offsets.
+pub(crate) mod code_metadata;
+
 /// Defines entries in an exception table, part of the `Code` attribute, for try-catch blocks.
 mod exception_table_entry;
 
@@ -93,9 +96,6 @@ mod module_access_flags;
 
 /// Defines access flags for nested (inner) classes (e.g., `ACC_PUBLIC`, `ACC_STATIC`).
 mod nested_class_access_flags;
-
-/// Utilities for working with bytecode offsets, often used in parsing or manipulating code attributes.
-pub(crate) mod offset_utils;
 
 /// Represents `opens` declarations in a `Module` attribute, specifying packages opened by a Java module.
 mod opens;
@@ -165,72 +165,3 @@ pub use target_path::TargetPath;
 pub use target_type::TargetType;
 pub use type_annotation::TypeAnnotation;
 pub use verification_type::VerificationType;
-
-// Example for Annotation (assuming AnnotationValuePair and AnnotationElement are defined and accessible)
-// To make this example runnable, you'd need to define dummy versions or import actual ones.
-// For demonstration, we'll assume they exist.
-//
-// /// ```
-// /// use ristretto_classfile::attributes::{Annotation, AnnotationValuePair, AnnotationElement};
-// ///
-// /// // Assuming AnnotationElement::String { const_value_index: u16 } exists
-// /// // and AnnotationValuePair { name_index: u16, value: AnnotationElement } exists
-// ///
-// /// let annotation = Annotation {
-// ///     type_index: 10, // Index in constant pool for annotation type
-// ///     num_element_value_pairs: 1,
-// ///     element_value_pairs: vec![
-// ///         AnnotationValuePair {
-// ///             name_index: 11, // Index for "value"
-// ///             value: AnnotationElement::String { const_value_index: 12 } // Index for "Hello"
-// ///         }
-// ///     ]
-// /// };
-// ///
-// /// assert_eq!(annotation.type_index, 10);
-// /// assert_eq!(annotation.element_value_pairs.len(), 1);
-// /// ```
-
-// Example for LineNumber
-//
-// /// ```
-// /// use ristretto_classfile::attributes::LineNumber;
-// ///
-// /// let line_info = LineNumber {
-// ///     start_pc: 100,    // Bytecode offset
-// ///     line_number: 42,  // Source line number
-// /// };
-// ///
-// /// assert_eq!(line_info.start_pc, 100);
-// /// assert_eq!(line_info.line_number, 42);
-// /// ```
-
-// Example for MaxStack
-//
-// /// ```
-// /// use ristretto_classfile::attributes::MaxStack;
-// ///
-// /// let max_stack_attr = MaxStack {
-// ///     max_stack: 16, // Maximum operand stack size
-// /// };
-// ///
-// /// assert_eq!(max_stack_attr.max_stack, 16);
-// /// ```
-
-// Example for Attribute (generic structure)
-//
-// /// ```
-// /// use ristretto_classfile::attributes::Attribute;
-// ///
-// /// // A generic attribute, e.g., a custom one or one whose content is opaque here.
-// /// let generic_attribute = Attribute {
-// ///     attribute_name_index: 5, // Index in constant pool for attribute name
-// ///     attribute_length: 4,
-// ///     info: vec![0xDE, 0xAD, 0xBE, 0xEF], // Raw byte data
-// /// };
-// ///
-// /// assert_eq!(generic_attribute.attribute_name_index, 5);
-// /// assert_eq!(generic_attribute.info.len(), 4);
-// /// ```
-
-mod code_offsets;

@@ -8,9 +8,9 @@ fn double_is_nan() -> Result<()> {
         Instruction::Dload_0,
         Instruction::Dload_0,
         Instruction::Dcmpl,
-        Instruction::Ifeq(6),
+        Instruction::Ifeq(7),
         Instruction::Iconst_1,
-        Instruction::Goto(7),
+        Instruction::Goto(4),
         Instruction::Iconst_0,
         Instruction::Ireturn,
     ];

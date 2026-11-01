@@ -556,7 +556,7 @@ mod tests {
                 name_index: 5,
                 max_stack: 0,
                 max_locals: 0,
-                code: vec![Instruction::Goto(2), Instruction::Nop, Instruction::Return],
+                code: vec![Instruction::Goto(4), Instruction::Nop, Instruction::Return],
                 exception_table: Vec::new(),
                 attributes: Vec::new(),
             }],

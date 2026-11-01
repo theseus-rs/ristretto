@@ -12,36 +12,11 @@ use ristretto_classfile::attributes::{ExceptionTableEntry, Instruction};
 /// This is needed because Cranelift's entry block cannot be jumped to,
 /// so we need to detect this case and create a separate loop header block.
 fn has_backward_jump_to_zero(instructions: &[Instruction]) -> bool {
-    for (program_counter, instruction) in instructions.iter().enumerate() {
-        if program_counter == 0 {
-            continue;
-        }
-        let target_address = match instruction {
-            Instruction::Goto_w(address) => usize::try_from(*address).ok(),
-            Instruction::Ifeq(address)
-            | Instruction::Ifne(address)
-            | Instruction::Iflt(address)
-            | Instruction::Ifge(address)
-            | Instruction::Ifgt(address)
-            | Instruction::Ifle(address)
-            | Instruction::If_icmpeq(address)
-            | Instruction::If_icmpne(address)
-            | Instruction::If_icmplt(address)
-            | Instruction::If_icmpge(address)
-            | Instruction::If_icmpgt(address)
-            | Instruction::If_icmple(address)
-            | Instruction::If_acmpeq(address)
-            | Instruction::If_acmpne(address)
-            | Instruction::Ifnull(address)
-            | Instruction::Ifnonnull(address)
-            | Instruction::Goto(address) => Some(usize::from(*address)),
-            _ => None,
-        };
-        if target_address == Some(0) {
-            return true;
-        }
-    }
-    false
+    Instruction::with_offsets(instructions).any(|(pc, instruction)| {
+        instruction
+            .branch_offsets()
+            .any(|relative| i64::try_from(pc).is_ok_and(|pc| pc + i64::from(relative) == 0))
+    })
 }
 
 /// Creates a control flow graph of blocks for a function by analyzing the instructions.
@@ -88,7 +63,7 @@ pub(crate) fn get_blocks(
     }
     stack_states.insert(0, stack.clone());
 
-    for (program_counter, instruction) in instructions.iter().enumerate() {
+    for (program_counter, instruction) in Instruction::with_offsets(instructions) {
         if exception_handler_addresses.contains(&program_counter) {
             // Exception handlers are always reachable
             in_dead_code = false;
@@ -132,7 +107,8 @@ pub(crate) fn get_blocks(
             | Instruction::If_acmpne(address)
             | Instruction::Ifnull(address)
             | Instruction::Ifnonnull(address) => {
-                let then_address = usize::from(*address);
+                let then_address =
+                    usize::try_from(i64::try_from(program_counter)? + i64::from(*address))?;
                 insert_stack(&mut stack_states, then_address, &stack)?;
                 create_block_with_parameters(
                     function_builder,
@@ -141,7 +117,9 @@ pub(crate) fn get_blocks(
                     &mut blocks,
                 );
 
-                let Some(else_address) = program_counter.checked_add(1) else {
+                let Some(else_address) =
+                    program_counter.checked_add(instruction.byte_len(program_counter))
+                else {
                     return Err(InternalError(format!(
                         "Address overflow: {program_counter} + 1"
                     )));
@@ -155,17 +133,21 @@ pub(crate) fn get_blocks(
                 );
             }
             Instruction::Goto(address) => {
-                let address = usize::from(*address);
+                let address =
+                    usize::try_from(i64::try_from(program_counter)? + i64::from(*address))?;
                 insert_stack(&mut stack_states, address, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
             }
             Instruction::Goto_w(address) => {
-                let address = usize::try_from(*address)?;
+                let address =
+                    usize::try_from(i64::try_from(program_counter)? + i64::from(*address))?;
                 insert_stack(&mut stack_states, address, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
             }
             Instruction::Jsr(address) => {
-                let Some(next_address) = program_counter.checked_add(1) else {
+                let Some(next_address) =
+                    program_counter.checked_add(instruction.byte_len(program_counter))
+                else {
                     return Err(InternalError(format!(
                         "Address overflow: {program_counter} + 1"
                     )));
@@ -178,12 +160,15 @@ pub(crate) fn get_blocks(
                     &mut blocks,
                 );
 
-                let address = usize::from(*address);
+                let address =
+                    usize::try_from(i64::try_from(program_counter)? + i64::from(*address))?;
                 insert_stack(&mut stack_states, address, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
             }
             Instruction::Jsr_w(address) => {
-                let Some(next_address) = program_counter.checked_add(1) else {
+                let Some(next_address) =
+                    program_counter.checked_add(instruction.byte_len(program_counter))
+                else {
                     return Err(InternalError(format!(
                         "Address overflow: {program_counter} + 1"
                     )));
@@ -196,7 +181,8 @@ pub(crate) fn get_blocks(
                     &mut blocks,
                 );
 
-                let address = usize::try_from(*address)?;
+                let address =
+                    usize::try_from(i64::try_from(program_counter)? + i64::from(*address))?;
                 insert_stack(&mut stack_states, address, &stack)?;
                 create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
             }
@@ -349,9 +335,9 @@ mod tests {
         let instructions = vec![
             Instruction::Iload_0,      // 0: Load local variable 0
             Instruction::Iload_1,      // 1: Load local variable 1
-            Instruction::If_icmplt(5), // 2: If var0 < var1, branch to instruction 5
+            Instruction::If_icmplt(7), // 2: If var0 < var1, branch to instruction 5
             Instruction::Iload_0,      // 3: Load local variable 0
-            Instruction::Goto(6),      // 4: Jump to instruction 6
+            Instruction::Goto(4),      // 4: Jump to instruction 6
             Instruction::Iload_1,      // 5: Load local variable 1
             Instruction::Ireturn,      // 6: Return value on stack
         ];
@@ -366,9 +352,9 @@ mod tests {
         )?;
         assert_eq!(blocks.len(), 4);
         let _block_0 = blocks.get(&0).expect("block0");
-        let _block_3 = blocks.get(&3).expect("block3");
         let _block_5 = blocks.get(&5).expect("block5");
-        let _block_6 = blocks.get(&6).expect("block6");
+        let _block_9 = blocks.get(&9).expect("block9");
+        let _block_10 = blocks.get(&10).expect("block10");
         Ok(())
     }
 }

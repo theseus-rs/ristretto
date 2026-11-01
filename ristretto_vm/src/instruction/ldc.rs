@@ -31,7 +31,11 @@ pub(crate) fn ldc_w(
 ///
 /// - `InvalidConstantIndex` if the index is out of bounds.
 /// - `InvalidConstant` if the constant type is not supported.
-#[inline]
+#[expect(
+    clippy::inline_always,
+    reason = "Merge the synchronous fast path into dispatch to avoid per-instruction result copies"
+)]
+#[inline(always)]
 fn load_constant(frame: &Frame, stack: &mut OperandStack, index: u16) -> Result<InstructionResult> {
     let constant_pool = frame.class().constant_pool();
     let constant = constant_pool
@@ -89,12 +93,12 @@ pub(crate) async fn load_constant_async(
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc2_w>
-#[inline]
-pub(crate) fn ldc2_w(
-    frame: &Frame,
-    stack: &mut OperandStack,
-    index: u16,
-) -> Result<ExecutionResult> {
+#[expect(
+    clippy::inline_always,
+    reason = "Merge the synchronous fast path into dispatch to avoid per-instruction result copies"
+)]
+#[inline(always)]
+pub(crate) fn ldc2_w(frame: &Frame, stack: &mut OperandStack, index: u16) -> Result<()> {
     let constant_pool = frame.class().constant_pool();
     let constant = constant_pool
         .get(index)
@@ -111,7 +115,7 @@ pub(crate) fn ldc2_w(
         }
     };
     stack.push(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -258,8 +262,7 @@ mod test {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let index = constant_pool.add_long(42)?;
-        let result = ldc2_w(&frame, stack, index)?;
-        assert_eq!(Continue, result);
+        ldc2_w(&frame, stack, index)?;
         assert_eq!(42, stack.pop_long()?);
         Ok(())
     }
@@ -271,8 +274,7 @@ mod test {
         let class = frame.class_mut();
         let constant_pool = Arc::get_mut(class).expect("class").constant_pool_mut();
         let index = constant_pool.add_double(42.1)?;
-        let result = ldc2_w(&frame, stack, index)?;
-        assert_eq!(Continue, result);
+        ldc2_w(&frame, stack, index)?;
         let value = stack.pop_double()? - 42.1f64;
         assert!(value.abs() < 0.1f64);
         Ok(())

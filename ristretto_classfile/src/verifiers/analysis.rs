@@ -141,6 +141,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             .find(|a| matches!(a, Attribute::StackMapTable { .. }))
         {
             let mut current_frame = initial_frame;
+            let mut previous_offset: Option<u16> = None;
             for stack_frame in stack_frames {
                 let offset_delta = match stack_frame {
                     StackFrame::SameFrame { frame_type } => u16::from(*frame_type),
@@ -154,14 +155,22 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
                     | StackFrame::FullFrame { offset_delta, .. } => *offset_delta,
                 };
 
-                // offset_delta is the instruction index
-                let instruction_index = offset_delta as usize;
-                if instruction_index >= self.instruction_offsets.len() {
+                let offset = if let Some(previous) = previous_offset {
+                    previous
+                        .checked_add(offset_delta)
+                        .and_then(|pc| pc.checked_add(1))
+                        .ok_or_else(|| {
+                            VerifyError::VerifyError("Stack map offset overflow".to_string())
+                        })?
+                } else {
+                    offset_delta
+                };
+                if !self.offset_to_index.contains_key(&offset) {
                     return Err(VerifyError::VerifyError(format!(
-                        "Invalid StackMapTable frame index {instruction_index}"
+                        "Invalid StackMapTable offset {offset}"
                     )));
                 }
-                let offset = self.instruction_offsets[instruction_index];
+                previous_offset = Some(offset);
 
                 let next_frame = self.apply_stack_frame(&current_frame, stack_frame)?;
                 frames.insert(offset, next_frame.clone());
@@ -326,13 +335,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
         let mut next_frame = frame.clone();
         let mut successors = Vec::new();
 
-        // Calculate next offset (fallthrough)
-        let mut cursor = Cursor::new(Vec::new());
-        instruction
-            .to_bytes(&mut cursor)
-            .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
-        let len = u16::try_from(cursor.position())?;
-        let fallthrough = offset + len;
+        let fallthrough = offset + u16::try_from(instruction.byte_len(usize::from(offset)))?;
 
         let mut does_fallthrough = true;
 
@@ -677,12 +680,11 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
 
             // Control Flow
             Instruction::Goto(offset_target) => {
-                successors.push(Self::resolve_offset(*offset_target));
+                successors.push(self.resolve_offset(offset, i32::from(*offset_target))?);
                 does_fallthrough = false;
             }
             Instruction::Goto_w(offset_target) => {
-                let target = u16::try_from(*offset_target)
-                    .map_err(|_| VerifyError::VerifyError("Goto_w target too large".to_string()))?;
+                let target = self.resolve_offset(offset, *offset_target)?;
                 successors.push(target);
                 does_fallthrough = false;
             }
@@ -694,7 +696,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             | Instruction::Ifgt(target)
             | Instruction::Ifle(target) => {
                 self.pop_expect(&mut next_frame, &VerificationType::Integer)?;
-                successors.push(*target);
+                successors.push(self.resolve_offset(offset, i32::from(*target))?);
             }
 
             Instruction::If_icmpeq(target)
@@ -705,7 +707,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             | Instruction::If_icmple(target) => {
                 self.pop_expect(&mut next_frame, &VerificationType::Integer)?;
                 self.pop_expect(&mut next_frame, &VerificationType::Integer)?;
-                successors.push(*target);
+                successors.push(self.resolve_offset(offset, i32::from(*target))?);
             }
 
             Instruction::If_acmpeq(target) | Instruction::If_acmpne(target) => {
@@ -733,7 +735,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
                         "If_acmp expected reference".to_string(),
                     ));
                 }
-                successors.push(*target);
+                successors.push(self.resolve_offset(offset, i32::from(*target))?);
             }
 
             Instruction::Ifnull(target) | Instruction::Ifnonnull(target) => {
@@ -749,7 +751,24 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
                         "Ifnull expected reference".to_string(),
                     ));
                 }
-                successors.push(*target);
+                successors.push(self.resolve_offset(offset, i32::from(*target))?);
+            }
+
+            Instruction::Tableswitch(table) => {
+                self.pop_expect(&mut next_frame, &VerificationType::Integer)?;
+                successors.push(self.resolve_offset(offset, table.default)?);
+                for &relative in &table.offsets {
+                    successors.push(self.resolve_offset(offset, relative)?);
+                }
+                does_fallthrough = false;
+            }
+            Instruction::Lookupswitch(table) => {
+                self.pop_expect(&mut next_frame, &VerificationType::Integer)?;
+                successors.push(self.resolve_offset(offset, table.default)?);
+                for &relative in table.pairs.values() {
+                    successors.push(self.resolve_offset(offset, relative)?);
+                }
+                does_fallthrough = false;
             }
 
             // Object Creation
@@ -850,8 +869,14 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
         Ok((next_frame, successors))
     }
 
-    const fn resolve_offset(offset: u16) -> u16 {
-        offset
+    fn resolve_offset(&self, position: u16, relative: i32) -> Result<u16> {
+        let target = u16::try_from(i64::from(position) + i64::from(relative))?;
+        if !self.offset_to_index.contains_key(&target) {
+            return Err(VerifyError::VerifyError(format!(
+                "Invalid branch target {target}"
+            )));
+        }
+        Ok(target)
     }
 
     fn push_constant(&self, frame: &mut Frame, index: u16) -> Result<()> {

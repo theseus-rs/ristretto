@@ -1,8 +1,6 @@
-use crate::Error::InvalidInstructionOffset;
 use crate::attributes::bootstrap_method::BootstrapMethod;
 use crate::attributes::inner_class::InnerClass;
 use crate::attributes::line_number::LineNumber;
-use crate::attributes::offset_utils::{self, lookup_byte_offset};
 use crate::attributes::parameter_annotation::ParameterAnnotation;
 use crate::attributes::{
     Annotation, AnnotationElement, ExceptionTableEntry, Exports, Instruction, LocalVariableTable,
@@ -17,7 +15,6 @@ use crate::error::Error::{InvalidAttributeLength, InvalidAttributeNameIndex};
 use crate::error::Result;
 use crate::version::Version;
 use crate::{JAVA_1_0_2, JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_11, JAVA_16, JAVA_17, mutf8};
-use ahash::AHashMap;
 use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
 
@@ -835,11 +832,6 @@ impl Attribute {
                 }
             }
             b"Code" => {
-                // Instruction pointers are converted from byte offsets to instruction offsets to
-                // facilitate faster / easier instruction manipulation at runtime.  During runtime,
-                // the instruction offset can be used directly and calculating the next instruction
-                // byte offset is unnecessary. This separates the physical storage of the
-                // instructions from the logical representation.
                 let max_stack = bytes.read_u16()?;
                 let max_locals = bytes.read_u16()?;
 
@@ -848,28 +840,38 @@ impl Attribute {
                     return Err(InvalidAttributeLength(code_length));
                 }
                 let code_slice = bytes.read_bytes(code_length as usize)?;
-                let (byte_to_instruction_pairs, instructions) =
-                    offset_utils::instructions_from_bytes(&mut ByteReader::new(code_slice))?;
-
+                let instructions = Instruction::decode(code_slice)?;
                 let exception_length = bytes.read_u16()?;
                 let mut exception_table = Vec::with_capacity(exception_length as usize);
+                let boundaries: Vec<_> = Instruction::with_offsets(&instructions)
+                    .map(|(offset, _)| offset)
+                    .collect();
+                let boundary = |pc: u16| boundaries.binary_search(&usize::from(pc)).is_ok();
                 for _ in 0..exception_length {
-                    let mut exception = ExceptionTableEntry::from_bytes(bytes)?;
-                    exception.range_pc.start =
-                        lookup_byte_offset(&byte_to_instruction_pairs, exception.range_pc.start)
-                            .ok_or(InvalidInstructionOffset(u32::from(
-                                exception.range_pc.start,
-                            )))?;
-                    exception.range_pc.end =
-                        lookup_byte_offset(&byte_to_instruction_pairs, exception.range_pc.end)
-                            .ok_or(InvalidInstructionOffset(u32::from(exception.range_pc.end)))?;
-                    exception.handler_pc =
-                        lookup_byte_offset(&byte_to_instruction_pairs, exception.handler_pc)
-                            .ok_or(InvalidInstructionOffset(u32::from(exception.handler_pc)))?;
-                    exception_table.push(exception);
+                    let entry = ExceptionTableEntry::from_bytes(bytes)?;
+                    for pc in [entry.range_pc.start, entry.handler_pc] {
+                        if !boundary(pc) {
+                            return Err(crate::Error::InvalidInstructionOffset(u32::from(pc)));
+                        }
+                    }
+                    if (u32::from(entry.range_pc.end) != code_length
+                        && !boundary(entry.range_pc.end))
+                        || entry.range_pc.start >= entry.range_pc.end
+                    {
+                        return Err(crate::Error::InvalidInstructionOffset(u32::from(
+                            entry.range_pc.end,
+                        )));
+                    }
+                    exception_table.push(entry);
                 }
-                let pairs = &byte_to_instruction_pairs;
-                let attributes = Self::from_bytes_code_attributes(constant_pool, bytes, pairs)?;
+                let attributes = Self::from_bytes_code_attributes(constant_pool, bytes)?;
+                for attribute in &attributes {
+                    super::code_metadata::validate(
+                        attribute,
+                        u16::try_from(code_length)?,
+                        boundary,
+                    )?;
+                }
                 Attribute::Code {
                     name_index,
                     max_stack,
@@ -1227,99 +1229,11 @@ impl Attribute {
     fn from_bytes_code_attributes(
         constant_pool: &ConstantPool<'_>,
         bytes: &mut ByteReader<'_>,
-        byte_to_instruction_pairs: &[(u16, u16)],
     ) -> Result<Vec<Attribute>> {
-        let attributes_count = bytes.read_u16()?;
-        let mut attributes = Vec::with_capacity(attributes_count as usize);
-        for _ in 0..attributes_count {
-            let mut attribute =
-                Attribute::from_bytes_in(constant_pool, bytes, AttributeLocation::Code)?;
-            super::code_offsets::relocate(&mut attribute, |offset| {
-                lookup_byte_offset(byte_to_instruction_pairs, offset)
-                    .ok_or(InvalidInstructionOffset(u32::from(offset)))
-            })?;
-            match attribute {
-                Attribute::LineNumberTable {
-                    name_index,
-                    mut line_numbers,
-                } => {
-                    for line_number in &mut line_numbers {
-                        line_number.start_pc =
-                            lookup_byte_offset(byte_to_instruction_pairs, line_number.start_pc)
-                                .ok_or(InvalidInstructionOffset(u32::from(line_number.start_pc)))?;
-                    }
-                    let attribute = Attribute::LineNumberTable {
-                        name_index,
-                        line_numbers,
-                    };
-                    attributes.push(attribute);
-                }
-                Attribute::StackMapTable {
-                    name_index,
-                    mut frames,
-                } => {
-                    let mut first_frame = true;
-                    let mut last_byte_offset: u16 = 0;
-                    let mut last_instruction_offset: u16 = 0;
-                    for frame in &mut frames {
-                        let offset_delta = frame.offset_delta();
-                        let byte_offset = if first_frame {
-                            offset_delta
-                        } else {
-                            last_byte_offset
-                                .checked_add(offset_delta)
-                                .and_then(|offset| offset.checked_add(1))
-                                .ok_or(InvalidInstructionOffset(
-                                    u32::from(last_byte_offset) + u32::from(offset_delta) + 1,
-                                ))?
-                        };
-
-                        let instruction_offset =
-                            lookup_byte_offset(byte_to_instruction_pairs, byte_offset)
-                                .ok_or(InvalidInstructionOffset(u32::from(byte_offset)))?;
-                        // Calculate the instruction delta offset from the last instruction offset
-                        // subtracting 1 to account for the current instruction.
-                        let instruction_delta_offset = if first_frame {
-                            first_frame = false;
-                            instruction_offset
-                        } else {
-                            instruction_offset
-                                .saturating_sub(last_instruction_offset)
-                                .saturating_sub(1)
-                        };
-
-                        match frame {
-                            StackFrame::SameFrame { frame_type } => {
-                                // SameFrame uses the offset as the frame type
-                                *frame_type = u8::try_from(instruction_delta_offset)?;
-                            }
-                            StackFrame::SameLocals1StackItemFrame { frame_type, .. } => {
-                                // SameLocals1StackItemFrame requires that the 64 is added to the
-                                // delta offset as it is used as the frame type.
-                                let instruction_delta_offset =
-                                    instruction_delta_offset.saturating_add(64);
-                                *frame_type = u8::try_from(instruction_delta_offset)?;
-                            }
-                            StackFrame::AppendFrame { offset_delta, .. }
-                            | StackFrame::ChopFrame { offset_delta, .. }
-                            | StackFrame::FullFrame { offset_delta, .. }
-                            | StackFrame::SameFrameExtended { offset_delta, .. }
-                            | StackFrame::SameLocals1StackItemFrameExtended {
-                                offset_delta, ..
-                            } => {
-                                *offset_delta = instruction_delta_offset;
-                            }
-                        }
-                        last_byte_offset = byte_offset;
-                        last_instruction_offset = instruction_offset;
-                    }
-                    let attribute = Attribute::StackMapTable { name_index, frames };
-                    attributes.push(attribute);
-                }
-                _ => attributes.push(attribute),
-            }
-        }
-        Ok(attributes)
+        let count = bytes.read_u16()?;
+        (0..count)
+            .map(|_| Self::from_bytes_in(constant_pool, bytes, AttributeLocation::Code))
+            .collect()
     }
 
     /// Serialize the Attribute to bytes.
@@ -1368,8 +1282,7 @@ impl Attribute {
                 bytes.write_u16::<BigEndian>(*max_stack)?;
                 bytes.write_u16::<BigEndian>(*max_locals)?;
 
-                let (instruction_to_byte_map, code_bytes) =
-                    offset_utils::instructions_to_bytes(code)?;
+                let code_bytes = Instruction::encode(code)?;
                 let code_length = u32::try_from(code_bytes.len())?;
                 if !(1..=65535).contains(&code_length) {
                     return Err(InvalidAttributeLength(code_length));
@@ -1379,24 +1292,13 @@ impl Attribute {
 
                 let exceptions_length = u16::try_from(exception_table.len())?;
                 bytes.write_u16::<BigEndian>(exceptions_length)?;
-                for exception in &mut exception_table.clone() {
-                    // Convert the instruction offset to byte offset
-                    exception.range_pc.start = *instruction_to_byte_map
-                        .get(&exception.range_pc.start)
-                        .ok_or(InvalidInstructionOffset(u32::from(
-                            exception.range_pc.start,
-                        )))?;
-                    exception.range_pc.end = instruction_to_byte_map
-                        .get(&exception.range_pc.end)
-                        .copied()
-                        .ok_or(InvalidInstructionOffset(u32::from(exception.range_pc.end)))?;
-                    exception.handler_pc = *instruction_to_byte_map
-                        .get(&exception.handler_pc)
-                        .ok_or(InvalidInstructionOffset(u32::from(exception.handler_pc)))?;
+                for exception in exception_table {
                     exception.to_bytes(&mut bytes)?;
                 }
-
-                Self::to_bytes_code_attributes(attributes, &mut bytes, &instruction_to_byte_map)?;
+                bytes.write_u16::<BigEndian>(u16::try_from(attributes.len())?)?;
+                for attribute in attributes {
+                    attribute.to_bytes(&mut bytes)?;
+                }
                 (name_index, bytes)
             }
             Attribute::StackMapTable { name_index, frames } => {
@@ -1710,184 +1612,6 @@ impl Attribute {
         bytes.extend_from_slice(info.as_slice());
         Ok(())
     }
-
-    /// Serializes the attributes of a Code attribute to bytes, handling special cases.
-    ///
-    /// This method is used internally by the `to_bytes` method when serializing a Code attribute.
-    /// It handles the conversion of instruction offsets to byte offsets for attributes that contain
-    /// instruction references (like `LineNumberTable` and `StackMapTable`).
-    ///
-    /// # Note
-    ///
-    /// This method is necessary because the JVM uses byte offsets in class files, but our in-memory
-    /// representation uses instruction offsets for easier manipulation.
-    ///
-    /// # Errors
-    ///
-    /// - Returns an error if any instruction offset cannot be mapped to a byte offset.
-    #[expect(clippy::too_many_lines)]
-    fn to_bytes_code_attributes(
-        attributes: &Vec<Attribute>,
-        bytes: &mut Vec<u8>,
-        instruction_to_byte_map: &AHashMap<u16, u16>,
-    ) -> Result<()> {
-        let attributes_length = u16::try_from(attributes.len())?;
-        bytes.write_u16::<BigEndian>(attributes_length)?;
-        for attribute in attributes {
-            let mut relocated = attribute.clone();
-            super::code_offsets::relocate(&mut relocated, |offset| {
-                instruction_to_byte_map
-                    .get(&offset)
-                    .copied()
-                    .ok_or(InvalidInstructionOffset(u32::from(offset)))
-            })?;
-            let attribute = &relocated;
-            match attribute {
-                Attribute::LineNumberTable {
-                    name_index,
-                    line_numbers,
-                } => {
-                    let mut new_line_numbers = Vec::new();
-                    for line_number in line_numbers {
-                        let start_pc = *instruction_to_byte_map
-                            .get(&line_number.start_pc)
-                            .ok_or(InvalidInstructionOffset(u32::from(line_number.start_pc)))?;
-                        new_line_numbers.push(LineNumber {
-                            start_pc,
-                            line_number: line_number.line_number,
-                        });
-                    }
-                    let attribute = Attribute::LineNumberTable {
-                        name_index: *name_index,
-                        line_numbers: new_line_numbers,
-                    };
-                    attribute.to_bytes(bytes)?;
-                }
-                Attribute::StackMapTable { name_index, frames } => {
-                    let mut first_frame = true;
-                    let mut last_byte_offset: u16 = 0;
-                    let mut last_instruction_offset: u16 = 0;
-                    let mut new_frames = Vec::new();
-                    for frame in frames {
-                        frame.validate()?;
-                        let offset_delta = frame.offset_delta();
-                        let instruction_offset = if first_frame {
-                            offset_delta
-                        } else {
-                            last_instruction_offset
-                                .checked_add(offset_delta)
-                                .and_then(|offset| offset.checked_add(1))
-                                .ok_or(InvalidInstructionOffset(
-                                    u32::from(last_instruction_offset)
-                                        + u32::from(offset_delta)
-                                        + 1,
-                                ))?
-                        };
-
-                        let byte_offset = *instruction_to_byte_map
-                            .get(&instruction_offset)
-                            .ok_or(InvalidInstructionOffset(u32::from(instruction_offset)))?;
-                        // Calculate the byte delta offset from the last instruction offset
-                        // subtracting 1 to account for the current instruction.
-                        let byte_delta_offset = if first_frame {
-                            first_frame = false;
-                            byte_offset
-                        } else {
-                            byte_offset
-                                .saturating_sub(last_byte_offset)
-                                .saturating_sub(1)
-                        };
-
-                        match frame {
-                            StackFrame::SameFrame { .. } => {
-                                // SameFrame uses the offset as the frame type
-                                new_frames.push(if byte_delta_offset <= 63 {
-                                    StackFrame::SameFrame {
-                                        frame_type: u8::try_from(byte_delta_offset)?,
-                                    }
-                                } else {
-                                    StackFrame::SameFrameExtended {
-                                        frame_type: 251,
-                                        offset_delta: byte_delta_offset,
-                                    }
-                                });
-                            }
-                            StackFrame::SameLocals1StackItemFrame { stack, .. } => {
-                                // SameLocals1StackItemFrame requires that the 64 is added to the
-                                // delta offset as it is used as the frame type.
-                                new_frames.push(if byte_delta_offset <= 63 {
-                                    StackFrame::SameLocals1StackItemFrame {
-                                        frame_type: u8::try_from(byte_delta_offset + 64)?,
-                                        stack: stack.clone(),
-                                    }
-                                } else {
-                                    StackFrame::SameLocals1StackItemFrameExtended {
-                                        frame_type: 247,
-                                        offset_delta: byte_delta_offset,
-                                        stack: stack.clone(),
-                                    }
-                                });
-                            }
-                            StackFrame::AppendFrame {
-                                frame_type, locals, ..
-                            } => {
-                                new_frames.push(StackFrame::AppendFrame {
-                                    frame_type: *frame_type,
-                                    offset_delta: byte_delta_offset,
-                                    locals: locals.clone(),
-                                });
-                            }
-                            StackFrame::ChopFrame { frame_type, .. } => {
-                                new_frames.push(StackFrame::ChopFrame {
-                                    frame_type: *frame_type,
-                                    offset_delta: byte_delta_offset,
-                                });
-                            }
-                            StackFrame::FullFrame {
-                                frame_type,
-                                locals,
-                                stack,
-                                ..
-                            } => {
-                                new_frames.push(StackFrame::FullFrame {
-                                    frame_type: *frame_type,
-                                    offset_delta: byte_delta_offset,
-                                    locals: locals.clone(),
-                                    stack: stack.clone(),
-                                });
-                            }
-                            StackFrame::SameFrameExtended { frame_type, .. } => {
-                                new_frames.push(StackFrame::SameFrameExtended {
-                                    frame_type: *frame_type,
-                                    offset_delta: byte_delta_offset,
-                                });
-                            }
-                            StackFrame::SameLocals1StackItemFrameExtended {
-                                frame_type,
-                                stack,
-                                ..
-                            } => {
-                                new_frames.push(StackFrame::SameLocals1StackItemFrameExtended {
-                                    frame_type: *frame_type,
-                                    offset_delta: byte_delta_offset,
-                                    stack: stack.clone(),
-                                });
-                            }
-                        }
-                        last_byte_offset = byte_offset;
-                        last_instruction_offset = instruction_offset;
-                    }
-                    let attribute = Attribute::StackMapTable {
-                        name_index: *name_index,
-                        frames: new_frames,
-                    };
-                    attribute.to_bytes(bytes)?;
-                }
-                _ => attribute.to_bytes(bytes)?,
-            }
-        }
-        Ok(())
-    }
 }
 
 impl fmt::Display for Attribute {
@@ -1948,52 +1672,13 @@ impl fmt::Display for Attribute {
                 writeln!(f, "Code:")?;
                 writeln!(f, "  stack={max_stack}, locals={max_locals}")?;
 
-                let (instruction_to_byte_map, code_bytes) =
-                    offset_utils::instructions_to_bytes(code).map_err(|_| fmt::Error)?;
-                let code_length = code_bytes.len();
-                let mut reader = ByteReader::new(&code_bytes);
-                while reader.position() < code_length {
-                    let index = reader.position();
-                    let mut instruction =
-                        Instruction::from_bytes(&mut reader).map_err(|_| fmt::Error)?;
-                    match instruction {
-                        Instruction::Tableswitch(ref mut table_switch) => {
-                            let position = i32::try_from(index).map_err(|_| fmt::Error)?;
-                            table_switch.default += position;
-                            for offset in &mut table_switch.offsets {
-                                *offset += position;
-                            }
-                        }
-                        Instruction::Lookupswitch(ref mut lookupswitch) => {
-                            let position = i32::try_from(index).map_err(|_| fmt::Error)?;
-                            lookupswitch.default += position;
-                            for offset in lookupswitch.pairs.values_mut() {
-                                *offset += position;
-                            }
-                        }
-                        _ => {}
-                    }
-                    let value = instruction.to_string();
-                    let (name, value) = value.split_once(' ').unwrap_or((value.as_str(), ""));
-                    let value = format!("{name:<13} {value}");
+                for (index, instruction) in Instruction::with_offsets(code) {
+                    let value = instruction.display_at(index).to_string();
+                    let (name, operand) = value.split_once(' ').unwrap_or((value.as_str(), ""));
+                    let value = format!("{name:<13} {operand}");
                     writeln!(f, "{index:>6}: {}", value.trim())?;
                 }
 
-                let mut exception_table = exception_table.clone();
-                for exception in &mut exception_table {
-                    exception.range_pc.start = *instruction_to_byte_map
-                        .get(&exception.range_pc.start)
-                        .ok_or(fmt::Error)?;
-                    exception.range_pc.end = instruction_to_byte_map
-                        .iter()
-                        .filter(|&(&k, _)| k <= exception.range_pc.end)
-                        .max_by_key(|&(&k, _)| k)
-                        .map(|(_, &v)| v + 1)
-                        .ok_or(fmt::Error)?;
-                    exception.handler_pc = *instruction_to_byte_map
-                        .get(&exception.handler_pc)
-                        .ok_or(fmt::Error)?;
-                }
                 if !exception_table.is_empty() {
                     writeln!(f, "  {exception_table:?}")?;
                 }
@@ -2003,9 +1688,7 @@ impl fmt::Display for Attribute {
                         Attribute::LineNumberTable { line_numbers, .. } => {
                             writeln!(f, "  LineNumberTable:")?;
                             for line_number in line_numbers {
-                                let start_pc = instruction_to_byte_map
-                                    .get(&line_number.start_pc)
-                                    .ok_or(fmt::Error)?;
+                                let start_pc = line_number.start_pc;
                                 let line_number = line_number.line_number;
                                 writeln!(f, "    line {line_number}: {start_pc}")?;
                             }
@@ -2199,7 +1882,7 @@ mod test {
                  6: nop
                  7: nop
                  8: return
-              [ExceptionTableEntry { range_pc: 0..2, handler_pc: 0, catch_type: 4 }]
+              [ExceptionTableEntry { range_pc: 0..1, handler_pc: 0, catch_type: 4 }]
               Unknown { name_index: 2, info: [0, 42] }
               LineNumberTable:
                 line 1: 0
@@ -2245,29 +1928,107 @@ mod test {
     }
 
     #[test]
+    fn test_code_disassembly_resolves_signed_branches() -> Result<()> {
+        let short_branches: [fn(i16) -> Instruction; 18] = [
+            Instruction::Ifeq,
+            Instruction::Ifne,
+            Instruction::Iflt,
+            Instruction::Ifge,
+            Instruction::Ifgt,
+            Instruction::Ifle,
+            Instruction::If_icmpeq,
+            Instruction::If_icmpne,
+            Instruction::If_icmplt,
+            Instruction::If_icmpge,
+            Instruction::If_icmpgt,
+            Instruction::If_icmple,
+            Instruction::If_acmpeq,
+            Instruction::If_acmpne,
+            Instruction::Goto,
+            Instruction::Jsr,
+            Instruction::Ifnull,
+            Instruction::Ifnonnull,
+        ];
+        let mut branches = Vec::new();
+        for constructor in short_branches {
+            for offset in [-3, 3, i16::MIN, i16::MAX] {
+                branches.push((constructor(offset), i64::from(offset)));
+            }
+        }
+        for constructor in [Instruction::Goto_w, Instruction::Jsr_w] {
+            for offset in [-3, 5, i32::MIN, i32::MAX] {
+                branches.push((constructor(offset), i64::from(offset)));
+            }
+        }
+        for (branch, offset) in branches {
+            let mnemonic = branch.to_string();
+            let (mnemonic, _) = mnemonic.split_once(' ').expect("branch operand");
+            let attribute = Attribute::Code {
+                name_index: 1,
+                max_stack: 1,
+                max_locals: 1,
+                code: vec![
+                    Instruction::Bipush(0),
+                    Instruction::Pop,
+                    branch,
+                    Instruction::Return,
+                ],
+                exception_table: vec![],
+                attributes: vec![],
+            };
+            let mut before = Vec::new();
+            attribute.to_bytes(&mut before)?;
+            let display = attribute.to_string();
+            assert!(
+                display.contains(&format!("     3: {mnemonic:<13} {}", 3 + offset)),
+                "{display}"
+            );
+            let mut after = Vec::new();
+            attribute.to_bytes(&mut after)?;
+            assert_eq!(before, after);
+        }
+        Ok(())
+    }
+
+    #[test]
     fn test_code_to_string_tableswitch_offsets() {
         let attribute = Attribute::Code {
             name_index: 1,
             max_stack: 1,
             max_locals: 1,
             code: vec![
+                Instruction::Bipush(0),
+                Instruction::Pop,
                 Instruction::Tableswitch(Box::new(TableSwitch {
-                    default: 3,
+                    default: 23,
                     low: 3,
                     high: 4,
-                    offsets: vec![1, 2],
+                    offsets: vec![-3, 21],
                 })),
                 Instruction::Nop,
                 Instruction::Nop,
                 Instruction::Return,
             ],
-            exception_table: Vec::new(),
-            attributes: Vec::new(),
+            exception_table: vec![],
+            attributes: vec![],
         };
-
-        let display = attribute.to_string();
-        assert!(display.contains("tableswitch"));
-        assert!(display.contains("default"));
+        assert_eq!(
+            indoc! {"
+            Code:
+              stack=1, locals=1
+                 0: bipush        0
+                 2: pop
+                 3: tableswitch   { // 3 to 4
+                               3: 0
+                               4: 24
+                         default: 26
+                    }
+                24: nop
+                25: nop
+                26: return
+        "},
+            attribute.to_string()
+        );
     }
 
     #[test]
@@ -2277,24 +2038,36 @@ mod test {
             max_stack: 1,
             max_locals: 1,
             code: vec![
-                Instruction::Nop,
+                Instruction::Bipush(0),
+                Instruction::Pop,
                 Instruction::Lookupswitch(Box::new(LookupSwitch {
-                    default: 3,
-                    pairs: [(7, 1), (9, 2)].into_iter().collect(),
+                    default: 27,
+                    pairs: [(7, -3), (9, 25)].into_iter().collect(),
                 })),
                 Instruction::Nop,
                 Instruction::Nop,
                 Instruction::Return,
             ],
-            exception_table: Vec::new(),
-            attributes: Vec::new(),
+            exception_table: vec![],
+            attributes: vec![],
         };
-
-        let display = attribute.to_string();
-        assert!(display.contains("lookupswitch"));
-        assert!(display.contains("default"));
-        assert!(display.contains("7:"));
-        assert!(display.contains("9:"));
+        assert_eq!(
+            indoc! {"
+            Code:
+              stack=1, locals=1
+                 0: bipush        0
+                 2: pop
+                 3: lookupswitch  { // 2
+                               7: 0
+                               9: 28
+                         default: 30
+                    }
+                28: nop
+                29: nop
+                30: return
+        "},
+            attribute.to_string()
+        );
     }
 
     #[test]

@@ -76,7 +76,10 @@ fn switches_reject_invalid_ranges_counts_and_key_order() {
     }
     let mut reader = ByteReader::new(&[0, 200, 127, 255, 255, 255]);
     reader.read_u8().unwrap();
-    assert!(Instruction::from_bytes(&mut reader).is_err());
+    assert_eq!(
+        Instruction::from_bytes(&mut reader).unwrap(),
+        Instruction::Goto_w(i32::MAX)
+    );
 }
 
 fn code(pool: &mut ConstantPool<'_>, instructions: Vec<Instruction>) -> Attribute {
@@ -133,7 +136,7 @@ fn malformed_constructed_stack_frames_are_not_serialized() {
 }
 
 #[test]
-fn code_metadata_relocates_after_instruction_width_changes() {
+fn code_metadata_preserves_byte_offsets() {
     let mut pool = ConstantPool::new();
     let local_name = pool.add_utf8("x").unwrap();
     let descriptor = pool.add_utf8("I").unwrap();
@@ -157,15 +160,15 @@ fn code_metadata_relocates_after_instruction_width_changes() {
     } = &mut attr
     {
         exception_table.push(ExceptionTableEntry {
-            range_pc: 0..5,
-            handler_pc: 4,
+            range_pc: 0..8,
+            handler_pc: 7,
             catch_type: 0,
         });
         attributes.push(Attribute::LocalVariableTable {
             name_index: table_name,
             variables: vec![LocalVariableTable {
-                start_pc: 1,
-                length: 4,
+                start_pc: 2,
+                length: 6,
                 name_index: local_name,
                 descriptor_index: descriptor,
                 index: 0,
@@ -175,9 +178,9 @@ fn code_metadata_relocates_after_instruction_width_changes() {
             name_index: frames_name,
             frames: vec![StackFrame::FullFrame {
                 frame_type: 255,
-                offset_delta: 3,
+                offset_delta: 6,
                 locals: vec![],
-                stack: vec![VerificationType::Uninitialized { offset: 2 }],
+                stack: vec![VerificationType::Uninitialized { offset: 3 }],
             }],
         });
     }
@@ -223,12 +226,12 @@ fn code_metadata_relocates_after_instruction_width_changes() {
     let mut parsed = Attribute::from_bytes(&pool, &mut ByteReader::new(&bytes)).unwrap();
     assert_eq!(parsed, attr);
     if let Attribute::Code { code, .. } = &mut parsed {
-        code[0] = Instruction::Sipush(0);
+        code[0] = Instruction::Bipush(42);
     }
     let mut changed = Vec::new();
     parsed.to_bytes(&mut changed).unwrap();
-    check_encoded_offsets(&changed, 3, 4);
-    assert_eq!(changed.len(), bytes.len() + 1);
+    check_encoded_offsets(&changed, 2, 3);
+    assert_eq!(changed.len(), bytes.len());
     assert_eq!(
         Attribute::from_bytes(&pool, &mut ByteReader::new(&changed)).unwrap(),
         parsed

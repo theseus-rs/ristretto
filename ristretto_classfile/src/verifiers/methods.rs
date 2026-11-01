@@ -52,6 +52,12 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
         return Ok(());
     };
 
+    // Most methods contain only compatible returns. Reachability matters only when
+    // an incompatible return could be dead code; avoid constructing a CFG otherwise.
+    if returns_are_compatible(code, return_type.as_ref()) {
+        return Ok(());
+    }
+
     // Helper to format return type for error messages
     let return_type_str = match &return_type {
         Some(t) => format!("{t:?}"),
@@ -60,7 +66,7 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
 
     // Return compatibility is a type-checking constraint on reachable instructions.
     let reachable = reachable_instructions(method, code)?;
-    for (index, instruction) in code.iter().enumerate() {
+    for (index, instruction) in Instruction::with_offsets(code) {
         if !reachable.contains(&u16::try_from(index)?) {
             continue;
         }
@@ -146,13 +152,33 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
     Ok(())
 }
 
+fn returns_are_compatible(code: &[Instruction], return_type: Option<&FieldType>) -> bool {
+    let expected = match return_type {
+        None => Instruction::Return,
+        Some(FieldType::Base(BaseType::Long)) => Instruction::Lreturn,
+        Some(FieldType::Base(BaseType::Float)) => Instruction::Freturn,
+        Some(FieldType::Base(BaseType::Double)) => Instruction::Dreturn,
+        Some(FieldType::Base(_)) => Instruction::Ireturn,
+        Some(FieldType::Object(_) | FieldType::Array(_)) => Instruction::Areturn,
+    };
+    !code.iter().any(|instruction| {
+        matches!(
+            instruction,
+            Instruction::Return
+                | Instruction::Ireturn
+                | Instruction::Lreturn
+                | Instruction::Freturn
+                | Instruction::Dreturn
+                | Instruction::Areturn
+        ) && instruction != &expected
+    })
+}
+
 fn reachable_instructions(
     method: &Method,
     code: &[Instruction],
 ) -> Result<std::collections::HashSet<u16>> {
-    let length = u16::try_from(code.len())?;
-    let info =
-        crate::verifiers::bytecode::control_flow::CodeInfo::new((0..length).collect(), length);
+    let info = crate::verifiers::bytecode::control_flow::CodeInfo::from_code(code)?;
     let mut reachable = std::collections::HashSet::new();
     let mut pending = vec![0];
     for attribute in &method.attributes {
@@ -167,22 +193,26 @@ fn reachable_instructions(
         if !reachable.insert(pc) {
             continue;
         }
-        if let Some(instruction) = code.get(usize::from(pc)) {
+        if let Some(index) = info.index_at(pc) {
+            let Some(instruction) = code.get(index) else {
+                continue;
+            };
+            let next = info.offset_at(index + 1).unwrap_or(info.code_length());
             match instruction {
                 Instruction::Jsr(target) => {
-                    pending.push(*target);
-                    pending.push(pc.saturating_add(1));
+                    pending.push(info.branch_target(pc, i32::from(*target))?);
+                    pending.push(next);
                 }
                 Instruction::Jsr_w(target) => {
-                    pending.push(u16::try_from(*target)?);
-                    pending.push(pc.saturating_add(1));
+                    pending.push(info.branch_target(pc, *target)?);
+                    pending.push(next);
                 }
                 _ => {
                     if let Ok((successors, _)) =
                         crate::verifiers::bytecode::control_flow::compute_successors(
                             pc,
                             instruction,
-                            pc.saturating_add(1),
+                            next,
                             &info,
                         )
                     {
@@ -328,6 +358,28 @@ mod test {
     }
 
     // Return type verification tests
+
+    #[test]
+    fn test_return_compatibility_distinguishes_dead_and_reachable_code() {
+        let (class_file, method) = create_method_with_code(
+            "()V",
+            vec![
+                Instruction::Goto(4),
+                Instruction::Ireturn,
+                Instruction::Return,
+            ],
+        );
+        assert!(verify_return_instructions(&class_file, &method).is_ok());
+        let (class_file, method) = create_method_with_code(
+            "()V",
+            vec![
+                Instruction::Goto(3),
+                Instruction::Ireturn,
+                Instruction::Return,
+            ],
+        );
+        assert!(verify_return_instructions(&class_file, &method).is_err());
+    }
 
     #[test]
     fn test_void_return_valid() {

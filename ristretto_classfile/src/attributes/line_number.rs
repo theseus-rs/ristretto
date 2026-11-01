@@ -9,16 +9,14 @@ use std::fmt;
 /// The `LineNumberTable` attribute is an optional attribute in the `Code` attribute of a method. It
 /// is used by debuggers to determine the source line corresponding to a given bytecode instruction.
 ///
-/// **Note on PC representation:** In this implementation, `start_pc` represents an index into the
-/// logical sequence of `Instruction`s within the `Code` attribute, rather than a raw byte offset as
-/// in the class file format. This abstraction simplifies instruction manipulation.
+/// Program counters and scope lengths are measured in bytes in the method's code array.
 ///
 /// See the [JVMS §4.7.12](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.12)
 /// for more details.
 ///
 /// # Fields
 ///
-/// - `start_pc`: The instruction index (program counter) at which the new line number begins.
+/// - `start_pc`: The byte offset (program counter) at which the new line number begins.
 /// - `line_number`: The corresponding line number in the original source file.
 ///
 /// # Examples
@@ -27,9 +25,9 @@ use std::fmt;
 /// use ristretto_classfile::attributes::LineNumber;
 /// use ristretto_classfile::byte_reader::ByteReader;
 ///
-/// // Create a LineNumber entry: instruction at index 10 corresponds to source line 42
+/// // Create a LineNumber entry: instruction at byte offset 10 corresponds to source line 42
 /// let ln_entry = LineNumber {
-///     start_pc: 10,    // Instruction index
+///     start_pc: 10,    // Byte offset
 ///     line_number: 42, // Source line number
 /// };
 ///
@@ -77,9 +75,7 @@ impl fmt::Display for LineNumber {
 impl LineNumber {
     /// Deserializes a `LineNumber` entry from a byte stream.
     ///
-    /// Reads `start_pc` and `line_number` from the stream. Note that `start_pc` is read as a raw PC
-    /// value (typically a byte offset in a class file) and may need further mapping to a logical
-    /// instruction index depending on the context (e.g., when parsing a `Code` attribute).
+    /// Reads the fields directly, preserving JVM byte offsets and lengths.
     ///
     /// # Errors
     ///
@@ -111,9 +107,7 @@ impl LineNumber {
 
     /// Serializes the `LineNumber` entry to a byte vector.
     ///
-    /// Writes `start_pc` and `line_number` to the vector. Note that `start_pc` is written directly;
-    /// if it represents a logical instruction index, it must be converted to a byte offset before
-    /// serialization in the context of a `Code` attribute.
+    /// Writes the fields directly using JVM byte offsets and lengths.
     ///
     /// # Errors
     ///
@@ -125,7 +119,7 @@ impl LineNumber {
     /// use ristretto_classfile::attributes::LineNumber;
     ///
     /// let ln_entry = LineNumber {
-    ///     start_pc: 100,   // Byte offset or instruction index
+    ///     start_pc: 100,   // Byte offset
     ///     line_number: 55,
     /// };
     ///

@@ -9,16 +9,15 @@ use std::fmt;
 /// This structure specifies which local variable is being annotated by identifying its scope and
 /// its index in the local variable array of the current stack frame.
 ///
-/// **Note on PC representation:** Similar to `LineNumber` and `LocalVariableTable` entries,
-/// `start_pc` and `length` here define a range of instruction indices within the method's code.
+/// Program counters and scope lengths are measured in bytes in the method's code array.
 ///
 /// See the [JVMS §4.7.20.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20.1)
 /// as part of the `TypeAnnotation` structure.
 ///
 /// # Fields
 ///
-/// - `start_pc`: The instruction index (program counter) from which the local variable is in scope.
-/// - `length`: The number of subsequent instruction indices for which the variable remains in
+/// - `start_pc`: The byte offset (program counter) from which the local variable is in scope.
+/// - `length`: The number of bytes for which the variable remains in
 ///   scope. The variable is in scope from `start_pc` to `start_pc + length - 1` inclusive.
 /// - `index`: The local variable's index in the current frame's local variable array.
 ///
@@ -29,10 +28,10 @@ use std::fmt;
 /// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// // Example: Targeting a local variable in slot 3,
-/// //          scoped from instruction index 20 for 5 instructions.
+/// //          scoped from byte offset 20 for 5 bytes.
 /// let lv_target = LocalVariableTarget {
-///     start_pc: 20,    // Scope starts at instruction index 20
-///     length: 5,       // In scope for 5 instructions (indices 20-24)
+///     start_pc: 20,    // Scope starts at byte offset 20
+///     length: 5,       // In scope for 5 bytes (indices 20-24)
 ///     index: 3,        // Local variable array slot 3
 /// };
 ///
@@ -58,9 +57,7 @@ pub struct LocalVariableTarget {
 impl LocalVariableTarget {
     /// Deserializes a `LocalVariableTarget` from a byte stream.
     ///
-    /// Reads `start_pc`, `length`, and `index` from the stream. Note that `start_pc` and `length`
-    /// are read as raw PC values/lengths and may need mapping to logical instruction indices/counts
-    /// depending on the context.
+    /// Reads the fields directly, preserving JVM byte offsets and lengths.
     ///
     /// # Errors
     ///
@@ -98,10 +95,7 @@ impl LocalVariableTarget {
 
     /// Serializes the `LocalVariableTarget` to a byte vector.
     ///
-    /// Writes `start_pc`, `length`, and `index` to the vector. Note that `start_pc` and `length`
-    /// are written directly; if they represent logical instruction indices/counts, they must be
-    /// converted to byte offsets/lengths before serialization in the context of a `TypeAnnotation`
-    /// attribute.
+    /// Writes the fields directly using JVM byte offsets and lengths.
     ///
     /// # Errors
     ///

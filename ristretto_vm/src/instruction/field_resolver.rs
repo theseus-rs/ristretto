@@ -51,6 +51,11 @@ impl ResolvedFieldRef {
     }
 }
 
+#[expect(
+    clippy::inline_always,
+    reason = "Merge the synchronous fast path into dispatch to avoid per-instruction result copies"
+)]
+#[inline(always)]
 pub(crate) fn try_field(
     frame: &Frame,
     stack: &mut OperandStack,

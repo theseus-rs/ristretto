@@ -20,8 +20,8 @@ fn exception_range_can_end_at_code_length() -> Result<()> {
             Instruction::Return,
         ],
         exception_table: vec![ExceptionTableEntry {
-            range_pc: 0..3,
-            handler_pc: 2,
+            range_pc: 0..5,
+            handler_pc: 4,
             catch_type: 0,
         }],
         attributes: vec![],

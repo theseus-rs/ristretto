@@ -211,9 +211,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
 
     /// Builds the code info structure from instructions.
     fn build_code_info(code: &[Instruction]) -> Result<CodeInfo> {
-        crate::attributes::offset_utils::instructions_to_bytes(code)?;
-        let length = u16::try_from(code.len())?;
-        Ok(CodeInfo::new((0..length).collect(), length))
+        CodeInfo::from_code(code)
     }
 
     /// Extracts method information from the constant pool.
@@ -405,7 +403,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 )
                 && !self
                     .stack_map_table
-                    .has_frame_at(u16::try_from(index + 1).unwrap_or(u16::MAX))
+                    .has_frame_at(self.code_info.offset_at(index + 1).unwrap_or(u16::MAX))
             {
                 return FastPathResult::Failed(VerifyError::VerifyError(
                     "Missing frame after control transfer".to_string(),
@@ -432,6 +430,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     /// Straight-line code (no jumps, no exception handlers) doesn't require
     /// `StackMapTable` even in Java 6+ class files.
     fn has_control_flow(&self) -> bool {
+        // Backedges to the initial instruction also need stack maps or inference.
         !self.jump_targets.is_empty() || !self.handler_entries.is_empty()
     }
 
@@ -456,7 +455,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             worklist: self
                 .stack_map_table
                 .frames()
-                .map(|f| usize::from(f.offset))
+                .filter_map(|f| self.code_info.index_at(f.offset))
                 .chain(std::iter::once(0))
                 .collect(),
             visited: vec![false; self.code_info.instruction_count()],
@@ -776,6 +775,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         super::constraints::verify_state(
             self.class_file,
             self.code,
+            &self.code_info,
             instruction,
             &frame,
             self.context,
@@ -1004,6 +1004,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             super::constraints::invalidate_constructor_receiver(
                 self.class_file,
                 self.code,
+                &self.code_info,
                 offset,
                 current_frame,
                 &mut handler_frame,
@@ -1352,7 +1353,7 @@ mod tests {
         let context = MockContext::PERMISSIVE;
         let strict = VerifierConfig::default();
         let permissive = VerifierConfig::permissive();
-        let code = vec![Instruction::Goto(2), Instruction::Nop, Instruction::Return];
+        let code = vec![Instruction::Goto(4), Instruction::Nop, Instruction::Return];
         let method = static_method(code, 0, 0);
 
         let mut strict_verifier = fast_verifier(&class_file, &method, &context, &strict);
@@ -1370,12 +1371,12 @@ mod tests {
         let stackmap_method = method_with(
             MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
             4,
-            vec![Instruction::Goto(1), Instruction::Return],
+            vec![Instruction::Goto(3), Instruction::Return],
             0,
             0,
             vec![Attribute::StackMapTable {
                 name_index: 5,
-                frames: vec![StackFrame::SameFrame { frame_type: 1 }],
+                frames: vec![StackFrame::SameFrame { frame_type: 3 }],
             }],
             Vec::new(),
         );
@@ -1712,9 +1713,9 @@ mod tests {
         let context = MockContext::PERMISSIVE;
         let config = VerifierConfig::default();
 
-        let bad_code = static_method(vec![Instruction::Goto(u16::MAX)], 0, 0);
+        let bad_code = static_method(vec![Instruction::Goto(i16::MAX)], 0, 0);
         assert!(TestFastPathVerifier::new(&class_file, &bad_code, &context, &config).is_err());
-        assert!(TestFastPathVerifier::build_code_info(&[Instruction::Goto(u16::MAX)]).is_err());
+        assert!(TestFastPathVerifier::build_code_info(&[Instruction::Goto(i16::MAX)]).is_err());
 
         let bad_descriptor_for_new = method_with(
             MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
@@ -1951,7 +1952,7 @@ mod tests {
             FastPathResult::Success
         ));
 
-        let relative_return = 1;
+        let relative_return = 19;
         let duplicate_target_method = static_method(
             vec![
                 Instruction::Iconst_0,
@@ -2234,8 +2235,8 @@ mod tests {
                 1,
                 Vec::new(),
                 vec![ExceptionTableEntry {
-                    range_pc: 0..1,
-                    handler_pc: 1,
+                    range_pc: 0..3,
+                    handler_pc: 3,
                     catch_type: 0,
                 }],
             );

@@ -7,6 +7,7 @@ use ristretto_classfile::ClassFile;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Debug;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 /// Represents a class path entry.
 #[derive(Clone, Debug, PartialEq)]
@@ -67,6 +68,16 @@ impl ClassPathEntry {
             ClassPathEntry::Image(image) => image.read_class(name).await,
             ClassPathEntry::Jar(jar) => jar.read_class(name).await,
             ClassPathEntry::Memory(memory) => memory.read_class(name).await,
+        }
+    }
+
+    pub(crate) async fn read_class_shared<S: AsRef<str>>(
+        &self,
+        name: S,
+    ) -> Result<Arc<ClassFile<'static>>> {
+        match self {
+            Self::Image(image) => image.read_class_shared(name).await,
+            _ => self.read_class(name).await.map(Arc::new),
         }
     }
 

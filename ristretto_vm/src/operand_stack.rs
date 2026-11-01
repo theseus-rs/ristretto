@@ -97,7 +97,11 @@ impl OperandStack {
     }
 
     /// Push a value onto the operand stack.
-    #[inline]
+    #[expect(
+        clippy::inline_always,
+        reason = "Primitive opcode handlers eliminate generic value handling when this is inlined"
+    )]
+    #[inline(always)]
     pub fn push(&mut self, value: Value) -> Result<()> {
         if self.stack.len() >= self.max_size {
             return Err(OperandStackOverflow);

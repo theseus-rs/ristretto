@@ -126,15 +126,22 @@ impl Image {
     /// # Errors
     ///
     /// if the class file is not found or cannot be read.
-    #[expect(clippy::unused_async, clippy::unused_async_trait_impl)]
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile<'static>> {
+        Ok(Arc::unwrap_or_clone(self.read_class_shared(name).await?))
+    }
+
+    #[expect(clippy::unused_async, clippy::unused_async_trait_impl)]
+    pub(crate) async fn read_class_shared<S: AsRef<str>>(
+        &self,
+        name: S,
+    ) -> Result<Arc<ClassFile<'static>>> {
         let name = name.as_ref();
         if let Some(class_file) = self
             .classes
             .get(name)
             .map(|entry| Arc::clone(entry.value()))
         {
-            return Ok((*class_file).clone());
+            return Ok(class_file);
         }
 
         let (package, _class_name) = name.rsplit_once('/').unwrap_or(("", name));
@@ -170,7 +177,7 @@ impl Image {
                 cached_class_file
             }
         };
-        Ok((*cached_class_file).clone())
+        Ok(cached_class_file)
     }
 
     /// Read a resource from the image.

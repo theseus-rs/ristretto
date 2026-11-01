@@ -10,16 +10,15 @@ use std::fmt;
 /// method. It is an extension of the `LocalVariableTable` attribute and is used by debuggers to
 /// determine the generic type of a local variable, in addition to its name and descriptor.
 ///
-/// **Note on PC representation:** Similar to `LocalVariableTable`, `start_pc` and `length` define
-/// a range of instruction indices.
+/// Program counters and scope lengths are measured in bytes in the method's code array.
 ///
 /// See the [JVMS §4.7.14](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.14)
 /// for more details.
 ///
 /// # Fields
 ///
-/// - `start_pc`: The instruction index from which the local variable is in scope.
-/// - `length`: The number of subsequent instruction indices for which the variable remains in scope.
+/// - `start_pc`: The byte offset from which the local variable is in scope.
+/// - `length`: The number of bytes for which the variable remains in scope.
 /// - `name_index`: An index into the `constant_pool` for the `CONSTANT_Utf8_info` of the variable's name.
 /// - `signature_index`: An index into the `constant_pool` for the `CONSTANT_Utf8_info` of the variable's
 ///   generic type signature (a field signature, not a field descriptor).
@@ -34,10 +33,10 @@ use std::fmt;
 /// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// // Example: A local variable "myList" of generic type List<String>,
-/// //          in slot 2, scoped from instruction index 8 for 15 instructions.
+/// //          in slot 2, scoped from byte offset 8 for 15 bytes.
 /// let lvt_entry = LocalVariableTypeTable {
-///     start_pc: 8,         // Scope starts at instruction index 8
-///     length: 15,          // In scope for 15 instructions (indices 8-22)
+///     start_pc: 8,         // Scope starts at byte offset 8
+///     length: 15,          // In scope for 15 bytes (indices 8-22)
 ///     name_index: 200,     // CP index for Utf8 "myList"
 ///     signature_index: 201, // CP index for Utf8 "Ljava/util/List<Ljava/lang/String;>;"
 ///     index: 2,            // Local variable array slot 2
@@ -67,8 +66,7 @@ pub struct LocalVariableTypeTable {
 impl LocalVariableTypeTable {
     /// Deserializes a `LocalVariableTypeTable` entry from a byte stream.
     ///
-    /// Reads all fields from the stream. `start_pc` and `length` may need mapping from byte offsets
-    /// to logical instruction indices/counts.
+    /// Reads the fields directly, preserving JVM byte offsets and lengths.
     ///
     /// # Errors
     ///

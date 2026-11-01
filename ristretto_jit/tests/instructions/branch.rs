@@ -8,9 +8,9 @@ use ristretto_jit::{Result, Value};
 fn ifeq() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
-        Instruction::Ifeq(4),
+        Instruction::Ifeq(7),
         Instruction::Iconst_0,
-        Instruction::Goto(5),
+        Instruction::Goto(4),
         Instruction::Iconst_1,
         Instruction::Ireturn,
     ];
@@ -34,9 +34,9 @@ fn ifeq() -> Result<()> {
 fn ifne() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
-        Instruction::Ifne(4),
+        Instruction::Ifne(7),
         Instruction::Iconst_0,
-        Instruction::Goto(5),
+        Instruction::Goto(4),
         Instruction::Iconst_1,
         Instruction::Ireturn,
     ];
@@ -60,9 +60,9 @@ fn ifne() -> Result<()> {
 fn iflt() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
-        Instruction::Iflt(4),
+        Instruction::Iflt(7),
         Instruction::Iconst_0,
-        Instruction::Goto(5),
+        Instruction::Goto(4),
         Instruction::Iconst_1,
         Instruction::Ireturn,
     ];
@@ -86,9 +86,9 @@ fn iflt() -> Result<()> {
 fn ifge() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
-        Instruction::Ifge(4),
+        Instruction::Ifge(7),
         Instruction::Iconst_0,
-        Instruction::Goto(5),
+        Instruction::Goto(4),
         Instruction::Iconst_1,
         Instruction::Ireturn,
     ];
@@ -116,9 +116,9 @@ fn ifge() -> Result<()> {
 fn ifgt() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
-        Instruction::Ifgt(4),
+        Instruction::Ifgt(7),
         Instruction::Iconst_0,
-        Instruction::Goto(5),
+        Instruction::Goto(4),
         Instruction::Iconst_1,
         Instruction::Ireturn,
     ];
@@ -142,9 +142,9 @@ fn ifgt() -> Result<()> {
 fn ifle() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
-        Instruction::Ifle(4),
+        Instruction::Ifle(7),
         Instruction::Iconst_0,
-        Instruction::Goto(5),
+        Instruction::Goto(4),
         Instruction::Iconst_1,
         Instruction::Ireturn,
     ];
@@ -173,9 +173,9 @@ fn if_icmpeq() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
         Instruction::Iload_1,
-        Instruction::If_icmpeq(5),
+        Instruction::If_icmpeq(7),
         Instruction::Iconst_0,
-        Instruction::Goto(6),
+        Instruction::Goto(4),
         Instruction::Iconst_1,
         Instruction::Ireturn,
     ];
@@ -200,9 +200,9 @@ fn if_icmpne() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
         Instruction::Iload_1,
-        Instruction::If_icmpne(5),
+        Instruction::If_icmpne(7),
         Instruction::Iconst_0,
-        Instruction::Goto(6),
+        Instruction::Goto(4),
         Instruction::Iconst_1,
         Instruction::Ireturn,
     ];
@@ -227,9 +227,9 @@ fn if_icmplt() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
         Instruction::Iload_1,
-        Instruction::If_icmplt(5),
+        Instruction::If_icmplt(7),
         Instruction::Iconst_0,
-        Instruction::Goto(6),
+        Instruction::Goto(4),
         Instruction::Iconst_1,
         Instruction::Ireturn,
     ];
@@ -254,9 +254,9 @@ fn if_icmpge() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
         Instruction::Iload_1,
-        Instruction::If_icmpge(5),
+        Instruction::If_icmpge(7),
         Instruction::Iconst_0,
-        Instruction::Goto(6),
+        Instruction::Goto(4),
         Instruction::Iconst_1,
         Instruction::Ireturn,
     ];
@@ -285,9 +285,9 @@ fn if_icmpgt() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
         Instruction::Iload_1,
-        Instruction::If_icmpgt(5),
+        Instruction::If_icmpgt(7),
         Instruction::Iconst_0,
-        Instruction::Goto(6),
+        Instruction::Goto(4),
         Instruction::Iconst_1,
         Instruction::Ireturn,
     ];
@@ -312,9 +312,9 @@ fn if_icmple() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
         Instruction::Iload_1,
-        Instruction::If_icmple(5),
+        Instruction::If_icmple(7),
         Instruction::Iconst_0,
-        Instruction::Goto(6),
+        Instruction::Goto(4),
         Instruction::Iconst_1,
         Instruction::Ireturn,
     ];
@@ -342,7 +342,7 @@ fn if_icmple() -> Result<()> {
 fn goto() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
-        Instruction::Goto(2),
+        Instruction::Goto(3),
         Instruction::Ireturn,
     ];
     let function = create_function("(I)I", &instructions)?;
@@ -357,7 +357,7 @@ fn goto() -> Result<()> {
 fn goto_w() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
-        Instruction::Goto_w(2),
+        Instruction::Goto_w(5),
         Instruction::Ireturn,
     ];
     let function = create_function("(I)I", &instructions)?;
@@ -372,7 +372,7 @@ fn goto_w() -> Result<()> {
 fn jsr_and_ret() -> Result<()> {
     // Internal lowering stores the return address as an integer.
     let instructions = vec![
-        Instruction::Jsr(2),
+        Instruction::Jsr(4),
         Instruction::Ireturn,
         Instruction::Istore_0,
         Instruction::Iconst_2,
@@ -388,7 +388,7 @@ fn jsr_and_ret() -> Result<()> {
 fn jsr_w_and_ret_w() -> Result<()> {
     // Internal lowering stores the return address as an integer.
     let instructions = vec![
-        Instruction::Jsr_w(2),
+        Instruction::Jsr_w(6),
         Instruction::Ireturn,
         Instruction::Istore_0,
         Instruction::Iconst_2,
@@ -405,10 +405,10 @@ fn tableswitch() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
         Instruction::Tableswitch(Box::new(TableSwitch {
-            default: 7,
+            default: 33,
             low: 0,
             high: 2,
-            offsets: vec![1, 3, 5],
+            offsets: vec![27, 29, 31],
         })),
         Instruction::Iconst_0,
         Instruction::Ireturn,
@@ -465,16 +465,16 @@ fn tableswitch() -> Result<()> {
 fn tableswitch_negative_offset() -> Result<()> {
     // Structure: Entry jumps to switch, switch can jump backward
     let instructions = vec![
-        Instruction::Goto(4),  // 0: jump to the switch at instruction 4
+        Instruction::Goto(6),  // 0: jump to the switch at instruction 4
         Instruction::Iconst_0, // 1: target of backward jump; push 0
         Instruction::Ireturn,  // 2: return 0
         Instruction::Nop,      // 3: padding (unreachable)
         Instruction::Iload_0,  // 4: load input for switch
         Instruction::Tableswitch(Box::new(TableSwitch {
-            default: 3, // forward to instruction 8 (5 + 3)
+            default: 23, // forward to instruction 8 (5 + 3)
             low: 0,
             high: 1,
-            offsets: vec![-4, 3], // case 0: backward to instruction 1 (5 + (-4) = 1), case 1: forward to instruction 8
+            offsets: vec![-4, 23], // case 0: backward to instruction 1 (5 + (-4) = 1), case 1: forward to instruction 8
         })), // 5: switch
         Instruction::Nop,      // 6: padding
         Instruction::Nop,      // 7: padding
@@ -509,7 +509,7 @@ fn tableswitch_negative_offset() -> Result<()> {
 fn tableswitch_negative_default_offset() -> Result<()> {
     // Structure: Entry jumps to switch, default case jumps backward
     let instructions = vec![
-        Instruction::Goto(4),   // 0: jump to the switch at instruction 4
+        Instruction::Goto(6),   // 0: jump to the switch at instruction 4
         Instruction::Iconst_m1, // 1: target of backward jump (default); push -1
         Instruction::Ireturn,   // 2: return -1
         Instruction::Nop,       // 3: padding (unreachable)
@@ -518,7 +518,7 @@ fn tableswitch_negative_default_offset() -> Result<()> {
             default: -4, // backward to instruction 1 (5 + (-4) = 1)
             low: 0,
             high: 0,
-            offsets: vec![3], // case 0: forward to instruction 8 (5 + 3)
+            offsets: vec![19], // case 0: forward to instruction 8 (5 + 3)
         })), // 5: switch
         Instruction::Nop,       // 6: padding
         Instruction::Nop,       // 7: padding
@@ -547,8 +547,8 @@ fn test_lookupswitch() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
         Instruction::Lookupswitch(Box::new(LookupSwitch {
-            default: 7,
-            pairs: IndexMap::from_iter([(0, 1), (1, 3), (2, 5)]),
+            default: 41,
+            pairs: IndexMap::from_iter([(0, 35), (1, 37), (2, 39)]),
         })),
         Instruction::Iconst_0,
         Instruction::Ireturn,
@@ -605,16 +605,16 @@ fn test_lookupswitch() -> Result<()> {
 fn lookupswitch_negative_offset() -> Result<()> {
     // Structure: Entry jumps to switch, switch can jump backward
     let instructions = vec![
-        Instruction::Goto(4),  // 0: jump to the switch at instruction 4
+        Instruction::Goto(6),  // 0: jump to the switch at instruction 4
         Instruction::Iconst_0, // 1: target of backward jump; push 0
         Instruction::Ireturn,  // 2: return 0
         Instruction::Nop,      // 3: padding (unreachable)
         Instruction::Iload_0,  // 4: load input for switch
         Instruction::Lookupswitch(Box::new(LookupSwitch {
-            default: 3, // forward to instruction 8 (5 + 3)
+            default: 27, // forward to instruction 8 (5 + 3)
             pairs: IndexMap::from_iter([
-                (42, -4), // case 42: backward to instruction 1 (5 + (-4) = 1)
-                (100, 3), // case 100: forward to instruction 8
+                (42, -4),  // case 42: backward to instruction 1 (5 + (-4) = 1)
+                (100, 27), // case 100: forward to instruction 8
             ]),
         })), // 5: switch
         Instruction::Nop,      // 6: padding
@@ -650,7 +650,7 @@ fn lookupswitch_negative_offset() -> Result<()> {
 fn lookupswitch_negative_default_offset() -> Result<()> {
     // Structure: Entry jumps to switch, default case jumps backward
     let instructions = vec![
-        Instruction::Goto(4),   // 0: jump to the switch at instruction 4
+        Instruction::Goto(6),   // 0: jump to the switch at instruction 4
         Instruction::Iconst_m1, // 1: target of backward jump (default); push -1
         Instruction::Ireturn,   // 2: return -1
         Instruction::Nop,       // 3: padding (unreachable)
@@ -658,7 +658,7 @@ fn lookupswitch_negative_default_offset() -> Result<()> {
         Instruction::Lookupswitch(Box::new(LookupSwitch {
             default: -4, // backward to instruction 1 (5 + (-4) = 1)
             pairs: IndexMap::from_iter([
-                (42, 3), // case 42: forward to instruction 8 (5 + 3)
+                (42, 19), // case 42: forward to instruction 8 (5 + 3)
             ]),
         })), // 5: switch
         Instruction::Nop,       // 6: padding

@@ -1,8 +1,8 @@
 use crate::Error::InvalidStackValue;
 use crate::JavaError::ArithmeticException;
 use crate::JavaError::{ArrayIndexOutOfBoundsException, NullPointerException};
+use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Return;
-use crate::frame::{ExecutionResult, ExecutionResult::Continue};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{Result, Value};
@@ -13,32 +13,28 @@ use std::cmp::Ordering;
 ///
 /// - [JVMS §6.5.lconst_l](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lconst_l)
 #[inline]
-pub(crate) fn lconst_0(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lconst_0(stack: &mut OperandStack) -> Result<()> {
     stack.push_long(0)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lconst_l](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lconst_l)
 #[inline]
-pub(crate) fn lconst_1(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lconst_1(stack: &mut OperandStack) -> Result<()> {
     stack.push_long(1)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload)
 #[inline]
-pub(crate) fn lload(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-    index: u8,
-) -> Result<ExecutionResult> {
+pub(crate) fn lload(locals: &LocalVariables, stack: &mut OperandStack, index: u8) -> Result<()> {
     let value = locals.get_long(usize::from(index))?;
     stack.push_long(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
@@ -46,66 +42,50 @@ pub(crate) fn lload(
 /// - [JVMS §6.5.lload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload)
 /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 #[inline]
-pub(crate) fn lload_w(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-    index: u16,
-) -> Result<ExecutionResult> {
+pub(crate) fn lload_w(locals: &LocalVariables, stack: &mut OperandStack, index: u16) -> Result<()> {
     let value = locals.get_long(usize::from(index))?;
     stack.push_long(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n)
 #[inline]
-pub(crate) fn lload_0(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn lload_0(locals: &LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = locals.get_long(0)?;
     stack.push_long(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n)
 #[inline]
-pub(crate) fn lload_1(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn lload_1(locals: &LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = locals.get_long(1)?;
     stack.push_long(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n)
 #[inline]
-pub(crate) fn lload_2(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn lload_2(locals: &LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = locals.get_long(2)?;
     stack.push_long(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n)
 #[inline]
-pub(crate) fn lload_3(
-    locals: &LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn lload_3(locals: &LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = locals.get_long(3)?;
     stack.push_long(value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
@@ -116,10 +96,10 @@ pub(crate) fn lstore(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
     index: u8,
-) -> Result<ExecutionResult> {
+) -> Result<()> {
     let value = stack.pop_long()?;
     locals.set_long(usize::from(index), value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
@@ -131,69 +111,57 @@ pub(crate) fn lstore_w(
     locals: &mut LocalVariables,
     stack: &mut OperandStack,
     index: u16,
-) -> Result<ExecutionResult> {
+) -> Result<()> {
     let value = stack.pop_long()?;
     locals.set_long(usize::from(index), value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n)
 #[inline]
-pub(crate) fn lstore_0(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn lstore_0(locals: &mut LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_long()?;
     locals.set_long(0, value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n)
 #[inline]
-pub(crate) fn lstore_1(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn lstore_1(locals: &mut LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_long()?;
     locals.set_long(1, value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n)
 #[inline]
-pub(crate) fn lstore_2(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn lstore_2(locals: &mut LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_long()?;
     locals.set_long(2, value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n)
 #[inline]
-pub(crate) fn lstore_3(
-    locals: &mut LocalVariables,
-    stack: &mut OperandStack,
-) -> Result<ExecutionResult> {
+pub(crate) fn lstore_3(locals: &mut LocalVariables, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_long()?;
     locals.set_long(3, value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.laload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.laload)
 #[inline]
-pub(crate) fn laload(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn laload(stack: &mut OperandStack) -> Result<()> {
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
         return Err(NullPointerException(None).into());
@@ -220,14 +188,14 @@ pub(crate) fn laload(stack: &mut OperandStack) -> Result<ExecutionResult> {
         .into());
     };
     stack.push_long(*value)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lastore)
 #[inline]
-pub(crate) fn lastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lastore(stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_long()?;
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
@@ -256,47 +224,47 @@ pub(crate) fn lastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
         }
         .into());
     }
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.ladd](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ladd)
 #[inline]
-pub(crate) fn ladd(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn ladd(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
     stack.push_long(i64::wrapping_add(value1, value2))?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lsub](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lsub)
 #[inline]
-pub(crate) fn lsub(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lsub(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
     stack.push_long(i64::wrapping_sub(value1, value2))?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lmul](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lmul)
 #[inline]
-pub(crate) fn lmul(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lmul(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
     stack.push_long(i64::wrapping_mul(value1, value2))?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.ldiv](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldiv)
 #[inline]
-pub(crate) fn ldiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn ldiv(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
 
@@ -305,14 +273,14 @@ pub(crate) fn ldiv(stack: &mut OperandStack) -> Result<ExecutionResult> {
     }
 
     stack.push_long(value1.wrapping_div(value2))?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lrem](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lrem)
 #[inline]
-pub(crate) fn lrem(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lrem(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
 
@@ -321,46 +289,46 @@ pub(crate) fn lrem(stack: &mut OperandStack) -> Result<ExecutionResult> {
     }
 
     stack.push_long(value1.wrapping_rem(value2))?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lneg](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lneg)
 #[inline]
-pub(crate) fn lneg(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lneg(stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_long()?;
     stack.push_long(value.wrapping_neg())?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lshl](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshl)
 #[inline]
-pub(crate) fn lshl(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lshl(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_long()?;
     stack.push_long(value1 << (value2 & 0x3f))?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lshr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshr)
 #[inline]
-pub(crate) fn lshr(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lshr(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_long()?;
     stack.push_long(value1 >> (value2 & 0x3f))?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lushr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lushr)
 #[inline]
-pub(crate) fn lushr(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lushr(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_long()?;
     #[expect(clippy::cast_sign_loss)]
@@ -368,47 +336,47 @@ pub(crate) fn lushr(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let result = value1 >> (value2 & 0x3f);
     let result: i64 = zerocopy::transmute!(result);
     stack.push_long(result)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.land](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.land)
 #[inline]
-pub(crate) fn land(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn land(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
     stack.push_long(value1 & value2)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lor](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lor)
 #[inline]
-pub(crate) fn lor(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lor(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
     stack.push_long(value1 | value2)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lxor](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lxor)
 #[inline]
-pub(crate) fn lxor(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lxor(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
     stack.push_long(value1 ^ value2)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lcmp](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lcmp)
 #[inline]
-pub(crate) fn lcmp(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn lcmp(stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long()?;
     let value1 = stack.pop_long()?;
     let cmp = match value1.cmp(&value2) {
@@ -417,7 +385,7 @@ pub(crate) fn lcmp(stack: &mut OperandStack) -> Result<ExecutionResult> {
         Ordering::Equal => 0,
     };
     stack.push_int(cmp)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
@@ -438,8 +406,7 @@ mod tests {
     #[test]
     fn test_lconst_0() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let result = lconst_0(stack)?;
-        assert_eq!(Continue, result);
+        lconst_0(stack)?;
         assert_eq!(0, stack.pop_long()?);
         Ok(())
     }
@@ -447,8 +414,7 @@ mod tests {
     #[test]
     fn test_lconst_1() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let result = lconst_1(stack)?;
-        assert_eq!(Continue, result);
+        lconst_1(stack)?;
         assert_eq!(1, stack.pop_long()?);
         Ok(())
     }
@@ -458,8 +424,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(1);
         locals.set_long(0, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = lload(&locals, stack, 0)?;
-        assert_eq!(Continue, result);
+        lload(&locals, stack, 0)?;
         assert_eq!(42, stack.pop_long()?);
         Ok(())
     }
@@ -469,8 +434,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(1);
         locals.set_long(0, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = lload_w(&locals, stack, 0)?;
-        assert_eq!(Continue, result);
+        lload_w(&locals, stack, 0)?;
         assert_eq!(42, stack.pop_long()?);
         Ok(())
     }
@@ -480,8 +444,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(1);
         locals.set_long(0, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = lload_0(&locals, stack)?;
-        assert_eq!(Continue, result);
+        lload_0(&locals, stack)?;
         assert_eq!(42, stack.pop_long()?);
         Ok(())
     }
@@ -491,8 +454,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(2);
         locals.set_long(1, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = lload_1(&locals, stack)?;
-        assert_eq!(Continue, result);
+        lload_1(&locals, stack)?;
         assert_eq!(42, stack.pop_long()?);
         Ok(())
     }
@@ -502,8 +464,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(3);
         locals.set_long(2, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = lload_2(&locals, stack)?;
-        assert_eq!(Continue, result);
+        lload_2(&locals, stack)?;
         assert_eq!(42, stack.pop_long()?);
         Ok(())
     }
@@ -513,8 +474,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(4);
         locals.set_long(3, 42)?;
         let stack = &mut OperandStack::with_max_size(1);
-        let result = lload_3(&locals, stack)?;
-        assert_eq!(Continue, result);
+        lload_3(&locals, stack)?;
         assert_eq!(42, stack.pop_long()?);
         Ok(())
     }
@@ -524,8 +484,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(42)?;
-        let result = lstore(locals, stack, 0)?;
-        assert_eq!(Continue, result);
+        lstore(locals, stack, 0)?;
         assert_eq!(42, locals.get_long(0)?);
         Ok(())
     }
@@ -535,8 +494,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(42)?;
-        let result = lstore_w(locals, stack, 0)?;
-        assert_eq!(Continue, result);
+        lstore_w(locals, stack, 0)?;
         assert_eq!(42, locals.get_long(0)?);
         Ok(())
     }
@@ -546,8 +504,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(1);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(42)?;
-        let result = lstore_0(locals, stack)?;
-        assert_eq!(Continue, result);
+        lstore_0(locals, stack)?;
         assert_eq!(42, locals.get_long(0)?);
         Ok(())
     }
@@ -557,8 +514,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(2);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(42)?;
-        let result = lstore_1(locals, stack)?;
-        assert_eq!(Continue, result);
+        lstore_1(locals, stack)?;
         assert_eq!(42, locals.get_long(1)?);
         Ok(())
     }
@@ -568,8 +524,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(3);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(42)?;
-        let result = lstore_2(locals, stack)?;
-        assert_eq!(Continue, result);
+        lstore_2(locals, stack)?;
         assert_eq!(42, locals.get_long(2)?);
         Ok(())
     }
@@ -579,8 +534,7 @@ mod tests {
         let locals = &mut LocalVariables::with_max_size(4);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(42)?;
-        let result = lstore_3(locals, stack)?;
-        assert_eq!(Continue, result);
+        lstore_3(locals, stack)?;
         assert_eq!(42, locals.get_long(3)?);
         Ok(())
     }
@@ -593,8 +547,7 @@ mod tests {
         let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
-        let result = laload(stack)?;
-        assert_eq!(Continue, result);
+        laload(stack)?;
         assert_eq!(42, stack.pop_long()?);
         Ok(())
     }
@@ -671,8 +624,7 @@ mod tests {
         stack.push(array)?;
         stack.push_int(0)?;
         stack.push_long(42)?;
-        let result = lastore(stack)?;
-        assert_eq!(Continue, result);
+        lastore(stack)?;
         Ok(())
     }
 
@@ -748,8 +700,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(1)?;
         stack.push_long(2)?;
-        let result = ladd(stack)?;
-        assert_eq!(Continue, result);
+        ladd(stack)?;
         assert_eq!(3, stack.pop_long()?);
         Ok(())
     }
@@ -759,8 +710,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(i64::MAX)?;
         stack.push_long(1)?;
-        let result = ladd(stack)?;
-        assert_eq!(Continue, result);
+        ladd(stack)?;
         assert_eq!(i64::MIN, stack.pop_long()?);
         Ok(())
     }
@@ -770,8 +720,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(2)?;
         stack.push_long(1)?;
-        let result = lsub(stack)?;
-        assert_eq!(Continue, result);
+        lsub(stack)?;
         assert_eq!(1, stack.pop_long()?);
         Ok(())
     }
@@ -781,8 +730,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(i64::MIN)?;
         stack.push_long(1)?;
-        let result = lsub(stack)?;
-        assert_eq!(Continue, result);
+        lsub(stack)?;
         assert_eq!(i64::MAX, stack.pop_long()?);
         Ok(())
     }
@@ -792,8 +740,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(2)?;
         stack.push_long(3)?;
-        let result = lmul(stack)?;
-        assert_eq!(Continue, result);
+        lmul(stack)?;
         assert_eq!(6, stack.pop_long()?);
         Ok(())
     }
@@ -803,8 +750,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(6)?;
         stack.push_long(3)?;
-        let result = ldiv(stack)?;
-        assert_eq!(Continue, result);
+        ldiv(stack)?;
         assert_eq!(2, stack.pop_long()?);
         Ok(())
     }
@@ -824,8 +770,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(1)?;
         stack.push_long(2)?;
-        let result = lrem(stack)?;
-        assert_eq!(Continue, result);
+        lrem(stack)?;
         assert_eq!(1, stack.pop_long()?);
         Ok(())
     }
@@ -844,8 +789,7 @@ mod tests {
     fn test_lneg() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(1)?;
-        let result = lneg(stack)?;
-        assert_eq!(Continue, result);
+        lneg(stack)?;
         assert_eq!(-1, stack.pop_long()?);
         Ok(())
     }
@@ -854,8 +798,7 @@ mod tests {
     fn test_lneg_minimum() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_long(i64::MIN)?;
-        let result = lneg(stack)?;
-        assert_eq!(Continue, result);
+        lneg(stack)?;
         assert_eq!(i64::MIN, stack.pop_long()?);
         Ok(())
     }
@@ -865,8 +808,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(4)?;
         stack.push_int(1)?;
-        let result = lshl(stack)?;
-        assert_eq!(Continue, result);
+        lshl(stack)?;
         assert_eq!(8, stack.pop_long()?);
         Ok(())
     }
@@ -876,8 +818,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(4)?;
         stack.push_int(1)?;
-        let result = lshr(stack)?;
-        assert_eq!(Continue, result);
+        lshr(stack)?;
         assert_eq!(2, stack.pop_long()?);
         Ok(())
     }
@@ -887,8 +828,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(4)?;
         stack.push_int(1)?;
-        let result = lushr(stack)?;
-        assert_eq!(Continue, result);
+        lushr(stack)?;
         assert_eq!(2, stack.pop_long()?);
         Ok(())
     }
@@ -898,8 +838,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(57_558_190_860)?;
         stack.push_int(32)?;
-        let result = lushr(stack)?;
-        assert_eq!(Continue, result);
+        lushr(stack)?;
         assert_eq!(13, stack.pop_long()?);
         Ok(())
     }
@@ -909,8 +848,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(-1)?;
         stack.push_int(60)?;
-        let result = lushr(stack)?;
-        assert_eq!(Continue, result);
+        lushr(stack)?;
         assert_eq!(15, stack.pop_long()?);
         Ok(())
     }
@@ -920,8 +858,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(2)?;
         stack.push_long(3)?;
-        let result = land(stack)?;
-        assert_eq!(Continue, result);
+        land(stack)?;
         assert_eq!(2, stack.pop_long()?);
         Ok(())
     }
@@ -931,8 +868,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(2)?;
         stack.push_long(4)?;
-        let result = lor(stack)?;
-        assert_eq!(Continue, result);
+        lor(stack)?;
         assert_eq!(6, stack.pop_long()?);
         Ok(())
     }
@@ -942,8 +878,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(2)?;
         stack.push_long(3)?;
-        let result = lxor(stack)?;
-        assert_eq!(Continue, result);
+        lxor(stack)?;
         assert_eq!(1, stack.pop_long()?);
         Ok(())
     }
@@ -953,8 +888,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(1)?;
         stack.push_long(1)?;
-        let result = lcmp(stack)?;
-        assert_eq!(Continue, result);
+        lcmp(stack)?;
         assert_eq!(0, stack.pop_int()?);
         Ok(())
     }
@@ -964,8 +898,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(2)?;
         stack.push_long(1)?;
-        let result = lcmp(stack)?;
-        assert_eq!(Continue, result);
+        lcmp(stack)?;
         assert_eq!(1, stack.pop_int()?);
         Ok(())
     }
@@ -975,8 +908,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_long(1)?;
         stack.push_long(2)?;
-        let result = lcmp(stack)?;
-        assert_eq!(Continue, result);
+        lcmp(stack)?;
         assert_eq!(-1, stack.pop_int()?);
         Ok(())
     }

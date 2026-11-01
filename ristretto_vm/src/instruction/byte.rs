@@ -1,8 +1,6 @@
 use crate::Error::InvalidStackValue;
 use crate::JavaError::{ArrayIndexOutOfBoundsException, NullPointerException};
 use crate::Result;
-use crate::frame::ExecutionResult;
-use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
 use ristretto_classloader::Reference;
 
@@ -10,7 +8,7 @@ use ristretto_classloader::Reference;
 ///
 /// - [JVMS §6.5.baload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.baload)
 #[inline]
-pub(crate) fn baload(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn baload(stack: &mut OperandStack) -> Result<()> {
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
         return Err(NullPointerException(None).into());
@@ -37,14 +35,14 @@ pub(crate) fn baload(stack: &mut OperandStack) -> Result<ExecutionResult> {
         .into());
     };
     stack.push_int(i32::from(*value))?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.bastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bastore)
 #[inline]
-pub(crate) fn bastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn bastore(stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_int()?;
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
@@ -76,7 +74,7 @@ pub(crate) fn bastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
         }
         .into());
     }
-    Ok(Continue)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -93,8 +91,7 @@ mod test {
         let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
-        let result = baload(stack)?;
-        assert_eq!(Continue, result);
+        baload(stack)?;
         assert_eq!(42, stack.pop_int()?);
         Ok(())
     }
@@ -171,8 +168,7 @@ mod test {
         stack.push(array)?;
         stack.push_int(0)?;
         stack.push_int(42)?;
-        let result = bastore(stack)?;
-        assert_eq!(Continue, result);
+        bastore(stack)?;
         Ok(())
     }
 
