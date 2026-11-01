@@ -454,7 +454,8 @@ impl VM {
     /// Get the next unique suffix for a hidden class name.
     ///
     /// This atomically increments and returns a counter used to generate unique names for hidden
-    /// classes in the format `{name}+0x{suffix:016x}`.
+    /// classes in the internal format `{name}+0x{suffix:016x}` and the `Class::getName` format
+    /// `{binary_name}/0x{suffix:016x}`.
     ///
     /// # Errors
     ///

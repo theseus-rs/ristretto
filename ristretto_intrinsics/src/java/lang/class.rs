@@ -164,6 +164,12 @@ pub async fn for_name_0<T: Thread + 'static>(
     }
 
     let class_name = object.as_string()?;
+    // A hidden class name contains '/', so it is not a binary name; JEP 371 keeps hidden
+    // classes undiscoverable through Class.forName even though the VM can resolve the
+    // public form internally from a Class mirror.
+    if class_name.contains("/0x") {
+        return Err(ClassNotFoundException(class_name).into());
+    }
 
     // When a custom ClassLoader is provided and the class is not an array type, delegate to
     // ClassLoader.loadClass(). Array classes are created by the VM directly and are not loaded
@@ -1023,7 +1029,7 @@ pub async fn get_name_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
     let class = get_class_no_init(&thread, &object).await?;
-    let class_name = class.name().replace('/', ".");
+    let class_name = class.public_name();
     let value = class_name.to_object(&thread).await?;
     Ok(Some(value))
 }
@@ -1572,10 +1578,9 @@ pub async fn init_class_name<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // TODO: implement support for hidden classes
     let object = parameters.pop()?;
     let class = get_class_no_init(&thread, &object).await?;
-    let class_name = class.name().replace('/', ".");
+    let class_name = class.public_name();
     let value = class_name.to_object(&thread).await?;
     Ok(Some(value))
 }
