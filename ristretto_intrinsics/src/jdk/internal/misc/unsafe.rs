@@ -16,7 +16,7 @@ use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 use zerocopy::transmute_ref;
 
 pub(crate) const BOOLEAN_SIZE: usize = 1;
@@ -791,10 +791,6 @@ pub async fn define_anonymous_class_0<T: Thread + 'static>(
     let bytes = parameters.pop()?;
     let host_class_object = parameters.pop()?;
     let host_class = get_class(&thread, &host_class_object).await?;
-    info!(
-        "defineAnonymousClass0 called for host: {}",
-        host_class.name()
-    );
 
     let bytes = {
         let bytes = bytes.as_byte_vec_ref()?;
