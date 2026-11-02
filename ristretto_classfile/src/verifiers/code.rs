@@ -7,16 +7,13 @@ use crate::constant::Constant;
 use crate::method::Method;
 use crate::method_access_flags::MethodAccessFlags;
 use crate::verifiers::error::Result;
-use crate::verifiers::error::VerifyError::{
-    InvalidInstructionOffset, InvalidStackFrameOffset, VerificationError,
-};
+use crate::verifiers::error::VerifyError::{InvalidStackFrameOffset, VerificationError};
 use crate::{CLASS_INITIALIZER_NAME, FieldType};
 use ahash::AHashSet;
 
 /// Verify the `Code` attribute.
 ///
-/// Note: After parsing, both branch instruction targets and `StackMapTable` frame offsets
-/// are stored as **instruction indices**. This function verifies them as such.
+/// Branches and metadata are validated against JVM bytecode instruction boundaries.
 ///
 /// # Errors
 /// Returns `VerificationError` if the code attribute is invalid.
@@ -62,23 +59,22 @@ pub(crate) fn verify(
         }
     }
 
-    // Calculate code byte length (needed for return value)
-    // We need to serialize to compute the actual byte length
-    let (_, bytes) = crate::attributes::offset_utils::instructions_to_bytes(code)?;
-    let code_length = u16::try_from(bytes.len())?;
+    let info = crate::verifiers::bytecode::control_flow::CodeInfo::from_code(code)?;
+    let code_length = info.code_length();
     if code_length == 0 {
         return Err(VerificationError {
             context: "Code".to_string(),
             message: "Code must not be empty".to_string(),
         });
     }
-
-    let num_instructions = code.len();
-    let num_inst_u16 = u16::try_from(num_instructions)?;
-
-    // 1. Identify jump targets (these are instruction indices after parsing)
+    crate::verifiers::bytecode::control_flow::validate_exception_table(exception_table, &info)?;
     let mut jump_target_indices = AHashSet::default();
-    for instruction in code {
+    for (position, instruction) in Instruction::with_offsets(code) {
+        let position = u16::try_from(position)?;
+        let mut add = |relative| -> Result<()> {
+            jump_target_indices.insert(info.branch_target(position, relative)?);
+            Ok(())
+        };
         match instruction {
             Instruction::Ifeq(target)
             | Instruction::Ifne(target)
@@ -97,87 +93,29 @@ pub(crate) fn verify(
             | Instruction::Goto(target)
             | Instruction::Jsr(target)
             | Instruction::Ifnull(target)
-            | Instruction::Ifnonnull(target) => {
-                // target is an instruction index
-                let target_index = *target;
-                if target_index >= num_inst_u16 {
-                    return Err(InvalidInstructionOffset(u32::from(target_index)));
-                }
-                jump_target_indices.insert(target_index);
-            }
-            Instruction::Goto_w(target) | Instruction::Jsr_w(target) => {
-                // target is an instruction index
-                let target_index = u16::try_from(*target)?;
-                if target_index >= num_inst_u16 {
-                    return Err(InvalidInstructionOffset(u32::from(target_index)));
-                }
-                jump_target_indices.insert(target_index);
-            }
-            Instruction::Tableswitch(switch) => {
-                // After parsing, switch offsets are relative instruction offsets from current instruction
-                let current_index = code
-                    .iter()
-                    .position(|i| std::ptr::eq(i, instruction))
-                    .unwrap_or(0);
-                let current_index_i32 = i32::try_from(current_index)?;
-                let num_instr_i32 = i32::try_from(num_instructions)?;
-
-                // Validate default target
-                let default_target = current_index_i32 + switch.default;
-                if default_target < 0 || default_target >= num_instr_i32 {
-                    return Err(InvalidInstructionOffset(u32::try_from(default_target)?));
-                }
-
-                jump_target_indices.insert(u16::try_from(default_target)?);
-
-                // Validate all jump table offsets
-                for offset in &switch.offsets {
-                    let target = current_index_i32 + offset;
-                    if target < 0 || target >= num_instr_i32 {
-                        return Err(InvalidInstructionOffset(u32::try_from(target)?));
-                    }
-                    jump_target_indices.insert(u16::try_from(target)?);
+            | Instruction::Ifnonnull(target) => add(i32::from(*target))?,
+            Instruction::Goto_w(target) | Instruction::Jsr_w(target) => add(*target)?,
+            Instruction::Tableswitch(table) => {
+                add(table.default)?;
+                for &relative in &table.offsets {
+                    add(relative)?;
                 }
             }
-            Instruction::Lookupswitch(switch) => {
-                // After parsing, switch offsets are relative instruction offsets from current instruction
-                let current_index = code
-                    .iter()
-                    .position(|i| std::ptr::eq(i, instruction))
-                    .unwrap_or(0);
-                let current_index_i32 = i32::try_from(current_index)?;
-                let num_instr_i32 = i32::try_from(num_instructions)?;
-
-                // Validate default target
-                let default_target = current_index_i32 + switch.default;
-                if default_target < 0 || default_target >= num_instr_i32 {
-                    return Err(InvalidInstructionOffset(u32::try_from(default_target)?));
-                }
-                jump_target_indices.insert(u16::try_from(default_target)?);
-
-                // Validate all match-offset pairs
-                for (_, offset) in &switch.pairs {
-                    let target = current_index_i32 + offset;
-                    if target < 0 || target >= num_instr_i32 {
-                        return Err(InvalidInstructionOffset(u32::try_from(target)?));
-                    }
-                    jump_target_indices.insert(u16::try_from(target)?);
+            Instruction::Lookupswitch(table) => {
+                add(table.default)?;
+                for &relative in table.pairs.values() {
+                    add(relative)?;
                 }
             }
             _ => {}
         }
     }
-
-    // Exception table handlers; already instruction indices after parsing
     for entry in exception_table {
-        if entry.handler_pc >= num_inst_u16 {
-            return Err(InvalidInstructionOffset(u32::from(entry.handler_pc)));
-        }
         jump_target_indices.insert(entry.handler_pc);
     }
 
-    // 2. Verify StackMapTable (frame offsets are instruction indices after parsing)
-    let mut frame_instruction_indices = AHashSet::default();
+    // Stack map deltas count bytes from the preceding frame plus one.
+    let mut frame_instruction_indices = AHashSet::from_iter([0]);
     let mut has_stack_map = false;
     for attribute in attributes {
         if let Attribute::StackMapTable { frames, .. } = attribute {
@@ -185,7 +123,6 @@ pub(crate) fn verify(
             let mut current_frame_index = -1i32;
             for (i, frame) in frames.iter().enumerate() {
                 frame.validate()?;
-                // After parsing, offset_delta is in instruction indices, not byte offsets
                 let offset_delta = i32::from(frame.offset_delta());
                 let frame_index = if i == 0 {
                     offset_delta
@@ -193,7 +130,10 @@ pub(crate) fn verify(
                     current_frame_index + offset_delta + 1
                 };
 
-                if frame_index < 0 || frame_index >= i32::from(num_inst_u16) {
+                if frame_index < 0
+                    || frame_index >= i32::from(code_length)
+                    || !info.is_valid_offset(u16::try_from(frame_index)?)
+                {
                     return Err(InvalidStackFrameOffset(u16::try_from(frame_index)?));
                 }
 
@@ -206,7 +146,7 @@ pub(crate) fn verify(
 
     // Verify that all jump targets have a corresponding StackFrame for Java 7 and later.
     if class_file.version.major() >= JAVA_7.major() {
-        if !jump_target_indices.is_empty() && !has_stack_map {
+        if jump_target_indices.iter().any(|&target| target != 0) && !has_stack_map {
             return Err(VerificationError {
                 context: "Code Attribute".to_string(),
                 message: format!(
@@ -222,20 +162,21 @@ pub(crate) fn verify(
                 return Err(VerificationError {
                     context: "Code Attribute".to_string(),
                     message: format!(
-                        "Jump target at instruction index {target_index} does not have a corresponding StackMapFrame"
+                        "Jump target at byte offset {target_index} does not have a corresponding StackMapFrame"
                     ),
                 });
             }
         }
     }
 
-    Ok(num_inst_u16)
+    Ok(code_length)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::attributes::StackFrame;
+    use crate::verifiers::VerifyError::InvalidInstructionOffset;
     use crate::version::Version;
 
     fn get_dummy_method() -> Method {
@@ -254,20 +195,20 @@ mod test {
             ..Default::default()
         };
         let method = get_dummy_method();
-        // After parsing, Goto targets AND StackMapTable frame offsets are instruction indices
+        // Branch operands are relative byte offsets; stack maps locate bytecode boundaries.
         let code = vec![
             Instruction::Nop,     // Index 0
-            Instruction::Goto(3), // Index 1, jumps to instruction 3
+            Instruction::Goto(4), // Index 1, jumps to instruction 3
             Instruction::Return,  // Index 2
             Instruction::Return,  // Index 3; target
         ];
 
-        // StackMapTable frame at instruction index 3
+        // StackMapTable frame at byte offset 5
         let stack_map_table = Attribute::StackMapTable {
             name_index: 0,
             frames: vec![
-                // After parsing, frame_type is instruction index delta, not byte offset
-                StackFrame::SameFrame { frame_type: 3 }, // First frame: instruction index 3
+                // The first frame is at byte offset 5.
+                StackFrame::SameFrame { frame_type: 5 }, // First frame: byte offset 5
             ],
         };
         let attributes = vec![stack_map_table];
@@ -285,7 +226,7 @@ mod test {
         let method = get_dummy_method();
         let code = vec![
             Instruction::Nop,
-            Instruction::Goto(3),
+            Instruction::Goto(4),
             Instruction::Return,
             Instruction::Return,
         ];
@@ -293,7 +234,7 @@ mod test {
             name_index: 0,
             frames: vec![
                 StackFrame::SameFrame { frame_type: 1 },
-                StackFrame::SameFrame { frame_type: 1 },
+                StackFrame::SameFrame { frame_type: 3 },
             ],
         };
 
@@ -323,7 +264,7 @@ mod test {
         let method = get_dummy_method();
         let code = vec![
             Instruction::Nop,     // Index 0
-            Instruction::Goto(3), // Index 1, jumps to instruction 3
+            Instruction::Goto(4), // Index 1, jumps to instruction 3
             Instruction::Return,  // Index 2
             Instruction::Return,  // Index 3; target
         ];
@@ -345,7 +286,7 @@ mod test {
         // Jump to instruction index 3
         let code = vec![
             Instruction::Nop,     // Index 0
-            Instruction::Goto(3), // Index 1, jumps to instruction 3
+            Instruction::Goto(4), // Index 1, jumps to instruction 3
             Instruction::Return,  // Index 2
             Instruction::Return,  // Index 3; target
         ];
@@ -354,7 +295,7 @@ mod test {
         let stack_map_table = Attribute::StackMapTable {
             name_index: 0,
             frames: vec![
-                StackFrame::SameFrame { frame_type: 2 }, // Frame at instruction index 2
+                StackFrame::SameFrame { frame_type: 4 }, // Frame at instruction index 2
             ],
         };
         let attributes = vec![stack_map_table];
@@ -362,9 +303,11 @@ mod test {
         let message = verify(&class_file, &method, 0, 10, &code, &[], &attributes)
             .unwrap_err()
             .to_string();
-        assert!(message.contains(
-            "Jump target at instruction index 3 does not have a corresponding StackMapFrame"
-        ));
+        assert!(
+            message.contains(
+                "Jump target at byte offset 5 does not have a corresponding StackMapFrame"
+            )
+        );
     }
 
     #[test]
@@ -420,30 +363,30 @@ mod test {
         };
         let method = get_dummy_method();
         let code = vec![
-            Instruction::Ifeq(19),
-            Instruction::Ifne(19),
-            Instruction::Iflt(19),
-            Instruction::Ifge(19),
-            Instruction::Ifgt(19),
-            Instruction::Ifle(19),
-            Instruction::If_icmpeq(19),
-            Instruction::If_icmpne(19),
-            Instruction::If_icmplt(19),
-            Instruction::If_icmpge(19),
-            Instruction::If_icmpgt(19),
-            Instruction::If_icmple(19),
+            Instruction::Ifeq(55),
+            Instruction::Ifne(52),
+            Instruction::Iflt(49),
+            Instruction::Ifge(46),
+            Instruction::Ifgt(43),
+            Instruction::Ifle(40),
+            Instruction::If_icmpeq(37),
+            Instruction::If_icmpne(34),
+            Instruction::If_icmplt(31),
+            Instruction::If_icmpge(28),
+            Instruction::If_icmpgt(25),
+            Instruction::If_icmple(22),
             Instruction::If_acmpeq(19),
-            Instruction::If_acmpne(19),
-            Instruction::Goto(19),
-            Instruction::Jsr(19),
-            Instruction::Ifnull(19),
-            Instruction::Ifnonnull(19),
+            Instruction::If_acmpne(16),
+            Instruction::Goto(13),
+            Instruction::Jsr(10),
+            Instruction::Ifnull(7),
+            Instruction::Ifnonnull(4),
             Instruction::Nop,
             Instruction::Return,
         ];
         let stack_map_table = Attribute::StackMapTable {
             name_index: 0,
-            frames: vec![StackFrame::SameFrame { frame_type: 19 }],
+            frames: vec![StackFrame::SameFrame { frame_type: 55 }],
         };
 
         assert!(verify(&class_file, &method, 0, 10, &code, &[], &[stack_map_table]).is_ok());
@@ -454,8 +397,8 @@ mod test {
         let class_file = ClassFile::default();
         let method = get_dummy_method();
         let valid_code = vec![
-            Instruction::Goto_w(2),
-            Instruction::Jsr_w(2),
+            Instruction::Goto_w(10),
+            Instruction::Jsr_w(5),
             Instruction::Return,
         ];
         assert!(verify(&class_file, &method, 0, 10, &valid_code, &[], &[]).is_ok());
@@ -477,10 +420,7 @@ mod test {
             handler_pc: 10,
             catch_type: 0,
         }];
-        assert_eq!(
-            Err(InvalidInstructionOffset(10)),
-            verify(&class_file, &method, 0, 10, &code, &exception_table, &[])
-        );
+        assert!(verify(&class_file, &method, 0, 10, &code, &exception_table, &[]).is_err());
 
         let stack_map_table = Attribute::StackMapTable {
             name_index: 0,
@@ -515,10 +455,10 @@ mod test {
         // low=0, high=2 means 3 offsets in the table
         let code = vec![
             Instruction::Tableswitch(Box::new(TableSwitch {
-                default: 4, // Relative: 0 + 4 = 4
+                default: 31, // Relative: 0 + 4 = 4
                 low: 0,
                 high: 2,
-                offsets: vec![1, 2, 3], // Relative: 0+1=1, 0+2=2, 0+3=3
+                offsets: vec![28, 29, 30], // Relative: 0+1=1, 0+2=2, 0+3=3
             })), // Index 0
             Instruction::Nop,    // Index 1; target
             Instruction::Nop,    // Index 2; target
@@ -540,7 +480,7 @@ mod test {
                 default: 100, // Invalid: 0 + 100 = 100 (out of bounds)
                 low: 0,
                 high: 0,
-                offsets: vec![1],
+                offsets: vec![20],
             })),
             Instruction::Return,
         ];
@@ -556,7 +496,7 @@ mod test {
         let method = get_dummy_method();
         let code = vec![
             Instruction::Tableswitch(Box::new(TableSwitch {
-                default: 1,
+                default: 20,
                 low: 0,
                 high: 0,
                 offsets: vec![50], // Invalid: 0 + 50 = 50 (out of bounds)
@@ -576,12 +516,12 @@ mod test {
         let method = get_dummy_method();
 
         let mut pairs = IndexMap::new();
-        pairs.insert(1, 1); // match 1 -> offset 1 (relative from instruction 0)
-        pairs.insert(2, 2); // match 2 -> offset 2
+        pairs.insert(1, 28); // match 1 -> byte offset 28
+        pairs.insert(2, 29); // match 2 -> byte offset 29
 
         let code = vec![
             Instruction::Lookupswitch(Box::new(LookupSwitch {
-                default: 3, // Relative: 0 + 3 = 3
+                default: 30, // Default target at byte offset 30
                 pairs,
             })), // Index 0
             Instruction::Nop,    // Index 1; target for match 1
@@ -623,7 +563,7 @@ mod test {
         pairs.insert(1, 50); // Invalid: 0 + 50 = 50 (out of bounds)
 
         let code = vec![
-            Instruction::Lookupswitch(Box::new(LookupSwitch { default: 1, pairs })),
+            Instruction::Lookupswitch(Box::new(LookupSwitch { default: 20, pairs })),
             Instruction::Return,
         ];
 

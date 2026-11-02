@@ -136,7 +136,7 @@ fn athrow_dispatches_to_second_matching_handler() -> Result<()> {
     ];
     // Two entries covering the same PC range. First has catch_type 99 (won't match); second is
     // catch-all.
-    let exception_table = vec![exception_entry(0, 2, 2, 99), exception_entry(0, 2, 5, 0)];
+    let exception_table = vec![exception_entry(0, 2, 2, 99), exception_entry(0, 2, 6, 0)];
     let function = create_function_with_exception_table(
         constant_pool,
         "(Ljava/lang/Throwable;)I",
@@ -174,7 +174,7 @@ fn checkcast_failure_caught_by_handler() -> Result<()> {
         Instruction::Bipush(55),        // 4
         Instruction::Ireturn,           // 5
     ];
-    let exception_table = vec![exception_entry(0, 3, 3, 0)];
+    let exception_table = vec![exception_entry(0, 5, 5, 0)];
     let function = create_function_with_exception_table(
         constant_pool,
         "(Ljava/lang/Object;)I",
@@ -206,7 +206,7 @@ fn getfield_npe_caught_by_handler() -> Result<()> {
         Instruction::Bipush(99),          // 4
         Instruction::Ireturn,             // 5
     ];
-    let exception_table = vec![exception_entry(0, 3, 3, 0)];
+    let exception_table = vec![exception_entry(0, 5, 5, 0)];
     let function =
         create_function_with_exception_table(constant_pool, "()I", &instructions, exception_table)?;
     let ctx = TestContext::new();

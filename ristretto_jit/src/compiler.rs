@@ -247,7 +247,7 @@ impl Compiler {
 
         let mut stack = OperandStack::with_capacity(max_stack);
         let mut block_is_terminated = false;
-        for (program_counter, instruction) in instructions.iter().enumerate() {
+        for (program_counter, instruction) in Instruction::with_offsets(instructions) {
             if let Some(block) = blocks.get(&program_counter) {
                 // The block needs to be filled before switching
                 if program_counter != 0 {
@@ -1020,7 +1020,9 @@ impl Compiler {
             Instruction::If_acmpne(address) => {
                 if_acmpne(function_builder, blocks, stack, program_counter, *address)?;
             }
-            Instruction::Goto(address) => goto(function_builder, blocks, stack, *address)?,
+            Instruction::Goto(address) => {
+                goto(function_builder, blocks, stack, program_counter, *address)?;
+            }
             Instruction::Jsr(address) => {
                 jsr(function_builder, blocks, stack, program_counter, *address)?;
             }
@@ -1154,7 +1156,9 @@ impl Compiler {
             Instruction::Ifnonnull(address) => {
                 ifnonnull(function_builder, blocks, stack, program_counter, *address)?;
             }
-            Instruction::Goto_w(address) => goto_w(function_builder, blocks, stack, *address)?,
+            Instruction::Goto_w(address) => {
+                goto_w(function_builder, blocks, stack, program_counter, *address)?;
+            }
             Instruction::Jsr_w(address) => {
                 jsr_w(function_builder, blocks, stack, program_counter, *address)?;
             }

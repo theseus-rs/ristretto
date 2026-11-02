@@ -42,10 +42,7 @@ pub(super) fn analyze(
     pool: &ConstantPool<'_>,
     handlers: &[ExceptionTableEntry],
 ) -> Result<u16> {
-    // ControlFlow's offsets are logical indices here, so conversions are identity
-    // mappings. There is no need to serialize bytecode just to follow branches.
-    let length = u16::try_from(code.len())?;
-    let info = CodeInfo::new((0..length).collect(), length);
+    let info = CodeInfo::from_code(code)?;
     validate_exception_table(handlers, &info)?;
     if code.is_empty() {
         return Ok(0);
@@ -67,14 +64,14 @@ pub(super) fn analyze(
 }
 
 // Without jsr/ret, the incoming height is the entire state of an instruction.
-// Record it directly by logical index, and visit each reachable instruction once.
+// Record it at each bytecode offset, and visit each reachable instruction once.
 fn analyze_depths(
     code: &[Instruction],
     pool: &ConstantPool<'_>,
     handlers: &[ExceptionTableEntry],
     info: &CodeInfo,
 ) -> Result<u16> {
-    let mut depths = vec![None; code.len()];
+    let mut depths = vec![None; usize::from(info.code_length())];
     let mut pending = Vec::new();
     merge_depth(0, 0, &mut depths, &mut pending)?;
     let mut maximum = 0;
@@ -85,7 +82,10 @@ fn analyze_depths(
             .flatten()
             .ok_or_else(|| error(pc, "missing analysis state"))?;
         let instruction = code
-            .get(pc)
+            .get(
+                info.index_at(u16::try_from(pc)?)
+                    .ok_or_else(|| error(pc, "invalid instruction boundary"))?,
+            )
             .ok_or_else(|| error(pc, "branch target outside code"))?;
         let offset = u16::try_from(pc)?;
         maximum = maximum.max(depth);
@@ -111,7 +111,12 @@ fn analyze_depths(
             .checked_add(produced)
             .ok_or_else(|| error(pc, "stack depth exceeds u16::MAX"))?;
         maximum = maximum.max(next);
-        let (successors, _) = compute_successors(offset, instruction, offset + 1, info)?;
+        let (successors, _) = compute_successors(
+            offset,
+            instruction,
+            offset + u16::try_from(instruction.byte_len(pc))?,
+            info,
+        )?;
         for successor in successors {
             merge_depth(usize::from(successor), next, &mut depths, &mut pending)?;
         }
@@ -160,14 +165,17 @@ fn analyze_legacy(
         &mut pending,
     )?;
     let mut maximum = 0;
-    let mut depths = vec![None; code.len()];
+    let mut depths = vec![None; usize::from(info.code_length())];
     while let Some(location) = pending.pop_front() {
         let state = states
             .get(&location)
             .cloned()
             .ok_or_else(|| error(location.pc, "missing analysis state"))?;
         let instruction = code
-            .get(location.pc)
+            .get(
+                info.index_at(u16::try_from(location.pc)?)
+                    .ok_or_else(|| error(location.pc, "invalid instruction boundary"))?,
+            )
             .ok_or_else(|| error(location.pc, "branch target outside code"))?;
         let previous_depth = depths
             .get_mut(location.pc)
@@ -264,11 +272,16 @@ fn propagate(
     match instruction {
         Instruction::Jsr(_) | Instruction::Jsr_w(_) => {
             let target = match instruction {
-                Instruction::Jsr(target) => usize::from(*target),
-                Instruction::Jsr_w(target) => usize::try_from(*target)?,
+                Instruction::Jsr(target) => usize::from(
+                    info.branch_target(u16::try_from(location.pc)?, i32::from(*target))?,
+                ),
+                Instruction::Jsr_w(target) => {
+                    usize::from(info.branch_target(u16::try_from(location.pc)?, *target)?)
+                }
                 _ => return Err(error(location.pc, "invalid subroutine call")),
             };
-            if target >= info.instruction_count() || location.pc + 1 >= info.instruction_count() {
+            let return_pc = location.pc + instruction.byte_len(location.pc);
+            if return_pc >= usize::from(info.code_length()) {
                 return Err(error(
                     location.pc,
                     "invalid subroutine target or return address",
@@ -277,7 +290,6 @@ fn propagate(
             if location.calls.iter().any(|call| call.target == target) {
                 return Err(error(location.pc, "recursive subroutine call"));
             }
-            let return_pc = location.pc + 1;
             next.stack_addresses.insert(next.depth - 1, return_pc);
             location.calls.push(Call { target, return_pc });
             location.pc = target;
@@ -312,7 +324,7 @@ fn propagate(
             let (successors, _) = compute_successors(
                 u16::try_from(location.pc)?,
                 instruction,
-                u16::try_from(location.pc + 1)?,
+                u16::try_from(location.pc + instruction.byte_len(location.pc))?,
                 info,
             )?;
             for pc in successors {

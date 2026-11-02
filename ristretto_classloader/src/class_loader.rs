@@ -162,7 +162,7 @@ impl ClassLoader {
                 .read_class_with_code_source(class_name_str.as_ref(), include_code_source)
                 .await
             {
-                let class = Class::from(Some(self.this.clone()), class_file)?;
+                let class = Class::from_shared(Some(self.this.clone()), class_file)?;
                 self.set_class_module_name(&class, &class_name_str)?;
                 return Ok(self
                     .cache_class(class_name_internal.into_owned(), class)

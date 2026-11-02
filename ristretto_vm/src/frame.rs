@@ -10,11 +10,11 @@ use crate::instruction::{
     dstore_3, dstore_w, dsub, dup, dup_x1, dup_x2, dup2, dup2_x1, dup2_x2, f2d, f2i, f2l, fadd,
     faload, fastore, fcmpg, fcmpl, fconst_0, fconst_1, fconst_2, fdiv, fload, fload_0, fload_1,
     fload_2, fload_3, fload_w, fmul, fneg, frem, freturn, fstore, fstore_0, fstore_1, fstore_2,
-    fstore_3, fstore_w, fsub, getfield, getstatic, goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s,
-    iadd, iaload, iand, iastore, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5,
-    iconst_m1, idiv, if_acmpeq, if_acmpne, if_icmpeq, if_icmpge, if_icmpgt, if_icmple, if_icmplt,
-    if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull, iinc, iinc_w, iload, iload_0,
-    iload_1, iload_2, iload_3, iload_w, impdep1, impdep2, imul, ineg, instanceof, invokedynamic,
+    fstore_3, fstore_w, fsub, getfield, getstatic, goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd,
+    iaload, iand, iastore, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1,
+    idiv, if_acmpeq, if_acmpne, if_icmpeq, if_icmpge, if_icmpgt, if_icmple, if_icmplt, if_icmpne,
+    ifeq, ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull, iinc, iinc_w, iload, iload_0, iload_1,
+    iload_2, iload_3, iload_w, impdep1, impdep2, imul, ineg, instanceof, invokedynamic,
     invokeinterface, invokespecial, invokestatic, invokevirtual, ior, irem, ireturn, ishl, ishr,
     istore, istore_0, istore_1, istore_2, istore_3, istore_w, isub, iushr, ixor, jsr, jsr_w, l2d,
     l2f, l2i, ladd, laload, land, lastore, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w, ldiv,
@@ -71,8 +71,8 @@ impl PartialEq for MethodCall {
 ///
 /// # Overview
 ///
-/// This enum is used to control the flow of execution within a frame. After each instruction is
-/// processed, an `ExecutionResult` is returned to indicate how the virtual machine should proceed.
+/// Frame execution returns this enum at control-flow boundaries. Ordinary synchronous opcode
+/// handlers return `Result<()>`; dispatch advances them directly without constructing this enum.
 ///
 /// # Variants
 ///
@@ -80,10 +80,7 @@ impl PartialEq for MethodCall {
 ///   specified value (if any) to the caller. Methods with a void return type use `Return(None)`.
 ///
 /// - `Continue`: Indicates that execution should continue with the next instruction (increments
-///   the program counter by 1).
-///
-/// - `ContinueAtPosition(usize)`: Indicates that execution should continue at the specified
-///   bytecode offset. Used for branch instructions like `goto`, `if_*`, and exception handlers.
+///   the program counter by the encoded instruction length).
 ///
 /// # Usage
 ///
@@ -93,7 +90,8 @@ impl PartialEq for MethodCall {
 pub(crate) enum ExecutionResult {
     Return(Option<Value>),
     Continue,
-    ContinueAtPosition(usize),
+    /// The already-executed opcode selected this decoded cursor; do not advance it again.
+    ContinueAtInstruction(usize),
     Call(MethodCall),
 }
 
@@ -124,7 +122,7 @@ pub(crate) enum BatchExit {
 /// - `thread`: A weak reference to the thread that owns this frame
 /// - `class`: Reference to the class that contains the method being executed
 /// - `method`: Reference to the method being executed
-/// - `program_counter`: Current position in the bytecode
+/// - `instruction_index`: Internal execution cursor; public program counters are byte offsets
 ///
 /// # Execution Model
 /// When a method is invoked, a new frame is created and pushed onto the JVM stack of the invoking
@@ -144,7 +142,8 @@ pub struct Frame {
     thread: Weak<Thread>,
     class: Arc<Class>,
     method: Arc<Method>,
-    program_counter: AtomicUsize,
+    instruction_index: AtomicUsize,
+    invalid_program_counter: AtomicUsize,
     method_refs: OnceLock<Arc<ClassReferences<MethodRefEntry>>>,
     field_refs: OnceLock<Arc<ClassReferences<FieldRefEntry>>>,
 }
@@ -279,7 +278,8 @@ impl Frame {
             thread: thread.clone(),
             class: class.clone(),
             method: method.clone(),
-            program_counter: AtomicUsize::new(0),
+            instruction_index: AtomicUsize::new(0),
+            invalid_program_counter: AtomicUsize::new(0),
             method_refs: OnceLock::new(),
             field_refs: OnceLock::new(),
         }
@@ -295,7 +295,7 @@ impl Frame {
         if !Arc::ptr_eq(&self.method, method) {
             self.method = method.clone();
         }
-        self.program_counter.store(0, Ordering::Relaxed);
+        self.instruction_index.store(0, Ordering::Relaxed);
     }
 
     /// Get the thread that owns this frame.
@@ -361,18 +361,30 @@ impl Frame {
 
     /// Get the current program counter in this frame.
     ///
-    /// The program counter represents the current position in the bytecode of the method
+    /// The program counter is the JVM byte offset in the code array of the method
     /// being executed. It's used to determine which instruction to execute next.
     #[inline]
     pub fn program_counter(&self) -> usize {
-        self.program_counter.load(Ordering::Relaxed)
+        self.method
+            .instruction_offset(self.instruction_index.load(Ordering::Relaxed))
+            .unwrap_or_else(|| self.invalid_program_counter.load(Ordering::Relaxed))
     }
 
-    /// Set the current program counter in this frame.
+    /// Set the current JVM byte offset in this frame. Invalid offsets are retained for
+    /// diagnostics and rejected if interpreted execution resumes at them.
     #[inline]
     pub fn set_program_counter(&self, program_counter: usize) {
-        self.program_counter
-            .store(program_counter, Ordering::Relaxed);
+        let index = self
+            .method
+            .instruction_index(program_counter)
+            .unwrap_or_else(|| {
+                // Preserve an invalid requested PC for diagnostics without allowing execution
+                // to mistake an operand byte for a decoded instruction index.
+                self.invalid_program_counter
+                    .store(program_counter, Ordering::Relaxed);
+                usize::MAX
+            });
+        self.instruction_index.store(index, Ordering::Relaxed);
     }
 
     /// Execute the method in this frame
@@ -435,42 +447,43 @@ impl Frame {
         state: &mut FrameState,
         boundary: BatchExit,
     ) -> Result<ExecutionResult> {
-        let pending = match boundary {
-            BatchExit::Complete(result) => return Ok(result),
-            BatchExit::Async(instruction) => Ok(InstructionResult::Async(instruction)),
-            BatchExit::Fault(error) => Err(error),
-            BatchExit::Yield => {
-                // The pending bytecode has already consumed budget, exactly as in ordinary
-                // dispatch. Its PC and operands remain unchanged until this yield resumes.
-                tokio::task::yield_now().await;
-                let pc = self.program_counter();
-                let instruction = self
-                    .method
-                    .code()
-                    .get(pc)
-                    .ok_or(InvalidProgramCounter(pc))?;
-                self.process(&mut state.locals, &mut state.stack, instruction)
-            }
+        let boundary = if matches!(boundary, BatchExit::Yield) {
+            // This opcode already consumed budget before yielding. Resume through the same
+            // loop for exactly one instruction without charging or logging it again.
+            tokio::task::yield_now().await;
+            let thread = self.thread()?;
+            self.execute_sync_instructions::<false>(
+                &mut thread.instruction_budget(),
+                state,
+                &mut 1,
+                false,
+            )?
+        } else {
+            boundary
         };
-        let result = match pending {
-            Ok(InstructionResult::Sync(result)) => Ok(result),
-            Ok(InstructionResult::Async(instruction)) => {
+        let result = match boundary {
+            BatchExit::Complete(ExecutionResult::ContinueAtInstruction(next)) => {
+                self.instruction_index.store(next, Ordering::Relaxed);
+                return Ok(ExecutionResult::Continue);
+            }
+            BatchExit::Complete(result) => return Ok(result),
+            BatchExit::Async(instruction) => {
                 // Loading/bootstrap work can re-enter Java execution. Keep the recursive
                 // future boundary here, reached only after a synchronous cache miss.
                 Box::pin(self.process_async(&mut state.stack, &instruction)).await
             }
-            Err(error) => Err(error),
+            BatchExit::Fault(error) => Err(error),
+            BatchExit::Yield => {
+                return Err(InternalError("Unbudgeted dispatch yielded".to_owned()));
+            }
         };
 
         match result {
             Ok(ExecutionResult::Continue) => {
-                self.program_counter
-                    .store(self.program_counter().wrapping_add(1), Ordering::Relaxed);
-                Ok(ExecutionResult::Continue)
-            }
-            Ok(ExecutionResult::ContinueAtPosition(next_program_counter)) => {
-                self.program_counter
-                    .store(next_program_counter, Ordering::Relaxed);
+                self.instruction_index.store(
+                    self.instruction_index.load(Ordering::Relaxed) + 1,
+                    Ordering::Relaxed,
+                );
                 Ok(ExecutionResult::Continue)
             }
             Ok(result) => Ok(result),
@@ -498,8 +511,24 @@ impl Frame {
 
     /// Keep ordinary bytecodes out of the async state machine. All opcodes use this dispatch
     /// loop; no instruction sequences or workload-specific patterns are recognized.
-    #[inline(never)]
+    #[inline]
     pub(crate) fn execute_sync_batch_with_budget(
+        &self,
+        budget: &mut crate::thread::InstructionBudget<'_>,
+        state: &mut FrameState,
+        remaining: &mut usize,
+        debug: bool,
+    ) -> Result<BatchExit> {
+        self.execute_sync_instructions::<true>(budget, state, remaining, debug)
+    }
+
+    /// Share dispatch with yield resumption, which executes its already-budgeted instruction.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "One exhaustive dispatch loop covers every JVM opcode"
+    )]
+    #[inline(never)]
+    fn execute_sync_instructions<const ACCOUNT: bool>(
         &self,
         budget: &mut crate::thread::InstructionBudget<'_>,
         state: &mut FrameState,
@@ -508,31 +537,1102 @@ impl Frame {
     ) -> Result<BatchExit> {
         let code = self.method.code();
         let FrameState { locals, stack } = state;
-        let mut pc = self.program_counter();
-        while *remaining != 0 {
-            let Some(instruction) = code.get(pc) else {
-                return Err(InvalidProgramCounter(pc));
-            };
-            if debug {
-                self.debug_execute(locals, stack, instruction)?;
-            }
-            *remaining -= 1;
-            if budget.record() {
-                return Ok(BatchExit::Yield);
-            }
-            match self.process(locals, stack, instruction) {
-                Ok(InstructionResult::Sync(ExecutionResult::Continue)) => pc += 1,
-                Ok(InstructionResult::Sync(ExecutionResult::ContinueAtPosition(next))) => pc = next,
-                Ok(InstructionResult::Sync(result)) => return Ok(BatchExit::Complete(result)),
-                Ok(InstructionResult::Async(instruction)) => {
-                    return Ok(BatchExit::Async(instruction));
+        let mut cursor = self.instruction_index.load(Ordering::Relaxed);
+        // The thread owns the stack while this batch runs. Publish the exact cursor at
+        // every boundary before a caller, handler, safepoint, or stack walker can observe it.
+        let result = 'batch: {
+            while *remaining != 0 {
+                let Some(instruction) = code.get(cursor) else {
+                    let pc = self
+                        .method
+                        .instruction_offset(cursor)
+                        .unwrap_or_else(|| self.invalid_program_counter.load(Ordering::Relaxed));
+                    break 'batch Err(InvalidProgramCounter(pc));
+                };
+                if debug {
+                    self.instruction_index.store(cursor, Ordering::Relaxed);
+                    if let Err(error) = self.debug_execute(locals, stack, instruction) {
+                        break 'batch Err(error);
+                    }
                 }
-                Err(error) => return Ok(BatchExit::Fault(error)),
+                *remaining -= 1;
+                if ACCOUNT && budget.record() {
+                    break 'batch Ok(BatchExit::Yield);
+                }
+                let current_index = cursor;
+                let program_counter = || {
+                    self.method
+                        .instruction_offset(current_index)
+                        .unwrap_or_else(|| self.invalid_program_counter.load(Ordering::Relaxed))
+                };
+                // Keep success/error handling and cursor advancement explicitly inlined in each
+                // opcode arm for performance: sharing this logic after the match reduces throughput.
+                // Macros are deliberately avoided so IDE "Find References" can locate handler calls.
+                // On failure, retain the faulting instruction for exception handling and stack walking.
+                match instruction {
+                    Instruction::Nop => match nop() {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Aconst_null => match aconst_null(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iconst_m1 => match iconst_m1(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iconst_0 => match iconst_0(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iconst_1 => match iconst_1(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iconst_2 => match iconst_2(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iconst_3 => match iconst_3(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iconst_4 => match iconst_4(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iconst_5 => match iconst_5(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lconst_0 => match lconst_0(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lconst_1 => match lconst_1(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fconst_0 => match fconst_0(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fconst_1 => match fconst_1(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fconst_2 => match fconst_2(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dconst_0 => match dconst_0(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dconst_1 => match dconst_1(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Bipush(value) => match bipush(stack, *value) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Sipush(value) => match sipush(stack, *value) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Ldc(index) => {
+                        let result = match ldc(self, stack, *index) {
+                            Ok(InstructionResult::Sync(result)) => result,
+                            Ok(InstructionResult::Async(instruction)) => {
+                                break 'batch Ok(BatchExit::Async(instruction));
+                            }
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        match result {
+                            ExecutionResult::Continue => cursor += 1,
+                            ExecutionResult::ContinueAtInstruction(next) => cursor = next,
+                            result => break 'batch Ok(BatchExit::Complete(result)),
+                        }
+                    }
+                    Instruction::Ldc_w(index) => {
+                        let result = match ldc_w(self, stack, *index) {
+                            Ok(InstructionResult::Sync(result)) => result,
+                            Ok(InstructionResult::Async(instruction)) => {
+                                break 'batch Ok(BatchExit::Async(instruction));
+                            }
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        match result {
+                            ExecutionResult::Continue => cursor += 1,
+                            ExecutionResult::ContinueAtInstruction(next) => cursor = next,
+                            result => break 'batch Ok(BatchExit::Complete(result)),
+                        }
+                    }
+                    Instruction::Ldc2_w(index) => match ldc2_w(self, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iload(index) => match iload(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lload(index) => match lload(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fload(index) => match fload(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dload(index) => match dload(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Aload(index) => match aload(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iload_0 => match iload_0(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iload_1 => match iload_1(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iload_2 => match iload_2(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iload_3 => match iload_3(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lload_0 => match lload_0(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lload_1 => match lload_1(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lload_2 => match lload_2(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lload_3 => match lload_3(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fload_0 => match fload_0(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fload_1 => match fload_1(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fload_2 => match fload_2(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fload_3 => match fload_3(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dload_0 => match dload_0(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dload_1 => match dload_1(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dload_2 => match dload_2(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dload_3 => match dload_3(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Aload_0 => match aload_0(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Aload_1 => match aload_1(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Aload_2 => match aload_2(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Aload_3 => match aload_3(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iaload => match iaload(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Laload => match laload(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Faload => match faload(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Daload => match daload(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Aaload => match aaload(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Baload => match baload(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Caload => match caload(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Saload => match saload(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Istore(index) => match istore(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lstore(index) => match lstore(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fstore(index) => match fstore(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dstore(index) => match dstore(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Astore(index) => match astore(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Istore_0 => match istore_0(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Istore_1 => match istore_1(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Istore_2 => match istore_2(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Istore_3 => match istore_3(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lstore_0 => match lstore_0(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lstore_1 => match lstore_1(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lstore_2 => match lstore_2(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lstore_3 => match lstore_3(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fstore_0 => match fstore_0(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fstore_1 => match fstore_1(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fstore_2 => match fstore_2(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fstore_3 => match fstore_3(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dstore_0 => match dstore_0(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dstore_1 => match dstore_1(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dstore_2 => match dstore_2(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dstore_3 => match dstore_3(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Astore_0 => match astore_0(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Astore_1 => match astore_1(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Astore_2 => match astore_2(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Astore_3 => match astore_3(locals, stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iastore => match iastore(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lastore => match lastore(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fastore => match fastore(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dastore => match dastore(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Aastore => match aastore(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Bastore => match bastore(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Castore => match castore(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Sastore => match sastore(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Pop => match pop(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Pop2 => match pop2(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dup => match dup(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dup_x1 => match dup_x1(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dup_x2 => match dup_x2(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dup2 => match dup2(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dup2_x1 => match dup2_x1(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dup2_x2 => match dup2_x2(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Swap => match swap(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iadd => match iadd(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Ladd => match ladd(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fadd => match fadd(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dadd => match dadd(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Isub => match isub(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lsub => match lsub(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fsub => match fsub(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dsub => match dsub(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Imul => match imul(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lmul => match lmul(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fmul => match fmul(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dmul => match dmul(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Idiv => match idiv(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Ldiv => match ldiv(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fdiv => match fdiv(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Ddiv => match ddiv(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Irem => match irem(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lrem => match lrem(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Frem => match frem(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Drem => match drem(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Ineg => match ineg(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lneg => match lneg(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fneg => match fneg(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dneg => match dneg(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Ishl => match ishl(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lshl => match lshl(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Ishr => match ishr(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lshr => match lshr(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iushr => match iushr(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lushr => match lushr(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iand => match iand(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Land => match land(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Ior => match ior(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lor => match lor(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Ixor => match ixor(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lxor => match lxor(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iinc(index, constant) => match iinc(locals, *index, *constant) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::I2l => match i2l(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::I2f => match i2f(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::I2d => match i2d(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::L2i => match l2i(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::L2f => match l2f(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::L2d => match l2d(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::F2i => match f2i(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::F2l => match f2l(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::F2d => match f2d(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::D2i => match d2i(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::D2l => match d2l(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::D2f => match d2f(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::I2b => match i2b(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::I2c => match i2c(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::I2s => match i2s(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lcmp => match lcmp(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fcmpl => match fcmpl(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fcmpg => match fcmpg(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dcmpl => match dcmpl(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dcmpg => match dcmpg(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Ifeq(address) => {
+                        let taken = match ifeq(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Ifne(address) => {
+                        let taken = match ifne(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Iflt(address) => {
+                        let taken = match iflt(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Ifge(address) => {
+                        let taken = match ifge(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Ifgt(address) => {
+                        let taken = match ifgt(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Ifle(address) => {
+                        let taken = match ifle(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::If_icmpeq(address) => {
+                        let taken = match if_icmpeq(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::If_icmpne(address) => {
+                        let taken = match if_icmpne(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::If_icmplt(address) => {
+                        let taken = match if_icmplt(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::If_icmpge(address) => {
+                        let taken = match if_icmpge(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::If_icmpgt(address) => {
+                        let taken = match if_icmpgt(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::If_icmple(address) => {
+                        let taken = match if_icmple(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::If_acmpeq(address) => {
+                        let taken = match if_acmpeq(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::If_acmpne(address) => {
+                        let taken = match if_acmpne(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Goto(address) => {
+                        let target = match self.branch_to(true, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Jsr(address) => {
+                        let target = match self.branch_to_byte(
+                            match jsr(stack, program_counter(), *address) {
+                                Ok(pc) => pc,
+                                Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                            },
+                        ) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Ret(index) => {
+                        let target = match self.branch_to_byte(match ret(locals, *index) {
+                            Ok(pc) => pc,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        }) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Tableswitch(table_switch) => {
+                        let branch = {
+                            let TableSwitch {
+                                default,
+                                low,
+                                high,
+                                offsets,
+                            } = table_switch.as_ref();
+                            let program_counter = program_counter();
+                            self.branch_to_byte(
+                                match tableswitch(
+                                    stack,
+                                    program_counter,
+                                    *default,
+                                    *low,
+                                    *high,
+                                    offsets,
+                                ) {
+                                    Ok(pc) => pc,
+                                    Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                                },
+                            )
+                        };
+                        let target = match branch {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Lookupswitch(lookup_switch) => {
+                        let branch = {
+                            let LookupSwitch { default, pairs } = lookup_switch.as_ref();
+                            let program_counter = program_counter();
+                            self.branch_to_byte(
+                                match lookupswitch(stack, program_counter, *default, pairs) {
+                                    Ok(pc) => pc,
+                                    Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                                },
+                            )
+                        };
+                        let target = match branch {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Ireturn => {
+                        break 'batch match ireturn(stack) {
+                            Ok(result) => Ok(BatchExit::Complete(result)),
+                            Err(error) => Ok(BatchExit::Fault(error)),
+                        };
+                    }
+                    Instruction::Lreturn => {
+                        break 'batch match lreturn(stack) {
+                            Ok(result) => Ok(BatchExit::Complete(result)),
+                            Err(error) => Ok(BatchExit::Fault(error)),
+                        };
+                    }
+                    Instruction::Freturn => {
+                        break 'batch match freturn(stack) {
+                            Ok(result) => Ok(BatchExit::Complete(result)),
+                            Err(error) => Ok(BatchExit::Fault(error)),
+                        };
+                    }
+                    Instruction::Dreturn => {
+                        break 'batch match dreturn(stack) {
+                            Ok(result) => Ok(BatchExit::Complete(result)),
+                            Err(error) => Ok(BatchExit::Fault(error)),
+                        };
+                    }
+                    Instruction::Areturn => {
+                        break 'batch match areturn(stack) {
+                            Ok(result) => Ok(BatchExit::Complete(result)),
+                            Err(error) => Ok(BatchExit::Fault(error)),
+                        };
+                    }
+                    Instruction::Return => {
+                        break 'batch match r#return() {
+                            Ok(result) => Ok(BatchExit::Complete(result)),
+                            Err(error) => Ok(BatchExit::Fault(error)),
+                        };
+                    }
+                    Instruction::Getstatic(_)
+                    | Instruction::Putstatic(_)
+                    | Instruction::Getfield(_)
+                    | Instruction::Putfield(_)
+                    | Instruction::Invokevirtual(_)
+                    | Instruction::Invokespecial(_)
+                    | Instruction::Invokestatic(_)
+                    | Instruction::Invokeinterface(_, _) => {
+                        let result = match self.process_reference(stack, instruction) {
+                            Ok(InstructionResult::Sync(result)) => result,
+                            Ok(InstructionResult::Async(instruction)) => {
+                                break 'batch Ok(BatchExit::Async(instruction));
+                            }
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        match result {
+                            ExecutionResult::Continue => cursor += 1,
+                            ExecutionResult::ContinueAtInstruction(next) => cursor = next,
+                            result => break 'batch Ok(BatchExit::Complete(result)),
+                        }
+                    }
+                    Instruction::Newarray(array_type) => match newarray(self, stack, array_type) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Athrow => match athrow(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Arraylength => match arraylength(stack) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Wide => match wide() {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Invokedynamic(_)
+                    | Instruction::New(_)
+                    | Instruction::Anewarray(_)
+                    | Instruction::Checkcast(_)
+                    | Instruction::Instanceof(_)
+                    | Instruction::Monitorenter
+                    | Instruction::Monitorexit
+                    | Instruction::Multianewarray(_, _) => {
+                        break 'batch Ok(BatchExit::Async(instruction.clone()));
+                    }
+                    Instruction::Ifnull(address) => {
+                        let taken = match ifnull(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Ifnonnull(address) => {
+                        let taken = match ifnonnull(stack) {
+                            Ok(taken) => taken,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        let target = match self.branch_to(taken, cursor, i32::from(*address)) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Goto_w(address) => {
+                        let target = match self.branch_to(true, cursor, *address) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Jsr_w(address) => {
+                        let target = match self.branch_to_byte(
+                            match jsr_w(stack, program_counter(), *address) {
+                                Ok(pc) => pc,
+                                Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                            },
+                        ) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                    Instruction::Breakpoint => match breakpoint() {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Impdep1 => match impdep1() {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Impdep2 => match impdep2() {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iload_w(index) => match iload_w(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lload_w(index) => match lload_w(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fload_w(index) => match fload_w(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dload_w(index) => match dload_w(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Aload_w(index) => match aload_w(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Istore_w(index) => match istore_w(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Lstore_w(index) => match lstore_w(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Fstore_w(index) => match fstore_w(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Dstore_w(index) => match dstore_w(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Astore_w(index) => match astore_w(locals, stack, *index) {
+                        Ok(()) => cursor += 1,
+                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                    },
+                    Instruction::Iinc_w(index, constant) => {
+                        match iinc_w(locals, *index, *constant) {
+                            Ok(()) => cursor += 1,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        }
+                    }
+                    Instruction::Ret_w(index) => {
+                        let target = match self.branch_to_byte(match ret_w(locals, *index) {
+                            Ok(pc) => pc,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        }) {
+                            Ok(target) => target,
+                            Err(error) => break 'batch Ok(BatchExit::Fault(error)),
+                        };
+                        cursor = target;
+                    }
+                }
             }
-            // Publish every instruction's next PC for stack walking and exception attribution.
-            self.program_counter.store(pc, Ordering::Relaxed);
-        }
-        Ok(BatchExit::Complete(ExecutionResult::Continue))
+            Ok(BatchExit::Complete(if ACCOUNT {
+                ExecutionResult::Continue
+            } else {
+                ExecutionResult::ContinueAtInstruction(cursor)
+            }))
+        };
+        self.instruction_index.store(cursor, Ordering::Relaxed);
+        result
     }
 
     /// Resume this frame after a method call completes successfully.
@@ -547,8 +1647,10 @@ impl Frame {
             let value = value.unwrap_or(Value::Object(None));
             state.stack.push(value)?;
         }
-        self.program_counter
-            .store(self.program_counter().wrapping_add(1), Ordering::Relaxed);
+        self.instruction_index.store(
+            self.instruction_index.load(Ordering::Relaxed) + 1,
+            Ordering::Relaxed,
+        );
         Ok(())
     }
 
@@ -566,18 +1668,16 @@ impl Frame {
         stack: &mut OperandStack,
         error: crate::Error,
     ) -> Result<()> {
-        let thread = frame.thread()?;
-        // The current frame may have consumed the entire configured Java stack. Every implicit
-        // throwable needs enough headroom to run its constructor without replacing the original
-        // error with a StackOverflowError.
-        let throwable = {
+        let throwable = if let crate::Error::Throwable(throwable) = error {
+            throwable
+        } else {
+            let thread = frame.thread()?;
+            // Implicit exceptions need constructor headroom even when the Java stack is full.
             let _overflow_reserve = thread.stack_overflow_reserve();
             convert_error_to_throwable(&thread, error).await?
         };
         let handler_program_counter = process_throwable(frame, stack, throwable).await?;
-        frame
-            .program_counter
-            .store(handler_program_counter, Ordering::Relaxed);
+        frame.set_program_counter(handler_program_counter);
         Ok(())
     }
 
@@ -662,7 +1762,7 @@ impl Frame {
             Instruction::Invokedynamic(index) => invokedynamic(self, stack, *index).await,
             Instruction::New(index) => new(self, stack, *index).await,
             Instruction::Anewarray(index) => anewarray(self, stack, *index).await,
-            Instruction::Athrow => athrow(stack).await,
+            Instruction::Athrow => athrow(stack).map(|()| ExecutionResult::Continue),
             Instruction::Checkcast(index) => checkcast(self, stack, *index).await,
             Instruction::Instanceof(index) => instanceof(self, stack, *index).await,
             Instruction::Monitorenter => monitorenter(self, stack).await,
@@ -682,266 +1782,27 @@ impl Frame {
         }
     }
 
-    /// This method is responsible for executing a single JVM bytecode instruction within the current frame.
-    /// It dispatches the instruction to the appropriate handler function based on its opcode and
-    /// manages the modification of the local variables and operand stack.
-    ///
-    /// # Error Handling
-    ///
-    /// If an instruction throws an exception (either explicitly via `athrow` or due to an error
-    /// condition), this method returns an `Err` that will be handled by the caller (`execute`
-    /// method).
-    ///
-    /// # Implementation Note
-    ///
-    /// This method uses a large match statement to dispatch each instruction to its
-    /// specialized handler function. The JVM specification defines over 200 bytecode
-    /// instructions, and this method handles all of them.
-    ///
-    /// # References
-    ///
-    /// - [JVMS §6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html)
-    #[expect(clippy::too_many_lines)]
     #[expect(
         clippy::inline_always,
-        reason = "Dispatch must merge into the synchronous loop to eliminate per-bytecode result copies"
+        reason = "Keep cached reference resolution inside dispatch"
     )]
     #[inline(always)]
-    fn process(
+    fn process_reference(
         &self,
-        locals: &mut LocalVariables,
         stack: &mut OperandStack,
         instruction: &Instruction,
     ) -> Result<InstructionResult> {
         match instruction {
-            Instruction::Nop => nop().map(InstructionResult::Sync),
-            Instruction::Aconst_null => aconst_null(stack).map(InstructionResult::Sync),
-            Instruction::Iconst_m1 => iconst_m1(stack).map(InstructionResult::Sync),
-            Instruction::Iconst_0 => iconst_0(stack).map(InstructionResult::Sync),
-            Instruction::Iconst_1 => iconst_1(stack).map(InstructionResult::Sync),
-            Instruction::Iconst_2 => iconst_2(stack).map(InstructionResult::Sync),
-            Instruction::Iconst_3 => iconst_3(stack).map(InstructionResult::Sync),
-            Instruction::Iconst_4 => iconst_4(stack).map(InstructionResult::Sync),
-            Instruction::Iconst_5 => iconst_5(stack).map(InstructionResult::Sync),
-            Instruction::Lconst_0 => lconst_0(stack).map(InstructionResult::Sync),
-            Instruction::Lconst_1 => lconst_1(stack).map(InstructionResult::Sync),
-            Instruction::Fconst_0 => fconst_0(stack).map(InstructionResult::Sync),
-            Instruction::Fconst_1 => fconst_1(stack).map(InstructionResult::Sync),
-            Instruction::Fconst_2 => fconst_2(stack).map(InstructionResult::Sync),
-            Instruction::Dconst_0 => dconst_0(stack).map(InstructionResult::Sync),
-            Instruction::Dconst_1 => dconst_1(stack).map(InstructionResult::Sync),
-            Instruction::Bipush(value) => bipush(stack, *value).map(InstructionResult::Sync),
-            Instruction::Sipush(value) => sipush(stack, *value).map(InstructionResult::Sync),
-            Instruction::Ldc(index) => ldc(self, stack, *index),
-            Instruction::Ldc_w(index) => ldc_w(self, stack, *index),
-            Instruction::Ldc2_w(index) => ldc2_w(self, stack, *index).map(InstructionResult::Sync),
-            Instruction::Iload(index) => iload(locals, stack, *index).map(InstructionResult::Sync),
-            Instruction::Lload(index) => lload(locals, stack, *index).map(InstructionResult::Sync),
-            Instruction::Fload(index) => fload(locals, stack, *index).map(InstructionResult::Sync),
-            Instruction::Dload(index) => dload(locals, stack, *index).map(InstructionResult::Sync),
-            Instruction::Aload(index) => aload(locals, stack, *index).map(InstructionResult::Sync),
-            Instruction::Iload_0 => iload_0(locals, stack).map(InstructionResult::Sync),
-            Instruction::Iload_1 => iload_1(locals, stack).map(InstructionResult::Sync),
-            Instruction::Iload_2 => iload_2(locals, stack).map(InstructionResult::Sync),
-            Instruction::Iload_3 => iload_3(locals, stack).map(InstructionResult::Sync),
-            Instruction::Lload_0 => lload_0(locals, stack).map(InstructionResult::Sync),
-            Instruction::Lload_1 => lload_1(locals, stack).map(InstructionResult::Sync),
-            Instruction::Lload_2 => lload_2(locals, stack).map(InstructionResult::Sync),
-            Instruction::Lload_3 => lload_3(locals, stack).map(InstructionResult::Sync),
-            Instruction::Fload_0 => fload_0(locals, stack).map(InstructionResult::Sync),
-            Instruction::Fload_1 => fload_1(locals, stack).map(InstructionResult::Sync),
-            Instruction::Fload_2 => fload_2(locals, stack).map(InstructionResult::Sync),
-            Instruction::Fload_3 => fload_3(locals, stack).map(InstructionResult::Sync),
-            Instruction::Dload_0 => dload_0(locals, stack).map(InstructionResult::Sync),
-            Instruction::Dload_1 => dload_1(locals, stack).map(InstructionResult::Sync),
-            Instruction::Dload_2 => dload_2(locals, stack).map(InstructionResult::Sync),
-            Instruction::Dload_3 => dload_3(locals, stack).map(InstructionResult::Sync),
-            Instruction::Aload_0 => aload_0(locals, stack).map(InstructionResult::Sync),
-            Instruction::Aload_1 => aload_1(locals, stack).map(InstructionResult::Sync),
-            Instruction::Aload_2 => aload_2(locals, stack).map(InstructionResult::Sync),
-            Instruction::Aload_3 => aload_3(locals, stack).map(InstructionResult::Sync),
-            Instruction::Iaload => iaload(stack).map(InstructionResult::Sync),
-            Instruction::Laload => laload(stack).map(InstructionResult::Sync),
-            Instruction::Faload => faload(stack).map(InstructionResult::Sync),
-            Instruction::Daload => daload(stack).map(InstructionResult::Sync),
-            Instruction::Aaload => aaload(stack).map(InstructionResult::Sync),
-            Instruction::Baload => baload(stack).map(InstructionResult::Sync),
-            Instruction::Caload => caload(stack).map(InstructionResult::Sync),
-            Instruction::Saload => saload(stack).map(InstructionResult::Sync),
-            Instruction::Istore(index) => {
-                istore(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Lstore(index) => {
-                lstore(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Fstore(index) => {
-                fstore(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Dstore(index) => {
-                dstore(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Astore(index) => {
-                astore(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Istore_0 => istore_0(locals, stack).map(InstructionResult::Sync),
-            Instruction::Istore_1 => istore_1(locals, stack).map(InstructionResult::Sync),
-            Instruction::Istore_2 => istore_2(locals, stack).map(InstructionResult::Sync),
-            Instruction::Istore_3 => istore_3(locals, stack).map(InstructionResult::Sync),
-            Instruction::Lstore_0 => lstore_0(locals, stack).map(InstructionResult::Sync),
-            Instruction::Lstore_1 => lstore_1(locals, stack).map(InstructionResult::Sync),
-            Instruction::Lstore_2 => lstore_2(locals, stack).map(InstructionResult::Sync),
-            Instruction::Lstore_3 => lstore_3(locals, stack).map(InstructionResult::Sync),
-            Instruction::Fstore_0 => fstore_0(locals, stack).map(InstructionResult::Sync),
-            Instruction::Fstore_1 => fstore_1(locals, stack).map(InstructionResult::Sync),
-            Instruction::Fstore_2 => fstore_2(locals, stack).map(InstructionResult::Sync),
-            Instruction::Fstore_3 => fstore_3(locals, stack).map(InstructionResult::Sync),
-            Instruction::Dstore_0 => dstore_0(locals, stack).map(InstructionResult::Sync),
-            Instruction::Dstore_1 => dstore_1(locals, stack).map(InstructionResult::Sync),
-            Instruction::Dstore_2 => dstore_2(locals, stack).map(InstructionResult::Sync),
-            Instruction::Dstore_3 => dstore_3(locals, stack).map(InstructionResult::Sync),
-            Instruction::Astore_0 => astore_0(locals, stack).map(InstructionResult::Sync),
-            Instruction::Astore_1 => astore_1(locals, stack).map(InstructionResult::Sync),
-            Instruction::Astore_2 => astore_2(locals, stack).map(InstructionResult::Sync),
-            Instruction::Astore_3 => astore_3(locals, stack).map(InstructionResult::Sync),
-            Instruction::Iastore => iastore(stack).map(InstructionResult::Sync),
-            Instruction::Lastore => lastore(stack).map(InstructionResult::Sync),
-            Instruction::Fastore => fastore(stack).map(InstructionResult::Sync),
-            Instruction::Dastore => dastore(stack).map(InstructionResult::Sync),
-            Instruction::Aastore => aastore(stack).map(InstructionResult::Sync),
-            Instruction::Bastore => bastore(stack).map(InstructionResult::Sync),
-            Instruction::Castore => castore(stack).map(InstructionResult::Sync),
-            Instruction::Sastore => sastore(stack).map(InstructionResult::Sync),
-            Instruction::Pop => pop(stack).map(InstructionResult::Sync),
-            Instruction::Pop2 => pop2(stack).map(InstructionResult::Sync),
-            Instruction::Dup => dup(stack).map(InstructionResult::Sync),
-            Instruction::Dup_x1 => dup_x1(stack).map(InstructionResult::Sync),
-            Instruction::Dup_x2 => dup_x2(stack).map(InstructionResult::Sync),
-            Instruction::Dup2 => dup2(stack).map(InstructionResult::Sync),
-            Instruction::Dup2_x1 => dup2_x1(stack).map(InstructionResult::Sync),
-            Instruction::Dup2_x2 => dup2_x2(stack).map(InstructionResult::Sync),
-            Instruction::Swap => swap(stack).map(InstructionResult::Sync),
-            Instruction::Iadd => iadd(stack).map(InstructionResult::Sync),
-            Instruction::Ladd => ladd(stack).map(InstructionResult::Sync),
-            Instruction::Fadd => fadd(stack).map(InstructionResult::Sync),
-            Instruction::Dadd => dadd(stack).map(InstructionResult::Sync),
-            Instruction::Isub => isub(stack).map(InstructionResult::Sync),
-            Instruction::Lsub => lsub(stack).map(InstructionResult::Sync),
-            Instruction::Fsub => fsub(stack).map(InstructionResult::Sync),
-            Instruction::Dsub => dsub(stack).map(InstructionResult::Sync),
-            Instruction::Imul => imul(stack).map(InstructionResult::Sync),
-            Instruction::Lmul => lmul(stack).map(InstructionResult::Sync),
-            Instruction::Fmul => fmul(stack).map(InstructionResult::Sync),
-            Instruction::Dmul => dmul(stack).map(InstructionResult::Sync),
-            Instruction::Idiv => idiv(stack).map(InstructionResult::Sync),
-            Instruction::Ldiv => ldiv(stack).map(InstructionResult::Sync),
-            Instruction::Fdiv => fdiv(stack).map(InstructionResult::Sync),
-            Instruction::Ddiv => ddiv(stack).map(InstructionResult::Sync),
-            Instruction::Irem => irem(stack).map(InstructionResult::Sync),
-            Instruction::Lrem => lrem(stack).map(InstructionResult::Sync),
-            Instruction::Frem => frem(stack).map(InstructionResult::Sync),
-            Instruction::Drem => drem(stack).map(InstructionResult::Sync),
-            Instruction::Ineg => ineg(stack).map(InstructionResult::Sync),
-            Instruction::Lneg => lneg(stack).map(InstructionResult::Sync),
-            Instruction::Fneg => fneg(stack).map(InstructionResult::Sync),
-            Instruction::Dneg => dneg(stack).map(InstructionResult::Sync),
-            Instruction::Ishl => ishl(stack).map(InstructionResult::Sync),
-            Instruction::Lshl => lshl(stack).map(InstructionResult::Sync),
-            Instruction::Ishr => ishr(stack).map(InstructionResult::Sync),
-            Instruction::Lshr => lshr(stack).map(InstructionResult::Sync),
-            Instruction::Iushr => iushr(stack).map(InstructionResult::Sync),
-            Instruction::Lushr => lushr(stack).map(InstructionResult::Sync),
-            Instruction::Iand => iand(stack).map(InstructionResult::Sync),
-            Instruction::Land => land(stack).map(InstructionResult::Sync),
-            Instruction::Ior => ior(stack).map(InstructionResult::Sync),
-            Instruction::Lor => lor(stack).map(InstructionResult::Sync),
-            Instruction::Ixor => ixor(stack).map(InstructionResult::Sync),
-            Instruction::Lxor => lxor(stack).map(InstructionResult::Sync),
-            Instruction::Iinc(index, constant) => {
-                iinc(locals, *index, *constant).map(InstructionResult::Sync)
-            }
-            Instruction::I2l => i2l(stack).map(InstructionResult::Sync),
-            Instruction::I2f => i2f(stack).map(InstructionResult::Sync),
-            Instruction::I2d => i2d(stack).map(InstructionResult::Sync),
-            Instruction::L2i => l2i(stack).map(InstructionResult::Sync),
-            Instruction::L2f => l2f(stack).map(InstructionResult::Sync),
-            Instruction::L2d => l2d(stack).map(InstructionResult::Sync),
-            Instruction::F2i => f2i(stack).map(InstructionResult::Sync),
-            Instruction::F2l => f2l(stack).map(InstructionResult::Sync),
-            Instruction::F2d => f2d(stack).map(InstructionResult::Sync),
-            Instruction::D2i => d2i(stack).map(InstructionResult::Sync),
-            Instruction::D2l => d2l(stack).map(InstructionResult::Sync),
-            Instruction::D2f => d2f(stack).map(InstructionResult::Sync),
-            Instruction::I2b => i2b(stack).map(InstructionResult::Sync),
-            Instruction::I2c => i2c(stack).map(InstructionResult::Sync),
-            Instruction::I2s => i2s(stack).map(InstructionResult::Sync),
-            Instruction::Lcmp => lcmp(stack).map(InstructionResult::Sync),
-            Instruction::Fcmpl => fcmpl(stack).map(InstructionResult::Sync),
-            Instruction::Fcmpg => fcmpg(stack).map(InstructionResult::Sync),
-            Instruction::Dcmpl => dcmpl(stack).map(InstructionResult::Sync),
-            Instruction::Dcmpg => dcmpg(stack).map(InstructionResult::Sync),
-            Instruction::Ifeq(address) => ifeq(stack, *address).map(InstructionResult::Sync),
-            Instruction::Ifne(address) => ifne(stack, *address).map(InstructionResult::Sync),
-            Instruction::Iflt(address) => iflt(stack, *address).map(InstructionResult::Sync),
-            Instruction::Ifge(address) => ifge(stack, *address).map(InstructionResult::Sync),
-            Instruction::Ifgt(address) => ifgt(stack, *address).map(InstructionResult::Sync),
-            Instruction::Ifle(address) => ifle(stack, *address).map(InstructionResult::Sync),
-            Instruction::If_icmpeq(address) => {
-                if_icmpeq(stack, *address).map(InstructionResult::Sync)
-            }
-            Instruction::If_icmpne(address) => {
-                if_icmpne(stack, *address).map(InstructionResult::Sync)
-            }
-            Instruction::If_icmplt(address) => {
-                if_icmplt(stack, *address).map(InstructionResult::Sync)
-            }
-            Instruction::If_icmpge(address) => {
-                if_icmpge(stack, *address).map(InstructionResult::Sync)
-            }
-            Instruction::If_icmpgt(address) => {
-                if_icmpgt(stack, *address).map(InstructionResult::Sync)
-            }
-            Instruction::If_icmple(address) => {
-                if_icmple(stack, *address).map(InstructionResult::Sync)
-            }
-            Instruction::If_acmpeq(address) => {
-                if_acmpeq(stack, *address).map(InstructionResult::Sync)
-            }
-            Instruction::If_acmpne(address) => {
-                if_acmpne(stack, *address).map(InstructionResult::Sync)
-            }
-            Instruction::Goto(address) => goto(*address).map(InstructionResult::Sync),
-            Instruction::Jsr(address) => jsr(stack, *address).map(InstructionResult::Sync),
-            Instruction::Ret(index) => ret(locals, *index).map(InstructionResult::Sync),
-            Instruction::Tableswitch(table_switch) => {
-                let TableSwitch {
-                    default,
-                    low,
-                    high,
-                    offsets,
-                } = table_switch.as_ref();
-                let program_counter = self.program_counter.load(Ordering::Relaxed);
-                tableswitch(stack, program_counter, *default, *low, *high, offsets)
-                    .map(InstructionResult::Sync)
-            }
-            Instruction::Lookupswitch(lookup_switch) => {
-                let LookupSwitch { default, pairs } = lookup_switch.as_ref();
-                let program_counter = self.program_counter.load(Ordering::Relaxed);
-                lookupswitch(stack, program_counter, *default, pairs).map(InstructionResult::Sync)
-            }
-            Instruction::Ireturn => ireturn(stack).map(InstructionResult::Sync),
-            Instruction::Lreturn => lreturn(stack).map(InstructionResult::Sync),
-            Instruction::Freturn => freturn(stack).map(InstructionResult::Sync),
-            Instruction::Dreturn => dreturn(stack).map(InstructionResult::Sync),
-            Instruction::Areturn => areturn(stack).map(InstructionResult::Sync),
-            Instruction::Return => r#return().map(InstructionResult::Sync),
             Instruction::Getstatic(index)
             | Instruction::Putstatic(index)
             | Instruction::Getfield(index)
             | Instruction::Putfield(index) => {
-                match crate::instruction::try_field(self, stack, *index, instruction)? {
-                    Some(result) => Ok(InstructionResult::Sync(result)),
-                    None => Ok(InstructionResult::Async(instruction.clone())),
-                }
+                let result = match crate::instruction::try_field(self, stack, *index, instruction)?
+                {
+                    Some(result) => InstructionResult::Sync(result),
+                    None => InstructionResult::Async(instruction.clone()),
+                };
+                Ok(result)
             }
             Instruction::Invokevirtual(index)
             | Instruction::Invokespecial(index)
@@ -954,72 +1815,45 @@ impl Frame {
                     Instruction::Invokestatic(_) => InvokeKind::Static,
                     _ => InvokeKind::Interface,
                 };
-                match crate::instruction::try_invoke(self, stack, *index, kind)? {
-                    Some(result) => Ok(InstructionResult::Sync(result)),
-                    None => Ok(InstructionResult::Async(instruction.clone())),
-                }
+                let result = match crate::instruction::try_invoke(self, stack, *index, kind)? {
+                    Some(result) => InstructionResult::Sync(result),
+                    None => InstructionResult::Async(instruction.clone()),
+                };
+                Ok(result)
             }
-            Instruction::Newarray(array_type) => {
-                newarray(self, stack, array_type).map(InstructionResult::Sync)
-            }
-            Instruction::Arraylength => arraylength(stack).map(InstructionResult::Sync),
-            Instruction::Wide => wide().map(InstructionResult::Sync),
-            Instruction::Invokedynamic(_)
-            | Instruction::New(_)
-            | Instruction::Anewarray(_)
-            | Instruction::Athrow
-            | Instruction::Checkcast(_)
-            | Instruction::Instanceof(_)
-            | Instruction::Monitorenter
-            | Instruction::Monitorexit
-            | Instruction::Multianewarray(_, _) => {
-                Ok(InstructionResult::Async(instruction.clone()))
-            }
-            Instruction::Ifnull(address) => ifnull(stack, *address).map(InstructionResult::Sync),
-            Instruction::Ifnonnull(address) => {
-                ifnonnull(stack, *address).map(InstructionResult::Sync)
-            }
-            Instruction::Goto_w(address) => goto_w(*address).map(InstructionResult::Sync),
-            Instruction::Jsr_w(address) => jsr_w(stack, *address).map(InstructionResult::Sync),
-            Instruction::Breakpoint => breakpoint().map(InstructionResult::Sync),
-            Instruction::Impdep1 => impdep1().map(InstructionResult::Sync),
-            Instruction::Impdep2 => impdep2().map(InstructionResult::Sync),
-            // Wide instructions
-            Instruction::Iload_w(index) => {
-                iload_w(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Lload_w(index) => {
-                lload_w(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Fload_w(index) => {
-                fload_w(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Dload_w(index) => {
-                dload_w(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Aload_w(index) => {
-                aload_w(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Istore_w(index) => {
-                istore_w(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Lstore_w(index) => {
-                lstore_w(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Fstore_w(index) => {
-                fstore_w(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Dstore_w(index) => {
-                dstore_w(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Astore_w(index) => {
-                astore_w(locals, stack, *index).map(InstructionResult::Sync)
-            }
-            Instruction::Iinc_w(index, constant) => {
-                iinc_w(locals, *index, *constant).map(InstructionResult::Sync)
-            }
-            Instruction::Ret_w(index) => ret_w(locals, *index).map(InstructionResult::Sync),
+            _ => Err(InternalError(format!(
+                "Unexpected reference instruction: {instruction:?}"
+            ))),
         }
+    }
+
+    #[expect(
+        clippy::inline_always,
+        reason = "Merge the synchronous fast path into dispatch to avoid per-instruction result copies"
+    )]
+    #[inline(always)]
+    fn branch_to(&self, taken: bool, instruction_index: usize, displacement: i32) -> Result<usize> {
+        if !taken {
+            return Ok(instruction_index + 1);
+        }
+        if let Some(target) = self.method.branch_target_index(instruction_index) {
+            return Ok(target);
+        }
+        // Unverified programmatic methods can contain invalid targets. Resolve them with
+        // checked signed arithmetic so the ordinary boundary checks still report an error.
+        let pc = self
+            .method
+            .instruction_offset(instruction_index)
+            .unwrap_or_else(|| self.invalid_program_counter.load(Ordering::Relaxed));
+        self.branch_to_byte(goto_w(pc, displacement)?)
+    }
+
+    /// Translate dynamic JVM byte targets (switches and return addresses) at the boundary.
+    #[inline]
+    fn branch_to_byte(&self, byte_offset: usize) -> Result<usize> {
+        self.method
+            .instruction_index(byte_offset)
+            .ok_or(InvalidProgramCounter(byte_offset))
     }
 }
 
@@ -1033,7 +1867,7 @@ impl ristretto_types::Frame for Frame {
     }
 
     fn program_counter(&self) -> usize {
-        self.program_counter.load(Ordering::Relaxed)
+        Frame::program_counter(self)
     }
 }
 
@@ -1112,6 +1946,78 @@ mod tests {
     }
 
     #[test]
+    fn test_branch_faults_publish_the_opcode_byte_offset() -> Result<()> {
+        for (branch, target) in [
+            (Instruction::Ifeq(0), None),
+            (Instruction::Goto(-2), Some(1)),
+            (Instruction::Goto(3), Some(6)),
+        ] {
+            let (thread, frame, mut state) =
+                batch_test_frame(|_| vec![Instruction::Bipush(42), Instruction::Pop, branch])?;
+            let mut remaining = INSTRUCTION_BATCH_SIZE;
+            let boundary = frame.execute_sync_batch(&thread, &mut state, &mut remaining, false)?;
+            match target {
+                None => assert!(matches!(
+                    boundary,
+                    BatchExit::Fault(crate::Error::OperandStackUnderflow)
+                )),
+                Some(target) => assert!(
+                    matches!(boundary, BatchExit::Fault(InvalidProgramCounter(pc)) if pc == target)
+                ),
+            }
+            assert_eq!(3, frame.program_counter());
+            assert_eq!(3, thread.instruction_count());
+            assert_eq!(INSTRUCTION_BATCH_SIZE - 3, remaining);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_legacy_subroutines_return_to_the_next_bytecode() -> Result<()> {
+        for branch in [Instruction::Jsr(-3), Instruction::Jsr_w(-3)] {
+            let (thread, frame, mut state) = batch_test_frame(|_| {
+                vec![
+                    Instruction::Goto(6),
+                    Instruction::Astore_0,
+                    Instruction::Ret(0),
+                    branch,
+                    Instruction::Bipush(42),
+                    Instruction::Ireturn,
+                ]
+            })?;
+            let mut remaining = INSTRUCTION_BATCH_SIZE;
+            assert!(matches!(
+                frame.execute_sync_batch(&thread, &mut state, &mut remaining, false)?,
+                BatchExit::Complete(ExecutionResult::Return(Some(Value::Int(42))))
+            ));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_program_counter_exposes_bytes_and_rejects_operand_bytes() -> Result<()> {
+        let (thread, frame, mut state) = batch_test_frame(|_| {
+            vec![
+                Instruction::Bipush(42),
+                Instruction::Pop,
+                Instruction::Return,
+            ]
+        })?;
+        frame.set_program_counter(2);
+        assert_eq!(2, frame.program_counter());
+        assert_eq!(2, ristretto_types::Frame::program_counter(&frame));
+
+        frame.set_program_counter(1);
+        assert_eq!(1, frame.program_counter());
+        let mut remaining = INSTRUCTION_BATCH_SIZE;
+        assert!(matches!(
+            frame.execute_sync_batch(&thread, &mut state, &mut remaining, false),
+            Err(InvalidProgramCounter(1))
+        ));
+        Ok(())
+    }
+
+    #[test]
     fn test_stack_arguments_fill_reused_wide_locals() -> Result<()> {
         let (_thread, frame, _) = batch_test_frame(|_| vec![Instruction::Return])?;
         let mut definition = frame.class().class_file().clone();
@@ -1156,11 +2062,11 @@ mod tests {
             vec![
                 Instruction::Iconst_0,
                 Instruction::Iload_0,
-                Instruction::Ifeq(7),
+                Instruction::Ifeq(11),
                 Instruction::Iinc(0, -1),
                 Instruction::Iconst_1,
                 Instruction::Iadd,
-                Instruction::Goto(1),
+                Instruction::Goto(-9),
                 Instruction::Ireturn,
             ]
         })?;
@@ -1175,7 +2081,38 @@ mod tests {
             }
         }
         assert_eq!(ExecutionResult::Return(Some(Value::Int(1_000))), result);
-        assert_eq!(7, frame.program_counter());
+        assert_eq!(13, frame.program_counter());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_yielded_conditional_resumes_at_the_correct_byte_offset() -> Result<()> {
+        for (condition, next_pc, expected) in [(0, 5, 11), (1, 8, 22)] {
+            let (thread, frame, mut state) = batch_test_frame(|_| {
+                vec![
+                    Instruction::Bipush(condition),
+                    Instruction::Ifne(6),
+                    Instruction::Bipush(11),
+                    Instruction::Ireturn,
+                    Instruction::Bipush(22),
+                    Instruction::Ireturn,
+                ]
+            })?;
+            // A yielded opcode has already consumed its budget, but has not popped operands.
+            state.stack.push_int(i32::from(condition))?;
+            frame.set_program_counter(2);
+            let count = thread.instruction_count();
+            assert_eq!(
+                ExecutionResult::Continue,
+                frame.resume_batch(&mut state, BatchExit::Yield).await?
+            );
+            assert_eq!(next_pc, frame.program_counter());
+            assert_eq!(count, thread.instruction_count());
+            assert_eq!(
+                ExecutionResult::Return(Some(Value::Int(expected))),
+                frame.execute_batch(&thread, &mut state).await?
+            );
+        }
         Ok(())
     }
 
@@ -1201,7 +2138,7 @@ mod tests {
                         Instruction::Aconst_null,
                         Instruction::Instanceof(class_index),
                         Instruction::Pop,
-                        Instruction::Goto(0),
+                        Instruction::Goto(-5),
                     ]
                 } else {
                     vec![Instruction::Goto(0)]
@@ -1267,7 +2204,7 @@ mod tests {
         let fields = vm.field_ref_cache().for_class(&original_class);
         assert!(std::ptr::eq(frame.method_refs()?, methods.as_ref()));
         assert!(std::ptr::eq(frame.field_refs()?, fields.as_ref()));
-        frame.program_counter.store(17, Ordering::Relaxed);
+        frame.instruction_index.store(17, Ordering::Relaxed);
         frame.reset(&original_class, &original_method);
         assert_eq!(0, frame.program_counter());
         assert!(std::ptr::eq(frame.method_refs()?, methods.as_ref()));

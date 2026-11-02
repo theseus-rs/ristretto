@@ -180,13 +180,12 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
     #[expect(clippy::too_many_lines)]
     #[expect(clippy::match_same_arms)]
     fn analyze(&self, target_bci: usize) -> Option<String> {
-        let code = self.method.code();
         let mut stack: Vec<Source> = Vec::new();
         let mut pc = 0;
         let is_instance_method = !self.method.is_static();
 
         while pc < target_bci {
-            let Some(instruction) = code.get(pc) else {
+            let Some(instruction) = self.method.instruction_at(pc) else {
                 break;
             };
 
@@ -524,10 +523,10 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                 _ => {}
             }
 
-            pc += 1;
+            pc += instruction.byte_len(pc);
         }
 
-        let instruction = code.get(target_bci)?;
+        let instruction = self.method.instruction_at(target_bci)?;
 
         match instruction {
             Instruction::Getfield(idx) => {

@@ -98,8 +98,7 @@ async fn dispatch(
     instruction: Instruction,
     sync: bool,
 ) -> Result<MethodCall> {
-    let mut locals = LocalVariables::new(Vec::new());
-    let result = frame.process(&mut locals, stack, &instruction)?;
+    let result = frame.process_reference(stack, &instruction)?;
     let result = match result {
         InstructionResult::Sync(result) => {
             assert!(sync, "unexpected cache hit");
@@ -232,11 +231,7 @@ async fn receiver_identity_polymorphism_and_overflow() -> Result<()> {
     stack.push_long(17)?;
     stack.push_double(2.0)?;
     assert!(matches!(
-        frame.process(
-            &mut LocalVariables::new(vec![]),
-            &mut stack,
-            &Instruction::Invokevirtual(index)
-        ),
+        frame.process_reference(&mut stack, &Instruction::Invokevirtual(index)),
         Err(JavaError(NullPointerException(_)))
     ));
     Ok(())
@@ -274,8 +269,7 @@ async fn special_intrinsics_follow_selected_superclass_on_cold_and_cached_calls(
                 vm.garbage_collector(),
                 Object::new(frame.class().clone())?,
             ))?;
-            let result =
-                frame.process(&mut LocalVariables::new(vec![]), &mut stack, &instruction)?;
+            let result = frame.process_reference(&mut stack, &instruction)?;
             let result = match result {
                 InstructionResult::Sync(result) => {
                     assert!(cached);
@@ -328,7 +322,7 @@ async fn special_conflicts_check_null_before_selection_on_cold_and_cached_calls(
         stack.push_long(17)?;
         stack.push_double(2.0)?;
         let result = if cached {
-            frame.process(&mut LocalVariables::new(vec![]), &mut stack, &instruction)
+            frame.process_reference(&mut stack, &instruction)
         } else {
             frame
                 .process_async(&mut stack, &instruction)
@@ -344,11 +338,7 @@ async fn special_conflicts_check_null_before_selection_on_cold_and_cached_calls(
             result,
             Err(JavaError(IncompatibleClassChangeError(_)))
         ));
-        let result = frame.process(
-            &mut LocalVariables::new(vec![]),
-            &mut arguments(&vm, Some(&receiver))?,
-            &instruction,
-        );
+        let result = frame.process_reference(&mut arguments(&vm, Some(&receiver))?, &instruction);
         assert!(matches!(
             result,
             Err(JavaError(IncompatibleClassChangeError(_)))
@@ -539,11 +529,7 @@ async fn cached_static_method_waits_for_initialization_and_preserves_failure() -
     );
     let mut stack = arguments(&vm, None)?;
     assert!(matches!(
-        other_frame.process(
-            &mut LocalVariables::new(vec![]),
-            &mut stack,
-            &Instruction::Invokestatic(index)
-        )?,
+        other_frame.process_reference(&mut stack, &Instruction::Invokestatic(index))?,
         InstructionResult::Async(_)
     ));
     assert!(
@@ -610,7 +596,6 @@ async fn fields_have_sync_hits_and_check_static_kind() -> Result<()> {
     let static_index = pool.add_field_ref(class_index, "staticValue", "I")?;
     let object = Value::from_object(vm.garbage_collector(), Object::new(class.clone())?);
     let mut stack = OperandStack::with_max_size(2);
-    let mut locals = LocalVariables::new(vec![]);
     for (index, is_static) in [(field_index, false), (static_index, true)] {
         let put = if is_static {
             Instruction::Putstatic(index)
@@ -627,7 +612,7 @@ async fn fields_have_sync_hits_and_check_static_kind() -> Result<()> {
                 stack.push(object.clone())?;
             }
             stack.push_int(42)?;
-            match frame.process(&mut locals, &mut stack, &put)? {
+            match frame.process_reference(&mut stack, &put)? {
                 InstructionResult::Async(instruction) => {
                     assert!(!sync);
                     frame.process_async(&mut stack, &instruction).await?;
@@ -638,7 +623,7 @@ async fn fields_have_sync_hits_and_check_static_kind() -> Result<()> {
                 stack.push(object.clone())?;
             }
             assert!(matches!(
-                frame.process(&mut locals, &mut stack, &get)?,
+                frame.process_reference(&mut stack, &get)?,
                 InstructionResult::Sync(ExecutionResult::Continue)
             ));
             assert_eq!(stack.pop_int()?, 42);
@@ -649,7 +634,7 @@ async fn fields_have_sync_hits_and_check_static_kind() -> Result<()> {
             Instruction::Getstatic(index)
         };
         assert!(matches!(
-            frame.process(&mut locals, &mut stack, &wrong_kind),
+            frame.process_reference(&mut stack, &wrong_kind),
             Err(JavaError(IncompatibleClassChangeError(_)))
         ));
         if !is_static {

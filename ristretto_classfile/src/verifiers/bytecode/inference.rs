@@ -121,9 +121,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                 VerifyError::ClassFormatError("Method has no Code attribute".to_string())
             })?;
 
-        crate::attributes::offset_utils::instructions_to_bytes(code)?;
-        let length = u16::try_from(code.len())?;
-        let code_info = CodeInfo::new((0..length).collect(), length);
+        let code_info = CodeInfo::from_code(code)?;
 
         // Get class and method names
         let current_class = class_file
@@ -322,6 +320,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                 super::constraints::invalidate_constructor_receiver(
                     self.class_file,
                     self.code,
+                    &self.code_info,
                     offset,
                     &before,
                     &mut frame,
@@ -345,7 +344,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                 edges.push(((handler.handler_pc, calls.clone()), frame));
             }
             for (key, frame) in edges {
-                if usize::from(key.0) >= self.code.len() {
+                if !self.code_info.is_valid_offset(key.0) {
                     return Err(VerifyError::VerifyError(
                         "Invalid subroutine target".to_string(),
                     ));
@@ -370,7 +369,11 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
         mut frame: Frame,
         calls: &mut Vec<(u16, u16)>,
     ) -> Result<(Frame, Vec<u16>)> {
-        let instruction = self.code.get(usize::from(offset)).ok_or_else(|| {
+        let index = self
+            .code_info
+            .index_at(offset)
+            .ok_or_else(|| VerifyError::VerifyError("Invalid instruction boundary".to_string()))?;
+        let instruction = self.code.get(index).ok_or_else(|| {
             VerifyError::VerifyError("Invalid subroutine instruction".to_string())
         })?;
         let successors = match instruction {
@@ -386,13 +389,15 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                     ));
                 }
                 let target = match instruction {
-                    Instruction::Jsr(target) => *target,
-                    Instruction::Jsr_w(target) => u16::try_from(*target)?,
+                    Instruction::Jsr(target) => {
+                        self.code_info.branch_target(offset, i32::from(*target))?
+                    }
+                    Instruction::Jsr_w(target) => self.code_info.branch_target(offset, *target)?,
                     _ => {
                         return Err(VerifyError::VerifyError("Invalid subroutine".to_string()));
                     }
                 };
-                let next = offset.checked_add(1).ok_or_else(|| {
+                let next = self.code_info.offset_at(index + 1).ok_or_else(|| {
                     VerifyError::VerifyError("Invalid subroutine return address".to_string())
                 })?;
                 if next >= self.code_info.code_length()
@@ -426,7 +431,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
             }
             _ => {
                 let (after, successors, _) =
-                    self.execute_instruction(offset, usize::from(offset), instruction, frame)?;
+                    self.execute_instruction(offset, index, instruction, frame)?;
                 frame = after;
                 successors
             }
@@ -495,6 +500,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
         super::constraints::verify_state(
             self.class_file,
             self.code,
+            &self.code_info,
             instruction,
             &frame,
             self.context,
@@ -708,6 +714,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
             super::constraints::invalidate_constructor_receiver(
                 self.class_file,
                 self.code,
+                &self.code_info,
                 offset,
                 current_frame,
                 &mut handler_frame,
@@ -971,7 +978,7 @@ mod tests {
         let config = VerifierConfig::default();
         let context = MockContext::PERMISSIVE;
 
-        let bad_code = static_method(vec![Instruction::Goto(u16::MAX)], 0, 0);
+        let bad_code = static_method(vec![Instruction::Goto(i16::MAX)], 0, 0);
         assert!(TestInferenceVerifier::new(&class_file, &bad_code, &context, &config).is_err());
 
         let method = static_method(vec![Instruction::Return], 0, 0);
@@ -1496,8 +1503,8 @@ mod tests {
                 1,
                 1,
                 vec![ExceptionTableEntry {
-                    range_pc: 0..1,
-                    handler_pc: 1,
+                    range_pc: 0..3,
+                    handler_pc: 3,
                     catch_type: 0,
                 }],
             );
@@ -1618,7 +1625,7 @@ mod tests {
             4,
             vec![
                 Instruction::Iconst_0,
-                Instruction::Ifeq(5),
+                Instruction::Ifeq(10),
                 Instruction::Aconst_null,
                 Instruction::Checkcast(class_a),
                 Instruction::Goto(7),

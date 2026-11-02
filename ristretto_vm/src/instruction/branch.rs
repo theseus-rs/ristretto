@@ -1,175 +1,141 @@
 use crate::Error::InternalError;
 use crate::Result;
 use crate::frame::ExecutionResult;
-use crate::frame::ExecutionResult::{Continue, ContinueAtPosition, Return};
+use crate::frame::ExecutionResult::Return;
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use indexmap::IndexMap;
 #[cfg(test)]
 use ristretto_classloader::Reference;
 
-/// # References
-///
-/// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
+/// Resolve a signed JVM branch displacement without wrapping at either end of the code.
 #[inline]
-pub(crate) fn ifeq(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
-    if stack.pop_int()? == 0 {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+fn branch_target(program_counter: usize, offset: i32) -> Result<usize> {
+    Ok(usize::try_from(
+        i64::try_from(program_counter)? + i64::from(offset),
+    )?)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
 #[inline]
-pub(crate) fn ifne(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
-    if stack.pop_int()? != 0 {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+pub(crate) fn ifeq(stack: &mut OperandStack) -> Result<bool> {
+    Ok(stack.pop_int()? == 0)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
 #[inline]
-pub(crate) fn iflt(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
-    if stack.pop_int()? < 0 {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+pub(crate) fn ifne(stack: &mut OperandStack) -> Result<bool> {
+    Ok(stack.pop_int()? != 0)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
 #[inline]
-pub(crate) fn ifge(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
-    if stack.pop_int()? >= 0 {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+pub(crate) fn iflt(stack: &mut OperandStack) -> Result<bool> {
+    Ok(stack.pop_int()? < 0)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
 #[inline]
-pub(crate) fn ifgt(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
-    if stack.pop_int()? > 0 {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+pub(crate) fn ifge(stack: &mut OperandStack) -> Result<bool> {
+    Ok(stack.pop_int()? >= 0)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
 #[inline]
-pub(crate) fn ifle(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
-    if stack.pop_int()? <= 0 {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+pub(crate) fn ifgt(stack: &mut OperandStack) -> Result<bool> {
+    Ok(stack.pop_int()? > 0)
+}
+
+/// # References
+///
+/// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
+#[inline]
+pub(crate) fn ifle(stack: &mut OperandStack) -> Result<bool> {
+    Ok(stack.pop_int()? <= 0)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
 #[inline]
-pub(crate) fn if_icmpeq(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_icmpeq(stack: &mut OperandStack) -> Result<bool> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
-    if value1 == value2 {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+    Ok(value1 == value2)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
 #[inline]
-pub(crate) fn if_icmpne(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_icmpne(stack: &mut OperandStack) -> Result<bool> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
-    if value1 != value2 {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+    Ok(value1 != value2)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
 #[inline]
-pub(crate) fn if_icmplt(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_icmplt(stack: &mut OperandStack) -> Result<bool> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
-    if value1 < value2 {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+    Ok(value1 < value2)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
 #[inline]
-pub(crate) fn if_icmpge(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_icmpge(stack: &mut OperandStack) -> Result<bool> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
-    if value1 >= value2 {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+    Ok(value1 >= value2)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
 #[inline]
-pub(crate) fn if_icmpgt(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_icmpgt(stack: &mut OperandStack) -> Result<bool> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
-    if value1 > value2 {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+    Ok(value1 > value2)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
 #[inline]
-pub(crate) fn if_icmple(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_icmple(stack: &mut OperandStack) -> Result<bool> {
     let value2 = stack.pop_int()?;
     let value1 = stack.pop_int()?;
-    if value1 <= value2 {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+    Ok(value1 <= value2)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.if_acmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond)
 #[inline]
-pub(crate) fn if_acmpeq(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_acmpeq(stack: &mut OperandStack) -> Result<bool> {
     let value2 = stack.pop_object()?;
     let value1 = stack.pop_object()?;
 
     match (value1, value2) {
-        (None, None) => Ok(ContinueAtPosition(usize::from(address))),
-        (Some(_), None) | (None, Some(_)) => Ok(Continue),
-        (Some(value1), Some(value2)) => {
-            if value1.ptr_eq(&value2) {
-                Ok(ContinueAtPosition(usize::from(address)))
-            } else {
-                Ok(Continue)
-            }
-        }
+        (None, None) => Ok(true),
+        (Some(_), None) | (None, Some(_)) => Ok(false),
+        (Some(value1), Some(value2)) => Ok(value1.ptr_eq(&value2)),
     }
 }
 
@@ -177,30 +143,24 @@ pub(crate) fn if_acmpeq(stack: &mut OperandStack, address: u16) -> Result<Execut
 ///
 /// - [JVMS §6.5.if_acmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond)
 #[inline]
-pub(crate) fn if_acmpne(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
+pub(crate) fn if_acmpne(stack: &mut OperandStack) -> Result<bool> {
     let value2 = stack.pop_object()?;
     let value1 = stack.pop_object()?;
 
     match (value1, value2) {
-        (None, None) => Ok(Continue),
-        (Some(_), None) | (None, Some(_)) => Ok(ContinueAtPosition(usize::from(address))),
-        (Some(value1), Some(value2)) => {
-            if value1.ptr_eq(&value2) {
-                Ok(Continue)
-            } else {
-                Ok(ContinueAtPosition(usize::from(address)))
-            }
-        }
+        (None, None) => Ok(false),
+        (Some(_), None) | (None, Some(_)) => Ok(true),
+        (Some(value1), Some(value2)) => Ok(!value1.ptr_eq(&value2)),
     }
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.goto](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto)
-#[expect(clippy::unnecessary_wraps)]
 #[inline]
-pub(crate) fn goto(address: u16) -> Result<ExecutionResult> {
-    Ok(ContinueAtPosition(usize::from(address)))
+#[cfg(test)]
+pub(crate) fn goto(program_counter: usize, address: i16) -> Result<usize> {
+    branch_target(program_counter, i32::from(address))
 }
 
 /// # References
@@ -208,18 +168,17 @@ pub(crate) fn goto(address: u16) -> Result<ExecutionResult> {
 /// - [JVMS §6.5.goto_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto_w)
 /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 #[inline]
-pub(crate) fn goto_w(address: i32) -> Result<ExecutionResult> {
-    Ok(ContinueAtPosition(usize::try_from(address)?))
+pub(crate) fn goto_w(program_counter: usize, address: i32) -> Result<usize> {
+    branch_target(program_counter, address)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.jsr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr)
 #[inline]
-pub(crate) fn jsr(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
-    let address = i32::from(address);
-    stack.push_int(address)?;
-    Ok(ContinueAtPosition(usize::try_from(address)?))
+pub(crate) fn jsr(stack: &mut OperandStack, program_counter: usize, address: i16) -> Result<usize> {
+    stack.push_int(i32::try_from(program_counter + 3)?)?;
+    branch_target(program_counter, i32::from(address))
 }
 
 /// # References
@@ -227,18 +186,22 @@ pub(crate) fn jsr(stack: &mut OperandStack, address: u16) -> Result<ExecutionRes
 /// - [JVMS §6.5.jsr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr)
 /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 #[inline]
-pub(crate) fn jsr_w(stack: &mut OperandStack, address: i32) -> Result<ExecutionResult> {
-    stack.push_int(address)?;
-    Ok(ContinueAtPosition(usize::try_from(address)?))
+pub(crate) fn jsr_w(
+    stack: &mut OperandStack,
+    program_counter: usize,
+    address: i32,
+) -> Result<usize> {
+    stack.push_int(i32::try_from(program_counter + 5)?)?;
+    branch_target(program_counter, address)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.ret](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret)
 #[inline]
-pub(crate) fn ret(locals: &LocalVariables, index: u8) -> Result<ExecutionResult> {
+pub(crate) fn ret(locals: &LocalVariables, index: u8) -> Result<usize> {
     let address = locals.get_int(usize::from(index))?;
-    Ok(ContinueAtPosition(usize::try_from(address)?))
+    Ok(usize::try_from(address)?)
 }
 
 /// # References
@@ -246,9 +209,9 @@ pub(crate) fn ret(locals: &LocalVariables, index: u8) -> Result<ExecutionResult>
 /// - [JVMS §6.5.ret](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret)
 /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 #[inline]
-pub(crate) fn ret_w(locals: &LocalVariables, index: u16) -> Result<ExecutionResult> {
+pub(crate) fn ret_w(locals: &LocalVariables, index: u16) -> Result<usize> {
     let address = locals.get_int(usize::from(index))?;
-    Ok(ContinueAtPosition(usize::try_from(address)?))
+    Ok(usize::try_from(address)?)
 }
 
 /// # References
@@ -263,7 +226,7 @@ pub(crate) fn tableswitch(
     low: i32,
     high: i32,
     offsets: &Vec<i32>,
-) -> Result<ExecutionResult> {
+) -> Result<usize> {
     let key = stack.pop_int()?;
     let offset = if key < low || key > high {
         default
@@ -275,19 +238,23 @@ pub(crate) fn tableswitch(
     };
     let pc = i64::try_from(program_counter)?;
     let address = usize::try_from(pc + i64::from(offset))?;
-    Ok(ContinueAtPosition(address))
+    Ok(address)
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.lookupswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch)
-#[inline]
+#[expect(
+    clippy::inline_always,
+    reason = "Merge the synchronous fast path into dispatch to avoid per-instruction result copies"
+)]
+#[inline(always)]
 pub(crate) fn lookupswitch(
     stack: &mut OperandStack,
     program_counter: usize,
     default: i32,
     pairs: &IndexMap<i32, i32>,
-) -> Result<ExecutionResult> {
+) -> Result<usize> {
     let key = stack.pop_int()?;
     let offset = match pairs.get(&key) {
         Some(offset) => *offset,
@@ -295,7 +262,7 @@ pub(crate) fn lookupswitch(
     };
     let pc = i64::try_from(program_counter)?;
     let address = usize::try_from(pc + i64::from(offset))?;
-    Ok(ContinueAtPosition(address))
+    Ok(address)
 }
 
 /// # References
@@ -311,22 +278,16 @@ pub(crate) fn r#return() -> Result<ExecutionResult> {
 ///
 /// - [JVMS §6.5.ifnull](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnull)
 #[inline]
-pub(crate) fn ifnull(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
-    if stack.pop_object()?.is_none() {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+pub(crate) fn ifnull(stack: &mut OperandStack) -> Result<bool> {
+    Ok(stack.pop_object()?.is_none())
 }
 
 /// # References
 ///
 /// - [JVMS §6.5.ifnonnull](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnonnull)
 #[inline]
-pub(crate) fn ifnonnull(stack: &mut OperandStack, address: u16) -> Result<ExecutionResult> {
-    if stack.pop_object()?.is_some() {
-        return Ok(ContinueAtPosition(usize::from(address)));
-    }
-    Ok(Continue)
+pub(crate) fn ifnonnull(stack: &mut OperandStack) -> Result<bool> {
+    Ok(stack.pop_object()?.is_some())
 }
 
 #[cfg(test)]
@@ -341,8 +302,8 @@ mod test {
     fn test_ifeq_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = ifeq(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = ifeq(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -350,8 +311,8 @@ mod test {
     fn test_ifeq_not_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(1)?;
-        let result = ifeq(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = ifeq(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -359,8 +320,8 @@ mod test {
     fn test_ifne_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = ifne(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = ifne(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -368,8 +329,8 @@ mod test {
     fn test_ifne_not_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(1)?;
-        let result = ifne(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = ifne(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -377,8 +338,8 @@ mod test {
     fn test_iflt_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = iflt(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = iflt(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -386,8 +347,8 @@ mod test {
     fn test_iflt_less_than() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(-1)?;
-        let result = iflt(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = iflt(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -397,18 +358,18 @@ mod test {
 
         // Test less than
         stack.push_int(-1)?;
-        let result = ifge(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = ifge(stack)?;
+        assert!(!result);
 
         // Test equal
         stack.push_int(0)?;
-        let result = ifge(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = ifge(stack)?;
+        assert!(result);
 
         // Test greater than
         stack.push_int(1)?;
-        let result = ifge(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = ifge(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -416,8 +377,8 @@ mod test {
     fn test_ifge_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = ifge(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = ifge(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -425,8 +386,8 @@ mod test {
     fn test_ifge_less_than() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(-1)?;
-        let result = ifge(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = ifge(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -434,8 +395,8 @@ mod test {
     fn test_ifge_greater_than() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(1)?;
-        let result = ifge(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = ifge(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -443,8 +404,8 @@ mod test {
     fn test_ifgt_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = ifgt(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = ifgt(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -452,8 +413,8 @@ mod test {
     fn test_ifgt_greater_than() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(1)?;
-        let result = ifgt(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = ifgt(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -461,8 +422,8 @@ mod test {
     fn test_ifle_equal() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = ifle(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = ifle(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -470,8 +431,8 @@ mod test {
     fn test_ifle_less_than() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(-1)?;
-        let result = ifle(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = ifle(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -479,8 +440,8 @@ mod test {
     fn test_ifle_greater_than() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(1)?;
-        let result = ifle(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = ifle(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -489,8 +450,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(1)?;
         stack.push_int(1)?;
-        let result = if_icmpeq(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_icmpeq(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -499,8 +460,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(2)?;
         stack.push_int(1)?;
-        let result = if_icmpeq(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = if_icmpeq(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -509,8 +470,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(1)?;
         stack.push_int(1)?;
-        let result = if_icmpne(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = if_icmpne(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -519,8 +480,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(2)?;
         stack.push_int(1)?;
-        let result = if_icmpne(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_icmpne(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -529,8 +490,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(1)?;
         stack.push_int(1)?;
-        let result = if_icmplt(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = if_icmplt(stack)?;
+        assert!(!result);
         Ok(())
     }
     #[test]
@@ -538,8 +499,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(1)?;
         stack.push_int(2)?;
-        let result = if_icmplt(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_icmplt(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -548,8 +509,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(1)?;
         stack.push_int(1)?;
-        let result = if_icmpge(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_icmpge(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -558,8 +519,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(1)?;
         stack.push_int(2)?;
-        let result = if_icmpge(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = if_icmpge(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -568,8 +529,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(2)?;
         stack.push_int(1)?;
-        let result = if_icmpge(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_icmpge(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -578,8 +539,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(1)?;
         stack.push_int(1)?;
-        let result = if_icmpgt(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = if_icmpgt(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -588,8 +549,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(2)?;
         stack.push_int(1)?;
-        let result = if_icmpgt(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_icmpgt(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -598,8 +559,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(1)?;
         stack.push_int(1)?;
-        let result = if_icmple(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_icmple(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -608,8 +569,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(2)?;
         stack.push_int(1)?;
-        let result = if_icmple(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = if_icmple(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -618,8 +579,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_int(1)?;
         stack.push_int(2)?;
-        let result = if_icmple(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_icmple(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -631,8 +592,8 @@ mod test {
         let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object.clone())?;
         stack.push(object.clone())?;
-        let result = if_acmpeq(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_acmpeq(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -644,12 +605,12 @@ mod test {
         let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push_object(None)?;
         stack.push(object.clone())?;
-        let result = if_acmpeq(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = if_acmpeq(stack)?;
+        assert!(!result);
         stack.push(object.clone())?;
         stack.push(object.clone())?;
-        let result = if_acmpeq(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_acmpeq(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -658,8 +619,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_object(None)?;
         stack.push_object(None)?;
-        let result = if_acmpeq(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_acmpeq(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -673,8 +634,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push(class1)?;
         stack.push(class2)?;
-        let result = if_acmpeq(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_acmpeq(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -689,8 +650,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push(class1)?;
         stack.push(class2)?;
-        let result = if_acmpeq(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = if_acmpeq(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -702,8 +663,8 @@ mod test {
         let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object.clone())?;
         stack.push(object.clone())?;
-        let result = if_acmpne(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = if_acmpne(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -715,8 +676,8 @@ mod test {
         let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push_object(None)?;
         stack.push(object.clone())?;
-        let result = if_acmpne(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_acmpne(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -725,8 +686,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push_object(None)?;
         stack.push_object(None)?;
-        let result = if_acmpne(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = if_acmpne(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -740,8 +701,8 @@ mod test {
         let stack = &mut OperandStack::with_max_size(2);
         stack.push(class1)?;
         stack.push(class2)?;
-        let result = if_acmpne(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = if_acmpne(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -762,30 +723,30 @@ mod test {
         stack.push_object(Some(
             Gc::new(thread.vm()?.garbage_collector(), RwLock::new(class2)).clone_gc(),
         ))?;
-        let result = if_acmpne(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = if_acmpne(stack)?;
+        assert!(result);
         Ok(())
     }
 
     #[test]
     fn test_goto() -> Result<()> {
-        let result = goto(3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = goto(0, 3)?;
+        assert_eq!(3, result);
         Ok(())
     }
 
     #[test]
     fn test_goto_w() -> Result<()> {
-        let result = goto_w(3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = goto_w(0, 3)?;
+        assert_eq!(3, result);
         Ok(())
     }
 
     #[test]
     fn test_jsr() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let result = jsr(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = jsr(stack, 0, 3)?;
+        assert_eq!(3, result);
         assert_eq!(3, stack.pop_int()?);
         Ok(())
     }
@@ -793,9 +754,9 @@ mod test {
     #[test]
     fn test_jsr_w() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
-        let result = jsr_w(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
-        assert_eq!(3, stack.pop_int()?);
+        let result = jsr_w(stack, 0, 3)?;
+        assert_eq!(3, result);
+        assert_eq!(5, stack.pop_int()?);
         Ok(())
     }
 
@@ -804,7 +765,7 @@ mod test {
         let locals = &mut LocalVariables::with_max_size(1);
         locals.set_int(0, 3)?;
         let result = ret(locals, 0)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        assert_eq!(3, result);
         Ok(())
     }
 
@@ -813,7 +774,7 @@ mod test {
         let locals = &mut LocalVariables::with_max_size(1);
         locals.set_int(0, 3)?;
         let result = ret_w(locals, 0)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        assert_eq!(3, result);
         Ok(())
     }
 
@@ -823,7 +784,7 @@ mod test {
         stack.push_int(2)?;
         let program_counter = 10;
         let result = tableswitch(stack, program_counter, 14, 1, 3, &vec![11, 12, 13])?;
-        assert!(matches!(result, ContinueAtPosition(22)));
+        assert_eq!(result, 22);
         Ok(())
     }
 
@@ -833,7 +794,7 @@ mod test {
         stack.push_int(0)?;
         let program_counter = 10;
         let result = tableswitch(stack, program_counter, 14, 1, 3, &vec![11, 12, 13])?;
-        assert!(matches!(result, ContinueAtPosition(24)));
+        assert_eq!(result, 24);
         Ok(())
     }
 
@@ -846,7 +807,7 @@ mod test {
         // low=0, high=2, offsets: case 0 -> +10, case 1 -> -5 (backward), case 2 -> +15
         let result = tableswitch(stack, program_counter, 100, 0, 2, &vec![10, -5, 15])?;
         // program_counter (20) + offset (-5) = 15
-        assert_eq!(ContinueAtPosition(15), result);
+        assert_eq!(15, result);
         Ok(())
     }
 
@@ -859,7 +820,7 @@ mod test {
         // default offset is -10 (backward jump)
         let result = tableswitch(stack, program_counter, -10, 0, 2, &vec![10, 15, 20])?;
         // program_counter (20) + default offset (-10) = 10
-        assert_eq!(ContinueAtPosition(10), result);
+        assert_eq!(10, result);
         Ok(())
     }
 
@@ -874,7 +835,7 @@ mod test {
             14,
             &IndexMap::from([(1, 11), (2, 12), (3, 13)]),
         )?;
-        assert!(matches!(result, ContinueAtPosition(22)));
+        assert_eq!(result, 22);
         Ok(())
     }
 
@@ -889,7 +850,7 @@ mod test {
             14,
             &IndexMap::from([(1, 11), (2, 12), (3, 13)]),
         )?;
-        assert!(matches!(result, ContinueAtPosition(24)));
+        assert_eq!(result, 24);
         Ok(())
     }
 
@@ -906,7 +867,7 @@ mod test {
             &IndexMap::from([(42, -8), (100, 15)]), // case 42 jumps backward
         )?;
         // program_counter (20) + offset (-8) = 12
-        assert_eq!(ContinueAtPosition(12), result);
+        assert_eq!(12, result);
         Ok(())
     }
 
@@ -923,7 +884,7 @@ mod test {
             &IndexMap::from([(42, 10), (100, 15)]),
         )?;
         // program_counter (20) + default offset (-15) = 5
-        assert_eq!(ContinueAtPosition(5), result);
+        assert_eq!(5, result);
         Ok(())
     }
 
@@ -943,8 +904,8 @@ mod test {
             Reference::from(vec![42i8]),
         );
         stack.push(object)?;
-        let result = ifnull(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = ifnull(stack)?;
+        assert!(!result);
         Ok(())
     }
 
@@ -952,8 +913,8 @@ mod test {
     fn test_ifnull_null() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
-        let result = ifnull(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = ifnull(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -966,8 +927,8 @@ mod test {
             Reference::from(vec![42i8]),
         );
         stack.push(object)?;
-        let result = ifnonnull(stack, 3)?;
-        assert_eq!(ContinueAtPosition(3), result);
+        let result = ifnonnull(stack)?;
+        assert!(result);
         Ok(())
     }
 
@@ -975,8 +936,8 @@ mod test {
     fn test_ifnonnull_null() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
-        let result = ifnonnull(stack, 3)?;
-        assert_eq!(Continue, result);
+        let result = ifnonnull(stack)?;
+        assert!(!result);
         Ok(())
     }
 }

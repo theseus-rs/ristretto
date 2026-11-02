@@ -121,12 +121,12 @@ fn pop_one_category_two_value() -> Result<()> {
 fn reordered_blocks() -> Result<()> {
     let code = [
         Instruction::Iconst_0,
-        Instruction::Goto(4),
+        Instruction::Goto(5),
         Instruction::Pop,
         Instruction::Return,
         Instruction::Iconst_1,
         Instruction::Iadd,
-        Instruction::Goto(2),
+        Instruction::Goto(-4),
     ];
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
@@ -135,12 +135,12 @@ fn reordered_blocks() -> Result<()> {
 fn reordered_wide_branches() -> Result<()> {
     let code = [
         Instruction::Iconst_0,
-        Instruction::Goto_w(4),
+        Instruction::Goto_w(7),
         Instruction::Pop,
         Instruction::Return,
         Instruction::Iconst_1,
         Instruction::Iadd,
-        Instruction::Goto_w(2),
+        Instruction::Goto_w(-4),
     ];
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
@@ -149,10 +149,10 @@ fn reordered_wide_branches() -> Result<()> {
 fn balanced_diamond() -> Result<()> {
     let code = [
         Instruction::Iload_0,
-        Instruction::Ifeq(5),
+        Instruction::Ifeq(8),
         Instruction::Iconst_0,
         Instruction::Iconst_1,
-        Instruction::Goto(7),
+        Instruction::Goto(5),
         Instruction::Iconst_0,
         Instruction::Iconst_1,
         Instruction::Iadd,
@@ -167,9 +167,9 @@ fn balanced_loop() -> Result<()> {
         Instruction::Iconst_0,
         Instruction::Istore_0,
         Instruction::Iload_0,
-        Instruction::Ifeq(7),
+        Instruction::Ifeq(10),
         Instruction::Iinc(0, -1),
-        Instruction::Goto(2),
+        Instruction::Goto(-7),
         Instruction::Nop,
         Instruction::Return,
     ];
@@ -223,7 +223,7 @@ fn unreachable_bad_constant_pool_reference() -> Result<()> {
 #[test]
 fn shared_legacy_subroutine() -> Result<()> {
     let code = [
-        Instruction::Jsr(6),
+        Instruction::Jsr(10),
         Instruction::Nop,
         Instruction::Jsr(6),
         Instruction::Nop,
@@ -241,12 +241,12 @@ fn shared_legacy_subroutine() -> Result<()> {
 #[test]
 fn nested_legacy_subroutines() -> Result<()> {
     let code = [
-        Instruction::Jsr(4),
+        Instruction::Jsr(6),
         Instruction::Return,
         Instruction::Nop,
         Instruction::Nop,
         Instruction::Astore_0,
-        Instruction::Jsr(8),
+        Instruction::Jsr(6),
         Instruction::Ret(0),
         Instruction::Nop,
         Instruction::Astore_1,
@@ -258,12 +258,12 @@ fn nested_legacy_subroutines() -> Result<()> {
 #[test]
 fn legacy_return_to_outer_call() -> Result<()> {
     let code = [
-        Instruction::Jsr(4),
+        Instruction::Jsr(6),
         Instruction::Return,
         Instruction::Nop,
         Instruction::Nop,
         Instruction::Astore_0,
-        Instruction::Jsr(8),
+        Instruction::Jsr(6),
         Instruction::Ret(0),
         Instruction::Nop,
         Instruction::Astore_1,
@@ -275,7 +275,7 @@ fn legacy_return_to_outer_call() -> Result<()> {
 #[test]
 fn wide_legacy_subroutine() -> Result<()> {
     let code = [
-        Instruction::Jsr_w(2),
+        Instruction::Jsr_w(6),
         Instruction::Return,
         Instruction::Astore_w(300),
         Instruction::Ret_w(300),
@@ -286,7 +286,7 @@ fn wide_legacy_subroutine() -> Result<()> {
 #[test]
 fn duplicated_return_address() -> Result<()> {
     let code = [
-        Instruction::Jsr(3),
+        Instruction::Jsr(5),
         Instruction::Return,
         Instruction::Nop,
         Instruction::Dup,
@@ -300,7 +300,7 @@ fn duplicated_return_address() -> Result<()> {
 #[test]
 fn swapped_return_address() -> Result<()> {
     let code = [
-        Instruction::Jsr(3),
+        Instruction::Jsr(5),
         Instruction::Return,
         Instruction::Nop,
         Instruction::Iconst_0,
@@ -826,14 +826,14 @@ fn reserved_opcodes_and_standalone_wide_are_rejected() {
 fn both_switch_forms_follow_default_and_case_targets() -> Result<()> {
     let switches = [
         Instruction::Tableswitch(Box::new(TableSwitch {
-            default: 3,
+            default: 21,
             low: 0,
             high: 0,
-            offsets: vec![1],
+            offsets: vec![19],
         })),
         Instruction::Lookupswitch(Box::new(LookupSwitch {
-            default: 3,
-            pairs: [(10, 1)].into_iter().collect(),
+            default: 21,
+            pairs: [(10, 19)].into_iter().collect(),
         })),
     ];
     for switch in switches {
@@ -855,7 +855,7 @@ fn both_switch_forms_follow_default_and_case_targets() -> Result<()> {
 #[test]
 fn switch_back_edge_preserves_stack_height() -> Result<()> {
     let switch = Instruction::Tableswitch(Box::new(TableSwitch {
-        default: 1,
+        default: 19,
         low: 0,
         high: 0,
         offsets: vec![-1],
@@ -870,17 +870,17 @@ fn incompatible_merges_and_unbalanced_loops_are_rejected() {
     for code in [
         vec![
             Instruction::Iconst_0,
-            Instruction::Ifeq(4),
+            Instruction::Ifeq(7),
             Instruction::Iconst_1,
-            Instruction::Goto(5),
+            Instruction::Goto(4),
             Instruction::Nop,
             Instruction::Return,
         ],
-        vec![Instruction::Iconst_0, Instruction::Goto(0)],
+        vec![Instruction::Iconst_0, Instruction::Goto(-1)],
         vec![
             Instruction::Iconst_0,
             Instruction::Pop,
-            Instruction::Goto(1),
+            Instruction::Goto(-1),
         ],
     ] {
         assert!(code.max_stack(&ConstantPool::new()).is_err(), "{code:?}");
@@ -890,14 +890,14 @@ fn incompatible_merges_and_unbalanced_loops_are_rejected() {
 #[test]
 fn invalid_branch_targets_and_fallthrough_are_rejected() {
     for code in [
-        vec![Instruction::Goto(1)],
+        vec![Instruction::Goto(3)],
         vec![Instruction::Goto_w(-1)],
         vec![Instruction::Goto_w(i32::MAX)],
         vec![Instruction::Nop],
-        vec![Instruction::Iconst_0, Instruction::Ifeq(0)],
+        vec![Instruction::Iconst_0, Instruction::Ifeq(-1)],
         vec![
             Instruction::Iconst_0,
-            Instruction::Ifeq(3),
+            Instruction::Ifeq(4),
             Instruction::Return,
         ],
         vec![
@@ -906,14 +906,14 @@ fn invalid_branch_targets_and_fallthrough_are_rejected() {
                 default: -2,
                 low: 0,
                 high: 0,
-                offsets: vec![1],
+                offsets: vec![19],
             })),
             Instruction::Return,
         ],
         vec![
             Instruction::Iconst_0,
             Instruction::Lookupswitch(Box::new(LookupSwitch {
-                default: 1,
+                default: 19,
                 pairs: [(0, 20)].into_iter().collect(),
             })),
             Instruction::Return,
@@ -964,7 +964,7 @@ fn stack_underflow_checks_consumed_operands_not_net_delta() {
         vec![Instruction::Athrow],
         vec![
             Instruction::Iconst_0,
-            Instruction::If_icmpeq(2),
+            Instruction::If_icmpeq(3),
             Instruction::Return,
         ],
     ] {
@@ -1019,8 +1019,8 @@ fn exception_handler_contributes_its_initial_slot() -> Result<()> {
         Instruction::Return,
     ];
     let handlers = [ExceptionTableEntry {
-        range_pc: 0..1,
-        handler_pc: 2,
+        range_pc: 0..3,
+        handler_pc: 4,
         catch_type: 0,
     }];
     assert_eq!(code.max_stack(&pool)?, 0);
@@ -1154,7 +1154,7 @@ fn exception_range_can_end_at_code_length() -> Result<()> {
 #[test]
 fn handler_preserves_legacy_return_address_locals() -> Result<()> {
     let code = [
-        Instruction::Jsr(2),
+        Instruction::Jsr(4),
         Instruction::Return,
         Instruction::Astore_0,
         Instruction::Aconst_null,
@@ -1163,8 +1163,8 @@ fn handler_preserves_legacy_return_address_locals() -> Result<()> {
         Instruction::Ret(0),
     ];
     let handlers = [ExceptionTableEntry {
-        range_pc: 3..5,
-        handler_pc: 5,
+        range_pc: 5..7,
+        handler_pc: 7,
         catch_type: 0,
     }];
     assert_eq!(
@@ -1178,7 +1178,7 @@ fn handler_preserves_legacy_return_address_locals() -> Result<()> {
 fn invalid_legacy_returns_and_recursive_calls_are_rejected() {
     for code in [
         vec![
-            Instruction::Jsr(6),
+            Instruction::Jsr(10),
             Instruction::Iconst_0,
             Instruction::Jsr(6),
             Instruction::Pop,
@@ -1194,14 +1194,14 @@ fn invalid_legacy_returns_and_recursive_calls_are_rejected() {
         vec![Instruction::Jsr(0)],
         vec![Instruction::Jsr_w(-1), Instruction::Return],
         vec![
-            Instruction::Jsr(2),
+            Instruction::Jsr(4),
             Instruction::Return,
             Instruction::Astore_0,
-            Instruction::Jsr(2),
+            Instruction::Jsr(-1),
             Instruction::Ret(0),
         ],
         vec![
-            Instruction::Jsr(2),
+            Instruction::Jsr(4),
             Instruction::Return,
             Instruction::Astore_0,
             Instruction::Iconst_0,
@@ -1209,7 +1209,7 @@ fn invalid_legacy_returns_and_recursive_calls_are_rejected() {
             Instruction::Ret(0),
         ],
         vec![
-            Instruction::Jsr(2),
+            Instruction::Jsr(4),
             Instruction::Return,
             Instruction::Astore_1,
             Instruction::Lconst_0,
@@ -1217,14 +1217,14 @@ fn invalid_legacy_returns_and_recursive_calls_are_rejected() {
             Instruction::Ret(1),
         ],
         vec![
-            Instruction::Jsr(2),
+            Instruction::Jsr(4),
             Instruction::Return,
             Instruction::Astore_0,
             Instruction::Iload_0,
             Instruction::Ifeq(8),
             Instruction::Iconst_0,
             Instruction::Istore_0,
-            Instruction::Goto(8),
+            Instruction::Goto(3),
             Instruction::Ret(0),
         ],
     ] {

@@ -9,18 +9,15 @@ use std::fmt;
 /// It is used by debuggers to determine the name and type of a local variable at a given point
 /// in the method's execution.
 ///
-/// **Note on PC representation:** In this implementation, `start_pc` and `length` define a range
-/// of instruction indices. `start_pc` is the first instruction index where the variable is in scope,
-/// and `start_pc + length` is the first instruction index where it is no longer in scope. This
-/// differs from the raw byte offsets in the class file format.
+/// Program counters and scope lengths are measured in bytes in the method's code array.
 ///
 /// See the [JVMS §4.7.13](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.13)
 /// for more details.
 ///
 /// # Fields
 ///
-/// - `start_pc`: The instruction index (program counter) from which the local variable is in scope.
-/// - `length`: The number of subsequent instruction indices for which the variable remains in scope.
+/// - `start_pc`: The byte offset (program counter) from which the local variable is in scope.
+/// - `length`: The number of bytes for which the variable remains in scope.
 ///   The variable is in scope from `start_pc` to `start_pc + length - 1` inclusive.
 /// - `name_index`: An index into the `constant_pool` table. The entry at this index must be a
 ///   `CONSTANT_Utf8_info` structure representing the name of the local variable.
@@ -39,10 +36,10 @@ use std::fmt;
 /// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// // Example: A local variable "myVar" of type int, in slot 1,
-/// //          scoped from instruction index 5 for 10 instructions.
+/// //          scoped from byte offset 5 for 10 bytes.
 /// let lv_entry = LocalVariableTable {
-///     start_pc: 5,         // Scope starts at instruction index 5
-///     length: 10,          // In scope for 10 instructions (indices 5-14)
+///     start_pc: 5,         // Scope starts at byte offset 5
+///     length: 10,          // In scope for 10 bytes (indices 5-14)
 ///     name_index: 100,     // CP index for Utf8 "myVar"
 ///     descriptor_index: 101, // CP index for Utf8 "I" (int descriptor)
 ///     index: 1,            // Local variable array slot 1
@@ -72,10 +69,7 @@ pub struct LocalVariableTable {
 impl LocalVariableTable {
     /// Deserializes a `LocalVariableTable` entry from a byte stream.
     ///
-    /// Reads `start_pc`, `length`, `name_index`, `descriptor_index`, and `index` from the stream.
-    /// Note that `start_pc` and `length` are read as raw PC values/lengths (typically byte offsets
-    /// in a class file) and may need further mapping to logical instruction indices/counts
-    /// depending on the context.
+    /// Reads the fields directly, preserving JVM byte offsets and lengths.
     ///
     /// # Errors
     ///
@@ -120,10 +114,7 @@ impl LocalVariableTable {
 
     /// Serializes the `LocalVariableTable` entry to a byte vector.
     ///
-    /// Writes `start_pc`, `length`, `name_index`, `descriptor_index`, and `index` to the vector.
-    /// Note that `start_pc` and `length` are written directly; if they represent logical
-    /// instruction indices/counts, they must be converted to byte offsets/lengths before
-    /// serialization in the context of a `Code` attribute.
+    /// Writes the fields directly using JVM byte offsets and lengths.
     ///
     /// # Errors
     ///

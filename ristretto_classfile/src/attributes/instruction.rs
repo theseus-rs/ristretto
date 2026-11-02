@@ -14,89 +14,40 @@ mod stack_effect;
 /// Separate structure for the `tableswitch` instruction to limit the size of the `Instruction`
 /// enum.
 ///
-/// # Ristretto vs JVM Specification
-///
-/// In the JVM specification, `default` and each entry in `offsets` are signed 32-bit byte offsets
-/// relative to the byte position of the `tableswitch` instruction itself (after alignment padding).
-///
-/// In Ristretto, these fields store **relative logical instruction indices**: the signed difference
-/// between the target instruction's index and the `tableswitch` instruction's own index in the
-/// `Vec<Instruction>`.
-///
 /// # References
 ///
 /// - [JVMS §6.5.tableswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.tableswitch)
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TableSwitch {
-    /// Default branch target as a relative logical instruction index (target index minus this
-    /// instruction's index). The JVM spec stores this as a signed byte offset.
+    /// Signed byte offset from the opcode of this instruction to the default target.
     pub default: i32,
     pub low: i32,
     pub high: i32,
-    /// Branch targets as relative logical instruction indices (each target index minus this
-    /// instruction's index). The JVM spec stores these as signed byte offsets.
+    /// Signed byte offsets from the opcode of this instruction to each target.
     pub offsets: Vec<i32>,
 }
 
 /// Separate structure for the `lookupswitch` instruction to limit the size of the `Instruction`
 /// enum.
 ///
-/// # Ristretto vs JVM Specification
-///
-/// In the JVM specification, `default` and the offset of each match-offset pair are signed 32-bit
-/// byte offsets relative to the byte position of the `lookupswitch` instruction itself (after
-/// alignment padding).
-///
-/// In Ristretto, these fields store **relative logical instruction indices**: the signed difference
-/// between the target instruction's index and the `lookupswitch` instruction's own index in the
-/// `Vec<Instruction>`.
-///
 /// # References
 ///
 /// - [JVMS §6.5.lookupswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch)
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LookupSwitch {
-    /// Default branch target as a relative logical instruction index (target index minus this
-    /// instruction's index). The JVM spec stores this as a signed byte offset.
+    /// Signed byte offset from the opcode of this instruction to the default target.
     pub default: i32,
-    /// Match-offset pairs where each offset is a relative logical instruction index (target index
-    /// minus this instruction's index). The JVM spec stores these offsets as signed byte offsets.
+    /// Match-offset pairs with signed byte offsets relative to this instruction's opcode.
     pub pairs: IndexMap<i32, i32>,
 }
 
 /// A single JVM bytecode instruction.
 ///
 /// `Instruction` is the in-memory representation of one operation found in the `Code` attribute of
-/// a method. Every JVM opcode listed in JVMS §6.5 has exactly one corresponding variant. The
+/// a method. Branch operands are signed byte offsets relative to the start of the opcode.
+/// Switch operands use the same convention. The `wide` prefix is represented by `_w` variants.
+/// Every JVM opcode listed in JVMS §6.5 has exactly one corresponding variant. The
 /// mapping from a variant back to its opcode byte is exposed by [`Instruction::code`].
-///
-/// # Ristretto vs JVM Specification
-///
-/// The variant set and naming follow the JVM specification closely, with two intentional
-/// representational differences chosen to make in-memory analysis easier:
-///
-/// 1. **Branch targets are logical instruction indices, not byte offsets.**
-///    The JVM specification stores branch and switch targets as signed byte offsets relative to the
-///    start of the originating instruction. Ristretto stores them as indices into the surrounding
-///    `Vec<Instruction>`:
-///
-///    - Short branch instructions (`Ifeq`, `Ifne`, `Iflt`, `Ifge`, `Ifgt`, `Ifle`, `If_icmpeq`,
-///      `If_icmpne`, `If_icmplt`, `If_icmpge`, `If_icmpgt`, `If_icmple`, `If_acmpeq`, `If_acmpne`,
-///      `Goto`, `Jsr`, `Ifnull`, `Ifnonnull`) carry the **absolute** target index as `u16`.
-///    - Wide branch instructions (`Goto_w`, `Jsr_w`) carry the **absolute** target index as `i32`,
-///      matching the short branch convention while preserving the JVM operand width.
-///    - Switch instructions ([`TableSwitch`], [`LookupSwitch`]) store every offset as a **signed
-///      relative instruction index** (target index minus this instruction's index).
-///
-/// 2. **The `wide` prefix is folded into dedicated variants.** The JVM specification defines a
-///    standalone `wide` opcode (`0xc4`) that prefixes another instruction to widen its operand
-///    from one byte to two. Ristretto exposes the wide forms as first-class variants suffixed with
-///    `_w` ([`Iload_w`](Self::Iload_w), [`Lload_w`](Self::Lload_w), [`Fload_w`](Self::Fload_w),
-///    [`Dload_w`](Self::Dload_w), [`Aload_w`](Self::Aload_w), [`Istore_w`](Self::Istore_w),
-///    [`Lstore_w`](Self::Lstore_w), [`Fstore_w`](Self::Fstore_w), [`Dstore_w`](Self::Dstore_w),
-///    [`Astore_w`](Self::Astore_w), [`Ret_w`](Self::Ret_w), [`Iinc_w`](Self::Iinc_w)). Encoding
-///    these variants in `to_bytes` correctly emits the `wide` prefix; decoding in `from_bytes`
-///    consumes it. There is no `Wide` variant.
 ///
 /// # References
 ///
@@ -718,206 +669,94 @@ pub enum Instruction {
     Dcmpg,
     /// Branch if integer comparison with zero succeeds (`value == 0`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
-    Ifeq(u16),
+    Ifeq(i16),
     /// Branch if integer comparison with zero succeeds (`value != 0`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
-    Ifne(u16),
+    Ifne(i16),
     /// Branch if integer comparison with zero succeeds (`value < 0`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
-    Iflt(u16),
+    Iflt(i16),
     /// Branch if integer comparison with zero succeeds (`value >= 0`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
-    Ifge(u16),
+    Ifge(i16),
     /// Branch if integer comparison with zero succeeds (`value > 0`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
-    Ifgt(u16),
+    Ifgt(i16),
     /// Branch if integer comparison with zero succeeds (`value <= 0`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
-    Ifle(u16),
+    Ifle(i16),
     /// Branch if two integers compare equal (`value1 == value2`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
-    If_icmpeq(u16),
+    If_icmpeq(i16),
     /// Branch if two integers compare not equal (`value1 != value2`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
-    If_icmpne(u16),
+    If_icmpne(i16),
     /// Branch if two integers compare less than (`value1 < value2`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
-    If_icmplt(u16),
+    If_icmplt(i16),
     /// Branch if two integers compare greater than or equal (`value1 >= value2`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
-    If_icmpge(u16),
+    If_icmpge(i16),
     /// Branch if two integers compare greater than (`value1 > value2`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
-    If_icmpgt(u16),
+    If_icmpgt(i16),
     /// Branch if two integers compare less than or equal (`value1 <= value2`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
-    If_icmple(u16),
+    If_icmple(i16),
     /// Branch if two reference values compare equal (`value1 == value2`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_acmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond)
-    If_acmpeq(u16),
+    If_acmpeq(i16),
     /// Branch if two reference values compare not equal (`value1 != value2`).
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.if_acmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond)
-    If_acmpne(u16),
+    If_acmpne(i16),
     /// Branch unconditionally to a target instruction.
-    ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.goto](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto)
-    Goto(u16),
+    Goto(i16),
     /// Jump to a subroutine and push the return address.
-    ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the subroutine target as a signed 16-bit byte offset relative
-    /// to the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.jsr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr)
-    Jsr(u16),
+    Jsr(i16),
     ///
     /// # References
     /// - [JVMS §6.5.ret](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret)
     Ret(u8),
     /// Access jump table by index and jump.
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification stores `default` and each entry in `TableSwitch::offsets` as signed
-    /// 32-bit byte offsets relative to the byte position of this instruction (after alignment
-    /// padding). In Ristretto these are **relative logical instruction indices**: the signed
-    /// difference between the target instruction's index and this instruction's own index in the
-    /// `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.tableswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.tableswitch)
     Tableswitch(Box<TableSwitch>),
     /// Access jump table by key match and jump.
-    ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification stores `default` and each offset in `LookupSwitch::pairs` as signed
-    /// 32-bit byte offsets relative to the byte position of this instruction (after alignment
-    /// padding). In Ristretto these are **relative logical instruction indices**: the signed
-    /// difference between the target instruction's index and this instruction's own index in the
-    /// `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.lookupswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch)
@@ -1031,44 +870,20 @@ pub enum Instruction {
     Multianewarray(u16, u8),
     /// Branch if reference is `null`.
     ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
-    ///
     /// # References
     /// - [JVMS §6.5.ifnull](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnull)
-    Ifnull(u16),
+    Ifnull(i16),
     /// Branch if reference is not `null`.
-    ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.ifnonnull](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnonnull)
-    Ifnonnull(u16),
-    /// Branch unconditionally to a target instruction (wide index).
-    ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the branch target as a signed 32-bit byte offset relative to
-    /// the start of this instruction. In Ristretto the `i32` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
+    Ifnonnull(i16),
+    /// Branch unconditionally using a signed 32-bit byte offset.
     ///
     /// # References
     /// - [JVMS §6.5.goto_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto_w)
     Goto_w(i32),
-    /// Jump to a subroutine and push the return address (wide index).
-    ///
-    /// # Ristretto vs JVM Specification
-    ///
-    /// The JVM specification encodes the subroutine target as a signed 32-bit byte offset relative
-    /// to the start of this instruction. In Ristretto the `i32` parameter is an **absolute logical
-    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
+    /// Jump to a subroutine using a signed 32-bit byte offset and push the return address.
     ///
     /// # References
     /// - [JVMS §6.5.jsr_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr_w)
@@ -1178,6 +993,101 @@ pub enum Instruction {
 }
 
 impl Instruction {
+    /// Signed byte displacements of all explicit branch targets, including switch defaults.
+    pub fn branch_offsets(&self) -> impl Iterator<Item = i32> + '_ {
+        let (target, offsets, pairs): (Option<i32>, &[i32], Option<&IndexMap<i32, i32>>) =
+            match self {
+                Self::Ifeq(offset)
+                | Self::Ifne(offset)
+                | Self::Iflt(offset)
+                | Self::Ifge(offset)
+                | Self::Ifgt(offset)
+                | Self::Ifle(offset)
+                | Self::If_icmpeq(offset)
+                | Self::If_icmpne(offset)
+                | Self::If_icmplt(offset)
+                | Self::If_icmpge(offset)
+                | Self::If_icmpgt(offset)
+                | Self::If_icmple(offset)
+                | Self::If_acmpeq(offset)
+                | Self::If_acmpne(offset)
+                | Self::Goto(offset)
+                | Self::Jsr(offset)
+                | Self::Ifnull(offset)
+                | Self::Ifnonnull(offset) => (Some(i32::from(*offset)), &[], None),
+                Self::Goto_w(offset) | Self::Jsr_w(offset) => (Some(*offset), &[], None),
+                Self::Tableswitch(table) => (Some(table.default), &table.offsets, None),
+                Self::Lookupswitch(table) => (Some(table.default), &[], Some(&table.pairs)),
+                _ => (None, &[], None),
+            };
+        target
+            .into_iter()
+            .chain(offsets.iter().copied())
+            .chain(pairs.into_iter().flat_map(|pairs| pairs.values().copied()))
+    }
+
+    /// Number of encoded bytes, including switch alignment at `byte_offset`.
+    #[must_use]
+    pub fn byte_len(&self, byte_offset: usize) -> usize {
+        match self {
+            Self::Tableswitch(table) => 1 + (3 - byte_offset % 4) + 12 + 4 * table.offsets.len(),
+            Self::Lookupswitch(table) => 1 + (3 - byte_offset % 4) + 8 + 8 * table.pairs.len(),
+            Self::Iinc_w(..) => 6,
+            Self::Iload_w(..)
+            | Self::Lload_w(..)
+            | Self::Fload_w(..)
+            | Self::Dload_w(..)
+            | Self::Aload_w(..)
+            | Self::Istore_w(..)
+            | Self::Lstore_w(..)
+            | Self::Fstore_w(..)
+            | Self::Dstore_w(..)
+            | Self::Astore_w(..)
+            | Self::Ret_w(..) => 4,
+            _ => match self.code() {
+                16 | 18 | 21..=25 | 54..=58 | 169 | 188 => 2,
+                17 | 19 | 20 | 132 | 153..=168 | 178..=184 | 187 | 189 | 192 | 193 | 198 | 199 => 3,
+                197 => 4,
+                185 | 186 | 200 | 201 => 5,
+                _ => 1,
+            },
+        }
+    }
+
+    /// Iterate over instructions and their JVM bytecode offsets.
+    pub fn with_offsets(code: &[Self]) -> impl Iterator<Item = (usize, &Self)> {
+        code.iter().scan(0, |offset, instruction| {
+            let position = *offset;
+            *offset += instruction.byte_len(position);
+            Some((position, instruction))
+        })
+    }
+
+    /// Encode a complete code array without changing branch operands.
+    ///
+    /// # Errors
+    /// Returns an error if an instruction cannot be encoded.
+    pub fn encode(code: &[Self]) -> Result<Vec<u8>> {
+        let mut bytes = Cursor::new(Vec::new());
+        for instruction in code {
+            instruction.to_bytes(&mut bytes)?;
+        }
+        Ok(bytes.into_inner())
+    }
+
+    /// Decode a complete code array, preserving signed byte offsets.
+    ///
+    /// # Errors
+    /// Returns an error for invalid or truncated instructions.
+    pub fn decode(code: &[u8]) -> Result<Vec<Self>> {
+        let mut reader = ByteReader::new(code);
+        let mut instructions = Vec::with_capacity(code.len() / 2);
+        while reader.remaining() != 0 {
+            instructions.push(Self::from_bytes(&mut reader)?);
+        }
+        Ok(instructions)
+    }
+
     /// Return the code for the instruction element.
     #[expect(clippy::match_same_arms)]
     #[expect(clippy::too_many_lines)]
@@ -1511,7 +1421,6 @@ impl Instruction {
     /// Returns an error if the instruction is invalid.
     #[expect(clippy::too_many_lines)]
     pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<Instruction> {
-        let current_position = i32::try_from(bytes.position())?;
         let code = bytes.read_u8()?;
 
         let instruction = match code {
@@ -1668,22 +1577,22 @@ impl Instruction {
             150 => Instruction::Fcmpg,
             151 => Instruction::Dcmpl,
             152 => Instruction::Dcmpg,
-            153 => Instruction::Ifeq(Self::read_offset(bytes, current_position)?),
-            154 => Instruction::Ifne(Self::read_offset(bytes, current_position)?),
-            155 => Instruction::Iflt(Self::read_offset(bytes, current_position)?),
-            156 => Instruction::Ifge(Self::read_offset(bytes, current_position)?),
-            157 => Instruction::Ifgt(Self::read_offset(bytes, current_position)?),
-            158 => Instruction::Ifle(Self::read_offset(bytes, current_position)?),
-            159 => Instruction::If_icmpeq(Self::read_offset(bytes, current_position)?),
-            160 => Instruction::If_icmpne(Self::read_offset(bytes, current_position)?),
-            161 => Instruction::If_icmplt(Self::read_offset(bytes, current_position)?),
-            162 => Instruction::If_icmpge(Self::read_offset(bytes, current_position)?),
-            163 => Instruction::If_icmpgt(Self::read_offset(bytes, current_position)?),
-            164 => Instruction::If_icmple(Self::read_offset(bytes, current_position)?),
-            165 => Instruction::If_acmpeq(Self::read_offset(bytes, current_position)?),
-            166 => Instruction::If_acmpne(Self::read_offset(bytes, current_position)?),
-            167 => Instruction::Goto(Self::read_offset(bytes, current_position)?),
-            168 => Instruction::Jsr(Self::read_offset(bytes, current_position)?),
+            153 => Instruction::Ifeq(bytes.read_i16()?),
+            154 => Instruction::Ifne(bytes.read_i16()?),
+            155 => Instruction::Iflt(bytes.read_i16()?),
+            156 => Instruction::Ifge(bytes.read_i16()?),
+            157 => Instruction::Ifgt(bytes.read_i16()?),
+            158 => Instruction::Ifle(bytes.read_i16()?),
+            159 => Instruction::If_icmpeq(bytes.read_i16()?),
+            160 => Instruction::If_icmpne(bytes.read_i16()?),
+            161 => Instruction::If_icmplt(bytes.read_i16()?),
+            162 => Instruction::If_icmpge(bytes.read_i16()?),
+            163 => Instruction::If_icmpgt(bytes.read_i16()?),
+            164 => Instruction::If_icmple(bytes.read_i16()?),
+            165 => Instruction::If_acmpeq(bytes.read_i16()?),
+            166 => Instruction::If_acmpne(bytes.read_i16()?),
+            167 => Instruction::Goto(bytes.read_i16()?),
+            168 => Instruction::Jsr(bytes.read_i16()?),
             169 => Instruction::Ret(bytes.read_u8()?),
             170 => {
                 let position = u32::try_from(bytes.position())?;
@@ -1798,22 +1707,10 @@ impl Instruction {
                 }
             }
             197 => Instruction::Multianewarray(bytes.read_u16()?, bytes.read_u8()?),
-            198 => Instruction::Ifnull(Self::read_offset(bytes, current_position)?),
-            199 => Instruction::Ifnonnull(Self::read_offset(bytes, current_position)?),
-            200 => {
-                let offset = bytes.read_i32()?;
-                let position = current_position
-                    .checked_add(offset)
-                    .ok_or(InvalidInstruction(code))?;
-                Instruction::Goto_w(position)
-            }
-            201 => {
-                let offset = bytes.read_i32()?;
-                let position = current_position
-                    .checked_add(offset)
-                    .ok_or(InvalidInstruction(code))?;
-                Instruction::Jsr_w(position)
-            }
+            198 => Instruction::Ifnull(bytes.read_i16()?),
+            199 => Instruction::Ifnonnull(bytes.read_i16()?),
+            200 => Instruction::Goto_w(bytes.read_i32()?),
+            201 => Instruction::Jsr_w(bytes.read_i32()?),
             202 => Instruction::Breakpoint,
             254 => Instruction::Impdep1,
             255 => Instruction::Impdep2,
@@ -1822,16 +1719,31 @@ impl Instruction {
         Ok(instruction)
     }
 
-    /// Read a signed 16-bit offset from the bytes.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the offset is invalid.
-    #[inline]
-    fn read_offset(bytes: &mut ByteReader<'_>, current_position: i32) -> Result<u16> {
-        let offset = bytes.read_i16()?;
-        let position = u16::try_from(current_position + i32::from(offset))?;
-        Ok(position)
+    /// Check variable-length operands without allocating an encoded code array.
+    pub(crate) fn validate_encoding(&self) -> Result<()> {
+        match self {
+            Self::Tableswitch(table_switch) => {
+                if i64::from(table_switch.high) - i64::from(table_switch.low) + 1
+                    != i64::try_from(table_switch.offsets.len())?
+                    || table_switch.high < table_switch.low
+                {
+                    return Err(InvalidInstruction(170));
+                }
+            }
+            Self::Lookupswitch(lookup_switch) => {
+                if lookup_switch
+                    .pairs
+                    .keys()
+                    .zip(lookup_switch.pairs.keys().skip(1))
+                    .any(|(a, b)| a >= b)
+                {
+                    return Err(InvalidInstruction(171));
+                }
+                i32::try_from(lookup_switch.pairs.len())?;
+            }
+            _ => {}
+        }
+        Ok(())
     }
 
     /// Serialize the `Instruction` to bytes.
@@ -1842,6 +1754,7 @@ impl Instruction {
     #[expect(clippy::too_many_lines)]
     #[expect(clippy::match_same_arms)]
     pub fn to_bytes(&self, bytes: &mut Cursor<Vec<u8>>) -> Result<()> {
+        self.validate_encoding()?;
         bytes.write_u8(self.code())?;
 
         match self {
@@ -1864,30 +1777,24 @@ impl Instruction {
                 bytes.write_u8(*value1)?;
                 bytes.write_i8(*value2)?;
             }
-            Instruction::Ifeq(value) => Self::write_offset(bytes, *value)?,
-            Instruction::Ifne(value) => Self::write_offset(bytes, *value)?,
-            Instruction::Iflt(value) => Self::write_offset(bytes, *value)?,
-            Instruction::Ifge(value) => Self::write_offset(bytes, *value)?,
-            Instruction::Ifgt(value) => Self::write_offset(bytes, *value)?,
-            Instruction::Ifle(value) => Self::write_offset(bytes, *value)?,
-            Instruction::If_icmpeq(value) => Self::write_offset(bytes, *value)?,
-            Instruction::If_icmpne(value) => Self::write_offset(bytes, *value)?,
-            Instruction::If_icmplt(value) => Self::write_offset(bytes, *value)?,
-            Instruction::If_icmpge(value) => Self::write_offset(bytes, *value)?,
-            Instruction::If_icmpgt(value) => Self::write_offset(bytes, *value)?,
-            Instruction::If_icmple(value) => Self::write_offset(bytes, *value)?,
-            Instruction::If_acmpeq(value) => Self::write_offset(bytes, *value)?,
-            Instruction::If_acmpne(value) => Self::write_offset(bytes, *value)?,
-            Instruction::Goto(value) => Self::write_offset(bytes, *value)?,
-            Instruction::Jsr(value) => Self::write_offset(bytes, *value)?,
+            Instruction::Ifeq(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::Ifne(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::Iflt(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::Ifge(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::Ifgt(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::Ifle(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::If_icmpeq(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::If_icmpne(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::If_icmplt(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::If_icmpge(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::If_icmpgt(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::If_icmple(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::If_acmpeq(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::If_acmpne(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::Goto(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::Jsr(value) => bytes.write_i16::<BigEndian>(*value)?,
             Instruction::Ret(value) => bytes.write_u8(*value)?,
             Instruction::Tableswitch(table_switch) => {
-                if i64::from(table_switch.high) - i64::from(table_switch.low) + 1
-                    != i64::try_from(table_switch.offsets.len())?
-                    || table_switch.high < table_switch.low
-                {
-                    return Err(InvalidInstruction(170));
-                }
                 let position = i32::try_from(bytes.position())?;
                 let padding = (4 - (position % 4)) % 4;
                 for _ in 0..padding {
@@ -1901,14 +1808,6 @@ impl Instruction {
                 }
             }
             Instruction::Lookupswitch(lookup_switch) => {
-                if lookup_switch
-                    .pairs
-                    .keys()
-                    .zip(lookup_switch.pairs.keys().skip(1))
-                    .any(|(a, b)| a >= b)
-                {
-                    return Err(InvalidInstruction(171));
-                }
                 let position = i32::try_from(bytes.position())?;
                 let padding = (4 - (position % 4)) % 4;
                 for _ in 0..padding {
@@ -1947,22 +1846,10 @@ impl Instruction {
                 bytes.write_u16::<BigEndian>(*value1)?;
                 bytes.write_u8(*value2)?;
             }
-            Instruction::Ifnull(value) => Self::write_offset(bytes, *value)?,
-            Instruction::Ifnonnull(value) => Self::write_offset(bytes, *value)?,
-            Instruction::Goto_w(value) => {
-                let current_position = i32::try_from(bytes.position())? - 1;
-                let offset = value
-                    .checked_sub(current_position)
-                    .ok_or(InvalidInstruction(self.code()))?;
-                bytes.write_i32::<BigEndian>(offset)?;
-            }
-            Instruction::Jsr_w(value) => {
-                let current_position = i32::try_from(bytes.position())? - 1;
-                let offset = value
-                    .checked_sub(current_position)
-                    .ok_or(InvalidInstruction(self.code()))?;
-                bytes.write_i32::<BigEndian>(offset)?;
-            }
+            Instruction::Ifnull(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::Ifnonnull(value) => bytes.write_i16::<BigEndian>(*value)?,
+            Instruction::Goto_w(value) => bytes.write_i32::<BigEndian>(*value)?,
+            Instruction::Jsr_w(value) => bytes.write_i32::<BigEndian>(*value)?,
             // Wide instructions
             Instruction::Iload_w(value) => {
                 bytes.write_u8(21)?;
@@ -2018,18 +1905,6 @@ impl Instruction {
         Ok(())
     }
 
-    /// Write a signed 16-bit offset to the bytes.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the offset is invalid.
-    fn write_offset(bytes: &mut Cursor<Vec<u8>>, offset: u16) -> Result<()> {
-        let current_position = i32::try_from(bytes.position())? - 1;
-        let offset = i16::try_from(i32::from(offset) - current_position)?;
-        bytes.write_i16::<BigEndian>(offset)?;
-        Ok(())
-    }
-
     /// Get a formatted string representation of the instruction.
     ///
     /// # Errors
@@ -2067,10 +1942,33 @@ impl Instruction {
     }
 }
 
+impl Instruction {
+    /// Display branch destinations relative to the start of the code array, without
+    /// changing the signed displacements stored in the instruction.
+    pub(crate) fn display_at(&self, byte_offset: usize) -> impl fmt::Display + '_ {
+        InstructionDisplay {
+            instruction: self,
+            byte_offset,
+        }
+    }
+}
+
+struct InstructionDisplay<'a> {
+    instruction: &'a Instruction,
+    byte_offset: usize,
+}
+
 impl fmt::Display for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.display_at(0).fmt(f)
+    }
+}
+
+impl fmt::Display for InstructionDisplay<'_> {
     #[expect(clippy::too_many_lines)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let byte_offset = i128::try_from(self.byte_offset).map_err(|_| fmt::Error)?;
+        match self.instruction {
             Instruction::Nop => write!(f, "nop"),
             Instruction::Aconst_null => write!(f, "aconst_null"),
             Instruction::Iconst_m1 => write!(f, "iconst_m1"),
@@ -2224,22 +2122,38 @@ impl fmt::Display for Instruction {
             Instruction::Fcmpg => write!(f, "fcmpg"),
             Instruction::Dcmpl => write!(f, "dcmpl"),
             Instruction::Dcmpg => write!(f, "dcmpg"),
-            Instruction::Ifeq(value) => write!(f, "ifeq {value}"),
-            Instruction::Ifne(value) => write!(f, "ifne {value}"),
-            Instruction::Iflt(value) => write!(f, "iflt {value}"),
-            Instruction::Ifge(value) => write!(f, "ifge {value}"),
-            Instruction::Ifgt(value) => write!(f, "ifgt {value}"),
-            Instruction::Ifle(value) => write!(f, "ifle {value}"),
-            Instruction::If_icmpeq(value) => write!(f, "if_icmpeq {value}"),
-            Instruction::If_icmpne(value) => write!(f, "if_icmpne {value}"),
-            Instruction::If_icmplt(value) => write!(f, "if_icmplt {value}"),
-            Instruction::If_icmpge(value) => write!(f, "if_icmpge {value}"),
-            Instruction::If_icmpgt(value) => write!(f, "if_icmpgt {value}"),
-            Instruction::If_icmple(value) => write!(f, "if_icmple {value}"),
-            Instruction::If_acmpeq(value) => write!(f, "if_acmpeq {value}"),
-            Instruction::If_acmpne(value) => write!(f, "if_acmpne {value}"),
-            Instruction::Goto(value) => write!(f, "goto {value}"),
-            Instruction::Jsr(value) => write!(f, "jsr {value}"),
+            Instruction::Ifeq(value) => write!(f, "ifeq {}", byte_offset + i128::from(*value)),
+            Instruction::Ifne(value) => write!(f, "ifne {}", byte_offset + i128::from(*value)),
+            Instruction::Iflt(value) => write!(f, "iflt {}", byte_offset + i128::from(*value)),
+            Instruction::Ifge(value) => write!(f, "ifge {}", byte_offset + i128::from(*value)),
+            Instruction::Ifgt(value) => write!(f, "ifgt {}", byte_offset + i128::from(*value)),
+            Instruction::Ifle(value) => write!(f, "ifle {}", byte_offset + i128::from(*value)),
+            Instruction::If_icmpeq(value) => {
+                write!(f, "if_icmpeq {}", byte_offset + i128::from(*value))
+            }
+            Instruction::If_icmpne(value) => {
+                write!(f, "if_icmpne {}", byte_offset + i128::from(*value))
+            }
+            Instruction::If_icmplt(value) => {
+                write!(f, "if_icmplt {}", byte_offset + i128::from(*value))
+            }
+            Instruction::If_icmpge(value) => {
+                write!(f, "if_icmpge {}", byte_offset + i128::from(*value))
+            }
+            Instruction::If_icmpgt(value) => {
+                write!(f, "if_icmpgt {}", byte_offset + i128::from(*value))
+            }
+            Instruction::If_icmple(value) => {
+                write!(f, "if_icmple {}", byte_offset + i128::from(*value))
+            }
+            Instruction::If_acmpeq(value) => {
+                write!(f, "if_acmpeq {}", byte_offset + i128::from(*value))
+            }
+            Instruction::If_acmpne(value) => {
+                write!(f, "if_acmpne {}", byte_offset + i128::from(*value))
+            }
+            Instruction::Goto(value) => write!(f, "goto {}", byte_offset + i128::from(*value)),
+            Instruction::Jsr(value) => write!(f, "jsr {}", byte_offset + i128::from(*value)),
             Instruction::Ret(value) => write!(f, "ret {value}"),
             Instruction::Tableswitch(table_switch) => {
                 let width = 12;
@@ -2248,9 +2162,11 @@ impl fmt::Display for Instruction {
                 writeln!(f, "tableswitch {{ // {low} to {high}")?;
                 for (i, offset) in table_switch.offsets.iter().enumerate() {
                     let value = table_switch.low + i32::try_from(i).map_err(|_| fmt::Error)?;
-                    writeln!(f, "        {value:>width$}: {offset}")?;
+                    let target = byte_offset + i128::from(*offset);
+                    writeln!(f, "        {value:>width$}: {target}")?;
                 }
-                writeln!(f, "        {:>width$}: {}", "default", table_switch.default)?;
+                let default = byte_offset + i128::from(table_switch.default);
+                writeln!(f, "        {:>width$}: {default}", "default")?;
                 write!(f, "        }}")
             }
             Instruction::Lookupswitch(lookup_switch) => {
@@ -2258,9 +2174,10 @@ impl fmt::Display for Instruction {
                 writeln!(f, "lookupswitch {{ // {}", lookup_switch.pairs.len())?;
                 for pair in &lookup_switch.pairs {
                     let (value, offset) = pair;
-                    writeln!(f, "        {value:>width$}: {offset}")?;
+                    let target = byte_offset + i128::from(*offset);
+                    writeln!(f, "        {value:>width$}: {target}")?;
                 }
-                let default = lookup_switch.default;
+                let default = byte_offset + i128::from(lookup_switch.default);
                 writeln!(f, "        {:>width$}: {default}", "default")?;
                 write!(f, "        }}")
             }
@@ -2292,10 +2209,12 @@ impl fmt::Display for Instruction {
             Instruction::Monitorexit => write!(f, "monitorexit"),
             Instruction::Wide => write!(f, "wide"),
             Instruction::Multianewarray(value, dim) => write!(f, "multianewarray #{value}, {dim}"),
-            Instruction::Ifnull(value) => write!(f, "ifnull {value}"),
-            Instruction::Ifnonnull(value) => write!(f, "ifnonnull {value}"),
-            Instruction::Goto_w(value) => write!(f, "goto_w {value}"),
-            Instruction::Jsr_w(value) => write!(f, "jsr_w {value}"),
+            Instruction::Ifnull(value) => write!(f, "ifnull {}", byte_offset + i128::from(*value)),
+            Instruction::Ifnonnull(value) => {
+                write!(f, "ifnonnull {}", byte_offset + i128::from(*value))
+            }
+            Instruction::Goto_w(value) => write!(f, "goto_w {}", byte_offset + i128::from(*value)),
+            Instruction::Jsr_w(value) => write!(f, "jsr_w {}", byte_offset + i128::from(*value)),
             Instruction::Breakpoint => write!(f, "breakpoint"),
             Instruction::Impdep1 => write!(f, "impdep1"),
             Instruction::Impdep2 => write!(f, "impdep2"),
@@ -2337,6 +2256,7 @@ mod test {
 
     fn test_instruction(instruction: &Instruction, expected_bytes: &[u8], code: u8) -> Result<()> {
         assert_eq!(code, instruction.code());
+        assert_eq!(expected_bytes.len(), instruction.byte_len(0));
 
         let mut buffer = Cursor::new(Vec::new());
         instruction.to_bytes(&mut buffer)?;

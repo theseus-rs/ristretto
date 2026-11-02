@@ -79,11 +79,9 @@ mod test {
             ristretto_classloader::Object::new(class)?,
         ))?;
 
-        let result = dup(stack)?;
-        assert_eq!(Continue, result);
+        dup(stack)?;
 
-        let result = dup(stack)?;
-        assert_eq!(Continue, result);
+        dup(stack)?;
 
         stack.push_int(42)?;
         let result = putfield(&frame, stack, field_index).await?;
@@ -135,8 +133,7 @@ mod test {
         let stack = &mut OperandStack::with_max_size(3);
         let result = new(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
-        let result = dup(stack)?;
-        assert_eq!(Continue, result);
+        dup(stack)?;
         stack.push_int(42)?;
         let result = putfield(&frame, stack, field_index).await;
         assert!(result.is_err());

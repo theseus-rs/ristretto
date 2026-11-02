@@ -106,7 +106,7 @@ pub enum VerificationType {
     /// This allows tracking which uninitialized reference becomes which initialized type.
     Uninitialized(u16),
 
-    /// Return instruction index used by legacy jsr/ret subroutines.
+    /// Return bytecode offset used by legacy jsr/ret subroutines.
     ReturnAddress(u16),
 
     /// Object reference type.

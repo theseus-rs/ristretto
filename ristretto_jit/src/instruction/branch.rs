@@ -17,16 +17,16 @@ pub(crate) fn ifeq(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -53,16 +53,16 @@ pub(crate) fn ifne(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -89,16 +89,16 @@ pub(crate) fn iflt(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -127,16 +127,16 @@ pub(crate) fn ifge(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -166,16 +166,16 @@ pub(crate) fn ifgt(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -204,16 +204,16 @@ pub(crate) fn ifle(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -242,17 +242,17 @@ pub(crate) fn if_icmpeq(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value2 = stack.pop()?;
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -278,17 +278,17 @@ pub(crate) fn if_icmpne(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value2 = stack.pop()?;
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -314,17 +314,17 @@ pub(crate) fn if_icmplt(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value2 = stack.pop()?;
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -352,17 +352,17 @@ pub(crate) fn if_icmpge(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value2 = stack.pop()?;
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -391,17 +391,17 @@ pub(crate) fn if_icmpgt(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value2 = stack.pop()?;
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -429,17 +429,17 @@ pub(crate) fn if_icmple(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value2 = stack.pop()?;
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -467,17 +467,17 @@ pub(crate) fn if_acmpeq(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value2 = stack.pop()?;
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -503,17 +503,17 @@ pub(crate) fn if_acmpne(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value2 = stack.pop()?;
     let value1 = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -539,16 +539,16 @@ pub(crate) fn ifnull(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -575,16 +575,16 @@ pub(crate) fn ifnonnull(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let value = stack.pop()?;
-    let address = usize::from(address);
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
 
     let then_block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(1)
+        .checked_add(3)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -610,10 +610,11 @@ pub(crate) fn goto(
     function_builder: &mut FunctionBuilder,
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
-    address: u16,
+    program_counter: usize,
+    address: i16,
 ) -> Result<()> {
     let address = i32::from(address);
-    goto_w(function_builder, blocks, stack, address)
+    goto_w(function_builder, blocks, stack, program_counter, address)
 }
 
 /// # References
@@ -624,9 +625,10 @@ pub(crate) fn goto_w(
     function_builder: &mut FunctionBuilder,
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
+    program_counter: usize,
     address: i32,
 ) -> Result<()> {
-    let address = usize::try_from(address)?;
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
     let block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
@@ -644,10 +646,10 @@ pub(crate) fn jsr(
     blocks: &AHashMap<usize, Block>,
     stack: &mut OperandStack,
     program_counter: usize,
-    address: u16,
+    address: i16,
 ) -> Result<()> {
     let address = i32::from(address);
-    jsr_w(function_builder, blocks, stack, program_counter, address)
+    jsr_at(function_builder, blocks, stack, program_counter, address, 3)
 }
 
 /// # References
@@ -661,14 +663,25 @@ pub(crate) fn jsr_w(
     program_counter: usize,
     address: i32,
 ) -> Result<()> {
+    jsr_at(function_builder, blocks, stack, program_counter, address, 5)
+}
+
+fn jsr_at(
+    function_builder: &mut FunctionBuilder,
+    blocks: &AHashMap<usize, Block>,
+    stack: &mut OperandStack,
+    program_counter: usize,
+    address: i32,
+    length: i64,
+) -> Result<()> {
     let next_address = i64::try_from(program_counter)?;
     let next_address = next_address
-        .checked_add(1)
+        .checked_add(length)
         .ok_or_else(|| InvalidBlockAddress(program_counter))?;
     let value = function_builder.ins().iconst(types::I32, next_address);
     stack.push(value)?;
 
-    let address = usize::try_from(address)?;
+    let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
     let block = blocks
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;

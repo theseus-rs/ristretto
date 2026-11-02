@@ -85,6 +85,33 @@ fn create_static_void_method(code: Vec<Instruction>, max_stack: u16, max_locals:
     create_static_method_with_descriptor(4, code, max_stack, max_locals)
 }
 
+#[test]
+fn test_many_constructor_allocation_sites() -> Result<()> {
+    for (version, path) in [
+        (Version::Java5 { minor: 0 }, VerificationPath::Inference),
+        (Version::Java8 { minor: 0 }, VerificationPath::FastPath),
+    ] {
+        let mut class = create_test_class_file(version)?;
+        let constructor =
+            class
+                .constant_pool
+                .add_method_ref(class.super_class, CONSTRUCTOR_NAME, "()V")?;
+        // Multi-byte instructions ensure allocation byte offsets differ from indices.
+        let mut code = vec![Instruction::Sipush(1), Instruction::Pop];
+        for _ in 0..8_000 {
+            code.extend([
+                Instruction::New(class.super_class),
+                Instruction::Invokespecial(constructor),
+            ]);
+        }
+        code.push(Instruction::Return);
+        let method = create_static_void_method(code, 1, 0);
+        let result = verify_method(&class, &method, &TestContext, &VerifierConfig::strict())?;
+        assert_eq!(result.path_used, path);
+    }
+    Ok(())
+}
+
 fn create_static_method_with_descriptor(
     descriptor_index: u16,
     code: Vec<Instruction>,
@@ -319,9 +346,9 @@ fn test_inference_merges_reference_types() -> Result<()> {
     let context = TestContext;
     let merge_code = vec![
         Instruction::Iload_2,
-        Instruction::Ifeq(4),
+        Instruction::Ifeq(7),
         Instruction::Aload_0,
-        Instruction::Goto(5),
+        Instruction::Goto(4),
         Instruction::Aload_1,
         Instruction::Pop,
         Instruction::Return,
@@ -368,9 +395,9 @@ fn test_inference_merges_incompatible_primitive_types_to_top() -> Result<()> {
         descriptor,
         vec![
             Instruction::Iload_0,
-            Instruction::Ifeq(4),
+            Instruction::Ifeq(7),
             Instruction::Iconst_0,
-            Instruction::Goto(5),
+            Instruction::Goto(4),
             Instruction::Fconst_0,
             Instruction::Pop,
             Instruction::Return,
@@ -393,9 +420,9 @@ fn test_inference_merges_incompatible_primitive_types_to_top() -> Result<()> {
         descriptor,
         vec![
             Instruction::Iload_0,
-            Instruction::Ifeq(4),
+            Instruction::Ifeq(9),
             Instruction::New(object_class),
-            Instruction::Goto(5),
+            Instruction::Goto(6),
             Instruction::New(object_class),
             Instruction::Pop,
             Instruction::Return,
@@ -428,17 +455,17 @@ fn test_java8_with_stackmap_uses_fast_path() -> Result<()> {
     // Note: Ifeq pops the int, so at branch target we have empty stack
     let code = vec![
         Instruction::Iconst_0, // 0: push 0
-        Instruction::Ifeq(4),  // 1: if == 0, jump to return (this consumes the int)
+        Instruction::Ifeq(5),  // 1: if == 0, jump to return (this consumes the int)
         Instruction::Iconst_1, // 2: push 1 (fallthrough case)
         Instruction::Pop,      // 3: pop
         Instruction::Return,   // 4: return
     ];
 
-    // Create StackMapTable for the branch target at instruction index 4.
-    // The API stores instruction indices; serialization converts them to byte offsets.
+    // Create StackMapTable for the branch target at byte offset 6.
+    // Stack map frame deltas count bytes.
     // SameFrame type 0-63 means offset_delta = frame_type
     let stack_map_frames = vec![
-        StackFrame::SameFrame { frame_type: 4 }, // Frame at instruction 4 (return)
+        StackFrame::SameFrame { frame_type: 6 }, // Frame at byte offset 6 (return)
     ];
 
     let code_attribute = Attribute::Code {
@@ -482,7 +509,7 @@ fn test_fallback_to_inference_when_configured() -> Result<()> {
     // Code with branch but no StackMapTable
     let code = vec![
         Instruction::Iconst_0,
-        Instruction::Ifeq(4), // Branch without StackMapTable
+        Instruction::Ifeq(5), // Branch without StackMapTable
         Instruction::Iconst_1,
         Instruction::Pop,
         Instruction::Return, // Target
@@ -518,6 +545,65 @@ fn test_fallback_to_inference_when_configured() -> Result<()> {
         "Should succeed with fallback: {:?}",
         result.err()
     );
+    Ok(())
+}
+
+#[test]
+fn test_zero_target_loop_rejects_incompatible_local_types() -> Result<()> {
+    for version in [Version::Java6 { minor: 0 }, Version::Java8 { minor: 0 }] {
+        let mut class = create_test_class_file(version)?;
+        let descriptor = class.constant_pool.add_utf8("(I)V")?;
+        for branch in [Instruction::Goto(-4), Instruction::Goto_w(-4)] {
+            let method = create_static_method_with_descriptor(
+                descriptor,
+                vec![
+                    Instruction::Iload_0,
+                    Instruction::Pop,
+                    Instruction::Aconst_null,
+                    Instruction::Astore_0,
+                    branch,
+                ],
+                1,
+                1,
+            );
+            // The first iteration is valid, but the backedge replaces the integer
+            // parameter with a reference before iload_0 executes again.
+            let result =
+                verify_method(&class, &method, &TestContext, &VerifierConfig::permissive());
+            assert!(result.is_err(), "{:?}: {result:?}", class.version);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_zero_target_loop_uses_inference_without_stackmaps() -> Result<()> {
+    for version in [Version::Java6 { minor: 0 }, Version::Java8 { minor: 0 }] {
+        let mut class = create_test_class_file(version)?;
+        let descriptor = class.constant_pool.add_utf8("(I)V")?;
+        for branch in [Instruction::Goto(-4), Instruction::Goto_w(-4)] {
+            let method = create_static_method_with_descriptor(
+                descriptor,
+                vec![
+                    Instruction::Iload_0,
+                    Instruction::Pop,
+                    Instruction::Iconst_0,
+                    Instruction::Istore_0,
+                    branch,
+                ],
+                1,
+                1,
+            );
+            let result =
+                verify_method(&class, &method, &TestContext, &VerifierConfig::permissive())?;
+            assert_eq!(
+                result.path_used,
+                VerificationPath::Inference,
+                "{:?}",
+                class.version
+            );
+        }
+    }
     Ok(())
 }
 

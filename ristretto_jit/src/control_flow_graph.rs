@@ -31,11 +31,11 @@
 //! let instructions = vec![
 //!    Instruction::Iload_0,      // 0: Load local variable 0
 //!    Instruction::Iload_1,      // 1: Load local variable 1
-//!    Instruction::If_icmplt(5), // 2: If var0 < var1, branch to instruction 5
-//!    Instruction::Iload_0,      // 3: Load local variable 0
-//!    Instruction::Goto(6),      // 4: Jump to instruction 6
-//!    Instruction::Iload_1,      // 5: Load local variable 1
-//!    Instruction::Ireturn,      // 6: Return value on stack
+//!    Instruction::If_icmplt(7), // 2: If var0 < var1, branch to byte offset 9
+//!    Instruction::Iload_0,      // 5: Load local variable 0
+//!    Instruction::Goto(4),      // 6: Jump to byte offset 10
+//!    Instruction::Iload_1,      // 9: Load local variable 1
+//!    Instruction::Ireturn,      // 10: Return value on stack
 //! ];
 //! ```
 //!
@@ -52,7 +52,7 @@
 //!                         │  ; Java 1: Iload_1                                         │
 //!                         │  v1 = load.i32 notrap aligned l1          stack: [v0, v1]  │
 //!                         │                                                            │
-//!                         │  ; Java 2: If_icmplt(5)                                    │
+//!                         │  ; Java 2: If_icmplt(7)                                    │
 //!                         │  v2 = icmp slt v0, v1                     stack: [v0, v1]  │
 //!                         │  brif v2, block1, block2                  stack: [v0, v1]  │
 //!                         ╰────────────────────────────────────────────────────────────╯
@@ -61,12 +61,12 @@
 //!                                         /                            \
 //!  ╭──────────────────────────────────────────────────╮    ╭──────────────────────────────────────────────────╮
 //!  │                    block1 ()                     │    │                    block2 ()                     │
-//!  │  // target of Java If_icmplt(5)                  │    │  // fall-through path to instructions 3 & 4      │
+//!  │  // target of Java If_icmplt(7)                  │    │  // fall-through path to byte offsets 5 & 6      │
 //!  │                                                  │    │                                                  │
-//!  │  ; Java 5: Iload_1                               │    │  ; Java 3: Iload_0                               │
+//!  │  ; Java 9: Iload_1                               │    │  ; Java 5: Iload_0                               │
 //!  │  v3 = load.i32 notrap aligned l1    stack: [v3]  │    │  v4 = load.i32 notrap aligned l0    stack: [v4]  │
 //!  │                                                  │    │                                                  │
-//!  │  jump block3(v3)                    stack: [v3]  │    │  ; Java 4: Goto 6                                │
+//!  │  jump block3(v3)                    stack: [v3]  │    │  ; Java 6: Goto 4                                │
 //!  ╰──────────────────────────────────────────────────╯    │  jump block3(v4)                    stack: [v4]  │
 //!                                         \                ╰──────────────────────────────────────────────────╯
 //!                                          \                           /
@@ -78,7 +78,7 @@
 //!                              │  // join point with 1 incoming i32 param         │
 //!                              │  v5 = load.i32 notrap aligned p0    stack: [v5]  │
 //!                              │                                                  │
-//!                              │  ; Java 6: Ireturn                               │
+//!                              │  ; Java 10: Ireturn                               │
 //!                              │  return v5                            stack: []  │
 //!                              ╰──────────────────────────────────────────────────╯
 //! ```

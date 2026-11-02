@@ -47,7 +47,11 @@ fn receiver_target<'a>(
 }
 
 /// A miss leaves every operand in place for the explicit slow instruction.
-#[inline]
+#[expect(
+    clippy::inline_always,
+    reason = "Merge the synchronous fast path into dispatch to avoid per-instruction result copies"
+)]
+#[inline(always)]
 pub(crate) fn try_invoke(
     frame: &Frame,
     stack: &mut OperandStack,

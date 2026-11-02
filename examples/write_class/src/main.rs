@@ -89,11 +89,11 @@ fn generate_class() -> Result<Vec<u8>> {
             name_index: line_number_table_index,
             line_numbers: vec![
                 LineNumber {
-                    start_pc: 0, // Instruction index 0 (Getstatic)
+                    start_pc: 0, // Byte offset of Getstatic
                     line_number: 3,
                 },
                 LineNumber {
-                    start_pc: 3, // Instruction index 3 (Return)
+                    start_pc: 8, // Byte offset of Return
                     line_number: 4,
                 },
             ],
@@ -136,6 +136,27 @@ mod test {
             .map(|method| class_file.constant_pool.try_get_utf8(method.name_index))
             .collect::<Result<Vec<_>>>()?;
         assert_eq!(vec![CONSTRUCTOR_NAME, "main"], method_names);
+        let main = class_file.methods.last().expect("main method");
+        let Attribute::Code {
+            code, attributes, ..
+        } = &main.attributes[0]
+        else {
+            panic!("main must have code");
+        };
+        let Attribute::LineNumberTable { line_numbers, .. } = &attributes[0] else {
+            panic!("main must have line numbers");
+        };
+        let source_lines = Instruction::with_offsets(code)
+            .map(|(offset, _)| {
+                let line = line_numbers
+                    .iter()
+                    .rev()
+                    .find(|line| usize::from(line.start_pc) <= offset)
+                    .expect("source line for every instruction");
+                (offset, line.line_number)
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(vec![(0, 3), (3, 3), (5, 3), (8, 4)], source_lines);
         Ok(())
     }
 }

@@ -11,10 +11,7 @@ use std::ops::Range;
 /// exclusive end) and the thrown exception is an instance of the `catch_type` (or a subclass),
 /// control is transferred to the `handler_pc`.
 ///
-/// **Note on PC representation:** In this implementation, `start_pc`, `end_pc`, and `handler_pc`
-/// represent indices into the logical sequence of `Instruction`s within the `Code` attribute,
-/// rather than raw byte offsets as in the class file format. This abstraction simplifies
-/// instruction manipulation and analysis.
+/// Program counters and scope lengths are measured in bytes in the method's code array.
 ///
 /// See the [JVMS §4.7.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.3)
 /// for more details (specifically, the `exception_table` within the `Code` attribute).
@@ -26,9 +23,9 @@ use std::ops::Range;
 /// use ristretto_classfile::attributes::ExceptionTableEntry;
 ///
 /// // Create an ExceptionTableEntry
-/// // This handler covers instructions from index 5 up to (but not including) index 10.
+/// // This handler covers bytes from offset 5 up to (but not including) offset 10.
 /// // If an exception of type indicated by constant pool index 7 occurs in this range,
-/// // execution jumps to instruction index 12.
+/// // execution jumps to byte offset 12.
 /// let entry = ExceptionTableEntry {
 ///     range_pc: 5..10,      // start_pc = 5, end_pc = 10
 ///     handler_pc: 12,
@@ -61,10 +58,7 @@ pub struct ExceptionTableEntry {
 impl ExceptionTableEntry {
     /// Deserializes an `ExceptionTableEntry` from a byte stream.
     ///
-    /// Reads `start_pc`, `end_pc`, `handler_pc`, and `catch_type` from the stream. Note that these
-    /// are read as raw PC values (typically byte offsets in a class file) and may need further
-    /// mapping to logical instruction indices depending on the context (e.g., when parsing a
-    /// `Code` attribute).
+    /// Reads the fields directly, preserving JVM byte offsets and lengths.
     ///
     /// # Errors
     ///
@@ -105,10 +99,7 @@ impl ExceptionTableEntry {
 
     /// Serializes the `ExceptionTableEntry` to a byte vector.
     ///
-    /// Writes `range_pc.start`, `range_pc.end`, `handler_pc`, and `catch_type` to the vector. Note
-    /// that these PC values are written directly; if they represent logical instruction indices,
-    /// they must be converted to byte offsets before serialization in the context of a `Code`
-    /// attribute.
+    /// Writes the fields directly using JVM byte offsets and lengths.
     ///
     /// # Errors
     ///

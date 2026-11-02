@@ -541,20 +541,19 @@ fn verify_code_metadata(class: &ClassFile<'_>, attribute: &Attribute) -> Result<
         return Ok(());
     };
     verify_attributes(class, attributes, L::Code)?;
-    let count = u16::try_from(code.len())?;
+    let info = crate::verifiers::bytecode::control_flow::CodeInfo::from_code(code)?;
+    let count = info.code_length();
     for handler in exception_table {
         if handler.range_pc.start >= handler.range_pc.end
-            || handler.range_pc.end > count
-            || handler.handler_pc >= count
+            || (handler.range_pc.end != count && !info.is_valid_offset(handler.range_pc.end))
+            || !info.is_valid_offset(handler.range_pc.start)
+            || !info.is_valid_offset(handler.handler_pc)
         {
             return Err(invalid("Invalid exception handler range"));
         }
     }
-    // Code metadata offsets are normalized to instruction indices during parsing.
-    let valid_range = |start: u16, length: u16| {
-        start < count && start.checked_add(length).is_some_and(|end| end <= count)
-    };
     for nested in attributes {
+        crate::attributes::code_metadata::validate(nested, count, |pc| info.is_valid_offset(pc))?;
         match nested {
             Attribute::LocalVariableTable { variables, .. } => {
                 for local in variables {
@@ -565,19 +564,15 @@ fn verify_code_metadata(class: &ClassFile<'_>, attribute: &Attribute) -> Result<
                     } else {
                         1
                     };
-                    if u32::from(local.index) + width > u32::from(*max_locals)
-                        || !valid_range(local.start_pc, local.length)
-                    {
-                        return Err(invalid("Invalid LocalVariableTable range or local index"));
+                    if u32::from(local.index) + width > u32::from(*max_locals) {
+                        return Err(invalid("Invalid LocalVariableTable local index"));
                     }
                 }
             }
             Attribute::LocalVariableTypeTable { variable_types, .. } => {
                 for local in variable_types {
-                    if local.index >= *max_locals || !valid_range(local.start_pc, local.length) {
-                        return Err(invalid(
-                            "Invalid LocalVariableTypeTable range or local index",
-                        ));
+                    if local.index >= *max_locals {
+                        return Err(invalid("Invalid LocalVariableTypeTable local index"));
                     }
                 }
             }
@@ -594,7 +589,7 @@ fn verify_code_metadata(class: &ClassFile<'_>, attribute: &Attribute) -> Result<
                     for ty in locals.iter().chain(stack) {
                         if let crate::attributes::VerificationType::Uninitialized { offset } = ty
                             && !matches!(
-                                code.get(usize::from(*offset)),
+                                info.index_at(*offset).and_then(|index| code.get(index)),
                                 Some(crate::attributes::Instruction::New(_))
                             )
                         {

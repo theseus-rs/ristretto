@@ -15,7 +15,7 @@ pub(crate) fn newarray(
     frame: &Frame,
     stack: &mut OperandStack,
     array_type: &ArrayType,
-) -> Result<ExecutionResult> {
+) -> Result<()> {
     let thread = frame.thread()?;
     let vm = thread.vm()?;
     let count = stack.pop_int()?;
@@ -35,7 +35,7 @@ pub(crate) fn newarray(
         ArrayType::Long => Value::new_object(collector, Reference::from(vec![0i64; count])),
     };
     stack.push(array)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.anewarray>
@@ -70,7 +70,7 @@ pub(crate) async fn anewarray(
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.arraylength>
 #[inline]
-pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<ExecutionResult> {
+pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<()> {
     let Some(reference) = stack.pop_object()? else {
         return Err(NullPointerException(None).into());
     };
@@ -92,7 +92,7 @@ pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<ExecutionResult> {
         }
     };
     stack.push_int(i32::try_from(length)?)?;
-    Ok(Continue)
+    Ok(())
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray>
@@ -227,8 +227,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(&frame, stack, &ArrayType::Boolean)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Boolean)?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::BooleanArray(_)));
@@ -240,8 +239,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(&frame, stack, &ArrayType::Byte)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Byte)?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::ByteArray(_)));
@@ -253,8 +251,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(&frame, stack, &ArrayType::Char)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Char)?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::CharArray(_)));
@@ -266,8 +263,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(&frame, stack, &ArrayType::Double)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Double)?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::DoubleArray(_)));
@@ -279,8 +275,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(&frame, stack, &ArrayType::Float)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Float)?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::FloatArray(_)));
@@ -292,8 +287,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(&frame, stack, &ArrayType::Int)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Int)?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::IntArray(_)));
@@ -305,8 +299,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(&frame, stack, &ArrayType::Long)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Long)?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::LongArray(_)));
@@ -318,8 +311,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(&frame, stack, &ArrayType::Short)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Short)?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::ShortArray(_)));
@@ -363,10 +355,8 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(&frame, stack, &ArrayType::Boolean)?;
-        assert_eq!(Continue, result);
-        let result = arraylength(stack)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Boolean)?;
+        arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
     }
@@ -376,10 +366,8 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(&frame, stack, &ArrayType::Byte)?;
-        assert_eq!(Continue, result);
-        let result = arraylength(stack)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Byte)?;
+        arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
     }
@@ -389,10 +377,8 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(&frame, stack, &ArrayType::Char)?;
-        assert_eq!(Continue, result);
-        let result = arraylength(stack)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Char)?;
+        arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
     }
@@ -402,10 +388,8 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(&frame, stack, &ArrayType::Double)?;
-        assert_eq!(Continue, result);
-        let result = arraylength(stack)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Double)?;
+        arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
     }
@@ -415,10 +399,8 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(&frame, stack, &ArrayType::Float)?;
-        assert_eq!(Continue, result);
-        let result = arraylength(stack)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Float)?;
+        arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
     }
@@ -428,10 +410,8 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(&frame, stack, &ArrayType::Int)?;
-        assert_eq!(Continue, result);
-        let result = arraylength(stack)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Int)?;
+        arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
     }
@@ -441,10 +421,8 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(&frame, stack, &ArrayType::Long)?;
-        assert_eq!(Continue, result);
-        let result = arraylength(stack)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Long)?;
+        arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
     }
@@ -454,10 +432,8 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(&frame, stack, &ArrayType::Short)?;
-        assert_eq!(Continue, result);
-        let result = arraylength(stack)?;
-        assert_eq!(Continue, result);
+        newarray(&frame, stack, &ArrayType::Short)?;
+        arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
     }
@@ -473,8 +449,7 @@ mod tests {
         let result = anewarray(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
 
-        let result = arraylength(stack)?;
-        assert_eq!(Continue, result);
+        arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
     }

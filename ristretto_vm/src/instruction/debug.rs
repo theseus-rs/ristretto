@@ -1,15 +1,13 @@
 use crate::Result;
-use crate::frame::ExecutionResult;
-use crate::frame::ExecutionResult::Continue;
 
 /// # References
 ///
 /// - [JVMS §6.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2)
 #[inline]
 #[expect(clippy::unnecessary_wraps)]
-pub(crate) fn breakpoint() -> Result<ExecutionResult> {
+pub(crate) fn breakpoint() -> Result<()> {
     // Breakpoint instruction is reserved for debugging and implementation dependent operations.
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
@@ -17,9 +15,9 @@ pub(crate) fn breakpoint() -> Result<ExecutionResult> {
 /// - [JVMS §6.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2)
 #[inline]
 #[expect(clippy::unnecessary_wraps)]
-pub(crate) fn impdep1() -> Result<ExecutionResult> {
+pub(crate) fn impdep1() -> Result<()> {
     // Impdep1 instruction is reserved for debugging and implementation dependent operations.
-    Ok(Continue)
+    Ok(())
 }
 
 /// # References
@@ -27,9 +25,9 @@ pub(crate) fn impdep1() -> Result<ExecutionResult> {
 /// - [JVMS §6.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2)
 #[inline]
 #[expect(clippy::unnecessary_wraps)]
-pub(crate) fn impdep2() -> Result<ExecutionResult> {
+pub(crate) fn impdep2() -> Result<()> {
     // Impdep2 instruction is reserved for debugging and implementation dependent operations.
-    Ok(Continue)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -38,19 +36,19 @@ mod tests {
 
     #[test]
     fn test_breakpoint() -> Result<()> {
-        assert_eq!(breakpoint()?, Continue);
+        breakpoint()?;
         Ok(())
     }
 
     #[test]
     fn test_impdep1() -> Result<()> {
-        assert_eq!(impdep1()?, Continue);
+        impdep1()?;
         Ok(())
     }
 
     #[test]
     fn test_impdep2() -> Result<()> {
-        assert_eq!(impdep2()?, Continue);
+        impdep2()?;
         Ok(())
     }
 }

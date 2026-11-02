@@ -7,9 +7,9 @@ fn math_max() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
         Instruction::Iload_1,
-        Instruction::If_icmplt(5),
+        Instruction::If_icmplt(7),
         Instruction::Iload_0,
-        Instruction::Goto(6),
+        Instruction::Goto(4),
         Instruction::Iload_1,
         Instruction::Ireturn,
     ];
