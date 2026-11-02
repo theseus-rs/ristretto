@@ -8,13 +8,20 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  workflow_run:
-    workflows: [Release]
-    types: [completed]
+  workflow_call:
+    inputs:
+      release_tag:
+        description: Published stable release to archive and deploy
+        required: true
+        type: string
+      release_sha:
+        description: Exact source commit used by the release
+        required: true
+        type: string
 
 concurrency:
   group: web-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ inputs.release_tag == '' }}
 
 jobs:
   web:
@@ -23,7 +30,23 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.release_sha || github.sha }}
           fetch-depth: 0
+          persist-credentials: false
+      - name: Verify release source
+        if: ${{ inputs.release_tag != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          git check-ref-format "refs/tags/${RELEASE_TAG}"
+          test "$(git rev-parse --verify "refs/tags/${RELEASE_TAG}^{commit}")" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          gh release view --repo "$GITHUB_REPOSITORY" \
+            --json isDraft,isPrerelease -- "$RELEASE_TAG" \
+            | jq -e '.isDraft == false and .isPrerelease == false'
       - name: Install Rust and WASI target
         run: |
           rustup toolchain install --no-self-update
@@ -72,6 +95,7 @@ jobs:
           name: playground-site
           path: public
           include-hidden-files: true
+          if-no-files-found: error
           retention-days: 7
 
   browsers:
@@ -85,6 +109,9 @@ jobs:
         browser: [chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
@@ -109,23 +136,39 @@ jobs:
           path: web/test-results
           retention-days: 7
 
-  deploy:
-    name: Deploy GitHub Pages
+  archive:
+    name: Archive tested playground on the release
     needs: [web, browsers]
-    if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+    if: ${{ inputs.release_tag != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           name: playground-site
           path: public
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4.4.1
-        with:
-          branch: playground-pages
-          folder: public
-          token: ${{ secrets.GITHUB_TOKEN }}
-          single-commit: true
+      - name: Upload site archive and checksum
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          archive="playground-site-${RELEASE_TAG//\//-}.tar.gz"
+          tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner \
+            --dereference --hard-dereference -C public -cf - . | gzip -n > "$archive"
+          sha256sum "$archive" > "$archive.sha256"
+          # Preserve the tested release build. Retry deployments with Deploy playground.
+          gh release upload --repo "$GITHUB_REPOSITORY" -- \
+            "$RELEASE_TAG" "$archive" "$archive.sha256"
+
+  deploy:
+    name: Deploy released playground
+    needs: archive
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/web-deploy.yml
+    with:
+      release_tag: ${{ inputs.release_tag }}
