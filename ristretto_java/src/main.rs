@@ -120,12 +120,12 @@ async fn common_main(mut cli: Arguments) -> Result<()> {
     if let Some(ref properties) = cli.properties {
         for property in properties {
             let mut parts = property.splitn(2, '=');
-            let key = parts.next().ok_or(InternalError(format!(
-                "Invalid system property key: {property}"
-            )))?;
-            let value = parts.next().ok_or(InternalError(format!(
-                "Invalid system property value: {property}"
-            )))?;
+            let key = parts.next().ok_or(InternalError(
+                ["Invalid system property key: ", property].concat(),
+            ))?;
+            let value = parts.next().ok_or(InternalError(
+                ["Invalid system property value: ", property].concat(),
+            ))?;
             configuration_builder = configuration_builder.add_system_property(key, value);
         }
     }
@@ -230,7 +230,7 @@ fn process_error(error: Error) -> Result<()> {
             let line = stack_trace_element.value("lineNumber")?.as_i32()?;
             if line > 0 {
                 if source.is_empty() {
-                    source = format!("{line}");
+                    source = line.to_string();
                 } else {
                     source = format!("{source}:{line}");
                 }

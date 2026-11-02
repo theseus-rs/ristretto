@@ -10,7 +10,7 @@ pub fn full() -> String {
     #[cfg(not(target_family = "wasm"))]
     {
         let info = os_info::get();
-        let os = format!("{}", info.os_type()).replace(' ', "-");
+        let os = info.os_type().to_string().replace(' ', "-");
         let os_version = info.version();
         let architecture = info.architecture().unwrap_or("unknown");
         format!("{program_name}/{version}/{java_version} {os}/{os_version}/{architecture}")
@@ -18,7 +18,15 @@ pub fn full() -> String {
 
     #[cfg(target_family = "wasm")]
     {
-        format!("{program_name}/{version}/{java_version} wasm/unknown/wasm32")
+        [
+            program_name,
+            "/",
+            version,
+            "/",
+            &java_version,
+            " wasm/unknown/wasm32",
+        ]
+        .concat()
     }
 }
 

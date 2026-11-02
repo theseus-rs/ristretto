@@ -59,7 +59,7 @@ pub fn number(value: &Value, key: &str) -> Result<f64> {
     let result = value
         .get(key)
         .and_then(Value::as_f64)
-        .with_context(|| format!("Missing numeric field {key}"))?;
+        .with_context(|| ["Missing numeric field ", key].concat())?;
     ensure!(result.is_finite(), "Non-finite field {key}");
     Ok(result)
 }
@@ -68,7 +68,7 @@ pub fn string<'a>(value: &'a Value, key: &str) -> Result<&'a str> {
     value
         .get(key)
         .and_then(Value::as_str)
-        .with_context(|| format!("Missing string field {key}"))
+        .with_context(|| ["Missing string field ", key].concat())
 }
 
 pub fn median(values: &[f64]) -> Result<f64> {
@@ -204,7 +204,7 @@ pub fn summarize(records: &[Value], selected: &[Workload], forks: usize) -> Resu
                 ("fork_cv_pct", json!(cv)),
                 ("median_peak_rss_mib", json!(median(&rss)? / 1_048_576.0)),
             ] {
-                put(&mut row, format!("{runtime}_{key}"), value)?;
+                put(&mut row, [runtime, "_", key].concat(), value)?;
             }
             complete &= group.len() == forks;
             all_medians.push(medians);
@@ -223,12 +223,12 @@ pub fn summarize(records: &[Value], selected: &[Workload], forks: usize) -> Resu
     let control = rows.iter().find(|r| r["benchmark"] == "control").cloned();
     for row in &mut rows {
         for runtime in ["openjdk", "ristretto"] {
-            let key = format!("{runtime}_batch_median_ms");
+            let key = [runtime, "_batch_median_ms"].concat();
             let percentage = match &control {
                 Some(control) => json!(100.0 * number(control, &key)? / number(row, &key)?),
                 None => Value::Null,
             };
-            put(row, format!("{runtime}_control_pct"), percentage)?;
+            put(row, [runtime, "_control_pct"].concat(), percentage)?;
         }
     }
     Ok(rows)

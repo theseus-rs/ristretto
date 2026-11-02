@@ -325,7 +325,7 @@ impl JavaError {
     /// Get the error message
     #[must_use]
     pub fn message(&self) -> String {
-        format!("{self}")
+        self.to_string()
     }
 }
 

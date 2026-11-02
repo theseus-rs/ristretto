@@ -79,10 +79,12 @@ impl Scm {
             child_scm_connection_inherit_append_path: None,
             child_scm_developer_connection_inherit_append_path: None,
             child_scm_url_inherit_append_path: None,
-            connection: Some(format!("scm:git:git://github.com/{owner}/{repo}.git")),
-            developer_connection: Some(format!("scm:git:ssh://github.com/{owner}/{repo}.git")),
+            connection: Some(["scm:git:git://github.com/", owner, "/", repo, ".git"].concat()),
+            developer_connection: Some(
+                ["scm:git:ssh://github.com/", owner, "/", repo, ".git"].concat(),
+            ),
             tag: Some("HEAD".to_string()),
-            url: Some(format!("https://github.com/{owner}/{repo}")),
+            url: Some(["https://github.com/", owner, "/", repo].concat()),
         }
     }
 }

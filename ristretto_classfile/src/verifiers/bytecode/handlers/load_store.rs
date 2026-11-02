@@ -734,9 +734,9 @@ fn verify_byte_or_boolean_array(array_type: &VerificationType, instruction: &str
 /// Parses the component type from an array descriptor.
 fn parse_array_component(descriptor: &str) -> Result<VerificationType> {
     if !descriptor.starts_with('[') {
-        return Err(VerifyError::VerifyError(format!(
-            "Invalid array descriptor: {descriptor}"
-        )));
+        return Err(VerifyError::VerifyError(
+            ["Invalid array descriptor: ", descriptor].concat(),
+        ));
     }
 
     let component_desc = &descriptor[1..];
@@ -756,14 +756,14 @@ fn parse_array_component(descriptor: &str) -> Result<VerificationType> {
                 let class_name = &component_desc[1..end];
                 Ok(VerificationType::Object(JavaString::from(class_name)))
             } else {
-                Err(VerifyError::VerifyError(format!(
-                    "Invalid object descriptor: {component_desc}"
-                )))
+                Err(VerifyError::VerifyError(
+                    ["Invalid object descriptor: ", component_desc].concat(),
+                ))
             }
         }
-        _ => Err(VerifyError::VerifyError(format!(
-            "Unknown array component: {component_desc}"
-        ))),
+        _ => Err(VerifyError::VerifyError(
+            ["Unknown array component: ", component_desc].concat(),
+        )),
     }
 }
 

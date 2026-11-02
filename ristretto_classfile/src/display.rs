@@ -6,7 +6,7 @@
 pub(crate) fn indent_lines(input: &str, indent: &str) -> String {
     input
         .lines()
-        .map(|line| format!("{indent}{line}"))
+        .map(|line| [indent, line].concat())
         .collect::<Vec<String>>()
         .join("\n")
 }

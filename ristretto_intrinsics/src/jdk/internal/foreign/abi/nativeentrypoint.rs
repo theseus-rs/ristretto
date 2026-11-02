@@ -100,10 +100,9 @@ fn downcall_stubs<V: VM + ?Sized>(vm: &V) -> Result<Arc<DowncallStubs>> {
 fn class_name(value: &Value) -> Result<String> {
     let class = value.as_object_ref()?;
     if class.class().name() != "java/lang/Class" {
-        return Err(InternalError(format!(
-            "expected java/lang/Class, found {}",
-            class.class().name()
-        )));
+        return Err(InternalError(
+            ["expected java/lang/Class, found ", class.class().name()].concat(),
+        ));
     }
     Ok(class.value("name")?.as_string()?)
 }
@@ -114,19 +113,25 @@ fn decode_method_type(
     let method_type = reference.read();
     let method_type = method_type.as_object_ref()?;
     if method_type.class().name() != "java/lang/invoke/MethodType" {
-        return Err(InternalError(format!(
-            "expected java/lang/invoke/MethodType, found {}",
-            method_type.class().name()
-        )));
+        return Err(InternalError(
+            [
+                "expected java/lang/invoke/MethodType, found ",
+                method_type.class().name(),
+            ]
+            .concat(),
+        ));
     }
 
     let parameter_types = method_type.value("ptypes")?;
     let (parameter_array_class, parameter_types) = parameter_types.as_class_vec_ref()?;
     if parameter_array_class.name() != "[Ljava/lang/Class;" {
-        return Err(InternalError(format!(
-            "expected [Ljava/lang/Class;, found {}",
-            parameter_array_class.name()
-        )));
+        return Err(InternalError(
+            [
+                "expected [Ljava/lang/Class;, found ",
+                parameter_array_class.name(),
+            ]
+            .concat(),
+        ));
     }
     let parameters = parameter_types
         .iter()
@@ -146,10 +151,13 @@ fn decode_vm_storage(value: &Value) -> Result<Option<VMStorageDescriptor>> {
     }
     let storage = value.as_object_ref()?;
     if storage.class().name() != "jdk/internal/foreign/abi/VMStorage" {
-        return Err(InternalError(format!(
-            "expected jdk/internal/foreign/abi/VMStorage, found {}",
-            storage.class().name()
-        )));
+        return Err(InternalError(
+            [
+                "expected jdk/internal/foreign/abi/VMStorage, found ",
+                storage.class().name(),
+            ]
+            .concat(),
+        ));
     }
     Ok(Some(VMStorageDescriptor {
         storage_type: storage.value("type")?.as_i8()?,
@@ -164,10 +172,13 @@ fn decode_vm_storages(
     let storages = reference.read();
     let (storage_array_class, storages) = storages.as_class_vec_ref()?;
     if storage_array_class.name() != "[Ljdk/internal/foreign/abi/VMStorage;" {
-        return Err(InternalError(format!(
-            "expected [Ljdk/internal/foreign/abi/VMStorage;, found {}",
-            storage_array_class.name()
-        )));
+        return Err(InternalError(
+            [
+                "expected [Ljdk/internal/foreign/abi/VMStorage;, found ",
+                storage_array_class.name(),
+            ]
+            .concat(),
+        ));
     }
     storages
         .iter()
@@ -184,20 +195,26 @@ fn decode_required_vm_storage(value: &Value) -> Result<VMStorageDescriptor> {
 fn decode_vm_storage_matrix(value: &Value) -> Result<Vec<Vec<VMStorageDescriptor>>> {
     let (matrix_class, storage_arrays) = value.as_class_vec_ref()?;
     if matrix_class.name() != "[[Ljdk/internal/foreign/abi/VMStorage;" {
-        return Err(InternalError(format!(
-            "expected [[Ljdk/internal/foreign/abi/VMStorage;, found {}",
-            matrix_class.name()
-        )));
+        return Err(InternalError(
+            [
+                "expected [[Ljdk/internal/foreign/abi/VMStorage;, found ",
+                matrix_class.name(),
+            ]
+            .concat(),
+        ));
     }
     storage_arrays
         .iter()
         .map(|storage_array| {
             let (storage_array_class, storages) = storage_array.as_class_vec_ref()?;
             if storage_array_class.name() != "[Ljdk/internal/foreign/abi/VMStorage;" {
-                return Err(InternalError(format!(
-                    "expected [Ljdk/internal/foreign/abi/VMStorage;, found {}",
-                    storage_array_class.name()
-                )));
+                return Err(InternalError(
+                    [
+                        "expected [Ljdk/internal/foreign/abi/VMStorage;, found ",
+                        storage_array_class.name(),
+                    ]
+                    .concat(),
+                ));
             }
             storages
                 .iter()
@@ -221,10 +238,13 @@ fn decode_abi(reference: &ristretto_gc::Gc<GcRwLock<Reference>>) -> Result<AbiDe
         let abi = reference.read();
         let abi = abi.as_object_ref()?;
         if abi.class().name() != "jdk/internal/foreign/abi/ABIDescriptor" {
-            return Err(InternalError(format!(
-                "expected jdk/internal/foreign/abi/ABIDescriptor, found {}",
-                abi.class().name()
-            )));
+            return Err(InternalError(
+                [
+                    "expected jdk/internal/foreign/abi/ABIDescriptor, found ",
+                    abi.class().name(),
+                ]
+                .concat(),
+            ));
         }
         (
             abi.value("arch")?,

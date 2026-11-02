@@ -106,9 +106,9 @@ pub async fn n_get_port_name<T: ristretto_types::Thread + 'static>(
         let guard = audio.port_mixer_handles().read();
         guard.get(&handle_id).map(|handle| {
             if port_index == 0 {
-                format!("{} Source", handle.name)
+                [&handle.name, " Source"].concat()
             } else {
-                format!("{} Target", handle.name)
+                [&handle.name, " Target"].concat()
             }
         })
     };

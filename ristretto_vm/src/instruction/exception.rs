@@ -101,7 +101,7 @@ pub(crate) async fn convert_error_to_throwable(thread: &Thread, error: Error) ->
         }
         Throwable(throwable) => return Ok(throwable),
         _ => {
-            let msg = format!("{error}");
+            let msg = error.to_string();
             ("java.lang.InternalError".to_string(), msg)
         }
     };

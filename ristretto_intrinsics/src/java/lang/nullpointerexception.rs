@@ -20,9 +20,7 @@ fn field_type_to_name(field_type: &FieldType) -> String {
             let name = class_name.to_rust_string();
             name.rsplit('/').next().unwrap_or(&name).to_string()
         }
-        FieldType::Array(component) => {
-            format!("{} array", field_type_to_name(component))
-        }
+        FieldType::Array(component) => [&field_type_to_name(component), " array"].concat(),
     }
 }
 
@@ -533,9 +531,16 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                 if let Some(source) = stack.last() {
                     let (_, field_name, _) = self.resolve_field(*idx);
                     let reason = self.describe_source(source);
-                    return Some(format!(
-                        "Cannot read field \"{field_name}\" because {reason} is null"
-                    ));
+                    return Some(
+                        [
+                            "Cannot read field \"",
+                            &field_name,
+                            "\" because ",
+                            &reason,
+                            " is null",
+                        ]
+                        .concat(),
+                    );
                 }
             }
             Instruction::Putfield(idx) => {
@@ -549,9 +554,16 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                     let source = Self::stack_from_top(&stack, offset)?;
                     let (_, field_name, _) = self.resolve_field(*idx);
                     let reason = self.describe_source(source);
-                    return Some(format!(
-                        "Cannot assign field \"{field_name}\" because {reason} is null"
-                    ));
+                    return Some(
+                        [
+                            "Cannot assign field \"",
+                            &field_name,
+                            "\" because ",
+                            &reason,
+                            " is null",
+                        ]
+                        .concat(),
+                    );
                 }
             }
             Instruction::Invokevirtual(idx) | Instruction::Invokeinterface(idx, _) => {
@@ -562,79 +574,101 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                     let reason = self.describe_source(source);
                     // Use simple class name for the message
                     let simple_class = class_name.rsplit('/').next().unwrap_or(&class_name);
-                    return Some(format!(
-                        "Cannot invoke \"{simple_class}.{method_name}()\" because {reason} is null"
-                    ));
+                    return Some(
+                        [
+                            "Cannot invoke \"",
+                            simple_class,
+                            ".",
+                            &method_name,
+                            "()\" because ",
+                            &reason,
+                            " is null",
+                        ]
+                        .concat(),
+                    );
                 }
             }
             Instruction::Arraylength => {
                 if let Some(source) = stack.last() {
                     let reason = self.describe_source(source);
-                    return Some(format!(
-                        "Cannot read the array length because {reason} is null"
-                    ));
+                    return Some(
+                        ["Cannot read the array length because ", &reason, " is null"].concat(),
+                    );
                 }
             }
             Instruction::Iaload if stack.len() > 1 => {
                 let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
-                return Some(format!(
-                    "Cannot load from int array because {reason} is null"
-                ));
+                return Some(["Cannot load from int array because ", &reason, " is null"].concat());
             }
             Instruction::Laload if stack.len() > 1 => {
                 let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
-                return Some(format!(
-                    "Cannot load from long array because {reason} is null"
-                ));
+                return Some(
+                    ["Cannot load from long array because ", &reason, " is null"].concat(),
+                );
             }
             Instruction::Faload if stack.len() > 1 => {
                 let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
-                return Some(format!(
-                    "Cannot load from float array because {reason} is null"
-                ));
+                return Some(
+                    ["Cannot load from float array because ", &reason, " is null"].concat(),
+                );
             }
             Instruction::Daload if stack.len() > 1 => {
                 let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
-                return Some(format!(
-                    "Cannot load from double array because {reason} is null"
-                ));
+                return Some(
+                    [
+                        "Cannot load from double array because ",
+                        &reason,
+                        " is null",
+                    ]
+                    .concat(),
+                );
             }
             Instruction::Aaload if stack.len() > 1 => {
                 let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
-                return Some(format!(
-                    "Cannot load from object array because {reason} is null"
-                ));
+                return Some(
+                    [
+                        "Cannot load from object array because ",
+                        &reason,
+                        " is null",
+                    ]
+                    .concat(),
+                );
             }
             Instruction::Baload if stack.len() > 1 => {
                 let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
-                return Some(format!(
-                    "Cannot load from byte/boolean array because {reason} is null"
-                ));
+                return Some(
+                    [
+                        "Cannot load from byte/boolean array because ",
+                        &reason,
+                        " is null",
+                    ]
+                    .concat(),
+                );
             }
             Instruction::Caload if stack.len() > 1 => {
                 let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
-                return Some(format!(
-                    "Cannot load from char array because {reason} is null"
-                ));
+                return Some(
+                    ["Cannot load from char array because ", &reason, " is null"].concat(),
+                );
             }
             Instruction::Saload if stack.len() > 1 => {
                 let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
-                return Some(format!(
-                    "Cannot load from short array because {reason} is null"
-                ));
+                return Some(
+                    ["Cannot load from short array because ", &reason, " is null"].concat(),
+                );
             }
             Instruction::Athrow => {
                 if let Some(source) = stack.last() {
                     let reason = self.describe_source(source);
-                    return Some(format!("Cannot throw exception because {reason} is null"));
+                    return Some(["Cannot throw exception because ", &reason, " is null"].concat());
                 }
             }
             Instruction::Monitorenter | Instruction::Monitorexit => {
@@ -645,9 +679,16 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                     } else {
                         "exit"
                     };
-                    return Some(format!(
-                        "Cannot {op} synchronized block because {reason} is null"
-                    ));
+                    return Some(
+                        [
+                            "Cannot ",
+                            op,
+                            " synchronized block because ",
+                            &reason,
+                            " is null",
+                        ]
+                        .concat(),
+                    );
                 }
             }
             _ => {}
@@ -660,7 +701,7 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
         match source {
             Source::Local(idx) => {
                 if let Some(name) = self.get_local_name(*idx) {
-                    format!("\"{name}\"")
+                    ["\"", &name, "\""].concat()
                 } else {
                     format!("\"<local{idx}>\"")
                 }
@@ -671,22 +712,29 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                     match recv.as_ref() {
                         Source::Local(idx) => {
                             if let Some(local_name) = self.get_local_name(*idx) {
-                                format!("\"{local_name}.{name}\"")
+                                ["\"", &local_name, ".", name, "\""].concat()
                             } else {
                                 format!("\"<local{idx}>.{name}\"")
                             }
                         }
-                        Source::This => format!("\"this.{name}\""),
-                        _ => format!("\"{name}\""),
+                        Source::This => ["\"this.", name, "\""].concat(),
+                        _ => ["\"", name, "\""].concat(),
                     }
                 } else {
-                    format!("\"{name}\"")
+                    ["\"", name, "\""].concat()
                 }
             }
             Source::MethodReturn(class_name, method_name) => {
                 // Use simple class name (just the part after the last /)
                 let simple_class = class_name.rsplit('/').next().unwrap_or(class_name);
-                format!("the return value of \"{simple_class}.{method_name}()\"")
+                [
+                    "the return value of \"",
+                    simple_class,
+                    ".",
+                    method_name,
+                    "()\"",
+                ]
+                .concat()
             }
             Source::ArrayAccess(_) => "an array element".to_string(),
             Source::Constant => "\"null\"".to_string(),

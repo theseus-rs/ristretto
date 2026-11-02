@@ -153,9 +153,14 @@ impl FieldType {
             FieldType::Base(base_type) => base_type.class_name().to_string(),
             FieldType::Object(class_name) => class_name.to_rust_string(),
             FieldType::Array(component_type) => match &**component_type {
-                FieldType::Base(base_type) => format!("[{}", base_type.code()),
-                FieldType::Object(class_name) => format!("[L{class_name};"),
-                FieldType::Array(_) => format!("[{}", component_type.class_name()),
+                FieldType::Base(base_type) => {
+                    let mut name = String::with_capacity(2);
+                    name.push('[');
+                    name.push(base_type.code());
+                    name
+                }
+                FieldType::Object(class_name) => ["[L", &class_name.to_str_lossy(), ";"].concat(),
+                FieldType::Array(_) => ["[", &component_type.class_name()].concat(),
             },
         }
     }
@@ -190,10 +195,8 @@ impl FieldType {
     pub fn descriptor(&self) -> String {
         match self {
             FieldType::Base(base_type) => base_type.code().to_string(),
-            FieldType::Object(class_name) => format!("L{class_name};"),
-            FieldType::Array(component_type) => {
-                format!("[{}", component_type.descriptor())
-            }
+            FieldType::Object(class_name) => ["L", &class_name.to_str_lossy(), ";"].concat(),
+            FieldType::Array(component_type) => ["[", &component_type.descriptor()].concat(),
         }
     }
 

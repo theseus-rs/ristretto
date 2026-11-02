@@ -41,7 +41,7 @@ pub fn add_child_to_node<T: Thread + 'static>(
     let child = parameters.pop()?.as_string()?;
     let path = parameters.pop()?.as_string()?;
 
-    let child_path = format!("{path}{child}/");
+    let child_path = [&path, &child, "/"].concat();
     let mut store = PREFS.lock().map_err(|e| InternalError(e.to_string()))?;
     let domain = store.entry((user, host, name)).or_default();
     let is_new = !domain.contains_key(&child_path);
@@ -65,7 +65,7 @@ pub fn add_key_to_node<T: Thread + 'static>(
     let key = parameters.pop()?.as_string()?;
     let path = parameters.pop()?.as_string()?;
 
-    let full_key = format!("{path}{key}");
+    let full_key = [path.as_str(), &key].concat();
     let mut store = PREFS.lock().map_err(|e| InternalError(e.to_string()))?;
     let domain = store.entry((user, host, name)).or_default();
     domain.insert(full_key, value);
@@ -188,7 +188,7 @@ pub async fn get_key_from_node<T: Thread + 'static>(
     let key = parameters.pop()?.as_string()?;
     let path = parameters.pop()?.as_string()?;
 
-    let full_key = format!("{path}{key}");
+    let full_key = [path.as_str(), &key].concat();
     let value = {
         let store = PREFS.lock().map_err(|e| InternalError(e.to_string()))?;
         store
@@ -261,7 +261,7 @@ pub fn remove_child_from_node<T: Thread + 'static>(
     let child = parameters.pop()?.as_string()?;
     let path = parameters.pop()?.as_string()?;
 
-    let child_path = format!("{path}{child}/");
+    let child_path = [&path, &child, "/"].concat();
     let mut store = PREFS.lock().map_err(|e| InternalError(e.to_string()))?;
     if let Some(domain) = store.get_mut(&(user, host, name)) {
         domain.remove(&child_path);
@@ -284,7 +284,7 @@ pub fn remove_key_from_node<T: Thread + 'static>(
     let key = parameters.pop()?.as_string()?;
     let path = parameters.pop()?.as_string()?;
 
-    let full_key = format!("{path}{key}");
+    let full_key = [path.as_str(), &key].concat();
     let mut store = PREFS.lock().map_err(|e| InternalError(e.to_string()))?;
     if let Some(domain) = store.get_mut(&(user, host, name)) {
         domain.remove(&full_key);

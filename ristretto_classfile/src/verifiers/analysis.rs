@@ -30,9 +30,7 @@ pub fn verify<C: VerificationContext>(
                     .constant_pool
                     .try_get_utf8(method.name_index)
                     .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
-                return Err(VerifyError::ClassFormatError(format!(
-                    "Method {name} is native or abstract but has Code attribute"
-                )));
+                return Err(VerifyError::ClassFormatError(["Method ", &name.to_str_lossy(), " is native or abstract but has Code attribute"].concat()));
             }
         }
         return Ok(());

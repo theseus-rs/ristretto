@@ -78,20 +78,18 @@ pub(crate) async fn invokevirtual(
                 return Err(e.into());
             }
         };
+        let class_name = target.declaring_class.name();
+        let method_name = resolution.method_name.as_str();
         if target.method.is_static() {
-            return Err(JavaError::IncompatibleClassChangeError(format!(
-                "Method {}.{} is static",
-                target.declaring_class.name(),
-                resolution.method_name
-            ))
+            return Err(JavaError::IncompatibleClassChangeError(
+                ["Method ", class_name, ".", method_name, " is static"].concat(),
+            )
             .into());
         }
         if target.method.is_abstract() {
-            return Err(JavaError::AbstractMethodError(format!(
-                "Method {}.{} is abstract",
-                target.declaring_class.name(),
-                resolution.method_name
-            ))
+            return Err(JavaError::AbstractMethodError(
+                ["Method ", class_name, ".", method_name, " is abstract"].concat(),
+            )
             .into());
         }
         let intrinsic = thread

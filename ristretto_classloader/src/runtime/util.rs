@@ -26,13 +26,8 @@ static GITHUB_TOKEN: LazyLock<Option<String>> = LazyLock::new(|| match env::var(
     Err(_) => None,
 });
 
-static USER_AGENT: LazyLock<String> = LazyLock::new(|| {
-    format!(
-        "{PACKAGE}/{VERSION}",
-        PACKAGE = env!("CARGO_PKG_NAME"),
-        VERSION = env!("CARGO_PKG_VERSION")
-    )
-});
+static USER_AGENT: LazyLock<String> =
+    LazyLock::new(|| concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")).to_string());
 
 /// Get a runtime archive for the given version requirement. If the version requirement is a partial
 /// version, the latest release matching the partial version will be returned. If the version
@@ -196,8 +191,23 @@ fn archive_location(version: &str, os: &str, arch: &str) -> (String, String) {
         }
     };
 
-    let file_name = format!("amazon-corretto-{version}-{corretto_os}-{corretto_arch}{extension}");
-    let url = format!("https://corretto.aws/downloads/resources/{version}/{file_name}");
+    let file_name = [
+        "amazon-corretto-",
+        version,
+        "-",
+        corretto_os,
+        "-",
+        corretto_arch,
+        extension,
+    ]
+    .concat();
+    let url = [
+        "https://corretto.aws/downloads/resources/",
+        version,
+        "/",
+        &file_name,
+    ]
+    .concat();
     (file_name, url)
 }
 
@@ -227,7 +237,7 @@ async fn get_release_versions(major_version: &str, os: &str, arch: &str) -> Resu
         ),
     ];
     if let Some(token) = &*GITHUB_TOKEN {
-        headers.push(("authorization".to_string(), format!("Bearer {token}")));
+        headers.push(("authorization".to_string(), ["Bearer ", token].concat()));
     }
 
     debug!("Getting release versions: {url}");

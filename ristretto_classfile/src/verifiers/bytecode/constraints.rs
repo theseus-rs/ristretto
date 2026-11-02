@@ -223,7 +223,7 @@ fn verify_member_access<C: crate::verifiers::context::VerificationContext>(
         };
         let receiver_type = object.and_then(|ty| {
             if *ty == VerificationType::UninitializedThis {
-                Some(format!("L{current};"))
+                Some(["L", &current, ";"].concat())
             } else {
                 ty.to_descriptor()
             }

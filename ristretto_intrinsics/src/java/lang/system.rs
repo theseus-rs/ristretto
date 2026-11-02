@@ -326,9 +326,9 @@ pub async fn map_library_name<T: Thread + 'static>(
     let object = parameters.pop()?;
     let library_name = object.as_string()?;
     let library_file_name = match OS {
-        "macos" => format!("lib{library_name}.dylib"),
-        "windows" => format!("{library_name}.dll"),
-        _ => format!("lib{library_name}.so"),
+        "macos" => ["lib", &library_name, ".dylib"].concat(),
+        "windows" => [&library_name, ".dll"].concat(),
+        _ => ["lib", &library_name, ".so"].concat(),
     };
     let library_name = library_file_name.to_object(&thread).await?;
     Ok(Some(library_name))

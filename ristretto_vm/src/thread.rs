@@ -253,12 +253,9 @@ impl JavaStack {
             .ok_or_else(|| InternalError("Java stack slot count overflow".to_string()))?;
         if used_slots > limit {
             if self.overflow_reserve_depth == 0 {
-                return Err(StackOverflowError(format!(
-                    "{}.{}{}",
-                    class.name(),
-                    method.name(),
-                    method.descriptor()
-                ))
+                return Err(StackOverflowError(
+                    [class.name(), ".", method.name(), method.descriptor()].concat(),
+                )
                 .into());
             }
             return Err(InternalError(
@@ -1085,13 +1082,13 @@ impl Thread {
         if let Some(superclass) = class.parent()?
             && let Err(error) = self.initialize_class(&superclass).await
         {
-            class.fail_initialization(format!("{error}"))?;
+            class.fail_initialization(error.to_string())?;
             return Err(error);
         }
 
         // Prepare String constants before executing <clinit>.
         if let Err(error) = self.initialize_string_constants(class).await {
-            class.fail_initialization(format!("{error}"))?;
+            class.fail_initialization(error.to_string())?;
             return Err(error);
         }
 
@@ -1432,9 +1429,9 @@ impl Thread {
             Self::debug_result(&class, &method, &result);
             return result.map(DispatchResult::Completed);
         } else if method.is_native() {
-            return Err(UnsatisfiedLinkError(format!(
-                "'{class_name}.{method_name}{method_descriptor}'"
-            ))
+            return Err(UnsatisfiedLinkError(
+                ["'", class_name, ".", method_name, method_descriptor, "'"].concat(),
+            )
             .into());
         }
 
@@ -1659,12 +1656,12 @@ impl Thread {
         }
         let result_str = match result {
             Ok(Some(value)) => {
-                let value = value.to_string();
+                let mut value = value.to_string();
                 if value.len() > 100 {
-                    format!("{}...", &value[..97])
-                } else {
-                    value
+                    value.truncate(97);
+                    value.push_str("...");
                 }
+                value
             }
             Ok(None) => "void".to_string(),
             Err(error) => format!("[ERROR] {error}"),
@@ -1747,12 +1744,12 @@ impl Thread {
         M: AsRef<str> + Send + Sync,
     {
         let class_name = class_name.as_ref();
-        let descriptor = &format!("({})V", descriptor.as_ref());
+        let descriptor = &["(", descriptor.as_ref(), ")V"].concat();
         let class = self.class(class_name).await?;
         let Some(constructor) = class.method(CONSTRUCTOR_NAME, descriptor) else {
-            return Err(InternalError(format!(
-                "No constructor found: {class_name}.<init>{descriptor}"
-            )));
+            return Err(InternalError(
+                ["No constructor found: ", class_name, ".<init>", descriptor].concat(),
+            ));
         };
 
         let parameters = process_values(self, parameters).await?;
@@ -1783,7 +1780,7 @@ impl Thread {
             let line_number = method.line_number(program_counter);
             if line_number > 0 {
                 if source.is_empty() {
-                    source = format!("{line_number}");
+                    source = line_number.to_string();
                 } else {
                     source = format!("{source}:{line_number}");
                 }

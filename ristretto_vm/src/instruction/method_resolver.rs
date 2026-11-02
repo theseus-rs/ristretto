@@ -196,40 +196,40 @@ fn validate_class_kind(
         InvokeKind::Static => {
             // invokestatic with InterfaceMethodRef requires interface
             if is_interface_method && !target_class.is_interface() {
-                return Err(IncompatibleClassChangeError(format!(
-                    "Expected interface, found class: {class_name}"
-                ))
+                return Err(IncompatibleClassChangeError(
+                    ["Expected interface, found class: ", class_name].concat(),
+                )
                 .into());
             }
             // invokestatic with MethodRef requires non-interface
             if !is_interface_method && target_class.is_interface() {
-                return Err(IncompatibleClassChangeError(format!(
-                    "Expected class, found interface: {class_name}"
-                ))
+                return Err(IncompatibleClassChangeError(
+                    ["Expected class, found interface: ", class_name].concat(),
+                )
                 .into());
             }
         }
         InvokeKind::Interface => {
             if !is_interface_method || !target_class.is_interface() {
-                return Err(IncompatibleClassChangeError(format!(
-                    "{class_name} is not an interface"
-                ))
+                return Err(IncompatibleClassChangeError(
+                    [class_name, " is not an interface"].concat(),
+                )
                 .into());
             }
         }
         InvokeKind::Virtual => {
             if is_interface_method || target_class.is_interface() {
-                return Err(IncompatibleClassChangeError(format!(
-                    "Expected class method reference: {class_name}"
-                ))
+                return Err(IncompatibleClassChangeError(
+                    ["Expected class method reference: ", class_name].concat(),
+                )
                 .into());
             }
         }
         InvokeKind::Special => {
             if is_interface_method != target_class.is_interface() {
-                return Err(IncompatibleClassChangeError(format!(
-                    "Class/interface method reference mismatch: {class_name}"
-                ))
+                return Err(IncompatibleClassChangeError(
+                    ["Class/interface method reference mismatch: ", class_name].concat(),
+                )
                 .into());
             }
         }
@@ -250,17 +250,17 @@ fn validate_method_for_invoke(
     match invoke_kind {
         InvokeKind::Static => {
             if !method.is_static() {
-                return Err(IncompatibleClassChangeError(format!(
-                    "Method {method_name}{method_descriptor} is not static"
-                ))
+                return Err(IncompatibleClassChangeError(
+                    ["Method ", method_name, method_descriptor, " is not static"].concat(),
+                )
                 .into());
             }
         }
         InvokeKind::Virtual | InvokeKind::Interface | InvokeKind::Special => {
             if method.is_static() {
-                return Err(IncompatibleClassChangeError(format!(
-                    "Method {method_name}{method_descriptor} is static"
-                ))
+                return Err(IncompatibleClassChangeError(
+                    ["Method ", method_name, method_descriptor, " is static"].concat(),
+                )
                 .into());
             }
         }

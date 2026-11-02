@@ -376,7 +376,7 @@ fn saved_units(rows: &[Value], name: &str) -> Result<u32> {
     let row = rows
         .iter()
         .find(|r| r["benchmark"] == name)
-        .with_context(|| format!("Missing calibration for {name}"))?;
+        .with_context(|| ["Missing calibration for ", name].concat())?;
     ensure!(row["complete"] == true, "Incomplete calibration for {name}");
     let units = row["units"].as_u64().context("Invalid saved unit count")?;
     ensure!(

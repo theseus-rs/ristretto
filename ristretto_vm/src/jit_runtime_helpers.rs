@@ -113,7 +113,7 @@ impl CachedResolutionError {
     }
 
     fn to_error(&self) -> crate::Error {
-        InternalError(format!("cached resolution failure: {}", self.message))
+        InternalError(["cached resolution failure: ", &self.message].concat())
     }
 }
 
@@ -1670,9 +1670,9 @@ fn jit_anewarray_impl(ctx: &RuntimeContext, cp_class_index: u16, count: i32) -> 
         run_async(async { thread.class(class_name_str.as_ref()).await })?;
     }
     let array_class_name = if class_name_str.starts_with('[') {
-        format!("[{class_name_str}")
+        ["[", &class_name_str].concat()
     } else {
-        format!("[L{class_name_str};")
+        ["[L", &class_name_str, ";"].concat()
     };
     let array_class = run_async(async { thread.class(array_class_name.as_str()).await })?;
     if count < 0 {
@@ -1874,10 +1874,9 @@ fn build_multianewarray<'a>(
 async fn component_class_of(thread: &Thread, class: &Class) -> Result<Arc<Class>> {
     let component = class.array_component_type();
     if component.is_empty() {
-        return Err(InternalError(format!(
-            "multianewarray: class {} is not an array",
-            class.name()
-        )));
+        return Err(InternalError(
+            ["multianewarray: class ", class.name(), " is not an array"].concat(),
+        ));
     }
     // `array_component_type` returns either a class name like `java/lang/String`, an
     // array descriptor like `[Ljava/lang/String;` / `[I`, or a single-character primitive

@@ -1015,7 +1015,7 @@ impl ModuleSystem {
         let from_display = if from_module == ALL_UNNAMED {
             "unnamed module".to_string()
         } else {
-            format!("module {from_module}")
+            ["module ", from_module].concat()
         };
 
         // Use dot notation for package names in error messages (JDK style)
@@ -1023,23 +1023,45 @@ impl ModuleSystem {
 
         match result {
             AccessCheckResult::Allowed => {
-                format!("access to {class_display} allowed") // Should not happen
+                ["access to ", &class_display, " allowed"].concat() // Should not happen
             }
-            AccessCheckResult::NotReadable => {
-                format!(
-                    "{from_display} cannot access class {class_display} \
-                     (in module {to_module}) because {from_display} does not read module {to_module}"
-                )
-            }
-            AccessCheckResult::NotExported => {
-                format!(
-                    "{from_display} cannot access class {class_display} \
-                     (in module {to_module}) because module {to_module} does not export {package_display} to {from_display}"
-                )
-            }
+            AccessCheckResult::NotReadable => [
+                &from_display,
+                " cannot access class ",
+                &class_display,
+                " (in module ",
+                to_module,
+                ") because ",
+                &from_display,
+                " does not read module ",
+                to_module,
+            ]
+            .concat(),
+            AccessCheckResult::NotExported => [
+                &from_display,
+                " cannot access class ",
+                &class_display,
+                " (in module ",
+                to_module,
+                ") because module ",
+                to_module,
+                " does not export ",
+                &package_display,
+                " to ",
+                &from_display,
+            ]
+            .concat(),
             AccessCheckResult::NotOpened => {
                 // Format to match JDK's InaccessibleObjectException message
-                format!("module {to_module} does not \"opens {package_display}\" to {from_display}")
+                [
+                    "module ",
+                    to_module,
+                    " does not \"opens ",
+                    &package_display,
+                    "\" to ",
+                    &from_display,
+                ]
+                .concat()
             }
         }
     }

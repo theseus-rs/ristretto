@@ -76,9 +76,7 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                 if return_type.is_some() => {
                     return Err(VerificationError {
                         context: "Method return type".to_string(),
-                        message: format!(
-                            "Method returns {return_type_str} but contains 'return' instruction (void return)"
-                        ),
+                        message: ["Method returns ", &return_type_str, " but contains 'return' instruction (void return)"].concat(),
                     });
                 }
             Instruction::Ireturn => {
@@ -94,9 +92,7 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                     _ => {
                         return Err(VerificationError {
                             context: "Method return type".to_string(),
-                            message: format!(
-                                "Method returns {return_type_str} but contains 'ireturn' instruction (int return)"
-                            ),
+                            message: ["Method returns ", &return_type_str, " but contains 'ireturn' instruction (int return)"].concat(),
                         });
                     }
                 }
@@ -106,9 +102,7 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                 if !matches!(&return_type, Some(FieldType::Base(BaseType::Long))) => {
                     return Err(VerificationError {
                         context: "Method return type".to_string(),
-                        message: format!(
-                            "Method returns {return_type_str} but contains 'lreturn' instruction (long return)"
-                        ),
+                        message: ["Method returns ", &return_type_str, " but contains 'lreturn' instruction (long return)"].concat(),
                     });
                 }
             Instruction::Freturn
@@ -116,9 +110,7 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                 if !matches!(&return_type, Some(FieldType::Base(BaseType::Float))) => {
                     return Err(VerificationError {
                         context: "Method return type".to_string(),
-                        message: format!(
-                            "Method returns {return_type_str} but contains 'freturn' instruction (float return)"
-                        ),
+                        message: ["Method returns ", &return_type_str, " but contains 'freturn' instruction (float return)"].concat(),
                     });
                 }
             Instruction::Dreturn
@@ -126,9 +118,7 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                 if !matches!(&return_type, Some(FieldType::Base(BaseType::Double))) => {
                     return Err(VerificationError {
                         context: "Method return type".to_string(),
-                        message: format!(
-                            "Method returns {return_type_str} but contains 'dreturn' instruction (double return)"
-                        ),
+                        message: ["Method returns ", &return_type_str, " but contains 'dreturn' instruction (double return)"].concat(),
                     });
                 }
             Instruction::Areturn => {
@@ -138,9 +128,7 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                     _ => {
                         return Err(VerificationError {
                             context: "Method return type".to_string(),
-                            message: format!(
-                                "Method returns {return_type_str} but contains 'areturn' instruction (reference return)"
-                            ),
+                            message: ["Method returns ", &return_type_str, " but contains 'areturn' instruction (reference return)"].concat(),
                         });
                     }
                 }

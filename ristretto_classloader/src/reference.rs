@@ -567,12 +567,12 @@ impl Display for Reference {
             let slice = value;
             let mut values = Vec::with_capacity(slice.len());
             for value in slice {
-                let value = format!("{value:?}");
+                let mut value = format!("{value:?}");
                 if value.len() > 100 {
-                    values.push(format!("{}...", &value[..97]));
-                } else {
-                    values.push(value);
+                    value.truncate(97);
+                    value.push_str("...");
                 }
+                values.push(value);
             }
             write!(f, "{name}[{}]", values.join(", "))
         }

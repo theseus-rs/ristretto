@@ -362,8 +362,8 @@ impl VerificationType {
             Self::Float => Some("F".to_string()),
             Self::Long => Some("J".to_string()),
             Self::Double => Some("D".to_string()),
-            Self::Object(name) => Some(format!("L{name};")),
-            Self::Array(component) => component.to_descriptor().map(|desc| format!("[{desc}")),
+            Self::Object(name) => Some(["L", &name.to_str_lossy(), ";"].concat()),
+            Self::Array(component) => component.to_descriptor().map(|desc| ["[", &desc].concat()),
             _ => None,
         }
     }

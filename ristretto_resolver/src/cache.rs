@@ -111,7 +111,12 @@ impl FileCache {
             .trim_start_matches('/');
         let mut path = self.root.join(relative);
         if path.file_name().and_then(|name| name.to_str()) == Some("maven-metadata.xml") {
-            let file_name = format!("maven-metadata-{}.xml", cache_repository_id(&repository.id));
+            let file_name = [
+                "maven-metadata-",
+                &cache_repository_id(&repository.id),
+                ".xml",
+            ]
+            .concat();
             path.set_file_name(file_name);
         }
         Ok(path)
@@ -145,7 +150,7 @@ impl FileCache {
             return Ok(());
         };
         let tracking_path = parent.join("_remote.repositories");
-        let entry = format!("{name}>{}=\n", repository.id);
+        let prefix = [name, ">"].concat();
         let contents = match tokio::fs::read_to_string(&tracking_path).await {
             Ok(contents) => contents,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
@@ -153,13 +158,15 @@ impl FileCache {
         };
         let mut updated = contents
             .lines()
-            .filter(|line| !line.starts_with(&format!("{name}>")))
+            .filter(|line| !line.starts_with(&prefix))
             .fold(String::new(), |mut output, line| {
                 output.push_str(line);
                 output.push('\n');
                 output
             });
-        updated.push_str(&entry);
+        updated.push_str(&prefix);
+        updated.push_str(&repository.id);
+        updated.push_str("=\n");
         atomic_write(&self.root, &tracking_path, updated.as_bytes()).await?;
         Ok(())
     }
@@ -177,9 +184,8 @@ impl FileCache {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
             Err(error) => return Err(error.into()),
         };
-        Ok(contents
-            .lines()
-            .any(|line| line == format!("{name}>{}=", repository.id)))
+        let entry = [name, ">", &repository.id, "="].concat();
+        Ok(contents.lines().any(|line| line == entry))
     }
 }
 

@@ -332,9 +332,9 @@ impl ResolverBuilder {
             .chain(self.mirrors.iter().map(|mirror| &mirror.repository))
             .any(|repository| repository.id == SYSTEM_REPOSITORY_ID)
         {
-            return Err(Error::InvalidConfiguration(format!(
-                "repository id '{SYSTEM_REPOSITORY_ID}' is reserved"
-            )));
+            return Err(Error::InvalidConfiguration(
+                ["repository id '", SYSTEM_REPOSITORY_ID, "' is reserved"].concat(),
+            ));
         }
         let mut repository_ids = BTreeMap::<&str, &RemoteRepository>::new();
         for repository in self
@@ -346,10 +346,14 @@ impl ResolverBuilder {
             if let Some(existing) = repository_ids.insert(&repository.id, repository)
                 && existing != repository
             {
-                return Err(Error::InvalidConfiguration(format!(
-                    "repository id '{}' is configured more than once with different settings",
-                    repository.id
-                )));
+                return Err(Error::InvalidConfiguration(
+                    [
+                        "repository id '",
+                        &repository.id,
+                        "' is configured more than once with different settings",
+                    ]
+                    .concat(),
+                ));
             }
         }
         Ok(Resolver {
@@ -649,10 +653,14 @@ impl Resolver {
                 .iter()
                 .find(|repository| repository.id == artifact.repository_id)
                 .ok_or_else(|| {
-                    Error::InvalidConfiguration(format!(
-                        "resolution omitted repository '{}'",
-                        artifact.repository_id
-                    ))
+                    Error::InvalidConfiguration(
+                        [
+                            "resolution omitted repository '",
+                            &artifact.repository_id,
+                            "'",
+                        ]
+                        .concat(),
+                    )
                 })?;
             if preferred_repository.id == SYSTEM_REPOSITORY_ID {
                 preferred_repository.validate_resource_url(&artifact.url)?;
@@ -1024,7 +1032,7 @@ impl Resolver {
             ("sha1", "SHA-1"),
             ("md5", "MD5"),
         ] {
-            let url = format!("{artifact_url}.{extension}");
+            let url = [artifact_url, ".", extension].concat();
             let bytes = match self
                 .fetch_small(repository, &url, ResourceKind::Checksum)
                 .await
@@ -1036,7 +1044,7 @@ impl Resolver {
             if let Some(bytes) = bytes {
                 let value = parse_checksum(&bytes, algorithm).ok_or_else(|| Error::Transport {
                     url,
-                    message: format!("malformed {algorithm} checksum"),
+                    message: ["malformed ", algorithm, " checksum"].concat(),
                 })?;
                 return Ok(Some(VerifiedChecksum {
                     algorithm: algorithm.to_string(),
@@ -1382,7 +1390,7 @@ impl<'a> ResolutionSession<'a> {
                     OverrideAction::ForceVersion(version) => {
                         dependency.version = Some(version.to_string());
                         events.push(ResolutionEvent::Override {
-                            action: format!("forced version {version}"),
+                            action: ["forced version ", version.as_str()].concat(),
                         });
                     }
                     OverrideAction::Replace(coordinate) => {
@@ -1466,9 +1474,12 @@ impl<'a> ResolutionSession<'a> {
                                 .as_ref()
                                 .ok_or_else(|| Error::Model {
                                     coordinate: coordinate.clone(),
-                                    message: format!(
-                                        "relative systemPath '{system_path}' has no base directory"
-                                    ),
+                                    message: [
+                                        "relative systemPath '",
+                                        system_path,
+                                        "' has no base directory",
+                                    ]
+                                    .concat(),
                                 })?;
                         path = base.join(path);
                     }
@@ -2011,10 +2022,12 @@ impl<'a> ResolutionSession<'a> {
             {
                 return Err(Error::Model {
                     coordinate: parent.coordinate.clone(),
-                    message: format!(
-                        "parent POM must use 'pom' packaging, found '{}'",
-                        parent.packaging
-                    ),
+                    message: [
+                        "parent POM must use 'pom' packaging, found '",
+                        &parent.packaging,
+                        "'",
+                    ]
+                    .concat(),
                 });
             }
 
@@ -2797,22 +2810,25 @@ fn add_project_properties(
     parent: Option<&ArtifactCoordinate>,
 ) {
     for prefix in ["project", "pom"] {
-        properties.insert(format!("{prefix}.groupId"), coordinate.key.group_id.clone());
         properties.insert(
-            format!("{prefix}.artifactId"),
+            [prefix, ".groupId"].concat(),
+            coordinate.key.group_id.clone(),
+        );
+        properties.insert(
+            [prefix, ".artifactId"].concat(),
             coordinate.key.artifact_id.clone(),
         );
-        properties.insert(format!("{prefix}.version"), coordinate.version.clone());
+        properties.insert([prefix, ".version"].concat(), coordinate.version.clone());
         if let Some(parent) = parent {
             properties.insert(
-                format!("{prefix}.parent.groupId"),
+                [prefix, ".parent.groupId"].concat(),
                 parent.key.group_id.clone(),
             );
             properties.insert(
-                format!("{prefix}.parent.artifactId"),
+                [prefix, ".parent.artifactId"].concat(),
                 parent.key.artifact_id.clone(),
             );
-            properties.insert(format!("{prefix}.parent.version"), parent.version.clone());
+            properties.insert([prefix, ".parent.version"].concat(), parent.version.clone());
         }
     }
 }
@@ -2826,9 +2842,9 @@ fn interpolate(
     let mut seen = BTreeSet::new();
     for _ in 0..64 {
         if !seen.insert(result.clone()) {
-            return Err(Error::Interpolation(format!(
-                "property cycle while expanding '{value}'"
-            )));
+            return Err(Error::Interpolation(
+                ["property cycle while expanding '", value, "'"].concat(),
+            ));
         }
         let Some(start) = result.find("${") else {
             return Ok(result);
@@ -2860,9 +2876,9 @@ fn interpolate(
         };
         result.replace_range(start..=end, replacement);
     }
-    Err(Error::Interpolation(format!(
-        "expansion depth exceeded for '{value}'"
-    )))
+    Err(Error::Interpolation(
+        ["expansion depth exceeded for '", value, "'"].concat(),
+    ))
 }
 
 fn active_profiles<'a>(
@@ -3099,11 +3115,16 @@ fn append_pom_repositories(
             .map(|layout| interpolate(&layout, properties, context))
             .transpose()?;
         if layout.as_deref().is_some_and(|layout| layout != "default") {
-            return Err(Error::InvalidConfiguration(format!(
-                "repository '{}' uses unsupported layout '{}'",
-                repository.id,
-                layout.unwrap_or_default()
-            )));
+            return Err(Error::InvalidConfiguration(
+                [
+                    "repository '",
+                    &repository.id,
+                    "' uses unsupported layout '",
+                    &layout.unwrap_or_default(),
+                    "'",
+                ]
+                .concat(),
+            ));
         }
         let id = interpolate(&repository.id, properties, context)?;
         let url = interpolate(&repository.url, properties, context)?;
@@ -3159,7 +3180,9 @@ fn pom_update_policy(policy: Option<&ristretto_pom::UpdatePolicy>) -> Result<Upd
             .and_then(|minutes| minutes.parse().ok())
             .map(UpdatePolicy::IntervalMinutes)
             .ok_or_else(|| {
-                Error::InvalidConfiguration(format!("invalid repository update policy '{value}'"))
+                Error::InvalidConfiguration(
+                    ["invalid repository update policy '", value, "'"].concat(),
+                )
             })?,
         Some(ristretto_pom::UpdatePolicy::Daily) | None => UpdatePolicy::Daily,
     })
@@ -3181,9 +3204,9 @@ fn interpolated_update_policy(
                 .and_then(|minutes| minutes.parse().ok())
                 .map(UpdatePolicy::IntervalMinutes)
                 .ok_or_else(|| {
-                    Error::InvalidConfiguration(format!(
-                        "invalid repository update policy '{value}'"
-                    ))
+                    Error::InvalidConfiguration(
+                        ["invalid repository update policy '", &value, "'"].concat(),
+                    )
                 }),
         };
     }
@@ -3209,9 +3232,9 @@ fn interpolated_checksum_policy(
             "fail" => Ok(ChecksumPolicy::Fail),
             "ignore" => Ok(ChecksumPolicy::Ignore),
             "warn" => Ok(ChecksumPolicy::Warn),
-            _ => Err(Error::InvalidConfiguration(format!(
-                "invalid repository checksum policy '{value}'"
-            ))),
+            _ => Err(Error::InvalidConfiguration(
+                ["invalid repository checksum policy '", &value, "'"].concat(),
+            )),
         };
     }
     Ok(pom_checksum_policy(policy.checksum_policy.as_ref()))
@@ -3258,10 +3281,15 @@ fn validate_overrides(rules: &[OverrideRule]) -> Result<()> {
     for (index, left) in rules.iter().enumerate() {
         for right in rules.iter().skip(index + 1) {
             if left.matcher == right.matcher {
-                return Err(Error::InvalidConfiguration(format!(
-                    "duplicate override matcher for {}:{}",
-                    left.matcher.group_id, left.matcher.artifact_id
-                )));
+                return Err(Error::InvalidConfiguration(
+                    [
+                        "duplicate override matcher for ",
+                        &left.matcher.group_id,
+                        ":",
+                        &left.matcher.artifact_id,
+                    ]
+                    .concat(),
+                ));
             }
         }
     }

@@ -95,9 +95,9 @@ fn push_property(
     property_name: &str,
 ) -> Result<()> {
     let Some(value) = system_properties.remove(property_name) else {
-        return Err(InternalError(format!(
-            "Property not found: {property_name}"
-        )));
+        return Err(InternalError(
+            ["Property not found: ", property_name].concat(),
+        ));
     };
     properties.push(value);
     Ok(())

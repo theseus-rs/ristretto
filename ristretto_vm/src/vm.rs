@@ -879,9 +879,9 @@ impl VM {
             };
             let main_class = self.class(&main_class_name).await?;
             let Some(mut target) = main_class.resolve_main_method(self.java_major_version)? else {
-                return Err(InternalError(format!(
-                    "No main method found for {main_class_name}"
-                )));
+                return Err(InternalError(
+                    ["No main method found for ", main_class_name].concat(),
+                ));
             };
 
             let thread = self.primordial_thread().await?;
@@ -893,16 +893,20 @@ impl VM {
                         .access_flags
                         .contains(ClassAccessFlags::ABSTRACT)
                 {
-                    return Err(InternalError(format!(
-                        "Cannot instantiate main class {main_class_name}"
-                    )));
+                    return Err(InternalError(
+                        ["Cannot instantiate main class ", main_class_name].concat(),
+                    ));
                 }
 
                 let constructor = main_class.object_initializer("()V");
                 if constructor.is_none_or(|constructor| constructor.is_private()) {
-                    return Err(InternalError(format!(
-                        "No non-private no-argument constructor found for {main_class_name}"
-                    )));
+                    return Err(InternalError(
+                        [
+                            "No non-private no-argument constructor found for ",
+                            main_class_name,
+                        ]
+                        .concat(),
+                    ));
                 }
                 arguments.push(thread.object(main_class_name, "", &[] as &[Value]).await?);
                 // Separately compiled hierarchies can expose an abstract entry point.

@@ -257,10 +257,15 @@ pub async fn open_0<T: Thread + 'static>(
                 }
                 Ok(None)
             }
-            Err(error) => Err(FileNotFoundException(format!(
-                "{path} ({})",
-                crate::java::io::filesystem::open_error_message(&error)
-            ))
+            Err(error) => Err(FileNotFoundException(
+                [
+                    &path,
+                    " (",
+                    &crate::java::io::filesystem::open_error_message(&error),
+                    ")",
+                ]
+                .concat(),
+            )
             .into()),
         }
     }

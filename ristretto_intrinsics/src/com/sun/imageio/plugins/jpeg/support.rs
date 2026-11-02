@@ -62,10 +62,12 @@ pub(super) async fn context<T: Thread>(thread: &T, id: i64, writer: bool) -> Res
     if let Some(context) = context {
         return Ok(context);
     }
-    let message = format!(
-        "Attempting to use {} after dispose()",
-        if writer { "writer" } else { "reader" }
-    );
+    let message = [
+        "Attempting to use ",
+        if writer { "writer" } else { "reader" },
+        " after dispose()",
+    ]
+    .concat();
     let message = message.to_object(thread).await?;
     Err(Error::Throwable(
         thread

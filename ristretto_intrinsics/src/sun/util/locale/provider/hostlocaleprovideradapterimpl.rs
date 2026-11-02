@@ -366,7 +366,7 @@ fn default_date_time_pattern(date_style: i32, time_style: i32) -> String {
         default_date_pattern(date_style),
         default_time_pattern(time_style),
     ) {
-        (Some(date), Some(time)) => format!("{date} {time}"),
+        (Some(date), Some(time)) => [date, " ", time].concat(),
         (Some(date), None) => date.to_string(),
         (None, Some(time)) => time.to_string(),
         (None, None) => String::new(),
@@ -1886,7 +1886,7 @@ pub async fn get_default_locale<T: Thread + 'static>(
         {
             let (language, country) = detect_default_locale();
             match country {
-                Some(country) if !country.is_empty() => format!("{language}_{country}"),
+                Some(country) if !country.is_empty() => [&language, "_", &country].concat(),
                 _ => language,
             }
         }

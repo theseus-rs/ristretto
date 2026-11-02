@@ -191,9 +191,14 @@ impl Proxy {
             || parsed.query().is_some()
             || parsed.fragment().is_some()
         {
-            return Err(Error::InvalidConfiguration(format!(
-                "proxy URL must be an HTTP(S) URL without a query or fragment: '{url}'"
-            )));
+            return Err(Error::InvalidConfiguration(
+                [
+                    "proxy URL must be an HTTP(S) URL without a query or fragment: '",
+                    &url,
+                    "'",
+                ]
+                .concat(),
+            ));
         }
         Ok(Self {
             url,
@@ -234,9 +239,9 @@ impl RemoteRepository {
                 .chars()
                 .any(|character| character.is_whitespace() || character.is_control())
         {
-            return Err(Error::InvalidConfiguration(format!(
-                "invalid repository id '{id}'"
-            )));
+            return Err(Error::InvalidConfiguration(
+                ["invalid repository id '", &id, "'"].concat(),
+            ));
         }
         let url = normalize_url(&url.into())?;
         Ok(Self {
@@ -271,10 +276,16 @@ impl RemoteRepository {
     pub fn validate(&self) -> Result<()> {
         let validated = Self::new(&self.id, &self.url)?;
         if validated.url != self.url {
-            return Err(Error::InvalidConfiguration(format!(
-                "repository '{}' URL must be normalized as '{}'",
-                self.id, validated.url
-            )));
+            return Err(Error::InvalidConfiguration(
+                [
+                    "repository '",
+                    &self.id,
+                    "' URL must be normalized as '",
+                    &validated.url,
+                    "'",
+                ]
+                .concat(),
+            ));
         }
         if let Some(proxy) = &self.proxy {
             drop(Proxy::new(&proxy.url)?);
@@ -307,9 +318,9 @@ impl RemoteRepository {
                 .split('/')
                 .any(|segment| segment.is_empty() || matches!(segment, "." | ".."))
         {
-            return Err(Error::InvalidConfiguration(format!(
-                "invalid repository resource path '{path}'"
-            )));
+            return Err(Error::InvalidConfiguration(
+                ["invalid repository resource path '", path, "'"].concat(),
+            ));
         }
         let base = Url::parse(&self.url)?;
         let resource = base.join(path)?;
@@ -346,10 +357,16 @@ impl RemoteRepository {
                             .any(|segment| segment.is_empty() || matches!(segment, "." | "..")))
             })
         {
-            return Err(Error::InvalidConfiguration(format!(
-                "resource URL is outside repository '{}': '{value}'",
-                self.id
-            )));
+            return Err(Error::InvalidConfiguration(
+                [
+                    "resource URL is outside repository '",
+                    &self.id,
+                    "': '",
+                    value,
+                    "'",
+                ]
+                .concat(),
+            ));
         }
         Ok(())
     }
@@ -414,13 +431,18 @@ impl Mirror {
 fn normalize_url(value: &str) -> Result<String> {
     let mut url = Url::parse(value)?;
     if url.cannot_be_a_base() || url.query().is_some() || url.fragment().is_some() {
-        return Err(Error::InvalidConfiguration(format!(
-            "repository URL must be a hierarchical URL without a query or fragment: '{value}'"
-        )));
+        return Err(Error::InvalidConfiguration(
+            [
+                "repository URL must be a hierarchical URL without a query or fragment: '",
+                value,
+                "'",
+            ]
+            .concat(),
+        ));
     }
     reject_url_credentials(&url, "repository")?;
     if !url.path().ends_with('/') {
-        let path = format!("{}/", url.path());
+        let path = [url.path(), "/"].concat();
         url.set_path(&path);
     }
     Ok(url.to_string())
@@ -428,9 +450,13 @@ fn normalize_url(value: &str) -> Result<String> {
 
 fn reject_url_credentials(url: &Url, kind: &str) -> Result<()> {
     if !url.username().is_empty() || url.password().is_some() {
-        return Err(Error::InvalidConfiguration(format!(
-            "{kind} URL credentials must be configured through authentication"
-        )));
+        return Err(Error::InvalidConfiguration(
+            [
+                kind,
+                " URL credentials must be configured through authentication",
+            ]
+            .concat(),
+        ));
     }
     Ok(())
 }
