@@ -1040,98 +1040,101 @@ impl Thread {
     /// if the class initialization fails
     #[async_method]
     pub(crate) async fn initialize_class(&self, class: &Arc<Class>) -> Result<()> {
-        use crate::JavaError::{ExceptionInInitializerError, NoClassDefFoundError};
+        if !self.claim_class_initialization(class).await? {
+            return Ok(());
+        }
+        self.initialize_class_contents(class).await
+    }
+
+    /// Waits for another initializer or claims initialization for this thread.
+    async fn claim_class_initialization(&self, class: &Arc<Class>) -> Result<bool> {
+        use crate::JavaError::NoClassDefFoundError;
         use ristretto_classloader::InitializationAction;
 
         loop {
             let action = class.begin_initialization(self.id)?;
 
-            match action {
-                // Step 1 & 3: Already initialized or being initialized by current thread
-                // Per JLS §12.4.2, circularity by same thread is allowed; return immediately
+            // Steps 1 and 3: Already initialized or being initialized by this thread.
+            if matches!(
+                action,
                 InitializationAction::AlreadyInitialized
-                | InitializationAction::AlreadyInitializing => {
-                    return Ok(());
-                }
-                InitializationAction::Failed { error } => {
-                    // Step 2: Previously failed, throw NoClassDefFoundError
-                    return Err(NoClassDefFoundError(error).into());
-                }
-                InitializationAction::WaitForInitialization => {
-                    // Step 4: Another thread is initializing, wait and recheck
-                    // Use a timeout to handle race conditions where the notification was sent
-                    // before we started waiting.
-                    let _ = tokio::time::timeout(
-                        Duration::from_millis(10),
-                        class.wait_for_initialization(),
-                    )
-                    .await;
-                    // Loop will continue to recheck the state
-                }
-                InitializationAction::ShouldInitialize => {
-                    // Step 5: We are now the initializing thread
-                    // Step 6: Initialize superclass first (recursive descent)
-                    if let Some(superclass) = class.parent()?
-                        && let Err(error) = self.initialize_class(&superclass).await
-                    {
-                        // Superclass initialization failed
-                        let error_msg = format!("{error}");
-                        class.fail_initialization(error_msg)?;
-                        return Err(error);
-                    }
-
-                    // Step 6.5: Initialize String constants from ConstantValue attributes
-                    // This happens during the preparation phase before <clinit> runs
-                    if let Err(error) = self.initialize_string_constants(class).await {
-                        let error_msg = format!("{error}");
-                        class.fail_initialization(error_msg)?;
-                        return Err(error);
-                    }
-
-                    // Step 7: Execute <clinit> for this class
-                    if let Some(class_initializer) = class.class_initializer() {
-                        match self
-                            .execute(class, &class_initializer, &[] as &[Value])
-                            .await
-                        {
-                            Ok(_) => {
-                                // Step 9: Mark as initialized
-                                class.complete_initialization()?;
-                            }
-                            Err(error) => {
-                                // Step 8: <clinit> threw, mark as Erroneous
-                                let error_msg = format!("{error:#}");
-                                class.fail_initialization(error_msg.clone())?;
-                                if let crate::Error::Throwable(ref cause) = error {
-                                    use crate::assignable::Assignable;
-                                    let cause_class = cause.as_object_ref()?.class().clone();
-                                    let error_class = self.class("java/lang/Error").await?;
-                                    // JVMS 5.5: Error subclasses propagate unchanged. Other
-                                    // throwables retain their cause in the initialization error.
-                                    if error_class.is_assignable_from(self, &cause_class).await? {
-                                        return Err(error);
-                                    }
-                                    let wrapped = self
-                                        .object(
-                                            "java/lang/ExceptionInInitializerError",
-                                            "Ljava/lang/Throwable;",
-                                            std::slice::from_ref(cause),
-                                        )
-                                        .await?;
-                                    return Err(crate::Error::Throwable(wrapped));
-                                }
-                                return Err(ExceptionInInitializerError(error_msg).into());
-                            }
-                        }
-                    } else {
-                        // No <clinit>, just mark as initialized
-                        class.complete_initialization()?;
-                    }
-
-                    return Ok(());
-                }
+                    | InitializationAction::AlreadyInitializing
+            ) {
+                return Ok(false);
             }
+            // Step 2: Previously failed, throw NoClassDefFoundError.
+            if let InitializationAction::Failed { error } = action {
+                return Err(NoClassDefFoundError(error).into());
+            }
+            if matches!(action, InitializationAction::ShouldInitialize) {
+                break;
+            }
+
+            // Step 4: Another thread is initializing, wait and recheck. The timeout
+            // handles notifications sent before we started waiting.
+            let _ =
+                tokio::time::timeout(Duration::from_millis(10), class.wait_for_initialization())
+                    .await;
         }
+        Ok(true)
+    }
+
+    /// Initializes the superclass and static fields after claiming initialization.
+    async fn initialize_class_contents(&self, class: &Arc<Class>) -> Result<()> {
+        // Step 6: Initialize the superclass first.
+        if let Some(superclass) = class.parent()?
+            && let Err(error) = self.initialize_class(&superclass).await
+        {
+            class.fail_initialization(format!("{error}"))?;
+            return Err(error);
+        }
+
+        // Prepare String constants before executing <clinit>.
+        if let Err(error) = self.initialize_string_constants(class).await {
+            class.fail_initialization(format!("{error}"))?;
+            return Err(error);
+        }
+
+        // Step 7: Execute <clinit>, if present.
+        if let Some(class_initializer) = class.class_initializer()
+            && let Err(error) = self
+                .execute(class, &class_initializer, &[] as &[Value])
+                .await
+        {
+            return self.fail_class_initializer(class, error).await;
+        }
+
+        // Step 9: Mark the class as initialized, including classes without <clinit>.
+        class.complete_initialization()?;
+        Ok(())
+    }
+
+    /// Marks a failed initializer and preserves Java's throwable wrapping rules.
+    async fn fail_class_initializer(&self, class: &Arc<Class>, error: crate::Error) -> Result<()> {
+        use crate::JavaError::ExceptionInInitializerError;
+        use crate::assignable::Assignable;
+
+        // Step 8: <clinit> threw, so mark the class as erroneous.
+        let error_msg = format!("{error:#}");
+        class.fail_initialization(error_msg.clone())?;
+        let crate::Error::Throwable(ref cause) = error else {
+            return Err(ExceptionInInitializerError(error_msg).into());
+        };
+        let cause_class = cause.as_object_ref()?.class().clone();
+        let error_class = self.class("java/lang/Error").await?;
+        // JVMS 5.5: Error subclasses propagate unchanged. Other throwables retain
+        // their cause in the initialization error.
+        if error_class.is_assignable_from(self, &cause_class).await? {
+            return Err(error);
+        }
+        let wrapped = self
+            .object(
+                "java/lang/ExceptionInInitializerError",
+                "Ljava/lang/Throwable;",
+                std::slice::from_ref(cause),
+            )
+            .await?;
+        Err(crate::Error::Throwable(wrapped))
     }
 
     /// Initialize String constants that have a `ConstantValue` attribute.

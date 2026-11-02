@@ -1852,6 +1852,104 @@ impl<'a> ResolutionSession<'a> {
         })
     }
 
+    /// Resolves a declared parent, preferring a matching local POM when available.
+    async fn resolve_parent_model(
+        &mut self,
+        project: &Project,
+        repositories: &[RemoteRepository],
+        stack: &mut Vec<ArtifactCoordinate>,
+        context: &ResolutionContext,
+    ) -> Result<Option<Arc<EffectiveModel>>> {
+        let Some(parent) = &project.parent else {
+            return Ok(None);
+        };
+        let mut initial_properties = project.properties.clone();
+        initial_properties.extend(context.properties.clone());
+        let group = interpolate(&parent.group_id, &initial_properties, context)?;
+        let artifact = interpolate(&parent.artifact_id, &initial_properties, context)?;
+        let version = interpolate(&parent.version, &initial_properties, context)?;
+        let parent_key = ArtifactKey::new(group, artifact)?.with_extension("pom")?;
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(local_parent) = self
+            .local_parent_model(
+                parent.relative_path.as_deref().unwrap_or("../pom.xml"),
+                &parent_key,
+                &version.parse()?,
+                repositories,
+                stack,
+                context,
+            )
+            .await?
+        {
+            return Ok(Some(local_parent));
+        }
+
+        let parent_coordinate = self
+            .select_coordinate(&parent_key, &version, repositories, &mut Vec::new())
+            .await?;
+        Ok(Some(
+            self.effective_model(&parent_coordinate, repositories, stack)
+                .await?,
+        ))
+    }
+
+    /// Loads a local parent only when both its raw and effective coordinates match.
+    #[cfg(not(target_family = "wasm"))]
+    async fn local_parent_model(
+        &mut self,
+        relative_path: &str,
+        parent_key: &ArtifactKey,
+        parent_specification: &VersionSpec,
+        repositories: &[RemoteRepository],
+        stack: &mut Vec<ArtifactCoordinate>,
+        context: &ResolutionContext,
+    ) -> Result<Option<Arc<EffectiveModel>>> {
+        let Some(base_directory) = &context.base_directory else {
+            return Ok(None);
+        };
+        if relative_path.is_empty() {
+            return Ok(None);
+        }
+        let mut parent_path = base_directory.join(relative_path);
+        if parent_path.is_dir() {
+            parent_path = parent_path.join("pom.xml");
+        }
+        if !tokio::fs::try_exists(&parent_path).await? {
+            return Ok(None);
+        }
+        let bytes = tokio::fs::read(&parent_path).await?;
+        let parent_project: Project = quick_xml::de::from_reader(Cursor::new(bytes))?;
+        let matches_parent = |coordinate: &ArtifactCoordinate| {
+            coordinate.key.group_id == parent_key.group_id
+                && coordinate.key.artifact_id == parent_key.artifact_id
+                && parent_specification.matches(&Version::new(&coordinate.version))
+        };
+        let Some(candidate_coordinate) =
+            raw_project_coordinate(&parent_project, context).filter(matches_parent)
+        else {
+            return Ok(None);
+        };
+        parent_project.validate()?;
+        if stack.contains(&candidate_coordinate) {
+            return Err(Error::Cycle(candidate_coordinate.to_string()));
+        }
+        stack.push(candidate_coordinate);
+        let mut parent_context = context.clone();
+        parent_context.base_directory = parent_path.parent().map(std::path::Path::to_path_buf);
+        let parent_model = self
+            .build_effective_model_with_context(
+                parent_project,
+                None,
+                None,
+                repositories,
+                stack,
+                &parent_context,
+            )
+            .await?;
+        drop(stack.pop());
+        Ok(matches_parent(&parent_model.coordinate).then(|| Arc::new(parent_model)))
+    }
+
     #[expect(
         clippy::too_many_lines,
         reason = "effective model construction follows the ordered parent/profile/BOM interpolation pipeline"
@@ -1905,97 +2003,9 @@ impl<'a> ResolutionSession<'a> {
                 self.resolver.apply_mirrors(repositories)
             };
 
-            let parent_model = if let Some(parent) = &project.parent {
-                let mut initial_properties = project.properties.clone();
-                initial_properties.extend(context.properties.clone());
-                let group = interpolate(&parent.group_id, &initial_properties, context)?;
-                let artifact = interpolate(&parent.artifact_id, &initial_properties, context)?;
-                let version = interpolate(&parent.version, &initial_properties, context)?;
-                let parent_key = ArtifactKey::new(group, artifact)?.with_extension("pom")?;
-                #[cfg(not(target_family = "wasm"))]
-                let parent_specification: VersionSpec = version.parse()?;
-                #[cfg(not(target_family = "wasm"))]
-                let local_parent = if let Some(base_directory) = &context.base_directory {
-                    let relative_path = parent.relative_path.as_deref().unwrap_or("../pom.xml");
-                    if relative_path.is_empty() {
-                        None
-                    } else {
-                        let mut parent_path = base_directory.join(relative_path);
-                        if parent_path.is_dir() {
-                            parent_path = parent_path.join("pom.xml");
-                        }
-                        if tokio::fs::try_exists(&parent_path).await? {
-                            let bytes = tokio::fs::read(&parent_path).await?;
-                            let parent_project: Project =
-                                quick_xml::de::from_reader(Cursor::new(bytes))?;
-                            if let Some(candidate_coordinate) =
-                                raw_project_coordinate(&parent_project, context)
-                                && candidate_coordinate.key.group_id == parent_key.group_id
-                                && candidate_coordinate.key.artifact_id == parent_key.artifact_id
-                                && parent_specification
-                                    .matches(&Version::new(&candidate_coordinate.version))
-                            {
-                                parent_project.validate()?;
-                                if stack.contains(&candidate_coordinate) {
-                                    return Err(Error::Cycle(candidate_coordinate.to_string()));
-                                }
-                                stack.push(candidate_coordinate);
-                                let mut parent_context = context.clone();
-                                parent_context.base_directory =
-                                    parent_path.parent().map(std::path::Path::to_path_buf);
-                                let parent_model = self
-                                    .build_effective_model_with_context(
-                                        parent_project,
-                                        None,
-                                        None,
-                                        &parent_repositories,
-                                        stack,
-                                        &parent_context,
-                                    )
-                                    .await?;
-                                drop(stack.pop());
-                                if parent_model.coordinate.key.group_id == parent_key.group_id
-                                    && parent_model.coordinate.key.artifact_id
-                                        == parent_key.artifact_id
-                                    && parent_specification
-                                        .matches(&Version::new(&parent_model.coordinate.version))
-                                {
-                                    Some(Arc::new(parent_model))
-                                } else {
-                                    None
-                                }
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        }
-                    }
-                } else {
-                    None
-                };
-                #[cfg(target_family = "wasm")]
-                let local_parent: Option<Arc<EffectiveModel>> = None;
-
-                if let Some(local_parent) = local_parent {
-                    Some(local_parent)
-                } else {
-                    let parent_coordinate = self
-                        .select_coordinate(
-                            &parent_key,
-                            &version,
-                            &parent_repositories,
-                            &mut Vec::new(),
-                        )
-                        .await?;
-                    Some(
-                        self.effective_model(&parent_coordinate, &parent_repositories, stack)
-                            .await?,
-                    )
-                }
-            } else {
-                None
-            };
+            let parent_model = self
+                .resolve_parent_model(&project, &parent_repositories, stack, context)
+                .await?;
             if let Some(parent) = &parent_model
                 && parent.packaging != "pom"
             {
@@ -2099,60 +2109,42 @@ impl<'a> ResolutionSession<'a> {
                 .as_ref()
                 .map_or_else(BTreeMap::new, |model| model.dependency_management.clone());
             let mut imported_management = BTreeMap::new();
-            let mut management_sources = Vec::new();
-            if let Some(dependency_management) = &project.dependency_management {
-                management_sources.push(dependency_management);
-            }
-            for profile in &active_profiles {
-                if let Some(dependency_management) = &profile.dependency_management {
-                    management_sources.push(dependency_management);
-                }
-            }
+            let management_sources: Vec<_> = project
+                .dependency_management
+                .iter()
+                .chain(
+                    active_profiles
+                        .iter()
+                        .filter_map(|profile| profile.dependency_management.as_ref()),
+                )
+                .collect();
 
-            for source in &management_sources {
-                for dependency in &source.dependencies.dependencies {
-                    let effective = dependency_from_pom(dependency, &properties, context)?;
-                    if effective.scope == DependencyScope::Import
-                        && effective.key.extension == "pom"
-                    {
-                        let version = effective.version.clone().ok_or_else(|| Error::Model {
-                            coordinate: coordinate.clone(),
-                            message: format!("imported BOM {} has no version", effective.key),
-                        })?;
-                        let bom_coordinate = self
-                            .select_coordinate(
-                                &effective.key,
-                                &version,
-                                &import_repositories,
-                                &mut Vec::new(),
-                            )
-                            .await?;
-                        let bom = self
-                            .effective_model(&bom_coordinate, &import_repositories, stack)
-                            .await?;
-                        for (key, managed) in &bom.dependency_management {
-                            if !exclusion_matches(&effective.exclusions, key) {
-                                imported_management
-                                    .entry(key.clone())
-                                    .or_insert_with(|| managed.clone());
-                            }
-                        }
-                    }
-                }
+            for dependency in management_sources
+                .iter()
+                .flat_map(|source| &source.dependencies.dependencies)
+            {
+                let effective = dependency_from_pom(dependency, &properties, context)?;
+                self.import_dependency_management(
+                    &effective,
+                    &coordinate,
+                    &import_repositories,
+                    stack,
+                    &mut imported_management,
+                )
+                .await?;
             }
             // Entries imported in the current model outrank inherited
             // dependency management, while the first imported BOM wins when
             // multiple imports manage the same key.
             management.extend(imported_management);
-            for source in management_sources {
-                for dependency in &source.dependencies.dependencies {
-                    let effective = dependency_from_pom(dependency, &properties, context)?;
-                    if !(effective.scope == DependencyScope::Import
-                        && effective.key.extension == "pom")
-                    {
-                        management.insert(effective.key.clone(), effective);
-                    }
-                }
+            for dependency in management_sources
+                .iter()
+                .flat_map(|source| &source.dependencies.dependencies)
+            {
+                let effective = dependency_from_pom(dependency, &properties, context)?;
+                let is_import =
+                    effective.scope == DependencyScope::Import && effective.key.extension == "pom";
+                management.extend((!is_import).then_some((effective.key.clone(), effective)));
             }
 
             let mut dependencies = parent_model
@@ -2165,16 +2157,17 @@ impl<'a> ResolutionSession<'a> {
                 &properties,
                 context,
             )?;
-            for profile in active_profiles {
-                if let Some(profile_dependencies) = &profile.dependencies {
-                    merge_dependencies(
-                        &mut dependencies,
-                        profile_dependencies,
-                        &management,
-                        &properties,
-                        context,
-                    )?;
-                }
+            for profile_dependencies in active_profiles
+                .iter()
+                .filter_map(|profile| profile.dependencies.as_ref())
+            {
+                merge_dependencies(
+                    &mut dependencies,
+                    profile_dependencies,
+                    &management,
+                    &properties,
+                    context,
+                )?;
             }
 
             let relocation = project
@@ -2215,6 +2208,38 @@ impl<'a> ResolutionSession<'a> {
                 repository_id,
             })
         })
+    }
+
+    /// Merges one imported BOM, preserving exclusions and first-import precedence.
+    async fn import_dependency_management(
+        &mut self,
+        dependency: &EffectiveDependency,
+        coordinate: &ArtifactCoordinate,
+        repositories: &[RemoteRepository],
+        stack: &mut Vec<ArtifactCoordinate>,
+        imported_management: &mut BTreeMap<ArtifactKey, EffectiveDependency>,
+    ) -> Result<()> {
+        if dependency.scope != DependencyScope::Import || dependency.key.extension != "pom" {
+            return Ok(());
+        }
+        let version = dependency.version.as_ref().ok_or_else(|| Error::Model {
+            coordinate: coordinate.clone(),
+            message: format!("imported BOM {} has no version", dependency.key),
+        })?;
+        let bom_coordinate = self
+            .select_coordinate(&dependency.key, version, repositories, &mut Vec::new())
+            .await?;
+        let bom = self
+            .effective_model(&bom_coordinate, repositories, stack)
+            .await?;
+        for (key, managed) in &bom.dependency_management {
+            if !exclusion_matches(&dependency.exclusions, key) {
+                imported_management
+                    .entry(key.clone())
+                    .or_insert_with(|| managed.clone());
+            }
+        }
+        Ok(())
     }
 
     async fn fetch_project(

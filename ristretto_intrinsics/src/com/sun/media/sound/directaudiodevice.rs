@@ -206,12 +206,7 @@ pub fn n_is_still_draining<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nOpen(IIZIFIIIZZI)J", Any)]
-#[expect(
-    clippy::too_many_lines,
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
-)]
-#[cfg_attr(not(target_family = "wasm"), expect(clippy::cast_possible_wrap))]
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub fn n_open<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -247,183 +242,6 @@ pub fn n_open<T: ristretto_types::Thread + 'static>(
         let is_running = Arc::new(AtomicBool::new(false));
         let close_signal = Arc::new(AtomicBool::new(false));
 
-        let buf_clone = Arc::clone(&buffer);
-        let pos_clone = Arc::clone(&byte_position);
-        let running_clone = Arc::clone(&is_running);
-        let close_clone = Arc::clone(&close_signal);
-        let bits_per_sample = sample_size_in_bits;
-
-        let is_source_bool = is_source != 0;
-        let channels_u16 = channels as u16;
-        let sample_rate_u32 = sample_rate as u32;
-        let (tx, rx) = std::sync::mpsc::channel();
-
-        std::thread::spawn(move || {
-            use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-
-            let host = cpal::default_host();
-            let device = if is_source_bool {
-                host.default_output_device()
-            } else {
-                host.default_input_device()
-            };
-
-            let Some(device) = device else {
-                let _ = tx.send(false);
-                return;
-            };
-
-            let default_config = device.default_output_config().ok();
-            let supported_config =
-                device
-                    .supported_output_configs()
-                    .ok()
-                    .and_then(|mut configs| {
-                        configs.find(|c| {
-                            c.channels() >= channels_u16
-                                && c.min_sample_rate() <= sample_rate_u32
-                                && c.max_sample_rate() >= sample_rate_u32
-                        })
-                    });
-
-            let (actual_channels, actual_sample_rate) = if let Some(sc) = &supported_config {
-                (
-                    sc.channels(),
-                    sample_rate_u32.clamp(sc.min_sample_rate(), sc.max_sample_rate()),
-                )
-            } else if let Some(dc) = &default_config {
-                (dc.channels(), dc.sample_rate())
-            } else {
-                (channels_u16, sample_rate_u32)
-            };
-
-            let config = cpal::StreamConfig {
-                channels: actual_channels,
-                sample_rate: actual_sample_rate,
-                buffer_size: cpal::BufferSize::Default,
-            };
-
-            let source_channels = channels_u16;
-            let stream = if is_source_bool {
-                device.build_output_stream(
-                    config,
-                    move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                        if !running_clone.load(Ordering::Relaxed) {
-                            data.fill(0.0);
-                            return;
-                        }
-                        let Ok(mut buf) = buf_clone.lock() else {
-                            data.fill(0.0);
-                            return;
-                        };
-                        let mut bytes_consumed: i64 = 0;
-                        // Process data in frames of actual_channels samples
-                        for frame in data.chunks_mut(actual_channels as usize) {
-                            // Decode one source sample
-                            let sample = if bits_per_sample == 16 {
-                                if buf.len() >= 2 {
-                                    let low = buf.pop_front().unwrap_or(0);
-                                    let high = buf.pop_front().unwrap_or(0);
-                                    let s = i16::from_le_bytes([low, high]);
-                                    bytes_consumed += 2;
-                                    f32::from(s) / 32768.0
-                                } else {
-                                    0.0
-                                }
-                            } else if let Some(byte) = buf.pop_front() {
-                                bytes_consumed += 1;
-                                (f32::from(byte) - 128.0) / 128.0
-                            } else {
-                                0.0
-                            };
-
-                            if source_channels == 1 {
-                                // Mono source: duplicate to all output channels
-                                for ch in frame.iter_mut() {
-                                    *ch = sample;
-                                }
-                            } else {
-                                // First channel gets the decoded sample
-                                if let Some(first_channel) = frame.first_mut() {
-                                    *first_channel = sample;
-                                }
-                                // Decode remaining source channels
-                                for ch in frame
-                                    .iter_mut()
-                                    .skip(1)
-                                    .take((source_channels - 1) as usize)
-                                {
-                                    *ch = if bits_per_sample == 16 {
-                                        if buf.len() >= 2 {
-                                            let low = buf.pop_front().unwrap_or(0);
-                                            let high = buf.pop_front().unwrap_or(0);
-                                            let s = i16::from_le_bytes([low, high]);
-                                            bytes_consumed += 2;
-                                            f32::from(s) / 32768.0
-                                        } else {
-                                            0.0
-                                        }
-                                    } else if let Some(byte) = buf.pop_front() {
-                                        bytes_consumed += 1;
-                                        (f32::from(byte) - 128.0) / 128.0
-                                    } else {
-                                        0.0
-                                    };
-                                }
-                                // Zero any extra output channels
-                                for ch in frame.iter_mut().skip(source_channels as usize) {
-                                    *ch = 0.0;
-                                }
-                            }
-                        }
-                        pos_clone.fetch_add(bytes_consumed, Ordering::Relaxed);
-                    },
-                    |err| {
-                        tracing::error!("Audio output stream error: {err}");
-                    },
-                    None,
-                )
-            } else {
-                device.build_input_stream(
-                    config,
-                    move |data: &[f32], _: &cpal::InputCallbackInfo| {
-                        if !running_clone.load(Ordering::Relaxed) {
-                            return;
-                        }
-                        let Ok(mut buf) = buf_clone.lock() else {
-                            return;
-                        };
-                        for &sample in data {
-                            let byte = ((sample * 128.0) + 128.0).clamp(0.0, 255.0) as u8;
-                            buf.push_back(byte);
-                        }
-                        pos_clone.fetch_add(data.len() as i64, Ordering::Relaxed);
-                    },
-                    |err| {
-                        tracing::error!("Audio input stream error: {err}");
-                    },
-                    None,
-                )
-            };
-
-            let Ok(stream) = stream else {
-                let _ = tx.send(false);
-                return;
-            };
-
-            let _ = stream.play();
-            let _ = tx.send(true);
-
-            while !close_clone.load(Ordering::Relaxed) {
-                std::thread::sleep(std::time::Duration::from_millis(50));
-            }
-            drop(stream);
-        });
-
-        // Even if the audio device failed, create the handle so Java can proceed.
-        // Audio data will simply be discarded if no device is available.
-        let _device_ok = rx.recv().unwrap_or(false);
-
         let audio = thread
             .vm()?
             .resource_manager()
@@ -441,6 +259,8 @@ pub fn n_open<T: ristretto_types::Thread + 'static>(
             buffer_size_bytes,
             close_signal,
         };
+
+        start_native_audio_stream(&audio_handle);
 
         let handles = audio.audio_handles();
         let mut guard = handles.write();
@@ -500,6 +320,208 @@ pub fn n_open<T: ristretto_types::Thread + 'static>(
 
         Ok(Some(Value::Long(handle_id)))
     }
+}
+
+/// Starts a native stream and waits until device initialization finishes.
+#[cfg(not(target_family = "wasm"))]
+fn start_native_audio_stream(handle: &super::audio_state::AudioStreamHandle) {
+    let buf_clone = Arc::clone(&handle.buffer);
+    let pos_clone = Arc::clone(&handle.byte_position);
+    let running_clone = Arc::clone(&handle.is_running);
+    let close_clone = Arc::clone(&handle.close_signal);
+    let bits_per_sample = handle.sample_size_bits;
+    let is_source_bool = handle.is_source;
+    let channels_u16 = handle.channels;
+    let sample_rate_u32 = handle.sample_rate;
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    std::thread::spawn(move || {
+        use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+
+        let host = cpal::default_host();
+        let device = if is_source_bool {
+            host.default_output_device()
+        } else {
+            host.default_input_device()
+        };
+
+        let Some(device) = device else {
+            let _ = tx.send(false);
+            return;
+        };
+
+        let default_config = device.default_output_config().ok();
+        let supported_config = device
+            .supported_output_configs()
+            .ok()
+            .and_then(|mut configs| {
+                configs.find(|c| {
+                    c.channels() >= channels_u16
+                        && c.min_sample_rate() <= sample_rate_u32
+                        && c.max_sample_rate() >= sample_rate_u32
+                })
+            });
+
+        let (actual_channels, actual_sample_rate) = if let Some(sc) = &supported_config {
+            (
+                sc.channels(),
+                sample_rate_u32.clamp(sc.min_sample_rate(), sc.max_sample_rate()),
+            )
+        } else if let Some(dc) = &default_config {
+            (dc.channels(), dc.sample_rate())
+        } else {
+            (channels_u16, sample_rate_u32)
+        };
+
+        let config = cpal::StreamConfig {
+            channels: actual_channels,
+            sample_rate: actual_sample_rate,
+            buffer_size: cpal::BufferSize::Default,
+        };
+
+        let source_channels = channels_u16;
+        let stream = if is_source_bool {
+            device.build_output_stream(
+                config,
+                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                    write_output_samples(
+                        data,
+                        &buf_clone,
+                        &pos_clone,
+                        &running_clone,
+                        bits_per_sample,
+                        source_channels,
+                        actual_channels,
+                    );
+                },
+                |err| {
+                    tracing::error!("Audio output stream error: {err}");
+                },
+                None,
+            )
+        } else {
+            device.build_input_stream(
+                config,
+                move |data: &[f32], _: &cpal::InputCallbackInfo| {
+                    read_input_samples(data, &buf_clone, &pos_clone, &running_clone);
+                },
+                |err| {
+                    tracing::error!("Audio input stream error: {err}");
+                },
+                None,
+            )
+        };
+
+        let Ok(stream) = stream else {
+            let _ = tx.send(false);
+            return;
+        };
+
+        let _ = stream.play();
+        let _ = tx.send(true);
+
+        while !close_clone.load(Ordering::Relaxed) {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        drop(stream);
+    });
+
+    // Even if the audio device failed, create the handle so Java can proceed.
+    // Audio data will simply be discarded if no device is available.
+    let _device_ok = rx.recv().unwrap_or(false);
+}
+
+/// Decodes one complete PCM sample, leaving incomplete samples buffered.
+#[cfg(not(target_family = "wasm"))]
+fn decode_sample(
+    buffer: &mut std::collections::VecDeque<u8>,
+    bits_per_sample: u32,
+    bytes_consumed: &mut i64,
+) -> f32 {
+    if bits_per_sample == 16 {
+        if buffer.len() < 2 {
+            return 0.0;
+        }
+        let low = buffer.pop_front().unwrap_or(0);
+        let high = buffer.pop_front().unwrap_or(0);
+        *bytes_consumed += 2;
+        return f32::from(i16::from_le_bytes([low, high])) / 32768.0;
+    }
+    let Some(byte) = buffer.pop_front() else {
+        return 0.0;
+    };
+    *bytes_consumed += 1;
+    (f32::from(byte) - 128.0) / 128.0
+}
+
+/// Fills output frames and advances the position by the number of consumed bytes.
+#[cfg(not(target_family = "wasm"))]
+fn write_output_samples(
+    data: &mut [f32],
+    buffer: &std::sync::Mutex<std::collections::VecDeque<u8>>,
+    byte_position: &portable_atomic::AtomicI64,
+    is_running: &std::sync::atomic::AtomicBool,
+    bits_per_sample: u32,
+    source_channels: u16,
+    actual_channels: u16,
+) {
+    if !is_running.load(Ordering::Relaxed) {
+        data.fill(0.0);
+        return;
+    }
+    let Ok(mut buffer) = buffer.lock() else {
+        data.fill(0.0);
+        return;
+    };
+    let mut bytes_consumed = 0;
+    for frame in data.chunks_mut(usize::from(actual_channels)) {
+        let sample = decode_sample(&mut buffer, bits_per_sample, &mut bytes_consumed);
+        if source_channels == 1 {
+            // Mono source: duplicate to all output channels.
+            frame.fill(sample);
+            continue;
+        }
+        if let Some(first_channel) = frame.first_mut() {
+            *first_channel = sample;
+        }
+        for channel in frame
+            .iter_mut()
+            .skip(1)
+            .take(usize::from(source_channels - 1))
+        {
+            *channel = decode_sample(&mut buffer, bits_per_sample, &mut bytes_consumed);
+        }
+        for channel in frame.iter_mut().skip(usize::from(source_channels)) {
+            *channel = 0.0;
+        }
+    }
+    byte_position.fetch_add(bytes_consumed, Ordering::Relaxed);
+}
+
+/// Buffers captured samples and advances the input byte position.
+#[cfg(not(target_family = "wasm"))]
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+fn read_input_samples(
+    data: &[f32],
+    buffer: &std::sync::Mutex<std::collections::VecDeque<u8>>,
+    byte_position: &portable_atomic::AtomicI64,
+    is_running: &std::sync::atomic::AtomicBool,
+) {
+    if !is_running.load(Ordering::Relaxed) {
+        return;
+    }
+    let Ok(mut buffer) = buffer.lock() else {
+        return;
+    };
+    for &sample in data {
+        let byte = ((sample * 128.0) + 128.0).clamp(0.0, 255.0) as u8;
+        buffer.push_back(byte);
+    }
+    byte_position.fetch_add(data.len() as i64, Ordering::Relaxed);
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nRead(J[BIII)I", Any)]
@@ -806,6 +828,84 @@ fn wasm_write_audio(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn test_output_sample_decoding_and_channels() {
+        use std::collections::VecDeque;
+        use std::sync::Mutex;
+        use std::sync::atomic::AtomicBool;
+
+        let cases = [
+            (vec![0, 128, 0, 64], 16, 2, 2, vec![-1.0, 0.5], 4),
+            (vec![0, 128, 0, 64], 16, 1, 2, vec![-1.0, -1.0, 0.5, 0.5], 4),
+            (vec![0, 192], 8, 2, 3, vec![-1.0, 0.5, 0.0], 2),
+            (vec![0, 128, 42], 16, 2, 2, vec![-1.0, 0.0], 2),
+            (vec![], 16, 1, 2, vec![0.0, 0.0], 0),
+            (vec![192], 8, 1, 2, vec![0.5, 0.5, 0.0, 0.0], 1),
+        ];
+        for (bytes, bits, source_channels, actual_channels, expected, consumed) in cases {
+            let remaining: VecDeque<_> = bytes.iter().skip(consumed).copied().collect();
+            let buffer = Mutex::new(VecDeque::from(bytes));
+            let position = portable_atomic::AtomicI64::new(7);
+            let mut output = vec![42.0; expected.len()];
+            write_output_samples(
+                &mut output,
+                &buffer,
+                &position,
+                &AtomicBool::new(true),
+                bits,
+                source_channels,
+                actual_channels,
+            );
+            assert_eq!(output, expected);
+            assert_eq!(
+                position.load(Ordering::Relaxed),
+                7 + i64::try_from(consumed).unwrap()
+            );
+            assert_eq!(*buffer.lock().unwrap(), remaining);
+        }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn test_paused_audio_preserves_buffer_and_position() {
+        use std::collections::VecDeque;
+        use std::sync::Mutex;
+        use std::sync::atomic::AtomicBool;
+
+        let buffer = Mutex::new(VecDeque::from([192]));
+        let position = portable_atomic::AtomicI64::new(7);
+        let running = AtomicBool::new(false);
+        let mut output = [42.0; 2];
+        write_output_samples(&mut output, &buffer, &position, &running, 8, 1, 2);
+        read_input_samples(&[0.5], &buffer, &position, &running);
+        assert_eq!(output, [0.0; 2]);
+        assert_eq!(*buffer.lock().unwrap(), VecDeque::from([192]));
+        assert_eq!(position.load(Ordering::Relaxed), 7);
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn test_input_samples_clamp_and_advance_position() {
+        use std::collections::VecDeque;
+        use std::sync::Mutex;
+        use std::sync::atomic::AtomicBool;
+
+        let buffer = Mutex::new(VecDeque::new());
+        let position = portable_atomic::AtomicI64::new(7);
+        read_input_samples(
+            &[-2.0, -1.0, 0.0, 0.5, 1.0, 2.0],
+            &buffer,
+            &position,
+            &AtomicBool::new(true),
+        );
+        assert_eq!(
+            *buffer.lock().unwrap(),
+            VecDeque::from([0, 0, 128, 192, 255, 255])
+        );
+        assert_eq!(position.load(Ordering::Relaxed), 13);
+    }
 
     #[tokio::test]
     async fn test_n_available() -> Result<()> {
