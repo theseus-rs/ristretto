@@ -50,9 +50,9 @@ pub(crate) async fn anewarray(
     let class_name = constant_pool.try_get_class(index)?;
     let class_name_str = class_name.to_str_lossy();
     let array_class_name = if class_name_str.starts_with('[') {
-        format!("[{class_name_str}")
+        ["[", &class_name_str].concat()
     } else {
-        format!("[L{class_name_str};")
+        ["[L", &class_name_str, ";"].concat()
     };
 
     let class = thread.class(array_class_name.as_str()).await?;
@@ -173,7 +173,7 @@ async fn create_multidimensional_array(
             Ok(array)
         } else {
             // Object array
-            let array_class_name = format!("[L{component_type};");
+            let array_class_name = ["[L", component_type, ";"].concat();
             let array_class = thread.class(&array_class_name).await?;
             let vm = thread.vm()?;
             let reference =

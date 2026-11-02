@@ -94,9 +94,9 @@ impl Options {
                     return Ok(None);
                 }
                 _ => {
-                    return Err(Error::InvalidConfiguration(format!(
-                        "unknown argument '{argument}'; use --help for usage"
-                    )));
+                    return Err(Error::InvalidConfiguration(
+                        ["unknown argument '", &argument, "'; use --help for usage"].concat(),
+                    ));
                 }
             }
         }
@@ -222,9 +222,9 @@ fn print_node(
         return;
     }
     let child_prefix = if connector == "└── " {
-        format!("{prefix}    ")
+        [prefix, "    "].concat()
     } else {
-        format!("{prefix}│   ")
+        [prefix, "│   "].concat()
     };
     if let Some(child_nodes) = children.get(&id) {
         for (index, child) in child_nodes.iter().enumerate() {

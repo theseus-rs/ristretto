@@ -336,9 +336,13 @@ async fn to_class_loader_object(thread: &Thread, class_loader: &Arc<ClassLoader>
             .await?;
         let init_descriptor = "(Ljava/lang/String;Ljdk/internal/loader/BuiltinClassLoader;Ljdk/internal/loader/URLClassPath;)V";
         let Some(init_method) = builtin_class.method(CONSTRUCTOR_NAME, init_descriptor) else {
-            return Err(InternalError(format!(
-                "No constructor found: BuiltinClassLoader.<init>{init_descriptor}"
-            )));
+            return Err(InternalError(
+                [
+                    "No constructor found: BuiltinClassLoader.<init>",
+                    init_descriptor,
+                ]
+                .concat(),
+            ));
         };
         let gc = vm.garbage_collector();
         let object = Value::new_object(gc, Reference::Object(Object::new(loader_class)?));

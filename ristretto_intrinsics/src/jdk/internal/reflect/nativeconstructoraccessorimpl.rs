@@ -124,15 +124,23 @@ pub async fn new_instance_0<T: Thread + 'static>(
                     let caller_display = if caller.is_empty() {
                         "unnamed module".to_string()
                     } else {
-                        format!("module {caller}")
+                        ["module ", caller].concat()
                     };
-                    let error_msg = format!(
-                        "class {caller_display} cannot access class {class_name} (in module {}) because module {} does not export {} to {}",
+                    let error_msg = [
+                        "class ",
+                        &caller_display,
+                        " cannot access class ",
+                        &class_name,
+                        " (in module ",
                         target_module.as_deref().unwrap_or("unnamed module"),
+                        ") because module ",
                         target_module.as_deref().unwrap_or("unnamed module"),
-                        ristretto_types::package_from_class_name(class.name()).replace('/', "."),
-                        caller_display,
-                    );
+                        " does not export ",
+                        &ristretto_types::package_from_class_name(class.name()).replace('/', "."),
+                        " to ",
+                        &caller_display,
+                    ]
+                    .concat();
                     return Err(IllegalAccessException(error_msg).into());
                 }
             }

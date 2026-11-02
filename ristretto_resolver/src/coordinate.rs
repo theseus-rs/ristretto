@@ -90,22 +90,27 @@ impl ArtifactKey {
     /// Returns the group/artifact path used by default repositories.
     #[must_use]
     pub fn metadata_path(&self) -> String {
-        format!(
-            "{}/{}/maven-metadata.xml",
-            self.group_id.replace('.', "/"),
-            self.artifact_id
-        )
+        [
+            &self.group_id.replace('.', "/"),
+            "/",
+            &self.artifact_id,
+            "/maven-metadata.xml",
+        ]
+        .concat()
     }
 
     /// Returns a display key without a version.
     #[must_use]
     pub fn conflict_id(&self) -> String {
         match &self.classifier {
-            Some(classifier) => format!(
-                "{}:{}:{}:{classifier}",
-                self.group_id, self.artifact_id, self.extension
-            ),
-            None => format!("{}:{}:{}", self.group_id, self.artifact_id, self.extension),
+            Some(classifier) => [
+                self.group_id.as_str(),
+                &self.artifact_id,
+                &self.extension,
+                classifier,
+            ]
+            .join(":"),
+            None => [self.group_id.as_str(), &self.artifact_id, &self.extension].join(":"),
         }
     }
 
@@ -242,24 +247,35 @@ impl ArtifactCoordinate {
     /// Returns the version-level snapshot metadata path.
     #[must_use]
     pub fn snapshot_metadata_path(&self) -> String {
-        format!(
-            "{}/{}/{}/maven-metadata.xml",
-            self.key.group_id.replace('.', "/"),
-            self.key.artifact_id,
-            self.version
-        )
+        [
+            &self.key.group_id.replace('.', "/"),
+            "/",
+            &self.key.artifact_id,
+            "/",
+            &self.version,
+            "/maven-metadata.xml",
+        ]
+        .concat()
     }
 
     fn path_for(&self, extension: &str, classifier: Option<&str>, file_version: &str) -> String {
-        let classifier = classifier.map_or_else(String::new, |value| format!("-{value}"));
-        format!(
-            "{}/{}/{}/{}-{}{classifier}.{extension}",
-            self.key.group_id.replace('.', "/"),
-            self.key.artifact_id,
-            self.version,
-            self.key.artifact_id,
-            file_version
-        )
+        let classifier_separator = if classifier.is_some() { "-" } else { "" };
+        [
+            &self.key.group_id.replace('.', "/"),
+            "/",
+            &self.key.artifact_id,
+            "/",
+            &self.version,
+            "/",
+            &self.key.artifact_id,
+            "-",
+            file_version,
+            classifier_separator,
+            classifier.unwrap_or_default(),
+            ".",
+            extension,
+        ]
+        .concat()
     }
 }
 

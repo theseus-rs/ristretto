@@ -125,12 +125,13 @@ pub async fn capture(
 }
 
 pub async fn output(args: &[String], env: &Environment, cwd: &Path) -> Result<String> {
-    let (status, stdout, stderr) = capture(args, env, cwd, Duration::from_secs(120)).await?;
+    let (status, mut stdout, stderr) = capture(args, env, cwd, Duration::from_secs(120)).await?;
     ensure!(
         status.success(),
         "Command {args:?} failed: {stdout}{stderr}"
     );
-    Ok(format!("{stdout}{stderr}").trim().to_owned())
+    stdout.push_str(&stderr);
+    Ok(stdout.trim().to_owned())
 }
 
 async fn line<R: AsyncRead + Unpin>(reader: &mut BufReader<R>, limit: Duration) -> Result<String> {

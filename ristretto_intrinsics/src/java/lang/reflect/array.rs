@@ -143,7 +143,8 @@ fn set_primitive_to_array(
 /// Return an `IllegalArgumentException` indicating the argument is not an array of the
 /// expected type.
 fn illegal_argument(expected: &str) -> ristretto_types::Error {
-    IllegalArgumentException(format!("argument type mismatch: expected {expected} array")).into()
+    IllegalArgumentException(["argument type mismatch: expected ", expected, " array"].concat())
+        .into()
 }
 
 /// Return an `IllegalArgumentException` indicating the argument is not an array.
@@ -598,7 +599,7 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
             "long" => Reference::from(vec![0i64; length]),
             "short" => Reference::from(vec![0i16; length]),
             _ => {
-                let array_class_name = format!("[L{class_name};");
+                let array_class_name = ["[L", class_name, ";"].concat();
                 let class = thread.class(&array_class_name).await?;
                 let vm = thread.vm()?;
                 let collector = vm.garbage_collector();
@@ -617,19 +618,25 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
 
         // Create the appropriate array class name for the multi-dimensional array
         let array_class_name = if class_name.starts_with('[') {
-            format!("[{class_name}")
+            ["[", class_name].concat()
         } else {
+            let mut name = "[".repeat(dimensions.len());
             match class_name {
-                "boolean" => format!("{}{}", "[".repeat(dimensions.len()), "Z"),
-                "byte" => format!("{}{}", "[".repeat(dimensions.len()), "B"),
-                "char" => format!("{}{}", "[".repeat(dimensions.len()), "C"),
-                "float" => format!("{}{}", "[".repeat(dimensions.len()), "F"),
-                "double" => format!("{}{}", "[".repeat(dimensions.len()), "D"),
-                "int" => format!("{}{}", "[".repeat(dimensions.len()), "I"),
-                "long" => format!("{}{}", "[".repeat(dimensions.len()), "J"),
-                "short" => format!("{}{}", "[".repeat(dimensions.len()), "S"),
-                _ => format!("{}[L{class_name};", "[".repeat(dimensions.len() - 1)),
+                "boolean" => name.push('Z'),
+                "byte" => name.push('B'),
+                "char" => name.push('C'),
+                "float" => name.push('F'),
+                "double" => name.push('D'),
+                "int" => name.push('I'),
+                "long" => name.push('J'),
+                "short" => name.push('S'),
+                _ => {
+                    name.push('L');
+                    name.push_str(class_name);
+                    name.push(';');
+                }
             }
+            name
         };
 
         let class = thread.class(&array_class_name).await?;
@@ -667,7 +674,7 @@ pub async fn new_array<T: Thread + 'static>(
         "long" => Value::new_object(collector, Reference::from(vec![0i64; length])),
         "short" => Value::new_object(collector, Reference::from(vec![0i16; length])),
         _ => {
-            let class_name = format!("[L{class_name};");
+            let class_name = ["[L", &class_name, ";"].concat();
             let class = thread.class(&class_name).await?;
             let reference = Reference::try_from((class, vec![Value::Object(None); length]))?;
             Value::new_object(collector, reference)

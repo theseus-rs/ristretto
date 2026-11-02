@@ -320,10 +320,14 @@ impl ResolutionLock {
                 .as_ref()
                 .is_some_and(|id| !repository_ids.contains(id.as_str()))
             {
-                return Err(Error::InvalidConfiguration(format!(
-                    "resolution lock requires repository '{}'",
-                    node.repository_id.as_deref().unwrap_or_default()
-                )));
+                return Err(Error::InvalidConfiguration(
+                    [
+                        "resolution lock requires repository '",
+                        node.repository_id.as_deref().unwrap_or_default(),
+                        "'",
+                    ]
+                    .concat(),
+                ));
             }
             if let NodeStatus::Conflict { winner } = &node.status {
                 let winner_node = self.nodes.get(winner.0).ok_or_else(|| {
@@ -389,10 +393,14 @@ impl ResolutionLock {
                 .iter()
                 .find(|repository| repository.id == artifact.repository_id)
                 .ok_or_else(|| {
-                    Error::InvalidConfiguration(format!(
-                        "resolution lock requires repository '{}'",
-                        artifact.repository_id
-                    ))
+                    Error::InvalidConfiguration(
+                        [
+                            "resolution lock requires repository '",
+                            &artifact.repository_id,
+                            "'",
+                        ]
+                        .concat(),
+                    )
                 })?;
             // Artifact node indexes were validated before this loop.
             #[expect(

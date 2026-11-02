@@ -1375,15 +1375,15 @@ impl<'a> ConstantPool<'a> {
     pub fn try_get_formatted_string(&self, index: u16) -> Result<String> {
         let value = match self.try_get(index)? {
             Constant::Utf8(value) => value.to_string(),
-            Constant::Integer(integer) => format!("{integer}"),
-            Constant::Float(float) => format!("{float}"),
-            Constant::Long(long) => format!("{long}"),
-            Constant::Double(double) => format!("{double}"),
+            Constant::Integer(integer) => integer.to_string(),
+            Constant::Float(float) => float.to_string(),
+            Constant::Long(long) => long.to_string(),
+            Constant::Double(double) => double.to_string(),
             Constant::Class(utf8_index) => {
-                format!("Class {}", self.try_get_utf8(*utf8_index)?)
+                ["Class ", &self.try_get_utf8(*utf8_index)?.to_str_lossy()].concat()
             }
             Constant::String(utf8_index) => {
-                format!("String {}", self.try_get_utf8(*utf8_index)?)
+                ["String ", &self.try_get_utf8(*utf8_index)?.to_str_lossy()].concat()
             }
             Constant::FieldRef {
                 class_index,
@@ -1391,39 +1391,39 @@ impl<'a> ConstantPool<'a> {
             } => {
                 let (name_index, _descriptor_index) =
                     self.try_get_name_and_type(*name_and_type_index)?;
-                let class_name = self.try_get_class(*class_index)?;
-                let field_name = self.try_get_utf8(*name_index)?;
-                format!("Field {class_name}.{field_name}")
+                let class_name = self.try_get_class(*class_index)?.to_str_lossy();
+                let field_name = self.try_get_utf8(*name_index)?.to_str_lossy();
+                ["Field ", &class_name, ".", &field_name].concat()
             }
             Constant::MethodRef {
                 class_index,
                 name_and_type_index,
             } => {
-                let class_name = self.try_get_class(*class_index)?;
+                let class_name = self.try_get_class(*class_index)?.to_str_lossy();
                 let (name_index, descriptor_index) =
                     self.try_get_name_and_type(*name_and_type_index)?;
-                let method_name = self.try_get_utf8(*name_index)?;
-                let method_descriptor = self.try_get_utf8(*descriptor_index)?;
-                format!("Method {class_name}.{method_name}{method_descriptor}")
+                let name = self.try_get_utf8(*name_index)?.to_str_lossy();
+                let descriptor = self.try_get_utf8(*descriptor_index)?.to_str_lossy();
+                ["Method ", &class_name, ".", &name, &descriptor].concat()
             }
             Constant::InterfaceMethodRef {
                 class_index,
                 name_and_type_index,
             } => {
-                let class_name = self.try_get_class(*class_index)?;
+                let class_name = self.try_get_class(*class_index)?.to_str_lossy();
                 let (name_index, descriptor_index) =
                     self.try_get_name_and_type(*name_and_type_index)?;
-                let method_name = self.try_get_utf8(*name_index)?;
-                let method_descriptor = self.try_get_utf8(*descriptor_index)?;
-                format!("Interface method {class_name}.{method_name}{method_descriptor}")
+                let name = self.try_get_utf8(*name_index)?.to_str_lossy();
+                let descriptor = self.try_get_utf8(*descriptor_index)?.to_str_lossy();
+                ["Interface method ", &class_name, ".", &name, &descriptor].concat()
             }
             Constant::NameAndType {
                 name_index,
                 descriptor_index,
             } => {
-                let name = self.try_get_utf8(*name_index)?;
-                let descriptor = self.try_get_utf8(*descriptor_index)?;
-                format!("Name {name}, Descriptor {descriptor}")
+                let name = self.try_get_utf8(*name_index)?.to_str_lossy();
+                let descriptor = self.try_get_utf8(*descriptor_index)?.to_str_lossy();
+                ["Name ", &name, ", Descriptor ", &descriptor].concat()
             }
             Constant::MethodHandle {
                 reference_kind,
@@ -1434,7 +1434,7 @@ impl<'a> ConstantPool<'a> {
             }
             Constant::MethodType(utf8_index) => {
                 let method_descriptor = self.try_get_utf8(*utf8_index)?;
-                format!("Method type {method_descriptor}")
+                ["Method type ", &method_descriptor.to_str_lossy()].concat()
             }
             Constant::Dynamic {
                 bootstrap_method_attr_index,
@@ -1457,10 +1457,10 @@ impl<'a> ConstantPool<'a> {
                 format!("InvokeDynamic #{bootstrap_method_attr_index}:{name}:{descriptor}")
             }
             Constant::Module(name_index) => {
-                format!("Module {}", self.try_get_utf8(*name_index)?)
+                ["Module ", &self.try_get_utf8(*name_index)?.to_str_lossy()].concat()
             }
             Constant::Package(name_index) => {
-                format!("Package {}", self.try_get_utf8(*name_index)?)
+                ["Package ", &self.try_get_utf8(*name_index)?.to_str_lossy()].concat()
             }
         };
         Ok(value)

@@ -225,8 +225,9 @@ impl Display for OperandStack {
             let value = stack_entry.to_string();
             let chars: Vec<char> = value.chars().collect();
             if chars.len() > 100 {
-                let value = chars.iter().take(97).collect::<String>();
-                values.push(format!("{value}..."));
+                let mut value = chars.iter().take(97).collect::<String>();
+                value.push_str("...");
+                values.push(value);
             } else {
                 values.push(value);
             }

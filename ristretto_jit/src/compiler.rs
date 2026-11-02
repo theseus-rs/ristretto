@@ -79,9 +79,9 @@ impl Compiler {
         let settings = [("opt_level", "speed"), ("enable_verifier", ENABLE_VERIFIER)];
         for (name, value) in &settings {
             if flag_builder.set(name, value).is_err() {
-                return Err(InternalError(format!(
-                    "unable to set jit compiler flag '{name}'={value}'"
-                )));
+                return Err(InternalError(
+                    ["unable to set jit compiler flag '", name, "'=", value, "'"].concat(),
+                ));
             }
         }
         let flags = Flags::new(flag_builder);
@@ -318,7 +318,7 @@ impl Compiler {
             .unwrap_or(method_name)
             .strip_suffix(">")
             .unwrap_or(method_name);
-        format!("{class_name}__{method_name}")
+        [&class_name, "__", method_name].concat()
     }
 
     /// Creates a new signature from the method descriptor.

@@ -233,7 +233,7 @@ pub async fn version_class_loader_for_os(
     let mut version = version.to_string();
     let home_dir = cache_home_dir();
 
-    let base_path = home_dir.join(".ristretto").join(format!("{os}-{arch}"));
+    let base_path = home_dir.join(".ristretto").join([os, "-", arch].concat());
     let mut installation_dir = base_path.join(&version);
     if !is_complete_installation(&version, os, &installation_dir)? {
         remove_incomplete_installation(&installation_dir).await?;

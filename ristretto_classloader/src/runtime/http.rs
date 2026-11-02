@@ -88,13 +88,13 @@ fn build_url(url: &str, query: &[(&str, &str)]) -> String {
     if query.is_empty() {
         return url.to_string();
     }
-    let separator = if url.contains('?') { '&' } else { '?' };
+    let separator = if url.contains('?') { "&" } else { "?" };
     let pairs = query
         .iter()
-        .map(|(k, v)| format!("{}={}", urlencode(k), urlencode(v)))
+        .map(|(k, v)| [&urlencode(k), "=", &urlencode(v)].concat())
         .collect::<Vec<_>>()
         .join("&");
-    format!("{url}{separator}{pairs}")
+    [url, separator, &pairs].concat()
 }
 
 #[cfg(target_os = "wasi")]
@@ -149,9 +149,9 @@ async fn fetch_bytes(initial_url: &str, headers: &Headers) -> Result<Vec<u8>> {
             };
             let next = resolve_redirect(&current, location);
             if !visited.insert(next.clone()) {
-                return Err(Error::RequestError(format!(
-                    "redirect cycle detected at {next}",
-                )));
+                return Err(Error::RequestError(
+                    ["redirect cycle detected at ", &next].concat(),
+                ));
             }
             current = next;
             continue;
@@ -169,9 +169,9 @@ async fn fetch_bytes(initial_url: &str, headers: &Headers) -> Result<Vec<u8>> {
             .to_vec();
         return Ok(bytes);
     }
-    Err(Error::RequestError(format!(
-        "too many redirects starting at {initial_url}",
-    )))
+    Err(Error::RequestError(
+        ["too many redirects starting at ", initial_url].concat(),
+    ))
 }
 
 #[cfg(target_os = "wasi")]
@@ -184,12 +184,12 @@ fn resolve_redirect(base: &str, location: &str) -> String {
     {
         let after_scheme = &base[scheme_end + 3..];
         if let Some(path_start) = after_scheme.find('/') {
-            return format!("{}{}", &base[..scheme_end + 3 + path_start], location);
+            return [&base[..scheme_end + 3 + path_start], location].concat();
         }
-        return format!("{base}{location}");
+        return [base, location].concat();
     }
     if let Some(slash) = base.rfind('/') {
-        format!("{}/{}", &base[..slash], location)
+        [&base[..slash], "/", location].concat()
     } else {
         location.to_string()
     }

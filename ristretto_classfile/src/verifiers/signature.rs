@@ -94,7 +94,7 @@ impl<'a> SignatureParser<'a> {
             if !self.context.has_type_variable(name) {
                 return Err(VerificationError {
                     context: "Signature".to_string(),
-                    message: format!("Undefined type variable '{name}'"),
+                    message: ["Undefined type variable '", name, "'"].concat(),
                 });
             }
         }
@@ -443,10 +443,12 @@ pub fn verify_method_signature_with_context(
     if !parser.is_eof() {
         return Err(VerificationError {
             context: "Signature".to_string(),
-            message: format!(
-                "Unexpected characters at end of method signature: '{}'",
-                &signature[parser.pos..]
-            ),
+            message: [
+                "Unexpected characters at end of method signature: '",
+                &signature[parser.pos..],
+                "'",
+            ]
+            .concat(),
         });
     }
 
@@ -479,10 +481,12 @@ pub fn verify_field_signature(signature: &str, class_type_params: &[String]) -> 
     if !parser.is_eof() {
         return Err(VerificationError {
             context: "Signature".to_string(),
-            message: format!(
-                "Unexpected characters at end of field signature: '{}'",
-                &signature[parser.pos..]
-            ),
+            message: [
+                "Unexpected characters at end of field signature: '",
+                &signature[parser.pos..],
+                "'",
+            ]
+            .concat(),
         });
     }
 

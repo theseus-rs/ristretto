@@ -43,7 +43,7 @@ where
         .next()
         .unwrap_or("Unknown CPU");
     area.draw(&Text::new(
-        format!("{cpu} | same OpenJDK {version} library | both -Xint"),
+        [cpu, " | same OpenJDK ", version, " library | both -Xint"].concat(),
         (80, 80),
         ("sans-serif", 20).into_font(),
     ))?;

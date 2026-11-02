@@ -93,14 +93,22 @@ impl<T> IntrinsicRegistry<T> {
             return Ok(());
         }
         if let Some(previous) = self.metadata.get(metadata.signature) {
-            return Err(Error::InternalError(format!(
-                "Duplicate intrinsic {}: {} ({}) and {} ({})",
-                metadata.signature,
-                previous.implementation,
-                previous.source,
-                metadata.implementation,
-                metadata.source
-            )));
+            return Err(Error::InternalError(
+                [
+                    "Duplicate intrinsic ",
+                    metadata.signature,
+                    ": ",
+                    previous.implementation,
+                    " (",
+                    previous.source,
+                    ") and ",
+                    metadata.implementation,
+                    " (",
+                    metadata.source,
+                    ")",
+                ]
+                .concat(),
+            ));
         }
         self.methods.insert(metadata.signature, method);
         self.metadata.insert(metadata.signature, metadata);

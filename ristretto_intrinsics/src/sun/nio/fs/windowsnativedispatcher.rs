@@ -399,14 +399,14 @@ fn read_native_wide<T: Thread + 'static>(
     loop {
         let word = native_memory
             .read_i16(address + offset)
-            .ok_or_else(|| InternalError(format!("{context}: bad address")))?;
+            .ok_or_else(|| InternalError([context, ": bad address"].concat()))?;
         path_chars.push(word.cast_unsigned());
         if word == 0 {
             return Ok(path_chars);
         }
         offset = offset
             .checked_add(2)
-            .ok_or_else(|| InternalError(format!("{context}: address overflow")))?;
+            .ok_or_else(|| InternalError([context, ": address overflow"].concat()))?;
     }
 }
 
@@ -429,7 +429,9 @@ fn write_native_structure<V: VM + ?Sized, S>(
         std::slice::from_raw_parts(std::ptr::from_ref(structure).cast::<u8>(), size_of::<S>())
     };
     if !vm.native_memory().try_write_bytes(address, bytes) {
-        return Err(InternalError(format!("{context}: invalid output address")));
+        return Err(InternalError(
+            [context, ": invalid output address"].concat(),
+        ));
     }
     Ok(())
 }

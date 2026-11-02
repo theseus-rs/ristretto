@@ -96,7 +96,7 @@ impl Jar {
         let name = name.as_ref();
         let mut archive = self.archive.write().await;
         let class_file = if archive.is_module().await? {
-            let name = format!("classes/{name}");
+            let name = ["classes/", name].concat();
             archive.load_class_file(name.as_str()).await?
         } else {
             archive.load_class_file(name).await?
@@ -116,7 +116,7 @@ impl Jar {
         let name = name.as_ref();
         let mut archive = self.archive.write().await;
         if archive.is_module().await? {
-            let module_name = format!("classes/{name}");
+            let module_name = ["classes/", name].concat();
             if let Some(bytes) = archive.load_file(&module_name).await? {
                 return Ok(Some(bytes));
             }
@@ -241,9 +241,9 @@ impl Archive {
                 self.zip_archive = Some(archive);
             }
             #[cfg(target_family = "wasm")]
-            return Err(ArchiveError(format!(
-                "URL based archives are not supported on wasm: {url}"
-            )));
+            return Err(ArchiveError(
+                ["URL based archives are not supported on wasm: ", url].concat(),
+            ));
         } else if let Some(bytes) = &self.bytes {
             let bytes = bytes.to_vec();
             let cursor = io::Cursor::new(bytes);
@@ -265,7 +265,7 @@ impl Archive {
     ///
     /// if the jar cannot be read or the class file cannot be loaded.
     async fn load_class_file(&mut self, class_name: &str) -> Result<Option<ClassFile<'static>>> {
-        let class_file_name = format!("{class_name}.class");
+        let class_file_name = [class_name, ".class"].concat();
         let file = self.load_file(&class_file_name).await?;
         if let Some(bytes) = file {
             let class_file = ClassFile::from_bytes(&bytes)?;

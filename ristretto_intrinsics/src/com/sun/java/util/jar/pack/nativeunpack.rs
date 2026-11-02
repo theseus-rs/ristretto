@@ -211,7 +211,7 @@ fn decode_pack200(java_home: &Path, packed: &[u8]) -> Result<VecDeque<UnpackedEn
     if !output.status.success() {
         let message = String::from_utf8_lossy(&output.stderr);
         return Err(
-            JavaError::IoException(format!("Pack200 decoding failed: {}", message.trim())).into(),
+            JavaError::IoException(["Pack200 decoding failed: ", message.trim()].concat()).into(),
         );
     }
 

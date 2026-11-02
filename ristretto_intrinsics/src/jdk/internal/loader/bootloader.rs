@@ -36,7 +36,7 @@ pub async fn get_system_package_location<T: Thread + 'static>(
     let resolved_config = vm.module_system().resolved_configuration();
     let pkg_internal = package_name.replace('.', "/");
     if let Some(module_name) = resolved_config.find_module_for_package(&pkg_internal) {
-        let location = format!("jrt:/{module_name}").to_object(&thread).await?;
+        let location = ["jrt:/", module_name].concat().to_object(&thread).await?;
         return Ok(Some(location));
     }
 

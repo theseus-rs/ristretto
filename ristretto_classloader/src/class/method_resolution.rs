@@ -121,10 +121,16 @@ impl Class {
         {
             return Ok(target);
         }
-        Err(MethodResolutionError::NoSuchMethod(format!(
-            "Method {name}{descriptor} not found in class {}",
-            self.name()
-        )))
+        Err(MethodResolutionError::NoSuchMethod(
+            [
+                "Method ",
+                name,
+                descriptor,
+                " not found in class ",
+                self.name(),
+            ]
+            .concat(),
+        ))
     }
 
     /// Resolve an interface method, including Object methods and maximally specific
@@ -157,10 +163,16 @@ impl Class {
         if let Some(target) = interface_resolution_candidate(self, name, descriptor)? {
             return Ok(target);
         }
-        Err(MethodResolutionError::NoSuchMethod(format!(
-            "Method {name}{descriptor} not found in interface {}",
-            self.name()
-        )))
+        Err(MethodResolutionError::NoSuchMethod(
+            [
+                "Method ",
+                name,
+                descriptor,
+                " not found in interface ",
+                self.name(),
+            ]
+            .concat(),
+        ))
     }
 
     /// Select a resolved instance method for this receiver class in its linked hierarchy.
@@ -175,11 +187,16 @@ impl Class {
         resolved: &ResolvedMethod,
     ) -> Result<ResolvedMethod, MethodResolutionError> {
         if resolved.method.is_static() {
-            return Err(MethodResolutionError::IncompatibleClassChange(format!(
-                "Method {}.{} is static",
-                resolved.declaring_class.name(),
-                resolved.method.name()
-            )));
+            return Err(MethodResolutionError::IncompatibleClassChange(
+                [
+                    "Method ",
+                    resolved.declaring_class.name(),
+                    ".",
+                    resolved.method.name(),
+                    " is static",
+                ]
+                .concat(),
+            ));
         }
         if resolved.method.is_private() {
             return Ok(resolved.clone());
@@ -225,12 +242,16 @@ impl Class {
         {
             return Ok(target);
         }
-        Err(MethodResolutionError::AbstractMethod(format!(
-            "Method {}{} has no implementation in {}",
-            resolved.method.name(),
-            resolved.method.descriptor(),
-            self.name()
-        )))
+        Err(MethodResolutionError::AbstractMethod(
+            [
+                "Method ",
+                resolved.method.name(),
+                resolved.method.descriptor(),
+                " has no implementation in ",
+                self.name(),
+            ]
+            .concat(),
+        ))
     }
 
     /// Select a concrete instance method for a caller with no further access checks.
@@ -260,10 +281,16 @@ impl Class {
         let name = resolved.method.name();
         let descriptor = resolved.method.descriptor();
         if resolved.method.is_static() {
-            return Err(MethodResolutionError::IncompatibleClassChange(format!(
-                "Method {}.{name} is static",
-                resolved.declaring_class.name()
-            )));
+            return Err(MethodResolutionError::IncompatibleClassChange(
+                [
+                    "Method ",
+                    resolved.declaring_class.name(),
+                    ".",
+                    name,
+                    " is static",
+                ]
+                .concat(),
+            ));
         }
         if name == CONSTRUCTOR_NAME {
             return concrete_method(resolved.clone());
@@ -298,10 +325,16 @@ impl Class {
         if let Some(target) = interface_method(&lookup, name, descriptor)? {
             return concrete_method(target);
         }
-        Err(MethodResolutionError::AbstractMethod(format!(
-            "Method {name}{descriptor} has no implementation in {}",
-            lookup.name()
-        )))
+        Err(MethodResolutionError::AbstractMethod(
+            [
+                "Method ",
+                name,
+                descriptor,
+                " has no implementation in ",
+                lookup.name(),
+            ]
+            .concat(),
+        ))
     }
 
     /// Determine whether two classes have the same package name and defining loader.
@@ -333,11 +366,16 @@ impl Class {
 
 fn concrete_method(target: ResolvedMethod) -> Result<ResolvedMethod, MethodResolutionError> {
     if target.method.is_abstract() {
-        return Err(MethodResolutionError::AbstractMethod(format!(
-            "Method {}.{} is abstract",
-            target.declaring_class.name(),
-            target.method.name()
-        )));
+        return Err(MethodResolutionError::AbstractMethod(
+            [
+                "Method ",
+                target.declaring_class.name(),
+                ".",
+                target.method.name(),
+                " is abstract",
+            ]
+            .concat(),
+        ));
     }
     Ok(target)
 }
@@ -395,10 +433,16 @@ fn interface_method(
         .filter(|candidate| !candidate.method.is_abstract());
     if let Some(target) = concrete.next() {
         if concrete.next().is_some() {
-            return Err(MethodResolutionError::IncompatibleClassChange(format!(
-                "Conflicting interface defaults for {name}{descriptor} in {}",
-                class.name()
-            )));
+            return Err(MethodResolutionError::IncompatibleClassChange(
+                [
+                    "Conflicting interface defaults for ",
+                    name,
+                    descriptor,
+                    " in ",
+                    class.name(),
+                ]
+                .concat(),
+            ));
         }
         return Ok(Some(target.clone()));
     }

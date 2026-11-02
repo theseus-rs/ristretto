@@ -132,7 +132,12 @@ pub fn verify_method<C: VerificationContext>(
                 .constant_pool
                 .try_get_utf8(method.name_index)
                 .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
-            let message = format!("Method {name} is native or abstract but has Code attribute");
+            let message = [
+                "Method ",
+                &name.to_str_lossy(),
+                " is native or abstract but has Code attribute",
+            ]
+            .concat();
             return Err(VerifyError::ClassFormatError(message));
         }
         return Ok(VerificationResult::success(VerificationPath::Skipped));

@@ -48,7 +48,7 @@ pub async fn fill_in_stack_trace<T: Thread + 'static>(
     }
 
     let stack_element_array_class = thread
-        .class(format!("[L{stack_element_class};").as_str())
+        .class(["[L", stack_element_class.name(), ";"].concat().as_str())
         .await?;
     let reference = Reference::try_from((stack_element_array_class, stack_elements))?;
     let stack_trace = Value::new_object(vm.garbage_collector(), reference);

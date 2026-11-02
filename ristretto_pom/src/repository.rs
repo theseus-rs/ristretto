@@ -396,7 +396,7 @@ fn parse_update_policy(value: &str) -> Result<Option<UpdatePolicy>, String> {
             .strip_prefix("interval:")
             .and_then(|minutes| minutes.parse::<u64>().ok())
             .map(|minutes| Some(UpdatePolicy::Interval(format!("interval:{minutes}"))))
-            .ok_or_else(|| format!("invalid repository update policy '{value}'")),
+            .ok_or_else(|| ["invalid repository update policy '", value, "'"].concat()),
     }
 }
 
@@ -406,7 +406,7 @@ fn parse_checksum_policy(value: &str) -> Result<Option<ChecksumPolicy>, String> 
         "ignore" => Ok(Some(ChecksumPolicy::Ignore)),
         "warn" => Ok(Some(ChecksumPolicy::Warn)),
         _ if value.contains("${") => Ok(None),
-        _ => Err(format!("invalid repository checksum policy '{value}'")),
+        _ => Err(["invalid repository checksum policy '", value, "'"].concat()),
     }
 }
 

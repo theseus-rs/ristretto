@@ -222,7 +222,7 @@ pub fn get_entry<T: Thread + 'static>(
 
     // If not found and add_slash is true, try appending '/'
     if found_index.is_none() && add_slash {
-        let name_with_slash = format!("{name}/");
+        let name_with_slash = [&name, "/"].concat();
         for (i, entry) in context.entries.iter().enumerate() {
             let entry_name = String::from_utf8_lossy(&entry.name_bytes);
             if entry_name == name_with_slash {
@@ -662,7 +662,7 @@ pub fn open<T: Thread + 'static>(
     // Read the file bytes
     let file_bytes = std::fs::read(&path).map_err(|e| {
         if e.kind() == io::ErrorKind::NotFound {
-            ristretto_types::JavaError::FileNotFoundException(format!("File not found: {path}"))
+            ristretto_types::JavaError::FileNotFoundException(["File not found: ", &path].concat())
         } else {
             ristretto_types::JavaError::IoException(format!("Error reading file '{path}': {e}"))
         }

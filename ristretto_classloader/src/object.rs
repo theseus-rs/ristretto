@@ -338,9 +338,15 @@ impl Object {
     fn class_value(&self, expected_class_name: &str) -> Result<Value> {
         let class_name = self.class().name();
         if class_name != expected_class_name {
-            return Err(InvalidValueType(format!(
-                "Expected class {expected_class_name}; found {class_name}"
-            )));
+            return Err(InvalidValueType(
+                [
+                    "Expected class ",
+                    expected_class_name,
+                    "; found ",
+                    class_name,
+                ]
+                .concat(),
+            ));
         }
         self.value("value")
     }

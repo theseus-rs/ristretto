@@ -36,7 +36,7 @@ fn csv_field(value: &Value) -> String {
         .as_str()
         .map_or_else(|| value.to_string(), str::to_owned);
     if text.contains([',', '"', '\n', '\r']) {
-        format!("\"{}\"", text.replace('"', "\"\""))
+        ["\"", &text.replace('"', "\"\""), "\""].concat()
     } else {
         text
     }

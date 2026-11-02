@@ -52,7 +52,7 @@ pub fn find_signal_0<T: Thread + 'static>(
         "PWR" => 30,
         "SYS" | "UNUSED" => 31,
         _ => {
-            return Err(InternalError(format!("Unknown signal: {signal_name}")));
+            return Err(InternalError(["Unknown signal: ", &signal_name].concat()));
         }
     };
     Ok(Some(Value::Int(signal)))

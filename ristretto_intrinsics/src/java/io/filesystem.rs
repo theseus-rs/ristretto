@@ -132,7 +132,7 @@ fn strip_windows_extended_prefix(path: &str) -> String {
     #[cfg(windows)]
     {
         if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
-            return format!(r"\\{rest}");
+            return [r"\\", rest].concat();
         }
         if let Some(rest) = path.strip_prefix(r"\\?\") {
             return rest.to_string();

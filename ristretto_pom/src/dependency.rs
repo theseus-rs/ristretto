@@ -293,9 +293,9 @@ impl<'de> Deserialize<'de> for Dependency {
             && scope.is_none()
             && !expression.contains("${")
         {
-            return Err(serde::de::Error::custom(format!(
-                "unknown dependency scope '{expression}'"
-            )));
+            return Err(serde::de::Error::custom(
+                ["unknown dependency scope '", expression, "'"].concat(),
+            ));
         }
         Ok(Self {
             group_id: dependency.group_id,

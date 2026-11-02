@@ -285,9 +285,13 @@ async fn resolve_bootstrap_method<'a>(
         || !is_valid_third_arg
         || !is_valid_return
     {
-        return Err(BootstrapMethodError(format!(
-            "Invalid bootstrap method descriptor: {bootstrap_method_descriptor}"
-        ))
+        return Err(BootstrapMethodError(
+            [
+                "Invalid bootstrap method descriptor: ",
+                &bootstrap_method_descriptor,
+            ]
+            .concat(),
+        )
         .into());
     }
 
@@ -800,7 +804,7 @@ async fn adjust_varargs_static_arguments(
             );
 
             // Create the array type name
-            let array_type_name = format!("[{}", component_type.descriptor());
+            let array_type_name = ["[", &component_type.descriptor()].concat();
             let array_class = thread.class(&array_type_name).await?;
 
             // Box primitives if the array is Object[] (needed for varargs like Object...)
@@ -1081,10 +1085,14 @@ async fn validate_call_site(
         .await?;
 
     if !is_call_site && !is_method_handle {
-        return Err(BootstrapMethodError(format!(
-            "Bootstrap method returned object of type {} which is neither a CallSite nor a MethodHandle",
-            object_class.name()
-        ))
+        return Err(BootstrapMethodError(
+            [
+                "Bootstrap method returned object of type ",
+                object_class.name(),
+                " which is neither a CallSite nor a MethodHandle",
+            ]
+            .concat(),
+        )
         .into());
     }
 
@@ -1109,9 +1117,16 @@ async fn validate_call_site(
 
         // Compare descriptor strings
         if call_site_descriptor_str != bootstrap_method_descriptor {
-            return Err(BootstrapMethodError(format!(
-                "CallSite type '{call_site_descriptor_str}' does not match expected descriptor '{bootstrap_method_descriptor}'"
-            ))
+            return Err(BootstrapMethodError(
+                [
+                    "CallSite type '",
+                    &call_site_descriptor_str,
+                    "' does not match expected descriptor '",
+                    bootstrap_method_descriptor,
+                    "'",
+                ]
+                .concat(),
+            )
             .into());
         }
     }
@@ -1189,10 +1204,14 @@ pub(crate) async fn invokedynamic(
         // It's already a MethodHandle (from record-related bootstrap methods)
         call_site_or_method_handle
     } else {
-        return Err(BootstrapMethodError(format!(
-            "Bootstrap method returned object of type {} which is neither a CallSite nor a MethodHandle",
-            object_class.name()
-        ))
+        return Err(BootstrapMethodError(
+            [
+                "Bootstrap method returned object of type ",
+                object_class.name(),
+                " which is neither a CallSite nor a MethodHandle",
+            ]
+            .concat(),
+        )
         .into());
     };
 

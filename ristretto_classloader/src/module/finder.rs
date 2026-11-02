@@ -69,7 +69,7 @@ impl ModuleDescriptorCache {
 
         let image = JImage::from_file(jimage_path)
             .map_err(|error| ModuleError::IoError(error.to_string()))?;
-        let resource_name = format!("/{module_name}/module-info.class");
+        let resource_name = ["/", module_name, "/module-info.class"].concat();
         let resource = image
             .get_resource(&resource_name)
             .map_err(|error| ModuleError::IoError(error.to_string()))?;
@@ -200,7 +200,7 @@ impl SystemModuleFinder {
         let mut modules = HashMap::with_capacity(module_names.len());
 
         for module_name in module_names {
-            let resource_name = format!("/{module_name}/module-info.class");
+            let resource_name = ["/", &module_name, "/module-info.class"].concat();
             let resource = image
                 .get_resource(&resource_name)
                 .map_err(|e| ModuleError::IoError(format!("{resource_name}: {e}")))?;
@@ -451,7 +451,7 @@ impl ModulePathFinder {
                 let new_prefix = if prefix.is_empty() {
                     name_str.to_string()
                 } else {
-                    format!("{prefix}/{name_str}")
+                    [prefix, "/", &name_str].concat()
                 };
                 Self::discover_packages_in_dir(base, &new_prefix, packages)?;
             }

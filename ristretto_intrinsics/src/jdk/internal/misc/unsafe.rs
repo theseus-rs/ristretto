@@ -126,9 +126,9 @@ pub async fn array_index_scale_0<T: Thread + 'static>(
             REFERENCE_SIZE
         }
         _ => {
-            return Err(InternalError(format!(
-                "Unknown array class type '{class_name}'"
-            )));
+            return Err(InternalError(
+                ["Unknown array class type '", class_name, "'"].concat(),
+            ));
         }
     };
     Ok(Some(Value::Int(i32::try_from(scale)?)))

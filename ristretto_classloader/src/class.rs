@@ -582,7 +582,7 @@ impl Class {
         let name = self.name();
         if let Some((binary_name, suffix)) = name.rsplit_once("+0x") {
             let binary_name = binary_name.replace('/', ".");
-            format!("{binary_name}/0x{suffix}")
+            [&binary_name, "/0x", suffix].concat()
         } else {
             name.replace('/', ".")
         }
@@ -660,7 +660,7 @@ impl Class {
                 if name.starts_with('[') {
                     return name;
                 }
-                format!("L{name};")
+                ["L", &name, ";"].concat()
             }
         }
     }
@@ -958,10 +958,9 @@ impl Class {
                 _ => false,
             };
             if !same {
-                return Err(InternalError(format!(
-                    "Cannot change superclass of linked {}",
-                    self.name()
-                )));
+                return Err(InternalError(
+                    ["Cannot change superclass of linked ", self.name()].concat(),
+                ));
             }
         }
         *parent_guard = parent;
@@ -999,10 +998,9 @@ impl Class {
                     .zip(&interfaces)
                     .all(|(a, b)| Arc::ptr_eq(a, b)))
         {
-            return Err(InternalError(format!(
-                "Cannot change interfaces of linked {}",
-                self.name()
-            )));
+            return Err(InternalError(
+                ["Cannot change interfaces of linked ", self.name()].concat(),
+            ));
         }
         *interfaces_guard = interfaces;
         Ok(())
@@ -1055,16 +1053,15 @@ impl Class {
             || interfaces.len() != self.class_file.interfaces.len()
             || interfaces.iter().any(|class| !class.is_linked())
         {
-            return Err(InternalError(format!(
-                "Incomplete links for {}",
-                self.name()
-            )));
+            return Err(InternalError(
+                ["Incomplete links for ", self.name()].concat(),
+            ));
         }
         let mut fields = if let Some(parent) = parent.as_ref() {
             parent
                 .field_layout
                 .get()
-                .ok_or_else(|| InternalError(format!("Unlinked parent of {}", self.name())))?
+                .ok_or_else(|| InternalError(["Unlinked parent of ", self.name()].concat()))?
                 .to_vec()
         } else {
             Vec::new()
@@ -1411,7 +1408,7 @@ impl Class {
     {
         let name = name.as_ref();
         let descriptor = descriptor.as_ref();
-        let signature = format!("{name}{descriptor}");
+        let signature = [name, descriptor].concat();
         if let Some(method) = self.methods.get(&signature) {
             return Some(method.clone());
         }
@@ -1420,7 +1417,7 @@ impl Class {
         if let Some(polymorphic_descriptor) = POLYMORPHIC_METHODS.get(&(self.name(), name)) {
             // If the class name and method name match a polymorphic method, we can return it
             // regardless of the descriptor.
-            let signature = format!("{name}{polymorphic_descriptor}");
+            let signature = [name, polymorphic_descriptor].concat();
             if let Some(method) = self.methods.get(&signature) {
                 return Some(method.clone());
             }

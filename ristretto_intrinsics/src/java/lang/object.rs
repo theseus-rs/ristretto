@@ -61,9 +61,9 @@ pub async fn clone<T: Thread + 'static>(
             .await?;
         if !implements_cloneable {
             let class_name = object_class.name();
-            return Err(CloneNotSupportedException(format!(
-                "class {class_name} does not implement Cloneable"
-            ))
+            return Err(CloneNotSupportedException(
+                ["class ", class_name, " does not implement Cloneable"].concat(),
+            )
             .into());
         }
         let value = Value::new_object(

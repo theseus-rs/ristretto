@@ -45,7 +45,7 @@ pub async fn invoke_0<T: Thread + 'static>(
     let return_type_class = class::get_class(&thread, &return_type).await?;
     let is_void = return_type_class.name() == "void";
     let return_type_descriptor = RistrettoClass::convert_to_descriptor(return_type_class.name());
-    let descriptor = format!("({method_parameters}){return_type_descriptor}");
+    let descriptor = ["(", &method_parameters, ")", &return_type_descriptor].concat();
 
     let method = class.try_get_method(&name, &descriptor)?;
     let resolved = ResolvedMethod {

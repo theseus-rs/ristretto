@@ -71,12 +71,18 @@ impl ResolvedFieldRef {
 
     pub(crate) fn check_kind(&self, is_static: bool) -> Result<()> {
         if self.is_static() != is_static {
-            return Err(IncompatibleClassChangeError(format!(
-                "Field {}.{} {} static",
-                self.declaring_class.name(),
-                self.field.name(),
-                if self.is_static() { "is" } else { "is not" }
-            ))
+            return Err(IncompatibleClassChangeError(
+                [
+                    "Field ",
+                    self.declaring_class.name(),
+                    ".",
+                    self.field.name(),
+                    " ",
+                    if self.is_static() { "is" } else { "is not" },
+                    " static",
+                ]
+                .concat(),
+            )
             .into());
         }
         Ok(())
@@ -94,13 +100,19 @@ impl ResolvedFieldRef {
                             CONSTRUCTOR_NAME
                         }))
         {
-            return Err(IllegalAccessError(format!(
-                "Cannot write final field {}.{} from {}.{}",
-                self.declaring_class.name(),
-                self.field.name(),
-                frame.class().name(),
-                frame.method().name()
-            ))
+            return Err(IllegalAccessError(
+                [
+                    "Cannot write final field ",
+                    self.declaring_class.name(),
+                    ".",
+                    self.field.name(),
+                    " from ",
+                    frame.class().name(),
+                    ".",
+                    frame.method().name(),
+                ]
+                .concat(),
+            )
             .into());
         }
         Ok(())
@@ -116,23 +128,32 @@ impl ResolvedFieldRef {
             return Ok(slot);
         }
         if !is_subclass_or_same(receiver, &self.declaring_class)? {
-            return Err(IncompatibleClassChangeError(format!(
-                "{} is not an instance of {}",
-                receiver.name(),
-                self.declaring_class.name()
-            ))
+            return Err(IncompatibleClassChangeError(
+                [
+                    receiver.name(),
+                    " is not an instance of ",
+                    self.declaring_class.name(),
+                ]
+                .concat(),
+            )
             .into());
         }
         if let Some(caller) = &self.protected_receiver
             && !is_subclass_or_same(receiver, caller)?
         {
-            return Err(IllegalAccessError(format!(
-                "Cannot access protected field {}.{} on {} from {}",
-                self.declaring_class.name(),
-                self.field.name(),
-                receiver.name(),
-                caller.name()
-            ))
+            return Err(IllegalAccessError(
+                [
+                    "Cannot access protected field ",
+                    self.declaring_class.name(),
+                    ".",
+                    self.field.name(),
+                    " on ",
+                    receiver.name(),
+                    " from ",
+                    caller.name(),
+                ]
+                .concat(),
+            )
             .into());
         }
         // Standalone classloader users can still change unlinked hierarchies. Only publish
@@ -231,15 +252,13 @@ pub(crate) async fn resolve_field_ref(frame: &Frame, index: u16) -> Result<Arc<R
         .contains(ClassAccessFlags::PUBLIC)
         && !same_runtime_package(frame.class(), &target)?
     {
-        return Err(IllegalAccessError(format!(
-            "{} cannot access {}",
-            frame.class().name(),
-            target.name()
-        ))
+        return Err(IllegalAccessError(
+            [frame.class().name(), " cannot access ", target.name()].concat(),
+        )
         .into());
     }
     let (declaring_class, field) = lookup_field(&target, &name, &field_type)?
-        .ok_or_else(|| NoSuchFieldError(format!("{}.{name}:{descriptor}", target.name())))?;
+        .ok_or_else(|| NoSuchFieldError([target.name(), ".", &name, ":", &descriptor].concat()))?;
     let protected_receiver = check_access(frame, &declaring_class, &field).await?;
     let storage = if field.access_flags().contains(FieldAccessFlags::STATIC) {
         let index = declaring_class
@@ -341,12 +360,16 @@ async fn check_access(
     } else if flags.contains(FieldAccessFlags::PROTECTED) && is_subclass_or_same(caller, class)? {
         return Ok((!flags.contains(FieldAccessFlags::STATIC)).then(|| caller.clone()));
     }
-    Err(IllegalAccessError(format!(
-        "{} cannot access field {}.{}",
-        caller.name(),
-        class.name(),
-        field.name()
-    ))
+    Err(IllegalAccessError(
+        [
+            caller.name(),
+            " cannot access field ",
+            class.name(),
+            ".",
+            field.name(),
+        ]
+        .concat(),
+    )
     .into())
 }
 
@@ -375,7 +398,7 @@ async fn nest_host(frame: &Frame, class: &Arc<Class>) -> Result<Arc<Class>> {
                 }
             }
             return Err(
-                IllegalAccessError(format!("Invalid nest host for {}", class.name())).into(),
+                IllegalAccessError(["Invalid nest host for ", class.name()].concat()).into(),
             );
         }
     }

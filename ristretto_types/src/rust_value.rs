@@ -106,7 +106,7 @@ impl RustValue for &str {
         use ristretto_classloader::{Class, Object};
 
         const STRING_PREFIX: &str = "str:";
-        let class_name = format!("{STRING_PREFIX}{self}");
+        let class_name = [STRING_PREFIX, self].concat();
         let mut constant_pool = ConstantPool::new();
         let class_index = constant_pool.add_class(class_name).unwrap_or_default();
         let class_file = ClassFile {

@@ -280,7 +280,7 @@ impl Method {
     /// Get the method signature.
     #[must_use]
     pub fn signature(&self) -> String {
-        format!("{}{}", self.name, self.descriptor)
+        [self.name.as_str(), self.descriptor.as_str()].concat()
     }
 
     /// Get the maximum stack size.

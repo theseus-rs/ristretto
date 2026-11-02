@@ -22,10 +22,9 @@ pub(crate) enum FieldKind {
 impl FieldKind {
     pub(crate) fn from_descriptor(descriptor: &JavaStr) -> Result<Self> {
         let bytes = descriptor.as_bytes();
-        let first = bytes
-            .first()
-            .copied()
-            .ok_or_else(|| InternalError(format!("empty field descriptor: {descriptor}")))?;
+        let first = bytes.first().copied().ok_or_else(|| {
+            InternalError(["empty field descriptor: ", &descriptor.to_str_lossy()].concat())
+        })?;
         Ok(match first {
             b'B' | b'C' | b'S' | b'Z' | b'I' => FieldKind::Int,
             b'J' => FieldKind::Long,
@@ -33,9 +32,9 @@ impl FieldKind {
             b'D' => FieldKind::Double,
             b'L' | b'[' => FieldKind::Object,
             _ => {
-                return Err(InternalError(format!(
-                    "unsupported field descriptor: {descriptor}"
-                )));
+                return Err(InternalError(
+                    ["unsupported field descriptor: ", &descriptor.to_str_lossy()].concat(),
+                ));
             }
         })
     }

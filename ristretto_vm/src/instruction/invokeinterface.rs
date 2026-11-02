@@ -56,11 +56,14 @@ pub(crate) async fn invokeinterface(
         .is_assignable_from(&thread, &object_class)
         .await?
     {
-        return Err(IncompatibleClassChangeError(format!(
-            "{} does not implement {}",
-            object_class.name(),
-            resolution.referenced_class.name()
-        ))
+        return Err(IncompatibleClassChangeError(
+            [
+                object_class.name(),
+                " does not implement ",
+                resolution.referenced_class.name(),
+            ]
+            .concat(),
+        )
         .into());
     }
 
@@ -74,12 +77,12 @@ pub(crate) async fn invokeinterface(
         method: resolved_method,
     } = object_class.select_method(&resolved)?;
 
+    let class_name = resolved_class.name();
+    let method_name = resolution.method_name.as_str();
     if resolved_method.is_static() {
-        return Err(IncompatibleClassChangeError(format!(
-            "Method {}.{} is static",
-            resolved_class.name(),
-            resolution.method_name
-        ))
+        return Err(IncompatibleClassChangeError(
+            ["Method ", class_name, ".", method_name, " is static"].concat(),
+        )
         .into());
     }
 
@@ -87,20 +90,16 @@ pub(crate) async fn invokeinterface(
     // JVMS 6.5 permits private interface methods, including nestmate calls.
     // Member access was checked during resolution.
     if !resolved_method.is_public() && !resolved_method.is_private() {
-        return Err(IllegalAccessError(format!(
-            "Method {}.{} is not public",
-            resolved_class.name(),
-            resolution.method_name,
-        ))
+        return Err(IllegalAccessError(
+            ["Method ", class_name, ".", method_name, " is not public"].concat(),
+        )
         .into());
     }
 
     if resolved_method.is_abstract() {
-        return Err(AbstractMethodError(format!(
-            "Method {}.{} is abstract",
-            resolved_class.name(),
-            resolution.method_name,
-        ))
+        return Err(AbstractMethodError(
+            ["Method ", class_name, ".", method_name, " is abstract"].concat(),
+        )
         .into());
     }
 

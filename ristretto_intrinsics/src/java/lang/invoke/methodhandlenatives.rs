@@ -1456,12 +1456,20 @@ async fn resolve_method<T: Thread + 'static>(
             let return_descriptor = ret.map_or_else(|| "V".to_string(), |r| r.descriptor());
             (parameter_descriptors, return_descriptor)
         } else {
-            return Err(InternalError(format!("Unsupported type: {class_name}")));
+            return Err(InternalError(["Unsupported type: ", &class_name].concat()));
         }
     };
 
     let method_name = name.as_string()?;
-    let method_descriptor = format!("({}){return_descriptor}", parameter_descriptors.concat());
+    let mut method_descriptor = String::with_capacity(
+        parameter_descriptors.iter().map(String::len).sum::<usize>() + return_descriptor.len() + 2,
+    );
+    method_descriptor.push('(');
+    for descriptor in &parameter_descriptors {
+        method_descriptor.push_str(descriptor);
+    }
+    method_descriptor.push(')');
+    method_descriptor.push_str(&return_descriptor);
     let (resolved_class, method, is_lambda_method) = match class.name() {
         "java/lang/invoke/DelegatingMethodHandle$Holder"
         | "java/lang/invoke/DirectMethodHandle$Holder"
@@ -1504,8 +1512,9 @@ async fn resolve_method<T: Thread + 'static>(
                         // which already have appropriate access, so skip access check
                         (found_class, found_method, true)
                     } else {
-                        let missing = format!("{}.{method_name}{method_descriptor}", class.name());
-                        let message = format!("Lambda method not found: {missing}");
+                        let missing =
+                            [class.name(), ".", &method_name, &method_descriptor].concat();
+                        let message = ["Lambda method not found: ", &missing].concat();
                         let error = InternalError(message);
                         return resolution_failure(speculative_resolve, error);
                     }
@@ -1542,14 +1551,15 @@ async fn resolve_method<T: Thread + 'static>(
                         }
                         (found_class, found_method, false)
                     } else {
-                        let missing = format!("{}.{method_name}{method_descriptor}", class.name());
-                        let message = format!("Interface method not found: {missing}");
+                        let missing =
+                            [class.name(), ".", &method_name, &method_descriptor].concat();
+                        let message = ["Interface method not found: ", &missing].concat();
                         let error = InternalError(message);
                         return resolution_failure(speculative_resolve, error);
                     }
                 }
                 Err(_) => {
-                    let missing = format!("{}.{method_name}{method_descriptor}", class.name());
+                    let missing = [class.name(), ".", &method_name, &method_descriptor].concat();
                     let error = NoSuchMethodError(missing);
                     return resolution_failure(speculative_resolve, error.into());
                 }
@@ -1571,15 +1581,22 @@ async fn resolve_method<T: Thread + 'static>(
             // If speculative, return None (fail silently)
             Ok(None)
         } else {
-            Err(IllegalAccessError(format!(
-                "member is {}: {}.{method_name}{method_descriptor}",
-                if method_access_flags.contains(MethodAccessFlags::PRIVATE) {
-                    "private"
-                } else {
-                    "inaccessible"
-                },
-                resolved_class.name(),
-            ))
+            Err(IllegalAccessError(
+                [
+                    "member is ",
+                    if method_access_flags.contains(MethodAccessFlags::PRIVATE) {
+                        "private"
+                    } else {
+                        "inaccessible"
+                    },
+                    ": ",
+                    resolved_class.name(),
+                    ".",
+                    &method_name,
+                    &method_descriptor,
+                ]
+                .concat(),
+            )
             .into())
         };
     }
@@ -1643,7 +1660,7 @@ async fn resolve_field<T: Thread + 'static>(
         Ok(field) => field,
         Err(ristretto_classloader::Error::FieldNotFound { .. }) => {
             // A missing field is a linkage error; the JDK turns it into NoSuchFieldException.
-            let missing = format!("{}.{field_name}", class.name());
+            let missing = [class.name(), ".", &field_name].concat();
             let error = NoSuchFieldError(missing);
             return resolution_failure(speculative_resolve, error.into());
         }
@@ -1654,16 +1671,21 @@ async fn resolve_field<T: Thread + 'static>(
         return if speculative_resolve {
             Ok(None)
         } else {
-            Err(IllegalAccessError(format!(
-                "member is {}: {}.{}",
-                if field_access_flags.contains(FieldAccessFlags::PRIVATE) {
-                    "private"
-                } else {
-                    "inaccessible"
-                },
-                class.name(),
-                field_name,
-            ))
+            Err(IllegalAccessError(
+                [
+                    "member is ",
+                    if field_access_flags.contains(FieldAccessFlags::PRIVATE) {
+                        "private"
+                    } else {
+                        "inaccessible"
+                    },
+                    ": ",
+                    class.name(),
+                    ".",
+                    &field_name,
+                ]
+                .concat(),
+            )
             .into())
         };
     }

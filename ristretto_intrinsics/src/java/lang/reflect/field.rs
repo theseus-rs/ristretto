@@ -40,9 +40,9 @@ pub async fn get_type_annotation_bytes_0<T: Thread + 'static>(
         .into_iter()
         .find(|f| f.name() == field_name)
         .ok_or_else(|| {
-            ristretto_types::Error::InternalError(format!(
-                "Field {field_name} not found in {class_name}"
-            ))
+            ristretto_types::Error::InternalError(
+                ["Field ", &field_name, " not found in ", &class_name].concat(),
+            )
         })?;
 
     // Collect all type annotations from both visible and invisible attributes

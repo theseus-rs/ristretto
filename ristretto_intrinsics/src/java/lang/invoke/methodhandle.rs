@@ -682,15 +682,15 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
                 let field_type_name = type_ref.value("name")?.as_string()?;
                 // For field access, we just need the field name, not the type descriptor
                 // The type is used to verify the field but we don't need it for GetField
-                format!("L{};", field_type_name.replace('.', "/"))
+                ["L", &field_type_name.replace('.', "/"), ";"].concat()
             } else {
                 // Unknown type; try to use descriptor field
                 if let Ok(descriptor) = member_descriptor.and_then(|value| value.as_string()) {
                     descriptor
                 } else {
-                    return Err(InternalError(format!(
-                        "MemberName has unknown type class: {class_name}"
-                    )));
+                    return Err(InternalError(
+                        ["MemberName has unknown type class: ", &class_name].concat(),
+                    ));
                 }
             }
         } else if let Ok(descriptor) = member_descriptor.and_then(|value| value.as_string()) {
@@ -720,17 +720,32 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
     match reference_kind {
         ReferenceKind::InvokeVirtual | ReferenceKind::InvokeInterface => {
             if arguments.is_empty() {
-                return Err(InternalError(format!(
-                    "InvokeVirtual/Interface requires receiver: {target_class_name}.{member_name}{member_descriptor}"
-                )));
+                return Err(InternalError(
+                    [
+                        "InvokeVirtual/Interface requires receiver: ",
+                        &target_class_name,
+                        ".",
+                        &member_name,
+                        &member_descriptor,
+                    ]
+                    .concat(),
+                ));
             }
             let receiver = arguments.remove(0);
 
             // Check for null receiver; this is a NullPointerException
             if receiver.is_null() {
-                return Err(NullPointerException(Some(format!(
-                    "Cannot invoke virtual method {target_class_name}.{member_name}{member_descriptor} on null"
-                )))
+                return Err(NullPointerException(Some(
+                    [
+                        "Cannot invoke virtual method ",
+                        &target_class_name,
+                        ".",
+                        &member_name,
+                        &member_descriptor,
+                        " on null",
+                    ]
+                    .concat(),
+                ))
                 .into());
             }
 
@@ -763,9 +778,16 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
                     // For lambda methods, try to find in argument's class hierarchy
                     find_static_lambda_method(&thread, &arguments, &member_name, &member_descriptor)
                         .ok_or_else(|| {
-                            InternalError(format!(
-                                "Static lambda method not found: {target_class_name}.{member_name}{member_descriptor}"
-                            ))
+                            InternalError(
+                                [
+                                    "Static lambda method not found: ",
+                                    &target_class_name,
+                                    ".",
+                                    &member_name,
+                                    &member_descriptor,
+                                ]
+                                .concat(),
+                            )
                         })?
                 }
                 Err(e) => return Err(e.into()),
@@ -788,15 +810,28 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
         }
         ReferenceKind::GetField => {
             if arguments.is_empty() {
-                return Err(InternalError(format!(
-                    "GetField requires receiver: {target_class_name}.{member_name}"
-                )));
+                return Err(InternalError(
+                    [
+                        "GetField requires receiver: ",
+                        &target_class_name,
+                        ".",
+                        &member_name,
+                    ]
+                    .concat(),
+                ));
             }
             let argument = arguments.remove(0);
             if argument.is_null() {
-                return Err(NullPointerException(Some(format!(
-                    "Cannot get field {target_class_name}.{member_name} from null"
-                )))
+                return Err(NullPointerException(Some(
+                    [
+                        "Cannot get field ",
+                        &target_class_name,
+                        ".",
+                        &member_name,
+                        " from null",
+                    ]
+                    .concat(),
+                ))
                 .into());
             }
             let receiver = argument.as_object_ref()?;
@@ -808,15 +843,28 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
         }
         ReferenceKind::PutField => {
             if arguments.is_empty() {
-                return Err(InternalError(format!(
-                    "PutField requires receiver: {target_class_name}.{member_name}"
-                )));
+                return Err(InternalError(
+                    [
+                        "PutField requires receiver: ",
+                        &target_class_name,
+                        ".",
+                        &member_name,
+                    ]
+                    .concat(),
+                ));
             }
             let argument = arguments.remove(0);
             if argument.is_null() {
-                return Err(NullPointerException(Some(format!(
-                    "Cannot set field {target_class_name}.{member_name} on null"
-                )))
+                return Err(NullPointerException(Some(
+                    [
+                        "Cannot set field ",
+                        &target_class_name,
+                        ".",
+                        &member_name,
+                        " on null",
+                    ]
+                    .concat(),
+                ))
                 .into());
             }
             let mut receiver = argument.as_object_mut()?;
@@ -869,7 +917,7 @@ async fn invoke_special<T: Thread + 'static>(
                     thread.vm()?.garbage_collector(),
                     Object::new(allocation_class)?,
                 );
-                let constructor_descriptor = format!("({descriptor})V");
+                let constructor_descriptor = ["(", descriptor, ")V"].concat();
                 let method = target_class.try_get_method(&method_name, &constructor_descriptor)?;
                 let mut call_arguments = vec![instance.clone()];
                 call_arguments.extend(arguments);
@@ -898,9 +946,16 @@ async fn invoke_special<T: Thread + 'static>(
         // Regular special invocation (private methods, super calls)
         if arguments.is_empty() {
             let class_name = target_class.name();
-            return Err(InternalError(format!(
-                "InvokeSpecial requires receiver: {class_name}.{method_name}{method_descriptor}"
-            )));
+            return Err(InternalError(
+                [
+                    "InvokeSpecial requires receiver: ",
+                    class_name,
+                    ".",
+                    &method_name,
+                    &method_descriptor,
+                ]
+                .concat(),
+            ));
         }
         let receiver = arguments.remove(0);
         if receiver.is_null() {
@@ -1029,9 +1084,14 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
 
     // The first argument should be the MethodHandle
     if arguments.is_empty() {
-        return Err(InternalError(format!(
-            "Holder method {method_name} requires at least a MethodHandle argument"
-        )));
+        return Err(InternalError(
+            [
+                "Holder method ",
+                method_name,
+                " requires at least a MethodHandle argument",
+            ]
+            .concat(),
+        ));
     }
 
     let method_handle = arguments.remove(0);
@@ -1167,7 +1227,7 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
                             .ok_or_else(|| InternalError("Invalid MethodType".to_string()))?
                             .as_string()?;
                         let end = descriptor.rfind(')').unwrap_or(descriptor.len());
-                        format!("{}V", &descriptor[..=end])
+                        [&descriptor[..=end], "V"].concat()
                     } else {
                         "()V".to_string()
                     };
@@ -1422,9 +1482,13 @@ fn extract_target_and_bound_args(
         }
     }
 
-    Err(InternalError(format!(
-        "Could not find target in MethodHandle of class {mh_class_name}"
-    )))
+    Err(InternalError(
+        [
+            "Could not find target in MethodHandle of class ",
+            &mh_class_name,
+        ]
+        .concat(),
+    ))
 }
 
 /// Wrapper for `dispatch_holder_method_internal` that starts with depth=0.

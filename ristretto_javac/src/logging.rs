@@ -1,6 +1,6 @@
 use ristretto_vm::{Error::InternalError, Result};
 use std::io::IsTerminal;
-use tracing_subscriber::filter::EnvFilter;
+use tracing_subscriber::filter::{Directive, EnvFilter};
 use tracing_subscriber::fmt;
 
 const LOG_ENV_VAR: &str = "RISTRETTO_LOG";
@@ -20,8 +20,8 @@ pub(crate) fn initialize() -> Result<()> {
         .with_timer(fmt::time::uptime())
         .compact();
     let cranelift_directive = "cranelift=warn"
-        .parse()
-        .map_err(|error| InternalError(format!("{error}")))?;
+        .parse::<Directive>()
+        .map_err(|error| InternalError(error.to_string()))?;
     let filter = EnvFilter::from_env(LOG_ENV_VAR).add_directive(cranelift_directive);
     fmt()
         .with_env_filter(filter)

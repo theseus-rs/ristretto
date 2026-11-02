@@ -292,10 +292,13 @@ fn class_mirror_name(value: &Value) -> Result<String> {
     }
     let class_object = value.as_object_ref()?;
     if class_object.class().name() != "java/lang/Class" {
-        return Err(InternalError(format!(
-            "Expected a java.lang.Class mirror; found {}",
-            class_object.class().name()
-        )));
+        return Err(InternalError(
+            [
+                "Expected a java.lang.Class mirror; found ",
+                class_object.class().name(),
+            ]
+            .concat(),
+        ));
     }
     class_object.value("name")?.as_string().map_err(Into::into)
 }
@@ -358,9 +361,9 @@ fn method_descriptor(value: &Value) -> Result<Option<String>> {
 fn object_array_values(value: &Value, description: &str) -> Result<Vec<Value>> {
     let reference = value.as_reference()?;
     let Reference::Array(array) = &*reference else {
-        return Err(InternalError(format!(
-            "{description} is not an object array"
-        )));
+        return Err(InternalError(
+            [description, " is not an object array"].concat(),
+        ));
     };
     Ok(array.elements.to_vec())
 }
@@ -378,7 +381,7 @@ fn class_mirror_descriptor(value: &Value) -> Result<String> {
         "short" => "S".to_string(),
         "void" => "V".to_string(),
         name if name.starts_with('[') => name.replace('.', "/"),
-        name => format!("L{};", name.replace('.', "/")),
+        name => ["L", &name.replace('.', "/"), ";"].concat(),
     };
     Ok(descriptor)
 }

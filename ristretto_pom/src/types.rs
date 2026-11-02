@@ -65,9 +65,9 @@ impl FromStr for DependencyScope {
             "test" => Ok(Self::Test),
             "system" => Ok(Self::System),
             "import" => Ok(Self::Import),
-            _ => Err(Error::InvalidValue(format!(
-                "Unknown dependency scope: {scope}"
-            ))),
+            _ => Err(Error::InvalidValue(
+                ["Unknown dependency scope: ", scope].concat(),
+            )),
         }
     }
 }
@@ -251,9 +251,9 @@ impl<'de> Deserialize<'de> for UpdatePolicy {
                     .strip_prefix("interval:")
                     .and_then(|minutes| minutes.parse::<u64>().ok())
                     .ok_or_else(|| {
-                        serde::de::Error::custom(format!(
-                            "invalid repository update policy '{policy}'"
-                        ))
+                        serde::de::Error::custom(
+                            ["invalid repository update policy '", &policy, "'"].concat(),
+                        )
                     })?;
                 Self::Interval(format!("interval:{minutes}"))
             }

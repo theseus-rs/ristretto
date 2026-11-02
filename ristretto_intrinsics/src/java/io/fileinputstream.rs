@@ -266,16 +266,16 @@ pub async fn open_0<T: Thread + 'static>(
                 {
                     let error = match error.kind() {
                         ErrorKind::NotFound => {
-                            FileNotFoundException(format!("{path} (No such file or directory)"))
+                            FileNotFoundException([&path, " (No such file or directory)"].concat())
                         }
                         ErrorKind::PermissionDenied => {
-                            AccessControlException(format!("Access denied: {path}"))
+                            AccessControlException(["Access denied: ", &path].concat())
                         }
                         ErrorKind::InvalidInput => {
-                            IllegalArgumentException(format!("Invalid file path: {path}"))
+                            IllegalArgumentException(["Invalid file path: ", &path].concat())
                         }
                         ErrorKind::InvalidFilename => {
-                            IoException(format!("Invalid filename: {path}"))
+                            IoException(["Invalid filename: ", &path].concat())
                         }
                         _ => IoException(format!("IO error opening file '{path}': {error}")),
                     };
@@ -283,10 +283,15 @@ pub async fn open_0<T: Thread + 'static>(
                 }
                 #[cfg(target_os = "windows")]
                 {
-                    Err(FileNotFoundException(format!(
-                        "{path} ({})",
-                        crate::java::io::filesystem::open_error_message(&error)
-                    ))
+                    Err(FileNotFoundException(
+                        [
+                            &path,
+                            " (",
+                            &crate::java::io::filesystem::open_error_message(&error),
+                            ")",
+                        ]
+                        .concat(),
+                    )
                     .into())
                 }
             }

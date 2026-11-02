@@ -294,10 +294,9 @@ impl Project {
                     return Err(Error::MissingField("profile.id".to_string()));
                 }
                 if !profile_ids.insert(&profile.id) {
-                    return Err(Error::ValidationError(format!(
-                        "Duplicate profile id '{}'",
-                        profile.id
-                    )));
+                    return Err(Error::ValidationError(
+                        ["Duplicate profile id '", &profile.id, "'"].concat(),
+                    ));
                 }
                 if let Some(dependencies) = &profile.dependencies {
                     validate_dependency_syntax(dependencies, "profile.dependencies")?;
@@ -347,10 +346,14 @@ impl Project {
                         .as_ref()
                         .is_some_and(|file| file.exists.is_some() && file.missing.is_some())
                 }) {
-                    return Err(Error::ValidationError(format!(
-                        "Profile '{}' activation.file cannot define both exists and missing",
-                        profile.id
-                    )));
+                    return Err(Error::ValidationError(
+                        [
+                            "Profile '",
+                            &profile.id,
+                            "' activation.file cannot define both exists and missing",
+                        ]
+                        .concat(),
+                    ));
                 }
                 if let Some(dependencies) = &profile.dependencies {
                     validate_dependencies(dependencies, false)?;
@@ -384,15 +387,23 @@ impl Project {
                     || declared.artifact_id != parent.artifact_id
                     || !parent_version_matches(&declared.version, parent_version)
                 {
-                    return Err(Error::ValidationError(format!(
-                        "Resolved parent {}:{}:{} does not match declared parent {}:{}:{}",
-                        parent_group,
-                        parent.artifact_id,
-                        parent_version,
-                        declared.group_id,
-                        declared.artifact_id,
-                        declared.version
-                    )));
+                    return Err(Error::ValidationError(
+                        [
+                            "Resolved parent ",
+                            parent_group,
+                            ":",
+                            &parent.artifact_id,
+                            ":",
+                            parent_version,
+                            " does not match declared parent ",
+                            &declared.group_id,
+                            ":",
+                            &declared.artifact_id,
+                            ":",
+                            &declared.version,
+                        ]
+                        .concat(),
+                    ));
                 }
                 Ok(())
             }
@@ -485,35 +496,35 @@ fn effective_version(project: &Project) -> Option<&str> {
 fn validate_dependency_syntax(dependencies: &Dependencies, location: &str) -> Result<()> {
     for dependency in &dependencies.dependencies {
         if dependency.group_id.trim().is_empty() {
-            return Err(Error::MissingField(format!(
-                "{location}.dependency.groupId"
-            )));
+            return Err(Error::MissingField(
+                [location, ".dependency.groupId"].concat(),
+            ));
         }
         if dependency.artifact_id.trim().is_empty() {
-            return Err(Error::MissingField(format!(
-                "{location}.dependency.artifactId"
-            )));
+            return Err(Error::MissingField(
+                [location, ".dependency.artifactId"].concat(),
+            ));
         }
         if dependency
             .version
             .as_ref()
             .is_some_and(|value| value.trim().is_empty())
         {
-            return Err(Error::MissingField(format!(
-                "{location}.dependency.version"
-            )));
+            return Err(Error::MissingField(
+                [location, ".dependency.version"].concat(),
+            ));
         }
         if let Some(exclusions) = &dependency.exclusions {
             for exclusion in &exclusions.exclusions {
                 if exclusion.group_id.trim().is_empty() {
-                    return Err(Error::MissingField(format!(
-                        "{location}.dependency.exclusions.exclusion.groupId"
-                    )));
+                    return Err(Error::MissingField(
+                        [location, ".dependency.exclusions.exclusion.groupId"].concat(),
+                    ));
                 }
                 if exclusion.artifact_id.trim().is_empty() {
-                    return Err(Error::MissingField(format!(
-                        "{location}.dependency.exclusions.exclusion.artifactId"
-                    )));
+                    return Err(Error::MissingField(
+                        [location, ".dependency.exclusions.exclusion.artifactId"].concat(),
+                    ));
                 }
             }
         }
@@ -528,16 +539,21 @@ fn validate_repositories(repositories: Option<&Repositories>, location: &str) ->
     let mut ids = BTreeSet::new();
     for repository in &repositories.repositories {
         if repository.id.trim().is_empty() {
-            return Err(Error::MissingField(format!("{location}.repository.id")));
+            return Err(Error::MissingField([location, ".repository.id"].concat()));
         }
         if repository.url.trim().is_empty() {
-            return Err(Error::MissingField(format!("{location}.repository.url")));
+            return Err(Error::MissingField([location, ".repository.url"].concat()));
         }
         if !ids.insert(&repository.id) {
-            return Err(Error::ValidationError(format!(
-                "Duplicate repository id '{}' in {location}",
-                repository.id
-            )));
+            return Err(Error::ValidationError(
+                [
+                    "Duplicate repository id '",
+                    &repository.id,
+                    "' in ",
+                    location,
+                ]
+                .concat(),
+            ));
         }
     }
     Ok(())
@@ -601,37 +617,52 @@ fn validate_reporting(reporting: Option<&Reporting>) -> Result<()> {
 
 fn validate_dependencies(dependencies: &Dependencies, managed: bool) -> Result<()> {
     for dependency in &dependencies.dependencies {
-        let coordinate = format!("{}:{}", dependency.group_id, dependency.artifact_id);
+        let coordinate = [&dependency.group_id, ":", &dependency.artifact_id].concat();
         if dependency.scope == Some(DependencyScope::System)
             && dependency
                 .system_path
                 .as_ref()
                 .is_none_or(|path| path.trim().is_empty())
         {
-            return Err(Error::ValidationError(format!(
-                "Dependency {coordinate} has system scope but no systemPath"
-            )));
+            return Err(Error::ValidationError(
+                [
+                    "Dependency ",
+                    &coordinate,
+                    " has system scope but no systemPath",
+                ]
+                .concat(),
+            ));
         }
         if dependency.scope != Some(DependencyScope::System) && dependency.system_path.is_some() {
-            return Err(Error::ValidationError(format!(
-                "Dependency {coordinate} has systemPath without system scope"
-            )));
+            return Err(Error::ValidationError(
+                [
+                    "Dependency ",
+                    &coordinate,
+                    " has systemPath without system scope",
+                ]
+                .concat(),
+            ));
         }
         if dependency.scope == Some(DependencyScope::Import) {
             if !managed {
-                return Err(Error::ValidationError(format!(
-                    "Dependency {coordinate} uses import scope outside dependencyManagement"
-                )));
+                return Err(Error::ValidationError(
+                    [
+                        "Dependency ",
+                        &coordinate,
+                        " uses import scope outside dependencyManagement",
+                    ]
+                    .concat(),
+                ));
             }
             if dependency.r#type.as_deref() != Some("pom") {
-                return Err(Error::ValidationError(format!(
-                    "Imported dependency {coordinate} must have type pom"
-                )));
+                return Err(Error::ValidationError(
+                    ["Imported dependency ", &coordinate, " must have type pom"].concat(),
+                ));
             }
             if dependency.version.is_none() {
-                return Err(Error::ValidationError(format!(
-                    "Imported dependency {coordinate} must have a version"
-                )));
+                return Err(Error::ValidationError(
+                    ["Imported dependency ", &coordinate, " must have a version"].concat(),
+                ));
             }
         }
     }

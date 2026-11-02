@@ -34,11 +34,11 @@ async fn set_version_fields<T: Thread + 'static>(thread: &Arc<T>, prefix: &str) 
     let vm = thread.vm()?;
     let (major, minor, micro, update, build) = parse_version(vm.java_version());
     let class = thread.class(VERSION_CLASS).await?;
-    class.set_static_value(&format!("{prefix}_major_version"), Value::Int(major))?;
-    class.set_static_value(&format!("{prefix}_minor_version"), Value::Int(minor))?;
-    class.set_static_value(&format!("{prefix}_micro_version"), Value::Int(micro))?;
-    class.set_static_value(&format!("{prefix}_update_version"), Value::Int(update))?;
-    class.set_static_value(&format!("{prefix}_build_number"), Value::Int(build))?;
+    class.set_static_value(&[prefix, "_major_version"].concat(), Value::Int(major))?;
+    class.set_static_value(&[prefix, "_minor_version"].concat(), Value::Int(minor))?;
+    class.set_static_value(&[prefix, "_micro_version"].concat(), Value::Int(micro))?;
+    class.set_static_value(&[prefix, "_update_version"].concat(), Value::Int(update))?;
+    class.set_static_value(&[prefix, "_build_number"].concat(), Value::Int(build))?;
     Ok(())
 }
 

@@ -568,9 +568,9 @@ fn validate_module_name(name: &str) -> Result<()> {
     // Module names follow Java qualified identifier rules
     for part in name.split('.') {
         if part.is_empty() {
-            return Err(ModuleError::InvalidModuleName(format!(
-                "empty component in {name}"
-            )));
+            return Err(ModuleError::InvalidModuleName(
+                ["empty component in ", name].concat(),
+            ));
         }
         // Check first character is a Java identifier start
         let mut chars = part.chars();
@@ -579,9 +579,9 @@ fn validate_module_name(name: &str) -> Result<()> {
             && first != '_'
             && first != '$'
         {
-            return Err(ModuleError::InvalidModuleName(format!(
-                "invalid start character in {name}"
-            )));
+            return Err(ModuleError::InvalidModuleName(
+                ["invalid start character in ", name].concat(),
+            ));
         }
         // Check remaining characters
         for c in chars {

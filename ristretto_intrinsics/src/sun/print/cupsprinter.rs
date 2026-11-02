@@ -146,7 +146,7 @@ fn ppd_path_for(printer: &str) -> Option<PathBuf> {
     if printer.is_empty() || printer.contains(['/', '\\', '\0']) {
         return None;
     }
-    Some(PathBuf::from(format!("/etc/cups/ppd/{printer}.ppd")))
+    Some(PathBuf::from(["/etc/cups/ppd/", printer, ".ppd"].concat()))
 }
 
 /// Reads the PPD file associated with a printer.
@@ -168,7 +168,7 @@ fn split_ppd_key(raw: &str) -> (String, String) {
 /// Parses a PPD file and returns the choice keys and human-readable labels for the requested
 /// option (e.g. `PageSize`, `OutputBin`, `Resolution`).
 fn parse_ppd_option_choices(ppd: &str, option: &str) -> Vec<(String, String)> {
-    let prefix = format!("*{option} ");
+    let prefix = ["*", option, " "].concat();
     let mut choices = Vec::new();
     for line in ppd.lines() {
         let line = line.trim_start();
@@ -189,7 +189,7 @@ fn parse_ppd_option_choices(ppd: &str, option: &str) -> Vec<(String, String)> {
 
 /// Parses a `*Default<Option>` line from a PPD, returning the choice key it points at.
 fn parse_ppd_default(ppd: &str, option: &str) -> Option<String> {
-    let prefix = format!("*Default{option}:");
+    let prefix = ["*Default", option, ":"].concat();
     for line in ppd.lines() {
         let line = line.trim_start();
         if let Some(rest) = line.strip_prefix(&prefix) {
@@ -212,7 +212,7 @@ fn parse_paper_dimension(ppd: &str, key: &str) -> Option<(f32, f32)> {
 /// Parses an `*ImageableArea` entry (`llx lly urx ury` in PostScript points) for the given page
 /// size key.
 fn parse_imageable_area(ppd: &str, key: &str) -> Option<(f32, f32, f32, f32)> {
-    let prefix = format!("*ImageableArea {key}:");
+    let prefix = ["*ImageableArea ", key, ":"].concat();
     for line in ppd.lines() {
         let line = line.trim_start();
         if let Some(rest) = line.strip_prefix(&prefix) {
@@ -227,7 +227,7 @@ fn parse_imageable_area(ppd: &str, key: &str) -> Option<(f32, f32, f32, f32)> {
 
 /// Helper for two-number PPD entries such as `*PaperDimension`.
 fn parse_ppd_pair(ppd: &str, option: &str, key: &str) -> Option<(f32, f32)> {
-    let prefix = format!("*{option} {key}:");
+    let prefix = ["*", option, " ", key, ":"].concat();
     for line in ppd.lines() {
         let line = line.trim_start();
         if let Some(rest) = line.strip_prefix(&prefix) {
