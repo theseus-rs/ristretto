@@ -60,6 +60,52 @@ public class Test {
                 || !first.isHidden() || !second.isHidden()) {
             throw new AssertionError("hidden definitions must have unique identities");
         }
+        String firstName = first.getName();
+        String secondName = second.getName();
+        boolean hiddenName = firstName.indexOf("/0x") > 0 && firstName.indexOf("/0x") == firstName.lastIndexOf("/0x")
+                && secondName.indexOf("/0x") > 0 && secondName.indexOf("/0x") == secondName.lastIndexOf("/0x");
+        boolean noPlus = !firstName.contains("+0x") && !secondName.contains("+0x");
+        boolean canonicalNull = first.getCanonicalName() == null && second.getCanonicalName() == null;
+        boolean simpleName = first.getSimpleName().equals(firstName) && second.getSimpleName().equals(secondName);
+        System.out.println("hidden name: " + hiddenName);
+        System.out.println("no plus: " + noPlus);
+        System.out.println("canonical null: " + canonicalNull);
+        System.out.println("simple name: " + simpleName);
+        if (!hiddenName || !noPlus || !canonicalNull || !simpleName) {
+            throw new AssertionError("unexpected hidden names: " + firstName + " / " + secondName);
+        }
+        boolean forNameFails = false;
+        try {
+            Class.forName(firstName);
+        } catch (ClassNotFoundException expected) {
+            forNameFails = true;
+        }
+        boolean forNameLoaderFails = false;
+        try {
+            Class.forName(firstName, false, ClassLoader.getSystemClassLoader());
+        } catch (ClassNotFoundException expected) {
+            forNameLoaderFails = true;
+        }
+        boolean findClassFails = false;
+        try {
+            MethodHandles.lookup().findClass(firstName);
+        } catch (ClassNotFoundException expected) {
+            findClassFails = true;
+        }
+        boolean loadClassFails = false;
+        try {
+            ClassLoader.getSystemClassLoader().loadClass(firstName);
+        } catch (ClassNotFoundException expected) {
+            loadClassFails = true;
+        }
+        System.out.println("forName fails: " + forNameFails);
+        System.out.println("forName loader fails: " + forNameLoaderFails);
+        System.out.println("findClass fails: " + findClassFails);
+        System.out.println("loadClass fails: " + loadClassFails);
+        System.out.println("package empty: " + first.getPackageName().isEmpty());
+        System.out.println("type name: " + first.getTypeName().equals(firstName));
+        System.out.println("enclosing null: " + (first.getEnclosingClass() == null));
+        System.out.println("declaring null: " + (first.getDeclaringClass() == null));
         check(lookup, first, 11);
         check(lookup, second, 22);
         Class<?> normal = lookup.defineClass(bytes(33));
