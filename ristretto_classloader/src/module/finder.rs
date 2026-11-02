@@ -267,50 +267,45 @@ impl ModulePathFinder {
         let mut modules = HashMap::new();
 
         for path in paths {
-            if path.is_file()
-                && path
-                    .extension()
-                    .is_some_and(|e| e.eq_ignore_ascii_case("jar"))
-            {
-                // Try to read as modular JAR
-                if let Some(reference) = Self::read_modular_jar(path)? {
-                    modules.insert(reference.name().to_string(), reference);
-                }
-            } else if path.is_dir() {
-                // Check for exploded module (has module-info.class)
-                let module_info_path = path.join("module-info.class");
-                if module_info_path.exists() {
-                    if let Some(reference) = Self::read_exploded_module(path)? {
-                        modules.insert(reference.name().to_string(), reference);
-                    }
-                } else {
-                    // Directory containing modules
-                    if let Ok(entries) = std::fs::read_dir(path) {
-                        for entry in entries.flatten() {
-                            let entry_path = entry.path();
-                            if entry_path.is_file()
-                                && entry_path
-                                    .extension()
-                                    .is_some_and(|e| e.eq_ignore_ascii_case("jar"))
-                                && let Some(reference) = Self::read_modular_jar(&entry_path)?
-                            {
-                                modules.insert(reference.name().to_string(), reference);
-                            } else if entry_path.is_dir() {
-                                let module_info = entry_path.join("module-info.class");
-                                if module_info.exists()
-                                    && let Some(reference) =
-                                        Self::read_exploded_module(&entry_path)?
-                                {
-                                    modules.insert(reference.name().to_string(), reference);
-                                }
-                            }
-                        }
-                    }
-                }
+            if let Some(reference) = Self::read_module(path)? {
+                modules.insert(reference.name().to_string(), reference);
+            } else if path.is_dir() && !path.join("module-info.class").exists() {
+                Self::load_from_directory(path, &mut modules)?;
             }
         }
 
         Ok(modules)
+    }
+
+    /// Loads immediate children of a directory containing modules.
+    fn load_from_directory(
+        path: &Path,
+        modules: &mut HashMap<String, ModuleReference>,
+    ) -> Result<()> {
+        let Ok(entries) = std::fs::read_dir(path) else {
+            return Ok(());
+        };
+        for entry in entries.flatten() {
+            if let Some(reference) = Self::read_module(&entry.path())? {
+                modules.insert(reference.name().to_string(), reference);
+            }
+        }
+        Ok(())
+    }
+
+    /// Reads a JAR or an exploded module without descending into module directories.
+    fn read_module(path: &Path) -> Result<Option<ModuleReference>> {
+        if path.is_file()
+            && path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("jar"))
+        {
+            return Self::read_modular_jar(path);
+        }
+        if path.is_dir() {
+            return Self::read_exploded_module(path);
+        }
+        Ok(None)
     }
 
     fn read_modular_jar(path: &Path) -> Result<Option<ModuleReference>> {
@@ -550,6 +545,94 @@ mod tests {
         let java_base = finder.find("java.base").expect("java.base module");
         assert!(java_base.descriptor().packages.contains("java/lang"));
         assert!(finder.find_all().len() > 1);
+        Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn write_test_module(path: &Path, name: &str) {
+        use ristretto_classfile::attributes::{Attribute, ModuleAccessFlags};
+        use ristretto_classfile::{ClassAccessFlags, Version};
+
+        let mut class_file = ClassFile {
+            version: Version::Java9 { minor: 0 },
+            access_flags: ClassAccessFlags::MODULE,
+            ..ClassFile::default()
+        };
+        class_file.this_class = class_file.constant_pool.add_class("module-info").unwrap();
+        let name_index = class_file.constant_pool.add_utf8("Module").unwrap();
+        let module_name_index = class_file.constant_pool.add_module(name).unwrap();
+        class_file.attributes.push(Attribute::Module {
+            name_index,
+            module_name_index,
+            flags: ModuleAccessFlags::empty(),
+            version_index: 0,
+            requires: Vec::new(),
+            exports: Vec::new(),
+            opens: Vec::new(),
+            uses: Vec::new(),
+            provides: Vec::new(),
+        });
+        let mut bytes = Vec::new();
+        class_file.to_bytes(&mut bytes).unwrap();
+        std::fs::create_dir_all(path).unwrap();
+        std::fs::write(path.join("module-info.class"), bytes).unwrap();
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[tokio::test]
+    async fn test_module_path_files_and_directories() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let root = directory.path();
+        let direct_jar = root.join("direct.jar");
+        zip::ZipWriter::new(std::fs::File::create(&direct_jar)?)
+            .finish()
+            .unwrap();
+        let direct_module = root.join("exploded");
+        write_test_module(&direct_module, "direct.module");
+        let modules_directory = root.join("modules");
+        let child_module = modules_directory.join("child");
+        write_test_module(&child_module, "child.module");
+        let child_jar = modules_directory.join("automatic.JAR");
+        zip::ZipWriter::new(std::fs::File::create(&child_jar)?)
+            .finish()
+            .unwrap();
+        write_test_module(&modules_directory.join("nested/deeper"), "ignored.module");
+        std::fs::write(modules_directory.join("ignored.txt"), b"not a module")?;
+
+        let finder = ModulePathFinder::new(&[
+            direct_jar,
+            direct_module,
+            modules_directory,
+            root.join("missing"),
+        ])
+        .await?;
+        let names: BTreeSet<_> = finder
+            .find_all()
+            .iter()
+            .map(|reference| reference.name().to_string())
+            .collect();
+        assert_eq!(
+            names,
+            ["automatic.JAR", "child.module", "direct", "direct.module"]
+                .map(str::to_string)
+                .into()
+        );
+        Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[tokio::test]
+    async fn test_module_path_propagates_invalid_descriptors() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let module_path = directory.path().join("broken");
+        std::fs::create_dir(&module_path)?;
+        std::fs::write(module_path.join("module-info.class"), b"invalid")?;
+        for path in [module_path, directory.path().to_path_buf()] {
+            assert!(matches!(
+                ModulePathFinder::new(&[path]).await,
+                Err(ModuleError::DescriptorParseError(_))
+            ));
+        }
         Ok(())
     }
 

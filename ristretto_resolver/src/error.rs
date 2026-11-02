@@ -112,10 +112,11 @@ mod tests {
 
     #[test]
     fn converts_reqwest_errors_without_urls() {
-        let error = reqwest::Client::new()
-            .get("://invalid")
+        // Invalid headers produce an error without a URL before TLS is initialized.
+        let error = reqwest::Client::builder()
+            .user_agent("\n")
             .build()
-            .expect_err("invalid request URL");
+            .expect_err("invalid user agent header");
         let converted = Error::from(error);
         assert!(matches!(
             converted,
