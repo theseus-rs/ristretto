@@ -452,11 +452,10 @@ impl Frame {
             // loop for exactly one instruction without charging or logging it again.
             tokio::task::yield_now().await;
             let thread = self.thread()?;
-            self.execute_sync_instructions::<false>(
+            self.execute_sync_instructions::<false, false>(
                 &mut thread.instruction_budget(),
                 state,
                 &mut 1,
-                false,
             )?
         } else {
             boundary
@@ -519,7 +518,12 @@ impl Frame {
         remaining: &mut usize,
         debug: bool,
     ) -> Result<BatchExit> {
-        self.execute_sync_instructions::<true>(budget, state, remaining, debug)
+        // Select logging once per batch so the ordinary loop has no per-opcode debug branch.
+        if debug {
+            self.execute_sync_instructions::<true, true>(budget, state, remaining)
+        } else {
+            self.execute_sync_instructions::<true, false>(budget, state, remaining)
+        }
     }
 
     /// Share dispatch with yield resumption, which executes its already-budgeted instruction.
@@ -528,12 +532,11 @@ impl Frame {
         reason = "One exhaustive dispatch loop covers every JVM opcode"
     )]
     #[inline(never)]
-    fn execute_sync_instructions<const ACCOUNT: bool>(
+    fn execute_sync_instructions<const ACCOUNT: bool, const DEBUG: bool>(
         &self,
         budget: &mut crate::thread::InstructionBudget<'_>,
         state: &mut FrameState,
         remaining: &mut usize,
-        debug: bool,
     ) -> Result<BatchExit> {
         let code = self.method.code();
         let FrameState { locals, stack } = state;
@@ -549,7 +552,7 @@ impl Frame {
                         .unwrap_or_else(|| self.invalid_program_counter.load(Ordering::Relaxed));
                     break 'batch Err(InvalidProgramCounter(pc));
                 };
-                if debug {
+                if DEBUG {
                     self.instruction_index.store(cursor, Ordering::Relaxed);
                     if let Err(error) = self.debug_execute(locals, stack, instruction) {
                         break 'batch Err(error);
@@ -1922,26 +1925,29 @@ mod tests {
 
     #[test]
     fn test_synchronous_batch_commits_budget_on_fault_and_invalid_pc() -> Result<()> {
-        let (thread, frame, mut state) =
-            batch_test_frame(|_| vec![Instruction::Iconst_1, Instruction::Pop, Instruction::Pop])?;
-        let mut remaining = INSTRUCTION_BATCH_SIZE;
-        assert!(matches!(
-            frame.execute_sync_batch(&thread, &mut state, &mut remaining, false)?,
-            BatchExit::Fault(crate::Error::OperandStackUnderflow)
-        ));
-        assert_eq!(3, thread.instruction_count());
-        assert_eq!(2, frame.program_counter());
-        assert_eq!(253, remaining);
+        for debug in [false, true] {
+            let (thread, frame, mut state) = batch_test_frame(|_| {
+                vec![Instruction::Iconst_1, Instruction::Pop, Instruction::Pop]
+            })?;
+            let mut remaining = INSTRUCTION_BATCH_SIZE;
+            assert!(matches!(
+                frame.execute_sync_batch(&thread, &mut state, &mut remaining, debug)?,
+                BatchExit::Fault(crate::Error::OperandStackUnderflow)
+            ));
+            assert_eq!(3, thread.instruction_count());
+            assert_eq!(2, frame.program_counter());
+            assert_eq!(253, remaining);
 
-        let (thread, frame, mut state) = batch_test_frame(|_| vec![Instruction::Nop])?;
-        let mut remaining = INSTRUCTION_BATCH_SIZE;
-        assert!(matches!(
-            frame.execute_sync_batch(&thread, &mut state, &mut remaining, false),
-            Err(InvalidProgramCounter(1))
-        ));
-        assert_eq!(1, thread.instruction_count());
-        assert_eq!(1, frame.program_counter());
-        assert_eq!(255, remaining);
+            let (thread, frame, mut state) = batch_test_frame(|_| vec![Instruction::Nop])?;
+            let mut remaining = INSTRUCTION_BATCH_SIZE;
+            assert!(matches!(
+                frame.execute_sync_batch(&thread, &mut state, &mut remaining, debug),
+                Err(InvalidProgramCounter(1))
+            ));
+            assert_eq!(1, thread.instruction_count());
+            assert_eq!(1, frame.program_counter());
+            assert_eq!(255, remaining);
+        }
         Ok(())
     }
 

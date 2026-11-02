@@ -1,4 +1,4 @@
-use ristretto_classfile::JavaStr;
+use crate::java::lang::class::{get_class_name, get_class_no_init};
 use ristretto_classfile::VersionSpecification::{Between, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{JAVA_11, JAVA_17};
@@ -369,7 +369,8 @@ fn object_array_values(value: &Value, description: &str) -> Result<Vec<Value>> {
 }
 
 fn class_mirror_descriptor(value: &Value) -> Result<String> {
-    let name = class_mirror_name(value)?;
+    let class = value.as_object_ref()?;
+    let name = get_class_name(&class)?;
     let descriptor = match name.as_str() {
         "boolean" => "Z".to_string(),
         "byte" => "B".to_string(),
@@ -391,9 +392,7 @@ async fn fill_stack_trace_element<T: Thread + 'static>(
     element: &Value,
     frame: &StackTraceFrame,
 ) -> Result<()> {
-    let internal_class_name = frame.class_name.replace('.', "/");
-    let class_name = JavaStr::cow_from_str(&internal_class_name);
-    let class = thread.load_and_link_class(&class_name).await?;
+    let class = get_class_no_init(thread, &frame.class_mirror).await?;
     let method = resolve_frame_method(&class, frame);
 
     // Class.getName() is already in the public StackTraceElement form. In particular, retaining

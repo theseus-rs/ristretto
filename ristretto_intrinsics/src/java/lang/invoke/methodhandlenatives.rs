@@ -1,5 +1,5 @@
 use crate::bounds;
-use crate::java::lang::class::get_class;
+use crate::java::lang::class::{get_class, get_class_name};
 use crate::jdk::internal::misc::r#unsafe::STATIC_FIELD_OFFSET_MASK;
 use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::Equal;
@@ -1342,7 +1342,7 @@ pub async fn resolve<T: Thread + 'static>(
     };
     let class_name = {
         let class_object = class_object.as_object_ref()?;
-        class_object.value("name")?.as_string()?
+        get_class_name(&class_object)?
     };
     // Per JVM spec §5.4.3, member resolution should only load and link the class,
     // NOT initialize it. Class initialization (§5.5) only occurs on active use
@@ -1417,13 +1417,13 @@ async fn resolve_method<T: Thread + 'static>(
             let mut parameter_descriptors = Vec::with_capacity(parameters.len());
             for parameter in parameters {
                 let class_object = parameter.as_object_ref()?;
-                let class_name = class_object.value("name")?.as_string()?;
+                let class_name = get_class_name(&class_object)?;
                 let descriptor = Class::convert_to_descriptor(&class_name);
                 parameter_descriptors.push(descriptor);
             }
             let return_type = method_type_ref.value("rtype")?;
             let return_type = return_type.as_object_ref()?;
-            let return_class_name = return_type.value("name")?.as_string()?;
+            let return_class_name = get_class_name(&return_type)?;
             let return_descriptor = Class::convert_to_descriptor(&return_class_name);
             (parameter_descriptors, return_descriptor)
         } else if class_name.starts_with('[') {
@@ -1436,13 +1436,13 @@ async fn resolve_method<T: Thread + 'static>(
             // elements[1..] are parameter types (Class)
             let return_type =
                 bounds::index(elements, 0, "MethodHandleNatives return type")?.as_object_ref()?;
-            let return_class_name = return_type.value("name")?.as_string()?;
+            let return_class_name = get_class_name(&return_type)?;
             let return_descriptor = Class::convert_to_descriptor(&return_class_name);
 
             let mut parameter_descriptors = Vec::with_capacity(elements.len() - 1);
             for parameter in elements.iter().skip(1) {
                 let class_object = parameter.as_object_ref()?;
-                let class_name = class_object.value("name")?.as_string()?;
+                let class_name = get_class_name(&class_object)?;
                 let descriptor = Class::convert_to_descriptor(&class_name);
                 parameter_descriptors.push(descriptor);
             }

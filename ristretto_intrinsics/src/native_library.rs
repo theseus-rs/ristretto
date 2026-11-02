@@ -250,6 +250,7 @@ pub fn is_intrinsic_native_library(path: &str) -> bool {
     matches!(
         stem,
         "awt"
+            | "extnet"
             | "javajpeg"
             | "jpeg"
             | "jimage"
@@ -265,6 +266,8 @@ pub fn is_intrinsic_native_library(path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_classloader::Value;
+    use ristretto_types::{JavaObject, Parameters};
 
     #[test]
     fn test_jni_versions() {
@@ -386,10 +389,38 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_extnet_bootstrap_initialization() -> Result<()> {
+        let (_vm, thread) = crate::test::java17_thread().await?;
+        // Legacy sockets initialize this class through Class.forName, which loads extnet.
+        let name = "jdk.net.ExtendedSocketOptions".to_object(&thread).await?;
+        let result = crate::java::lang::class::for_name_0(
+            thread,
+            Parameters::new(vec![
+                name,
+                Value::from(true),
+                Value::Object(None),
+                Value::Object(None),
+            ]),
+        )
+        .await?;
+        let class_object = result.expect("extended socket options class");
+        let class_object = class_object.as_object_ref()?;
+        let class_name = class_object.value("name")?.as_string()?;
+        assert_eq!(class_name.as_str(), "jdk.net.ExtendedSocketOptions");
+        Ok(())
+    }
+
     #[test]
     fn test_is_intrinsic_native_library() {
         for path in [
             "awt",
+            "extnet",
+            "/java/lib/libextnet.dylib",
+            "libextnet.so",
+            r"C:\Java\bin\extnet.dll",
+            "libextnet.jnilib",
+            "libextnet.a",
             "javajpeg",
             "jpeg",
             "libjavajpeg.so",
@@ -408,7 +439,13 @@ mod tests {
             assert!(is_intrinsic_native_library(path), "{path}");
         }
 
-        for path in ["", "libjava.so", "network.dll", "libzip.so.1"] {
+        for path in [
+            "",
+            "libjava.so",
+            "network.dll",
+            "libzip.so.1",
+            "libextnet_extra.so",
+        ] {
             assert!(!is_intrinsic_native_library(path), "{path}");
         }
     }

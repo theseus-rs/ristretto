@@ -1,9 +1,10 @@
-use crate::java::lang::class::get_class;
+use crate::java::lang::class::{get_class, get_class_name as mirror_class_name};
+use ristretto_classfile::BaseType;
 use ristretto_classfile::VersionSpecification::Any;
-use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
+use ristretto_classloader::{Class, ObjectArray, Reference, Value};
+use ristretto_gc::GarbageCollector;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::Error::InvalidOperand;
+use ristretto_types::Error::{InternalError, InvalidOperand};
 use ristretto_types::JavaError::{
     ArrayIndexOutOfBoundsException, IllegalArgumentException, NegativeArraySizeException,
     NullPointerException,
@@ -30,7 +31,7 @@ fn get_class_name(value: &Value) -> Result<String> {
     };
     let guard = reference.read();
     let component_type = guard.as_object_ref()?;
-    let class_name = component_type.value("name")?.as_string()?;
+    let class_name = mirror_class_name(component_type)?;
     Ok(class_name)
 }
 
@@ -559,91 +560,130 @@ pub async fn multi_new_array<T: Thread + 'static>(
     Ok(Some(array))
 }
 
-#[async_method]
+enum ArrayKind {
+    Primitive(BaseType),
+    Reference(Arc<Class>),
+}
+
+/// Resolve each allocated dimension once, then allocate without async recursion.
 async fn create_multi_dimensional_array<T: Thread + 'static>(
     thread: &T,
     class_name: &str,
     dimensions: &[i32],
 ) -> Result<Reference> {
-    if dimensions.is_empty() {
-        return Err(InvalidOperand {
-            expected: "non-empty dimensions".to_string(),
-            actual: "empty dimensions".to_string(),
-        });
-    }
-
-    let Some((dimension, remaining_dimensions)) = dimensions.split_first() else {
+    let Some((&first_length, remaining_dimensions)) = dimensions.split_first() else {
         return Err(InvalidOperand {
             expected: "non-empty dimensions".to_string(),
             actual: "empty dimensions".to_string(),
         });
     };
 
-    let length = if *dimension < 0 {
+    // Validate even dimensions beyond an empty outer array before allocating anything.
+    if let Some(dimension) = dimensions.iter().find(|&&dimension| dimension < 0) {
         return Err(NegativeArraySizeException(dimension.to_string()).into());
-    } else {
-        #[expect(clippy::cast_sign_loss)]
-        let len = *dimension as usize;
-        len
-    };
-
-    if dimensions.len() == 1 {
-        // Base case: create a single-dimensional array
-        let array = match class_name {
-            "boolean" => Reference::from(vec![false; length]),
-            "byte" => Reference::from(vec![0i8; length]),
-            "char" => Reference::from(vec![0 as char; length]),
-            "float" => Reference::from(vec![0.0f32; length]),
-            "double" => Reference::from(vec![0.0f64; length]),
-            "int" => Reference::from(vec![0i32; length]),
-            "long" => Reference::from(vec![0i64; length]),
-            "short" => Reference::from(vec![0i16; length]),
-            _ => {
-                let array_class_name = ["[L", class_name, ";"].concat();
-                let class = thread.class(&array_class_name).await?;
-                let vm = thread.vm()?;
-                let collector = vm.garbage_collector();
-                Reference::new_array(collector, class, vec![None; length])
-            }
-        };
-        Ok(array)
-    } else {
-        // Recursive case: create array of arrays
-        let mut elements = Vec::with_capacity(length);
-        for _ in 0..length {
-            let sub_array =
-                create_multi_dimensional_array(thread, class_name, remaining_dimensions).await?;
-            elements.push(Some(sub_array));
-        }
-
-        // Create the appropriate array class name for the multi-dimensional array
-        let array_class_name = if class_name.starts_with('[') {
-            ["[", class_name].concat()
-        } else {
-            let mut name = "[".repeat(dimensions.len());
-            match class_name {
-                "boolean" => name.push('Z'),
-                "byte" => name.push('B'),
-                "char" => name.push('C'),
-                "float" => name.push('F'),
-                "double" => name.push('D'),
-                "int" => name.push('I'),
-                "long" => name.push('J'),
-                "short" => name.push('S'),
-                _ => {
-                    name.push('L');
-                    name.push_str(class_name);
-                    name.push(';');
-                }
-            }
-            name
-        };
-
-        let class = thread.class(&array_class_name).await?;
-        let vm = thread.vm()?;
-        let collector = vm.garbage_collector();
-        Ok(Reference::new_array(collector, class, elements))
     }
+
+    let (component, primitive) = match class_name {
+        "boolean" => ("Z", Some(BaseType::Boolean)),
+        "byte" => ("B", Some(BaseType::Byte)),
+        "char" => ("C", Some(BaseType::Char)),
+        "float" => ("F", Some(BaseType::Float)),
+        "double" => ("D", Some(BaseType::Double)),
+        "int" => ("I", Some(BaseType::Int)),
+        "long" => ("J", Some(BaseType::Long)),
+        "short" => ("S", Some(BaseType::Short)),
+        name => (name, None),
+    };
+    if remaining_dimensions.is_empty()
+        && let Some(primitive) = &primitive
+    {
+        return Ok(create_primitive_array(
+            primitive,
+            usize::try_from(first_length)?,
+        ));
+    }
+
+    let (prefix, suffix) = if primitive.is_some() || component.starts_with('[') {
+        ("", "")
+    } else {
+        ("L", ";")
+    };
+    let mut descriptor =
+        String::with_capacity(dimensions.len() + prefix.len() + component.len() + suffix.len());
+    descriptor.extend(std::iter::repeat_n('[', dimensions.len()));
+    descriptor.push_str(prefix);
+    descriptor.push_str(component);
+    descriptor.push_str(suffix);
+
+    if first_length == 0 || remaining_dimensions.is_empty() {
+        return Ok(Reference::Array(ObjectArray {
+            class: thread.class(&descriptor).await?,
+            elements: vec![Value::Object(None); usize::try_from(first_length)?].into_boxed_slice(),
+        }));
+    }
+
+    let mut levels = Vec::with_capacity(dimensions.len());
+    for (depth, &dimension) in dimensions.iter().enumerate() {
+        let length = usize::try_from(dimension)?;
+        let kind = if depth + 1 == dimensions.len()
+            && let Some(primitive) = &primitive
+        {
+            ArrayKind::Primitive(primitive.clone())
+        } else {
+            // Every offset is within the ASCII '[' prefix, so these slices are UTF-8 safe.
+            let name = descriptor
+                .get(depth..)
+                .ok_or_else(|| InternalError("Invalid array dimension depth".to_string()))?;
+            ArrayKind::Reference(thread.class(name).await?)
+        };
+        levels.push((length, kind));
+        if length == 0 {
+            break;
+        }
+    }
+    allocate_array_dimensions(thread.vm()?.garbage_collector(), &levels)
+}
+
+fn create_primitive_array(primitive: &BaseType, length: usize) -> Reference {
+    match primitive {
+        BaseType::Boolean => Reference::BooleanArray(vec![0_i8; length].into_boxed_slice()),
+        BaseType::Byte => Reference::ByteArray(vec![0_i8; length].into_boxed_slice()),
+        BaseType::Char => Reference::CharArray(vec![0_u16; length].into_boxed_slice()),
+        BaseType::Short => Reference::ShortArray(vec![0_i16; length].into_boxed_slice()),
+        BaseType::Int => Reference::IntArray(vec![0_i32; length].into_boxed_slice()),
+        BaseType::Long => Reference::LongArray(vec![0_i64; length].into_boxed_slice()),
+        BaseType::Float => Reference::FloatArray(vec![0.0_f32; length].into_boxed_slice()),
+        BaseType::Double => Reference::DoubleArray(vec![0.0_f64; length].into_boxed_slice()),
+    }
+}
+
+fn allocate_array_dimensions(
+    collector: &Arc<GarbageCollector>,
+    levels: &[(usize, ArrayKind)],
+) -> Result<Reference> {
+    let Some(((length, kind), remaining)) = levels.split_first() else {
+        return Err(InternalError("Missing array dimension".to_string()));
+    };
+    let class = match kind {
+        ArrayKind::Primitive(primitive) => return Ok(create_primitive_array(primitive, *length)),
+        ArrayKind::Reference(class) => class,
+    };
+    let elements = if remaining.is_empty() {
+        vec![Value::Object(None); *length]
+    } else {
+        let mut elements = Vec::with_capacity(*length);
+        for _ in 0..*length {
+            let child = allocate_array_dimensions(collector, remaining)?;
+            elements.push(Value::new_object(collector, child));
+        }
+        elements
+    };
+    // Fill the final Value buffer directly instead of building and converting a
+    // temporary Vec<Option<Reference>> for every reference array.
+    Ok(Reference::Array(ObjectArray {
+        class: Arc::clone(class),
+        elements: elements.into_boxed_slice(),
+    }))
 }
 
 #[intrinsic_method(
@@ -674,7 +714,11 @@ pub async fn new_array<T: Thread + 'static>(
         "long" => Value::new_object(collector, Reference::from(vec![0i64; length])),
         "short" => Value::new_object(collector, Reference::from(vec![0i16; length])),
         _ => {
-            let class_name = ["[L", &class_name, ";"].concat();
+            let class_name = if class_name.starts_with('[') {
+                ["[", class_name.as_str()].concat()
+            } else {
+                ["[L", class_name.as_str(), ";"].concat()
+            };
             let class = thread.class(&class_name).await?;
             let reference = Reference::try_from((class, vec![Value::Object(None); length]))?;
             Value::new_object(collector, reference)

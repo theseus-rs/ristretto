@@ -340,6 +340,7 @@ impl MockVm {
         match name {
             "java/lang/Class" => &[
                 ("name", "Ljava/lang/String;"),
+                ("classLoader", "Ljava/lang/ClassLoader;"),
                 ("module", "Ljava/lang/Module;"),
                 ("componentType", "Ljava/lang/Class;"),
             ],
@@ -752,9 +753,20 @@ impl Thread for MockThread {
         &'a self,
         class_name: &'a str,
         _descriptor: &'a str,
-        _parameters: &'a [Value],
+        parameters: &'a [Value],
     ) -> crate::BoxFuture<'a, Result<Value>> {
-        Box::pin(async move { self.vm.object_value(class_name) })
+        Box::pin(async move {
+            let value = self.vm.object_value(class_name)?;
+            if MockVm::normalized_class_name(class_name) == "java/lang/Class" {
+                let mut object = value.as_object_mut()?;
+                for (field, parameter) in
+                    ["classLoader", "componentType"].into_iter().zip(parameters)
+                {
+                    object.set_value(field, parameter.clone())?;
+                }
+            }
+            Ok(value)
+        })
     }
 
     fn intern_string<'a>(&'a self, string: &'a str) -> crate::BoxFuture<'a, Result<Value>> {

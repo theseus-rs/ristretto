@@ -1,4 +1,5 @@
 use crate::bounds;
+use crate::java::lang::class::get_class_name;
 use crate::java::lang::invoke::methodhandlenatives::MemberNameFlags;
 use ristretto_classfile::ReferenceKind;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
@@ -616,7 +617,7 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
     };
     let target_class_name = {
         let target_class_object = member_class.as_object_ref()?;
-        target_class_object.value("name")?.as_string()?
+        get_class_name(&target_class_object)?
     };
 
     // Handle Holder classes and LambdaForm classes specially; these are synthetic entry points
@@ -679,7 +680,7 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
             } else if class_name == "java/lang/Class" {
                 // It's a field; get the class name and convert to descriptor
                 let type_ref = type_val.as_object_ref()?;
-                let field_type_name = type_ref.value("name")?.as_string()?;
+                let field_type_name = get_class_name(&type_ref)?;
                 // For field access, we just need the field name, not the type descriptor
                 // The type is used to verify the field but we don't need it for GetField
                 ["L", &field_type_name.replace('.', "/"), ";"].concat()
@@ -991,7 +992,7 @@ fn direct_constructor_instance_class_name(method_handle: &Value) -> Result<Optio
         return Ok(None);
     }
     let instance_class = instance_class.as_object_ref()?;
-    Ok(Some(instance_class.value("name")?.as_string()?))
+    Ok(Some(get_class_name(&instance_class)?))
 }
 
 fn method_handle_return_class_name(method_handle: &Value) -> Result<Option<String>> {
@@ -1010,7 +1011,7 @@ fn method_handle_return_class_name(method_handle: &Value) -> Result<Option<Strin
         return Ok(None);
     }
     let return_type = return_type.as_object_ref()?;
-    Ok(Some(return_type.value("name")?.as_string()?))
+    Ok(Some(get_class_name(&return_type)?))
 }
 
 fn is_same_or_subclass_of(class: &Arc<Class>, target_class: &Class) -> Result<bool> {
@@ -1168,8 +1169,7 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
                     clazz
                         .as_object_ref()
                         .ok()
-                        .and_then(|c| c.value("name").ok())
-                        .and_then(|n| n.as_string().ok())
+                        .and_then(|c| get_class_name(&c).ok())
                 } else {
                     None
                 };

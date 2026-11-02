@@ -3,6 +3,10 @@ public class Test {
     public static void main(String[] args) throws Exception {
         testPrimitiveArrays();
         testObjectArray();
+        testArrayComponent(String[].class, String[][].class);
+        testArrayComponent(int[].class, int[][].class);
+        testArrayComponent(String[][].class, String[][][].class);
+        testArrayComponent(int[][].class, int[][][].class);
         testZeroLength();
         testNegativeSize();
         testNullComponentType();
@@ -55,6 +59,23 @@ public class Test {
     static void testZeroLength() {
         Object array = java.lang.reflect.Array.newInstance(int.class, 0);
         System.out.println("zero length: " + java.lang.reflect.Array.getLength(array));
+    }
+
+    static void testArrayComponent(Class<?> component, Class<?> expected) {
+        for (int length : new int[]{0, 2}) {
+            Object array = java.lang.reflect.Array.newInstance(component, length);
+            if (array.getClass() != expected
+                    || array.getClass().getComponentType() != component
+                    || java.lang.reflect.Array.getLength(array) != length) {
+                throw new AssertionError("wrong array type or length for " + component);
+            }
+            for (int i = 0; i < length; i++) {
+                if (java.lang.reflect.Array.get(array, i) != null) {
+                    throw new AssertionError("component arrays must remain unallocated");
+                }
+            }
+            System.out.println("array component: " + component.getName() + ", length: " + length);
+        }
     }
 
     static void testNegativeSize() {

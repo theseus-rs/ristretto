@@ -1,3 +1,4 @@
+use crate::java::lang::class::get_class_name;
 use ristretto_classfile::JAVA_25;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
@@ -64,7 +65,7 @@ pub async fn expand_stack_frame_info<T: Thread + 'static>(
     // Resolve the internal class name from the Class mirror object
     let class_name = {
         let class_ref = class_value.as_object_ref()?;
-        class_ref.value("name")?.as_string()?
+        get_class_name(&class_ref)?
     };
 
     // Load the class to look up method descriptor information

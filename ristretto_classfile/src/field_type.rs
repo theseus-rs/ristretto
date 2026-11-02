@@ -97,6 +97,55 @@ pub enum FieldType {
     Array(Box<FieldType>),
 }
 
+/// Descriptor facts needed by verification without allocating owned type trees.
+#[derive(Debug)]
+pub(crate) struct MethodDescriptorInfo {
+    pub parameter_slots: u16,
+    pub returns_void: bool,
+}
+
+struct ParsedField<'a> {
+    dimensions: usize,
+    base: ParsedBase<'a>,
+}
+
+enum ParsedBase<'a> {
+    Primitive(BaseType),
+    Object(&'a [u8]),
+}
+
+impl ParsedField<'_> {
+    fn slot_count(&self) -> u16 {
+        if self.dimensions == 0
+            && matches!(
+                self.base,
+                ParsedBase::Primitive(BaseType::Long | BaseType::Double)
+            )
+        {
+            2
+        } else {
+            1
+        }
+    }
+
+    fn into_field_type(self) -> FieldType {
+        let mut field_type = match self.base {
+            ParsedBase::Primitive(base) => FieldType::Base(base),
+            ParsedBase::Object(bytes) => {
+                let name = match JavaStr::from_mutf8(bytes) {
+                    Ok(java_str) => java_str.to_java_string(),
+                    Err(_) => JavaString::from(String::from_utf8_lossy(bytes).as_ref()),
+                };
+                FieldType::Object(name)
+            }
+        };
+        for _ in 0..self.dimensions {
+            field_type = FieldType::Array(Box::new(field_type));
+        }
+        field_type
+    }
+}
+
 impl FieldType {
     /// Return the code for the `FieldType`.
     ///
@@ -369,27 +418,48 @@ impl FieldType {
         Self::parse_method_descriptor_bytes(descriptor.as_bytes(), descriptor)
     }
 
+    /// Validate a method descriptor and count slots using the same grammar as the owned parser.
+    pub(crate) fn method_descriptor_info(descriptor: &JavaStr) -> Result<MethodDescriptorInfo> {
+        let (parameter_slots, return_type) =
+            Self::scan_method_descriptor(descriptor.as_bytes(), descriptor, |_| {})?;
+        Ok(MethodDescriptorInfo {
+            parameter_slots,
+            returns_void: return_type.is_none(),
+        })
+    }
+
     /// Internal byte-level method descriptor parser.
     fn parse_method_descriptor_bytes(
         bytes: &[u8],
         display_desc: impl fmt::Display + Copy,
     ) -> Result<(Vec<FieldType>, Option<FieldType>)> {
+        let mut parameters = Vec::new();
+        let (_, return_type) = Self::scan_method_descriptor(bytes, display_desc, |field| {
+            parameters.push(field.into_field_type());
+        })?;
+        Ok((parameters, return_type.map(ParsedField::into_field_type)))
+    }
+
+    fn scan_method_descriptor<'a>(
+        bytes: &'a [u8],
+        display_desc: impl fmt::Display + Copy,
+        mut parameter: impl FnMut(ParsedField<'a>),
+    ) -> Result<(u16, Option<ParsedField<'a>>)> {
         if bytes.first().copied() != Some(b'(') {
             return Err(InvalidMethodDescriptor(display_desc.to_string()));
         }
-        let mut parameters = Vec::new();
         let mut slots = 0_u16;
         let mut pos = 1;
         while bytes.get(pos).copied() != Some(b')') {
             let field_bytes = bytes
                 .get(pos..)
                 .ok_or_else(|| InvalidMethodDescriptor(display_desc.to_string()))?;
-            let (field_type, consumed) = Self::parse_field_type_bytes(field_bytes, display_desc)?;
-            slots += u16::from(field_type.slot_count());
+            let (field_type, consumed) = Self::parse_field_descriptor(field_bytes, display_desc)?;
+            slots += field_type.slot_count();
             if slots > 255 {
                 return Err(InvalidMethodDescriptor(display_desc.to_string()));
             }
-            parameters.push(field_type);
+            parameter(field_type);
             pos += consumed;
         }
         pos += 1;
@@ -403,7 +473,7 @@ impl FieldType {
                     .get(pos..)
                     .ok_or_else(|| InvalidMethodDescriptor(display_desc.to_string()))?;
                 let (field_type, consumed) =
-                    Self::parse_field_type_bytes(field_bytes, display_desc)?;
+                    Self::parse_field_descriptor(field_bytes, display_desc)?;
                 pos += consumed;
                 Some(field_type)
             }
@@ -412,7 +482,7 @@ impl FieldType {
         if pos != bytes.len() {
             return Err(InvalidMethodDescriptor(display_desc.to_string()));
         }
-        Ok((parameters, return_type))
+        Ok((slots, return_type))
     }
 
     /// Parse a single field type from a byte slice, returning the type and bytes consumed.
@@ -420,6 +490,14 @@ impl FieldType {
         bytes: &[u8],
         display_desc: impl fmt::Display,
     ) -> Result<(FieldType, usize)> {
+        let (field, consumed) = Self::parse_field_descriptor(bytes, display_desc)?;
+        Ok((field.into_field_type(), consumed))
+    }
+
+    fn parse_field_descriptor(
+        bytes: &[u8],
+        display_desc: impl fmt::Display,
+    ) -> Result<(ParsedField<'_>, usize)> {
         // Count dimensions before parsing the element to bound allocation and
         // avoid recursive descent on malformed, deeply nested array descriptors.
         let dimensions = bytes.iter().take_while(|&&b| b == b'[').count();
@@ -427,7 +505,7 @@ impl FieldType {
             return Err(InvalidFieldTypeDescriptor(display_desc.to_string()));
         }
         let element = bytes.get(dimensions..).unwrap_or_default();
-        let (mut field_type, consumed) = match element.first().copied() {
+        let (base, consumed) = match element.first().copied() {
             Some(b'L') => {
                 // Find the terminator and validate internal-name components in one pass.
                 let mut component_empty = true;
@@ -451,19 +529,12 @@ impl FieldType {
                 let class_bytes = element
                     .get(1..end)
                     .ok_or_else(|| InvalidFieldTypeDescriptor(display_desc.to_string()))?;
-                let class_name = match JavaStr::from_mutf8(class_bytes) {
-                    Ok(java_str) => java_str.to_java_string(),
-                    Err(_) => JavaString::from(String::from_utf8_lossy(class_bytes).as_ref()),
-                };
-                (FieldType::Object(class_name), end + 1)
+                (ParsedBase::Object(class_bytes), end + 1)
             }
-            Some(code) => (FieldType::Base(BaseType::parse(code as char)?), 1),
+            Some(code) => (ParsedBase::Primitive(BaseType::parse(code as char)?), 1),
             None => return Err(InvalidMethodDescriptor(display_desc.to_string())),
         };
-        for _ in 0..dimensions {
-            field_type = FieldType::Array(Box::new(field_type));
-        }
-        Ok((field_type, dimensions + consumed))
+        Ok((ParsedField { dimensions, base }, dimensions + consumed))
     }
 }
 
@@ -480,6 +551,34 @@ impl fmt::Display for FieldType {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn method_descriptor_info_checks_slots_and_complete_grammar() -> Result<()> {
+        for (descriptor, slots, returns_void) in [
+            ("()V", 0, true),
+            ("(JD[I[[DLjava/lang/String;)V", 7, true),
+            ("([J)J", 1, false),
+            ("(L雪/😀;)Ljava/lang/Object;", 1, false),
+        ] {
+            let descriptor = JavaString::from(descriptor);
+            let info = FieldType::method_descriptor_info(&descriptor)?;
+            assert_eq!(slots, info.parameter_slots);
+            assert_eq!(returns_void, info.returns_void);
+        }
+        for descriptor in ["(V)V", "(L;)V", "(Lfoo//Bar;)V", "([)V", "()VV", "()", "I"] {
+            assert!(FieldType::method_descriptor_info(&JavaString::from(descriptor)).is_err());
+        }
+        let maximum = JavaString::from(["(", &"I".repeat(255), ")V"].concat());
+        assert_eq!(
+            255,
+            FieldType::method_descriptor_info(&maximum)?.parameter_slots
+        );
+        let excessive = JavaString::from(["(", &"J".repeat(128), ")V"].concat());
+        assert!(FieldType::method_descriptor_info(&excessive).is_err());
+        let excessive_rank = JavaString::from(["(", &"[".repeat(256), "I)V"].concat());
+        assert!(FieldType::method_descriptor_info(&excessive_rank).is_err());
+        Ok(())
+    }
 
     #[test]
     fn test_invalid_code() {

@@ -81,4 +81,8 @@ name = "class_loader"
 
 [[bench]]
 harness = false
+name = "array_loading"
+
+[[bench]]
+harness = false
 name = "jimage"

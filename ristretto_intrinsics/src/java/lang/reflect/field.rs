@@ -1,3 +1,4 @@
+use crate::java::lang::class::get_class_name;
 use byteorder::{BigEndian, WriteBytesExt};
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::attributes::Attribute;
@@ -24,7 +25,7 @@ pub async fn get_type_annotation_bytes_0<T: Thread + 'static>(
             ristretto_types::Error::InternalError(format!("Invalid slot value: {slot_i32}"))
         })?;
         let declaring_class_obj = declaring_class_value.as_object_ref()?;
-        let class_name = declaring_class_obj.value("name")?.as_string()?;
+        let class_name = get_class_name(&declaring_class_obj)?;
         let class_name = class_name.replace('.', "/");
         (class_name, slot)
     };

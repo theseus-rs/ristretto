@@ -1,5 +1,6 @@
 use crate::bounds;
-use crate::java::lang::class::get_class;
+use crate::java::lang::class::{get_class, get_class_name};
+use crate::java::lang::classloader::defining_class_loader;
 use crate::java::lang::thread::{ThreadState, set_thread_status};
 use ristretto_classfile::ClassFile;
 use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan, GreaterThanOrEqual};
@@ -160,7 +161,7 @@ pub async fn compare_and_exchange_int<T: Thread + 'static>(
             let (class_name, offset) = {
                 let object = value.as_object_ref()?;
                 let offset = usize::try_from(offset_long & !STATIC_FIELD_OFFSET_MASK)?;
-                let class_name = object.value("name")?.as_string()?;
+                let class_name = get_class_name(&object)?;
                 (class_name, offset)
             };
             let class = thread.class(&class_name).await?;
@@ -225,7 +226,7 @@ pub async fn compare_and_exchange_long<T: Thread + 'static>(
             let (class_name, offset) = {
                 let object = value.as_object_ref()?;
                 let offset = usize::try_from(offset_long & !STATIC_FIELD_OFFSET_MASK)?;
-                let class_name = object.value("name")?.as_string()?;
+                let class_name = get_class_name(&object)?;
                 (class_name, offset)
             };
             let class = thread.class(&class_name).await?;
@@ -361,7 +362,7 @@ pub async fn compare_and_set_int<T: Thread + 'static>(
             let (class_name, offset) = {
                 let object = value.as_object_ref()?;
                 let offset = usize::try_from(offset_long & !STATIC_FIELD_OFFSET_MASK)?;
-                let class_name = object.value("name")?.as_string()?;
+                let class_name = get_class_name(&object)?;
                 (class_name, offset)
             };
             let class = thread.class(&class_name).await?;
@@ -429,7 +430,7 @@ pub async fn compare_and_set_long<T: Thread + 'static>(
             let (class_name, offset) = {
                 let object = value.as_object_ref()?;
                 let offset = usize::try_from(offset_long & !STATIC_FIELD_OFFSET_MASK)?;
-                let class_name = object.value("name")?.as_string()?;
+                let class_name = get_class_name(&object)?;
                 (class_name, offset)
             };
             let class = thread.class(&class_name).await?;
@@ -884,7 +885,8 @@ pub async fn define_class_0<T: Thread + 'static>(
         debug!("Defining class: {expected_name}");
     }
 
-    let class = Class::from(None, class_file)?;
+    let defining_loader = defining_class_loader(&thread, &class_loader).await?;
+    let class = Class::from(defining_loader, class_file)?;
     // Generated method-handle species must be discoverable by subsequent linking/reflection.
     thread.register_class(class.clone()).await?;
     let class_object = class.to_object(&thread).await?;
@@ -957,7 +959,7 @@ pub async fn ensure_class_initialized_0<T: Thread + 'static>(
     let class_object = parameters.pop()?;
     let class_name = {
         let object = class_object.as_object_ref()?;
-        object.value("name")?.as_string()?
+        get_class_name(&object)?
     };
 
     // Trigger class initialization via the standard initialization path
@@ -997,8 +999,7 @@ async fn get_static_field_target<T: Thread + 'static>(
 ) -> Result<(Arc<Class>, String)> {
     match reference {
         Reference::Object(object) => {
-            let name_value = object.value("name")?;
-            let name = name_value.as_string()?;
+            let name = get_class_name(object)?;
             let class = thread.class(&name).await?;
             let field_name = class.field_name(offset)?;
             Ok((class, field_name))
@@ -1073,7 +1074,7 @@ async fn get_reference_type<T: Thread + 'static>(
                     "Static field access on non-object".to_string(),
                 ));
             };
-            object.value("name")?.as_string()?
+            get_class_name(object)?
         };
         let class = thread.class(&class_name).await?;
         let field_name = class.field_name(offset)?;
@@ -1288,7 +1289,7 @@ async fn put_reference_type<T: Thread + 'static>(
                     "Static field access on non-object".to_string(),
                 ));
             };
-            object.value("name")?.as_string()?
+            get_class_name(object)?
         };
         let class = thread.class(&class_name).await?;
         let field_name = class.field_name(offset)?;
@@ -1696,7 +1697,7 @@ pub async fn object_field_offset_1<T: Thread + 'static>(
     let class_object = parameters.pop()?;
     let class_name = {
         let class_object = class_object.as_object_ref()?;
-        class_object.value("name")?.as_string()?
+        get_class_name(&class_object)?
     };
     let class = thread.class(&class_name).await?;
     let offset = class.object_field_offset(&field_name)?;
@@ -2072,7 +2073,7 @@ pub async fn should_be_initialized_0<T: Thread + 'static>(
     let class_object = parameters.pop()?;
     let class_name = {
         let object = class_object.as_object_ref()?;
-        object.value("name")?.as_string()?
+        get_class_name(&object)?
     };
 
     let vm = thread.vm()?;
@@ -2121,7 +2122,7 @@ pub async fn static_field_offset_0<T: Thread + 'static>(
     let field_name = name.as_string()?;
     let class_name = {
         let class = class.as_object_ref()?;
-        class.value("name")?.as_string()?
+        get_class_name(&class)?
     };
     let class = thread.class(&class_name).await?;
     let offset = i64::try_from(class.field_offset(&field_name)?)?;
@@ -2625,11 +2626,28 @@ mod tests {
         parameters.push(Value::Object(None)); // classLoader (null = bootstrap)
         parameters.push(Value::Object(None)); // protectionDomain (null)
 
-        let result = define_class_0(thread, parameters).await?;
+        let result = define_class_0(thread.clone(), parameters).await?;
         assert!(result.is_some());
         // The result should be a Class object
         let class_value = result.expect("class");
         assert!(matches!(class_value, Value::Object(Some(_))));
+        let component = get_class(&thread, &class_value).await?;
+        let defining_loader = component
+            .class_loader()?
+            .expect("bootstrap loader metadata");
+        assert_eq!(
+            defining_loader.loader_type(),
+            Some(ristretto_classloader::ClassLoaderType::Bootstrap)
+        );
+        for name in ["[LMinimum;", "[[LMinimum;"] {
+            let array = thread.class(name).await?;
+            assert_eq!(array.class_loader()?, Some(defining_loader.clone()));
+            let cached = defining_loader
+                .find_loaded(JavaStr::try_from_str(name)?)
+                .await
+                .expect("bootstrap array cache");
+            assert!(Arc::ptr_eq(&array, &cached));
+        }
         Ok(())
     }
 

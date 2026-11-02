@@ -36,28 +36,36 @@ fn receiver<'a>(frame: &'a Frame, descriptor: &str) -> Result<&'a VerificationTy
     reason = "static operand rules for opcode families"
 )]
 pub(crate) fn verify_static(class: &ClassFile<'_>, method: &Method) -> Result<()> {
-    let code_attributes: Vec<_> = method
+    let mut code_attributes = method
         .attributes
         .iter()
-        .filter(|a| matches!(a, Attribute::Code { .. }))
-        .collect();
+        .filter(|a| matches!(a, Attribute::Code { .. }));
+    let code_attribute = code_attributes.next();
     let needs_code = class.constant_pool.try_get_utf8(method.name_index)? == CLASS_INITIALIZER_NAME
         || !method
             .access_flags
             .intersects(MethodAccessFlags::ABSTRACT | MethodAccessFlags::NATIVE);
-    if code_attributes.len() != usize::from(needs_code) {
+    if code_attribute.is_some() != needs_code || code_attributes.next().is_some() {
         return Err(invalid(
             "Method must have exactly one Code attribute unless abstract or native",
         ));
     }
     let Some(Attribute::Code {
         code, max_locals, ..
-    }) = code_attributes.first().copied()
+    }) = code_attribute
     else {
         return Ok(());
     };
-    let bytes = Instruction::encode(code)?;
-    if bytes.is_empty() || bytes.len() > 65535 {
+    // Validate the same encoding constraints without serializing a temporary byte array.
+    let mut code_length = 0;
+    for instruction in code {
+        instruction.validate_encoding()?;
+        code_length += instruction.byte_len(code_length);
+        if code_length > 65535 {
+            return Err(invalid("Invalid code length"));
+        }
+    }
+    if code_length == 0 {
         return Err(invalid("Invalid code length"));
     }
     let resolver = ConstantPoolResolver::new(class);
@@ -82,15 +90,17 @@ pub(crate) fn verify_static(class: &ClassFile<'_>, method: &Method) -> Result<()
             | Instruction::Getstatic(i)
             | Instruction::Putfield(i)
             | Instruction::Putstatic(i) => {
-                resolver.resolve_field_ref(*i)?;
+                resolver.resolve_field_ref_borrowed(*i)?;
             }
             Instruction::Invokedynamic(i) => {
-                resolver.resolve_invoke_dynamic(*i)?;
+                resolver.resolve_invoke_dynamic_borrowed(*i)?;
             }
             Instruction::Anewarray(i) => {
                 if resolver
-                    .resolve_class(*i)?
-                    .bytes()
+                    .resolve_class_borrowed(*i)?
+                    .as_bytes()
+                    .iter()
+                    .copied()
                     .take_while(|b| *b == b'[')
                     .count()
                     >= 255
@@ -123,7 +133,7 @@ pub(crate) fn verify_static(class: &ClassFile<'_>, method: &Method) -> Result<()
                     "Invocation has an invalid constant pool reference kind",
                 ));
             }
-            let (_, name, descriptor) = resolver.resolve_method_ref(index)?;
+            let (_, name, descriptor) = resolver.resolve_method_ref_borrowed(index)?;
             if name == CLASS_INITIALIZER_NAME
                 || (name == CONSTRUCTOR_NAME
                     && !matches!(instruction, Instruction::Invokespecial(_)))
@@ -131,18 +141,8 @@ pub(crate) fn verify_static(class: &ClassFile<'_>, method: &Method) -> Result<()
                 return Err(invalid("Illegal invocation of a special method"));
             }
             if !matches!(instruction, Instruction::Invokestatic(_)) {
-                let descriptor = crate::JavaStr::cow_from_str(&descriptor);
-                let (parameters, _) = FieldType::parse_method_descriptor(&descriptor)?;
-                let slots = 1 + parameters
-                    .iter()
-                    .map(|p| {
-                        if VerificationType::from_field_type(p).is_category2() {
-                            2
-                        } else {
-                            1
-                        }
-                    })
-                    .sum::<usize>();
+                let info = FieldType::method_descriptor_info(descriptor)?;
+                let slots = 1 + usize::from(info.parameter_slots);
                 if slots > 255 {
                     return Err(invalid(
                         "Invocation parameters including receiver exceed 255 slots",
@@ -157,14 +157,24 @@ pub(crate) fn verify_static(class: &ClassFile<'_>, method: &Method) -> Result<()
         }
         match instruction {
             Instruction::Instanceof(i) | Instruction::Checkcast(i) => {
-                resolver.resolve_class(*i)?;
+                resolver.resolve_class_borrowed(*i)?;
             }
-            Instruction::New(i) if resolver.resolve_class(*i)?.starts_with('[') => {
+            Instruction::New(i)
+                if resolver
+                    .resolve_class_borrowed(*i)?
+                    .as_bytes()
+                    .starts_with(b"[") =>
+            {
                 return Err(invalid("new cannot allocate an array class"));
             }
             Instruction::Multianewarray(i, dimensions) => {
-                let name = resolver.resolve_class(*i)?;
-                let rank = name.bytes().take_while(|b| *b == b'[').count();
+                let name = resolver.resolve_class_borrowed(*i)?;
+                let rank = name
+                    .as_bytes()
+                    .iter()
+                    .copied()
+                    .take_while(|b| *b == b'[')
+                    .count();
                 if *dimensions == 0 || usize::from(*dimensions) > rank {
                     return Err(invalid("Invalid multianewarray dimensions"));
                 }

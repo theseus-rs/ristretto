@@ -6,6 +6,7 @@ use ristretto_types::JavaObject;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 
+use ahash::AHashMap;
 use byteorder::{BigEndian, WriteBytesExt};
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
@@ -16,10 +17,49 @@ use ristretto_classfile::{
     JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodAccessFlags,
 };
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
+use ristretto_gc::sync::RwLock;
+use ristretto_gc::{GarbageCollector, Gc, GcRootGuard};
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use std::sync::Arc;
 use tracing::debug;
+
+/// Read the internal name represented by a Class mirror.
+///
+/// Only mirror names may translate the hidden `/0x` suffix: an ordinary internal
+/// name can legally end in the same text, while its binary mirror name uses dots.
+pub(crate) fn get_class_name(class: &Object) -> Result<String> {
+    let name = class.value("name")?.as_string()?;
+    Ok(internal_name_from_mirror(name))
+}
+
+fn internal_name_from_mirror(mut name: String) -> String {
+    let component_end = if name.starts_with('[') && name.ends_with(';') {
+        name.len() - 1
+    } else {
+        name.len()
+    };
+    // A hidden suffix has a fixed width. Check its only possible position rather
+    // than searching ordinary mirror names for a marker that they cannot contain.
+    if let Some(separator) = component_end.checked_sub(19)
+        && name.as_bytes().get(separator..separator + 3) == Some(b"/0x")
+        && name
+            .as_bytes()
+            .get(separator + 3..component_end)
+            .is_some_and(|suffix| suffix.iter().all(u8::is_ascii_hexdigit))
+    {
+        name.replace_range(separator..=separator, "+");
+    }
+    // Reuse the mirror string allocation. Replacing single-byte ASCII preserves
+    // UTF-8, including supplementary characters in class and package names.
+    #[expect(unsafe_code, reason = "only ASCII dots are replaced by ASCII slashes")]
+    for byte in unsafe { name.as_bytes_mut() } {
+        if *byte == b'.' {
+            *byte = b'/';
+        }
+    }
+    name
+}
 
 /// Get the class of an object, handling special cases for `java/lang/Class`.
 /// This WILL initialize the class if not already initialized.
@@ -37,7 +77,7 @@ pub async fn get_class<T: Thread + 'static>(thread: &T, object: &Value) -> Resul
 
     let class_name = {
         let object = object.as_object_ref()?;
-        object.value("name")?.as_string()?
+        get_class_name(&object)?
     };
     thread.class(class_name.as_str()).await
 }
@@ -62,7 +102,7 @@ pub async fn get_class_no_init<T: Thread + 'static>(
 
     let class_name = {
         let object = object.as_object_ref()?;
-        object.value("name")?.as_string()?
+        get_class_name(&object)?
     };
     let class_name = JavaStr::cow_from_str(class_name.as_str());
     thread.load_and_link_class(&class_name).await
@@ -147,6 +187,155 @@ fn is_class_not_found_exception(throwable: &Value) -> bool {
     }
 }
 
+/// Explicit bootstrap requests cannot use the caller-stack fallback or the
+/// application loader's registration cache.
+async fn for_name_bootstrap<T: Thread + 'static>(
+    thread: &Arc<T>,
+    class_name: &str,
+    initialize: bool,
+) -> Result<Value> {
+    let vm = thread.vm()?;
+    let mut loader = vm.class_loader().read().await.clone();
+    while let Some(parent) = loader.parent().await {
+        loader = parent;
+    }
+    let class = loader
+        .load(&JavaStr::cow_from_str(class_name))
+        .await
+        .map_err(|_| ClassNotFoundException(class_name.to_string()))?;
+    if class.is_primitive() {
+        return Err(ClassNotFoundException(class_name.to_string()).into());
+    }
+    if initialize && !class.is_array() {
+        thread.class(class.name()).await?;
+    }
+    class.to_object(thread).await
+}
+
+/// Resolve through the requested initiating loader, reusing its successful resolutions.
+/// Java loaders receive binary component names, never array descriptors.
+async fn for_name_array<T: Thread + 'static>(
+    thread: &Arc<T>,
+    class_name: &str,
+    class_loader: Value,
+) -> Result<Value> {
+    // A Java loader with a known Rust counterpart can resolve its own namespace
+    // directly. Unknown custom definitions still require Java loadClass below.
+    if let Some(loader) =
+        crate::java::lang::classloader::defining_class_loader(thread, &class_loader)
+            .await?
+            .and_then(|loader| loader.upgrade())
+        && loader.loader_type().is_some()
+        && let Ok(class) = loader.load(&JavaStr::cow_from_str(class_name)).await
+    {
+        let known_component = match class.array_base_class() {
+            Some(component) => component.class_loader()?.is_some(),
+            None => true,
+        };
+        if known_component {
+            return class.to_object(thread).await;
+        }
+    }
+    let base = class_name.trim_start_matches('[');
+    if let Some(component) = base
+        .strip_prefix('L')
+        .and_then(|name| name.strip_suffix(';'))
+    {
+        let component_name = component.to_object(thread).await?;
+        Box::pin(for_name_0(
+            thread.clone(),
+            Parameters::new(vec![
+                component_name,
+                Value::from(false),
+                class_loader,
+                Value::Object(None),
+            ]),
+        ))
+        .await?;
+    }
+    let vm = thread.vm()?;
+    let loader = vm.class_loader().read().await.clone();
+    let class = loader
+        .load(&JavaStr::cow_from_str(class_name))
+        .await
+        .map_err(|_| ClassNotFoundException(class_name.to_string()))?;
+    class.to_object(thread).await
+}
+
+/// Successful Java resolutions belong to the initiating loader, which can differ
+/// from the defining loader. Keep this cache separate from the VM's name cache:
+/// a class found by one custom loader must not bypass another loader's `loadClass`.
+#[derive(Default)]
+struct InitiatedClasses {
+    loaders: RwLock<AHashMap<i64, InitiatingLoaderClasses>>,
+}
+
+struct InitiatingLoaderClasses {
+    // Root the loader as well as its mirrors so pointer keys cannot be reused by GC.
+    _loader: GcRootGuard<RwLock<Reference>>,
+    classes: AHashMap<String, GcRootGuard<RwLock<Reference>>>,
+}
+
+impl InitiatedClasses {
+    fn get(&self, loader: &Gc<RwLock<Reference>>, name: &str) -> Option<Value> {
+        self.loaders
+            .read()
+            .get(&loader.as_ptr_i64())?
+            .classes
+            .get(name)
+            .map(|class| Value::Object(Some(class.clone_gc())))
+    }
+
+    fn insert(
+        &self,
+        collector: &Arc<GarbageCollector>,
+        loader: &Gc<RwLock<Reference>>,
+        name: &str,
+        class: &Gc<RwLock<Reference>>,
+    ) {
+        self.loaders
+            .write()
+            .entry(loader.as_ptr_i64())
+            .or_insert_with(|| InitiatingLoaderClasses {
+                _loader: collector.create_root_guard(loader.clone()),
+                classes: AHashMap::default(),
+            })
+            .classes
+            .entry(name.to_string())
+            .or_insert_with(|| collector.create_root_guard(class.clone()));
+    }
+}
+
+/// Resolve without initialization, consulting only this initiating loader's cache.
+async fn load_class_for_name<T: Thread + 'static>(
+    thread: &Arc<T>,
+    loader: &Gc<RwLock<Reference>>,
+    name: &str,
+) -> Result<Option<Value>> {
+    let vm = thread.vm()?;
+    let initiated_classes = vm
+        .resource_manager()
+        .get_or_init(InitiatedClasses::default)?;
+    if let Some(value) = initiated_classes.get(loader, name) {
+        return Ok(Some(value));
+    }
+
+    let class_name = name.to_object(thread).await?;
+    let result = thread
+        .invoke(
+            "java/lang/ClassLoader",
+            "loadClass(Ljava/lang/String;)Ljava/lang/Class;",
+            &[Value::Object(Some(loader.clone())), class_name],
+        )
+        .await?;
+    // Record loading before initialization: even a failed initializer does
+    // not undo successful resolution through this initiating loader.
+    if let Some(Value::Object(Some(class))) = &result {
+        initiated_classes.insert(vm.garbage_collector(), loader, name, class);
+    }
+    Ok(result)
+}
+
 #[intrinsic_method(
     "java/lang/Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;",
     Any
@@ -171,12 +360,21 @@ pub async fn for_name_0<T: Thread + 'static>(
         return Err(ClassNotFoundException(class_name).into());
     }
 
+    if class_loader.is_none() {
+        return Ok(Some(
+            for_name_bootstrap(&thread, &class_name, initialize).await?,
+        ));
+    }
+    if class_name.starts_with('[') {
+        return Ok(Some(
+            for_name_array(&thread, &class_name, Value::Object(class_loader)).await?,
+        ));
+    }
+
     // When a custom ClassLoader is provided and the class is not an array type, delegate to
     // ClassLoader.loadClass(). Array classes are created by the VM directly and are not loaded
     // through ClassLoader.loadClass() per the JVM specification (JVMS §5.3.2).
-    if let Some(class_loader_ref) = class_loader
-        && !class_name.starts_with('[')
-    {
+    if let Some(class_loader_ref) = class_loader {
         // Capture the classloader's class eagerly (cheap Arc refcount increment) so we can walk the
         // hierarchy lazily only if loadClass fails.
         let loader_class = {
@@ -187,15 +385,7 @@ pub async fn for_name_0<T: Thread + 'static>(
                 .map(|obj| Arc::clone(obj.class()))
         };
 
-        let class_loader_value = Value::Object(Some(class_loader_ref));
-        let class_name_value = class_name.to_object(&thread).await?;
-        let load_result = thread
-            .invoke(
-                "java/lang/ClassLoader",
-                "loadClass(Ljava/lang/String;)Ljava/lang/Class;",
-                &[class_loader_value, class_name_value],
-            )
-            .await;
+        let load_result = load_class_for_name(&thread, &class_loader_ref, &class_name).await;
 
         // Happy path: loadClass returned a non-null class value.
         // Per JVM spec §12.4.1, Class.forName(name, true, loader) must initialize the
@@ -260,19 +450,19 @@ pub async fn for_name_0<T: Thread + 'static>(
         }
     }
     let class = if initialize {
-        match thread.class(&class_name).await {
-            Ok(class) => class,
-            Err(_error) => return Err(ClassNotFoundException(class_name).into()),
-        }
+        thread
+            .class(&class_name)
+            .await
+            .map_err(|_| ClassNotFoundException(class_name.clone()))?
     } else {
-        // Load class without initialization
+        // The built-in Java loader can fall back to its Rust class path, but an
+        // explicit lookup must not select a different loader from the call stack.
         let vm = thread.vm()?;
-        let class_loader_lock = vm.class_loader();
-        let class_loader = class_loader_lock.read().await;
-        match class_loader.load(JavaStr::try_from_str(&class_name)?).await {
-            Ok(class) => class,
-            Err(_error) => return Err(ClassNotFoundException(class_name).into()),
-        }
+        let loader = vm.class_loader().read().await.clone();
+        loader
+            .load(&JavaStr::cow_from_str(&class_name))
+            .await
+            .map_err(|_| ClassNotFoundException(class_name.clone()))?
     };
 
     if class.is_primitive() {
@@ -390,7 +580,7 @@ pub async fn get_declared_classes_0<T: Thread + 'static>(
     let class = parameters.pop()?;
     let class_name = {
         let class = class.as_object_ref()?;
-        class.value("name")?.as_string()?
+        get_class_name(&class)?
     };
     let class = thread
         .load_and_link_class(&JavaStr::cow_from_str(&class_name))
@@ -957,7 +1147,7 @@ pub async fn get_interfaces_0<T: Thread + 'static>(
     let class = parameters.pop()?;
     let class_name = {
         let class = class.as_object_ref()?;
-        class.value("name")?.as_string()?
+        get_class_name(&class)?
     };
     let class = thread
         .load_and_link_class(&JavaStr::cow_from_str(&class_name))
@@ -1725,6 +1915,34 @@ mod tests {
     use ristretto_classfile::{ClassFile, ConstantPool, Version};
     use ristretto_classfile::{Field, FieldType, Method};
     use ristretto_types::Error::JavaError;
+
+    #[test]
+    fn test_internal_name_from_mirror() {
+        for (mirror, internal) in [
+            ("ordinary.0x000000000000002a", "ordinary/0x000000000000002a"),
+            ("ordinary/0x000000000000002a", "ordinary+0x000000000000002a"),
+            ("Generated+0xbar", "Generated+0xbar"),
+            (
+                "[Lordinary.0x000000000000002a;",
+                "[Lordinary/0x000000000000002a;",
+            ),
+            (
+                "[Lordinary/0x000000000000002a;",
+                "[Lordinary+0x000000000000002a;",
+            ),
+            (
+                "[[Lpkg.Generated/0x000000000000002a;",
+                "[[Lpkg/Generated+0x000000000000002a;",
+            ),
+            ("[[I", "[[I"),
+            (
+                "pkg.😀.Generated/0x000000000000002a",
+                "pkg/😀/Generated+0x000000000000002a",
+            ),
+        ] {
+            assert_eq!(internal_name_from_mirror(mirror.to_string()), internal);
+        }
+    }
 
     #[tokio::test]
     async fn test_desired_assertion_status_0() -> Result<()> {
