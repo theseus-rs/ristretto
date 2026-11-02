@@ -1,0 +1,76 @@
+name: Deploy playground
+
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        description: Published stable release containing the tested site archive
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Published stable release to redeploy or roll back to (for example, v0.35.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Serialize automatic releases and manual rollbacks without interrupting a deployment.
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Restore verified release archive
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download and verify released site
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          git check-ref-format "refs/tags/${RELEASE_TAG}"
+          gh release view --repo "$GITHUB_REPOSITORY" \
+            --json isDraft,isPrerelease -- "$RELEASE_TAG" \
+            | jq -e '.isDraft == false and .isPrerelease == false'
+          archive="playground-site-${RELEASE_TAG//\//-}.tar.gz"
+          mkdir downloads public
+          gh release download --repo "$GITHUB_REPOSITORY" \
+            --pattern "$archive" --pattern "$archive.sha256" --dir downloads -- "$RELEASE_TAG"
+          cd downloads
+          read -r checksum filename < "$archive.sha256"
+          test "$filename" = "$archive"
+          [[ "$checksum" =~ ^[0-9a-f]{64}$ ]]
+          printf '%s  %s\n' "$checksum" "$archive" | sha256sum --check --strict
+          tar --extract --gzip --file "$archive" --directory ../public \
+            --no-same-owner --no-same-permissions
+          cd ..
+          test -f public/index.html
+          test -f public/playground/index.html
+          test -f public/jshell/index.html
+          test -d public/runtime
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+
+  deploy:
+    name: Deploy GitHub Pages
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -12,7 +12,7 @@ cargo-cyclonedx = false
 # Global artifacts jobs to run in CI
 global-artifacts-jobs = ["./release-sbom"]
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.33.0"
+cargo-dist-version = "0.34.0"
 # Build only the required packages, and individually
 precise-builds = true
 # CI backends to support
