@@ -1098,6 +1098,7 @@ impl Compiler {
                     array_type,
                     context_pointer,
                     helpers,
+                    throw_context,
                 )?;
             }
             Instruction::Anewarray(index) => anewarray(

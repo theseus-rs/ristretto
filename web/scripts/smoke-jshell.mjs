@@ -77,6 +77,24 @@ for (const javaVersion of selected.length ? selected : [11, 17, 21, 25]) {
   assert.match(input('values.toString()').output, /==> "\[coffee\]"/);
   input('throw new IllegalArgumentException("test failure");');
   assert.match(input('counter').output, /counter ==> 1/);
+  // #940: an impossible wasm32 array must throw a catchable Java exception, and
+  // both caught and uncaught allocation failures must preserve the session.
+  for (const expression of [
+    'new long[Integer.MAX_VALUE - 8]',
+    'new Object[Integer.MAX_VALUE - 8]',
+    'new long[1][Integer.MAX_VALUE - 8]',
+    'java.lang.reflect.Array.newInstance(long.class, Integer.MAX_VALUE - 8)',
+    'java.lang.reflect.Array.newInstance(Object.class, 1, Integer.MAX_VALUE - 8)',
+  ]) {
+    assert.match(
+      input(
+        `try { Object huge = ${expression}; } catch (OutOfMemoryError e) { System.out.println("caught array allocation failure"); }`,
+      ).output,
+      /caught array allocation failure/,
+    );
+  }
+  assert.match(input('new long[Integer.MAX_VALUE - 8]').output, /java.lang.OutOfMemoryError/);
+  assert.match(input('counter').output, /counter ==> 1/);
   input('int incomplete(');
   assert.equal(input('', 'cancel').result.continuation, false);
   assert.match(input('counter').output, /counter ==> 1/);

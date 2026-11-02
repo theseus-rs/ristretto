@@ -17,6 +17,7 @@ pub(crate) fn newarray(
     atype: &ArrayType,
     context_pointer: Value,
     helpers: &RuntimeHelpers,
+    throw_context: &ThrowContext<'_>,
 ) -> Result<()> {
     let count = stack.pop_int(function_builder)?;
 
@@ -31,14 +32,21 @@ pub(crate) fn newarray(
         ArrayType::Double => helpers.new_double_array,
     };
 
+    let bci = emit_bci(function_builder, throw_context);
     let call = function_builder
         .ins()
-        .call(helper, &[context_pointer, count]);
+        .call(helper, &[context_pointer, bci, count]);
     let array_ptr = single_inst_result(function_builder, call)?;
 
     // Push as object reference (Gc pointer encoded as i64)
     stack.push_object(function_builder, array_ptr)?;
-    Ok(())
+    emit_pending_exception_check(
+        function_builder,
+        stack,
+        helpers,
+        context_pointer,
+        throw_context,
+    )
 }
 
 /// # References

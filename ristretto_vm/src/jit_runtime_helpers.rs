@@ -28,6 +28,7 @@ use ristretto_classfile::BaseType;
 use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_gc::sync::{Mutex, RwLock};
 use ristretto_gc::{GarbageCollector, Gc, GcRootGuard};
+use ristretto_types::array::{allocate_array, allocate_primitive_array};
 use std::future::Future;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
@@ -509,76 +510,55 @@ macro_rules! guarded {
     };
 }
 
-extern "C" fn jit_new_bool_array(context: *const u8, count: i32) -> i64 {
-    let ctx = ctx_from_ptr(context);
-    let count = count.max(0) as usize;
-    alloc_reference(
-        ctx,
-        Reference::BooleanArray(vec![0i8; count].into_boxed_slice()),
-    )
+/// Record allocation errors in the same pending-exception path as other JIT helpers.
+fn jit_new_primitive_array(context: *const u8, bci: i32, count: i32, base_type: &BaseType) -> i64 {
+    guarded!("jit_new_primitive_array", {
+        let ctx = ctx_from_ptr(context);
+        ctx.current_bci.store(bci, Ordering::Relaxed);
+        if count < 0 {
+            store_pending_error(ctx, NegativeArraySizeException(count.to_string()).into());
+            return 0;
+        }
+        match allocate_primitive_array(base_type, count as usize) {
+            Ok(reference) => alloc_reference(ctx, reference),
+            Err(error) => {
+                store_pending_error(ctx, error);
+                0
+            }
+        }
+    })
 }
 
-extern "C" fn jit_new_byte_array(context: *const u8, count: i32) -> i64 {
-    let ctx = ctx_from_ptr(context);
-    let count = count.max(0) as usize;
-    alloc_reference(
-        ctx,
-        Reference::ByteArray(vec![0i8; count].into_boxed_slice()),
-    )
+extern "C" fn jit_new_bool_array(context: *const u8, bci: i32, count: i32) -> i64 {
+    jit_new_primitive_array(context, bci, count, &BaseType::Boolean)
 }
 
-extern "C" fn jit_new_char_array(context: *const u8, count: i32) -> i64 {
-    let ctx = ctx_from_ptr(context);
-    let count = count.max(0) as usize;
-    alloc_reference(
-        ctx,
-        Reference::CharArray(vec![0u16; count].into_boxed_slice()),
-    )
+extern "C" fn jit_new_byte_array(context: *const u8, bci: i32, count: i32) -> i64 {
+    jit_new_primitive_array(context, bci, count, &BaseType::Byte)
 }
 
-extern "C" fn jit_new_short_array(context: *const u8, count: i32) -> i64 {
-    let ctx = ctx_from_ptr(context);
-    let count = count.max(0) as usize;
-    alloc_reference(
-        ctx,
-        Reference::ShortArray(vec![0i16; count].into_boxed_slice()),
-    )
+extern "C" fn jit_new_char_array(context: *const u8, bci: i32, count: i32) -> i64 {
+    jit_new_primitive_array(context, bci, count, &BaseType::Char)
 }
 
-extern "C" fn jit_new_int_array(context: *const u8, count: i32) -> i64 {
-    let ctx = ctx_from_ptr(context);
-    let count = count.max(0) as usize;
-    alloc_reference(
-        ctx,
-        Reference::IntArray(vec![0i32; count].into_boxed_slice()),
-    )
+extern "C" fn jit_new_short_array(context: *const u8, bci: i32, count: i32) -> i64 {
+    jit_new_primitive_array(context, bci, count, &BaseType::Short)
 }
 
-extern "C" fn jit_new_long_array(context: *const u8, count: i32) -> i64 {
-    let ctx = ctx_from_ptr(context);
-    let count = count.max(0) as usize;
-    alloc_reference(
-        ctx,
-        Reference::LongArray(vec![0i64; count].into_boxed_slice()),
-    )
+extern "C" fn jit_new_int_array(context: *const u8, bci: i32, count: i32) -> i64 {
+    jit_new_primitive_array(context, bci, count, &BaseType::Int)
 }
 
-extern "C" fn jit_new_float_array(context: *const u8, count: i32) -> i64 {
-    let ctx = ctx_from_ptr(context);
-    let count = count.max(0) as usize;
-    alloc_reference(
-        ctx,
-        Reference::FloatArray(vec![0.0f32; count].into_boxed_slice()),
-    )
+extern "C" fn jit_new_long_array(context: *const u8, bci: i32, count: i32) -> i64 {
+    jit_new_primitive_array(context, bci, count, &BaseType::Long)
 }
 
-extern "C" fn jit_new_double_array(context: *const u8, count: i32) -> i64 {
-    let ctx = ctx_from_ptr(context);
-    let count = count.max(0) as usize;
-    alloc_reference(
-        ctx,
-        Reference::DoubleArray(vec![0.0f64; count].into_boxed_slice()),
-    )
+extern "C" fn jit_new_float_array(context: *const u8, bci: i32, count: i32) -> i64 {
+    jit_new_primitive_array(context, bci, count, &BaseType::Float)
+}
+
+extern "C" fn jit_new_double_array(context: *const u8, bci: i32, count: i32) -> i64 {
+    jit_new_primitive_array(context, bci, count, &BaseType::Double)
 }
 
 // ---------------------------------------------------------------------------
@@ -1667,7 +1647,8 @@ fn jit_anewarray_impl(ctx: &RuntimeContext, cp_class_index: u16, count: i32) -> 
     let count = usize::try_from(count).map_err(|error| {
         InternalError(format!("anewarray: count out of range for usize: {error}"))
     })?;
-    let reference = Reference::try_from((array_class, vec![Value::Object(None); count]))?;
+    let reference =
+        Reference::try_from((array_class, allocate_array(count, Value::Object(None))?))?;
     Ok(alloc_reference(ctx, reference))
 }
 
@@ -1802,51 +1783,30 @@ fn build_multianewarray<'a>(
                     InternalError("multianewarray: empty component type".to_string())
                 })?;
                 let base_type = BaseType::parse(component_char)?;
-                let array = match base_type {
-                    BaseType::Char => {
-                        Value::new_object(collector, Reference::from(vec![0 as char; current_size]))
-                    }
-                    BaseType::Float => {
-                        Value::new_object(collector, Reference::from(vec![0.0f32; current_size]))
-                    }
-                    BaseType::Double => {
-                        Value::new_object(collector, Reference::from(vec![0.0f64; current_size]))
-                    }
-                    BaseType::Boolean => {
-                        Value::new_object(collector, Reference::from(vec![false; current_size]))
-                    }
-                    BaseType::Byte => {
-                        Value::new_object(collector, Reference::from(vec![0i8; current_size]))
-                    }
-                    BaseType::Short => {
-                        Value::new_object(collector, Reference::from(vec![0i16; current_size]))
-                    }
-                    BaseType::Int => {
-                        Value::new_object(collector, Reference::from(vec![0i32; current_size]))
-                    }
-                    BaseType::Long => {
-                        Value::new_object(collector, Reference::from(vec![0i64; current_size]))
-                    }
-                };
+                let array = Value::new_object(
+                    collector,
+                    allocate_primitive_array(&base_type, current_size)?,
+                );
                 Ok(array)
             } else {
-                let reference =
-                    Reference::try_from((class, vec![Value::Object(None); current_size]))?;
+                let reference = Reference::try_from((
+                    class,
+                    allocate_array(current_size, Value::Object(None))?,
+                ))?;
                 Ok(Value::new_object(collector, reference))
             }
         } else {
             // Recurse into the actual single-step component class, *not* a synthesized name.
             let component_class = thread.array_component_class(&class).await?;
-            let mut elements = Vec::with_capacity(current_size);
-            for _ in 0..current_size {
-                let sub_array = build_multianewarray(
+            let mut elements = allocate_array(current_size, Value::Object(None))?;
+            for element in &mut elements {
+                *element = build_multianewarray(
                     thread,
                     component_class.clone(),
                     dimension_sizes,
                     depth + 1,
                 )
                 .await?;
-                elements.push(sub_array);
             }
             let reference = Reference::try_from((class, elements))?;
             Ok(Value::new_object(collector, reference))
@@ -2824,6 +2784,80 @@ mod tests {
 
         drop(throwable_a);
         drop(throwable_b);
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_new_primitive_array_helpers_preserve_types_and_exceptions() -> Result<()> {
+        type Allocate = extern "C" fn(*const u8, i32, i32) -> i64;
+        let (vm, thread, class) = test::class().await?;
+        let ctx = RuntimeContext::new(vm.garbage_collector(), &vm, &thread, &class)?;
+        let helpers: [(Allocate, Reference); 8] = [
+            (
+                jit_new_bool_array,
+                Reference::BooleanArray(vec![0; 3].into_boxed_slice()),
+            ),
+            (
+                jit_new_byte_array,
+                Reference::ByteArray(vec![0; 3].into_boxed_slice()),
+            ),
+            (
+                jit_new_char_array,
+                Reference::CharArray(vec![0; 3].into_boxed_slice()),
+            ),
+            (
+                jit_new_short_array,
+                Reference::ShortArray(vec![0; 3].into_boxed_slice()),
+            ),
+            (
+                jit_new_int_array,
+                Reference::IntArray(vec![0; 3].into_boxed_slice()),
+            ),
+            (
+                jit_new_long_array,
+                Reference::LongArray(vec![0; 3].into_boxed_slice()),
+            ),
+            (
+                jit_new_float_array,
+                Reference::FloatArray(vec![0.0; 3].into_boxed_slice()),
+            ),
+            (
+                jit_new_double_array,
+                Reference::DoubleArray(vec![0.0; 3].into_boxed_slice()),
+            ),
+        ];
+        for (allocate, expected) in helpers {
+            let pointer = allocate(ctx.as_ptr(), 17, 3);
+            assert_ne!(pointer, 0);
+            assert_eq!(ctx.pending_exception(), 0);
+            assert_eq!(ctx.current_bci.load(Ordering::Relaxed), 17);
+            assert_eq!(*gc_ref_from_ptr(pointer)?.read(), expected);
+
+            assert_eq!(allocate(ctx.as_ptr(), 23, -1), 0);
+            assert_eq!(ctx.current_bci.load(Ordering::Relaxed), 23);
+            let exception = gc_ref_from_ptr(ctx.take_pending_exception())?;
+            assert_eq!(
+                exception.read().class_name()?,
+                "java/lang/NegativeArraySizeException"
+            );
+            assert_eq!(ctx.pending_exception(), 0);
+        }
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_multianewarray_capacity_overflow() -> Result<()> {
+        let (_vm, thread) = test::thread().await?;
+        for component in ["J", "Ljava/lang/Object;"] {
+            for dimensions in [&[usize::MAX][..], &[usize::MAX, 1], &[1, usize::MAX]] {
+                let class_name = format!("{}{component}", "[".repeat(dimensions.len()));
+                let class = thread.class(&class_name).await?;
+                assert!(matches!(
+                    build_multianewarray(&thread, class, dimensions, 0).await,
+                    Err(JavaError(crate::JavaError::OutOfMemoryError(_)))
+                ));
+            }
+        }
         Ok(())
     }
 

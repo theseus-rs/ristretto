@@ -13,11 +13,16 @@
 )]
 
 #[cfg(not(target_family = "wasm"))]
+mod common;
+
+#[cfg(not(target_family = "wasm"))]
+use common::java::{home as java_home, runtime_properties as parse_runtime_properties};
+#[cfg(not(target_family = "wasm"))]
 use rayon::ThreadPoolBuilder;
 #[cfg(not(target_family = "wasm"))]
 use rayon::prelude::*;
 use regex::Regex;
-use ristretto_classloader::{DEFAULT_JAVA_VERSION, runtime};
+use ristretto_classloader::DEFAULT_JAVA_VERSION;
 use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
 use ristretto_vm::Error::InternalError;
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
@@ -273,16 +278,6 @@ fn collect_test_dirs(tests_root_dir: &PathBuf) -> Result<Vec<PathBuf>> {
     Ok(test_paths)
 }
 
-/// Gets the VM directory for the Java runtime.
-#[cfg(not(target_family = "wasm"))]
-fn java_home(java_version: &str) -> Result<PathBuf> {
-    let runtime =
-        tokio::runtime::Runtime::new().map_err(|error| InternalError(error.to_string()))?;
-    let (java_home, _java_version, _class_loader) =
-        runtime.block_on(runtime::version_class_loader(java_version))?;
-    Ok(java_home)
-}
-
 #[cfg(not(target_family = "wasm"))]
 fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<TestCase>> {
     let workspace_dir = tests_root_dir
@@ -369,27 +364,6 @@ fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<
     Ok(cases)
 }
 
-#[cfg(not(target_family = "wasm"))]
-fn parse_runtime_properties(path: &Path) -> Result<HashMap<String, String>> {
-    let contents = fs::read_to_string(path)?;
-    let mut properties = HashMap::new();
-    for (line_number, line) in contents.lines().enumerate() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-        let Some((key, value)) = line.split_once('=') else {
-            return Err(InternalError(format!(
-                "invalid property at {}:{}",
-                path.display(),
-                line_number + 1
-            )));
-        };
-        properties.insert(key.trim().to_string(), value.trim().to_string());
-    }
-    Ok(properties)
-}
-
 /// Compiles the tests in the test directories.
 #[cfg(not(target_family = "wasm"))]
 fn compile_tests(test_cases: &[TestCase]) -> Result<()> {
@@ -418,47 +392,21 @@ fn compile_test(test_case: &TestCase) -> Result<()> {
         }
     }
 
-    let java_file = source_dir.join(TEST_FILE);
-    let mut arguments = vec!["-parameters"];
-    if let Some(release) = &test_case.java_release {
-        // Fixtures using records or nest attributes can opt into newer bytecode
-        // with java.release while still running against multiple JDK versions.
-        arguments.extend(["--release", release.as_str()]);
-    } else if test_case.source_dir != test_case.class_dir {
-        // Cross-runtime fixtures exercise the selected JDK's class library but
-        // intentionally use Java 8 bytecode. This keeps the test focused on the
-        // native surface instead of newer invokedynamic bootstrap machinery.
-        arguments.extend(["-source", "8", "-target", "8"]);
-    }
-    arguments.extend([
-        "-d",
-        class_dir.to_str().unwrap_or_default(),
-        "-cp",
-        source_dir.to_str().unwrap_or_default(),
-        java_file.to_str().unwrap_or_default(),
-    ]);
-    let javac = test_case.java_home.join("bin").join("javac");
-    let output = std::process::Command::new(javac)
-        .args(&arguments)
-        .current_dir(source_dir)
-        .output()
-        .map_err(|error| InternalError(error.to_string()))?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    info!("Compiling test {test_name}: {stdout}");
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let message = format!("Compilation failed for {test_name}: {stderr}");
-        error!(message);
-        return Err(InternalError(message));
-    }
+    let output = common::java::compile(
+        &test_case.java_home,
+        source_dir,
+        class_dir,
+        test_case.java_release.as_deref(),
+        test_case.source_dir != test_case.class_dir,
+        Duration::from_secs(120),
+    )?;
+    info!("Compiling test {test_name}: {}", output.stdout);
     Ok(())
 }
 
-/// Compiles a test directory by running `javac` on the `Test.java` file.
+/// Obtains the reference output in a bounded `OpenJDK` subprocess.
 #[cfg(not(target_family = "wasm"))]
 fn expected_output(test_case: &TestCase) -> Result<(Duration, String)> {
-    let test_name = test_case.name();
-
     let start_time = Instant::now();
     let mut arguments = vec![
         "-Dstdout.encoding=UTF-8".to_string(),
@@ -475,20 +423,11 @@ fn expected_output(test_case: &TestCase) -> Result<(Duration, String)> {
         test_case.class_dir.to_string_lossy().into_owned(),
         TEST_CLASS_NAME.to_string(),
     ]);
-    let java = test_case.java_home.join("bin").join("java");
-    let output = std::process::Command::new(java)
-        .args(&arguments)
-        .current_dir(&test_case.source_dir)
-        .output()
-        .map_err(|error| InternalError(error.to_string()))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let message = format!("Execution failed for {test_name}: {stderr}");
-        error!(message);
-        return Err(InternalError(message));
-    }
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    Ok((start_time.elapsed(), stdout))
+    let mut java = common::java::command(&test_case.java_home, "java");
+    java.args(&arguments).current_dir(&test_case.source_dir);
+    let output = common::process::run(&mut java, Duration::from_secs(120))?;
+    output.require_success()?;
+    Ok((start_time.elapsed(), output.stdout))
 }
 
 /// Tests the VM by running the `Test` class in the specified test directory.

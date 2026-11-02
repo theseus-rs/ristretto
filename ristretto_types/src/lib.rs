@@ -14,6 +14,7 @@
     )
 )]
 
+pub mod array;
 mod assignable;
 mod class_registry;
 mod error;

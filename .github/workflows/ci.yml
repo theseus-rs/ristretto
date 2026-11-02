@@ -27,6 +27,35 @@ jobs:
     with:
       dry_run: true
 
+  java-resource-errors:
+    name: Java resource errors (${{ matrix.java }})
+    needs: [ checks ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ '8', '11', '17', '21', '25' ]
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
+      - name: Install Rust
+        run: rustup toolchain install --no-self-update
+
+      - name: Verify Rust harness helpers
+        run: cargo test -p ristretto_vm --test resource_errors --no-default-features --features tls-rustls-ring
+
+      - name: Verify resource errors in isolated JVMs
+        env:
+          CARGO_TERM_COLOR: always
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RISTRETTO_RESOURCE_JAVA_VERSIONS: ${{ matrix.java }}
+          RUST_BACKTRACE: 1
+        run: |
+          cargo test -p ristretto_vm --test resource_errors --no-default-features --features tls-rustls-ring \
+            resource_error_tests -- --ignored --nocapture
+
   build:
     name: ${{ matrix.platform }}
     needs: [ checks ]
