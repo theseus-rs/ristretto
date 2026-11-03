@@ -290,7 +290,17 @@ impl<'a> SignatureParser<'a> {
 
     /// Parse an array type signature: `[ TypeSignature`
     fn parse_array_type_signature(&mut self) -> Result<()> {
-        self.expect('[')?;
+        let mut dimensions = 0;
+        while self.peek() == Some('[') {
+            self.advance();
+            dimensions += 1;
+            if dimensions > 255 {
+                return Err(VerificationError {
+                    context: "Signature".to_string(),
+                    message: "Array signature exceeds 255 dimensions".to_string(),
+                });
+            }
+        }
         self.parse_type_signature()?;
         Ok(())
     }
@@ -827,5 +837,19 @@ mod regression_tests {
             assert!(verify_class_signature(signature).is_err(), "{signature}");
         }
         assert!(verify_class_signature("Lfoo/Bar;").is_ok());
+    }
+    #[test]
+    fn array_dimensions_do_not_consume_generic_nesting_budget() {
+        use super::verify_field_signature;
+        for leaf in ["I", "Ljava/lang/Object;"] {
+            assert!(verify_field_signature(&format!("{}{leaf}", "[".repeat(255)), &[]).is_ok());
+            assert!(verify_field_signature(&format!("{}{leaf}", "[".repeat(256)), &[]).is_err());
+        }
+        let nested = format!(
+            "{}Ljava/lang/Object;{}",
+            "Ljava/util/List<".repeat(65),
+            ">;".repeat(65)
+        );
+        assert!(verify_field_signature(&nested, &[]).is_err());
     }
 }
