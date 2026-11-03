@@ -276,13 +276,35 @@ impl JavaStr {
 
 impl fmt::Debug for JavaStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "\"{}\"", self.to_rust_string())
+        f.write_str("\"")?;
+        fmt::Display::fmt(self, f)?;
+        f.write_str("\"")
     }
 }
 
 impl fmt::Display for JavaStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.to_rust_string())
+        if let Some(value) = self.as_str() {
+            return f.write_str(value);
+        }
+        // Batch writes into a fixed UTF-8 buffer to avoid one formatter call per character.
+        let mut buffer = [0; 256];
+        let mut used = 0;
+        for character in Mutf8CharIter::new(&self.0) {
+            if buffer.len() - used < 4 {
+                let text = std::str::from_utf8(buffer.get(..used).ok_or(fmt::Error)?)
+                    .map_err(|_| fmt::Error)?;
+                f.write_str(text)?;
+                used = 0;
+            }
+            used += character
+                .encode_utf8(buffer.get_mut(used..).ok_or(fmt::Error)?)
+                .len();
+        }
+        let text =
+            std::str::from_utf8(buffer.get(..used).ok_or(fmt::Error)?).map_err(|_| fmt::Error)?;
+        f.write_str(text)?;
+        Ok(())
     }
 }
 
@@ -1022,5 +1044,23 @@ mod tests {
         let mismatch = java_string.as_java_str();
         assert_ne!(mismatch, "x");
         assert_ne!(mismatch, "\0x");
+    }
+    #[test]
+    fn streaming_formatting_preserves_lossy_display_and_debug() {
+        for value in ["plain", "β", "a\0😀", "quote\" and newline\n"] {
+            let java = JavaString::from(value);
+            assert_eq!(format!("{java}"), value);
+            assert_eq!(format!("{java:?}"), format!("\"{value}\""));
+        }
+        let java = JavaString::from_mutf8(vec![0xED, 0xA0, 0x80]).unwrap();
+        assert_eq!(format!("{java}"), "\u{FFFD}");
+        assert_eq!(format!("{java:?}"), "\"\u{FFFD}\"");
+    }
+    #[test]
+    fn formatting_preserves_characters_across_buffer_boundaries() {
+        let value = "β\0😀".repeat(200);
+        let java = JavaString::from(value.as_str());
+        assert_eq!(format!("{java}"), value);
+        assert_eq!(format!("{java:?}"), format!("\"{value}\""));
     }
 }
