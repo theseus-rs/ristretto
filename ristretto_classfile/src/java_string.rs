@@ -583,6 +583,10 @@ impl From<&str> for JavaString {
 
 impl From<String> for JavaString {
     fn from(s: String) -> JavaString {
+        // UTF-8 and MUTF-8 differ only for NUL and supplementary characters.
+        if !s.as_bytes().iter().any(|byte| *byte == 0 || *byte >= 0xF0) {
+            return JavaString(s.into_bytes());
+        }
         JavaString::from(s.as_str())
     }
 }
@@ -1022,5 +1026,18 @@ mod tests {
         let mismatch = java_string.as_java_str();
         assert_ne!(mismatch, "x");
         assert_ne!(mismatch, "\0x");
+    }
+    #[test]
+    fn owned_compatible_strings_reuse_their_allocation() {
+        for value in ["plain ASCII", "Greek β and Japanese 日本語"] {
+            let source = value.to_string();
+            let pointer = source.as_ptr();
+            let java = JavaString::from(source);
+            assert_eq!(java.as_bytes().as_ptr(), pointer);
+            assert_eq!(java, value);
+        }
+        for value in ["embedded\0NUL", "supplementary 😀"] {
+            assert_eq!(JavaString::from(value.to_string()), JavaString::from(value));
+        }
     }
 }
