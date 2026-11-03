@@ -126,7 +126,7 @@ pub(crate) fn verify(
                     || frame_index >= i32::from(code_length)
                     || !info.is_valid_offset(u16::try_from(frame_index)?)
                 {
-                    return Err(InvalidStackFrameOffset(u16::try_from(frame_index)?));
+                    return Err(InvalidStackFrameOffset(frame_index));
                 }
 
                 let frame_index_u16 = u16::try_from(frame_index)?;
@@ -561,5 +561,25 @@ mod test {
 
         let result = verify(&class_file, &method, 0, 10, &code, &[], &[]);
         assert!(matches!(result, Err(InvalidInstructionOffset(50))));
+    }
+
+    #[test]
+    fn overflowing_frame_offset_retains_specific_diagnostic() {
+        let class = ClassFile::default();
+        let method = get_dummy_method();
+        let table = Attribute::StackMapTable {
+            name_index: 0,
+            frames: vec![
+                StackFrame::SameFrame { frame_type: 0 },
+                StackFrame::SameFrameExtended {
+                    frame_type: 251,
+                    offset_delta: u16::MAX,
+                },
+            ],
+        };
+        assert_eq!(
+            verify(&class, &method, 0, 0, &[Instruction::Return], &[], &[table]),
+            Err(InvalidStackFrameOffset(65536))
+        );
     }
 }
