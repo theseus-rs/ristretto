@@ -78,13 +78,13 @@ pub(crate) fn verify_static(class: &ClassFile<'_>, method: &Method) -> Result<()
         }
         match instruction {
             Instruction::Ldc(i) => {
-                super::handlers::misc::handle_ldc(&mut Frame::new(0, 2), class, u16::from(*i))?;
+                super::handlers::misc::ldc_type(class, u16::from(*i))?;
             }
             Instruction::Ldc_w(i) => {
-                super::handlers::misc::handle_ldc(&mut Frame::new(0, 2), class, *i)?;
+                super::handlers::misc::ldc_type(class, *i)?;
             }
             Instruction::Ldc2_w(i) => {
-                super::handlers::misc::handle_ldc2_w(&mut Frame::new(0, 2), class, *i)?;
+                super::handlers::misc::ldc2_w_type(class, *i)?;
             }
             Instruction::Getfield(i)
             | Instruction::Getstatic(i)
