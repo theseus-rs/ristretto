@@ -10,20 +10,20 @@ use ahash::AHashSet;
 
 /// Represents a parsed type parameter with its name and bounds.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct TypeParameter {
-    pub name: String,
-    pub class_bound: Option<String>,
-    pub interface_bounds: Vec<String>,
+pub(crate) struct TypeParameter<'a> {
+    pub name: &'a str,
+    pub class_bound: Option<&'a str>,
+    pub interface_bounds: Vec<&'a str>,
 }
 
 /// Context for signature validation, tracking declared type variables.
 #[derive(Debug, Default)]
-pub(crate) struct SignatureContext {
+pub(crate) struct SignatureContext<'a> {
     /// Type variables declared in this context (class or method type parameters)
-    declared_type_variables: AHashSet<String>,
+    declared_type_variables: AHashSet<&'a str>,
 }
 
-impl SignatureContext {
+impl<'a> SignatureContext<'a> {
     /// Create a new empty signature context.
     #[must_use]
     pub(crate) fn new() -> Self {
@@ -31,8 +31,8 @@ impl SignatureContext {
     }
 
     /// Add a declared type variable to the context.
-    pub fn add_type_variable(&mut self, name: &str) {
-        self.declared_type_variables.insert(name.to_string());
+    pub fn add_type_variable(&mut self, name: &'a str) {
+        self.declared_type_variables.insert(name);
     }
 
     /// Check if a type variable is declared in this context.
@@ -46,9 +46,9 @@ impl SignatureContext {
 struct SignatureParser<'a> {
     input: &'a str,
     pos: usize,
-    context: SignatureContext,
+    context: SignatureContext<'a>,
     depth: usize,
-    referenced_variables: AHashSet<String>,
+    referenced_variables: AHashSet<&'a str>,
 }
 
 impl<'a> SignatureParser<'a> {
@@ -106,7 +106,7 @@ impl<'a> SignatureParser<'a> {
     }
 
     /// Parse an identifier (used for type variable names, class names, etc.)
-    fn parse_identifier(&mut self) -> Result<String> {
+    fn parse_identifier(&mut self) -> Result<&'a str> {
         let start = self.pos;
         while let Some(c) = self.peek() {
             if ".;[/<>:".contains(c) {
@@ -120,11 +120,11 @@ impl<'a> SignatureParser<'a> {
                 message: format!("Expected identifier at position {start}"),
             });
         }
-        Ok(self.input[start..self.pos].to_string())
+        Ok(&self.input[start..self.pos])
     }
 
     /// Parse a class name (internal form with '/')
-    fn parse_class_name(&mut self) -> Result<String> {
+    fn parse_class_name(&mut self) -> Result<&'a str> {
         let start = self.pos;
         while let Some(c) = self.peek() {
             if ".;[<>:".contains(c) {
@@ -145,16 +145,16 @@ impl<'a> SignatureParser<'a> {
                 message: "Invalid class name".to_string(),
             });
         }
-        Ok(name.to_string())
+        Ok(name)
     }
 
     /// Parse type parameters: `<TypeParameter+>`
-    fn parse_type_parameters(&mut self) -> Result<Vec<TypeParameter>> {
+    fn parse_type_parameters(&mut self) -> Result<Vec<TypeParameter<'a>>> {
         self.expect('<')?;
         let mut params = Vec::new();
         while self.peek() != Some('>') {
             let param = self.parse_type_parameter()?;
-            self.context.add_type_variable(&param.name);
+            self.context.add_type_variable(param.name);
             params.push(param);
         }
         self.expect('>')?;
@@ -168,9 +168,9 @@ impl<'a> SignatureParser<'a> {
     }
 
     /// Parse a single type parameter: `Identifier ClassBound InterfaceBound*`
-    fn parse_type_parameter(&mut self) -> Result<TypeParameter> {
+    fn parse_type_parameter(&mut self) -> Result<TypeParameter<'a>> {
         let name = self.parse_identifier()?;
-        self.context.add_type_variable(&name);
+        self.context.add_type_variable(name);
         self.expect(':')?;
 
         // ClassBound is optional but the colon is required
@@ -194,7 +194,7 @@ impl<'a> SignatureParser<'a> {
     }
 
     /// Parse a field type signature
-    fn parse_field_type_signature(&mut self) -> Result<String> {
+    fn parse_field_type_signature(&mut self) -> Result<&'a str> {
         if self.depth >= 64 {
             return Err(VerificationError {
                 context: "Signature".to_string(),
@@ -207,7 +207,7 @@ impl<'a> SignatureParser<'a> {
         result
     }
 
-    fn parse_field_type_inner(&mut self) -> Result<String> {
+    fn parse_field_type_inner(&mut self) -> Result<&'a str> {
         let start = self.pos;
         match self.peek() {
             Some('L') => self.parse_class_type_signature()?,
@@ -226,7 +226,7 @@ impl<'a> SignatureParser<'a> {
                 });
             }
         }
-        Ok(self.input[start..self.pos].to_string())
+        Ok(&self.input[start..self.pos])
     }
 
     /// Parse a class type signature: `L ClassName TypeArguments? (. Identifier TypeArguments?)* ;`
