@@ -226,7 +226,9 @@ fn verify_attributes(
         // attributes can repeat without making this quadratic in table length.
         if !matches!(
             attribute,
-            Attribute::LineNumberTable { .. }
+            Attribute::Synthetic { .. }
+                | Attribute::Deprecated { .. }
+                | Attribute::LineNumberTable { .. }
                 | Attribute::LocalVariableTable { .. }
                 | Attribute::LocalVariableTypeTable { .. }
         ) && attributes
@@ -690,6 +692,28 @@ mod tests {
             let index = class.constant_pool.add_utf8(name)?;
             class.constant_pool.add(Constant::Package(index))?;
             assert_eq!(verify_constants(&class).is_ok(), accepted);
+        }
+        Ok(())
+    }
+    #[test]
+    fn marker_attributes_may_repeat() -> Result<()> {
+        let mut class = ClassFile::default();
+        let attributes = [
+            Attribute::Synthetic {
+                name_index: class.constant_pool.add_utf8("Synthetic")?,
+            },
+            Attribute::Deprecated {
+                name_index: class.constant_pool.add_utf8("Deprecated")?,
+            },
+        ];
+        for attribute in attributes {
+            for location in [
+                AttributeLocation::Class,
+                AttributeLocation::Field,
+                AttributeLocation::Method,
+            ] {
+                verify_attributes(&class, &[attribute.clone(), attribute.clone()], location)?;
+            }
         }
         Ok(())
     }
