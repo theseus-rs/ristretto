@@ -661,18 +661,98 @@ fn verify_parameter_annotations(
     Ok(())
 }
 
+fn verify_annotation_target(
+    class_file: &ClassFile<'_>,
+    context: AttributeContext,
+    target: &crate::attributes::TargetType,
+) -> Result<()> {
+    use crate::attributes::TargetType as T;
+    let tag = target.target_type();
+    let valid_location = match context {
+        AttributeContext::Class => matches!(tag, 0x00 | 0x10 | 0x11),
+        AttributeContext::Field(_) | AttributeContext::RecordComponent => tag == 0x13,
+        AttributeContext::Method(_) => matches!(tag, 0x01 | 0x12 | 0x14..=0x17),
+        AttributeContext::Code(..) => matches!(tag, 0x40..=0x4B),
+    };
+    let invalid = || VerificationError {
+        context: "Type annotation target".to_string(),
+        message: "Invalid target location or index".to_string(),
+    };
+    if !valid_location {
+        return Err(invalid());
+    }
+    match (context, target) {
+        (
+            AttributeContext::Class,
+            T::SuperType {
+                supertype_index, ..
+            },
+        ) => {
+            if *supertype_index == u16::MAX {
+                if class_file.super_class == 0
+                    || class_file
+                        .access_flags
+                        .contains(crate::ClassAccessFlags::INTERFACE)
+                {
+                    return Err(invalid());
+                }
+            } else if usize::from(*supertype_index) >= class_file.interfaces.len() {
+                return Err(invalid());
+            }
+        }
+        (
+            AttributeContext::Code(method, _),
+            T::Catch {
+                exception_table_index,
+                ..
+            },
+        ) => {
+            let count = method
+                .attributes
+                .iter()
+                .find_map(|a| match a {
+                    Attribute::Code {
+                        exception_table, ..
+                    } => Some(exception_table.len()),
+                    _ => None,
+                })
+                .unwrap_or(0);
+            if usize::from(*exception_table_index) >= count {
+                return Err(invalid());
+            }
+        }
+        (
+            AttributeContext::Method(method),
+            T::Throws {
+                throws_type_index, ..
+            },
+        ) => {
+            let count = method
+                .attributes
+                .iter()
+                .find_map(|a| match a {
+                    Attribute::Exceptions {
+                        exception_indexes, ..
+                    } => Some(exception_indexes.len()),
+                    _ => None,
+                })
+                .unwrap_or(0);
+            if usize::from(*throws_type_index) >= count {
+                return Err(invalid());
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
 fn verify_type_annotations(
     class_file: &ClassFile<'_>,
     context: AttributeContext,
     type_annotations: &[TypeAnnotation],
 ) -> Result<()> {
-    if matches!(context, AttributeContext::Code(..)) {
-        // Type annotations in Code attribute target instructions, local variables, etc.
-        // We should verify target_type here if we want to be strict.
-    }
     for type_annotation in type_annotations {
-        // Verify target_info based on target_type
-        // For now, just verify the annotation part
+        verify_annotation_target(class_file, context, &type_annotation.target_type)?;
         match class_file.constant_pool.get(type_annotation.type_index) {
             Some(Constant::Utf8(_)) => {}
             Some(_) => return Err(InvalidConstantPoolIndexType(type_annotation.type_index)),
@@ -2577,8 +2657,19 @@ mod tests {
     }
 
     #[test]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "covers invalid annotation payloads in a valid field context"
+    )]
     fn test_verify_type_annotation_invalid_paths() {
-        let class_context = AttributeContext::Class;
+        let field = Field {
+            access_flags: FieldAccessFlags::empty(),
+            name_index: 0,
+            descriptor_index: 0,
+            field_type: FieldType::Base(BaseType::Int),
+            attributes: vec![],
+        };
+        let class_context = AttributeContext::Field(&field);
         let empty_class = create_class_file(Vec::new());
         let int_class = create_class_file(vec![Constant::Integer(1), Constant::utf8("ok")]);
 
@@ -2881,7 +2972,10 @@ mod tests {
                 &[Attribute::RuntimeInvisibleTypeAnnotations {
                     name_index: 0,
                     type_annotations: vec![TypeAnnotation {
-                        target_type: TargetType::Empty { target_type: 0x13 },
+                        target_type: TargetType::Offset {
+                            target_type: 0x43,
+                            offset: 0
+                        },
                         type_path: Vec::new(),
                         type_index: annotation.type_index,
                         elements: vec![AnnotationValuePair {
@@ -3726,5 +3820,141 @@ mod tests {
             ),
             Err(InvalidConstantPoolIndex(9))
         ));
+    }
+    #[test]
+    fn type_annotation_targets_match_location_and_table_bounds() {
+        use crate::attributes::TargetType as T;
+        let class = ClassFile {
+            super_class: 1,
+            interfaces: vec![2],
+            ..ClassFile::default()
+        };
+        let method = Method {
+            attributes: vec![Attribute::Code {
+                name_index: 0,
+                max_stack: 1,
+                max_locals: 0,
+                code: vec![],
+                attributes: vec![],
+                exception_table: vec![ExceptionTableEntry {
+                    range_pc: 0..1,
+                    handler_pc: 0,
+                    catch_type: 0,
+                }],
+            }],
+            ..Method::default()
+        };
+        let field = Field {
+            access_flags: FieldAccessFlags::empty(),
+            name_index: 0,
+            descriptor_index: 0,
+            field_type: FieldType::Base(BaseType::Int),
+            attributes: vec![],
+        };
+        for (context, target) in [
+            (
+                AttributeContext::Class,
+                T::SuperType {
+                    target_type: 0x10,
+                    supertype_index: u16::MAX,
+                },
+            ),
+            (
+                AttributeContext::Field(&field),
+                T::Empty { target_type: 0x13 },
+            ),
+            (
+                AttributeContext::Method(&method),
+                T::Empty { target_type: 0x14 },
+            ),
+            (
+                AttributeContext::Code(&method, 1),
+                T::Offset {
+                    target_type: 0x43,
+                    offset: 0,
+                },
+            ),
+        ] {
+            assert!(verify_annotation_target(&class, context, &target).is_ok());
+            assert!(
+                verify_annotation_target(&class, context, &T::Empty { target_type: 0xFF }).is_err()
+            );
+        }
+        for (index, valid) in [(0, true), (1, false), (u16::MAX, true)] {
+            assert_eq!(
+                verify_annotation_target(
+                    &class,
+                    AttributeContext::Class,
+                    &T::SuperType {
+                        target_type: 0x10,
+                        supertype_index: index
+                    }
+                )
+                .is_ok(),
+                valid
+            );
+        }
+        for (index, valid) in [(0, true), (1, false)] {
+            assert_eq!(
+                verify_annotation_target(
+                    &class,
+                    AttributeContext::Code(&method, 1),
+                    &T::Catch {
+                        target_type: 0x42,
+                        exception_table_index: index
+                    }
+                )
+                .is_ok(),
+                valid
+            );
+        }
+        assert!(
+            verify_annotation_target(
+                &class,
+                AttributeContext::Class,
+                &T::Catch {
+                    target_type: 0x42,
+                    exception_table_index: 0
+                }
+            )
+            .is_err()
+        );
+    }
+    #[test]
+    fn annotation_superclass_and_throws_targets_have_real_entries() {
+        use crate::attributes::TargetType as T;
+        let target = T::SuperType {
+            target_type: 0x10,
+            supertype_index: u16::MAX,
+        };
+        let root = ClassFile::default();
+        assert!(verify_annotation_target(&root, AttributeContext::Class, &target).is_err());
+        let interface = ClassFile {
+            super_class: 1,
+            access_flags: crate::ClassAccessFlags::INTERFACE,
+            ..ClassFile::default()
+        };
+        assert!(verify_annotation_target(&interface, AttributeContext::Class, &target).is_err());
+        let method = Method {
+            attributes: vec![Attribute::Exceptions {
+                name_index: 0,
+                exception_indexes: vec![1],
+            }],
+            ..Method::default()
+        };
+        for (index, valid) in [(0, true), (1, false)] {
+            assert_eq!(
+                verify_annotation_target(
+                    &root,
+                    AttributeContext::Method(&method),
+                    &T::Throws {
+                        target_type: 0x17,
+                        throws_type_index: index
+                    }
+                )
+                .is_ok(),
+                valid
+            );
+        }
     }
 }
