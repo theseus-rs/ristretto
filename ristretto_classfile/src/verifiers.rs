@@ -54,9 +54,6 @@ pub(crate) mod field_access_flags;
 pub(crate) mod fields;
 mod format;
 
-/// Defines stack frames used in bytecode verification.
-pub(crate) mod frame;
-
 /// Verifies the interfaces implemented by a class.
 pub(crate) mod interfaces;
 
@@ -77,9 +74,6 @@ pub(crate) mod record;
 
 /// Validates generic signature grammar and type variable references.
 pub mod signature;
-
-/// Defines verification types used in bytecode verification.
-pub(crate) mod types;
 
 /// Provides the main verification framework and orchestration for all verifiers.
 pub(crate) mod verifier;
