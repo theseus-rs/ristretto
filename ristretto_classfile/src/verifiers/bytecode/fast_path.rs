@@ -405,9 +405,11 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                     .stack_map_table
                     .has_frame_at(self.code_info.offset_at(index + 1).unwrap_or(u16::MAX))
             {
-                return FastPathResult::Failed(VerifyError::VerifyError(
-                    "Missing frame after control transfer".to_string(),
-                ));
+                let message = "Missing frame after control transfer".to_string();
+                if self.config.allows_inference_fallback() {
+                    return FastPathResult::NeedsFallback(message);
+                }
+                return FastPathResult::Failed(VerifyError::VerifyError(message));
             }
         }
         // Perform the actual verification
@@ -2377,5 +2379,32 @@ mod tests {
             .unwrap();
         assert!(anchors[0].is_some());
         assert_eq!(worklist, vec![0]);
+    }
+    #[test]
+    fn test_missing_post_transfer_frame_honors_fallback() {
+        let class = create_mock_class_file();
+        let method = method_with(
+            MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            4,
+            vec![Instruction::Return, Instruction::Nop, Instruction::Return],
+            0,
+            0,
+            vec![Attribute::StackMapTable {
+                name_index: 5,
+                frames: vec![StackFrame::SameFrame { frame_type: 0 }],
+            }],
+            vec![],
+        );
+        let context = MockContext::PERMISSIVE;
+        let strict = VerifierConfig::default();
+        assert!(matches!(
+            fast_verifier(&class, &method, &context, &strict).verify(),
+            FastPathResult::Failed(_)
+        ));
+        let permissive = VerifierConfig::permissive();
+        assert!(matches!(
+            fast_verifier(&class, &method, &context, &permissive).verify(),
+            FastPathResult::NeedsFallback(_)
+        ));
     }
 }
