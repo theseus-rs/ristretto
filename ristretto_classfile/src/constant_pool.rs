@@ -1429,6 +1429,14 @@ impl<'a> ConstantPool<'a> {
                 reference_kind,
                 reference_index,
             } => {
+                if !matches!(
+                    self.try_get(*reference_index)?,
+                    Constant::FieldRef { .. }
+                        | Constant::MethodRef { .. }
+                        | Constant::InterfaceMethodRef { .. }
+                ) {
+                    return Err(InvalidConstantPoolIndexType(*reference_index));
+                }
                 let reference = self.try_get_formatted_string(*reference_index)?;
                 format!("Method handle {reference_kind} {reference}")
             }
@@ -2475,5 +2483,24 @@ mod test {
             Err(IoError("Invalid constant pool count".to_string())),
             ConstantPool::from_bytes(&mut bytes)
         );
+    }
+    #[test]
+    fn test_format_method_handle_rejects_cycles() {
+        for target in [1, 2] {
+            let mut pool = ConstantPool::new();
+            pool.add(Constant::MethodHandle {
+                reference_kind: ReferenceKind::InvokeStatic,
+                reference_index: target,
+            })
+            .unwrap();
+            pool.add(Constant::MethodHandle {
+                reference_kind: ReferenceKind::InvokeStatic,
+                reference_index: 1,
+            })
+            .unwrap();
+            assert!(
+                matches!(pool.try_get_formatted_string(1), Err(InvalidConstantPoolIndexType(index)) if index == target)
+            );
+        }
     }
 }
