@@ -1,3 +1,4 @@
+use crate::JAVA_7;
 use crate::attributes::{
     Annotation, AnnotationElement, Attribute, BootstrapMethod, ExceptionTableEntry, Exports,
     InnerClass, Instruction, LineNumber, LocalVariableTable, LocalVariableTypeTable,
@@ -292,6 +293,12 @@ fn verify_inner_classes(
         }
         // inner_name_index (can be 0)
         if class.name_index == 0 {
+            if class_file.version.major() >= JAVA_7.major() && class.outer_class_info_index != 0 {
+                return Err(VerificationError {
+                    context: "InnerClasses Attribute".to_string(),
+                    message: "Anonymous inner class must have zero outer class index".to_string(),
+                });
+            }
             continue;
         }
         match class_file.constant_pool.get(class.name_index) {
@@ -3825,6 +3832,33 @@ mod tests {
             ),
             Err(InvalidConstantPoolIndex(9))
         ));
+    }
+
+    #[test]
+    fn anonymous_inner_class_outer_index_is_version_sensitive() {
+        let mut class_file = create_class_file(vec![
+            Constant::utf8("Inner"),
+            Constant::Class(1),
+            Constant::utf8("Outer"),
+            Constant::Class(3),
+        ]);
+        let inner = InnerClass {
+            class_info_index: 2,
+            outer_class_info_index: 4,
+            name_index: 0,
+            access_flags: NestedClassAccessFlags::empty(),
+        };
+        class_file.version = JAVA_7;
+        assert!(
+            verify_inner_classes(
+                &class_file,
+                AttributeContext::Class,
+                std::slice::from_ref(&inner)
+            )
+            .is_err()
+        );
+        class_file.version = crate::JAVA_6;
+        assert!(verify_inner_classes(&class_file, AttributeContext::Class, &[inner]).is_ok());
     }
 
     #[test]

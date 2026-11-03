@@ -71,9 +71,61 @@ async fn test_jackson_databind() -> Result<(), Box<dyn Error>> {
 #[tokio::test]
 async fn test_jtds() -> Result<(), Box<dyn Error>> {
     verify_jar("https://repo1.maven.org/maven2/net/sourceforge/jtds/jtds/1.2.2/jtds-1.2.2.jar")
-        .await?;
-    verify_jar("https://repo1.maven.org/maven2/net/sourceforge/jtds/jtds/1.3.1/jtds-1.3.1.jar")
         .await
+}
+
+#[tokio::test]
+#[expect(
+    clippy::panic_in_result_fn,
+    reason = "asserts the exact malformed metadata in this fixture"
+)]
+async fn test_jtds_rejects_invalid_anonymous_inner_metadata() -> Result<(), Box<dyn Error>> {
+    use ristretto_classfile::JAVA_7;
+    use ristretto_classfile::verifiers::VerifyError;
+    // jTDS 1.3.1 records JDK 7u21 in its manifest; these class files use version 51.0.
+    // Their InnerClasses entries for the synthetic SharedSocket$1 have
+    // inner_name_index == 0 but a nonzero outer_class_info_index. This matches
+    // javac bug JDK-8034854, fixed in JDK 8u20. Java 7's JVMS 4.7.6 already
+    // required the outer index to be zero in this case, so these files violate
+    // the specification even though HotSpot loads them.
+    // https://bugs.openjdk.org/browse/JDK-8034854
+    // https://www.oracle.com/java/technologies/javase/8u20-bugfixes.html
+    // https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.7.6
+    let malformed = [
+        "net/sourceforge/jtds/jdbc/SharedSocket$1.class",
+        "net/sourceforge/jtds/jdbc/SharedSocket$VirtualSocket.class",
+        "net/sourceforge/jtds/jdbc/SharedSocket.class",
+    ];
+    let bytes = Client::new()
+        .get("https://repo1.maven.org/maven2/net/sourceforge/jtds/jtds/1.3.1/jtds-1.3.1.jar")
+        .send()
+        .await?
+        .bytes()
+        .await?
+        .to_vec();
+    let mut rejected = 0;
+    jar::verify_with(bytes, |name, class_file| {
+        let result = class_file.verify();
+        if malformed.contains(&name) {
+            assert_eq!(class_file.version.major(), JAVA_7.major());
+            assert_eq!(
+                result,
+                Err(ristretto_classfile::Error::VerificationError(
+                    VerifyError::VerificationError {
+                        context: "InnerClasses Attribute".to_string(),
+                        message: "Anonymous inner class must have zero outer class index"
+                            .to_string(),
+                    }
+                ))
+            );
+            rejected += 1;
+            Ok(())
+        } else {
+            result
+        }
+    })?;
+    assert_eq!(rejected, malformed.len());
+    Ok(())
 }
 
 #[tokio::test]
