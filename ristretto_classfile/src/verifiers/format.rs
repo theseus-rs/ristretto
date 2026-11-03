@@ -566,6 +566,9 @@ fn verify_code_metadata(class: &ClassFile<'_>, attribute: &Attribute) -> Result<
     let info = crate::verifiers::bytecode::control_flow::CodeInfo::from_code(code)?;
     let count = info.code_length();
     for handler in exception_table {
+        if handler.catch_type != 0 {
+            class_name(pool.try_get_class(handler.catch_type)?, false)?;
+        }
         if handler.range_pc.start >= handler.range_pc.end
             || (handler.range_pc.end != count && !info.is_valid_offset(handler.range_pc.end))
             || !info.is_valid_offset(handler.range_pc.start)
@@ -631,6 +634,7 @@ fn verify_code_metadata(class: &ClassFile<'_>, attribute: &Attribute) -> Result<
 mod tests {
     use super::*;
     use crate::attributes::attribute::AttributeLocation;
+    use crate::attributes::{BootstrapMethod, ExceptionTableEntry, Instruction};
 
     #[test]
     fn attribute_duplicates_respect_names_and_location() -> Result<()> {
@@ -679,7 +683,7 @@ mod tests {
             })?;
             let attribute = Attribute::BootstrapMethods {
                 name_index,
-                methods: vec![crate::attributes::BootstrapMethod {
+                methods: vec![BootstrapMethod {
                     bootstrap_method_ref: reference,
                     arguments: vec![],
                 }],
@@ -700,7 +704,7 @@ mod tests {
             );
             let invalid = Attribute::BootstrapMethods {
                 name_index,
-                methods: vec![crate::attributes::BootstrapMethod {
+                methods: vec![BootstrapMethod {
                     bootstrap_method_ref: name_index,
                     arguments: vec![],
                 }],
@@ -728,7 +732,7 @@ mod tests {
         })?;
         class.attributes.push(Attribute::BootstrapMethods {
             name_index: class.constant_pool.add_utf8("BootstrapMethods")?,
-            methods: vec![crate::attributes::BootstrapMethod {
+            methods: vec![BootstrapMethod {
                 bootstrap_method_ref: handle,
                 arguments: vec![],
             }],
@@ -818,6 +822,36 @@ mod tests {
             ..method
         };
         verify_method(&class, &valid)?;
+        Ok(())
+    }
+
+    #[test]
+    fn exception_catch_type_must_reference_a_non_array_class() -> Result<()> {
+        let mut class = ClassFile::default();
+        let wrong_kind = class.constant_pool.add_utf8("java/lang/Throwable")?;
+        let valid = class.constant_pool.add_class("java/lang/Throwable")?;
+        let array = class.constant_pool.add_class("[Ljava/lang/Throwable;")?;
+        for (catch_type, accepted) in [
+            (0, true),
+            (valid, true),
+            (wrong_kind, false),
+            (array, false),
+            (u16::MAX, false),
+        ] {
+            let code = Attribute::Code {
+                name_index: 0,
+                max_stack: 1,
+                max_locals: 0,
+                code: vec![Instruction::Return],
+                exception_table: vec![ExceptionTableEntry {
+                    range_pc: 0..1,
+                    handler_pc: 0,
+                    catch_type,
+                }],
+                attributes: vec![],
+            };
+            assert_eq!(verify_code_metadata(&class, &code).is_ok(), accepted);
+        }
         Ok(())
     }
 }
