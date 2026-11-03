@@ -511,6 +511,43 @@ mod tests {
     }
 
     #[test]
+    fn replacing_results_preserves_exact_scope_isolation() {
+        let cache = VerificationCache::new(true);
+        let mut key = MethodKey::new("Test", "foo", "()V");
+        key.scope = Cow::Owned(vec![1, 2, 3]);
+        cache.put_result(&key, CachedResult::Success);
+        cache.put_result(&key, CachedResult::Failed("changed result".to_string()));
+        assert_eq!(cache.result_count(), 1);
+        assert!(matches!(
+            cache.get_result(&key),
+            Some(CachedResult::Failed(message)) if message == "changed result"
+        ));
+
+        let mut other = key.clone();
+        other.scope = Cow::Owned(vec![1, 2, 4]);
+        cache.put_result(&other, CachedResult::Success);
+        assert_eq!(cache.result_count(), 2);
+        assert!(matches!(
+            cache.get_result(&other),
+            Some(CachedResult::Success)
+        ));
+        assert!(matches!(
+            cache.get_result(&key),
+            Some(CachedResult::Failed(_))
+        ));
+    }
+
+    #[test]
+    fn disabled_cache_ignores_scoped_results() {
+        let cache = VerificationCache::disabled();
+        let scope = cache.intern_scope(vec![1, 2, 3]);
+        let key = MethodKey::new("Test", "foo", "()V");
+        cache.put_result_scoped(&key, &scope, CachedResult::Success);
+        assert!(cache.get_result_scoped(&key, &scope).is_none());
+        assert_eq!(cache.result_count(), 0);
+    }
+
+    #[test]
     fn test_descriptor_cache() {
         let cache = VerificationCache::new(true);
 

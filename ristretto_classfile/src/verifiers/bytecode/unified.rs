@@ -893,4 +893,35 @@ mod tests {
                 .all(|r| r.path_used != VerificationPath::Cached)
         );
     }
+
+    #[test]
+    fn class_cache_bypasses_disabled_cache_and_unversioned_context() {
+        let mut class = create_mock_class_file();
+        class.methods.push(Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![],
+        });
+        let config = VerifierConfig::default();
+        let cache = VerificationCache::new(true);
+        let disabled = VerificationCache::disabled();
+        for _ in 0..2 {
+            let unversioned =
+                verify_class_cached(&class, &UnversionedContext, &config, &cache).unwrap();
+            let uncached =
+                verify_class_cached(&class, &MockContext::PERMISSIVE, &config, &disabled).unwrap();
+            for results in [unversioned, uncached] {
+                assert_eq!(results.len(), 1);
+                assert!(
+                    results
+                        .iter()
+                        .all(|result| result.success
+                            && result.path_used == VerificationPath::Skipped)
+                );
+            }
+        }
+        assert_eq!(cache.result_count(), 0);
+        assert_eq!(disabled.result_count(), 0);
+    }
 }
