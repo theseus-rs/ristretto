@@ -4,7 +4,7 @@ use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError::{ClassNotFoundException, NullPointerException};
 use ristretto_types::JavaObject;
 use ristretto_types::VM;
-use ristretto_types::{Parameters, Result};
+use ristretto_types::{BoxFuture, Parameters, Result};
 
 use ahash::AHashMap;
 use byteorder::{BigEndian, WriteBytesExt};
@@ -242,7 +242,7 @@ async fn for_name_array<T: Thread + 'static>(
         .and_then(|name| name.strip_suffix(';'))
     {
         let component_name = component.to_object(thread).await?;
-        Box::pin(for_name_0(
+        for_name_0_boxed(
             thread.clone(),
             Parameters::new(vec![
                 component_name,
@@ -250,7 +250,7 @@ async fn for_name_array<T: Thread + 'static>(
                 class_loader,
                 Value::Object(None),
             ]),
-        ))
+        )
         .await?;
     }
     let vm = thread.vm()?;
@@ -260,6 +260,15 @@ async fn for_name_array<T: Thread + 'static>(
         .await
         .map_err(|_| ClassNotFoundException(class_name.to_string()))?;
     class.to_object(thread).await
+}
+
+// Keep the erased return type outside the recursive async bodies so nightly
+// Send checking terminates without adding allocations to cached lookups.
+fn for_name_0_boxed<T: Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> BoxFuture<'static, Result<Option<Value>>> {
+    Box::pin(for_name_0(thread, parameters))
 }
 
 /// Successful Java resolutions belong to the initiating loader, which can differ

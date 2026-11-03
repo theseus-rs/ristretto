@@ -7,12 +7,21 @@ use ristretto_classfile::{
 };
 use std::borrow::Cow;
 use std::fmt::Display;
+use std::future::Future;
 use std::path::Path;
+use std::pin::Pin;
 use std::sync::{Arc, LazyLock, Weak};
 use tokio::sync::RwLock;
 
 /// Synchronous lock for module configuration to avoid async overhead on every class load.
 type ModuleConfigLock = ristretto_gc::sync::RwLock<Option<Arc<ResolvedConfiguration>>>;
+
+// Recursive loading needs an erased future to bound Send checking on nightly.
+// WASM I/O futures do not require Send, matching the VM's async boundaries.
+#[cfg(not(target_family = "wasm"))]
+type ClassLoadFuture<'a> = Pin<Box<dyn Future<Output = Result<(Arc<Class>, bool)>> + Send + 'a>>;
+#[cfg(target_family = "wasm")]
+type ClassLoadFuture<'a> = Pin<Box<dyn Future<Output = Result<(Arc<Class>, bool)>> + 'a>>;
 
 // All arrays share these constants. Cloning this template allocates one constant
 // pool vector and borrows the fixed UTF-8 names instead of allocating each name.
@@ -170,7 +179,7 @@ impl ClassLoader {
         // can replace them, and an initiating alias would retain stale metadata.
         if !class_name_internal.as_bytes().starts_with(b"[")
             && let Some(parent) = self.parent().await
-            && let Ok(class) = Box::pin(parent.load_with_status(&class_name_internal)).await
+            && let Ok(class) = parent.load_with_status_boxed(&class_name_internal).await
         {
             return Ok(class);
         }
@@ -182,26 +191,32 @@ impl ClassLoader {
             return Err(ClassNotFound(class_name_internal.to_rust_string()));
         }
         // Keep the large I/O/synthesis future off the cached lookup path.
-        Box::pin(self.load_uncached(&class_name_internal)).await
+        self.load_uncached(&class_name_internal).await
     }
 
-    async fn load_uncached(&self, class_name: &JavaStr) -> Result<(Arc<Class>, bool)> {
-        let class_name_str = class_name.to_str_lossy();
-        if class_name_str.starts_with('[') {
-            return self.load_array_class(class_name, &class_name_str).await;
-        }
+    fn load_with_status_boxed<'a>(&'a self, class_name: &'a JavaStr) -> ClassLoadFuture<'a> {
+        Box::pin(self.load_with_status(class_name))
+    }
 
-        let include_code_source = self.parent().await.is_some();
-        if let Ok(class_file) = self
-            .class_path
-            .read_class_with_code_source(class_name_str.as_ref(), include_code_source)
-            .await
-        {
-            let class = Class::from_shared(Some(self.this.clone()), class_file)?;
-            self.set_class_module_name(&class, &class_name_str)?;
-            return Ok(self.cache_class(class_name.to_owned(), class).await);
-        }
-        Err(ClassNotFound(class_name.to_rust_string()))
+    fn load_uncached<'a>(&'a self, class_name: &'a JavaStr) -> ClassLoadFuture<'a> {
+        Box::pin(async move {
+            let class_name_str = class_name.to_str_lossy();
+            if class_name_str.starts_with('[') {
+                return self.load_array_class(class_name, &class_name_str).await;
+            }
+
+            let include_code_source = self.parent().await.is_some();
+            if let Ok(class_file) = self
+                .class_path
+                .read_class_with_code_source(class_name_str.as_ref(), include_code_source)
+                .await
+            {
+                let class = Class::from_shared(Some(self.this.clone()), class_file)?;
+                self.set_class_module_name(&class, &class_name_str)?;
+                return Ok(self.cache_class(class_name.to_owned(), class).await);
+            }
+            Err(ClassNotFound(class_name.to_rust_string()))
+        })
     }
 
     /// Determines and sets the module name for a class based on its package.
