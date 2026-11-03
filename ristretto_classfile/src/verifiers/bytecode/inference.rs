@@ -102,6 +102,16 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
         context: &'a C,
         config: &'a VerifierConfig,
     ) -> Result<Self> {
+        Self::with_code_info(class_file, method, context, config, None)
+    }
+
+    pub(crate) fn with_code_info(
+        class_file: &'a ClassFile<'a>,
+        method: &'a Method,
+        context: &'a C,
+        config: &'a VerifierConfig,
+        code_info: Option<CodeInfo>,
+    ) -> Result<Self> {
         // Extract Code attribute
         let (code, max_stack, max_locals, _, exception_table) = method
             .attributes
@@ -121,7 +131,10 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                 VerifyError::ClassFormatError("Method has no Code attribute".to_string())
             })?;
 
-        let code_info = CodeInfo::from_code(code)?;
+        let code_info = match code_info {
+            Some(info) => info,
+            None => CodeInfo::from_code(code)?,
+        };
 
         // Get class and method names
         let current_class = class_file
