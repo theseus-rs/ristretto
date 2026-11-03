@@ -990,8 +990,8 @@ fn verify_permitted_subclasses(
 mod tests {
     use super::*;
     use crate::attributes::{
-        AnnotationValuePair, ExportsFlags, ModuleAccessFlags, NestedClassAccessFlags, OpensFlags,
-        RequiresFlags, TargetType,
+        AnnotationValuePair, ExportsFlags, MethodParameterAccessFlags, ModuleAccessFlags,
+        NestedClassAccessFlags, OpensFlags, RequiresFlags, TargetType,
     };
     use crate::constant::Constant;
     use crate::constant_pool::ConstantPool;
@@ -1955,7 +1955,7 @@ mod tests {
             name_index: 0,
             parameters: vec![MethodParameter {
                 name_index: 1,
-                access_flags: crate::MethodAccessFlags::empty(),
+                access_flags: MethodParameterAccessFlags::empty(),
             }],
         };
         let method = Method::default();
@@ -1976,7 +1976,7 @@ mod tests {
             name_index: 0,
             parameters: vec![MethodParameter {
                 name_index: 2,
-                access_flags: crate::MethodAccessFlags::empty(),
+                access_flags: MethodParameterAccessFlags::empty(),
             }],
         };
         assert!(matches!(
@@ -2020,7 +2020,7 @@ mod tests {
                     name_index: 0,
                     parameters: vec![MethodParameter {
                         name_index: 0,
-                        access_flags: crate::MethodAccessFlags::empty(),
+                        access_flags: MethodParameterAccessFlags::empty(),
                     }],
                 }],
                 AttributeContext::Method(&method),
@@ -2929,7 +2929,7 @@ mod tests {
                     name_index: 0,
                     parameters: vec![MethodParameter {
                         name_index: element_name,
-                        access_flags: crate::MethodAccessFlags::empty(),
+                        access_flags: MethodParameterAccessFlags::empty(),
                     }],
                 }],
                 AttributeContext::Method(&method),
@@ -3419,7 +3419,7 @@ mod tests {
             name_index: 0,
             parameters: vec![MethodParameter {
                 name_index: 8,
-                access_flags: crate::MethodAccessFlags::empty(),
+                access_flags: MethodParameterAccessFlags::empty(),
             }],
         };
         assert!(matches!(
