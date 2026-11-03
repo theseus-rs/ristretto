@@ -18,11 +18,11 @@
 //!
 //! - [JVMS §4.10 - Verification of class Files](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10)
 
-use ahash::AHashMap;
+use ahash::{AHashMap, AHashSet};
 use hashbrown::Equivalent;
 use std::borrow::Cow;
 use std::hash::{Hash, Hasher};
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use crate::FieldType;
 use crate::java_string::{JavaStr, JavaString};
@@ -40,7 +40,7 @@ pub enum CachedResult {
 ///
 /// Uses `Cow<'a, JavaStr>` fields so that lookups can borrow directly from
 /// the constant pool (`MethodKey<'borrowed>`) while the cache stores
-/// fully owned keys (`MethodKey<'static>`).
+/// fully owned names and shared exact scope bytes.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct MethodKey<'a> {
     /// Class name.
@@ -53,25 +53,50 @@ pub struct MethodKey<'a> {
     pub scope: Cow<'a, [u8]>,
 }
 
-/// Wrapper type for zero-allocation cache lookups.
-///
-/// Uses a separate type to avoid coherence conflicts with the blanket
-/// `impl<Q, K> Equivalent<K> for Q where Q: Eq, K: Borrow<Q>` impl
-/// in the `equivalent` crate.
-struct MethodKeyLookup<'a, 'b>(&'a MethodKey<'b>);
+/// Exact scope bytes interned once and shared by cached method results.
+pub(crate) type CacheScope = Arc<[u8]>;
 
-impl Hash for MethodKeyLookup<'_, '_> {
+#[derive(Debug)]
+struct CachedMethodKey {
+    class_name: JavaString,
+    method_name: JavaString,
+    descriptor: JavaString,
+    scope: CacheScope,
+}
+
+impl PartialEq for CachedMethodKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.class_name == other.class_name
+            && self.method_name == other.method_name
+            && self.descriptor == other.descriptor
+            && Arc::ptr_eq(&self.scope, &other.scope)
+    }
+}
+impl Eq for CachedMethodKey {}
+impl Hash for CachedMethodKey {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
+        self.class_name.hash(state);
+        self.method_name.hash(state);
+        self.descriptor.hash(state);
+        std::ptr::hash(Arc::as_ptr(&self.scope), state);
     }
 }
 
-impl Equivalent<MethodKey<'static>> for MethodKeyLookup<'_, '_> {
-    fn equivalent(&self, key: &MethodKey<'static>) -> bool {
-        self.0.class_name == key.class_name
-            && self.0.method_name == key.method_name
-            && self.0.descriptor == key.descriptor
-            && self.0.scope == key.scope
+struct MethodKeyLookup<'a, 'b>(&'a MethodKey<'b>, &'a CacheScope);
+impl Hash for MethodKeyLookup<'_, '_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.class_name.hash(state);
+        self.0.method_name.hash(state);
+        self.0.descriptor.hash(state);
+        std::ptr::hash(Arc::as_ptr(self.1), state);
+    }
+}
+impl Equivalent<CachedMethodKey> for MethodKeyLookup<'_, '_> {
+    fn equivalent(&self, key: &CachedMethodKey) -> bool {
+        self.0.class_name.as_ref() == key.class_name.as_java_str()
+            && self.0.method_name.as_ref() == key.method_name.as_java_str()
+            && self.0.descriptor.as_ref() == key.descriptor.as_java_str()
+            && Arc::ptr_eq(self.1, &key.scope)
     }
 }
 
@@ -139,11 +164,14 @@ pub struct VerificationCache {
     /// Whether caching is enabled.
     enabled: bool,
 
-    /// Cached verification results keyed by `MethodKey<'static>`.
+    /// Cached verification results keyed by names and an interned scope identity.
     ///
     /// Uses `hashbrown::HashMap` with `Equivalent` trait to allow
     /// zero-allocation lookups using a borrowed `MethodKey<'_>`.
-    results: RwLock<hashbrown::HashMap<MethodKey<'static>, CachedResult, ahash::RandomState>>,
+    results: RwLock<hashbrown::HashMap<CachedMethodKey, CachedResult, ahash::RandomState>>,
+
+    /// Scope interning compares complete bytes before sharing an identity.
+    scopes: RwLock<AHashSet<CacheScope>>,
 
     /// Cached parsed descriptors.
     descriptors: RwLock<AHashMap<String, ParsedDescriptor>>,
@@ -171,6 +199,7 @@ impl VerificationCache {
     pub fn new(enabled: bool) -> Self {
         Self {
             enabled,
+            scopes: RwLock::new(AHashSet::new()),
             results: RwLock::new(hashbrown::HashMap::with_hasher(
                 ahash::RandomState::default(),
             )),
@@ -191,36 +220,72 @@ impl VerificationCache {
         self.enabled
     }
 
-    /// Gets a cached verification result.
-    ///
-    /// Uses the `Equivalent` trait to look up a `MethodKey<'static>` in the cache
-    /// using a borrowed `MethodKey<'_>`, achieving zero-allocation lookups.
+    /// Intern complete scope bytes; hash collisions never establish identity.
+    pub(crate) fn intern_scope(&self, bytes: Vec<u8>) -> CacheScope {
+        if let Ok(mut scopes) = self.scopes.write() {
+            if let Some(scope) = scopes.get(bytes.as_slice()) {
+                return Arc::clone(scope);
+            }
+            let scope: CacheScope = bytes.into();
+            scopes.insert(Arc::clone(&scope));
+            return scope;
+        }
+        bytes.into()
+    }
+
+    /// Gets a cached result using exact scope bytes from a public method key.
     #[must_use]
     pub fn get_result(&self, key: &MethodKey<'_>) -> Option<CachedResult> {
         if !self.enabled {
             return None;
         }
+        let scope = self.scopes.read().ok()?.get(key.scope.as_ref()).cloned();
+        let Some(scope) = scope else {
+            self.record_result_lookup(false);
+            return None;
+        };
+        self.get_result_scoped(key, &scope)
+    }
 
+    pub(crate) fn get_result_scoped(
+        &self,
+        key: &MethodKey<'_>,
+        scope: &CacheScope,
+    ) -> Option<CachedResult> {
+        if !self.enabled {
+            return None;
+        }
         let guard = self.results.read().ok()?;
-        let result = guard.get(&MethodKeyLookup(key)).cloned();
-
+        let result = guard.get(&MethodKeyLookup(key, scope)).cloned();
         drop(guard);
-
         self.record_result_lookup(result.is_some());
-
         result
     }
 
-    /// Stores a verification result in the cache.
-    ///
-    /// Converts the key to an owned `MethodKey<'static>` for storage.
-    /// This allocation only occurs on cache misses.
+    /// Stores a result, sharing an exact interned scope with other methods.
     pub fn put_result(&self, key: &MethodKey<'_>, result: CachedResult) {
         if !self.enabled {
             return;
         }
+        let scope = self.intern_scope(key.scope.to_vec());
+        self.put_result_scoped(key, &scope, result);
+    }
 
-        let owned_key = key.clone().into_owned();
+    pub(crate) fn put_result_scoped(
+        &self,
+        key: &MethodKey<'_>,
+        scope: &CacheScope,
+        result: CachedResult,
+    ) {
+        if !self.enabled {
+            return;
+        }
+        let owned_key = CachedMethodKey {
+            class_name: key.class_name.clone().into_owned(),
+            method_name: key.method_name.clone().into_owned(),
+            descriptor: key.descriptor.clone().into_owned(),
+            scope: Arc::clone(scope),
+        };
         if let Ok(mut guard) = self.results.write() {
             guard.insert(owned_key, result);
         }
@@ -300,6 +365,9 @@ impl VerificationCache {
 
     /// Clears all cached data.
     pub fn clear(&self) {
+        if let Ok(mut scopes) = self.scopes.write() {
+            scopes.clear();
+        }
         if let Ok(mut guard) = self.results.write() {
             guard.clear();
         }
@@ -687,5 +755,17 @@ mod tests {
         let cache = VerificationCache::new(true);
         let debug_str = format!("{cache:?}");
         assert!(debug_str.contains("VerificationCache"));
+    }
+    #[test]
+    fn exact_scopes_are_shared_and_clear_does_not_reuse_live_identities() {
+        let cache = VerificationCache::new(true);
+        let first = cache.intern_scope(vec![1, 2, 3]);
+        let equal = cache.intern_scope(vec![1, 2, 3]);
+        let different = cache.intern_scope(vec![1, 2, 4]);
+        assert!(Arc::ptr_eq(&first, &equal));
+        assert!(!Arc::ptr_eq(&first, &different));
+        cache.clear();
+        let after_clear = cache.intern_scope(vec![1, 2, 3]);
+        assert!(!Arc::ptr_eq(&first, &after_clear));
     }
 }
