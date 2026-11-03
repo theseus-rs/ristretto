@@ -47,3 +47,7 @@ name = "class_file"
 [[bench]]
 harness = false
 name = "mutf8"
+
+[[bench]]
+harness = false
+name = "review_baselines"
