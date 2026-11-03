@@ -30,9 +30,9 @@ pub(crate) fn verify(
     // Verify max_locals
     let descriptor_index = method.descriptor_index;
     if let Some(Constant::Utf8(descriptor)) = class_file.constant_pool.get(descriptor_index)
-        && let Ok((parameters, _)) = FieldType::parse_method_descriptor(descriptor)
+        && let Ok(info) = FieldType::method_descriptor_info(descriptor)
     {
-        let mut required_locals = 0;
+        let mut required_locals = info.parameter_slots;
         if !method.access_flags.contains(MethodAccessFlags::STATIC)
             && !class_file
                 .constant_pool
@@ -40,14 +40,6 @@ pub(crate) fn verify(
                 .is_ok_and(|name| name == CLASS_INITIALIZER_NAME)
         {
             required_locals += 1;
-        }
-        for param in parameters {
-            required_locals += match param {
-                FieldType::Base(
-                    crate::base_type::BaseType::Double | crate::base_type::BaseType::Long,
-                ) => 2,
-                _ => 1,
-            };
         }
         if max_locals < required_locals {
             return Err(VerificationError {

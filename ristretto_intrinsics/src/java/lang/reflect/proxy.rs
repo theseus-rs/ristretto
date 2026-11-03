@@ -1,4 +1,5 @@
 use crate::bounds;
+use crate::java::lang::classloader::defining_class_loader;
 use ristretto_classfile::ClassFile;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
@@ -46,7 +47,8 @@ pub async fn define_class_0<T: Thread + 'static>(
         }
     };
 
-    let class = Class::from(None, class_file)?;
+    let defining_loader = defining_class_loader(&thread, &class_loader).await?;
+    let class = Class::from(defining_loader, class_file)?;
     thread.register_class(class.clone()).await?;
     let class_object = class.to_object(&thread).await?;
 

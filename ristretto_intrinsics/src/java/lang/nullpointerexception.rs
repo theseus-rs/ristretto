@@ -1,3 +1,4 @@
+use crate::java::lang::class::get_class_name;
 use ristretto_classfile::Constant;
 use ristretto_classfile::FieldType;
 use ristretto_classfile::JAVA_17;
@@ -82,8 +83,7 @@ pub async fn get_extended_npe_message<T: Thread + 'static>(
     let class_name_str = {
         let class_obj_ref = class_value.as_object_ref()?;
         // java.lang.Class has a "name" field which is a String.
-        let name_val = class_obj_ref.value("name")?;
-        name_val.as_string()?
+        get_class_name(&class_obj_ref)?
     };
 
     // The name in Class object is typically "java.lang.String". Internal names use slashes "java/lang/String".

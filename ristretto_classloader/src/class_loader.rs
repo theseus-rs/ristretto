@@ -3,43 +3,50 @@ use crate::module::{ModuleDescriptor, ModuleDescriptorCache, ResolvedConfigurati
 use crate::{Class, ClassLoaderType, ClassPath, Result, Value};
 use ahash::AHashMap;
 use ristretto_classfile::{
-    ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2, JavaStr, JavaString,
+    ClassAccessFlags, ClassFile, Constant, ConstantPool, JAVA_1_0_2, JavaStr, JavaString,
 };
 use std::borrow::Cow;
 use std::fmt::Display;
+use std::future::Future;
 use std::path::Path;
-use std::sync::{Arc, Weak};
+use std::pin::Pin;
+use std::sync::{Arc, LazyLock, Weak};
 use tokio::sync::RwLock;
 
 /// Synchronous lock for module configuration to avoid async overhead on every class load.
 type ModuleConfigLock = ristretto_gc::sync::RwLock<Option<Arc<ResolvedConfiguration>>>;
 
-/// Convert a `Class::getName` hidden name to the VM's internal hidden name.
-///
-/// Hidden classes are exposed as `{binary_name}/0x{suffix}` and registered internally as `{internal_name}+0x{suffix}`. Normal class names are not affected.
-fn hidden_internal_name(class_name: &JavaStr) -> Option<JavaString> {
-    const SUFFIX_LENGTH: usize = 16;
-    const MARKER_LENGTH: usize = 3;
-    let bytes = class_name.as_bytes();
-    let suffix_start = bytes.len().checked_sub(SUFFIX_LENGTH)?;
-    let marker_start = suffix_start.checked_sub(MARKER_LENGTH)?;
-    let suffix = bytes.get(suffix_start..)?;
-    if !suffix.iter().all(u8::is_ascii_hexdigit) {
-        return None;
+// Recursive loading needs an erased future to bound Send checking on nightly.
+// WASM I/O futures do not require Send, matching the VM's async boundaries.
+#[cfg(not(target_family = "wasm"))]
+type ClassLoadFuture<'a> = Pin<Box<dyn Future<Output = Result<(Arc<Class>, bool)>> + Send + 'a>>;
+#[cfg(target_family = "wasm")]
+type ClassLoadFuture<'a> = Pin<Box<dyn Future<Output = Result<(Arc<Class>, bool)>> + 'a>>;
+
+// All arrays share these constants. Cloning this template allocates one constant
+// pool vector and borrows the fixed UTF-8 names instead of allocating each name.
+static ARRAY_CLASS_TEMPLATE: LazyLock<Result<ClassFile<'static>>> = LazyLock::new(|| {
+    fn add_class(pool: &mut ConstantPool<'static>, name: &'static str) -> Result<u16> {
+        let index = pool.add(Constant::Utf8(Cow::Borrowed(JavaStr::try_from_str(name)?)))?;
+        Ok(pool.add(Constant::Class(index))?)
     }
-    if bytes.get(marker_start..suffix_start)? != b"/0x" {
-        return None;
-    }
-    let mut internal_name = Vec::with_capacity(bytes.len() + 1);
-    for &byte in bytes.get(..marker_start)? {
-        internal_name.push(if byte == b'.' { b'/' } else { byte });
-    }
-    internal_name.extend_from_slice(b"+0x");
-    internal_name.extend_from_slice(suffix);
-    // SAFETY: class_name is valid MUTF-8, and replacing ASCII '.' with ASCII '/' plus replacing the ASCII "/0x" marker with "+0x" preserves MUTF-8 validity.
-    #[expect(unsafe_code)]
-    Some(unsafe { JavaString::from_mutf8_unchecked(internal_name) })
-}
+    let mut constant_pool = ConstantPool::new();
+    let this_class = add_class(&mut constant_pool, "")?; // Array name replaces UTF-8 entry 1.
+    let super_class = add_class(&mut constant_pool, "java/lang/Object")?;
+    let cloneable = add_class(&mut constant_pool, "java/lang/Cloneable")?;
+    let serializable = add_class(&mut constant_pool, "java/io/Serializable")?;
+    Ok(ClassFile {
+        version: JAVA_1_0_2,
+        constant_pool,
+        access_flags: ClassAccessFlags::PUBLIC
+            | ClassAccessFlags::FINAL
+            | ClassAccessFlags::ABSTRACT,
+        this_class,
+        super_class,
+        interfaces: vec![cloneable, serializable],
+        ..Default::default()
+    })
+});
 
 /// Implementation of a Java class loader.
 ///
@@ -142,9 +149,7 @@ impl ClassLoader {
     /// if the class file cannot be read.
     pub async fn load_with_status(&self, class_name: &JavaStr) -> Result<(Arc<Class>, bool)> {
         let class_name_internal: Cow<'_, JavaStr> =
-            if let Some(hidden_name) = hidden_internal_name(class_name) {
-                Cow::Owned(hidden_name)
-            } else if memchr::memchr(b'.', class_name.as_bytes()).is_none() {
+            if memchr::memchr(b'.', class_name.as_bytes()).is_none() {
                 Cow::Borrowed(class_name)
             } else {
                 // '.' and '/' are both single-byte ASCII; replacing one with
@@ -169,37 +174,49 @@ impl ClassLoader {
             }
         }
 
-        // Attempt to load the class from the parent class loader first.
-        if let Some(parent) = self.parent().await
-            && let Ok((class, loaded)) = Box::pin(parent.load_with_status(class_name)).await
+        // Ordinary classes delegate before entering the large I/O future. Do
+        // not cache parent definitions here: legacy anonymous-class registration
+        // can replace them, and an initiating alias would retain stale metadata.
+        if !class_name_internal.as_bytes().starts_with(b"[")
+            && let Some(parent) = self.parent().await
+            && let Ok(class) = parent.load_with_status_boxed(&class_name_internal).await
         {
-            return Ok((class, loaded));
+            return Ok(class);
         }
+        // An empty path cannot supply an ordinary definition. Avoid allocating
+        // the I/O future (and a second not-found error) for these common misses.
+        if !class_name_internal.as_bytes().starts_with(b"[")
+            && self.class_path.iter().next().is_none()
+        {
+            return Err(ClassNotFound(class_name_internal.to_rust_string()));
+        }
+        // Keep the large I/O/synthesis future off the cached lookup path.
+        self.load_uncached(&class_name_internal).await
+    }
 
-        let class_name_str = class_name_internal.to_str_lossy();
-        if class_name_str.starts_with('[') {
-            if let Ok(class) = self.create_array_class(&class_name_str) {
-                return Ok(self
-                    .cache_class(class_name_internal.into_owned(), class)
-                    .await);
+    fn load_with_status_boxed<'a>(&'a self, class_name: &'a JavaStr) -> ClassLoadFuture<'a> {
+        Box::pin(self.load_with_status(class_name))
+    }
+
+    fn load_uncached<'a>(&'a self, class_name: &'a JavaStr) -> ClassLoadFuture<'a> {
+        Box::pin(async move {
+            let class_name_str = class_name.to_str_lossy();
+            if class_name_str.starts_with('[') {
+                return self.load_array_class(class_name, &class_name_str).await;
             }
-        } else {
-            let class_path = self.class_path();
-            // Root loaders omit code sources; avoid resolving a URL only to discard it.
+
             let include_code_source = self.parent().await.is_some();
-            if let Ok(class_file) = class_path
+            if let Ok(class_file) = self
+                .class_path
                 .read_class_with_code_source(class_name_str.as_ref(), include_code_source)
                 .await
             {
                 let class = Class::from_shared(Some(self.this.clone()), class_file)?;
                 self.set_class_module_name(&class, &class_name_str)?;
-                return Ok(self
-                    .cache_class(class_name_internal.into_owned(), class)
-                    .await);
+                return Ok(self.cache_class(class_name.to_owned(), class).await);
             }
-        }
-
-        Err(ClassNotFound(class_name_internal.to_rust_string()))
+            Err(ClassNotFound(class_name.to_rust_string()))
+        })
     }
 
     /// Determines and sets the module name for a class based on its package.
@@ -254,48 +271,77 @@ impl ClassLoader {
     /// # Reference
     ///
     /// - [JVMS §5.3.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.3)
-    fn create_array_class(&self, class_name: &str) -> Result<Arc<Class>> {
-        // Validate the array descriptor before creating the class
-        // Valid array descriptors:
-        // - [B, [C, [D, [F, [I, [J, [S, [Z for primitive arrays
-        // - [Lclassname; for object arrays
-        // - [[... for multi-dimensional arrays
-        let component_type = class_name
-            .strip_prefix('[')
-            .ok_or_else(|| ClassNotFound(class_name.to_string()))?;
-
-        // Validate component type is a valid descriptor
-        let is_valid = match component_type.chars().next() {
-            Some('B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 'Z') if component_type.len() == 1 => {
-                true
-            }
-            Some('[') => true, // multi-dimensional array
-            Some('L') => component_type.ends_with(';') && component_type.len() > 2,
-            _ => false,
+    async fn load_array_class(
+        &self,
+        name: &JavaStr,
+        class_name: &str,
+    ) -> Result<(Arc<Class>, bool)> {
+        let base_descriptor = class_name.trim_start_matches('[');
+        let dimensions = class_name.len() - base_descriptor.len();
+        let base_name = base_descriptor
+            .strip_prefix('L')
+            .and_then(|name| name.strip_suffix(';'));
+        let valid_base = if let Some(base_name) = base_name {
+            !base_name.is_empty() && !base_name.contains(['[', ';'])
+        } else {
+            matches!(
+                base_descriptor,
+                "B" | "C" | "D" | "F" | "I" | "J" | "S" | "Z"
+            )
         };
-
-        if !is_valid {
+        if !(1..=255).contains(&dimensions) || !valid_base {
             return Err(ClassNotFound(class_name.to_string()));
         }
 
-        let mut constant_pool = ConstantPool::new();
-        let this_class_index = constant_pool.add_class(class_name)?;
-        let super_class_index = constant_pool.add_class("java/lang/Object")?;
-        let cloneable_index = constant_pool.add_class("java/lang/Cloneable")?;
-        let serializable_index = constant_pool.add_class("java/io/Serializable")?;
-        let class_file = ClassFile {
-            version: JAVA_1_0_2,
-            constant_pool,
-            access_flags: ClassAccessFlags::PUBLIC
-                | ClassAccessFlags::FINAL
-                | ClassAccessFlags::ABSTRACT,
-            this_class: this_class_index,
-            super_class: super_class_index,
-            interfaces: vec![cloneable_index, serializable_index],
-            ..Default::default()
+        // Resolve once through the initiating loader, then use the component's
+        // defining cache. Probing every parent's array factory repeats failed
+        // component lookups for classes defined only in a child.
+        let array_base_class = match base_name {
+            Some(base_name) => Some(self.load(&JavaStr::cow_from_str(base_name)).await?),
+            None => None,
+        };
+        let defining_loader = if let Some(component) = &array_base_class {
+            component.class_loader()?
+        } else {
+            let mut bootstrap = self.parent().await;
+            while let Some(loader) = &bootstrap {
+                let Some(parent) = loader.parent().await else {
+                    break;
+                };
+                bootstrap = Some(parent);
+            }
+            bootstrap
         };
 
-        Class::from(Some(self.this.clone()), class_file)
+        let defining_loader = defining_loader.as_deref().unwrap_or(self);
+        let is_defining_loader = std::ptr::eq(self, defining_loader);
+
+        if !is_defining_loader {
+            let cached = defining_loader.classes.read().await.get(name).cloned();
+            if let Some(class) = cached {
+                let (class, _) = self.cache_class(name.to_owned(), class).await;
+                return Ok((class, true));
+            }
+        }
+
+        let mut class_file = ARRAY_CLASS_TEMPLATE
+            .as_ref()
+            .map_err(|error| InternalError(error.to_string()))?
+            .clone();
+        class_file
+            .constant_pool
+            .set(1, Constant::Utf8(Cow::Owned(name.to_owned())))?;
+        let class = Class::from_array(
+            Some(defining_loader.this.clone()),
+            class_file,
+            array_base_class,
+        )?;
+        let (class, loaded) = defining_loader.cache_class(name.to_owned(), class).await;
+        if is_defining_loader {
+            return Ok((class, loaded));
+        }
+        let (class, raced) = self.cache_class(name.to_owned(), class).await;
+        Ok((class, loaded || raced))
     }
 
     /// Register a class with the class loader.
@@ -640,10 +686,16 @@ mod tests {
             .load(JavaStr::try_from_str("HelloWorld")?)
             .await?;
 
-        // Register a fake array class in the child loader with a distinct name
-        // (using proper array notation to satisfy validation)
+        // Register a distinct array definition in the child under the same name.
         let fake_class_name = "[LHelloWorld;";
-        let fake_class = child_loader.create_array_class(fake_class_name)?;
+        let parent_array = parent_loader
+            .load(JavaStr::try_from_str(fake_class_name)?)
+            .await?;
+        let fake_class = Class::from_array(
+            Some(Arc::downgrade(&child_loader)),
+            parent_array.class_file().clone(),
+            Some(parent_class),
+        )?;
         child_loader.register(fake_class.clone()).await?;
 
         // Load the class from the child loader; should delegate to parent for HelloWorld
@@ -653,8 +705,8 @@ mod tests {
             .await?;
 
         // Verify that the loaded class is the one from the child loader, not the parent
-        assert_eq!(fake_class, loaded_class);
-        assert_ne!(parent_class, loaded_class);
+        assert!(Arc::ptr_eq(&fake_class, &loaded_class));
+        assert!(!Arc::ptr_eq(&parent_array, &loaded_class));
         Ok(())
     }
 
@@ -666,6 +718,223 @@ mod tests {
             .load(JavaStr::try_from_str("Foo").expect("valid class name"))
             .await;
         assert!(matches!(result, Err(ClassNotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_hidden_array_names_and_identity() -> Result<()> {
+        let parent = ClassLoader::new("parent", ClassPath::new(Vec::new()));
+        let loader = ClassLoader::new("child", ClassPath::new(Vec::new()));
+        loader.set_parent(Some(parent.clone())).await;
+
+        for suffix in [42, 43] {
+            let mut constant_pool = ConstantPool::new();
+            let this_class = constant_pool.add_class("example/Generated+0xbar")?;
+            let class_file = ClassFile {
+                constant_pool,
+                this_class,
+                ..Default::default()
+            };
+            let hidden = Class::from_hidden(Some(Arc::downgrade(&loader)), class_file, suffix)?;
+            loader.register(hidden.clone()).await?;
+
+            for dimensions in [1, 2] {
+                let prefix = "[".repeat(dimensions);
+                let internal = [prefix.as_str(), "L", hidden.name(), ";"].concat();
+                let public = [prefix.as_str(), "L", &hidden.public_name(), ";"].concat();
+                let array = loader.load(&JavaStr::cow_from_str(&internal)).await?;
+                let cached = loader.load(array.java_name()).await?;
+                assert!(Arc::ptr_eq(&array, &cached));
+                assert_eq!(array.name(), internal);
+                assert_eq!(array.public_name(), public);
+                assert!(!array.is_hidden());
+                assert!(array.verify_cached().is_ok());
+                assert_eq!(array.class_loader()?, Some(loader.clone()));
+                // Public hidden names belong to mirrors, not symbolic lookup.
+                assert!(loader.load(&JavaStr::cow_from_str(&public)).await.is_err());
+                assert!(
+                    parent
+                        .find_loaded(&JavaStr::cow_from_str(&internal))
+                        .await
+                        .is_none()
+                );
+            }
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_parent_registration_replacement_remains_visible() -> Result<()> {
+        let parent = ClassLoader::new("parent", ClassPath::new(Vec::new()));
+        let child = ClassLoader::new("child", ClassPath::new(Vec::new()));
+        child.set_parent(Some(parent.clone())).await;
+        let mut pool = ConstantPool::new();
+        let this_class = pool.add_class("Generated")?;
+        let file = ClassFile {
+            constant_pool: pool,
+            this_class,
+            ..Default::default()
+        };
+        let first = Class::from(Some(Arc::downgrade(&parent)), file.clone())?;
+        parent.register(first.clone()).await?;
+        assert!(Arc::ptr_eq(&first, &child.load(first.java_name()).await?));
+        // Legacy anonymous method-handle classes may reuse a registration name.
+        let replacement = Class::from(Some(Arc::downgrade(&parent)), file)?;
+        parent.register(replacement.clone()).await?;
+        assert!(Arc::ptr_eq(
+            &replacement,
+            &child.load(replacement.java_name()).await?
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_invalid_array_descriptors() -> Result<()> {
+        let loader = ClassLoader::new("test", ClassPath::new(Vec::new()));
+        for descriptor in ["[", "[[V", "[[X", "[[I;", "[[L;", "[[", "[Lfoo;;"] {
+            assert!(matches!(
+                loader.load(&JavaStr::cow_from_str(descriptor)).await,
+                Err(ClassNotFound(_))
+            ));
+        }
+        let too_deep = ["[".repeat(256).as_str(), "I"].concat();
+        assert!(
+            loader
+                .load(&JavaStr::cow_from_str(&too_deep))
+                .await
+                .is_err()
+        );
+        let deepest = ["[".repeat(255).as_str(), "I"].concat();
+        assert!(
+            loader
+                .load(&JavaStr::cow_from_str(&deepest))
+                .await?
+                .is_array()
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_hidden_array_uses_defining_loader_cache() -> Result<()> {
+        let bootstrap =
+            ClassLoader::new_builtin(ClassLoaderType::Bootstrap, ClassPath::new(Vec::new()));
+        let app = ClassLoader::new_builtin(ClassLoaderType::System, ClassPath::new(Vec::new()));
+        app.set_parent(Some(bootstrap.clone())).await;
+        let sibling = ClassLoader::new("sibling", ClassPath::new(Vec::new()));
+        sibling.set_parent(Some(bootstrap.clone())).await;
+
+        let mut constant_pool = ConstantPool::new();
+        let this_class = constant_pool.add_class("example/BootstrapHidden")?;
+        let hidden = Class::from_hidden(
+            Some(Arc::downgrade(&bootstrap)),
+            ClassFile {
+                constant_pool,
+                this_class,
+                ..Default::default()
+            },
+            42,
+        )?;
+        // Native hidden-class definition registers with the VM's top-level loader,
+        // while the class retains its bootstrap defining-loader metadata.
+        app.register(hidden.clone()).await?;
+        sibling.register(hidden.clone()).await?;
+        assert!(bootstrap.find_loaded(hidden.java_name()).await.is_none());
+
+        for dimensions in [1, 2] {
+            let prefix = "[".repeat(dimensions);
+            let descriptor = [prefix.as_str(), "L", hidden.name(), ";"].concat();
+            let name = JavaStr::cow_from_str(&descriptor);
+            let array = app.load(&name).await?;
+            assert_eq!(array.class_loader()?, Some(bootstrap.clone()));
+            assert!(
+                bootstrap
+                    .find_loaded(&name)
+                    .await
+                    .is_some_and(|cached| Arc::ptr_eq(&array, &cached))
+            );
+            assert!(Arc::ptr_eq(&array, &app.load(&name).await?));
+            assert!(Arc::ptr_eq(&array, &sibling.load(&name).await?));
+            assert_eq!(
+                array.public_name(),
+                [prefix.as_str(), "L", &hidden.public_name(), ";"].concat()
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ordinary_hidden_like_array_names() -> Result<()> {
+        let loader = ClassLoader::new("test", ClassPath::new(Vec::new()));
+        for name in [
+            "example/Generated+0xbar",
+            "example/Generated+0x000000000000002a",
+            "ordinary/0x000000000000002a",
+        ] {
+            let mut constant_pool = ConstantPool::new();
+            let this_class = constant_pool.add_class(name)?;
+            let class_file = ClassFile {
+                constant_pool,
+                this_class,
+                ..Default::default()
+            };
+            let class = Class::from(Some(Arc::downgrade(&loader)), class_file)?;
+            assert!(!class.is_hidden());
+            assert_eq!(class.public_name(), name.replace('/', "."));
+            loader.register(class).await?;
+
+            for dimensions in [1, 2] {
+                let descriptor = ["[".repeat(dimensions).as_str(), "L", name, ";"].concat();
+                let array = loader.load(&JavaStr::cow_from_str(&descriptor)).await?;
+                assert!(!array.is_hidden());
+                assert_eq!(array.public_name(), descriptor.replace('/', "."));
+            }
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ordinary_internal_name_is_not_a_hidden_alias() -> Result<()> {
+        let loader = ClassLoader::new("test", ClassPath::new(Vec::new()));
+        let mut pool = ConstantPool::new();
+        let this_class = pool.add_class("ordinary")?;
+        let hidden = Class::from_hidden(
+            Some(Arc::downgrade(&loader)),
+            ClassFile {
+                constant_pool: pool,
+                this_class,
+                ..Default::default()
+            },
+            42,
+        )?;
+        loader.register(hidden.clone()).await?;
+
+        let mut pool = ConstantPool::new();
+        let this_class = pool.add_class("ordinary/0x000000000000002a")?;
+        let ordinary = Class::from(
+            Some(Arc::downgrade(&loader)),
+            ClassFile {
+                constant_pool: pool,
+                this_class,
+                ..Default::default()
+            },
+        )?;
+        loader.register(ordinary.clone()).await?;
+        assert_eq!(ordinary.name(), hidden.public_name());
+
+        for class in [&ordinary, &hidden] {
+            let resolved = loader.load(class.java_name()).await?;
+            assert!(Arc::ptr_eq(class, &resolved));
+            let descriptor = ["[L", class.name(), ";"].concat();
+            let array = loader.load(&JavaStr::cow_from_str(&descriptor)).await?;
+            assert_eq!(
+                array.public_name(),
+                ["[L", &class.public_name(), ";"].concat()
+            );
+            let component = loader
+                .load(&JavaStr::cow_from_str(array.array_base_element_type()))
+                .await?;
+            assert!(Arc::ptr_eq(class, &component));
+        }
+        Ok(())
     }
 
     #[test]
@@ -766,22 +1035,5 @@ mod tests {
         );
         assert_eq!(ClassLoader::package_from_class_name("MyClass"), "");
         assert_eq!(ClassLoader::package_from_class_name("a/b/c/D"), "a/b/c");
-    }
-
-    #[test]
-    fn test_hidden_internal_name() -> Result<()> {
-        let normal = JavaStr::try_from_str("java/lang/String")?;
-        assert_eq!(hidden_internal_name(normal), None);
-
-        let internal = JavaStr::try_from_str("java/lang/String+0x000000000000002a")?;
-        assert_eq!(hidden_internal_name(internal), None);
-
-        let public = JavaStr::try_from_str("java.lang.String/0x000000000000002a")?;
-        let hidden = hidden_internal_name(public).expect("hidden name");
-        assert_eq!(hidden.to_str_lossy(), "java/lang/String+0x000000000000002a");
-
-        let malformed = JavaStr::try_from_str("java.lang.String/0x00000000000000zz")?;
-        assert_eq!(hidden_internal_name(malformed), None);
-        Ok(())
     }
 }

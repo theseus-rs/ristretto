@@ -5,14 +5,11 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 
 /**
- * A class-file name containing "$$" is not a hidden class: {@code MethodHandles.Lookup.defineClass} and {@code ClassLoader.defineClass} define it under its own name, and the definition must be findable by that name afterwards.
+ * Class-file names containing "$$" or "+0x" are legal ordinary names: {@code MethodHandles.Lookup.defineClass} and {@code ClassLoader.defineClass} define them under their own names, and the definitions must be findable by those names afterwards.
  *
  * Spring CGLIB relies on this: it defines {@code X$$SpringCGLIB$$0} and then asserts that {@code Class.forName("X$$SpringCGLIB$$0")} resolves the class it just defined.
  */
 public class Test {
-
-    static final String NAME = "Generated$$Ordinary$$0";
-    static final String LOADER_NAME = "Generated$$Loader$$0";
 
     static byte[] bytes(String name, int value) throws Exception {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -95,25 +92,34 @@ public class Test {
         System.out.println("value: " + actual);
     }
 
-    public static void main(String[] args) throws Throwable {
+    static void definition(String name, String loaderName) throws Throwable {
         MethodHandles.Lookup lookup = MethodHandles.lookup();
-        Class<?> defined = lookup.defineClass(bytes(NAME, 7));
-        identity(NAME, defined);
-        findable(NAME, Test.class.getClassLoader(), defined);
+        Class<?> defined = lookup.defineClass(bytes(name, 7));
+        identity(name, defined);
+        findable(name, Test.class.getClassLoader(), defined);
         check(7, defined);
+        System.out.println("reflected value: " + defined.getMethod("value").invoke(null));
 
-        Class<?> viaLoader = new DefiningLoader(bytes(LOADER_NAME, 9)).defined;
-        identity(LOADER_NAME, viaLoader);
-        findable(LOADER_NAME, viaLoader.getClassLoader(), viaLoader);
+        Class<?> viaLoader = new DefiningLoader(loaderName, bytes(loaderName, 9)).defined;
+        identity(loaderName, viaLoader);
+        findable(loaderName, viaLoader.getClassLoader(), viaLoader);
+        System.out.println("loader reflected value: " + viaLoader.getMethod("value").invoke(null));
+    }
+
+    public static void main(String[] args) throws Throwable {
+        definition("Generated$$Ordinary$$0", "Generated$$Loader$$0");
+        definition("Generated+0xbar", "GeneratedLoader+0xbar");
+        // Even a suffix matching the VM's hidden-name format is an ordinary name.
+        definition("Generated+0x000000000000002a", "GeneratedLoader+0x000000000000002a");
     }
 
     static class DefiningLoader extends ClassLoader {
 
         Class<?> defined;
 
-        DefiningLoader(byte[] bytes) {
+        DefiningLoader(String name, byte[] bytes) {
             super(Test.class.getClassLoader());
-            defined = defineClass(Test.LOADER_NAME, bytes, 0, bytes.length);
+            defined = defineClass(name, bytes, 0, bytes.length);
         }
     }
 }

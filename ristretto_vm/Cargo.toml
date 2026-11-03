@@ -95,3 +95,7 @@ name = "compiler"
 [[bench]]
 harness = false
 name = "intrinsics"
+
+[[bench]]
+harness = false
+name = "class_resolution"

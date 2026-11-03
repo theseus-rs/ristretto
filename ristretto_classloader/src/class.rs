@@ -301,6 +301,10 @@ pub struct Class {
     name: JavaString,
     /// Cached lossy UTF-8 conversion of the class name for APIs requiring `&str`.
     name_str: String,
+    /// Set only by an explicit hidden-class definition.
+    hidden: bool,
+    /// The base element class of an object array, including hidden-definition metadata.
+    array_base_class: Option<Arc<Class>>,
     source_file: Option<String>,
     class_file: Arc<ClassFile<'static>>,
     parent: RwLock<Option<Arc<Class>>>,
@@ -355,7 +359,31 @@ impl Class {
     /// Share immutable classfile data; runtime class state remains private to this loader.
     pub(crate) fn from_shared(
         class_loader: Option<Weak<ClassLoader>>,
+        class_file: Arc<ClassFile<'static>>,
+    ) -> Result<Arc<Self>> {
+        Self::from_definition(class_loader, class_file, false, None)
+    }
+
+    /// Construct a VM-generated array class with its resolved base element metadata.
+    pub(crate) fn from_array(
+        class_loader: Option<Weak<ClassLoader>>,
+        class_file: ClassFile<'static>,
+        array_base_class: Option<Arc<Class>>,
+    ) -> Result<Arc<Self>> {
+        let class =
+            Self::from_definition(class_loader, Arc::new(class_file), false, array_base_class)?;
+        // Arrays have no class file or bytecode to verify. Their synthetic metadata
+        // includes an array descriptor as the name and FINAL | ABSTRACT flags,
+        // which are not valid for an ordinary class-file definition.
+        let _ = class.verification.set(Ok(()));
+        Ok(class)
+    }
+
+    fn from_definition(
+        class_loader: Option<Weak<ClassLoader>>,
         mut class_file: Arc<ClassFile<'static>>,
+        hidden: bool,
+        array_base_class: Option<Arc<Class>>,
     ) -> Result<Arc<Self>> {
         let mut source_file = None;
 
@@ -371,8 +399,12 @@ impl Class {
             }
         }
 
+        // Resolve and decode the name once, including for ordinary and array
+        // definitions that do not need any synthetic members.
+        let name = JavaString::from(class_file.class_name()?);
+        let name_str = name.to_str_lossy().into_owned();
         #[expect(clippy::single_match)]
-        match class_file.class_name()?.to_str_lossy().as_ref() {
+        match name_str.as_str() {
             "java/lang/invoke/MemberName" => {
                 Self::add_synthetic_fields(
                     Arc::make_mut(&mut class_file),
@@ -405,7 +437,7 @@ impl Class {
             methods.insert(signature, Arc::new(method));
         }
 
-        match class_file.class_name()?.to_str_lossy().as_ref() {
+        match name_str.as_str() {
             "java/lang/invoke/DelegatingMethodHandle$Holder" => {
                 Self::add_synthetic_methods(
                     Arc::make_mut(&mut class_file),
@@ -439,12 +471,12 @@ impl Class {
             _ => {}
         }
 
-        let name = JavaString::from(class_file.class_name()?);
-        let name_str = name.to_str_lossy().into_owned();
-        let class = Arc::new(Self {
+        Ok(Arc::new(Self {
             class_loader,
             name,
             name_str,
+            hidden,
+            array_base_class,
             source_file,
             class_file,
             parent: RwLock::new(None),
@@ -460,8 +492,7 @@ impl Class {
             initialized: AtomicBool::new(false),
             initialization_notify: Notify::new(),
             module_name: RwLock::new(None),
-        });
-        Ok(class)
+        }))
     }
 
     /// Creates a Class from a `ClassFile` with a custom name suffix.
@@ -490,7 +521,7 @@ impl Class {
             .constant_pool
             .set(class_file.this_class, Constant::Class(hidden_name_index))?;
 
-        Self::from(class_loader, class_file)
+        Self::from_definition(class_loader, Arc::new(class_file), true, None)
     }
 
     /// Add synthetic fields for the class. Ensures no duplicates are added.
@@ -577,12 +608,22 @@ impl Class {
     ///
     /// Normal classes use the binary name, that is, the internal name with `/` replaced by `.`.
     /// A hidden class keeps its original binary name and appends `/` plus the hidden suffix, for example `java.lang.String/0x000000000000002a`, as required by JEP 371.
+    /// Object arrays preserve the public name of their base element class.
     #[must_use]
     pub fn public_name(&self) -> String {
         let name = self.name();
-        if let Some((binary_name, suffix)) = name.rsplit_once("+0x") {
-            let binary_name = binary_name.replace('/', ".");
-            [&binary_name, "/0x", suffix].concat()
+        let hidden_component = self
+            .array_base_class
+            .as_ref()
+            .is_some_and(|class| class.is_hidden());
+        if (self.is_hidden() || hidden_component)
+            && let Some((binary_name, suffix)) = name.rsplit_once("+0x")
+        {
+            let mut public_name = String::with_capacity(name.len());
+            public_name.extend(binary_name.chars().map(|c| if c == '/' { '.' } else { c }));
+            public_name.push_str("/0x");
+            public_name.push_str(suffix);
+            public_name
         } else {
             name.replace('/', ".")
         }
@@ -712,6 +753,12 @@ impl Class {
             _ => component_type,
         };
         Some(component_type)
+    }
+
+    /// Get the resolved base element definition of an object array.
+    #[must_use]
+    pub fn array_base_class(&self) -> Option<&Arc<Class>> {
+        self.array_base_class.as_ref()
     }
 
     /// Get the innermost base element type for a multidimensional array class.
@@ -916,7 +963,7 @@ impl Class {
     /// Hidden classes are created via `Class::from_hidden` and have unique names with a suffix in the format `{original_name}+0x{suffix:016x}`. They cannot be found by name lookups and are typically used for dynamically generated code like lambda expressions. `Class::getName` reports the JEP 371 form `{binary_name}/0x{suffix:016x}`.
     #[must_use]
     pub fn is_hidden(&self) -> bool {
-        self.name().rsplit_once("+0x").is_some()
+        self.hidden
     }
 
     /// Get the class file.

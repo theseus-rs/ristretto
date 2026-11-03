@@ -41,6 +41,19 @@ impl<'a> ConstantPoolResolver<'a> {
     ///
     /// Returns an error if the constant pool reference is invalid.
     pub fn resolve_field_ref(&self, index: u16) -> Result<(String, String, String)> {
+        let (class_name, name, descriptor) = self.resolve_field_ref_borrowed(index)?;
+        Ok((
+            class_name.to_string(),
+            name.to_string(),
+            descriptor.to_string(),
+        ))
+    }
+
+    /// Resolve without allocating names when only validating operands.
+    pub(crate) fn resolve_field_ref_borrowed(
+        &self,
+        index: u16,
+    ) -> Result<(&'a JavaStr, &'a JavaStr, &'a JavaStr)> {
         let (class_index, name_and_type_index) = self
             .class_file
             .constant_pool
@@ -71,11 +84,7 @@ impl<'a> ConstantPoolResolver<'a> {
             .try_get_utf8(*descriptor_index)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
-        Ok((
-            class_name.to_string(),
-            name.to_string(),
-            descriptor.to_string(),
-        ))
+        Ok((class_name, name, descriptor))
     }
 
     /// Resolves a method reference.
@@ -86,6 +95,19 @@ impl<'a> ConstantPoolResolver<'a> {
     ///
     /// Returns an error if the constant pool reference is invalid.
     pub fn resolve_method_ref(&self, index: u16) -> Result<(String, String, String)> {
+        let (class_name, name, descriptor) = self.resolve_method_ref_borrowed(index)?;
+        Ok((
+            class_name.to_string(),
+            name.to_string(),
+            descriptor.to_string(),
+        ))
+    }
+
+    /// Resolve without allocating names when only validating operands.
+    pub(crate) fn resolve_method_ref_borrowed(
+        &self,
+        index: u16,
+    ) -> Result<(&'a JavaStr, &'a JavaStr, &'a JavaStr)> {
         // Try Methodref first, then InterfaceMethodref
         let (class_index, name_and_type_index) = self
             .class_file
@@ -122,11 +144,7 @@ impl<'a> ConstantPoolResolver<'a> {
             .try_get_utf8(*descriptor_index)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
-        Ok((
-            class_name.to_string(),
-            name.to_string(),
-            descriptor.to_string(),
-        ))
+        Ok((class_name, name, descriptor))
     }
 
     /// Resolves a class reference.
@@ -135,10 +153,13 @@ impl<'a> ConstantPoolResolver<'a> {
     ///
     /// Returns an error if the constant pool reference is invalid.
     pub fn resolve_class(&self, index: u16) -> Result<String> {
+        self.resolve_class_borrowed(index).map(ToString::to_string)
+    }
+
+    pub(crate) fn resolve_class_borrowed(&self, index: u16) -> Result<&'a JavaStr> {
         self.class_file
             .constant_pool
             .try_get_class(index)
-            .map(ToString::to_string)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))
     }
 
@@ -150,6 +171,11 @@ impl<'a> ConstantPoolResolver<'a> {
     ///
     /// Returns an error if the constant pool reference is invalid.
     pub fn resolve_invoke_dynamic(&self, index: u16) -> Result<String> {
+        self.resolve_invoke_dynamic_borrowed(index)
+            .map(ToString::to_string)
+    }
+
+    pub(crate) fn resolve_invoke_dynamic_borrowed(&self, index: u16) -> Result<&'a JavaStr> {
         let (_bootstrap_index, name_and_type_index) = self
             .class_file
             .constant_pool
@@ -168,7 +194,7 @@ impl<'a> ConstantPoolResolver<'a> {
             .try_get_utf8(*descriptor_index)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
-        Ok(descriptor.to_string())
+        Ok(descriptor)
     }
 }
 

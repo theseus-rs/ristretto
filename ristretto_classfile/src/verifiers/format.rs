@@ -6,7 +6,7 @@ use crate::{
     FieldType, JAVA_7, JAVA_8, JAVA_9, JAVA_10, JavaStr, Method, MethodAccessFlags, ReferenceKind,
     Version,
 };
-use std::collections::HashSet;
+use ahash::AHashSet;
 
 fn invalid(message: &str) -> VerifyError {
     VerifyError::ClassFormatError(message.to_string())
@@ -80,7 +80,7 @@ pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
             }
         }
     }
-    let mut interfaces = HashSet::new();
+    let mut interfaces = AHashSet::new();
     for index in &class.interfaces {
         let interface = pool.try_get_class(*index)?;
         class_name(interface, false)?;
@@ -94,7 +94,7 @@ pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
         crate::attributes::attribute::AttributeLocation::Class,
     )?;
     verify_fields(class)?;
-    let mut methods = HashSet::new();
+    let mut methods = AHashSet::new();
     for method in &class.methods {
         verify_attributes(
             class,
@@ -117,7 +117,7 @@ pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
 pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()> {
     let name = class.constant_pool.try_get_utf8(method.name_index)?;
     let descriptor = class.constant_pool.try_get_utf8(method.descriptor_index)?;
-    let (parameters, ret) = FieldType::parse_method_descriptor(descriptor)?;
+    let descriptor_info = FieldType::method_descriptor_info(descriptor)?;
     let flags = method.access_flags;
     if name == CONSTRUCTOR_NAME {
         let disallowed = MethodAccessFlags::STATIC
@@ -126,16 +126,17 @@ pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()
             | MethodAccessFlags::BRIDGE
             | MethodAccessFlags::NATIVE
             | MethodAccessFlags::ABSTRACT;
-        if ret.is_some()
+        if !descriptor_info.returns_void
             || flags.intersects(disallowed)
             || class.access_flags.contains(ClassAccessFlags::INTERFACE)
         {
             return Err(invalid("Invalid constructor flags or descriptor"));
         }
     } else if name == CLASS_INITIALIZER_NAME {
-        if ret.is_some()
+        if !descriptor_info.returns_void
             || (class.version.major() >= JAVA_7.major()
-                && (!parameters.is_empty() || !flags.contains(MethodAccessFlags::STATIC)))
+                && (descriptor_info.parameter_slots != 0
+                    || !flags.contains(MethodAccessFlags::STATIC)))
         {
             return Err(invalid("Invalid class initializer flags or descriptor"));
         }
@@ -158,17 +159,7 @@ pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()
     }
     let receiver =
         usize::from(!flags.contains(MethodAccessFlags::STATIC) && name != CLASS_INITIALIZER_NAME);
-    let slots = receiver
-        + parameters
-            .iter()
-            .map(|p| {
-                if matches!(p, FieldType::Base(BaseType::Long | BaseType::Double)) {
-                    2
-                } else {
-                    1
-                }
-            })
-            .sum::<usize>();
+    let slots = receiver + usize::from(descriptor_info.parameter_slots);
     if slots > 255 {
         return Err(invalid(
             "Method parameters including receiver exceed 255 slots",
@@ -202,8 +193,7 @@ fn verify_attributes(
 ) -> Result<()> {
     use crate::attributes::attribute::AttributeLocation as L;
     let pool = &class.constant_pool;
-    let mut names = HashSet::new();
-    for attribute in attributes {
+    for (index, attribute) in attributes.iter().enumerate() {
         let name = pool.try_get_utf8(attribute.name_index())?;
         if matches!(attribute, Attribute::Unknown { .. }) {
             continue;
@@ -214,12 +204,19 @@ fn verify_attributes(
         if !location.recognizes(name.as_bytes()) {
             continue;
         }
+        // Known variants have distinct, validated names. Compare their tags to
+        // avoid allocating a set for each small attribute table. Only the fixed
+        // set of non-repeatable variants scans predecessors; unknown and debug
+        // attributes can repeat without making this quadratic in table length.
         if !matches!(
             attribute,
             Attribute::LineNumberTable { .. }
                 | Attribute::LocalVariableTable { .. }
                 | Attribute::LocalVariableTypeTable { .. }
-        ) && !names.insert(name)
+        ) && attributes
+            .iter()
+            .take(index)
+            .any(|previous| std::mem::discriminant(previous) == std::mem::discriminant(attribute))
         {
             return Err(invalid("Duplicate attribute"));
         }
@@ -296,7 +293,7 @@ fn verify_attributes(
 
 fn verify_fields(class: &ClassFile<'_>) -> Result<()> {
     let pool = &class.constant_pool;
-    let mut fields = HashSet::new();
+    let mut fields = AHashSet::new();
     for field in &class.fields {
         verify_attributes(
             class,
@@ -357,7 +354,7 @@ fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
                 return Err(invalid("Module and Package constants require ACC_MODULE"));
             }
             Constant::MethodType(index) => {
-                FieldType::parse_method_descriptor(pool.try_get_utf8(*index)?)?;
+                FieldType::method_descriptor_info(pool.try_get_utf8(*index)?)?;
             }
             Constant::NameAndType {
                 name_index,
@@ -366,9 +363,9 @@ fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
                 let name = pool.try_get_utf8(*name_index)?;
                 let descriptor = pool.try_get_utf8(*descriptor_index)?;
                 if descriptor.as_bytes().starts_with(b"(") {
-                    let (_, ret) = FieldType::parse_method_descriptor(descriptor)?;
+                    let descriptor_info = FieldType::method_descriptor_info(descriptor)?;
                     if name == CONSTRUCTOR_NAME {
-                        if ret.is_some() {
+                        if !descriptor_info.returns_void {
                             return Err(invalid("Constructor descriptor must return void"));
                         }
                     } else if name != CLASS_INITIALIZER_NAME {
@@ -413,8 +410,9 @@ fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
                 if name != CONSTRUCTOR_NAME || !matches!(constant, Constant::MethodRef { .. }) {
                     member_name(name, true)?;
                 }
-                let (_, ret) = FieldType::parse_method_descriptor(pool.try_get_utf8(*descriptor)?)?;
-                if name == CONSTRUCTOR_NAME && ret.is_some() {
+                let descriptor_info =
+                    FieldType::method_descriptor_info(pool.try_get_utf8(*descriptor)?)?;
+                if name == CONSTRUCTOR_NAME && !descriptor_info.returns_void {
                     return Err(invalid("Constructor reference must return void"));
                 }
             }
@@ -451,7 +449,7 @@ fn unique_names<'a>(
     indexes: impl IntoIterator<Item = u16>,
     resolve: impl Fn(u16) -> crate::Result<&'a JavaStr>,
 ) -> Result<()> {
-    let mut names = HashSet::new();
+    let mut names = AHashSet::new();
     for index in indexes {
         if !names.insert(resolve(index)?) {
             return Err(invalid("Duplicate module table entry"));
@@ -603,4 +601,40 @@ fn verify_code_metadata(class: &ClassFile<'_>, attribute: &Attribute) -> Result<
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::attributes::attribute::AttributeLocation;
+
+    #[test]
+    fn attribute_duplicates_respect_names_and_location() -> Result<()> {
+        let mut class = ClassFile::default();
+        let source_name = class.constant_pool.add_utf8("SourceFile")?;
+        let source = Attribute::SourceFile {
+            name_index: source_name,
+            source_file_index: class.constant_pool.add_utf8("Test.java")?,
+        };
+        let duplicate = [source.clone(), source];
+        assert!(verify_attributes(&class, &duplicate, AttributeLocation::Class).is_err());
+        // A known attribute in an unrecognized location must still be ignored.
+        verify_attributes(&class, &duplicate, AttributeLocation::Code)?;
+
+        let line = Attribute::LineNumberTable {
+            name_index: class.constant_pool.add_utf8("LineNumberTable")?,
+            line_numbers: Vec::new(),
+        };
+        verify_attributes(&class, &[line.clone(), line], AttributeLocation::Code)?;
+        let unknown = Attribute::Unknown {
+            name_index: class.constant_pool.add_utf8("VendorExtension")?,
+            info: Vec::new(),
+        };
+        verify_attributes(
+            &class,
+            &[unknown.clone(), unknown],
+            AttributeLocation::Class,
+        )?;
+        Ok(())
+    }
 }

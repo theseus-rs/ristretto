@@ -914,6 +914,22 @@ impl Thread {
 
         let class_name_str = class_name.to_rust_string();
 
+        // Java loaders resolve component classes, never array descriptors. Resolve
+        // the base component through the same Rust/Java loading path without
+        // initializing it, then retry synthesis now that the definition is registered.
+        if class_name_str.starts_with('[')
+            && let Some(component) = class_name_str
+                .trim_start_matches('[')
+                .strip_prefix('L')
+                .and_then(|name| name.strip_suffix(';'))
+        {
+            self.load_and_link_class(&JavaStr::cow_from_str(component))
+                .await?;
+            let class_loader_lock = vm.class_loader();
+            let class_loader = class_loader_lock.read().await;
+            return Ok(class_loader.load(class_name).await?);
+        }
+
         // Re-entrance guard: if this class is already being loaded via a Java
         // classloader on this thread, bail out to prevent infinite recursion
         // (e.g. loadClass -> findLoadedClass -> load_and_link -> loadClass …).
@@ -1204,10 +1220,18 @@ impl Thread {
     /// if the class cannot be registered
     pub(crate) async fn register_class(&self, class: Arc<Class>) -> Result<()> {
         debug!("register class: {class}");
-        let vm = self.vm()?;
-        let class_loader_lock = vm.class_loader();
-        let class_loader = class_loader_lock.read().await;
-        class_loader.register(class).await?;
+        let initiating_loader = self.vm()?.class_loader().read().await.clone();
+        // Native definitions belong to their defining loader and are initiated
+        // by the VM loader. Update both registrations together so bootstrap-only
+        // lookup works without slowing subsequent mirror resolution. Ordinary
+        // parent delegation does not create aliases for replaceable anonymous
+        // definitions (see ClassLoader::load_with_status).
+        if let Some(defining_loader) = class.class_loader()?
+            && !Arc::ptr_eq(&defining_loader, &initiating_loader)
+        {
+            defining_loader.register(class.clone()).await?;
+        }
+        initiating_loader.register(class).await?;
         Ok(())
     }
 

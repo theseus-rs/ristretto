@@ -77,6 +77,7 @@ impl ClassPathEntry {
     ) -> Result<Arc<ClassFile<'static>>> {
         match self {
             Self::Image(image) => image.read_class_shared(name).await,
+            Self::Jar(jar) => jar.read_class_shared(name).await,
             _ => self.read_class(name).await.map(Arc::new),
         }
     }

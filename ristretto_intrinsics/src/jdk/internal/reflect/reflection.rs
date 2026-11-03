@@ -226,7 +226,7 @@ pub async fn get_class_access_flags<T: Thread + 'static>(
     let object = parameters.pop()?;
     let class_name = {
         let object = object.as_object_ref()?;
-        object.value("name")?.as_string()?
+        class::get_class_name(&object)?
     };
     let class = thread.class(&class_name).await?;
     let class_file = class.class_file();

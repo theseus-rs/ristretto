@@ -1,6 +1,7 @@
 use crate::Error::{ArchiveError, ClassNotFound, FileNotFound, ParseError};
 use crate::Result;
 use crate::class_path_entry::manifest::Manifest;
+use ahash::AHashMap;
 use ristretto_classfile::ClassFile;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Debug;
@@ -93,8 +94,19 @@ impl Jar {
     ///
     /// if the class file is not found or cannot be read.
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile<'static>> {
+        Ok(Arc::unwrap_or_clone(self.read_class_shared(name).await?))
+    }
+
+    /// Reuse verified definitions while retaining loader-local runtime state.
+    pub(crate) async fn read_class_shared<S: AsRef<str>>(
+        &self,
+        name: S,
+    ) -> Result<Arc<ClassFile<'static>>> {
         let name = name.as_ref();
         let mut archive = self.archive.write().await;
+        if let Some(class_file) = archive.classes.get(name) {
+            return Ok(class_file.clone());
+        }
         let class_file = if archive.is_module().await? {
             let name = ["classes/", name].concat();
             archive.load_class_file(name.as_str()).await?
@@ -104,6 +116,8 @@ impl Jar {
         let Some(class_file) = class_file else {
             return Err(ClassNotFound(name.to_string()));
         };
+        let class_file = Arc::new(class_file);
+        archive.classes.insert(name.to_owned(), class_file.clone());
         Ok(class_file)
     }
 
@@ -169,6 +183,9 @@ struct Archive {
     bytes: Option<Arc<Vec<u8>>>,
     zip_archive: Option<ZipArchive<io::Cursor<Vec<u8>>>>,
     is_module: Option<bool>,
+    // The archive's bytes are already retained for its lifetime. Cache only
+    // successful definitions from those bytes, never mutable loader state.
+    classes: AHashMap<String, Arc<ClassFile<'static>>>,
 }
 
 /// Implement the `Archive` enum.
@@ -182,6 +199,7 @@ impl Archive {
             bytes: None,
             zip_archive: None,
             is_module: None,
+            classes: AHashMap::new(),
         }
     }
 
@@ -194,6 +212,7 @@ impl Archive {
             bytes: None,
             zip_archive: None,
             is_module: None,
+            classes: AHashMap::new(),
         }
     }
 
@@ -209,6 +228,7 @@ impl Archive {
             bytes: Some(Arc::new(bytes)),
             zip_archive: None,
             is_module: None,
+            classes: AHashMap::new(),
         }
     }
 
@@ -361,6 +381,27 @@ mod tests {
         assert_eq!("test", jar.name().to_string_lossy());
         let class_file = jar.read_class("HelloWorld").await?;
         assert_eq!("HelloWorld", class_file.class_name()?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_shared_definitions_and_owned_reads_are_isolated() -> Result<()> {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../classes/classes.jar");
+        let jar = Jar::new(path);
+        let shared = jar.read_class_shared("HelloWorld").await?;
+        let cloned_jar = jar.clone();
+        let repeated = cloned_jar.read_class_shared("HelloWorld").await?;
+        assert!(Arc::ptr_eq(&shared, &repeated));
+        let mut owned = jar.read_class("HelloWorld").await?;
+        owned.methods.clear();
+        owned.code_source_url = Some("file:/different.jar".to_owned());
+        assert_ne!(shared.methods.len(), 0);
+        assert_eq!(None, shared.code_source_url);
+        assert_eq!(*shared, *jar.read_class_shared("HelloWorld").await?);
+        for _ in 0..2 {
+            assert!(jar.read_class_shared("missing").await.is_err());
+        }
+        assert_eq!(1, jar.archive.read().await.classes.len());
         Ok(())
     }
 
@@ -547,6 +588,7 @@ mod tests {
             bytes: None,
             zip_archive: None,
             is_module: None,
+            classes: AHashMap::new(),
         };
         let result = archive.zip_archive().await;
         assert!(matches!(result, Err(ArchiveError(_))));

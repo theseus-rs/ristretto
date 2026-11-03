@@ -54,12 +54,18 @@ fn set_defining_class_loader(class: &Value, class_loader: &Value) -> Result<()> 
 
 /// Recover Rust loader metadata when Java calls a native definition method. A built-in
 /// application loader can have a JDK-created mirror as well as the VM-created mirror.
-async fn defining_class_loader<T: Thread + 'static>(
+pub(crate) async fn defining_class_loader<T: Thread + 'static>(
     thread: &Arc<T>,
     java_loader: &Value,
 ) -> Result<Option<Weak<ClassLoader>>> {
     let vm = thread.vm()?;
     let root = vm.class_loader().read().await.clone();
+    if let Value::Object(Some(expected)) = java_loader
+        && let Some(Value::Object(Some(actual))) = root.object().await
+        && Gc::ptr_eq(expected, &actual)
+    {
+        return Ok(Some(Arc::downgrade(&root)));
+    }
     let builtin_type = if java_loader.is_null() {
         Some(ClassLoaderType::Bootstrap)
     } else {
@@ -83,6 +89,9 @@ async fn defining_class_loader<T: Thread + 'static>(
     let mut current = Some(root);
     while let Some(loader) = current {
         if builtin_type.is_some() && loader.loader_type() == builtin_type {
+            if !java_loader.is_null() {
+                loader.set_object(Some(java_loader.clone())).await;
+            }
             return Ok(Some(Arc::downgrade(&loader)));
         }
         if let (Value::Object(Some(expected)), Some(Value::Object(Some(actual)))) =

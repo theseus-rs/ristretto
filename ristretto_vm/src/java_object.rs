@@ -301,7 +301,15 @@ async fn to_class_loader_object(thread: &Thread, class_loader: &Arc<ClassLoader>
 
     let vm = thread.vm()?;
     let builtin_class_loader = if *vm.java_class_file_version() == JAVA_8 {
-        let builtin_class_loader = Value::Object(None);
+        // Application mirrors must carry the real loader so caller-based
+        // Class.forName remains distinct from an explicit bootstrap lookup.
+        let builtin_class_loader = thread
+            .try_invoke(
+                "java.lang.ClassLoader",
+                "getSystemClassLoader()Ljava/lang/ClassLoader;",
+                &[] as &[Value],
+            )
+            .await?;
         class_loader
             .set_object(Some(builtin_class_loader.clone()))
             .await;
@@ -380,15 +388,21 @@ async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
     }
 
     // Build class name and get class loader object
-    let class_name = class.name().replace('/', ".");
+    let class_name = class.public_name();
     let name = class_name.to_object(thread).await?;
-    let class_loader_object = match class.class_loader()? {
-        Some(class_loader) => Box::pin(to_class_loader_object(thread, &class_loader)).await?,
-        None => Value::Object(None),
-    };
-
-    // Get component type and module
+    // Array mirrors inherit their component's Java loader, including custom
+    // loaders whose definitions do not yet have a Rust loader counterpart.
     let component_type_object = get_component_type_object(thread, class).await?;
+    let class_loader_object = if component_type_object.is_null() {
+        match class.class_loader()? {
+            Some(class_loader) => Box::pin(to_class_loader_object(thread, &class_loader)).await?,
+            None => Value::Object(None),
+        }
+    } else {
+        component_type_object
+            .as_object_ref()?
+            .value("classLoader")?
+    };
     let module = get_class_module(thread, class, &class_loader_object).await?;
 
     // Build constructor parameters based on Java version
@@ -810,26 +824,9 @@ async fn get_component_type_object(thread: &Thread, class: &Arc<Class>) -> Resul
 
 impl JavaObject for Arc<Class> {
     async fn to_object(&self, thread: &Thread) -> Result<Value> {
-        let class_object = to_class_object(thread, self).await?;
-
-        let vm = thread.vm()?;
-        if *vm.java_class_file_version() > JAVA_8 && self.is_array() {
-            let Some(component_type) = self.component_type() else {
-                return Err(InternalError(
-                    "array class missing component type".to_string(),
-                ));
-            };
-            let component_type_class = thread
-                .load_and_link_class(&JavaStr::cow_from_str(component_type))
-                .await?;
-            let component_type_object = to_class_object(thread, &component_type_class).await?;
-            {
-                let mut object = class_object.as_object_mut()?;
-                object.set_value("componentType", component_type_object)?;
-            }
-        }
-
-        Ok(class_object)
+        // Construction installs componentType once; cached mirrors retain that
+        // identity and do not need another component lookup on every access.
+        to_class_object(thread, self).await
     }
 }
 
@@ -996,6 +993,62 @@ mod tests {
         let value: Value = original_value.to_object(&thread).await?;
         let value = value.as_string()?;
         assert_eq!(original_value, value);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_java8_class_loader_mirrors() -> Result<()> {
+        let gc_config = ristretto_gc::ConfigurationBuilder::new().threads(1).build();
+        let configuration = crate::ConfigurationBuilder::new()
+            .java_version(ristretto_classloader::JAVA_8_VERSION)
+            .garbage_collector(ristretto_gc::GarbageCollector::with_config(gc_config))
+            .batch_compilation(false)
+            .build()?;
+        let vm = crate::VM::new(configuration).await?;
+        let thread = vm.primordial_thread().await?;
+        let system = thread
+            .try_invoke(
+                "java.lang.ClassLoader",
+                "getSystemClassLoader()Ljava/lang/ClassLoader;",
+                &[] as &[Value],
+            )
+            .await?;
+        assert!(!system.is_null());
+        let same_reference = |left: &Value, right: &Value| {
+            matches!((left, right), (Value::Object(Some(left)), Value::Object(Some(right)))
+                if ristretto_gc::Gc::ptr_eq(left, right))
+        };
+
+        // Use fresh Rust loaders to exercise both conversion paths before caching.
+        let loader = ClassLoader::new_builtin(
+            ClassLoaderType::System,
+            ristretto_classloader::ClassPath::new(Vec::new()),
+        );
+        let mirror = loader.to_object(&thread).await?;
+        assert!(same_reference(&system, &mirror));
+        assert!(same_reference(&mirror, &loader.to_object(&thread).await?));
+
+        let loader = ClassLoader::new_builtin(
+            ClassLoaderType::System,
+            ristretto_classloader::ClassPath::new(Vec::new()),
+        );
+        let mirror = ristretto_types::JavaObject::to_object(&loader, thread.as_ref()).await?;
+        assert!(same_reference(&system, &mirror));
+        assert!(same_reference(
+            &mirror,
+            &ristretto_types::JavaObject::to_object(&loader, thread.as_ref()).await?
+        ));
+
+        let bootstrap = ClassLoader::new_builtin(
+            ClassLoaderType::Bootstrap,
+            ristretto_classloader::ClassPath::new(Vec::new()),
+        );
+        assert!(bootstrap.to_object(&thread).await?.is_null());
+        assert!(
+            ristretto_types::JavaObject::to_object(&bootstrap, thread.as_ref())
+                .await?
+                .is_null()
+        );
         Ok(())
     }
 

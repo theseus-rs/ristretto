@@ -344,7 +344,15 @@ fn to_class_loader_object<'a, T: Thread + 'static>(
 
         let vm = thread.vm()?;
         let builtin_class_loader = if *vm.java_class_file_version() == JAVA_8 {
-            let builtin_class_loader = Value::Object(None);
+            // Application mirrors must carry the real loader so caller-based
+            // Class.forName remains distinct from an explicit bootstrap lookup.
+            let builtin_class_loader = thread
+                .try_invoke(
+                    "java.lang.ClassLoader",
+                    "getSystemClassLoader()Ljava/lang/ClassLoader;",
+                    &[],
+                )
+                .await?;
             class_loader
                 .set_object(Some(builtin_class_loader.clone()))
                 .await;
@@ -410,13 +418,19 @@ fn to_class_object<'a, T: Thread + 'static>(
         // Build class name and get class loader object
         let class_name = class.public_name();
         let name = class_name.to_object(thread).await?;
-        let class_loader_object = match class.class_loader()? {
-            Some(class_loader) => to_class_loader_object(thread, &class_loader).await?,
-            None => Value::Object(None),
-        };
-
-        // Get component type and module
+        // Array mirrors inherit their component's Java loader, including custom
+        // loaders whose definitions do not yet have a Rust loader counterpart.
         let component_type_object = get_component_type_object(thread, class).await?;
+        let class_loader_object = if component_type_object.is_null() {
+            match class.class_loader()? {
+                Some(class_loader) => to_class_loader_object(thread, &class_loader).await?,
+                None => Value::Object(None),
+            }
+        } else {
+            component_type_object
+                .as_object_ref()?
+                .value("classLoader")?
+        };
         let module = get_class_module(thread, class, &class_loader_object).await?;
 
         // Build constructor parameters based on Java version
@@ -737,25 +751,9 @@ fn get_component_type_object<'a, T: Thread + 'static>(
 
 impl<T: Thread + 'static> JavaObject<T> for Arc<Class> {
     fn to_object<'a>(&'a self, thread: &'a T) -> crate::BoxFuture<'a, Result<Value>> {
-        let class = self.clone();
-        Box::pin(async move {
-            let class_object = to_class_object(thread, &class).await?;
-
-            let vm = thread.vm()?;
-            if *vm.java_class_file_version() > JAVA_8 && class.is_array() {
-                let component_type = class.component_type().unwrap_or_default();
-                let component_type_class = thread
-                    .load_and_link_class(&JavaStr::cow_from_str(component_type))
-                    .await?;
-                let component_type_object = to_class_object(thread, &component_type_class).await?;
-                {
-                    let mut object = class_object.as_object_mut()?;
-                    object.set_value("componentType", component_type_object)?;
-                }
-            }
-
-            Ok(class_object)
-        })
+        // Construction installs componentType once; reuse the cached mirror and
+        // the existing future instead of wrapping it in another allocation.
+        to_class_object(thread, self)
     }
 }
 
@@ -960,10 +958,9 @@ mod tests {
 
         let java8_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_8));
         let java8_loader = ClassLoader::new("app", ClassPath::new(Vec::new()));
-        assert_eq!(
-            java8_loader.to_object(&*java8_thread).await?,
-            Value::Object(None)
-        );
+        java8_thread.fail_next_try_invoke();
+        assert!(java8_loader.to_object(&*java8_thread).await.is_err());
+        assert!(java8_loader.object().await.is_none());
 
         let parent_loader = ClassLoader::new("parent", ClassPath::new(Vec::new()));
         let child_loader = ClassLoader::new("child", ClassPath::new(Vec::new()));
@@ -1175,7 +1172,12 @@ mod tests {
     async fn test_array_class_to_object_sets_component_type() -> Result<()> {
         let thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_17));
         let array_class = test_utils::class("[I", &[])?;
-        assert!(array_class.to_object(&*thread).await?.is_object());
+        let array = array_class.to_object(&*thread).await?;
+        let component = thread.class("int").await?.to_object(&*thread).await?;
+        assert_eq!(array.as_object_ref()?.value("componentType")?, component);
+        let cached = array_class.to_object(&*thread).await?;
+        assert_eq!(cached, array);
+        assert_eq!(cached.as_object_ref()?.value("componentType")?, component);
         Ok(())
     }
 }
