@@ -248,16 +248,19 @@ fn verify_attributes(
             }
             Attribute::BootstrapMethods { methods, .. } => {
                 for bootstrap in methods {
-                    if !matches!(
-                        pool.try_get(bootstrap.bootstrap_method_ref)?,
-                        Constant::MethodHandle {
-                            reference_kind: ReferenceKind::InvokeStatic
-                                | ReferenceKind::NewInvokeSpecial,
-                            ..
-                        }
-                    ) {
+                    let Constant::MethodHandle { reference_kind, .. } =
+                        pool.try_get(bootstrap.bootstrap_method_ref)?
+                    else {
+                        return Err(invalid("Bootstrap method must reference a method handle"));
+                    };
+                    if class.version.major() < JAVA_8.major()
+                        && !matches!(
+                            reference_kind,
+                            ReferenceKind::InvokeStatic | ReferenceKind::NewInvokeSpecial
+                        )
+                    {
                         return Err(invalid(
-                            "Bootstrap method must be an invokestatic or newinvokespecial method handle",
+                            "Java 7 bootstrap method must be an invokestatic or newinvokespecial method handle",
                         ));
                     }
                     for argument in &bootstrap.arguments {
@@ -657,6 +660,82 @@ mod tests {
         )?;
         Ok(())
     }
+
+    #[test]
+    fn bootstrap_handle_kind_rules_follow_class_version() -> Result<()> {
+        for kind in [
+            ReferenceKind::GetField,
+            ReferenceKind::GetStatic,
+            ReferenceKind::InvokeVirtual,
+            ReferenceKind::InvokeStatic,
+            ReferenceKind::NewInvokeSpecial,
+        ] {
+            let mut class = ClassFile::default();
+            let name_index = class.constant_pool.add_utf8("BootstrapMethods")?;
+            let reference = class.constant_pool.add(Constant::MethodHandle {
+                reference_kind: kind.clone(),
+                reference_index: 1,
+            })?;
+            let attribute = Attribute::BootstrapMethods {
+                name_index,
+                methods: vec![crate::attributes::BootstrapMethod {
+                    bootstrap_method_ref: reference,
+                    arguments: vec![],
+                }],
+            };
+            class.version = JAVA_8;
+            verify_attributes(
+                &class,
+                std::slice::from_ref(&attribute),
+                AttributeLocation::Class,
+            )?;
+            class.version = JAVA_7;
+            assert_eq!(
+                verify_attributes(&class, &[attribute], AttributeLocation::Class).is_ok(),
+                matches!(
+                    kind,
+                    ReferenceKind::InvokeStatic | ReferenceKind::NewInvokeSpecial
+                )
+            );
+            let invalid = Attribute::BootstrapMethods {
+                name_index,
+                methods: vec![crate::attributes::BootstrapMethod {
+                    bootstrap_method_ref: name_index,
+                    arguments: vec![],
+                }],
+            };
+            class.version = JAVA_8;
+            assert!(verify_attributes(&class, &[invalid], AttributeLocation::Class).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn unused_virtual_bootstrap_handle_passes_class_verification() -> Result<()> {
+        let mut class = ClassFile {
+            version: JAVA_8,
+            ..ClassFile::default()
+        };
+        class.this_class = class.constant_pool.add_class("BootstrapOwner")?;
+        class.super_class = class.constant_pool.add_class("java/lang/Object")?;
+        let method = class
+            .constant_pool
+            .add_method_ref(class.this_class, "bootstrap", "()V")?;
+        let handle = class.constant_pool.add(Constant::MethodHandle {
+            reference_kind: ReferenceKind::InvokeVirtual,
+            reference_index: method,
+        })?;
+        class.attributes.push(Attribute::BootstrapMethods {
+            name_index: class.constant_pool.add_utf8("BootstrapMethods")?,
+            methods: vec![crate::attributes::BootstrapMethod {
+                bootstrap_method_ref: handle,
+                arguments: vec![],
+            }],
+        });
+        class.verify()?;
+        Ok(())
+    }
+
     #[test]
     fn module_and_package_names_follow_their_own_grammars() -> Result<()> {
         for name in [
