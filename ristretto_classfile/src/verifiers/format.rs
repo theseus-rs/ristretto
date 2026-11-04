@@ -48,6 +48,9 @@ pub(super) fn verify_non_array_class(class: &ClassFile<'_>, index: u16) -> Resul
 }
 
 fn module_name(name: &JavaStr) -> Result<()> {
+    if name.is_empty() {
+        return Err(invalid("Invalid module name"));
+    }
     let mut bytes = name.as_bytes().iter().copied().peekable();
     while let Some(byte) = bytes.next() {
         match byte {
@@ -721,6 +724,7 @@ mod tests {
     #[test]
     fn module_and_package_names_follow_their_own_grammars() -> Result<()> {
         for name in [
+            "",
             "bad:name",
             "bad@name",
             "bad\\q",
