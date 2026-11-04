@@ -511,7 +511,11 @@ pub fn handle_invoke<C: VerificationContext>(
     if !is_static {
         let objectref = frame.pop()?;
 
-        let expected = VerificationType::Object(JavaString::from(class_name));
+        let expected = if class_name.starts_with('[') {
+            parse_type_descriptor(class_name)?
+        } else {
+            VerificationType::Object(JavaString::from(class_name))
+        };
         if !objectref.is_null() && !objectref.is_assignable_to(&expected, context)? {
             return Err(VerifyError::VerifyError(format!(
                 "invoke: {objectref} is not assignable to {class_name}"
@@ -2105,6 +2109,45 @@ mod tests {
             VerificationType::Integer
         );
     }
+
+    #[test]
+    fn test_invoke_array_clone_uses_array_receiver_type() {
+        for descriptor in ["[I", "[Ljava/lang/String;", "[[I"] {
+            let mut frame = Frame::new(0, 1);
+            frame
+                .push(parse_type_descriptor(descriptor).unwrap())
+                .unwrap();
+            assert!(
+                handle_invoke(
+                    &mut frame,
+                    descriptor,
+                    "clone",
+                    "()Ljava/lang/Object;",
+                    false,
+                    &MockContext::STRICT
+                )
+                .is_ok()
+            );
+            let mut frame = Frame::new(0, 1);
+            frame
+                .push(VerificationType::Object(JavaString::from(
+                    "java/lang/Object",
+                )))
+                .unwrap();
+            assert!(
+                handle_invoke(
+                    &mut frame,
+                    descriptor,
+                    "clone",
+                    "()Ljava/lang/Object;",
+                    false,
+                    &MockContext::STRICT
+                )
+                .is_err()
+            );
+        }
+    }
+
     #[test]
     fn test_instanceof_rejects_uninitialized_operands() {
         for value in [
