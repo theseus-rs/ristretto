@@ -4,15 +4,10 @@ use crate::error::Result;
 use crate::java_string::{JavaStr, JavaString};
 use crate::reference_kind::ReferenceKind;
 use crate::version::Version;
-use crate::{JAVA_7, JAVA_9, JAVA_11};
+use crate::{JAVA_1_0_2, JAVA_7, JAVA_9, JAVA_11};
 use byteorder::{BigEndian, WriteBytesExt};
 use std::borrow::Cow;
 use std::fmt;
-
-const VERSION_45_3: Version = Version::Java1_0_2 { minor: 3 };
-const VERSION_51_0: Version = JAVA_7;
-const VERSION_53_0: Version = JAVA_9;
-const VERSION_55_0: Version = JAVA_11;
 
 /// Constant
 ///
@@ -303,10 +298,10 @@ impl Constant<'_> {
         match self {
             Constant::MethodHandle { .. }
             | Constant::MethodType { .. }
-            | Constant::InvokeDynamic { .. } => *version >= VERSION_51_0,
-            Constant::Module { .. } | Constant::Package { .. } => *version >= VERSION_53_0,
-            Constant::Dynamic { .. } => *version >= VERSION_55_0,
-            _ => *version >= VERSION_45_3,
+            | Constant::InvokeDynamic { .. } => *version >= JAVA_7,
+            Constant::Module { .. } | Constant::Package { .. } => *version >= JAVA_9,
+            Constant::Dynamic { .. } => *version >= JAVA_11,
+            _ => *version >= JAVA_1_0_2,
         }
     }
 
@@ -644,8 +639,6 @@ impl fmt::Display for Constant<'_> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::JAVA_1_0_2;
-    const VERSION_45_0: Version = JAVA_1_0_2;
 
     #[test]
     fn test_invalid_tag() {
@@ -662,7 +655,10 @@ mod test {
     ) -> Result<()> {
         assert_eq!(tag, constant.tag());
         assert!(constant.valid_for_version(supported_versions));
-        assert!(!constant.valid_for_version(&VERSION_45_0));
+        assert_eq!(
+            constant.valid_for_version(&JAVA_1_0_2),
+            supported_versions.major() == JAVA_1_0_2.major()
+        );
 
         let mut bytes = Vec::new();
         constant.to_bytes(&mut bytes)?;
@@ -678,7 +674,7 @@ mod test {
         let expected_bytes = [1, 0, 3, 102, 111, 111];
 
         assert_eq!("Utf8 foo", constant.to_string());
-        test_constant(&constant, &expected_bytes, 1, &VERSION_45_3)
+        test_constant(&constant, &expected_bytes, 1, &JAVA_1_0_2)
     }
 
     #[test]
@@ -687,7 +683,7 @@ mod test {
         let expected_bytes = [3, 0, 0, 0, 42];
 
         assert_eq!("Integer 42", constant.to_string());
-        test_constant(&constant, &expected_bytes, 3, &VERSION_45_3)
+        test_constant(&constant, &expected_bytes, 3, &JAVA_1_0_2)
     }
 
     #[test]
@@ -696,7 +692,7 @@ mod test {
         let expected_bytes = [4, 64, 73, 15, 219];
 
         assert_eq!("Float 3.1415927", constant.to_string());
-        test_constant(&constant, &expected_bytes, 4, &VERSION_45_3)
+        test_constant(&constant, &expected_bytes, 4, &JAVA_1_0_2)
     }
 
     #[test]
@@ -705,7 +701,7 @@ mod test {
         let expected_bytes = [5, 0, 0, 0, 0, 73, 150, 2, 210];
 
         assert_eq!("Long 1234567890", constant.to_string());
-        test_constant(&constant, &expected_bytes, 5, &VERSION_45_3)
+        test_constant(&constant, &expected_bytes, 5, &JAVA_1_0_2)
     }
 
     #[test]
@@ -714,7 +710,7 @@ mod test {
         let expected_bytes = [6, 64, 9, 33, 251, 84, 68, 45, 24];
 
         assert_eq!("Double 3.141592653589793", constant.to_string());
-        test_constant(&constant, &expected_bytes, 6, &VERSION_45_3)
+        test_constant(&constant, &expected_bytes, 6, &JAVA_1_0_2)
     }
 
     #[test]
@@ -723,7 +719,7 @@ mod test {
         let expected_bytes = [7, 0, 1];
 
         assert_eq!("Class #1", constant.to_string());
-        test_constant(&constant, &expected_bytes, 7, &VERSION_45_3)
+        test_constant(&constant, &expected_bytes, 7, &JAVA_1_0_2)
     }
 
     #[test]
@@ -732,7 +728,7 @@ mod test {
         let expected_bytes = [8, 0, 1];
 
         assert_eq!("String #1", constant.to_string());
-        test_constant(&constant, &expected_bytes, 8, &VERSION_45_3)
+        test_constant(&constant, &expected_bytes, 8, &JAVA_1_0_2)
     }
 
     #[test]
@@ -744,7 +740,7 @@ mod test {
         let expected_bytes = [9, 0, 1, 0, 2];
 
         assert_eq!("Fieldref #1.#2", constant.to_string());
-        test_constant(&constant, &expected_bytes, 9, &VERSION_45_3)
+        test_constant(&constant, &expected_bytes, 9, &JAVA_1_0_2)
     }
 
     #[test]
@@ -756,7 +752,7 @@ mod test {
         let expected_bytes = [10, 0, 1, 0, 2];
 
         assert_eq!("Methodref #1.#2", constant.to_string());
-        test_constant(&constant, &expected_bytes, 10, &VERSION_45_3)
+        test_constant(&constant, &expected_bytes, 10, &JAVA_1_0_2)
     }
 
     #[test]
@@ -768,7 +764,7 @@ mod test {
         let expected_bytes = [11, 0, 1, 0, 2];
 
         assert_eq!("InterfaceMethodRef #1.#2", constant.to_string());
-        test_constant(&constant, &expected_bytes, 11, &VERSION_45_3)
+        test_constant(&constant, &expected_bytes, 11, &JAVA_1_0_2)
     }
 
     #[test]
@@ -780,7 +776,7 @@ mod test {
         let expected_bytes = [12, 0, 1, 0, 2];
 
         assert_eq!("NameAndType #1:#2", constant.to_string());
-        test_constant(&constant, &expected_bytes, 12, &VERSION_45_3)
+        test_constant(&constant, &expected_bytes, 12, &JAVA_1_0_2)
     }
 
     #[test]
@@ -792,7 +788,7 @@ mod test {
         let expected_bytes = [15, 1, 0, 2];
 
         assert_eq!("MethodHandle GetField.#2", constant.to_string());
-        test_constant(&constant, &expected_bytes, 15, &VERSION_51_0)
+        test_constant(&constant, &expected_bytes, 15, &JAVA_7)
     }
 
     #[test]
@@ -801,7 +797,7 @@ mod test {
         let expected_bytes = [16, 0, 1];
 
         assert_eq!("MethodType #1", constant.to_string());
-        test_constant(&constant, &expected_bytes, 16, &VERSION_51_0)
+        test_constant(&constant, &expected_bytes, 16, &JAVA_7)
     }
 
     #[test]
@@ -813,7 +809,7 @@ mod test {
         let expected_bytes = [17, 0, 1, 0, 2];
 
         assert_eq!("Dynamic #1.#2", constant.to_string());
-        test_constant(&constant, &expected_bytes, 17, &VERSION_55_0)
+        test_constant(&constant, &expected_bytes, 17, &JAVA_11)
     }
 
     #[test]
@@ -854,7 +850,7 @@ mod test {
         let expected_bytes = [18, 0, 1, 0, 2];
 
         assert_eq!("InvokeDynamic #1.#2", constant.to_string());
-        test_constant(&constant, &expected_bytes, 18, &VERSION_51_0)
+        test_constant(&constant, &expected_bytes, 18, &JAVA_7)
     }
 
     #[test]
@@ -863,7 +859,7 @@ mod test {
         let expected_bytes = [19, 0, 1];
 
         assert_eq!("Module #1", constant.to_string());
-        test_constant(&constant, &expected_bytes, 19, &VERSION_55_0)
+        test_constant(&constant, &expected_bytes, 19, &JAVA_9)
     }
 
     #[test]
@@ -872,7 +868,7 @@ mod test {
         let expected_bytes = [20, 0, 1];
 
         assert_eq!("Package #1", constant.to_string());
-        test_constant(&constant, &expected_bytes, 20, &VERSION_55_0)
+        test_constant(&constant, &expected_bytes, 20, &JAVA_9)
     }
 
     #[test]
@@ -1310,5 +1306,15 @@ mod test {
         assert_ne!(invoke_dynamic, module);
         assert_ne!(module, package);
         assert_ne!(package, utf8);
+    }
+
+    #[test]
+    fn basic_constants_support_all_legacy_minor_versions() {
+        for minor in 0..=3 {
+            let version = Version::Java1_0_2 { minor };
+            assert!(Constant::Integer(1).valid_for_version(&version));
+            assert!(Constant::Class(1).valid_for_version(&version));
+            assert!(!Constant::MethodType(1).valid_for_version(&version));
+        }
     }
 }

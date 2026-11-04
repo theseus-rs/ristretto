@@ -131,22 +131,27 @@ pub fn handle_push_int(frame: &mut Frame) -> Result<()> {
 /// - [JVMS §6.5.ldc](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc)
 /// - [JVMS§6.5.ldc_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc_w)
 pub fn handle_ldc(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) -> Result<()> {
+    let ty = ldc_type(class_file, index)?;
+    frame.push(ty)
+}
+
+pub(crate) fn ldc_type(class_file: &ClassFile<'_>, index: u16) -> Result<VerificationType> {
     let constant = class_file
         .constant_pool
         .get(index)
         .ok_or(VerifyError::InvalidConstantPoolIndex(index))?;
 
     match constant {
-        Constant::Integer(_) => frame.push(VerificationType::Integer),
-        Constant::Float(_) => frame.push(VerificationType::Float),
-        Constant::String(_) => frame.push(VerificationType::java_lang_string()),
+        Constant::Integer(_) => Ok(VerificationType::Integer),
+        Constant::Float(_) => Ok(VerificationType::Float),
+        Constant::String(_) => Ok(VerificationType::java_lang_string()),
         Constant::Class(_) if class_file.version.major() >= JAVA_5.major() => {
-            frame.push(VerificationType::java_lang_class())
+            Ok(VerificationType::java_lang_class())
         }
-        Constant::MethodHandle { .. } => frame.push(VerificationType::Object(JavaString::from(
+        Constant::MethodHandle { .. } => Ok(VerificationType::Object(JavaString::from(
             "java/lang/invoke/MethodHandle",
         ))),
-        Constant::MethodType { .. } => frame.push(VerificationType::Object(JavaString::from(
+        Constant::MethodType { .. } => Ok(VerificationType::Object(JavaString::from(
             "java/lang/invoke/MethodType",
         ))),
         Constant::Dynamic {
@@ -159,7 +164,7 @@ pub fn handle_ldc(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) -> 
                     "ldc cannot load a category 2 dynamic constant".to_string(),
                 ));
             }
-            frame.push(ty)
+            Ok(ty)
         }
         _ => Err(VerifyError::VerifyError(format!(
             "ldc: unsupported constant type at index {index}"
@@ -177,14 +182,19 @@ pub fn handle_ldc(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) -> 
 ///
 /// - [JVMS §6.5.ldc2_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc2_w)
 pub fn handle_ldc2_w(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) -> Result<()> {
+    let ty = ldc2_w_type(class_file, index)?;
+    frame.push_category2(ty)
+}
+
+pub(crate) fn ldc2_w_type(class_file: &ClassFile<'_>, index: u16) -> Result<VerificationType> {
     let constant = class_file
         .constant_pool
         .get(index)
         .ok_or(VerifyError::InvalidConstantPoolIndex(index))?;
 
     match constant {
-        Constant::Long(_) => frame.push_category2(VerificationType::Long),
-        Constant::Double(_) => frame.push_category2(VerificationType::Double),
+        Constant::Long(_) => Ok(VerificationType::Long),
+        Constant::Double(_) => Ok(VerificationType::Double),
         Constant::Dynamic {
             name_and_type_index,
             ..
@@ -195,7 +205,7 @@ pub fn handle_ldc2_w(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) 
                     "ldc2_w requires a category 2 dynamic constant".to_string(),
                 ));
             }
-            frame.push_category2(ty)
+            Ok(ty)
         }
         _ => Err(VerifyError::VerifyError(format!(
             "ldc2_w: expected long or double constant at index {index}"

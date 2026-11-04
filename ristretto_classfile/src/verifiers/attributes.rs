@@ -1,8 +1,10 @@
 use crate::attributes::{
     Annotation, AnnotationElement, Attribute, BootstrapMethod, ExceptionTableEntry, Exports,
     InnerClass, Instruction, LineNumber, LocalVariableTable, LocalVariableTypeTable,
-    MethodParameter, Opens, ParameterAnnotation, Provides, Record, Requires, TypeAnnotation,
+    MethodParameter, Opens, ParameterAnnotation, Provides, Record, Requires, TargetType,
+    TypeAnnotation,
 };
+use crate::class_access_flags::ClassAccessFlags;
 use crate::class_file::ClassFile;
 use crate::constant::Constant;
 use crate::field::Field;
@@ -664,9 +666,8 @@ fn verify_parameter_annotations(
 fn verify_annotation_target(
     class_file: &ClassFile<'_>,
     context: AttributeContext,
-    target: &crate::attributes::TargetType,
+    target: &TargetType,
 ) -> Result<()> {
-    use crate::attributes::TargetType as T;
     let tag = target.target_type();
     let valid_location = match context {
         AttributeContext::Class => matches!(tag, 0x00 | 0x10 | 0x11),
@@ -684,7 +685,7 @@ fn verify_annotation_target(
     match (context, target) {
         (
             AttributeContext::Class,
-            T::SuperType {
+            TargetType::SuperType {
                 supertype_index, ..
             },
         ) => {
@@ -692,7 +693,7 @@ fn verify_annotation_target(
                 if class_file.super_class == 0
                     || class_file
                         .access_flags
-                        .contains(crate::ClassAccessFlags::INTERFACE)
+                        .contains(ClassAccessFlags::INTERFACE)
                 {
                     return Err(invalid());
                 }
@@ -702,7 +703,7 @@ fn verify_annotation_target(
         }
         (
             AttributeContext::Code(method, _),
-            T::Catch {
+            TargetType::Catch {
                 exception_table_index,
                 ..
             },
@@ -723,7 +724,7 @@ fn verify_annotation_target(
         }
         (
             AttributeContext::Method(method),
-            T::Throws {
+            TargetType::Throws {
                 throws_type_index, ..
             },
         ) => {
@@ -752,6 +753,7 @@ fn verify_type_annotations(
     type_annotations: &[TypeAnnotation],
 ) -> Result<()> {
     for type_annotation in type_annotations {
+        type_annotation.target_type.validate()?;
         verify_annotation_target(class_file, context, &type_annotation.target_type)?;
         for path in &type_annotation.type_path {
             path.validate()?;
@@ -1074,7 +1076,7 @@ mod tests {
     use super::*;
     use crate::attributes::{
         AnnotationValuePair, ExportsFlags, ModuleAccessFlags, NestedClassAccessFlags, OpensFlags,
-        RequiresFlags, TargetType,
+        RequiresFlags,
     };
     use crate::constant::Constant;
     use crate::constant_pool::ConstantPool;
@@ -3824,9 +3826,9 @@ mod tests {
             Err(InvalidConstantPoolIndex(9))
         ));
     }
+
     #[test]
     fn type_annotation_targets_match_location_and_table_bounds() {
-        use crate::attributes::TargetType as T;
         let class = ClassFile {
             super_class: 1,
             interfaces: vec![2],
@@ -3857,22 +3859,22 @@ mod tests {
         for (context, target) in [
             (
                 AttributeContext::Class,
-                T::SuperType {
+                TargetType::SuperType {
                     target_type: 0x10,
                     supertype_index: u16::MAX,
                 },
             ),
             (
                 AttributeContext::Field(&field),
-                T::Empty { target_type: 0x13 },
+                TargetType::Empty { target_type: 0x13 },
             ),
             (
                 AttributeContext::Method(&method),
-                T::Empty { target_type: 0x14 },
+                TargetType::Empty { target_type: 0x14 },
             ),
             (
                 AttributeContext::Code(&method, 1),
-                T::Offset {
+                TargetType::Offset {
                     target_type: 0x43,
                     offset: 0,
                 },
@@ -3880,7 +3882,8 @@ mod tests {
         ] {
             assert!(verify_annotation_target(&class, context, &target).is_ok());
             assert!(
-                verify_annotation_target(&class, context, &T::Empty { target_type: 0xFF }).is_err()
+                verify_annotation_target(&class, context, &TargetType::Empty { target_type: 0xFF })
+                    .is_err()
             );
         }
         for (index, valid) in [(0, true), (1, false), (u16::MAX, true)] {
@@ -3888,7 +3891,7 @@ mod tests {
                 verify_annotation_target(
                     &class,
                     AttributeContext::Class,
-                    &T::SuperType {
+                    &TargetType::SuperType {
                         target_type: 0x10,
                         supertype_index: index
                     }
@@ -3902,7 +3905,7 @@ mod tests {
                 verify_annotation_target(
                     &class,
                     AttributeContext::Code(&method, 1),
-                    &T::Catch {
+                    &TargetType::Catch {
                         target_type: 0x42,
                         exception_table_index: index
                     }
@@ -3915,7 +3918,7 @@ mod tests {
             verify_annotation_target(
                 &class,
                 AttributeContext::Class,
-                &T::Catch {
+                &TargetType::Catch {
                     target_type: 0x42,
                     exception_table_index: 0
                 }
@@ -3923,10 +3926,10 @@ mod tests {
             .is_err()
         );
     }
+
     #[test]
     fn annotation_superclass_and_throws_targets_have_real_entries() {
-        use crate::attributes::TargetType as T;
-        let target = T::SuperType {
+        let target = TargetType::SuperType {
             target_type: 0x10,
             supertype_index: u16::MAX,
         };
@@ -3934,7 +3937,7 @@ mod tests {
         assert!(verify_annotation_target(&root, AttributeContext::Class, &target).is_err());
         let interface = ClassFile {
             super_class: 1,
-            access_flags: crate::ClassAccessFlags::INTERFACE,
+            access_flags: ClassAccessFlags::INTERFACE,
             ..ClassFile::default()
         };
         assert!(verify_annotation_target(&interface, AttributeContext::Class, &target).is_err());
@@ -3950,7 +3953,7 @@ mod tests {
                 verify_annotation_target(
                     &root,
                     AttributeContext::Method(&method),
-                    &T::Throws {
+                    &TargetType::Throws {
                         target_type: 0x17,
                         throws_type_index: index
                     }
