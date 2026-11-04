@@ -12,7 +12,7 @@ fn invalid(message: &str) -> VerifyError {
     VerifyError::ClassFormatError(message.to_string())
 }
 
-fn member_name(name: &JavaStr, method: bool) -> Result<()> {
+pub(super) fn member_name(name: &JavaStr, method: bool) -> Result<()> {
     let bytes = name.as_bytes();
     if bytes.is_empty()
         || bytes
@@ -53,7 +53,7 @@ fn module_name(name: &JavaStr) -> Result<()> {
     Ok(())
 }
 
-pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
+pub(super) fn verify_class_header(class: &ClassFile<'_>) -> Result<()> {
     Version::from(class.version.major(), class.version.minor())?;
     if class.constant_pool.len() > 65534 {
         return Err(invalid("Constant pool exceeds u2 count"));
@@ -104,34 +104,15 @@ pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
             return Err(invalid("Duplicate interface"));
         }
     }
-    verify_attributes(
-        class,
-        &class.attributes,
-        crate::attributes::attribute::AttributeLocation::Class,
-    )?;
-    verify_fields(class)?;
-    let mut methods = AHashSet::new();
-    for method in &class.methods {
-        verify_attributes(
-            class,
-            &method.attributes,
-            crate::attributes::attribute::AttributeLocation::Method,
-        )?;
-        verify_method(class, method)?;
-        if !methods.insert((
-            pool.try_get_utf8(method.name_index)?,
-            pool.try_get_utf8(method.descriptor_index)?,
-        )) {
-            return Err(invalid("Duplicate method name and descriptor"));
-        }
-    }
-    verify_constants(class)?;
-    verify_module_tables(class)?;
     Ok(())
 }
 
 pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()> {
     super::method_access_flags::verify(class, method)?;
+    verify_method_contents(class, method)
+}
+
+pub(super) fn verify_method_contents(class: &ClassFile<'_>, method: &Method) -> Result<()> {
     let name = class.constant_pool.try_get_utf8(method.name_index)?;
     let descriptor = class.constant_pool.try_get_utf8(method.descriptor_index)?;
     let descriptor_info = FieldType::method_descriptor_info(descriptor)?;
@@ -203,268 +184,222 @@ pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()
     Ok(())
 }
 
-fn verify_attributes(
+pub(super) fn verify_attribute(
     class: &ClassFile<'_>,
-    attributes: &[Attribute],
+    attribute: &Attribute,
+    previous: &[Attribute],
     location: crate::attributes::attribute::AttributeLocation,
-) -> Result<()> {
-    use crate::attributes::attribute::AttributeLocation as L;
+) -> Result<bool> {
     let pool = &class.constant_pool;
-    for (index, attribute) in attributes.iter().enumerate() {
-        let name = pool.try_get_utf8(attribute.name_index())?;
-        if matches!(attribute, Attribute::Unknown { .. }) {
-            continue;
-        }
-        if name != attribute.name() {
-            return Err(invalid("Attribute name index disagrees with its contents"));
-        }
-        if !location.recognizes(name.as_bytes()) {
-            continue;
-        }
-        // Known variants have distinct, validated names. Compare their tags to
-        // avoid allocating a set for each small attribute table. Only the fixed
-        // set of non-repeatable variants scans predecessors; unknown and debug
-        // attributes can repeat without making this quadratic in table length.
-        if !matches!(
-            attribute,
-            Attribute::Synthetic { .. }
-                | Attribute::Deprecated { .. }
-                | Attribute::LineNumberTable { .. }
-                | Attribute::LocalVariableTable { .. }
-                | Attribute::LocalVariableTypeTable { .. }
-        ) && attributes
-            .iter()
-            .take(index)
-            .any(|previous| std::mem::discriminant(previous) == std::mem::discriminant(attribute))
-        {
-            return Err(invalid("Duplicate attribute"));
-        }
-        match attribute {
-            Attribute::Code { .. } => verify_code_metadata(class, attribute)?,
-            Attribute::Record { records, .. } => {
-                for record in records {
-                    member_name(pool.try_get_utf8(record.name_index)?, false)?;
-                    verify_attributes(class, &record.attributes, L::RecordComponent)?;
-                }
-            }
-            Attribute::BootstrapMethods { methods, .. } => {
-                for bootstrap in methods {
-                    let Constant::MethodHandle { reference_kind, .. } =
-                        pool.try_get(bootstrap.bootstrap_method_ref)?
-                    else {
-                        return Err(invalid("Bootstrap method must reference a method handle"));
-                    };
-                    if class.version.major() < JAVA_8.major()
-                        && !matches!(
-                            reference_kind,
-                            ReferenceKind::InvokeStatic | ReferenceKind::NewInvokeSpecial
-                        )
-                    {
-                        return Err(invalid(
-                            "Java 7 bootstrap method must be an invokestatic or newinvokespecial method handle",
-                        ));
-                    }
-                    for argument in &bootstrap.arguments {
-                        if !matches!(
-                            pool.try_get(*argument)?,
-                            Constant::Integer(_)
-                                | Constant::Float(_)
-                                | Constant::Long(_)
-                                | Constant::Double(_)
-                                | Constant::String(_)
-                                | Constant::Class(_)
-                                | Constant::MethodHandle { .. }
-                                | Constant::MethodType(_)
-                                | Constant::Dynamic { .. }
-                        ) {
-                            return Err(invalid("Bootstrap argument must be a loadable constant"));
-                        }
-                    }
-                }
-            }
-            Attribute::RuntimeVisibleTypeAnnotations {
-                type_annotations, ..
-            }
-            | Attribute::RuntimeInvisibleTypeAnnotations {
-                type_annotations, ..
-            } => {
-                for annotation in type_annotations {
-                    let target = annotation.target_type.target_type();
-                    let allowed = match location {
-                        L::Class => matches!(target, 0x00 | 0x10 | 0x11),
-                        L::Field | L::RecordComponent => target == 0x13,
-                        L::Method => matches!(target, 0x01 | 0x12 | 0x14..=0x17),
-                        L::Code => (0x40..=0x4b).contains(&target),
-                        L::Any => true,
-                    };
-                    if !allowed
-                        || annotation.type_path.iter().any(|p| {
-                            p.type_path_kind > 3
-                                || (p.type_path_kind != 3 && p.type_argument_index != 0)
-                        })
-                    {
-                        return Err(invalid("Invalid type annotation target or path"));
-                    }
-                }
-            }
-            _ => {}
-        }
+    let name = pool.try_get_utf8(attribute.name_index())?;
+    if matches!(attribute, Attribute::Unknown { .. }) {
+        return Ok(false);
     }
-    Ok(())
-}
-
-fn verify_fields(class: &ClassFile<'_>) -> Result<()> {
-    let pool = &class.constant_pool;
-    let mut fields = AHashSet::new();
-    for field in &class.fields {
-        verify_attributes(
-            class,
-            &field.attributes,
-            crate::attributes::attribute::AttributeLocation::Field,
-        )?;
-        let name = pool.try_get_utf8(field.name_index)?;
-        member_name(name, false)?;
-        let descriptor = pool.try_get_utf8(field.descriptor_index)?;
-        let ty = FieldType::parse_java_str(descriptor)?;
-        if ty != field.field_type {
-            return Err(invalid("Field type disagrees with descriptor"));
-        }
-        if !fields.insert((name, descriptor)) {
-            return Err(invalid("Duplicate field name and descriptor"));
-        }
-        for attribute in &field.attributes {
-            if let Attribute::ConstantValue {
-                constant_value_index,
-                ..
-            } = attribute
+    if name != attribute.name() {
+        return Err(invalid("Attribute name index disagrees with its contents"));
+    }
+    if !location.recognizes(name.as_bytes()) {
+        return Ok(false);
+    }
+    // Known variants have distinct, validated names. Compare their tags to
+    // avoid allocating a set for each small attribute table. Only the fixed
+    // set of non-repeatable variants scans predecessors; unknown and debug
+    // attributes can repeat without making this quadratic in table length.
+    if !matches!(
+        attribute,
+        Attribute::Synthetic { .. }
+            | Attribute::Deprecated { .. }
+            | Attribute::LineNumberTable { .. }
+            | Attribute::LocalVariableTable { .. }
+            | Attribute::LocalVariableTypeTable { .. }
+            | Attribute::NestHost { .. }
+            | Attribute::NestMembers { .. }
+            | Attribute::Record { .. }
+            | Attribute::PermittedSubclasses { .. }
+    ) && previous
+        .iter()
+        .any(|previous| std::mem::discriminant(previous) == std::mem::discriminant(attribute))
+    {
+        return Err(invalid("Duplicate attribute"));
+    }
+    if let Attribute::BootstrapMethods { methods, .. } = attribute {
+        for bootstrap in methods {
+            let Constant::MethodHandle { reference_kind, .. } =
+                pool.try_get(bootstrap.bootstrap_method_ref)?
+            else {
+                return Err(invalid("Bootstrap method must reference a method handle"));
+            };
+            if class.version.major() < JAVA_8.major()
+                && !matches!(
+                    reference_kind,
+                    ReferenceKind::InvokeStatic | ReferenceKind::NewInvokeSpecial
+                )
             {
-                let valid = match (&ty, pool.try_get(*constant_value_index)?) {
-                    (
-                        FieldType::Base(
-                            BaseType::Boolean
-                            | BaseType::Byte
-                            | BaseType::Char
-                            | BaseType::Short
-                            | BaseType::Int,
-                        ),
-                        Constant::Integer(_),
-                    )
-                    | (FieldType::Base(BaseType::Long), Constant::Long(_))
-                    | (FieldType::Base(BaseType::Double), Constant::Double(_))
-                    | (FieldType::Base(BaseType::Float), Constant::Float(_)) => true,
-                    (FieldType::Object(name), Constant::String(_)) => name == "java/lang/String",
-                    _ => false,
-                };
-                if !valid {
-                    return Err(invalid(
-                        "ConstantValue type disagrees with field descriptor",
-                    ));
+                return Err(invalid(
+                    "Java 7 bootstrap method must be an invokestatic or newinvokespecial method handle",
+                ));
+            }
+            for argument in &bootstrap.arguments {
+                if !matches!(
+                    pool.try_get(*argument)?,
+                    Constant::Integer(_)
+                        | Constant::Float(_)
+                        | Constant::Long(_)
+                        | Constant::Double(_)
+                        | Constant::String(_)
+                        | Constant::Class(_)
+                        | Constant::MethodHandle { .. }
+                        | Constant::MethodType(_)
+                        | Constant::Dynamic { .. }
+                ) {
+                    return Err(invalid("Bootstrap argument must be a loadable constant"));
                 }
+            }
+        }
+    }
+    verify_module_attribute(class, attribute)?;
+    Ok(true)
+}
+
+pub(super) fn verify_field(class: &ClassFile<'_>, field: &crate::Field) -> Result<()> {
+    let pool = &class.constant_pool;
+    let name = pool.try_get_utf8(field.name_index)?;
+    member_name(name, false)?;
+    let descriptor = pool.try_get_utf8(field.descriptor_index)?;
+    let ty = FieldType::parse_java_str(descriptor)?;
+    if ty != field.field_type {
+        return Err(invalid("Field type disagrees with descriptor"));
+    }
+    for attribute in &field.attributes {
+        if let Attribute::ConstantValue {
+            constant_value_index,
+            ..
+        } = attribute
+        {
+            let valid = match (&ty, pool.try_get(*constant_value_index)?) {
+                (
+                    FieldType::Base(
+                        BaseType::Boolean
+                        | BaseType::Byte
+                        | BaseType::Char
+                        | BaseType::Short
+                        | BaseType::Int,
+                    ),
+                    Constant::Integer(_),
+                )
+                | (FieldType::Base(BaseType::Long), Constant::Long(_))
+                | (FieldType::Base(BaseType::Double), Constant::Double(_))
+                | (FieldType::Base(BaseType::Float), Constant::Float(_)) => true,
+                (FieldType::Object(name), Constant::String(_)) => name == "java/lang/String",
+                _ => false,
+            };
+            if !valid {
+                return Err(invalid(
+                    "ConstantValue type disagrees with field descriptor",
+                ));
             }
         }
     }
     Ok(())
 }
 
-fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
+pub(super) fn verify_constant(class: &ClassFile<'_>, constant: &Constant<'_>) -> Result<()> {
     let pool = &class.constant_pool;
     let module = class.access_flags.contains(ClassAccessFlags::MODULE);
-    for constant in pool {
-        match constant {
-            Constant::Class(index) => class_name(pool.try_get_utf8(*index)?, true)?,
-            Constant::Module(_) | Constant::Package(_) if !module => {
-                return Err(invalid("Module and Package constants require ACC_MODULE"));
-            }
-            Constant::Module(index) => module_name(pool.try_get_utf8(*index)?)?,
-            Constant::Package(index) => class_name(pool.try_get_utf8(*index)?, false)?,
-            Constant::MethodType(index) => {
-                FieldType::method_descriptor_info(pool.try_get_utf8(*index)?)?;
-            }
-            Constant::NameAndType {
-                name_index,
-                descriptor_index,
-            } => {
-                let name = pool.try_get_utf8(*name_index)?;
-                let descriptor = pool.try_get_utf8(*descriptor_index)?;
-                if descriptor.as_bytes().starts_with(b"(") {
-                    let descriptor_info = FieldType::method_descriptor_info(descriptor)?;
-                    if name == CONSTRUCTOR_NAME {
-                        if !descriptor_info.returns_void {
-                            return Err(invalid("Constructor descriptor must return void"));
-                        }
-                    } else if name != CLASS_INITIALIZER_NAME {
-                        // Kotlin uses <clinit> in EnclosingMethod metadata. A NameAndType
-                        // is not itself an invocation; method references are checked below.
-                        member_name(name, true)?;
+    match constant {
+        Constant::Class(index) => class_name(pool.try_get_utf8(*index)?, true)?,
+        Constant::Module(_) | Constant::Package(_) if !module => {
+            return Err(invalid("Module and Package constants require ACC_MODULE"));
+        }
+        Constant::Module(index) => module_name(pool.try_get_utf8(*index)?)?,
+        Constant::Package(index) => class_name(pool.try_get_utf8(*index)?, false)?,
+        Constant::MethodType(index) => {
+            FieldType::method_descriptor_info(pool.try_get_utf8(*index)?)?;
+        }
+        Constant::NameAndType {
+            name_index,
+            descriptor_index,
+        } => {
+            let name = pool.try_get_utf8(*name_index)?;
+            let descriptor = pool.try_get_utf8(*descriptor_index)?;
+            if descriptor.as_bytes().starts_with(b"(") {
+                let descriptor_info = FieldType::method_descriptor_info(descriptor)?;
+                if name == CONSTRUCTOR_NAME {
+                    if !descriptor_info.returns_void {
+                        return Err(invalid("Constructor descriptor must return void"));
                     }
-                } else {
-                    member_name(name, false)?;
-                    FieldType::parse_java_str(descriptor)?;
+                } else if name != CLASS_INITIALIZER_NAME {
+                    // Kotlin uses <clinit> in EnclosingMethod metadata. A NameAndType
+                    // is not itself an invocation; method references are checked below.
+                    member_name(name, true)?;
                 }
+            } else {
+                member_name(name, false)?;
+                FieldType::parse_java_str(descriptor)?;
             }
-            Constant::FieldRef {
-                name_and_type_index,
-                ..
+        }
+        Constant::FieldRef {
+            name_and_type_index,
+            ..
+        }
+        | Constant::Dynamic {
+            name_and_type_index,
+            ..
+        } => {
+            let (name, descriptor) = pool.try_get_name_and_type(*name_and_type_index)?;
+            member_name(
+                pool.try_get_utf8(*name)?,
+                matches!(constant, Constant::Dynamic { .. }),
+            )?;
+            FieldType::parse_java_str(pool.try_get_utf8(*descriptor)?)?;
+        }
+        Constant::MethodRef {
+            name_and_type_index,
+            ..
+        }
+        | Constant::InterfaceMethodRef {
+            name_and_type_index,
+            ..
+        }
+        | Constant::InvokeDynamic {
+            name_and_type_index,
+            ..
+        } => {
+            let (name, descriptor) = pool.try_get_name_and_type(*name_and_type_index)?;
+            let name = pool.try_get_utf8(*name)?;
+            if name != CONSTRUCTOR_NAME || !matches!(constant, Constant::MethodRef { .. }) {
+                member_name(name, true)?;
             }
-            | Constant::Dynamic {
-                name_and_type_index,
-                ..
-            } => {
-                let (name, descriptor) = pool.try_get_name_and_type(*name_and_type_index)?;
-                member_name(
-                    pool.try_get_utf8(*name)?,
-                    matches!(constant, Constant::Dynamic { .. }),
-                )?;
-                FieldType::parse_java_str(pool.try_get_utf8(*descriptor)?)?;
+            let descriptor_info =
+                FieldType::method_descriptor_info(pool.try_get_utf8(*descriptor)?)?;
+            if name == CONSTRUCTOR_NAME && !descriptor_info.returns_void {
+                return Err(invalid("Constructor reference must return void"));
             }
-            Constant::MethodRef {
+        }
+        Constant::MethodHandle {
+            reference_kind,
+            reference_index,
+        } => {
+            if let Constant::MethodRef {
                 name_and_type_index,
                 ..
             }
             | Constant::InterfaceMethodRef {
                 name_and_type_index,
                 ..
-            }
-            | Constant::InvokeDynamic {
-                name_and_type_index,
-                ..
-            } => {
-                let (name, descriptor) = pool.try_get_name_and_type(*name_and_type_index)?;
+            } = pool.try_get(*reference_index)?
+            {
+                let (name, _) = pool.try_get_name_and_type(*name_and_type_index)?;
                 let name = pool.try_get_utf8(*name)?;
-                if name != CONSTRUCTOR_NAME || !matches!(constant, Constant::MethodRef { .. }) {
-                    member_name(name, true)?;
-                }
-                let descriptor_info =
-                    FieldType::method_descriptor_info(pool.try_get_utf8(*descriptor)?)?;
-                if name == CONSTRUCTOR_NAME && !descriptor_info.returns_void {
-                    return Err(invalid("Constructor reference must return void"));
-                }
-            }
-            Constant::MethodHandle {
-                reference_kind,
-                reference_index,
-            } => {
-                if let Constant::MethodRef {
-                    name_and_type_index,
-                    ..
-                }
-                | Constant::InterfaceMethodRef {
-                    name_and_type_index,
-                    ..
-                } = pool.try_get(*reference_index)?
+                if (*reference_kind == ReferenceKind::NewInvokeSpecial)
+                    != (name == CONSTRUCTOR_NAME)
+                    || name == CLASS_INITIALIZER_NAME
                 {
-                    let (name, _) = pool.try_get_name_and_type(*name_and_type_index)?;
-                    let name = pool.try_get_utf8(*name)?;
-                    if (*reference_kind == ReferenceKind::NewInvokeSpecial)
-                        != (name == CONSTRUCTOR_NAME)
-                        || name == CLASS_INITIALIZER_NAME
-                    {
-                        return Err(invalid("Illegal MethodHandle target name"));
-                    }
+                    return Err(invalid("Illegal MethodHandle target name"));
                 }
             }
-            _ => {}
         }
+        _ => {}
     }
     Ok(())
 }
@@ -482,75 +417,76 @@ fn unique_names<'a>(
     Ok(())
 }
 
-fn verify_module_tables(class: &ClassFile<'_>) -> Result<()> {
+fn verify_module_attribute(class: &ClassFile<'_>, attribute: &Attribute) -> Result<()> {
     use crate::attributes::{ModuleAccessFlags, RequiresFlags};
     let pool = &class.constant_pool;
-    for attribute in &class.attributes {
-        if let Attribute::Module {
-            module_name_index,
-            flags,
-            requires,
-            exports,
-            opens,
-            uses,
-            provides,
-            ..
-        } = attribute
-        {
-            let name = pool.try_get_module(*module_name_index)?;
-            unique_names(requires.iter().map(|r| r.index), |i| pool.try_get_module(i))?;
-            if name == "java.base" {
-                if !requires.is_empty() {
-                    return Err(invalid("java.base must have no requires entries"));
-                }
-            } else {
-                let base = requires
-                    .iter()
-                    .find(|r| pool.try_get_module(r.index).is_ok_and(|n| n == "java.base"));
-                let Some(base) = base else {
-                    return Err(invalid("Module must require java.base"));
-                };
-                if base.flags.contains(RequiresFlags::SYNTHETIC)
-                    || (class.version.major() >= JAVA_10.major()
-                        && base.flags.contains(RequiresFlags::STATIC_PHASE))
-                {
-                    return Err(invalid("Invalid flags on java.base dependency"));
-                }
+    if let Attribute::Module {
+        module_name_index,
+        flags,
+        requires,
+        exports,
+        opens,
+        uses,
+        provides,
+        ..
+    } = attribute
+    {
+        let name = pool.try_get_module(*module_name_index)?;
+        unique_names(requires.iter().map(|r| r.index), |i| pool.try_get_module(i))?;
+        if name == "java.base" {
+            if !requires.is_empty() {
+                return Err(invalid("java.base must have no requires entries"));
             }
-            if flags.contains(ModuleAccessFlags::OPEN) && !opens.is_empty() {
-                return Err(invalid("Open module must have an empty opens table"));
-            }
-            unique_names(exports.iter().map(|e| e.index), |i| pool.try_get_package(i))?;
-            for export in exports {
-                unique_names(export.to_index.iter().copied(), |i| pool.try_get_module(i))?;
-            }
-            unique_names(opens.iter().map(|e| e.index), |i| pool.try_get_package(i))?;
-            for open in opens {
-                unique_names(open.to_index.iter().copied(), |i| pool.try_get_module(i))?;
-            }
-            unique_names(uses.iter().copied(), |i| pool.try_get_class(i))?;
-            unique_names(provides.iter().map(|p| p.index), |i| pool.try_get_class(i))?;
-            for provider in provides {
-                if provider.with_index.is_empty() {
-                    return Err(invalid("Module provider must name an implementation"));
-                }
-                unique_names(provider.with_index.iter().copied(), |i| {
-                    pool.try_get_class(i)
-                })?;
+        } else {
+            let base = requires
+                .iter()
+                .find(|r| pool.try_get_module(r.index).is_ok_and(|n| n == "java.base"));
+            let Some(base) = base else {
+                return Err(invalid("Module must require java.base"));
+            };
+            if base.flags.contains(RequiresFlags::SYNTHETIC)
+                || (class.version.major() >= JAVA_10.major()
+                    && base.flags.contains(RequiresFlags::STATIC_PHASE))
+            {
+                return Err(invalid("Invalid flags on java.base dependency"));
             }
         }
-        if let Attribute::ModulePackages {
-            package_indexes, ..
-        } = attribute
-        {
-            unique_names(package_indexes.iter().copied(), |i| pool.try_get_package(i))?;
+        if flags.contains(ModuleAccessFlags::OPEN) && !opens.is_empty() {
+            return Err(invalid("Open module must have an empty opens table"));
         }
+        unique_names(exports.iter().map(|e| e.index), |i| pool.try_get_package(i))?;
+        for export in exports {
+            unique_names(export.to_index.iter().copied(), |i| pool.try_get_module(i))?;
+        }
+        unique_names(opens.iter().map(|e| e.index), |i| pool.try_get_package(i))?;
+        for open in opens {
+            unique_names(open.to_index.iter().copied(), |i| pool.try_get_module(i))?;
+        }
+        unique_names(uses.iter().copied(), |i| pool.try_get_class(i))?;
+        unique_names(provides.iter().map(|p| p.index), |i| pool.try_get_class(i))?;
+        for provider in provides {
+            if provider.with_index.is_empty() {
+                return Err(invalid("Module provider must name an implementation"));
+            }
+            unique_names(provider.with_index.iter().copied(), |i| {
+                pool.try_get_class(i)
+            })?;
+        }
+    }
+    if let Attribute::ModulePackages {
+        package_indexes, ..
+    } = attribute
+    {
+        unique_names(package_indexes.iter().copied(), |i| pool.try_get_package(i))?;
     }
     Ok(())
 }
 
-fn verify_code_metadata(class: &ClassFile<'_>, attribute: &Attribute) -> Result<()> {
-    use crate::attributes::attribute::AttributeLocation as L;
+pub(super) fn verify_code_metadata(
+    class: &ClassFile<'_>,
+    attribute: &Attribute,
+    info: &super::bytecode::control_flow::CodeInfo,
+) -> Result<()> {
     let pool = &class.constant_pool;
     let Attribute::Code {
         code,
@@ -562,8 +498,6 @@ fn verify_code_metadata(class: &ClassFile<'_>, attribute: &Attribute) -> Result<
     else {
         return Ok(());
     };
-    verify_attributes(class, attributes, L::Code)?;
-    let info = crate::verifiers::bytecode::control_flow::CodeInfo::from_code(code)?;
     let count = info.code_length();
     for handler in exception_table {
         if handler.catch_type != 0 {
@@ -635,6 +569,32 @@ mod tests {
     use super::*;
     use crate::attributes::attribute::AttributeLocation;
     use crate::attributes::{BootstrapMethod, ExceptionTableEntry, Instruction};
+
+    fn verify_attributes(
+        class: &ClassFile<'_>,
+        attributes: &[Attribute],
+        location: AttributeLocation,
+    ) -> Result<()> {
+        for (index, attribute) in attributes.iter().enumerate() {
+            verify_attribute(class, attribute, &attributes[..index], location)?;
+        }
+        Ok(())
+    }
+
+    fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
+        for constant in &class.constant_pool {
+            verify_constant(class, constant)?;
+        }
+        Ok(())
+    }
+
+    fn verify_code_metadata(class: &ClassFile<'_>, attribute: &Attribute) -> Result<()> {
+        let Attribute::Code { code, .. } = attribute else {
+            return Ok(());
+        };
+        let info = crate::verifiers::bytecode::control_flow::CodeInfo::from_code(code)?;
+        super::verify_code_metadata(class, attribute, &info)
+    }
 
     #[test]
     fn attribute_duplicates_respect_names_and_location() -> Result<()> {

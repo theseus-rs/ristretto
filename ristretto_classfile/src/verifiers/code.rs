@@ -6,6 +6,7 @@ use crate::class_file::ClassFile;
 use crate::constant::Constant;
 use crate::method::Method;
 use crate::method_access_flags::MethodAccessFlags;
+use crate::verifiers::bytecode::control_flow::CodeInfo;
 use crate::verifiers::error::Result;
 use crate::verifiers::error::VerifyError::{InvalidStackFrameOffset, VerificationError};
 use crate::{CLASS_INITIALIZER_NAME, FieldType};
@@ -17,7 +18,7 @@ use ahash::AHashSet;
 ///
 /// # Errors
 /// Returns `VerificationError` if the code attribute is invalid.
-#[expect(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, clippy::too_many_arguments)]
 pub(crate) fn verify(
     class_file: &ClassFile<'_>,
     method: &Method,
@@ -26,6 +27,7 @@ pub(crate) fn verify(
     code: &[Instruction],
     exception_table: &[ExceptionTableEntry],
     attributes: &[Attribute],
+    info: &CodeInfo,
 ) -> Result<u16> {
     // Verify max_locals
     let descriptor_index = method.descriptor_index;
@@ -51,7 +53,6 @@ pub(crate) fn verify(
         }
     }
 
-    let info = crate::verifiers::bytecode::control_flow::CodeInfo::from_code(code)?;
     let code_length = info.code_length();
     if code_length == 0 {
         return Err(VerificationError {
@@ -59,7 +60,7 @@ pub(crate) fn verify(
             message: "Code must not be empty".to_string(),
         });
     }
-    crate::verifiers::bytecode::control_flow::validate_exception_table(exception_table, &info)?;
+    crate::verifiers::bytecode::control_flow::validate_exception_table(exception_table, info)?;
     let mut jump_target_indices = AHashSet::default();
     for (position, instruction) in Instruction::with_offsets(code) {
         let position = u16::try_from(position)?;
@@ -170,6 +171,28 @@ mod test {
     use crate::attributes::StackFrame;
     use crate::verifiers::VerifyError::InvalidInstructionOffset;
     use crate::version::Version;
+
+    fn verify(
+        class_file: &ClassFile<'_>,
+        method: &Method,
+        max_stack: u16,
+        max_locals: u16,
+        code: &[Instruction],
+        exception_table: &[ExceptionTableEntry],
+        attributes: &[Attribute],
+    ) -> Result<u16> {
+        let info = CodeInfo::from_code(code)?;
+        super::verify(
+            class_file,
+            method,
+            max_stack,
+            max_locals,
+            code,
+            exception_table,
+            attributes,
+            &info,
+        )
+    }
 
     fn get_dummy_method() -> Method {
         Method {

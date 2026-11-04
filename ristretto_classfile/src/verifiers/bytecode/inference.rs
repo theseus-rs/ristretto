@@ -96,6 +96,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
     /// # Errors
     ///
     /// Returns an error if the method's code cannot be processed.
+    #[cfg(test)]
     pub fn new(
         class_file: &'a ClassFile<'a>,
         method: &'a Method,

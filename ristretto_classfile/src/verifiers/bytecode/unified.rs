@@ -25,11 +25,13 @@ use crate::method::Method;
 use crate::method_access_flags::MethodAccessFlags;
 use crate::verifiers::bytecode::cache::{CacheScope, CachedResult, MethodKey, VerificationCache};
 use crate::verifiers::bytecode::config::VerifierConfig;
+use crate::verifiers::bytecode::control_flow::CodeInfo;
 use crate::verifiers::bytecode::diagnostics::VerificationDiagnostic;
 use crate::verifiers::bytecode::fast_path::{FastPathResult, FastPathVerifier};
 use crate::verifiers::bytecode::inference::InferenceVerifier;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
+use crate::verifiers::methods::VerifiedMethod;
 use crate::{CLASS_INITIALIZER_NAME, JAVA_6};
 use std::io::Write;
 
@@ -117,6 +119,17 @@ pub fn verify_method<C: VerificationContext>(
     config: &VerifierConfig,
 ) -> Result<VerificationResult> {
     crate::verifiers::format::verify_method(class_file, method)?;
+    verify_method_preverified(class_file, method, context, config, None)
+}
+
+/// Called only after structural checks, either for a standalone method or the whole class.
+fn verify_method_preverified<C: VerificationContext>(
+    class_file: &ClassFile<'_>,
+    method: &Method,
+    context: &C,
+    config: &VerifierConfig,
+    code_info: Option<CodeInfo>,
+) -> Result<VerificationResult> {
     // Native and abstract methods should not have Code attribute
     if method
         .access_flags
@@ -161,21 +174,17 @@ pub fn verify_method<C: VerificationContext>(
     let use_fast_path = !config.use_inference() && config.requires_stackmap(major_version);
 
     let (fast_path_result, code_info) = if use_fast_path {
-        verify_with_fast_path(class_file, method, context, config)?
+        verify_with_fast_path(class_file, method, context, config, code_info)?
     } else {
-        (None, None)
+        (None, code_info)
     };
     if let Some(result) = fast_path_result {
         return Ok(result);
     }
 
     // Use type inference (either directly or as fallback)
-    let mut inference_verifier = match code_info {
-        Some(info) => {
-            InferenceVerifier::with_code_info(class_file, method, context, config, Some(info))?
-        }
-        None => InferenceVerifier::new(class_file, method, context, config)?,
-    };
+    let mut inference_verifier =
+        InferenceVerifier::with_code_info(class_file, method, context, config, code_info)?;
 
     inference_verifier.verify()?;
     Ok(VerificationResult::success(VerificationPath::Inference))
@@ -186,11 +195,10 @@ fn verify_with_fast_path<C: VerificationContext>(
     method: &Method,
     context: &C,
     config: &VerifierConfig,
-) -> Result<(
-    Option<VerificationResult>,
-    Option<super::control_flow::CodeInfo>,
-)> {
-    let mut fast_verifier = FastPathVerifier::new(class_file, method, context, config)?;
+    code_info: Option<CodeInfo>,
+) -> Result<(Option<VerificationResult>, Option<CodeInfo>)> {
+    let mut fast_verifier =
+        FastPathVerifier::with_code_info(class_file, method, context, config, code_info)?;
     match fast_verifier.verify() {
         FastPathResult::Success => Ok((
             Some(VerificationResult::success(VerificationPath::FastPath)),
@@ -228,7 +236,7 @@ pub fn verify_method_cached<C: VerificationContext>(
     scope.extend_from_slice(&context_token.to_be_bytes());
     write!(scope, "{config:?}").map_err(crate::Error::from)?;
     let scope = cache.intern_scope(scope);
-    verify_method_scoped(class_file, method, context, config, cache, &scope)
+    verify_method_scoped(class_file, method, context, config, cache, &scope, None)
 }
 
 fn verify_method_scoped<C: VerificationContext>(
@@ -238,6 +246,7 @@ fn verify_method_scoped<C: VerificationContext>(
     config: &VerifierConfig,
     cache: &VerificationCache,
     scope: &CacheScope,
+    verified: Option<VerifiedMethod>,
 ) -> Result<VerificationResult> {
     // Build cache key
     let class_name = class_file
@@ -267,7 +276,11 @@ fn verify_method_scoped<C: VerificationContext>(
     }
 
     // Perform verification
-    let result = verify_method(class_file, method, context, config);
+    let result = if let Some(verified) = verified {
+        verify_method_preverified(class_file, method, context, config, verified.code_info)
+    } else {
+        verify_method(class_file, method, context, config)
+    };
 
     // Cache result
     match &result {
@@ -294,11 +307,12 @@ pub fn verify_class<C: VerificationContext>(
     context: &C,
     config: &VerifierConfig,
 ) -> Result<Vec<VerificationResult>> {
-    class_file.verify()?;
+    let verified = crate::verifiers::verifier::verify_with_code_info(class_file)?;
     let mut results = Vec::with_capacity(class_file.methods.len());
 
-    for method in &class_file.methods {
-        let result = verify_method(class_file, method, context, config)?;
+    for (method, verified) in class_file.methods.iter().zip(verified) {
+        let result =
+            verify_method_preverified(class_file, method, context, config, verified.code_info)?;
         results.push(result);
     }
 
@@ -319,7 +333,7 @@ pub fn verify_class_cached<C: VerificationContext>(
     let Some(context_token) = context.cache_token().filter(|_| cache.is_enabled()) else {
         return verify_class(class_file, context, config);
     };
-    class_file.verify()?;
+    let verified = crate::verifiers::verifier::verify_with_code_info(class_file)?;
     // Method names/descriptors are unique after class verification. The complete
     // class bytes include every method, so all keys can borrow one exact scope.
     let mut scope = vec![1]; // Distinguish class-wide from standalone method scopes.
@@ -328,9 +342,15 @@ pub fn verify_class_cached<C: VerificationContext>(
     write!(scope, "{config:?}").map_err(crate::Error::from)?;
     let scope = cache.intern_scope(scope);
     let mut results = Vec::with_capacity(class_file.methods.len());
-    for method in &class_file.methods {
+    for (method, verified) in class_file.methods.iter().zip(verified) {
         results.push(verify_method_scoped(
-            class_file, method, context, config, cache, &scope,
+            class_file,
+            method,
+            context,
+            config,
+            cache,
+            &scope,
+            Some(verified),
         )?);
     }
 
@@ -380,7 +400,9 @@ mod tests {
     use crate::constant::Constant;
     use crate::constant_pool::ConstantPool;
     use crate::verifiers::bytecode::config::FallbackStrategy;
+    use crate::verifiers::bytecode::control_flow::CODE_INFO_BUILDS;
     use crate::verifiers::bytecode::handlers::test_utils::MockContext;
+    use crate::verifiers::method_access_flags::METHOD_FLAG_CHECKS;
 
     struct UnversionedContext;
 
@@ -419,6 +441,82 @@ mod tests {
             attributes: vec![],
             code_source_url: None,
         }
+    }
+
+    #[test]
+    fn class_verification_builds_boundaries_and_checks_flags_once() {
+        let mut class = create_mock_class_file();
+        class.methods.push(Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![Attribute::Code {
+                name_index: 5,
+                max_stack: 1,
+                max_locals: 0,
+                code: vec![Instruction::Return],
+                exception_table: vec![],
+                attributes: vec![],
+            }],
+        });
+        let config = VerifierConfig::default();
+        let inference = config
+            .clone()
+            .with_fallback_strategy(FallbackStrategy::AlwaysInference);
+        let assert_once = || {
+            assert_eq!(CODE_INFO_BUILDS.get(), 1);
+            assert_eq!(METHOD_FLAG_CHECKS.get(), 1);
+        };
+        for (config, expected) in [
+            (&config, VerificationPath::FastPath),
+            (&inference, VerificationPath::Inference),
+        ] {
+            CODE_INFO_BUILDS.set(0);
+            METHOD_FLAG_CHECKS.set(0);
+            let results = verify_class(&class, &MockContext::PERMISSIVE, config).unwrap();
+            assert_eq!(results.first().unwrap().path_used, expected);
+            assert_once();
+        }
+        let cache = VerificationCache::new(true);
+        for expected in [VerificationPath::FastPath, VerificationPath::Cached] {
+            CODE_INFO_BUILDS.set(0);
+            METHOD_FLAG_CHECKS.set(0);
+            let results =
+                verify_class_cached(&class, &MockContext::PERMISSIVE, &config, &cache).unwrap();
+            assert_eq!(results.first().unwrap().path_used, expected);
+            assert_once();
+        }
+        // An incompatible dead return exercises structural reachability analysis.
+        class.version = crate::JAVA_5;
+        if let Some(Attribute::Code { code, .. }) = class
+            .methods
+            .first_mut()
+            .and_then(|m| m.attributes.first_mut())
+        {
+            code.push(Instruction::Ireturn);
+        }
+        CODE_INFO_BUILDS.set(0);
+        METHOD_FLAG_CHECKS.set(0);
+        verify_class(&class, &MockContext::PERMISSIVE, &config).unwrap();
+        assert_once();
+
+        // Java 6 fallback must consume the fast path's original boundaries.
+        class.version = JAVA_6;
+        if let Some(Attribute::Code { code, .. }) = class
+            .methods
+            .first_mut()
+            .and_then(|m| m.attributes.first_mut())
+        {
+            *code = vec![Instruction::Goto(3), Instruction::Return];
+        }
+        CODE_INFO_BUILDS.set(0);
+        METHOD_FLAG_CHECKS.set(0);
+        let results = verify_class(&class, &MockContext::PERMISSIVE, &config).unwrap();
+        assert_eq!(
+            results.first().unwrap().path_used,
+            VerificationPath::Inference
+        );
+        assert_once();
     }
 
     #[test]

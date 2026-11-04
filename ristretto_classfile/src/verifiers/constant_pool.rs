@@ -14,166 +14,165 @@ use crate::verifiers::error::VerifyError::{
 /// # Errors
 /// Returns `VerificationError` if the constant pool is invalid.
 pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
-    verify_version_constants(class_file)?;
-    verify_constant_indexes(class_file)?;
+    let len = u16::try_from(class_file.constant_pool.len())?;
+    for index in 1..=len {
+        let Some(constant) = class_file.constant_pool.get(index) else {
+            continue;
+        };
+        verify_version_constant(class_file, constant)?;
+        verify_constant_index(class_file, index, constant)?;
+        super::format::verify_constant(class_file, constant)?;
+    }
     Ok(())
 }
 
 /// Verify the `ClassFile` `ConstantPool` for version specific constants.
-fn verify_version_constants(class_file: &ClassFile<'_>) -> Result<()> {
-    for constant in &class_file.constant_pool {
-        if !constant.valid_for_version(&class_file.version) {
-            let tag = constant.tag();
-            return Err(InvalidVersionConstant(tag));
-        }
+fn verify_version_constant(class_file: &ClassFile<'_>, constant: &Constant<'_>) -> Result<()> {
+    if !constant.valid_for_version(&class_file.version) {
+        return Err(InvalidVersionConstant(constant.tag()));
     }
-
     Ok(())
 }
 
 /// Verify the `ClassFile` `ConstantPool` indexes.
 #[expect(clippy::too_many_lines)]
-fn verify_constant_indexes(class_file: &ClassFile<'_>) -> Result<()> {
+fn verify_constant_index(
+    class_file: &ClassFile<'_>,
+    index: u16,
+    constant: &Constant<'_>,
+) -> Result<()> {
     let constant_pool = &class_file.constant_pool;
-    let len = u16::try_from(constant_pool.len())?;
-    for index in 1..=len {
-        let Some(constant) = constant_pool.get(index) else {
-            continue;
-        };
-        match constant {
-            Constant::Class(name_index)
-            | Constant::Module(name_index)
-            | Constant::Package(name_index) => {
-                match constant_pool.get(*name_index) {
-                    Some(Constant::Utf8 { .. }) => {} // valid index
-                    None => return Err(InvalidConstantPoolIndex(index)),
-                    _ => return Err(InvalidConstantPoolIndexType(index)),
-                }
+    match constant {
+        Constant::Class(name_index)
+        | Constant::Module(name_index)
+        | Constant::Package(name_index) => {
+            match constant_pool.get(*name_index) {
+                Some(Constant::Utf8 { .. }) => {} // valid index
+                None => return Err(InvalidConstantPoolIndex(index)),
+                _ => return Err(InvalidConstantPoolIndexType(index)),
             }
-            Constant::String(string_index) => {
-                match constant_pool.get(*string_index) {
-                    Some(Constant::Utf8 { .. }) => {} // valid index
-                    None => return Err(InvalidConstantPoolIndex(index)),
-                    _ => return Err(InvalidConstantPoolIndexType(index)),
-                }
-            }
-            Constant::FieldRef {
-                class_index,
-                name_and_type_index,
-            }
-            | Constant::MethodRef {
-                class_index,
-                name_and_type_index,
-            }
-            | Constant::InterfaceMethodRef {
-                class_index,
-                name_and_type_index,
-            } => {
-                match constant_pool.get(*class_index) {
-                    Some(Constant::Class { .. }) => {} // valid index
-                    None => return Err(InvalidConstantPoolIndex(index)),
-                    _ => return Err(InvalidConstantPoolIndexType(index)),
-                }
-                match constant_pool.get(*name_and_type_index) {
-                    Some(Constant::NameAndType { .. }) => {} // valid index
-                    None => return Err(InvalidConstantPoolIndex(index)),
-                    _ => return Err(InvalidConstantPoolIndexType(index)),
-                }
-            }
-            Constant::NameAndType {
-                name_index,
-                descriptor_index,
-            } => {
-                match constant_pool.get(*name_index) {
-                    Some(Constant::Utf8 { .. }) => {} // valid index
-                    None => return Err(InvalidConstantPoolIndex(index)),
-                    _ => return Err(InvalidConstantPoolIndexType(index)),
-                }
-                match constant_pool.get(*descriptor_index) {
-                    Some(Constant::Utf8 { .. }) => {} // valid index
-                    None => return Err(InvalidConstantPoolIndex(index)),
-                    _ => return Err(InvalidConstantPoolIndexType(index)),
-                }
-            }
-            Constant::MethodHandle {
-                reference_kind,
-                reference_index,
-            } => match reference_kind {
-                ReferenceKind::GetField
-                | ReferenceKind::GetStatic
-                | ReferenceKind::PutField
-                | ReferenceKind::PutStatic => {
-                    match constant_pool.get(*reference_index) {
-                        Some(Constant::FieldRef { .. }) => {} // valid index
-                        None => return Err(InvalidConstantPoolIndex(index)),
-                        _ => return Err(InvalidConstantPoolIndexType(index)),
-                    }
-                }
-                ReferenceKind::InvokeVirtual | ReferenceKind::NewInvokeSpecial => {
-                    match constant_pool.get(*reference_index) {
-                        Some(Constant::MethodRef { .. }) => {} // valid index
-                        None => return Err(InvalidConstantPoolIndex(index)),
-                        _ => return Err(InvalidConstantPoolIndexType(index)),
-                    }
-                }
-                ReferenceKind::InvokeStatic | ReferenceKind::InvokeSpecial => {
-                    match constant_pool.get(*reference_index) {
-                        Some(Constant::MethodRef { .. }) => {} // valid index
-                        Some(Constant::InterfaceMethodRef { .. })
-                            if class_file.version >= JAVA_8 => {} // valid index
-                        None => return Err(InvalidConstantPoolIndex(index)),
-                        _ => return Err(InvalidConstantPoolIndexType(index)),
-                    }
-                }
-                ReferenceKind::InvokeInterface => {
-                    match constant_pool.get(*reference_index) {
-                        Some(Constant::InterfaceMethodRef { .. }) => {} // valid index
-                        None => return Err(InvalidConstantPoolIndex(index)),
-                        _ => return Err(InvalidConstantPoolIndexType(index)),
-                    }
-                }
-            },
-            Constant::MethodType(descriptor_index) => {
-                match constant_pool.get(*descriptor_index) {
-                    Some(Constant::Utf8 { .. }) => {} // valid index
-                    None => return Err(InvalidConstantPoolIndex(index)),
-                    _ => return Err(InvalidConstantPoolIndexType(index)),
-                }
-            }
-            Constant::Dynamic {
-                bootstrap_method_attr_index,
-                name_and_type_index,
-            }
-            | Constant::InvokeDynamic {
-                bootstrap_method_attr_index,
-                name_and_type_index,
-            } => {
-                let bootstrap_methods = class_file
-                    .attributes
-                    .iter()
-                    .find(|attribute| matches!(attribute, Attribute::BootstrapMethods { .. }));
-
-                match bootstrap_methods {
-                    Some(Attribute::BootstrapMethods { methods, .. }) => {
-                        if *bootstrap_method_attr_index as usize >= methods.len() {
-                            return Err(InvalidBootstrapMethodIndex(
-                                *bootstrap_method_attr_index as usize,
-                            ));
-                        }
-                    }
-                    _ => return Err(BootstrapMethodsNotDefined),
-                }
-
-                match constant_pool.get(*name_and_type_index) {
-                    Some(Constant::NameAndType { .. }) => {} // valid index
-                    None => return Err(InvalidConstantPoolIndex(index)),
-                    _ => return Err(InvalidConstantPoolIndexType(index)),
-                }
-            }
-            _ => {}
         }
-    }
+        Constant::String(string_index) => {
+            match constant_pool.get(*string_index) {
+                Some(Constant::Utf8 { .. }) => {} // valid index
+                None => return Err(InvalidConstantPoolIndex(index)),
+                _ => return Err(InvalidConstantPoolIndexType(index)),
+            }
+        }
+        Constant::FieldRef {
+            class_index,
+            name_and_type_index,
+        }
+        | Constant::MethodRef {
+            class_index,
+            name_and_type_index,
+        }
+        | Constant::InterfaceMethodRef {
+            class_index,
+            name_and_type_index,
+        } => {
+            match constant_pool.get(*class_index) {
+                Some(Constant::Class { .. }) => {} // valid index
+                None => return Err(InvalidConstantPoolIndex(index)),
+                _ => return Err(InvalidConstantPoolIndexType(index)),
+            }
+            match constant_pool.get(*name_and_type_index) {
+                Some(Constant::NameAndType { .. }) => {} // valid index
+                None => return Err(InvalidConstantPoolIndex(index)),
+                _ => return Err(InvalidConstantPoolIndexType(index)),
+            }
+        }
+        Constant::NameAndType {
+            name_index,
+            descriptor_index,
+        } => {
+            match constant_pool.get(*name_index) {
+                Some(Constant::Utf8 { .. }) => {} // valid index
+                None => return Err(InvalidConstantPoolIndex(index)),
+                _ => return Err(InvalidConstantPoolIndexType(index)),
+            }
+            match constant_pool.get(*descriptor_index) {
+                Some(Constant::Utf8 { .. }) => {} // valid index
+                None => return Err(InvalidConstantPoolIndex(index)),
+                _ => return Err(InvalidConstantPoolIndexType(index)),
+            }
+        }
+        Constant::MethodHandle {
+            reference_kind,
+            reference_index,
+        } => match reference_kind {
+            ReferenceKind::GetField
+            | ReferenceKind::GetStatic
+            | ReferenceKind::PutField
+            | ReferenceKind::PutStatic => {
+                match constant_pool.get(*reference_index) {
+                    Some(Constant::FieldRef { .. }) => {} // valid index
+                    None => return Err(InvalidConstantPoolIndex(index)),
+                    _ => return Err(InvalidConstantPoolIndexType(index)),
+                }
+            }
+            ReferenceKind::InvokeVirtual | ReferenceKind::NewInvokeSpecial => {
+                match constant_pool.get(*reference_index) {
+                    Some(Constant::MethodRef { .. }) => {} // valid index
+                    None => return Err(InvalidConstantPoolIndex(index)),
+                    _ => return Err(InvalidConstantPoolIndexType(index)),
+                }
+            }
+            ReferenceKind::InvokeStatic | ReferenceKind::InvokeSpecial => {
+                match constant_pool.get(*reference_index) {
+                    Some(Constant::MethodRef { .. }) => {} // valid index
+                    Some(Constant::InterfaceMethodRef { .. }) if class_file.version >= JAVA_8 => {} // valid index
+                    None => return Err(InvalidConstantPoolIndex(index)),
+                    _ => return Err(InvalidConstantPoolIndexType(index)),
+                }
+            }
+            ReferenceKind::InvokeInterface => {
+                match constant_pool.get(*reference_index) {
+                    Some(Constant::InterfaceMethodRef { .. }) => {} // valid index
+                    None => return Err(InvalidConstantPoolIndex(index)),
+                    _ => return Err(InvalidConstantPoolIndexType(index)),
+                }
+            }
+        },
+        Constant::MethodType(descriptor_index) => {
+            match constant_pool.get(*descriptor_index) {
+                Some(Constant::Utf8 { .. }) => {} // valid index
+                None => return Err(InvalidConstantPoolIndex(index)),
+                _ => return Err(InvalidConstantPoolIndexType(index)),
+            }
+        }
+        Constant::Dynamic {
+            bootstrap_method_attr_index,
+            name_and_type_index,
+        }
+        | Constant::InvokeDynamic {
+            bootstrap_method_attr_index,
+            name_and_type_index,
+        } => {
+            let bootstrap_methods = class_file
+                .attributes
+                .iter()
+                .find(|attribute| matches!(attribute, Attribute::BootstrapMethods { .. }));
 
+            match bootstrap_methods {
+                Some(Attribute::BootstrapMethods { methods, .. }) => {
+                    if *bootstrap_method_attr_index as usize >= methods.len() {
+                        return Err(InvalidBootstrapMethodIndex(
+                            *bootstrap_method_attr_index as usize,
+                        ));
+                    }
+                }
+                _ => return Err(BootstrapMethodsNotDefined),
+            }
+
+            match constant_pool.get(*name_and_type_index) {
+                Some(Constant::NameAndType { .. }) => {} // valid index
+                None => return Err(InvalidConstantPoolIndex(index)),
+                _ => return Err(InvalidConstantPoolIndexType(index)),
+            }
+        }
+        _ => {}
+    }
     Ok(())
 }
 
@@ -184,6 +183,22 @@ mod test {
     use crate::class_file::ClassFile;
     use crate::constant::Constant;
     use crate::{JAVA_6, JAVA_8, JAVA_10, Version};
+
+    fn verify_version_constants(class: &ClassFile<'_>) -> Result<()> {
+        for constant in &class.constant_pool {
+            verify_version_constant(class, constant)?;
+        }
+        Ok(())
+    }
+
+    fn verify_constant_indexes(class: &ClassFile<'_>) -> Result<()> {
+        for index in 1..=u16::try_from(class.constant_pool.len())? {
+            if let Some(constant) = class.constant_pool.get(index) {
+                verify_constant_index(class, index, constant)?;
+            }
+        }
+        Ok(())
+    }
 
     fn get_class_file() -> Result<ClassFile<'static>> {
         let class_bytes = include_bytes!("../../../classes/Minimum.class");

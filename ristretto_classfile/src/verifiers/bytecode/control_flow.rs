@@ -11,8 +11,14 @@
 //! - [JVMS §4.9 - Constraints on Java Virtual Machine Code](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.9)
 //! - [JVMS §4.10.1 - Verification by Type Checking](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1)
 
-use crate::attributes::{ExceptionTableEntry, Instruction, LookupSwitch, StackFrame, TableSwitch};
+use crate::attributes::{ExceptionTableEntry, Instruction, LookupSwitch, TableSwitch};
 use crate::verifiers::error::{Result, VerifyError};
+
+// Per-thread counters keep the allocation regression independent of parallel tests.
+#[cfg(test)]
+thread_local! {
+    pub(crate) static CODE_INFO_BUILDS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
 
 /// Information about the bytecode for control flow analysis.
 ///
@@ -65,6 +71,8 @@ impl CodeInfo {
     /// # Errors
     /// Returns an error if encoding fails or code exceeds the JVM size limit.
     pub fn from_code(code: &[Instruction]) -> Result<Self> {
+        #[cfg(test)]
+        CODE_INFO_BUILDS.update(|count| count + 1);
         let mut offsets = Vec::with_capacity(code.len());
         let mut length = 0;
         for instruction in code {
@@ -397,74 +405,6 @@ fn add_fallthrough_successor(
     Ok(())
 }
 
-/// Decodes stack map table entries and returns frame information at each offset.
-///
-/// The `StackMapTable` attribute contains delta-encoded frames. This function
-/// decodes them into absolute offsets.
-///
-/// # Arguments
-///
-/// * `stack_frames` - The stack frames from the `StackMapTable` attribute
-/// * `code_info` - Code boundary information
-///
-/// # Returns
-///
-/// A vector of (offset, `stack_frame`) pairs.
-///
-/// # Errors
-///
-/// Returns an error if the `StackMapTable` contains invalid offsets.
-pub fn decode_stack_map_table<'a>(
-    stack_frames: &'a [StackFrame],
-    code_info: &CodeInfo,
-) -> Result<Vec<(u16, &'a StackFrame)>> {
-    let mut result = Vec::with_capacity(stack_frames.len());
-    let mut current_offset: i32 = -1; // Previous offset (starts before first instruction)
-
-    for frame in stack_frames {
-        let offset_delta = get_offset_delta(frame);
-
-        // Calculate the actual offset
-        // First frame: offset = offset_delta
-        // Subsequent frames: offset = previous_offset + offset_delta + 1
-        let offset = if current_offset < 0 {
-            offset_delta
-        } else {
-            let prev = u16::try_from(current_offset)?;
-            prev.checked_add(offset_delta)
-                .and_then(|o| o.checked_add(1))
-                .ok_or_else(|| {
-                    VerifyError::VerifyError("StackMapTable offset overflow".to_string())
-                })?
-        };
-
-        // Validate the offset is a valid instruction boundary
-        if !code_info.is_valid_offset(offset) {
-            return Err(VerifyError::VerifyError(format!(
-                "StackMapTable frame offset {offset} is not a valid instruction boundary"
-            )));
-        }
-
-        result.push((offset, frame));
-        current_offset = i32::from(offset);
-    }
-
-    Ok(result)
-}
-
-/// Extracts the offset delta from a stack frame.
-fn get_offset_delta(frame: &StackFrame) -> u16 {
-    match frame {
-        StackFrame::SameFrame { frame_type } => u16::from(*frame_type),
-        StackFrame::SameLocals1StackItemFrame { frame_type, .. } => u16::from(*frame_type) - 64,
-        StackFrame::SameLocals1StackItemFrameExtended { offset_delta, .. }
-        | StackFrame::ChopFrame { offset_delta, .. }
-        | StackFrame::SameFrameExtended { offset_delta, .. }
-        | StackFrame::AppendFrame { offset_delta, .. }
-        | StackFrame::FullFrame { offset_delta, .. } => *offset_delta,
-    }
-}
-
 /// Worklist-based algorithm state for dataflow analysis.
 ///
 /// Uses a bitset for efficient tracking of which instructions need (re)processing.
@@ -767,88 +707,6 @@ mod tests {
                 (vec![3, 1], true)
             );
         }
-    }
-
-    #[test]
-    fn test_decode_stack_map_table_offsets() {
-        let info = CodeInfo::new(vec![0, 1, 3, 6], 7);
-        let frames = vec![
-            StackFrame::SameFrame { frame_type: 1 },
-            StackFrame::SameFrameExtended {
-                frame_type: 251,
-                offset_delta: 1,
-            },
-            StackFrame::SameLocals1StackItemFrame {
-                frame_type: 66,
-                stack: vec![],
-            },
-        ];
-
-        let decoded = decode_stack_map_table(&frames, &info).unwrap();
-        assert_eq!(
-            decoded
-                .iter()
-                .map(|(offset, _)| *offset)
-                .collect::<Vec<_>>(),
-            vec![1, 3, 6]
-        );
-        assert!(decode_stack_map_table(&[StackFrame::SameFrame { frame_type: 2 }], &info).is_err());
-    }
-
-    #[test]
-    fn test_decode_stack_map_table_offset_overflow_and_delta_variants() {
-        let info = CodeInfo::new(vec![u16::MAX], u16::MAX);
-        let frames = [
-            StackFrame::SameFrameExtended {
-                frame_type: 251,
-                offset_delta: u16::MAX,
-            },
-            StackFrame::SameFrameExtended {
-                frame_type: 251,
-                offset_delta: 0,
-            },
-        ];
-        assert!(decode_stack_map_table(&frames, &info).is_err());
-
-        assert_eq!(
-            4,
-            get_offset_delta(&StackFrame::SameLocals1StackItemFrame {
-                frame_type: 68,
-                stack: Vec::new(),
-            })
-        );
-        assert_eq!(
-            7,
-            get_offset_delta(&StackFrame::AppendFrame {
-                frame_type: 252,
-                offset_delta: 7,
-                locals: Vec::new(),
-            })
-        );
-        assert_eq!(
-            8,
-            get_offset_delta(&StackFrame::SameLocals1StackItemFrameExtended {
-                frame_type: 247,
-                offset_delta: 8,
-                stack: Vec::new(),
-            })
-        );
-        assert_eq!(
-            6,
-            get_offset_delta(&StackFrame::ChopFrame {
-                frame_type: 248,
-                offset_delta: 6,
-            })
-        );
-        assert_eq!(
-            9,
-            get_offset_delta(&StackFrame::FullFrame {
-                frame_type: 255,
-                offset_delta: 9,
-                locals: Vec::new(),
-                stack: Vec::new(),
-            })
-        );
     }
 
     #[test]

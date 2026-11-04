@@ -1,14 +1,10 @@
 //! # Verification Cache
 //!
-//! This module provides caching for verification artifacts to avoid
-//! redundant parsing and computation.
+//! This module caches method verification results to avoid redundant computation.
 //!
 //! # Cached Artifacts
 //!
-//! - Decoded `StackMapTable` per method
-//! - Parsed method descriptors
 //! - Per-method verification results
-//! - Constant pool decoding helpers
 //!
 //! # Thread Safety
 //!
@@ -18,13 +14,12 @@
 //!
 //! - [JVMS §4.10 - Verification of class Files](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10)
 
-use ahash::{AHashMap, AHashSet};
+use ahash::AHashSet;
 use hashbrown::Equivalent;
 use std::borrow::Cow;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLock};
 
-use crate::FieldType;
 use crate::java_string::{JavaStr, JavaString};
 
 /// Cached verification result for a method.
@@ -145,20 +140,10 @@ impl<'a> MethodKey<'a> {
     }
 }
 
-/// Parsed method descriptor cache entry.
-#[derive(Debug, Clone)]
-pub struct ParsedDescriptor {
-    /// Parameter types.
-    pub parameters: Vec<FieldType>,
-    /// Return type (None for void).
-    pub return_type: Option<FieldType>,
-}
-
-/// Verification cache for reusing parsed artifacts.
+/// Verification cache for reusing method results.
 ///
-/// This cache stores verification-related artifacts that are expensive
-/// to compute, allowing them to be reused across multiple verification
-/// passes or class loads.
+/// Results are scoped to exact class, method, configuration, and context identities
+/// so repeated verification can safely reuse them.
 #[derive(Debug, Default)]
 pub struct VerificationCache {
     /// Whether caching is enabled.
@@ -173,9 +158,6 @@ pub struct VerificationCache {
     /// Scope interning compares complete bytes before sharing an identity.
     scopes: RwLock<AHashSet<CacheScope>>,
 
-    /// Cached parsed descriptors.
-    descriptors: RwLock<AHashMap<String, ParsedDescriptor>>,
-
     /// Cache statistics.
     stats: RwLock<CacheStats>,
 }
@@ -187,10 +169,6 @@ pub struct CacheStats {
     pub result_hits: u64,
     /// Number of cache misses for results.
     pub result_misses: u64,
-    /// Number of cache hits for descriptors.
-    pub descriptor_hits: u64,
-    /// Number of cache misses for descriptors.
-    pub descriptor_misses: u64,
 }
 
 impl VerificationCache {
@@ -203,7 +181,6 @@ impl VerificationCache {
             results: RwLock::new(hashbrown::HashMap::with_hasher(
                 ahash::RandomState::default(),
             )),
-            descriptors: RwLock::new(AHashMap::default()),
             stats: RwLock::new(CacheStats::default()),
         }
     }
@@ -291,23 +268,6 @@ impl VerificationCache {
         }
     }
 
-    /// Gets a cached parsed descriptor.
-    #[must_use]
-    pub fn get_descriptor(&self, descriptor: &str) -> Option<ParsedDescriptor> {
-        if !self.enabled {
-            return None;
-        }
-
-        let guard = self.descriptors.read().ok()?;
-        let result = guard.get(descriptor).cloned();
-
-        drop(guard);
-
-        self.record_descriptor_lookup(result.is_some());
-
-        result
-    }
-
     fn record_result_lookup(&self, hit: bool) {
         let Ok(mut stats) = self.stats.write() else {
             return;
@@ -317,44 +277,6 @@ impl VerificationCache {
         } else {
             stats.result_misses += 1;
         }
-    }
-
-    fn record_descriptor_lookup(&self, hit: bool) {
-        let Ok(mut stats) = self.stats.write() else {
-            return;
-        };
-        if hit {
-            stats.descriptor_hits += 1;
-        } else {
-            stats.descriptor_misses += 1;
-        }
-    }
-
-    /// Parses and caches a method descriptor.
-    pub fn parse_descriptor(&self, descriptor: &str) -> Option<ParsedDescriptor> {
-        // Check cache first
-        if let Some(cached) = self.get_descriptor(descriptor) {
-            return Some(cached);
-        }
-
-        // Parse the descriptor
-        let java_descriptor = JavaStr::cow_from_str(descriptor);
-        let (parameters, return_type) =
-            FieldType::parse_method_descriptor(&java_descriptor).ok()?;
-
-        let parsed = ParsedDescriptor {
-            parameters,
-            return_type,
-        };
-
-        // Cache it
-        if self.enabled
-            && let Ok(mut guard) = self.descriptors.write()
-        {
-            guard.insert(descriptor.to_string(), parsed.clone());
-        }
-
-        Some(parsed)
     }
 
     /// Gets cache statistics.
@@ -371,9 +293,6 @@ impl VerificationCache {
         if let Ok(mut guard) = self.results.write() {
             guard.clear();
         }
-        if let Ok(mut guard) = self.descriptors.write() {
-            guard.clear();
-        }
         if let Ok(mut stats) = self.stats.write() {
             *stats = CacheStats::default();
         }
@@ -383,102 +302,6 @@ impl VerificationCache {
     #[must_use]
     pub fn result_count(&self) -> usize {
         self.results.read().map_or(0, |g| g.len())
-    }
-
-    /// Returns the number of cached descriptors.
-    #[must_use]
-    pub fn descriptor_count(&self) -> usize {
-        self.descriptors.read().map_or(0, |g| g.len())
-    }
-}
-
-/// Arena-style allocator for verification frames.
-///
-/// This provides a pool of reusable frame buffers to reduce allocation
-/// overhead during verification.
-#[derive(Debug)]
-pub struct FramePool {
-    /// Pool of reusable local variable buffers.
-    locals_pool: Vec<Vec<crate::verifiers::bytecode::type_system::VerificationType>>,
-    /// Pool of reusable stack buffers.
-    stack_pool: Vec<Vec<crate::verifiers::bytecode::type_system::VerificationType>>,
-    /// Maximum pool size.
-    max_size: usize,
-}
-
-impl FramePool {
-    /// Creates a new frame pool with the given maximum size.
-    #[must_use]
-    pub fn new(max_size: usize) -> Self {
-        Self {
-            locals_pool: Vec::with_capacity(max_size),
-            stack_pool: Vec::with_capacity(max_size),
-            max_size,
-        }
-    }
-
-    /// Acquires a locals buffer from the pool.
-    pub fn acquire_locals(
-        &mut self,
-        capacity: usize,
-    ) -> Vec<crate::verifiers::bytecode::type_system::VerificationType> {
-        if let Some(mut buffer) = self.locals_pool.pop() {
-            buffer.clear();
-            if buffer.capacity() < capacity {
-                buffer.reserve(capacity);
-            }
-            buffer
-        } else {
-            Vec::with_capacity(capacity)
-        }
-    }
-
-    /// Returns a locals buffer to the pool.
-    pub fn return_locals(
-        &mut self,
-        buffer: Vec<crate::verifiers::bytecode::type_system::VerificationType>,
-    ) {
-        if self.locals_pool.len() < self.max_size {
-            self.locals_pool.push(buffer);
-        }
-    }
-
-    /// Acquires a stack buffer from the pool.
-    pub fn acquire_stack(
-        &mut self,
-        capacity: usize,
-    ) -> Vec<crate::verifiers::bytecode::type_system::VerificationType> {
-        if let Some(mut buffer) = self.stack_pool.pop() {
-            buffer.clear();
-            if buffer.capacity() < capacity {
-                buffer.reserve(capacity);
-            }
-            buffer
-        } else {
-            Vec::with_capacity(capacity)
-        }
-    }
-
-    /// Returns a stack buffer to the pool.
-    pub fn return_stack(
-        &mut self,
-        buffer: Vec<crate::verifiers::bytecode::type_system::VerificationType>,
-    ) {
-        if self.stack_pool.len() < self.max_size {
-            self.stack_pool.push(buffer);
-        }
-    }
-
-    /// Clears the pool.
-    pub fn clear(&mut self) {
-        self.locals_pool.clear();
-        self.stack_pool.clear();
-    }
-}
-
-impl Default for FramePool {
-    fn default() -> Self {
-        Self::new(32)
     }
 }
 
@@ -548,60 +371,17 @@ mod tests {
     }
 
     #[test]
-    fn test_descriptor_cache() {
-        let cache = VerificationCache::new(true);
-
-        let parsed = cache.parse_descriptor("(II)V");
-        assert!(parsed.is_some());
-
-        let parsed = parsed.unwrap();
-        assert_eq!(parsed.parameters.len(), 2);
-        assert!(parsed.return_type.is_none());
-
-        // Should be cached now
-        assert_eq!(cache.descriptor_count(), 1);
-
-        // Second lookup should hit cache
-        let _ = cache.parse_descriptor("(II)V");
-        let stats = cache.stats();
-        assert_eq!(stats.descriptor_hits, 1);
-    }
-
-    #[test]
     fn test_cache_clear() {
         let cache = VerificationCache::new(true);
 
         let key = MethodKey::new("Test", "foo", "()V");
         cache.put_result(&key, CachedResult::Success);
-        cache.parse_descriptor("(II)V");
 
         assert_eq!(cache.result_count(), 1);
-        assert_eq!(cache.descriptor_count(), 1);
 
         cache.clear();
 
         assert_eq!(cache.result_count(), 0);
-        assert_eq!(cache.descriptor_count(), 0);
-    }
-
-    #[test]
-    fn test_frame_pool() {
-        let mut pool = FramePool::new(4);
-
-        // Acquire buffers
-        let locals = pool.acquire_locals(10);
-        let stack = pool.acquire_stack(5);
-
-        assert!(locals.capacity() >= 10);
-        assert!(stack.capacity() >= 5);
-
-        // Return to pool
-        pool.return_locals(locals);
-        pool.return_stack(stack);
-
-        // Acquire again; should reuse
-        let locals2 = pool.acquire_locals(5);
-        assert!(locals2.capacity() >= 10); // Still has old capacity
     }
 
     #[test]
@@ -638,22 +418,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parsed_descriptor_traits() {
-        let desc = ParsedDescriptor {
-            parameters: vec![],
-            return_type: None,
-        };
-
-        // Test Debug
-        assert!(format!("{desc:?}").contains("ParsedDescriptor"));
-
-        // Test Clone
-        let desc_clone = desc.clone();
-        assert_eq!(desc_clone.parameters, [] as [FieldType; 0]);
-        assert!(desc_clone.return_type.is_none());
-    }
-
-    #[test]
     fn test_cache_default() {
         let cache = VerificationCache::default();
         assert!(!cache.is_enabled()); // Default bool is false
@@ -667,14 +431,9 @@ mod tests {
         // Result miss
         assert!(cache.get_result(&key).is_none());
 
-        // Descriptor miss (via get_descriptor directly)
-        assert!(cache.get_descriptor("()V").is_none());
-
         let stats = cache.stats();
         assert_eq!(stats.result_misses, 1);
-        assert_eq!(stats.descriptor_misses, 1);
         assert_eq!(stats.result_hits, 0);
-        assert_eq!(stats.descriptor_hits, 0);
     }
 
     #[cfg(panic = "unwind")]
@@ -688,93 +447,6 @@ mod tests {
         assert!(result.is_err());
 
         cache.record_result_lookup(true);
-        cache.record_descriptor_lookup(false);
-    }
-
-    #[test]
-    fn test_parse_descriptor_invalid() {
-        let cache = VerificationCache::new(true);
-        let result = cache.parse_descriptor("invalid");
-        assert!(result.is_none());
-    }
-
-    #[test]
-    fn test_parse_descriptor_disabled() {
-        let cache = VerificationCache::disabled();
-        let result = cache.parse_descriptor("(II)V");
-        assert!(result.is_some()); // Should still parse
-
-        // But not cache
-        assert_eq!(cache.descriptor_count(), 0);
-    }
-
-    #[test]
-    fn test_frame_pool_default() {
-        let pool = FramePool::default();
-        assert_eq!(pool.max_size, 32);
-    }
-
-    #[test]
-    fn test_frame_pool_resize() {
-        let mut pool = FramePool::new(1);
-
-        // Acquire and return a small buffer
-        let locals = pool.acquire_locals(5);
-        pool.return_locals(locals);
-
-        // Acquire a larger buffer; should reuse and resize
-        let locals = pool.acquire_locals(10);
-        assert!(locals.capacity() >= 10);
-
-        pool.return_locals(locals);
-
-        // Same for stack
-        let stack = pool.acquire_stack(5);
-        pool.return_stack(stack);
-
-        let stack = pool.acquire_stack(10);
-        assert!(stack.capacity() >= 10);
-    }
-
-    #[test]
-    fn test_frame_pool_limit() {
-        let mut pool = FramePool::new(1);
-
-        let l1 = pool.acquire_locals(1);
-        let l2 = pool.acquire_locals(1);
-
-        pool.return_locals(l1);
-        // Pool is now full (size 1)
-        pool.return_locals(l2);
-        // Should be dropped, not added to pool
-
-        assert_eq!(pool.locals_pool.len(), 1);
-
-        // Same for stack
-        let s1 = pool.acquire_stack(1);
-        let s2 = pool.acquire_stack(1);
-
-        pool.return_stack(s1);
-        pool.return_stack(s2);
-
-        assert_eq!(pool.stack_pool.len(), 1);
-    }
-
-    #[test]
-    fn test_frame_pool_clear() {
-        let mut pool = FramePool::new(5);
-        let l = pool.acquire_locals(1);
-        pool.return_locals(l);
-        let s = pool.acquire_stack(1);
-        pool.return_stack(s);
-
-        assert_eq!(pool.locals_pool.len(), 1);
-        assert_eq!(pool.stack_pool.len(), 1);
-
-        pool.clear();
-
-        assert_eq!(pool.locals_pool.len(), 0);
-        assert_eq!(pool.stack_pool.len(), 0);
     }
 
     #[test]

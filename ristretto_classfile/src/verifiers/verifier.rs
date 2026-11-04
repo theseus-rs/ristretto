@@ -6,9 +6,9 @@ use crate::verifiers::error::Result;
 use crate::verifiers::error::VerifyError::{
     InvalidConstantPoolIndex, InvalidConstantPoolIndexType,
 };
+use crate::verifiers::methods::VerifiedMethod;
 use crate::verifiers::{
-    attributes, class_access_flags, constant_pool, fields, interfaces, methods, nest,
-    permitted_subclasses, record,
+    attributes, class_access_flags, constant_pool, fields, interfaces, methods,
 };
 
 /// Verify the `ClassFile`.
@@ -16,18 +16,26 @@ use crate::verifiers::{
 /// # Errors
 /// Returns `VerificationError` if the class file is invalid.
 pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
+    verify_impl(class_file, drop)
+}
+
+/// Structural verification returns method boundaries for the bytecode verifier to consume.
+pub(crate) fn verify_with_code_info(class_file: &ClassFile<'_>) -> Result<Vec<VerifiedMethod>> {
+    let mut verified = Vec::with_capacity(class_file.methods.len());
+    verify_impl(class_file, |method| verified.push(method))?;
+    Ok(verified)
+}
+
+fn verify_impl(class_file: &ClassFile<'_>, on_method: impl FnMut(VerifiedMethod)) -> Result<()> {
     constant_pool::verify(class_file)?;
     class_access_flags::verify(class_file)?;
     verify_this_class(class_file)?;
     verify_super_class(class_file)?;
     interfaces::verify(class_file)?;
+    super::format::verify_class_header(class_file)?;
     fields::verify(class_file)?;
-    methods::verify(class_file)?;
+    methods::verify(class_file, on_method)?;
     attributes::verify(class_file, &class_file.attributes, AttributeContext::Class)?;
-    nest::verify(class_file)?;
-    permitted_subclasses::verify(class_file)?;
-    record::verify(class_file)?;
-    super::format::verify(class_file)?;
     Ok(())
 }
 

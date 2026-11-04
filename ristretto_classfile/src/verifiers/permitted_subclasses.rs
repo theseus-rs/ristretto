@@ -21,36 +21,38 @@ use crate::verifiers::error::VerifyError::{
 ///
 /// # Errors
 /// Returns an error if the `PermittedSubclasses` attribute is invalid.
-pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
-    let mut has_permitted_subclasses = false;
+pub(crate) fn verify(
+    class_file: &ClassFile<'_>,
+    attribute: &Attribute,
+    previous: &[Attribute],
+) -> Result<()> {
+    let has_permitted_subclasses = previous
+        .iter()
+        .any(|a| matches!(a, Attribute::PermittedSubclasses { .. }));
 
-    for attribute in &class_file.attributes {
-        if let Attribute::PermittedSubclasses { class_indexes, .. } = attribute {
-            if has_permitted_subclasses {
-                return Err(VerificationError {
-                    context: "PermittedSubclasses".to_string(),
-                    message: "Multiple PermittedSubclasses attributes are not allowed".to_string(),
-                });
-            }
-            has_permitted_subclasses = true;
+    if let Attribute::PermittedSubclasses { class_indexes, .. } = attribute {
+        if has_permitted_subclasses {
+            return Err(VerificationError {
+                context: "PermittedSubclasses".to_string(),
+                message: "Multiple PermittedSubclasses attributes are not allowed".to_string(),
+            });
+        }
 
-            // A sealed class cannot be final
-            if class_file.access_flags.contains(ClassAccessFlags::FINAL) {
-                return Err(VerificationError {
-                    context: "PermittedSubclasses".to_string(),
-                    message: "A sealed class (with PermittedSubclasses) cannot be final"
-                        .to_string(),
-                });
-            }
+        // A sealed class cannot be final
+        if class_file.access_flags.contains(ClassAccessFlags::FINAL) {
+            return Err(VerificationError {
+                context: "PermittedSubclasses".to_string(),
+                message: "A sealed class (with PermittedSubclasses) cannot be final".to_string(),
+            });
+        }
 
-            // Verify each class index
-            for &class_index in class_indexes {
-                // Verify index points to a valid CONSTANT_Class_info
-                match class_file.constant_pool.get(class_index) {
-                    Some(Constant::Class(_)) => {}
-                    Some(_) => return Err(InvalidConstantPoolIndexType(class_index)),
-                    None => return Err(InvalidConstantPoolIndex(class_index)),
-                }
+        // Verify each class index
+        for &class_index in class_indexes {
+            // Verify index points to a valid CONSTANT_Class_info
+            match class_file.constant_pool.get(class_index) {
+                Some(Constant::Class(_)) => {}
+                Some(_) => return Err(InvalidConstantPoolIndexType(class_index)),
+                None => return Err(InvalidConstantPoolIndex(class_index)),
             }
         }
     }
@@ -61,6 +63,13 @@ pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn verify(class_file: &ClassFile<'_>) -> Result<()> {
+        for (index, attribute) in class_file.attributes.iter().enumerate() {
+            super::verify(class_file, attribute, &class_file.attributes[..index])?;
+        }
+        Ok(())
+    }
 
     fn create_class_file_with_permitted_subclasses(
         class_indexes: Vec<u16>,
