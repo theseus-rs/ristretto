@@ -299,7 +299,7 @@ impl<'a> ConstantPool<'a> {
             ));
         }
         let target_len = raw_count as usize;
-        let mut constants = Vec::with_capacity(target_len);
+        let mut constants = Vec::with_capacity(target_len.min(bytes.remaining() / 3 + 1));
         constants.push(ConstantEntry::Placeholder);
 
         while constants.len() < target_len {

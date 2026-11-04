@@ -88,7 +88,7 @@ impl Record {
         let name_index = bytes.read_u16()?;
         let descriptor_index = bytes.read_u16()?;
         let attributes_count = bytes.read_u16()? as usize;
-        let mut attributes = Vec::with_capacity(attributes_count);
+        let mut attributes = Vec::with_capacity(attributes_count.min(bytes.remaining() / 6));
         for _ in 0..attributes_count {
             let attribute = Attribute::from_bytes_in(
                 constant_pool,
