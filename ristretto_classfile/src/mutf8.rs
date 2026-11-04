@@ -147,6 +147,7 @@ pub(crate) fn to_bytes_lossless(data: &str) -> Vec<u8> {
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
 pub fn to_utf16(input: &[u8]) -> Result<Vec<u16>> {
+    validate(input)?;
     let mut result = Vec::with_capacity(input.len());
     let mut iter = input.iter();
 
@@ -638,7 +639,8 @@ mod tests {
 
     #[test]
     fn test_to_utf16_all_paths_and_errors() -> Result<()> {
-        assert_eq!(to_utf16(&[0x00])?, vec![0]);
+        assert!(to_utf16(&[0x00]).is_err());
+        assert_eq!(to_utf16(&[0xC0, 0x80])?, vec![0]);
         assert_eq!(to_utf16(&[0xC2, 0xA2])?, vec![0x00A2]);
         assert_eq!(to_utf16(&[0xE2, 0x82, 0xAC])?, vec![0x20AC]);
         assert!(to_utf16(&[0xC2]).is_err());
@@ -713,5 +715,19 @@ mod tests {
             decode_mutf8(&[0xED, 0xA0, 0xBD, b'A', b'B', b'C']).unwrap(),
             "\u{FFFD}ABC"
         );
+    }
+    #[test]
+    fn utf16_conversion_rejects_noncanonical_encodings() -> Result<()> {
+        for bytes in [
+            &[0xC0, 0x81][..],
+            &[0xE0, 0x80, 0x80],
+            &[0xC2, 0x41],
+            &[0x80],
+        ] {
+            assert!(to_utf16(bytes).is_err());
+        }
+        assert_eq!(to_utf16(&[0xED, 0xA0, 0x80])?, vec![0xD800]);
+        assert_eq!(to_utf16(&[0xED, 0xB0, 0x80])?, vec![0xDC00]);
+        Ok(())
     }
 }
