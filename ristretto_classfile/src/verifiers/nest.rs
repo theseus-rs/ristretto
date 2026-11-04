@@ -5,11 +5,8 @@
 
 use crate::attributes::Attribute;
 use crate::class_file::ClassFile;
-use crate::constant::Constant;
 use crate::verifiers::error::Result;
-use crate::verifiers::error::VerifyError::{
-    InvalidConstantPoolIndex, InvalidConstantPoolIndexType, VerificationError,
-};
+use crate::verifiers::error::VerifyError::VerificationError;
 
 /// Verify `NestHost` and `NestMembers` attributes for a class.
 ///
@@ -87,16 +84,13 @@ pub(crate) fn verify(
 
 /// Verify that an index points to a valid `CONSTANT_Class_info` entry.
 fn verify_class_index(class_file: &ClassFile<'_>, index: u16, _context: &str) -> Result<()> {
-    match class_file.constant_pool.get(index) {
-        Some(Constant::Class(_)) => Ok(()),
-        Some(_) => Err(InvalidConstantPoolIndexType(index)),
-        None => Err(InvalidConstantPoolIndex(index)),
-    }
+    super::format::verify_non_array_class(class_file, index)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::verifiers::VerifyError::{InvalidConstantPoolIndex, InvalidConstantPoolIndexType};
 
     fn verify(class_file: &ClassFile<'_>) -> Result<()> {
         for (index, attribute) in class_file.attributes.iter().enumerate() {

@@ -6,11 +6,8 @@
 use crate::attributes::Attribute;
 use crate::class_access_flags::ClassAccessFlags;
 use crate::class_file::ClassFile;
-use crate::constant::Constant;
 use crate::verifiers::error::Result;
-use crate::verifiers::error::VerifyError::{
-    InvalidConstantPoolIndex, InvalidConstantPoolIndexType, VerificationError,
-};
+use crate::verifiers::error::VerifyError::VerificationError;
 
 /// Verify `PermittedSubclasses` attributes for a class.
 ///
@@ -49,11 +46,7 @@ pub(crate) fn verify(
         // Verify each class index
         for &class_index in class_indexes {
             // Verify index points to a valid CONSTANT_Class_info
-            match class_file.constant_pool.get(class_index) {
-                Some(Constant::Class(_)) => {}
-                Some(_) => return Err(InvalidConstantPoolIndexType(class_index)),
-                None => return Err(InvalidConstantPoolIndex(class_index)),
-            }
+            super::format::verify_non_array_class(class_file, class_index)?;
         }
     }
 
@@ -63,6 +56,7 @@ pub(crate) fn verify(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::verifiers::VerifyError::{InvalidConstantPoolIndex, InvalidConstantPoolIndexType};
 
     fn verify(class_file: &ClassFile<'_>) -> Result<()> {
         for (index, attribute) in class_file.attributes.iter().enumerate() {

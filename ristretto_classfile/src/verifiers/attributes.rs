@@ -264,11 +264,7 @@ fn verify_constant_value(class_file: &ClassFile<'_>, constant_value_index: u16) 
 
 fn verify_exceptions(class_file: &ClassFile<'_>, exception_indexes: &[u16]) -> Result<()> {
     for index in exception_indexes {
-        match class_file.constant_pool.get(*index) {
-            Some(Constant::Class(_)) => {}
-            Some(_) => return Err(InvalidConstantPoolIndexType(*index)),
-            None => return Err(InvalidConstantPoolIndex(*index)),
-        }
+        super::format::verify_non_array_class(class_file, *index)?;
     }
     Ok(())
 }
@@ -276,24 +272,10 @@ fn verify_exceptions(class_file: &ClassFile<'_>, exception_indexes: &[u16]) -> R
 fn verify_inner_classes(class_file: &ClassFile<'_>, classes: &[InnerClass]) -> Result<()> {
     for class in classes {
         // class_info_index
-        match class_file.constant_pool.get(class.class_info_index) {
-            Some(Constant::Class(_)) => {}
-            Some(_) => {
-                return Err(InvalidConstantPoolIndexType(class.class_info_index));
-            }
-            None => return Err(InvalidConstantPoolIndex(class.class_info_index)),
-        }
+        super::format::verify_non_array_class(class_file, class.class_info_index)?;
         // outer_class_info_index (can be 0)
         if class.outer_class_info_index != 0 {
-            match class_file.constant_pool.get(class.outer_class_info_index) {
-                Some(Constant::Class(_)) => {}
-                Some(_) => {
-                    return Err(InvalidConstantPoolIndexType(class.outer_class_info_index));
-                }
-                None => {
-                    return Err(InvalidConstantPoolIndex(class.outer_class_info_index));
-                }
-            }
+            super::format::verify_non_array_class(class_file, class.outer_class_info_index)?;
         }
         // inner_name_index (can be 0)
         if class.name_index == 0 {
@@ -319,11 +301,7 @@ fn verify_enclosing_method(
     class_index: u16,
     method_index: u16,
 ) -> Result<()> {
-    match class_file.constant_pool.get(class_index) {
-        Some(Constant::Class(_)) => {}
-        Some(_) => return Err(InvalidConstantPoolIndexType(class_index)),
-        None => return Err(InvalidConstantPoolIndex(class_index)),
-    }
+    super::format::verify_non_array_class(class_file, class_index)?;
     if method_index != 0 {
         match class_file.constant_pool.get(method_index) {
             Some(Constant::NameAndType { .. }) => {}
@@ -817,12 +795,7 @@ fn verify_module_packages(class_file: &ClassFile<'_>, package_indexes: &[u16]) -
 }
 
 fn verify_module_main_class(class_file: &ClassFile<'_>, main_class_index: u16) -> Result<()> {
-    match class_file.constant_pool.get(main_class_index) {
-        Some(Constant::Class(_)) => {}
-        Some(_) => return Err(InvalidConstantPoolIndexType(main_class_index)),
-        None => return Err(InvalidConstantPoolIndex(main_class_index)),
-    }
-    Ok(())
+    super::format::verify_non_array_class(class_file, main_class_index)
 }
 
 #[cfg(test)]
