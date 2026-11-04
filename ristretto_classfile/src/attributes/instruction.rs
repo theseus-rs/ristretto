@@ -1722,6 +1722,7 @@ impl Instruction {
     /// Check variable-length operands without allocating an encoded code array.
     pub(crate) fn validate_encoding(&self) -> Result<()> {
         match self {
+            Self::Wide => return Err(InvalidInstruction(self.code())),
             Self::Tableswitch(table_switch) => {
                 if i64::from(table_switch.high) - i64::from(table_switch.low) + 1
                     != i64::try_from(table_switch.offsets.len())?
@@ -5977,5 +5978,15 @@ mod test {
             Instruction::from_bytes(&mut ByteReader::new(&bytes)),
             Err(InvalidWideInstruction(0))
         );
+    }
+
+    #[test]
+    fn standalone_wide_cannot_be_serialized() {
+        let mut bytes = Cursor::new(vec![42]);
+        assert_eq!(
+            Instruction::Wide.to_bytes(&mut bytes),
+            Err(InvalidInstruction(Instruction::Wide.code()))
+        );
+        assert_eq!(bytes.into_inner(), vec![42]);
     }
 }
