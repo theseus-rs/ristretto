@@ -218,7 +218,7 @@ impl<'a> ClassFile<'a> {
         let version = Version::from_bytes(reader)?;
         reader.class_major_version = version.major();
         let constant_pool = ConstantPool::from_bytes(reader)?;
-        let access_flags = ClassAccessFlags::from_bits_truncate(reader.read_u16()?);
+        let access_flags = ClassAccessFlags::from_bytes(reader)?;
         let this_class = reader.read_u16()?;
         let super_class = reader.read_u16()?;
 
@@ -716,6 +716,21 @@ mod test {
             Err(IoError("Invalid constant pool count".to_string())),
             ClassFile::from_bytes(&bytes)
         );
+    }
+
+    #[test]
+    fn both_parsers_reject_reserved_module_access_bits() {
+        for bits in [0x8000, 0x8002] {
+            let class = ClassFile {
+                version: crate::JAVA_9,
+                access_flags: ClassAccessFlags::from_bits_retain(bits),
+                ..ClassFile::default()
+            };
+            let mut bytes = Vec::new();
+            class.to_bytes(&mut bytes).unwrap();
+            assert_eq!(ClassFile::from_bytes(&bytes).is_ok(), bits == 0x8000);
+            assert_eq!(ClassFile::from_slice(&bytes).is_ok(), bits == 0x8000);
+        }
     }
 
     #[test]
