@@ -30,22 +30,33 @@ pub(crate) async fn get_bytes(
     let client = crate::tls::reqwest_client()?;
     let mut retries = 0_u32;
     loop {
-        let response = client
-            .get(url)
-            .headers(header_map.clone())
-            .query(query)
-            .send()
-            .await?
-            .error_for_status()?;
-        match response.bytes().await {
+        let response = async {
+            client
+                .get(url)
+                .headers(header_map.clone())
+                .query(query)
+                .send()
+                .await?
+                .error_for_status()?
+                .bytes()
+                .await
+        }
+        .await;
+        match response {
             Ok(bytes) => return Ok(bytes.to_vec()),
-            // A server can close a large archive download before the body is complete. Retry the
-            // whole GET so that a partial response is never returned to the archive extractor.
-            Err(error) if retries < 2 => {
+            // DNS, connection, and body failures can all be transient. Retry the entire GET;
+            // malformed requests and HTTP status errors must still be returned immediately.
+            Err(error)
+                if retries < 2
+                    && (error.is_connect()
+                        || error.is_timeout()
+                        || error.is_request()
+                        || error.is_body()
+                        || error.is_decode()) =>
+            {
                 retries += 1;
-                tracing::warn!(%error, retries, "Retrying incomplete runtime download");
-                tokio::time::sleep(std::time::Duration::from_millis(100 * u64::from(retries)))
-                    .await;
+                tracing::warn!(%error, retries, "Retrying runtime download");
+                tokio::time::sleep(std::time::Duration::from_secs(u64::from(retries))).await;
             }
             Err(error) => return Err(error.into()),
         }
@@ -211,6 +222,7 @@ mod tests {
         b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\nConnection: close\r\n\r\npar";
     const COMPLETE: &[u8] =
         b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\nConnection: close\r\n\r\nfull";
+    const INCOMPLETE_HEADERS: &[u8] = b"HTTP/1.1 200 OK\r\nContent-Length:";
 
     async fn serve_responses(listener: &TcpListener, responses: &[&[u8]]) -> std::io::Result<()> {
         for response in responses {
@@ -256,6 +268,26 @@ mod tests {
     {
         assert!(matches!(
             fetch_responses(&[TRUNCATED; 3]).await?,
+            Err(Error::RequestError(_))
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_retry_incomplete_headers() -> std::result::Result<(), Box<dyn std::error::Error>>
+    {
+        assert_eq!(
+            fetch_responses(&[INCOMPLETE_HEADERS, COMPLETE]).await??,
+            b"full"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_incomplete_headers_retry_limit()
+    -> std::result::Result<(), Box<dyn std::error::Error>> {
+        assert!(matches!(
+            fetch_responses(&[INCOMPLETE_HEADERS; 3]).await?,
             Err(Error::RequestError(_))
         ));
         Ok(())

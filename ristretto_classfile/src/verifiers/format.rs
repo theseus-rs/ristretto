@@ -37,6 +37,22 @@ fn class_name(name: &JavaStr, arrays: bool) -> Result<()> {
     Ok(())
 }
 
+fn module_name(name: &JavaStr) -> Result<()> {
+    let mut bytes = name.as_bytes().iter().copied().peekable();
+    while let Some(byte) = bytes.next() {
+        match byte {
+            0..=31 | b':' | b'@' => return Err(invalid("Invalid module name")),
+            b'\\' if !matches!(bytes.next(), Some(b'\\' | b':' | b'@')) => {
+                return Err(invalid("Invalid module name escape"));
+            }
+            // Modified UTF-8 encodes U+0000 as C0 80.
+            0xC0 if bytes.peek() == Some(&0x80) => return Err(invalid("Invalid module name")),
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
     Version::from(class.version.major(), class.version.minor())?;
     if class.constant_pool.len() > 65534 {
@@ -115,6 +131,7 @@ pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
 }
 
 pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()> {
+    super::method_access_flags::verify(class, method)?;
     let name = class.constant_pool.try_get_utf8(method.name_index)?;
     let descriptor = class.constant_pool.try_get_utf8(method.descriptor_index)?;
     let descriptor_info = FieldType::method_descriptor_info(descriptor)?;
@@ -210,7 +227,9 @@ fn verify_attributes(
         // attributes can repeat without making this quadratic in table length.
         if !matches!(
             attribute,
-            Attribute::LineNumberTable { .. }
+            Attribute::Synthetic { .. }
+                | Attribute::Deprecated { .. }
+                | Attribute::LineNumberTable { .. }
                 | Attribute::LocalVariableTable { .. }
                 | Attribute::LocalVariableTypeTable { .. }
         ) && attributes
@@ -230,16 +249,19 @@ fn verify_attributes(
             }
             Attribute::BootstrapMethods { methods, .. } => {
                 for bootstrap in methods {
-                    if !matches!(
-                        pool.try_get(bootstrap.bootstrap_method_ref)?,
-                        Constant::MethodHandle {
-                            reference_kind: ReferenceKind::InvokeStatic
-                                | ReferenceKind::NewInvokeSpecial,
-                            ..
-                        }
-                    ) {
+                    let Constant::MethodHandle { reference_kind, .. } =
+                        pool.try_get(bootstrap.bootstrap_method_ref)?
+                    else {
+                        return Err(invalid("Bootstrap method must reference a method handle"));
+                    };
+                    if class.version.major() < JAVA_8.major()
+                        && !matches!(
+                            reference_kind,
+                            ReferenceKind::InvokeStatic | ReferenceKind::NewInvokeSpecial
+                        )
+                    {
                         return Err(invalid(
-                            "Bootstrap method must be an invokestatic or newinvokespecial method handle",
+                            "Java 7 bootstrap method must be an invokestatic or newinvokespecial method handle",
                         ));
                     }
                     for argument in &bootstrap.arguments {
@@ -353,6 +375,8 @@ fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
             Constant::Module(_) | Constant::Package(_) if !module => {
                 return Err(invalid("Module and Package constants require ACC_MODULE"));
             }
+            Constant::Module(index) => module_name(pool.try_get_utf8(*index)?)?,
+            Constant::Package(index) => class_name(pool.try_get_utf8(*index)?, false)?,
             Constant::MethodType(index) => {
                 FieldType::method_descriptor_info(pool.try_get_utf8(*index)?)?;
             }
@@ -542,6 +566,9 @@ fn verify_code_metadata(class: &ClassFile<'_>, attribute: &Attribute) -> Result<
     let info = crate::verifiers::bytecode::control_flow::CodeInfo::from_code(code)?;
     let count = info.code_length();
     for handler in exception_table {
+        if handler.catch_type != 0 {
+            class_name(pool.try_get_class(handler.catch_type)?, false)?;
+        }
         if handler.range_pc.start >= handler.range_pc.end
             || (handler.range_pc.end != count && !info.is_valid_offset(handler.range_pc.end))
             || !info.is_valid_offset(handler.range_pc.start)
@@ -607,6 +634,7 @@ fn verify_code_metadata(class: &ClassFile<'_>, attribute: &Attribute) -> Result<
 mod tests {
     use super::*;
     use crate::attributes::attribute::AttributeLocation;
+    use crate::attributes::{BootstrapMethod, ExceptionTableEntry, Instruction};
 
     #[test]
     fn attribute_duplicates_respect_names_and_location() -> Result<()> {
@@ -635,6 +663,195 @@ mod tests {
             &[unknown.clone(), unknown],
             AttributeLocation::Class,
         )?;
+        Ok(())
+    }
+
+    #[test]
+    fn bootstrap_handle_kind_rules_follow_class_version() -> Result<()> {
+        for kind in [
+            ReferenceKind::GetField,
+            ReferenceKind::GetStatic,
+            ReferenceKind::InvokeVirtual,
+            ReferenceKind::InvokeStatic,
+            ReferenceKind::NewInvokeSpecial,
+        ] {
+            let mut class = ClassFile::default();
+            let name_index = class.constant_pool.add_utf8("BootstrapMethods")?;
+            let reference = class.constant_pool.add(Constant::MethodHandle {
+                reference_kind: kind.clone(),
+                reference_index: 1,
+            })?;
+            let attribute = Attribute::BootstrapMethods {
+                name_index,
+                methods: vec![BootstrapMethod {
+                    bootstrap_method_ref: reference,
+                    arguments: vec![],
+                }],
+            };
+            class.version = JAVA_8;
+            verify_attributes(
+                &class,
+                std::slice::from_ref(&attribute),
+                AttributeLocation::Class,
+            )?;
+            class.version = JAVA_7;
+            assert_eq!(
+                verify_attributes(&class, &[attribute], AttributeLocation::Class).is_ok(),
+                matches!(
+                    kind,
+                    ReferenceKind::InvokeStatic | ReferenceKind::NewInvokeSpecial
+                )
+            );
+            let invalid = Attribute::BootstrapMethods {
+                name_index,
+                methods: vec![BootstrapMethod {
+                    bootstrap_method_ref: name_index,
+                    arguments: vec![],
+                }],
+            };
+            class.version = JAVA_8;
+            assert!(verify_attributes(&class, &[invalid], AttributeLocation::Class).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn unused_virtual_bootstrap_handle_passes_class_verification() -> Result<()> {
+        let mut class = ClassFile {
+            version: JAVA_8,
+            ..ClassFile::default()
+        };
+        class.this_class = class.constant_pool.add_class("BootstrapOwner")?;
+        class.super_class = class.constant_pool.add_class("java/lang/Object")?;
+        let method = class
+            .constant_pool
+            .add_method_ref(class.this_class, "bootstrap", "()V")?;
+        let handle = class.constant_pool.add(Constant::MethodHandle {
+            reference_kind: ReferenceKind::InvokeVirtual,
+            reference_index: method,
+        })?;
+        class.attributes.push(Attribute::BootstrapMethods {
+            name_index: class.constant_pool.add_utf8("BootstrapMethods")?,
+            methods: vec![BootstrapMethod {
+                bootstrap_method_ref: handle,
+                arguments: vec![],
+            }],
+        });
+        class.verify()?;
+        Ok(())
+    }
+
+    #[test]
+    fn module_and_package_names_follow_their_own_grammars() -> Result<()> {
+        for name in [
+            "bad:name",
+            "bad@name",
+            "bad\\q",
+            "bad\\",
+            "bad\0name",
+            "bad\u{1F}name",
+        ] {
+            assert!(module_name(&JavaStr::cow_from_str(name)).is_err());
+        }
+        for name in [
+            "java.base",
+            "module/name",
+            "escaped\\:name",
+            "escaped\\@name",
+            "escaped\\\\name",
+        ] {
+            module_name(&JavaStr::cow_from_str(name))?;
+        }
+        for (name, accepted) in [
+            ("valid/package", true),
+            ("bad.package", false),
+            ("bad//package", false),
+            ("[I", false),
+            ("", false),
+        ] {
+            let mut class = ClassFile {
+                access_flags: ClassAccessFlags::MODULE,
+                ..ClassFile::default()
+            };
+            let index = class.constant_pool.add_utf8(name)?;
+            class.constant_pool.add(Constant::Package(index))?;
+            assert_eq!(verify_constants(&class).is_ok(), accepted);
+        }
+        Ok(())
+    }
+    #[test]
+    fn marker_attributes_may_repeat() -> Result<()> {
+        let mut class = ClassFile::default();
+        let attributes = [
+            Attribute::Synthetic {
+                name_index: class.constant_pool.add_utf8("Synthetic")?,
+            },
+            Attribute::Deprecated {
+                name_index: class.constant_pool.add_utf8("Deprecated")?,
+            },
+        ];
+        for attribute in attributes {
+            for location in [
+                AttributeLocation::Class,
+                AttributeLocation::Field,
+                AttributeLocation::Method,
+            ] {
+                verify_attributes(&class, &[attribute.clone(), attribute.clone()], location)?;
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn method_verification_checks_visibility_before_code() -> Result<()> {
+        let mut class = ClassFile::default();
+        let method = Method {
+            name_index: class.constant_pool.add_utf8("method")?,
+            descriptor_index: class.constant_pool.add_utf8("()V")?,
+            access_flags: MethodAccessFlags::PUBLIC
+                | MethodAccessFlags::PRIVATE
+                | MethodAccessFlags::NATIVE,
+            attributes: vec![],
+        };
+        assert!(matches!(
+            verify_method(&class, &method),
+            Err(VerifyError::InvalidMethodAccessFlags(_))
+        ));
+        let valid = Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
+            ..method
+        };
+        verify_method(&class, &valid)?;
+        Ok(())
+    }
+
+    #[test]
+    fn exception_catch_type_must_reference_a_non_array_class() -> Result<()> {
+        let mut class = ClassFile::default();
+        let wrong_kind = class.constant_pool.add_utf8("java/lang/Throwable")?;
+        let valid = class.constant_pool.add_class("java/lang/Throwable")?;
+        let array = class.constant_pool.add_class("[Ljava/lang/Throwable;")?;
+        for (catch_type, accepted) in [
+            (0, true),
+            (valid, true),
+            (wrong_kind, false),
+            (array, false),
+            (u16::MAX, false),
+        ] {
+            let code = Attribute::Code {
+                name_index: 0,
+                max_stack: 1,
+                max_locals: 0,
+                code: vec![Instruction::Return],
+                exception_table: vec![ExceptionTableEntry {
+                    range_pc: 0..1,
+                    handler_pc: 0,
+                    catch_type,
+                }],
+                attributes: vec![],
+            };
+            assert_eq!(verify_code_metadata(&class, &code).is_ok(), accepted);
+        }
         Ok(())
     }
 }

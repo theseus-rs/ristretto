@@ -1177,18 +1177,6 @@ fn handler_preserves_legacy_return_address_locals() -> Result<()> {
 #[test]
 fn invalid_legacy_returns_and_recursive_calls_are_rejected() {
     for code in [
-        vec![
-            Instruction::Jsr(10),
-            Instruction::Iconst_0,
-            Instruction::Jsr(6),
-            Instruction::Pop,
-            Instruction::Return,
-            Instruction::Nop,
-            Instruction::Astore_0,
-            Instruction::Iconst_1,
-            Instruction::Pop,
-            Instruction::Ret(0),
-        ],
         vec![Instruction::Ret(0)],
         vec![Instruction::Ret_w(300)],
         vec![Instruction::Jsr(0)],
@@ -1230,4 +1218,37 @@ fn invalid_legacy_returns_and_recursive_calls_are_rejected() {
     ] {
         assert!(code.max_stack(&ConstantPool::new()).is_err(), "{code:?}");
     }
+}
+
+#[test]
+fn legacy_subroutine_accepts_different_caller_stack_depths() -> Result<()> {
+    let code = [
+        Instruction::Jsr(9),
+        Instruction::Iconst_0,
+        Instruction::Jsr(5),
+        Instruction::Pop,
+        Instruction::Return,
+        Instruction::Astore_0,
+        Instruction::Ret(0),
+    ];
+    assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
+    Ok(())
+}
+
+#[test]
+fn legacy_subroutine_with_temporary_values_accepts_different_callers() -> Result<()> {
+    let code = vec![
+        Instruction::Jsr(10),
+        Instruction::Iconst_0,
+        Instruction::Jsr(6),
+        Instruction::Pop,
+        Instruction::Return,
+        Instruction::Nop,
+        Instruction::Astore_0,
+        Instruction::Iconst_1,
+        Instruction::Pop,
+        Instruction::Ret(0),
+    ];
+    assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
+    Ok(())
 }

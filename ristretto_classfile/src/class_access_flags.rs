@@ -1,5 +1,6 @@
 use crate::byte_reader::ByteReader;
 use crate::error::Result;
+use crate::verifiers::VerifyError;
 use bitflags::bitflags;
 use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
@@ -119,9 +120,7 @@ impl ClassAccessFlags {
     pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<ClassAccessFlags> {
         let access_flags = bytes.read_u16()?;
         if access_flags & Self::MODULE.bits() != 0 && access_flags != Self::MODULE.bits() {
-            return Err(
-                crate::verifiers::VerifyError::InvalidClassAccessFlags(access_flags).into(),
-            );
+            return Err(VerifyError::InvalidClassAccessFlags(access_flags).into());
         }
         let access_flags = ClassAccessFlags::from_bits_truncate(access_flags);
         Ok(access_flags)

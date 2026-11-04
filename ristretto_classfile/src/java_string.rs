@@ -276,13 +276,35 @@ impl JavaStr {
 
 impl fmt::Debug for JavaStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "\"{}\"", self.to_rust_string())
+        f.write_str("\"")?;
+        fmt::Display::fmt(self, f)?;
+        f.write_str("\"")
     }
 }
 
 impl fmt::Display for JavaStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.to_rust_string())
+        if let Some(value) = self.as_str() {
+            return f.write_str(value);
+        }
+        // Batch writes into a fixed UTF-8 buffer to avoid one formatter call per character.
+        let mut buffer = [0; 256];
+        let mut used = 0;
+        for character in Mutf8CharIter::new(&self.0) {
+            if buffer.len() - used < 4 {
+                let text = std::str::from_utf8(buffer.get(..used).ok_or(fmt::Error)?)
+                    .map_err(|_| fmt::Error)?;
+                f.write_str(text)?;
+                used = 0;
+            }
+            used += character
+                .encode_utf8(buffer.get_mut(used..).ok_or(fmt::Error)?)
+                .len();
+        }
+        let text =
+            std::str::from_utf8(buffer.get(..used).ok_or(fmt::Error)?).map_err(|_| fmt::Error)?;
+        f.write_str(text)?;
+        Ok(())
     }
 }
 
@@ -305,7 +327,7 @@ impl PartialEq<str> for JavaStr {
         loop {
             match (mutf8_iter.next(), other_iter.next()) {
                 (Some(a), Some(b)) => {
-                    if a != b {
+                    if a != b || mutf8_iter.has_unpaired_surrogate {
                         return false;
                     }
                 }
@@ -323,11 +345,16 @@ impl PartialEq<str> for JavaStr {
 struct Mutf8CharIter<'a> {
     bytes: &'a [u8],
     pos: usize,
+    has_unpaired_surrogate: bool,
 }
 
 impl<'a> Mutf8CharIter<'a> {
     fn new(bytes: &'a [u8]) -> Self {
-        Self { bytes, pos: 0 }
+        Self {
+            bytes,
+            pos: 0,
+            has_unpaired_surrogate: false,
+        }
     }
 }
 
@@ -391,7 +418,8 @@ impl Iterator for Mutf8CharIter<'_> {
                     Some(decoded)
                 } else {
                     self.pos += 3;
-                    // Lone surrogate -> replacement character
+                    // Formatting can replace lone surrogates; equality must preserve their identity.
+                    self.has_unpaired_surrogate |= (0xD800..=0xDFFF).contains(&ch);
                     Some(char::from_u32(ch).unwrap_or('\u{FFFD}'))
                 }
             }
@@ -583,6 +611,10 @@ impl From<&str> for JavaString {
 
 impl From<String> for JavaString {
     fn from(s: String) -> JavaString {
+        // UTF-8 and MUTF-8 differ only for NUL and supplementary characters.
+        if !s.as_bytes().iter().any(|byte| *byte == 0 || *byte >= 0xF0) {
+            return JavaString(s.into_bytes());
+        }
         JavaString::from(s.as_str())
     }
 }
@@ -1022,5 +1054,51 @@ mod tests {
         let mismatch = java_string.as_java_str();
         assert_ne!(mismatch, "x");
         assert_ne!(mismatch, "\0x");
+    }
+    #[test]
+    fn owned_compatible_strings_reuse_their_allocation() {
+        for value in ["plain ASCII", "Greek β and Japanese 日本語"] {
+            let source = value.to_string();
+            let pointer = source.as_ptr();
+            let java = JavaString::from(source);
+            assert_eq!(java.as_bytes().as_ptr(), pointer);
+            assert_eq!(java, value);
+        }
+        for value in ["embedded\0NUL", "supplementary 😀"] {
+            assert_eq!(JavaString::from(value.to_string()), JavaString::from(value));
+        }
+    }
+
+    #[test]
+    fn streaming_formatting_preserves_lossy_display_and_debug() {
+        for value in ["plain", "β", "a\0😀", "quote\" and newline\n"] {
+            let java = JavaString::from(value);
+            assert_eq!(format!("{java}"), value);
+            assert_eq!(format!("{java:?}"), format!("\"{value}\""));
+        }
+        let java = JavaString::from_mutf8(vec![0xED, 0xA0, 0x80]).unwrap();
+        assert_eq!(format!("{java}"), "\u{FFFD}");
+        assert_eq!(format!("{java:?}"), "\"\u{FFFD}\"");
+    }
+    #[test]
+    fn formatting_preserves_characters_across_buffer_boundaries() {
+        let value = "β\0😀".repeat(200);
+        let java = JavaString::from(value.as_str());
+        assert_eq!(format!("{java}"), value);
+        assert_eq!(format!("{java:?}"), format!("\"{value}\""));
+    }
+
+    #[test]
+    fn equality_preserves_surrogates_and_replacement_characters() {
+        for bytes in [vec![0xED, 0xA0, 0x80], vec![0xED, 0xB0, 0x80]] {
+            let surrogate = JavaString::from_mutf8(bytes).unwrap();
+            assert_ne!(surrogate, "\u{FFFD}");
+            assert_ne!("\u{FFFD}", surrogate);
+            assert_ne!(surrogate, JavaString::from("\u{FFFD}"));
+        }
+        for value in ["", "a\0b", "β", "😀", "\u{FFFD}"] {
+            assert_eq!(JavaString::from(value), value);
+            assert_eq!(value, JavaString::from(value));
+        }
     }
 }
