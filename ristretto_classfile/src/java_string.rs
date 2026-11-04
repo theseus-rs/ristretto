@@ -327,7 +327,7 @@ impl PartialEq<str> for JavaStr {
         loop {
             match (mutf8_iter.next(), other_iter.next()) {
                 (Some(a), Some(b)) => {
-                    if a != b {
+                    if a != b || mutf8_iter.has_unpaired_surrogate {
                         return false;
                     }
                 }
@@ -345,11 +345,16 @@ impl PartialEq<str> for JavaStr {
 struct Mutf8CharIter<'a> {
     bytes: &'a [u8],
     pos: usize,
+    has_unpaired_surrogate: bool,
 }
 
 impl<'a> Mutf8CharIter<'a> {
     fn new(bytes: &'a [u8]) -> Self {
-        Self { bytes, pos: 0 }
+        Self {
+            bytes,
+            pos: 0,
+            has_unpaired_surrogate: false,
+        }
     }
 }
 
@@ -413,7 +418,8 @@ impl Iterator for Mutf8CharIter<'_> {
                     Some(decoded)
                 } else {
                     self.pos += 3;
-                    // Lone surrogate -> replacement character
+                    // Formatting can replace lone surrogates; equality must preserve their identity.
+                    self.has_unpaired_surrogate |= (0xD800..=0xDFFF).contains(&ch);
                     Some(char::from_u32(ch).unwrap_or('\u{FFFD}'))
                 }
             }
@@ -1062,5 +1068,19 @@ mod tests {
         let java = JavaString::from(value.as_str());
         assert_eq!(format!("{java}"), value);
         assert_eq!(format!("{java:?}"), format!("\"{value}\""));
+    }
+
+    #[test]
+    fn equality_preserves_surrogates_and_replacement_characters() {
+        for bytes in [vec![0xED, 0xA0, 0x80], vec![0xED, 0xB0, 0x80]] {
+            let surrogate = JavaString::from_mutf8(bytes).unwrap();
+            assert_ne!(surrogate, "\u{FFFD}");
+            assert_ne!("\u{FFFD}", surrogate);
+            assert_ne!(surrogate, JavaString::from("\u{FFFD}"));
+        }
+        for value in ["", "a\0b", "β", "😀", "\u{FFFD}"] {
+            assert_eq!(JavaString::from(value), value);
+            assert_eq!(value, JavaString::from(value));
+        }
     }
 }
