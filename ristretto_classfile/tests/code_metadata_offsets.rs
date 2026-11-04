@@ -7,7 +7,7 @@ use ristretto_classfile::attributes::{
 };
 use ristretto_classfile::verifiers::bytecode::{VerifierConfig, verify_class};
 use ristretto_classfile::verifiers::context::VerificationContext;
-use ristretto_classfile::verifiers::error::Result as VerifyResult;
+use ristretto_classfile::verifiers::error::{Result as VerifyResult, VerifyError};
 use ristretto_classfile::{ClassAccessFlags, ClassFile, JAVA_8, Method, MethodAccessFlags, Result};
 
 struct Context;
@@ -216,6 +216,69 @@ fn local_scopes_require_boundaries_and_allow_code_length_as_the_end() -> Result<
                     visible,
                 )?;
                 check_metadata(class.clone(), metadata, valid)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn local_variable_type_annotation_indices_respect_max_locals() -> Result<()> {
+    for visible in [false, true] {
+        for target_type in [0x40, 0x41] {
+            for (max_locals, index, valid) in [
+                (0, 0, false),
+                (1, 0, true),
+                (1, 1, false),
+                (1, u16::MAX, false),
+                (u16::MAX, u16::MAX - 1, true),
+                (u16::MAX, u16::MAX, false),
+            ] {
+                let mut class = class()?;
+                let metadata = annotation(
+                    &mut class,
+                    TargetType::LocalVar {
+                        target_type,
+                        local_variable_targets: [0, index]
+                            .into_iter()
+                            .map(|index| LocalVariableTarget {
+                                start_pc: 0,
+                                length: 1,
+                                index,
+                            })
+                            .collect(),
+                    },
+                    visible,
+                )?;
+                class.methods.push(Method {
+                    access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                    name_index: class.constant_pool.add_utf8("test")?,
+                    descriptor_index: class.constant_pool.add_utf8("()V")?,
+                    attributes: vec![Attribute::Code {
+                        name_index: class.constant_pool.add_utf8("Code")?,
+                        max_stack: 0,
+                        max_locals,
+                        code: vec![Instruction::Return],
+                        exception_table: vec![],
+                        attributes: vec![metadata],
+                    }],
+                });
+                let mut bytes = Vec::new();
+                class.to_bytes(&mut bytes)?;
+                let parsed = ClassFile::from_bytes(&bytes)?;
+                let expected = if valid {
+                    Ok(())
+                } else {
+                    Err(VerifyError::ClassFormatError(
+                        "Invalid local variable type annotation index".to_string(),
+                    ))
+                };
+                assert_eq!(class.verify().map_err(VerifyError::from), expected);
+                assert_eq!(parsed.verify().map_err(VerifyError::from), expected);
+                assert_eq!(
+                    verify_class(&class, &Context, &VerifierConfig::strict()).map(|_| ()),
+                    expected
+                );
             }
         }
     }

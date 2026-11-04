@@ -1,6 +1,6 @@
 //! Local-array requirements imposed by retained Code attributes (JVMS 4.7.3).
 
-use crate::attributes::{Attribute, StackFrame, VerificationType};
+use crate::attributes::{Attribute, StackFrame, TargetType, VerificationType};
 use crate::verifiers::VerifyError;
 use crate::{ConstantPool, Error, FieldType, Method, Result};
 
@@ -35,6 +35,28 @@ pub(super) fn max_locals(
                     for variable in variable_types {
                         let count = u16::try_from(u32::from(variable.index) + 1)?;
                         maximum = maximum.max(count);
+                    }
+                }
+                Attribute::RuntimeVisibleTypeAnnotations {
+                    type_annotations, ..
+                }
+                | Attribute::RuntimeInvisibleTypeAnnotations {
+                    type_annotations, ..
+                } => {
+                    for annotation in type_annotations {
+                        let TargetType::LocalVar {
+                            local_variable_targets,
+                            ..
+                        } = &annotation.target_type
+                        else {
+                            continue;
+                        };
+                        // Reserve at least the named slot; annotations do not encode
+                        // the local variable's type.
+                        for local in local_variable_targets {
+                            let count = u16::try_from(u32::from(local.index) + 1)?;
+                            maximum = maximum.max(count);
+                        }
                     }
                 }
                 Attribute::StackMapTable { frames, .. } => {

@@ -15,8 +15,8 @@ mod metadata;
 ///     all other types occupy one slot.
 /// 3.  Any additional local variables declared and used within the method body.
 ///     Again, `long` and `double` types will use two slots.
-/// 4.  Local slots required by retained stack maps and local-variable debug tables
-///     in the method's `Code` attributes.
+/// 4.  Local slots required by retained stack maps, local-variable debug tables,
+///     and local-variable type annotations in the method's `Code` attributes.
 ///
 /// The JVM uses `max_locals` to determine the size of the local variable array when a new
 /// stack frame is created for a method invocation.
@@ -32,7 +32,7 @@ mod metadata;
 ///   - Update `max_locals` if this instruction uses a higher index than currently recorded.
 ///     For `long` and `double` types use `index` and `index + 1`.
 /// - Include local slots described by retained `StackMapTable`, `LocalVariableTable`,
-///   and `LocalVariableTypeTable` attributes.
+///   `LocalVariableTypeTable`, and local-variable type annotations.
 ///
 /// # Examples
 ///

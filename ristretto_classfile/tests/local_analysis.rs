@@ -5,8 +5,8 @@
 )]
 
 use ristretto_classfile::attributes::{
-    Attribute, Instruction, LocalVariableTable, LocalVariableTypeTable, MaxLocals, StackFrame,
-    VerificationType,
+    Attribute, Instruction, LocalVariableTable, LocalVariableTarget, LocalVariableTypeTable,
+    MaxLocals, StackFrame, TargetType, TypeAnnotation, VerificationType,
 };
 use ristretto_classfile::{
     ConstantPool, Error, FieldType, JavaString, Method, MethodAccessFlags, Result,
@@ -683,6 +683,59 @@ fn generic_debug_locals_use_reference_slots_and_check_capacity() -> Result<()> {
                 assert!(matches!(result, Err(Error::TryFromIntError(_))));
             } else {
                 assert_eq!(result?, index + 1);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn local_variable_type_annotations_contribute_to_max_locals() -> Result<()> {
+    for visible in [false, true] {
+        for target_type in [0x40, 0x41] {
+            for (indices, expected) in [
+                (vec![], Some(0)),
+                (vec![0], Some(1)),
+                (vec![0, 42, 1], Some(43)),
+                (vec![u16::MAX - 1], Some(u16::MAX)),
+                (vec![u16::MAX], None),
+            ] {
+                let mut pool = ConstantPool::new();
+                let type_annotations = vec![TypeAnnotation {
+                    target_type: TargetType::LocalVar {
+                        target_type,
+                        local_variable_targets: indices
+                            .into_iter()
+                            .map(|index| LocalVariableTarget {
+                                start_pc: 0,
+                                length: 1,
+                                index,
+                            })
+                            .collect(),
+                    },
+                    type_path: vec![],
+                    type_index: pool.add_utf8("LAnnotation;")?,
+                    elements: vec![],
+                }];
+                let attribute = if visible {
+                    Attribute::RuntimeVisibleTypeAnnotations {
+                        name_index: pool.add_utf8("RuntimeVisibleTypeAnnotations")?,
+                        type_annotations,
+                    }
+                } else {
+                    Attribute::RuntimeInvisibleTypeAnnotations {
+                        name_index: pool.add_utf8("RuntimeInvisibleTypeAnnotations")?,
+                        type_annotations,
+                    }
+                };
+                let method =
+                    with_metadata(&mut pool, "()V", MethodAccessFlags::STATIC, vec![attribute])?;
+                let result = [Instruction::Return].max_locals(&pool, &method);
+                if let Some(expected) = expected {
+                    assert_eq!(result?, expected);
+                } else {
+                    assert!(matches!(result, Err(Error::TryFromIntError(_))));
+                }
             }
         }
     }
