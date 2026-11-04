@@ -1,6 +1,6 @@
 //! Class-file constraints that relate names, descriptors, flags, and attributes.
 use super::error::{Result, VerifyError};
-use crate::attributes::Attribute;
+use crate::attributes::{Attribute, TargetType};
 use crate::{
     BaseType, CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, Constant,
     FieldType, JAVA_7, JAVA_8, JAVA_9, JAVA_10, JavaStr, Method, MethodAccessFlags, ReferenceKind,
@@ -552,6 +552,27 @@ pub(super) fn verify_code_metadata(
                 for local in variable_types {
                     if local.index >= *max_locals {
                         return Err(invalid("Invalid LocalVariableTypeTable local index"));
+                    }
+                }
+            }
+            Attribute::RuntimeVisibleTypeAnnotations {
+                type_annotations, ..
+            }
+            | Attribute::RuntimeInvisibleTypeAnnotations {
+                type_annotations, ..
+            } => {
+                for annotation in type_annotations {
+                    let TargetType::LocalVar {
+                        local_variable_targets,
+                        ..
+                    } = &annotation.target_type
+                    else {
+                        continue;
+                    };
+                    for local in local_variable_targets {
+                        if local.index >= *max_locals {
+                            return Err(invalid("Invalid local variable type annotation index"));
+                        }
                     }
                 }
             }
