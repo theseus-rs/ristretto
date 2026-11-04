@@ -457,13 +457,15 @@ fn verify_annotations(class_file: &ClassFile<'_>, annotations: &[Annotation]) ->
 
 fn verify_annotation(class_file: &ClassFile<'_>, annotation: &Annotation) -> Result<()> {
     match class_file.constant_pool.get(annotation.type_index) {
-        Some(Constant::Utf8(_)) => {}
+        Some(Constant::Utf8(descriptor)) => {
+            crate::FieldType::parse_java_str(descriptor)?;
+        }
         Some(_) => return Err(InvalidConstantPoolIndexType(annotation.type_index)),
         None => return Err(InvalidConstantPoolIndex(annotation.type_index)),
     }
     for pair in &annotation.elements {
         match class_file.constant_pool.get(pair.name_index) {
-            Some(Constant::Utf8(_)) => {}
+            Some(Constant::Utf8(name)) => super::format::member_name(name, true)?,
             Some(_) => return Err(InvalidConstantPoolIndexType(pair.name_index)),
             None => return Err(InvalidConstantPoolIndex(pair.name_index)),
         }
@@ -521,19 +523,26 @@ fn verify_annotation_element(
             const_name_index,
         } => {
             match class_file.constant_pool.get(*type_name_index) {
-                Some(Constant::Utf8(_)) => {}
+                Some(Constant::Utf8(descriptor)) => {
+                    crate::FieldType::parse_java_str(descriptor)?;
+                }
                 Some(_) => return Err(InvalidConstantPoolIndexType(*type_name_index)),
                 None => return Err(InvalidConstantPoolIndex(*type_name_index)),
             }
             match class_file.constant_pool.get(*const_name_index) {
-                Some(Constant::Utf8(_)) => {}
+                Some(Constant::Utf8(name)) => super::format::member_name(name, false)?,
                 Some(_) => return Err(InvalidConstantPoolIndexType(*const_name_index)),
                 None => return Err(InvalidConstantPoolIndex(*const_name_index)),
             }
         }
         AnnotationElement::Class { class_info_index } => {
             match class_file.constant_pool.get(*class_info_index) {
-                Some(Constant::Utf8(_)) => {}
+                Some(Constant::Utf8(descriptor)) => {
+                    // Class literals use return descriptors, including void.class.
+                    if descriptor.as_bytes() != b"V" {
+                        crate::FieldType::parse_java_str(descriptor)?;
+                    }
+                }
                 Some(_) => return Err(InvalidConstantPoolIndexType(*class_info_index)),
                 None => return Err(InvalidConstantPoolIndex(*class_info_index)),
             }
@@ -656,13 +665,15 @@ fn verify_type_annotations(
             path.validate()?;
         }
         match class_file.constant_pool.get(type_annotation.type_index) {
-            Some(Constant::Utf8(_)) => {}
+            Some(Constant::Utf8(descriptor)) => {
+                crate::FieldType::parse_java_str(descriptor)?;
+            }
             Some(_) => return Err(InvalidConstantPoolIndexType(type_annotation.type_index)),
             None => return Err(InvalidConstantPoolIndex(type_annotation.type_index)),
         }
         for pair in &type_annotation.elements {
             match class_file.constant_pool.get(pair.name_index) {
-                Some(Constant::Utf8(_)) => {}
+                Some(Constant::Utf8(name)) => super::format::member_name(name, true)?,
                 Some(_) => return Err(InvalidConstantPoolIndexType(pair.name_index)),
                 None => return Err(InvalidConstantPoolIndex(pair.name_index)),
             }
@@ -2369,7 +2380,7 @@ mod tests {
     #[test]
     fn test_verify_annotation_element_enum_class_invalid_paths() {
         let empty_class = create_class_file(Vec::new());
-        let int_class = create_class_file(vec![Constant::Integer(1), Constant::utf8("ok")]);
+        let int_class = create_class_file(vec![Constant::Integer(1), Constant::utf8("LType;")]);
 
         assert!(matches!(
             verify_annotation_element(
@@ -2403,7 +2414,7 @@ mod tests {
         ));
         assert!(matches!(
             verify_annotation_element(
-                &create_class_file(vec![Constant::utf8("Enum")]),
+                &create_class_file(vec![Constant::utf8("LEnum;")]),
                 &AnnotationElement::Enum {
                     type_name_index: 1,
                     const_name_index: 2,
@@ -2446,7 +2457,7 @@ mod tests {
         };
         let class_context = AttributeContext::Field(&field);
         let empty_class = create_class_file(Vec::new());
-        let int_class = create_class_file(vec![Constant::Integer(1), Constant::utf8("ok")]);
+        let int_class = create_class_file(vec![Constant::Integer(1), Constant::utf8("LType;")]);
 
         let bad_type_annotation = TypeAnnotation {
             target_type: TargetType::Empty { target_type: 0x13 },
@@ -2512,7 +2523,7 @@ mod tests {
         };
         assert!(matches!(
             verify(
-                &create_class_file(vec![Constant::utf8("Type")]),
+                &create_class_file(vec![Constant::utf8("LType;")]),
                 &[Attribute::RuntimeVisibleTypeAnnotations {
                     name_index: 0,
                     type_annotations: vec![missing_pair_name],
@@ -2522,12 +2533,14 @@ mod tests {
             Err(InvalidConstantPoolIndex(2))
         ));
 
+        let mut value_class = int_class.clone();
+        let value_name = value_class.constant_pool.add_utf8("value").unwrap();
         let bad_pair_value = TypeAnnotation {
             target_type: TargetType::Empty { target_type: 0x13 },
             type_path: Vec::new(),
             type_index: 2,
             elements: vec![AnnotationValuePair {
-                name_index: 2,
+                name_index: value_name,
                 value: AnnotationElement::Int {
                     const_value_index: 2,
                 },
@@ -2535,7 +2548,7 @@ mod tests {
         };
         assert!(matches!(
             verify(
-                &int_class,
+                &value_class,
                 &[Attribute::RuntimeVisibleTypeAnnotations {
                     name_index: 0,
                     type_annotations: vec![bad_pair_value],
@@ -2659,7 +2672,9 @@ mod tests {
         let double_value = constant_pool.add(Constant::Double(2.0)).unwrap();
         let float_value = constant_pool.add(Constant::Float(3.0)).unwrap();
         let long_value = constant_pool.add(Constant::Long(4)).unwrap();
-        let string_value = constant_pool.add_utf8("text").unwrap();
+        let string_value = constant_pool
+            .add_utf8("Ljava/lang/annotation/RetentionPolicy;")
+            .unwrap();
         let module_name = constant_pool.add_module("module").unwrap();
         let module_version = constant_pool.add_utf8("1.0").unwrap();
         let package_name = constant_pool.add_package("package").unwrap();
@@ -3267,7 +3282,10 @@ mod tests {
             Err(InvalidConstantPoolIndex(9))
         ));
         assert!(matches!(
-            verify_annotations(&class_file, &[annotation(2, 9)]),
+            verify_annotations(
+                &create_class_file(vec![Constant::Integer(1), Constant::utf8("LAnnotation;")]),
+                &[annotation(2, 9)],
+            ),
             Err(InvalidConstantPoolIndex(9))
         ));
 
