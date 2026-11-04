@@ -6,11 +6,18 @@ use crate::verifiers::error::Result;
 use crate::verifiers::error::VerifyError::InvalidMethodAccessFlags;
 use crate::{CLASS_INITIALIZER_NAME, JAVA_1_2, JAVA_16};
 
+#[cfg(test)]
+thread_local! {
+    pub(crate) static METHOD_FLAG_CHECKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 /// Verify the method `MethodAccessFlags`.
 ///
 /// # Errors
 /// Returns `InvalidMethodAccessFlags` if the access flags are invalid.
 pub(crate) fn verify(class_file: &ClassFile<'_>, method: &Method) -> Result<()> {
+    #[cfg(test)]
+    METHOD_FLAG_CHECKS.update(|count| count + 1);
     // JVMS 4.6 exempts class initializers from the ordinary flag combinations.
     if class_file
         .constant_pool

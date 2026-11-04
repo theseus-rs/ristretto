@@ -5,32 +5,65 @@ use crate::attributes::Instruction;
 use crate::class_file::ClassFile;
 use crate::constant::Constant;
 use crate::method::Method;
+use crate::verifiers::attributes;
 use crate::verifiers::attributes::AttributeContext;
+use crate::verifiers::bytecode::control_flow::CodeInfo;
 use crate::verifiers::error::Result;
-use crate::verifiers::error::VerifyError::{
-    InvalidConstantPoolIndex, InvalidConstantPoolIndexType, VerificationError,
-};
-use crate::verifiers::{attributes, method_access_flags};
+use crate::verifiers::error::VerifyError::VerificationError;
+use ahash::AHashSet;
+
+/// Artifacts from a completed structural method verification.
+#[derive(Debug)]
+pub(crate) struct VerifiedMethod {
+    pub(crate) code_info: Option<CodeInfo>,
+}
 
 /// Verify the `ClassFile` methods.
 ///
 /// # Errors
 /// Returns `VerificationError` if the methods are invalid.
-pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
+pub(crate) fn verify(
+    class_file: &ClassFile<'_>,
+    mut on_method: impl FnMut(VerifiedMethod),
+) -> Result<()> {
+    let mut methods = AHashSet::new();
     for method in &class_file.methods {
-        method_access_flags::verify(class_file, method)?;
-        verify_name_index(class_file, method)?;
-        verify_descriptor_index(class_file, method)?;
-        verify_return_instructions(class_file, method)?;
-        let context = AttributeContext::Method(method);
-        attributes::verify(class_file, &method.attributes, context)?;
+        super::method_access_flags::verify(class_file, method)?;
+        let pool = &class_file.constant_pool;
+        if !methods.insert((
+            pool.try_get_utf8(method.name_index)?,
+            pool.try_get_utf8(method.descriptor_index)?,
+        )) {
+            return Err(crate::verifiers::VerifyError::ClassFormatError(
+                "Duplicate method name and descriptor".to_string(),
+            ));
+        }
+        let info = method
+            .attributes
+            .iter()
+            .find_map(code_attribute_instructions)
+            .map(CodeInfo::from_code)
+            .transpose()?;
+        verify_return_instructions(class_file, method, info.as_ref())?;
+        attributes::verify_with_code_info(
+            class_file,
+            &method.attributes,
+            AttributeContext::Method(method),
+            info.as_ref(),
+        )?;
+        super::format::verify_method_contents(class_file, method)?;
+        on_method(VerifiedMethod { code_info: info });
     }
     Ok(())
 }
 
 /// Verify that return instructions in the method match the method's return type.
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ireturn>
-fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Result<()> {
+fn verify_return_instructions(
+    class_file: &ClassFile<'_>,
+    method: &Method,
+    info: Option<&CodeInfo>,
+) -> Result<()> {
     // Get the method descriptor
     let Some(Constant::Utf8(descriptor)) = class_file.constant_pool.get(method.descriptor_index)
     else {
@@ -65,7 +98,10 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
     };
 
     // Return compatibility is a type-checking constraint on reachable instructions.
-    let reachable = reachable_instructions(method, code)?;
+    let Some(info) = info else {
+        return Ok(());
+    };
+    let reachable = reachable_instructions(method, code, info)?;
     for (index, instruction) in Instruction::with_offsets(code) {
         if !reachable.contains(&u16::try_from(index)?) {
             continue;
@@ -165,8 +201,8 @@ fn returns_are_compatible(code: &[Instruction], return_type: Option<&FieldType>)
 fn reachable_instructions(
     method: &Method,
     code: &[Instruction],
+    info: &CodeInfo,
 ) -> Result<std::collections::HashSet<u16>> {
-    let info = crate::verifiers::bytecode::control_flow::CodeInfo::from_code(code)?;
     let mut reachable = std::collections::HashSet::new();
     let mut pending = vec![0];
     for attribute in &method.attributes {
@@ -201,7 +237,7 @@ fn reachable_instructions(
                             pc,
                             instruction,
                             next,
-                            &info,
+                            info,
                         )
                     {
                         pending.extend(successors);
@@ -220,38 +256,32 @@ fn code_attribute_instructions(attribute: &Attribute) -> Option<&[Instruction]> 
     }
 }
 
-fn verify_name_index(class_file: &ClassFile<'_>, method: &Method) -> Result<()> {
-    let name_index = method.name_index;
-    match class_file.constant_pool.get(name_index) {
-        Some(Constant::Utf8 { .. }) => {} // valid constant
-        None => return Err(InvalidConstantPoolIndex(name_index)),
-        _ => return Err(InvalidConstantPoolIndexType(name_index)),
-    }
-    Ok(())
-}
-
-fn verify_descriptor_index(class_file: &ClassFile<'_>, method: &Method) -> Result<()> {
-    let descriptor_index = method.descriptor_index;
-    match class_file.constant_pool.get(descriptor_index) {
-        Some(Constant::Utf8 { .. }) => {} // valid constant
-        None => return Err(InvalidConstantPoolIndex(descriptor_index)),
-        _ => return Err(InvalidConstantPoolIndexType(descriptor_index)),
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::method_access_flags::MethodAccessFlags;
 
+    fn verify(class_file: &ClassFile<'_>) -> Result<()> {
+        super::verify(class_file, drop)
+    }
+
+    fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Result<()> {
+        let info = method
+            .attributes
+            .iter()
+            .find_map(code_attribute_instructions)
+            .map(CodeInfo::from_code)
+            .transpose()?;
+        super::verify_return_instructions(class_file, method, info.as_ref())
+    }
+
     fn get_test_class_file_and_method() -> (ClassFile<'static>, Method) {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
         constant_pool.push(Constant::utf8("foo"));
-        constant_pool.push(Constant::utf8("V"));
+        constant_pool.push(Constant::utf8("()V"));
         let method = Method {
-            access_flags: MethodAccessFlags::PUBLIC,
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
             name_index: 1,
             descriptor_index: 2,
             attributes: vec![],
@@ -286,6 +316,23 @@ mod test {
     }
 
     #[test]
+    fn method_indices_must_reference_utf8() {
+        let (mut class, method) = get_test_class_file_and_method();
+        let integer = class.constant_pool.add_integer(42).unwrap();
+        for invalid in [u16::MAX, integer] {
+            let mut bad_name = method.clone();
+            bad_name.name_index = invalid;
+            class.methods = vec![bad_name];
+            assert!(verify(&class).is_err());
+
+            let mut bad_descriptor = method.clone();
+            bad_descriptor.descriptor_index = invalid;
+            class.methods = vec![bad_descriptor];
+            assert!(verify(&class).is_err());
+        }
+    }
+
+    #[test]
     fn test_success() {
         let (class_file, _method) = get_test_class_file_and_method();
         assert_eq!(Ok(()), verify(&class_file));
@@ -297,52 +344,6 @@ mod test {
         method.access_flags = MethodAccessFlags::PUBLIC | MethodAccessFlags::PRIVATE;
         class_file.methods.push(method);
         assert!(verify(&class_file).is_err());
-    }
-
-    #[test]
-    fn test_invalid_name_index() {
-        let (class_file, mut method) = get_test_class_file_and_method();
-        method.name_index = u16::MAX;
-        assert_eq!(
-            Err(InvalidConstantPoolIndex(u16::MAX)),
-            verify_name_index(&class_file, &method)
-        );
-    }
-
-    #[test]
-    fn test_invalid_name_index_type() -> Result<()> {
-        let (mut class_file, mut method) = get_test_class_file_and_method();
-        let constant_pool = &mut class_file.constant_pool;
-        constant_pool.push(Constant::Class(method.name_index));
-        method.name_index = u16::try_from(constant_pool.len())?;
-        assert_eq!(
-            Err(InvalidConstantPoolIndexType(method.name_index)),
-            verify_name_index(&class_file, &method)
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn test_invalid_descriptor_index() {
-        let (class_file, mut method) = get_test_class_file_and_method();
-        method.descriptor_index = u16::MAX;
-        assert_eq!(
-            Err(InvalidConstantPoolIndex(u16::MAX)),
-            verify_descriptor_index(&class_file, &method)
-        );
-    }
-
-    #[test]
-    fn test_invalid_descriptor_index_type() -> Result<()> {
-        let (mut class_file, mut method) = get_test_class_file_and_method();
-        let constant_pool = &mut class_file.constant_pool;
-        constant_pool.push(Constant::Class(method.descriptor_index));
-        method.descriptor_index = u16::try_from(constant_pool.len())?;
-        assert_eq!(
-            Err(InvalidConstantPoolIndexType(method.descriptor_index)),
-            verify_descriptor_index(&class_file, &method)
-        );
-        Ok(())
     }
 
     // Return type verification tests

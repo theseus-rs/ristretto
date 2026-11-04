@@ -21,62 +21,66 @@ use crate::verifiers::error::VerifyError::{
 ///
 /// # Errors
 /// Returns an error if the Record attribute is invalid.
-pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
-    let mut has_record = false;
+pub(crate) fn verify(
+    class_file: &ClassFile<'_>,
+    attribute: &Attribute,
+    previous: &[Attribute],
+) -> Result<()> {
+    let has_record = previous
+        .iter()
+        .any(|a| matches!(a, Attribute::Record { .. }));
 
-    for attribute in &class_file.attributes {
-        if let Attribute::Record { records, .. } = attribute {
-            if has_record {
+    if let Attribute::Record { records, .. } = attribute {
+        if has_record {
+            return Err(VerificationError {
+                context: "Record".to_string(),
+                message: "Multiple Record attributes are not allowed".to_string(),
+            });
+        }
+
+        // Verify each record component
+
+        for (i, record_component) in records.iter().enumerate() {
+            // Verify name_index points to a valid CONSTANT_Utf8_info
+            let component_name = match class_file.constant_pool.get(record_component.name_index) {
+                Some(Constant::Utf8(name)) => name.clone(),
+                Some(_) => {
+                    return Err(InvalidConstantPoolIndexType(record_component.name_index));
+                }
+                None => return Err(InvalidConstantPoolIndex(record_component.name_index)),
+            };
+
+            // Verify descriptor_index points to a valid CONSTANT_Utf8_info
+            let descriptor = match class_file
+                .constant_pool
+                .get(record_component.descriptor_index)
+            {
+                Some(Constant::Utf8(desc)) => desc.clone(),
+                Some(_) => {
+                    return Err(InvalidConstantPoolIndexType(
+                        record_component.descriptor_index,
+                    ));
+                }
+                None => {
+                    return Err(InvalidConstantPoolIndex(record_component.descriptor_index));
+                }
+            };
+
+            super::format::member_name(&component_name, false)?;
+
+            // Validate the descriptor is a valid field descriptor
+            let descriptor_str = descriptor.to_str_lossy();
+            if !is_valid_field_descriptor(&descriptor_str) {
                 return Err(VerificationError {
                     context: "Record".to_string(),
-                    message: "Multiple Record attributes are not allowed".to_string(),
+                    message: format!(
+                        "Invalid field descriptor '{descriptor}' for record component '{component_name}' at index {i}"
+                    ),
                 });
             }
-            has_record = true;
 
-            // Verify each record component
-
-            for (i, record_component) in records.iter().enumerate() {
-                // Verify name_index points to a valid CONSTANT_Utf8_info
-                let component_name = match class_file.constant_pool.get(record_component.name_index)
-                {
-                    Some(Constant::Utf8(name)) => name.clone(),
-                    Some(_) => {
-                        return Err(InvalidConstantPoolIndexType(record_component.name_index));
-                    }
-                    None => return Err(InvalidConstantPoolIndex(record_component.name_index)),
-                };
-
-                // Verify descriptor_index points to a valid CONSTANT_Utf8_info
-                let descriptor = match class_file
-                    .constant_pool
-                    .get(record_component.descriptor_index)
-                {
-                    Some(Constant::Utf8(desc)) => desc.clone(),
-                    Some(_) => {
-                        return Err(InvalidConstantPoolIndexType(
-                            record_component.descriptor_index,
-                        ));
-                    }
-                    None => {
-                        return Err(InvalidConstantPoolIndex(record_component.descriptor_index));
-                    }
-                };
-
-                // Validate the descriptor is a valid field descriptor
-                let descriptor_str = descriptor.to_str_lossy();
-                if !is_valid_field_descriptor(&descriptor_str) {
-                    return Err(VerificationError {
-                        context: "Record".to_string(),
-                        message: format!(
-                            "Invalid field descriptor '{descriptor}' for record component '{component_name}' at index {i}"
-                        ),
-                    });
-                }
-
-                // Recursively verify component attributes
-                verify_component_attributes(class_file, &record_component.attributes, i)?;
-            }
+            // Recursively verify component attributes
+            verify_component_attributes(class_file, &record_component.attributes, i)?;
         }
     }
 
@@ -91,18 +95,11 @@ fn verify_component_attributes(
 ) -> Result<()> {
     for attribute in attributes {
         match attribute {
-            // Signature attribute is allowed on record components
-            Attribute::Signature {
-                signature_index, ..
-            } => match class_file.constant_pool.get(*signature_index) {
-                Some(Constant::Utf8(_)) => {}
-                Some(_) => return Err(InvalidConstantPoolIndexType(*signature_index)),
-                None => return Err(InvalidConstantPoolIndex(*signature_index)),
-            },
             // RuntimeVisibleAnnotations, RuntimeInvisibleAnnotations,
             // RuntimeVisibleTypeAnnotations, RuntimeInvisibleTypeAnnotations,
             // and Unknown attributes are allowed on record components per JVMS
-            Attribute::RuntimeVisibleAnnotations { .. }
+            Attribute::Signature { .. }
+            | Attribute::RuntimeVisibleAnnotations { .. }
             | Attribute::RuntimeInvisibleAnnotations { .. }
             | Attribute::RuntimeVisibleTypeAnnotations { .. }
             | Attribute::RuntimeInvisibleTypeAnnotations { .. }
@@ -119,7 +116,11 @@ fn verify_component_attributes(
             }
         }
     }
-    Ok(())
+    super::attributes::verify(
+        class_file,
+        attributes,
+        super::attributes::AttributeContext::RecordComponent,
+    )
 }
 
 /// Check if a string is a valid field descriptor according to [JVMS §4.3.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.3.2).
@@ -132,6 +133,13 @@ mod tests {
     use super::*;
     use crate::ClassAccessFlags;
     use crate::attributes::Record;
+
+    fn verify(class_file: &ClassFile<'_>) -> Result<()> {
+        for (index, attribute) in class_file.attributes.iter().enumerate() {
+            super::verify(class_file, attribute, &class_file.attributes[..index])?;
+        }
+        Ok(())
+    }
 
     fn create_record_component(
         class_file: &mut ClassFile<'_>,
@@ -370,13 +378,17 @@ mod tests {
             verify_component_attributes(&class_file, &[missing], 0)
         );
 
+        let unknown_name = class_file
+            .constant_pool
+            .add_utf8("VendorExtension")
+            .unwrap();
         class_file.attributes.push(Attribute::Record {
             name_index: 0,
             records: vec![Record {
                 name_index,
                 descriptor_index,
                 attributes: vec![Attribute::Unknown {
-                    name_index: 0,
+                    name_index: unknown_name,
                     info: vec![1, 2, 3],
                 }],
             }],

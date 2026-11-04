@@ -7,16 +7,28 @@ use crate::verifiers::error::VerifyError::{
     InvalidConstantPoolIndex, InvalidConstantPoolIndexType,
 };
 use crate::verifiers::{attributes, field_access_flags};
+use ahash::AHashSet;
 
 /// Verify the `ClassFile` fields.
 ///
 /// # Errors
 /// Returns `VerificationError` if the fields are invalid.
 pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
+    let mut fields = AHashSet::new();
     for field in &class_file.fields {
         field_access_flags::verify(class_file, field)?;
         verify_name_index(class_file, field)?;
         verify_descriptor_index(class_file, field)?;
+        super::format::verify_field(class_file, field)?;
+        let pool = &class_file.constant_pool;
+        if !fields.insert((
+            pool.try_get_utf8(field.name_index)?,
+            pool.try_get_utf8(field.descriptor_index)?,
+        )) {
+            return Err(crate::verifiers::VerifyError::ClassFormatError(
+                "Duplicate field name and descriptor".to_string(),
+            ));
+        }
         let context = AttributeContext::Field(field);
         attributes::verify(class_file, &field.attributes, context)?;
     }

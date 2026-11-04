@@ -20,62 +20,66 @@ use crate::verifiers::error::VerifyError::{
 ///
 /// # Errors
 /// Returns an error if the nest attributes are invalid or inconsistent.
-pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
-    let mut has_nest_host = false;
-    let mut has_nest_members = false;
+pub(crate) fn verify(
+    class_file: &ClassFile<'_>,
+    attribute: &Attribute,
+    previous: &[Attribute],
+) -> Result<()> {
+    let has_nest_host = previous
+        .iter()
+        .any(|a| matches!(a, Attribute::NestHost { .. }));
+    let has_nest_members = previous
+        .iter()
+        .any(|a| matches!(a, Attribute::NestMembers { .. }));
 
-    for attribute in &class_file.attributes {
-        match attribute {
-            Attribute::NestHost {
-                host_class_index, ..
-            } => {
-                if has_nest_host {
-                    return Err(VerificationError {
-                        context: "NestHost".to_string(),
-                        message: "Multiple NestHost attributes are not allowed".to_string(),
-                    });
-                }
-                has_nest_host = true;
-
-                if has_nest_members {
-                    return Err(VerificationError {
-                        context: "NestHost".to_string(),
-                        message: "Class cannot have both NestHost and NestMembers attributes"
-                            .to_string(),
-                    });
-                }
-
-                // Verify host_class_index points to a valid CONSTANT_Class_info
-                verify_class_index(class_file, *host_class_index, "NestHost.host_class_index")?;
+    match attribute {
+        Attribute::NestHost {
+            host_class_index, ..
+        } => {
+            if has_nest_host {
+                return Err(VerificationError {
+                    context: "NestHost".to_string(),
+                    message: "Multiple NestHost attributes are not allowed".to_string(),
+                });
             }
-            Attribute::NestMembers { class_indexes, .. } => {
-                if has_nest_members {
-                    return Err(VerificationError {
-                        context: "NestMembers".to_string(),
-                        message: "Multiple NestMembers attributes are not allowed".to_string(),
-                    });
-                }
-                has_nest_members = true;
 
-                if has_nest_host {
-                    return Err(VerificationError {
-                        context: "NestMembers".to_string(),
-                        message: "Class cannot have both NestHost and NestMembers attributes"
-                            .to_string(),
-                    });
-                }
-
-                // Verify each class index
-                for (i, &class_index) in class_indexes.iter().enumerate() {
-                    verify_class_index(
-                        class_file,
-                        class_index,
-                        &format!("NestMembers.class_indexes[{i}]"),
-                    )?;
-                }
+            if has_nest_members {
+                return Err(VerificationError {
+                    context: "NestHost".to_string(),
+                    message: "Class cannot have both NestHost and NestMembers attributes"
+                        .to_string(),
+                });
             }
-            _ => {}
+
+            // Verify host_class_index points to a valid CONSTANT_Class_info
+            verify_class_index(class_file, *host_class_index, "NestHost.host_class_index")?;
         }
+        Attribute::NestMembers { class_indexes, .. } => {
+            if has_nest_members {
+                return Err(VerificationError {
+                    context: "NestMembers".to_string(),
+                    message: "Multiple NestMembers attributes are not allowed".to_string(),
+                });
+            }
+
+            if has_nest_host {
+                return Err(VerificationError {
+                    context: "NestMembers".to_string(),
+                    message: "Class cannot have both NestHost and NestMembers attributes"
+                        .to_string(),
+                });
+            }
+
+            // Verify each class index
+            for (i, &class_index) in class_indexes.iter().enumerate() {
+                verify_class_index(
+                    class_file,
+                    class_index,
+                    &format!("NestMembers.class_indexes[{i}]"),
+                )?;
+            }
+        }
+        _ => {}
     }
 
     Ok(())
@@ -93,6 +97,13 @@ fn verify_class_index(class_file: &ClassFile<'_>, index: u16, _context: &str) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn verify(class_file: &ClassFile<'_>) -> Result<()> {
+        for (index, attribute) in class_file.attributes.iter().enumerate() {
+            super::verify(class_file, attribute, &class_file.attributes[..index])?;
+        }
+        Ok(())
+    }
 
     fn create_class_file_with_attributes(attributes: Vec<Attribute>) -> ClassFile<'static> {
         ClassFile {

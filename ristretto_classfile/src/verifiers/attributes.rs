@@ -1,15 +1,15 @@
 use crate::JAVA_7;
 use crate::attributes::{
-    Annotation, AnnotationElement, Attribute, BootstrapMethod, ExceptionTableEntry, Exports,
-    InnerClass, Instruction, LineNumber, LocalVariableTable, LocalVariableTypeTable,
-    MethodParameter, Opens, ParameterAnnotation, Provides, Record, Requires, TargetType,
-    TypeAnnotation,
+    Annotation, AnnotationElement, Attribute, BootstrapMethod, Exports, InnerClass, LineNumber,
+    LocalVariableTable, LocalVariableTypeTable, MethodParameter, Opens, ParameterAnnotation,
+    Provides, Requires, TargetType, TypeAnnotation,
 };
 use crate::class_access_flags::ClassAccessFlags;
 use crate::class_file::ClassFile;
 use crate::constant::Constant;
 use crate::field::Field;
 use crate::method::Method;
+use crate::verifiers::bytecode::control_flow::CodeInfo;
 use crate::verifiers::code;
 use crate::verifiers::error::Result;
 use crate::verifiers::error::VerifyError::{
@@ -26,34 +26,65 @@ pub(crate) enum AttributeContext<'a> {
     RecordComponent,
 }
 
+impl AttributeContext<'_> {
+    fn location(self) -> crate::attributes::attribute::AttributeLocation {
+        match self {
+            AttributeContext::Class => crate::attributes::attribute::AttributeLocation::Class,
+            AttributeContext::Field(_) => crate::attributes::attribute::AttributeLocation::Field,
+            AttributeContext::Method(_) => crate::attributes::attribute::AttributeLocation::Method,
+            AttributeContext::Code(..) => crate::attributes::attribute::AttributeLocation::Code,
+            AttributeContext::RecordComponent => {
+                crate::attributes::attribute::AttributeLocation::RecordComponent
+            }
+        }
+    }
+}
+
 /// Verify the attributes.
 ///
 /// # Errors
 /// Returns `VerificationError` if the attributes are invalid.
-#[expect(clippy::too_many_lines)]
 pub(crate) fn verify(
     class_file: &ClassFile<'_>,
     attributes: &[Attribute],
     context: AttributeContext,
 ) -> Result<()> {
-    let location = match context {
-        AttributeContext::Class => crate::attributes::attribute::AttributeLocation::Class,
-        AttributeContext::Field(_) => crate::attributes::attribute::AttributeLocation::Field,
-        AttributeContext::Method(_) => crate::attributes::attribute::AttributeLocation::Method,
-        AttributeContext::Code(..) => crate::attributes::attribute::AttributeLocation::Code,
-        AttributeContext::RecordComponent => {
-            crate::attributes::attribute::AttributeLocation::RecordComponent
+    verify_with_code_info(class_file, attributes, context, None)
+}
+
+pub(crate) fn verify_with_code_info(
+    class_file: &ClassFile<'_>,
+    attributes: &[Attribute],
+    context: AttributeContext,
+    code_info: Option<&CodeInfo>,
+) -> Result<()> {
+    let location = context.location();
+    for (index, attribute) in attributes.iter().enumerate() {
+        let previous = attributes.get(..index).unwrap_or_default();
+        if super::format::verify_attribute(class_file, attribute, previous, location)? {
+            verify_attribute(class_file, attribute, previous, context, code_info)?;
         }
-    };
-    for attribute in attributes {
-        if !location.recognizes(attribute.name().as_bytes()) {
-            continue;
-        }
-        match attribute {
+    }
+    Ok(())
+}
+
+#[expect(clippy::too_many_lines)]
+fn verify_attribute(
+    class_file: &ClassFile<'_>,
+    attribute: &Attribute,
+    previous: &[Attribute],
+    context: AttributeContext,
+    code_info: Option<&CodeInfo>,
+) -> Result<()> {
+    match (attribute, context) {
+        (
             Attribute::ConstantValue {
                 constant_value_index,
                 ..
-            } => verify_constant_value(class_file, context, *constant_value_index)?,
+            },
+            _,
+        ) => verify_constant_value(class_file, *constant_value_index)?,
+        (
             Attribute::Code {
                 max_stack,
                 max_locals,
@@ -61,49 +92,88 @@ pub(crate) fn verify(
                 attributes,
                 exception_table,
                 ..
-            } => verify_code(
+            },
+            AttributeContext::Method(method),
+        ) => {
+            let owned_info;
+            let info = if let Some(info) = code_info {
+                info
+            } else {
+                owned_info = CodeInfo::from_code(code)?;
+                &owned_info
+            };
+            let code_length = code::verify(
                 class_file,
-                context,
+                method,
                 *max_stack,
                 *max_locals,
                 code,
                 exception_table,
                 attributes,
-            )?,
-            Attribute::StackMapTable { .. } => verify_stack_map_table(context)?,
+                info,
+            )?;
+            super::format::verify_code_metadata(class_file, attribute, info)?;
+            verify(
+                class_file,
+                attributes,
+                AttributeContext::Code(method, code_length),
+            )?;
+        }
+        (
             Attribute::Exceptions {
                 exception_indexes, ..
-            } => verify_exceptions(class_file, context, exception_indexes)?,
-            Attribute::InnerClasses { classes, .. } => {
-                verify_inner_classes(class_file, context, classes)?;
-            }
+            },
+            _,
+        ) => verify_exceptions(class_file, exception_indexes)?,
+        (Attribute::InnerClasses { classes, .. }, _) => {
+            verify_inner_classes(class_file, classes)?;
+        }
+        (
             Attribute::EnclosingMethod {
                 class_index,
                 method_index,
                 ..
-            } => verify_enclosing_method(class_file, context, *class_index, *method_index)?,
-            Attribute::Synthetic { .. } => verify_synthetic(context)?,
+            },
+            _,
+        ) => verify_enclosing_method(class_file, *class_index, *method_index)?,
+        (
             Attribute::Signature {
                 signature_index, ..
-            } => verify_signature(class_file, context, *signature_index)?,
+            },
+            _,
+        ) => verify_signature(class_file, *signature_index)?,
+        (
             Attribute::SourceFile {
                 source_file_index, ..
-            } => verify_source_file(class_file, context, *source_file_index)?,
-            Attribute::SourceDebugExtension { .. } => verify_source_debug_extension(context)?,
-            Attribute::LineNumberTable { line_numbers, .. } => {
-                verify_line_number_table(context, line_numbers)?;
-            }
-            Attribute::LocalVariableTable { variables, .. } => {
-                verify_local_variable_table(class_file, context, variables)?;
-            }
-            Attribute::LocalVariableTypeTable { variable_types, .. } => {
-                verify_local_variable_type_table(class_file, context, variable_types)?;
-            }
-            Attribute::Deprecated { .. } => verify_deprecated(context)?,
+            },
+            _,
+        ) => verify_source_file(class_file, *source_file_index)?,
+        (
+            Attribute::LineNumberTable { line_numbers, .. },
+            AttributeContext::Code(_, code_length),
+        ) => {
+            verify_line_number_table(code_length, line_numbers)?;
+        }
+        (
+            Attribute::LocalVariableTable { variables, .. },
+            AttributeContext::Code(_, code_length),
+        ) => {
+            verify_local_variable_table(class_file, code_length, variables)?;
+        }
+        (
+            Attribute::LocalVariableTypeTable { variable_types, .. },
+            AttributeContext::Code(_, code_length),
+        ) => {
+            verify_local_variable_type_table(class_file, code_length, variable_types)?;
+        }
+        (
             Attribute::RuntimeVisibleAnnotations { annotations, .. }
-            | Attribute::RuntimeInvisibleAnnotations { annotations, .. } => {
-                verify_annotations(class_file, annotations)?;
-            }
+            | Attribute::RuntimeInvisibleAnnotations { annotations, .. },
+            _,
+        ) => {
+            verify_annotations(class_file, annotations)?;
+        }
+        (
             Attribute::RuntimeVisibleParameterAnnotations {
                 parameter_annotations,
                 ..
@@ -111,22 +181,28 @@ pub(crate) fn verify(
             | Attribute::RuntimeInvisibleParameterAnnotations {
                 parameter_annotations,
                 ..
-            } => verify_parameter_annotations(class_file, context, parameter_annotations)?,
+            },
+            _,
+        ) => verify_parameter_annotations(class_file, parameter_annotations)?,
+        (
             Attribute::RuntimeVisibleTypeAnnotations {
                 type_annotations, ..
             }
             | Attribute::RuntimeInvisibleTypeAnnotations {
                 type_annotations, ..
-            } => verify_type_annotations(class_file, context, type_annotations)?,
-            Attribute::AnnotationDefault { element, .. } => {
-                verify_annotation_default(class_file, context, element)?;
-            }
-            Attribute::BootstrapMethods { methods, .. } => {
-                verify_bootstrap_methods(class_file, context, methods)?;
-            }
-            Attribute::MethodParameters { parameters, .. } => {
-                verify_method_parameters(class_file, context, parameters)?;
-            }
+            },
+            _,
+        ) => verify_type_annotations(class_file, context, type_annotations)?,
+        (Attribute::AnnotationDefault { element, .. }, _) => {
+            verify_annotation_default(class_file, element)?;
+        }
+        (Attribute::BootstrapMethods { methods, .. }, _) => {
+            verify_bootstrap_methods(class_file, methods)?;
+        }
+        (Attribute::MethodParameters { parameters, .. }, _) => {
+            verify_method_parameters(class_file, parameters)?;
+        }
+        (
             Attribute::Module {
                 module_name_index,
                 version_index,
@@ -136,50 +212,43 @@ pub(crate) fn verify(
                 uses,
                 provides,
                 ..
-            } => verify_module(
-                class_file,
-                context,
-                *module_name_index,
-                *version_index,
-                requires,
-                exports,
-                opens,
-                uses,
-                provides,
-            )?,
+            },
+            _,
+        ) => verify_module(
+            class_file,
+            *module_name_index,
+            *version_index,
+            requires,
+            exports,
+            opens,
+            uses,
+            provides,
+        )?,
+        (
             Attribute::ModulePackages {
                 package_indexes, ..
-            } => verify_module_packages(class_file, context, package_indexes)?,
+            },
+            _,
+        ) => verify_module_packages(class_file, package_indexes)?,
+        (
             Attribute::ModuleMainClass {
                 main_class_index, ..
-            } => verify_module_main_class(class_file, context, *main_class_index)?,
-            Attribute::NestHost {
-                host_class_index, ..
-            } => verify_nest_host(class_file, context, *host_class_index)?,
-            Attribute::NestMembers { class_indexes, .. } => {
-                verify_nest_members(class_file, context, class_indexes)?;
-            }
-            Attribute::Record { records, .. } => verify_record(class_file, context, records)?,
-            Attribute::PermittedSubclasses { class_indexes, .. } => {
-                verify_permitted_subclasses(class_file, context, class_indexes)?;
-            }
-            Attribute::Unknown { .. } => {}
+            },
+            _,
+        ) => verify_module_main_class(class_file, *main_class_index)?,
+        (Attribute::NestHost { .. } | Attribute::NestMembers { .. }, _) => {
+            super::nest::verify(class_file, attribute, previous)?;
         }
+        (Attribute::Record { .. }, _) => super::record::verify(class_file, attribute, previous)?,
+        (Attribute::PermittedSubclasses { .. }, _) => {
+            super::permitted_subclasses::verify(class_file, attribute, previous)?;
+        }
+        _ => {}
     }
     Ok(())
 }
 
-fn verify_constant_value(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    constant_value_index: u16,
-) -> Result<()> {
-    if !matches!(context, AttributeContext::Field(_)) {
-        return Err(VerificationError {
-            context: "ConstantValue Attribute".to_string(),
-            message: "ConstantValue attribute only allowed in Field context".to_string(),
-        });
-    }
+fn verify_constant_value(class_file: &ClassFile<'_>, constant_value_index: u16) -> Result<()> {
     match class_file.constant_pool.get(constant_value_index) {
         Some(
             Constant::Long(_)
@@ -193,62 +262,7 @@ fn verify_constant_value(
     }
 }
 
-fn verify_code(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    max_stack: u16,
-    max_locals: u16,
-    code: &[Instruction],
-    exception_table: &[ExceptionTableEntry],
-    attributes: &[Attribute],
-) -> Result<()> {
-    let AttributeContext::Method(method) = context else {
-        return Err(VerificationError {
-            context: "Code Attribute".to_string(),
-            message: "Code attribute only allowed in Method context".to_string(),
-        });
-    };
-    // code::verify returns the code_length which is needed for context
-    let code_result = code::verify(
-        class_file,
-        method,
-        max_stack,
-        max_locals,
-        code,
-        exception_table,
-        attributes,
-    );
-    let code_length = code_result?;
-    // Recursively verify attributes of Code
-    verify(
-        class_file,
-        attributes,
-        AttributeContext::Code(method, code_length),
-    )
-}
-
-fn verify_stack_map_table(context: AttributeContext) -> Result<()> {
-    if !matches!(context, AttributeContext::Code(..)) {
-        return Err(VerificationError {
-            context: "StackMapTable Attribute".to_string(),
-            message: "StackMapTable attribute only allowed in Code context".to_string(),
-        });
-    }
-    // Structural verification is handled in code::verify
-    Ok(())
-}
-
-fn verify_exceptions(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    exception_indexes: &[u16],
-) -> Result<()> {
-    if !matches!(context, AttributeContext::Method(_)) {
-        return Err(VerificationError {
-            context: "Exceptions Attribute".to_string(),
-            message: "Exceptions attribute only allowed in Method context".to_string(),
-        });
-    }
+fn verify_exceptions(class_file: &ClassFile<'_>, exception_indexes: &[u16]) -> Result<()> {
     for index in exception_indexes {
         match class_file.constant_pool.get(*index) {
             Some(Constant::Class(_)) => {}
@@ -259,17 +273,7 @@ fn verify_exceptions(
     Ok(())
 }
 
-fn verify_inner_classes(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    classes: &[InnerClass],
-) -> Result<()> {
-    if !matches!(context, AttributeContext::Class) {
-        return Err(VerificationError {
-            context: "InnerClasses Attribute".to_string(),
-            message: "InnerClasses attribute only allowed in ClassFile context".to_string(),
-        });
-    }
+fn verify_inner_classes(class_file: &ClassFile<'_>, classes: &[InnerClass]) -> Result<()> {
     for class in classes {
         // class_info_index
         match class_file.constant_pool.get(class.class_info_index) {
@@ -312,16 +316,9 @@ fn verify_inner_classes(
 
 fn verify_enclosing_method(
     class_file: &ClassFile<'_>,
-    context: AttributeContext,
     class_index: u16,
     method_index: u16,
 ) -> Result<()> {
-    if !matches!(context, AttributeContext::Class) {
-        return Err(VerificationError {
-            context: "EnclosingMethod Attribute".to_string(),
-            message: "EnclosingMethod attribute only allowed in ClassFile context".to_string(),
-        });
-    }
     match class_file.constant_pool.get(class_index) {
         Some(Constant::Class(_)) => {}
         Some(_) => return Err(InvalidConstantPoolIndexType(class_index)),
@@ -337,27 +334,7 @@ fn verify_enclosing_method(
     Ok(())
 }
 
-fn verify_synthetic(context: AttributeContext) -> Result<()> {
-    if matches!(context, AttributeContext::Code(..)) {
-        return Err(VerificationError {
-            context: "Synthetic Attribute".to_string(),
-            message: "Synthetic attribute not allowed in Code context".to_string(),
-        });
-    }
-    Ok(())
-}
-
-fn verify_signature(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    signature_index: u16,
-) -> Result<()> {
-    if matches!(context, AttributeContext::Code(..)) {
-        return Err(VerificationError {
-            context: "Signature Attribute".to_string(),
-            message: "Signature attribute not allowed in Code context".to_string(),
-        });
-    }
+fn verify_signature(class_file: &ClassFile<'_>, signature_index: u16) -> Result<()> {
     match class_file.constant_pool.get(signature_index) {
         Some(Constant::Utf8(_)) => {}
         Some(_) => return Err(InvalidConstantPoolIndexType(signature_index)),
@@ -366,17 +343,7 @@ fn verify_signature(
     Ok(())
 }
 
-fn verify_source_file(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    source_file_index: u16,
-) -> Result<()> {
-    if !matches!(context, AttributeContext::Class) {
-        return Err(VerificationError {
-            context: "SourceFile Attribute".to_string(),
-            message: "SourceFile attribute only allowed in ClassFile context".to_string(),
-        });
-    }
+fn verify_source_file(class_file: &ClassFile<'_>, source_file_index: u16) -> Result<()> {
     match class_file.constant_pool.get(source_file_index) {
         Some(Constant::Utf8(_)) => {}
         Some(_) => return Err(InvalidConstantPoolIndexType(source_file_index)),
@@ -385,43 +352,15 @@ fn verify_source_file(
     Ok(())
 }
 
-fn verify_source_debug_extension(context: AttributeContext) -> Result<()> {
-    if !matches!(context, AttributeContext::Class) {
-        return Err(VerificationError {
-            context: "SourceDebugExtension Attribute".to_string(),
-            message: "SourceDebugExtension attribute only allowed in ClassFile context".to_string(),
-        });
-    }
-    Ok(())
-}
-
-fn verify_line_number_table(context: AttributeContext, line_numbers: &[LineNumber]) -> Result<()> {
-    // LineNumberTable is typically inside Code attribute, but some compilers (e.g., javac 21+)
-    // place it as a sibling attribute at the Method level. Both are accepted by the JVM.
-    match context {
-        AttributeContext::Code(_, code_length) => {
-            // When inside Code, validate start_pc against code_length
-            for line_number in line_numbers {
-                if line_number.start_pc >= code_length {
-                    return Err(VerificationError {
-                        context: "LineNumberTable Attribute".to_string(),
-                        message: format!(
-                            "Invalid start_pc {} in LineNumberTable (code length {})",
-                            line_number.start_pc, code_length
-                        ),
-                    });
-                }
-            }
-        }
-        AttributeContext::Method(_) => {
-            // When at Method level (sibling of Code), we cannot validate start_pc
-            // as we don't have code_length. The JVM accepts this placement.
-        }
-        _ => {
+fn verify_line_number_table(code_length: u16, line_numbers: &[LineNumber]) -> Result<()> {
+    for line_number in line_numbers {
+        if line_number.start_pc >= code_length {
             return Err(VerificationError {
                 context: "LineNumberTable Attribute".to_string(),
-                message: "LineNumberTable attribute only allowed in Code or Method context"
-                    .to_string(),
+                message: format!(
+                    "Invalid start_pc {} in LineNumberTable (code length {})",
+                    line_number.start_pc, code_length
+                ),
             });
         }
     }
@@ -430,28 +369,12 @@ fn verify_line_number_table(context: AttributeContext, line_numbers: &[LineNumbe
 
 fn verify_local_variable_table(
     class_file: &ClassFile<'_>,
-    context: AttributeContext,
+    code_length: u16,
     variables: &[LocalVariableTable],
 ) -> Result<()> {
-    // LocalVariableTable is typically inside Code attribute, but some compilers
-    // place it as a sibling attribute at the Method level. Both are accepted by the JVM.
-    let code_length = match context {
-        AttributeContext::Code(_, len) => Some(len),
-        AttributeContext::Method(_) => None, // Cannot validate ranges without code_length
-        _ => {
-            return Err(VerificationError {
-                context: "LocalVariableTable Attribute".to_string(),
-                message: "LocalVariableTable attribute only allowed in Code or Method context"
-                    .to_string(),
-            });
-        }
-    };
-
     for local_variable in variables {
-        // Only validate ranges if we have code_length (i.e., in Code context)
-        if let Some(code_length) = code_length
-            && u32::from(local_variable.start_pc) + u32::from(local_variable.length)
-                > u32::from(code_length)
+        if u32::from(local_variable.start_pc) + u32::from(local_variable.length)
+            > u32::from(code_length)
         {
             return Err(VerificationError {
                 context: "LocalVariableTable Attribute".to_string(),
@@ -489,28 +412,12 @@ fn verify_local_variable_table(
 
 fn verify_local_variable_type_table(
     class_file: &ClassFile<'_>,
-    context: AttributeContext,
+    code_length: u16,
     variable_types: &[LocalVariableTypeTable],
 ) -> Result<()> {
-    // LocalVariableTypeTable is typically inside Code attribute, but some compilers
-    // place it as a sibling attribute at the Method level. Both are accepted by the JVM.
-    let code_length = match context {
-        AttributeContext::Code(_, len) => Some(len),
-        AttributeContext::Method(_) => None, // Cannot validate ranges without code_length
-        _ => {
-            return Err(VerificationError {
-                context: "LocalVariableTypeTable Attribute".to_string(),
-                message: "LocalVariableTypeTable attribute only allowed in Code or Method context"
-                    .to_string(),
-            });
-        }
-    };
-
     for local_variable in variable_types {
-        // Only validate ranges if we have code_length (i.e., in Code context)
-        if let Some(code_length) = code_length
-            && u32::from(local_variable.start_pc) + u32::from(local_variable.length)
-                > u32::from(code_length)
+        if u32::from(local_variable.start_pc) + u32::from(local_variable.length)
+            > u32::from(code_length)
         {
             return Err(VerificationError {
                 context: "LocalVariableTypeTable Attribute".to_string(),
@@ -537,16 +444,6 @@ fn verify_local_variable_type_table(
                 return Err(InvalidConstantPoolIndex(local_variable.signature_index));
             }
         }
-    }
-    Ok(())
-}
-
-fn verify_deprecated(context: AttributeContext) -> Result<()> {
-    if matches!(context, AttributeContext::Code(..)) {
-        return Err(VerificationError {
-            context: "Deprecated Attribute".to_string(),
-            message: "Deprecated attribute not allowed in Code context".to_string(),
-        });
     }
     Ok(())
 }
@@ -655,15 +552,8 @@ fn verify_annotation_element(
 
 fn verify_parameter_annotations(
     class_file: &ClassFile<'_>,
-    context: AttributeContext,
     parameter_annotations: &[ParameterAnnotation],
 ) -> Result<()> {
-    if !matches!(context, AttributeContext::Method(_)) {
-        return Err(VerificationError {
-            context: "ParameterAnnotations Attribute".to_string(),
-            message: "ParameterAnnotations attribute only allowed in Method context".to_string(),
-        });
-    }
     for parameter_annotation in parameter_annotations {
         verify_annotations(class_file, &parameter_annotation.annotations)?;
     }
@@ -784,29 +674,12 @@ fn verify_type_annotations(
 
 fn verify_annotation_default(
     class_file: &ClassFile<'_>,
-    context: AttributeContext,
     element: &AnnotationElement,
 ) -> Result<()> {
-    if !matches!(context, AttributeContext::Method(_)) {
-        return Err(VerificationError {
-            context: "AnnotationDefault Attribute".to_string(),
-            message: "AnnotationDefault attribute only allowed in Method context".to_string(),
-        });
-    }
     verify_annotation_element(class_file, element)
 }
 
-fn verify_bootstrap_methods(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    methods: &[BootstrapMethod],
-) -> Result<()> {
-    if !matches!(context, AttributeContext::Class) {
-        return Err(VerificationError {
-            context: "BootstrapMethods Attribute".to_string(),
-            message: "BootstrapMethods attribute only allowed in ClassFile context".to_string(),
-        });
-    }
+fn verify_bootstrap_methods(class_file: &ClassFile<'_>, methods: &[BootstrapMethod]) -> Result<()> {
     for method in methods {
         match class_file.constant_pool.get(method.bootstrap_method_ref) {
             Some(Constant::MethodHandle { .. }) => {}
@@ -825,15 +698,8 @@ fn verify_bootstrap_methods(
 
 fn verify_method_parameters(
     class_file: &ClassFile<'_>,
-    context: AttributeContext,
     parameters: &[MethodParameter],
 ) -> Result<()> {
-    if !matches!(context, AttributeContext::Method(_)) {
-        return Err(VerificationError {
-            context: "MethodParameters Attribute".to_string(),
-            message: "MethodParameters attribute only allowed in Method context".to_string(),
-        });
-    }
     for parameter in parameters {
         if parameter.name_index == 0 {
             continue;
@@ -850,7 +716,6 @@ fn verify_method_parameters(
 #[expect(clippy::too_many_arguments)]
 fn verify_module(
     class_file: &ClassFile<'_>,
-    context: AttributeContext,
     module_name_index: u16,
     version_index: u16,
     requires: &[Requires],
@@ -859,12 +724,6 @@ fn verify_module(
     uses: &[u16],
     provides: &[Provides],
 ) -> Result<()> {
-    if !matches!(context, AttributeContext::Class) {
-        return Err(VerificationError {
-            context: "Module Attribute".to_string(),
-            message: "Module attribute only allowed in ClassFile context".to_string(),
-        });
-    }
     match class_file.constant_pool.get(module_name_index) {
         Some(Constant::Module(_)) => {}
         Some(_) => return Err(InvalidConstantPoolIndexType(module_name_index)),
@@ -946,17 +805,7 @@ fn verify_module(
     Ok(())
 }
 
-fn verify_module_packages(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    package_indexes: &[u16],
-) -> Result<()> {
-    if !matches!(context, AttributeContext::Class) {
-        return Err(VerificationError {
-            context: "ModulePackages Attribute".to_string(),
-            message: "ModulePackages attribute only allowed in ClassFile context".to_string(),
-        });
-    }
+fn verify_module_packages(class_file: &ClassFile<'_>, package_indexes: &[u16]) -> Result<()> {
     for index in package_indexes {
         match class_file.constant_pool.get(*index) {
             Some(Constant::Package(_)) => {}
@@ -967,17 +816,7 @@ fn verify_module_packages(
     Ok(())
 }
 
-fn verify_module_main_class(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    main_class_index: u16,
-) -> Result<()> {
-    if !matches!(context, AttributeContext::Class) {
-        return Err(VerificationError {
-            context: "ModuleMainClass Attribute".to_string(),
-            message: "ModuleMainClass attribute only allowed in ClassFile context".to_string(),
-        });
-    }
+fn verify_module_main_class(class_file: &ClassFile<'_>, main_class_index: u16) -> Result<()> {
     match class_file.constant_pool.get(main_class_index) {
         Some(Constant::Class(_)) => {}
         Some(_) => return Err(InvalidConstantPoolIndexType(main_class_index)),
@@ -986,104 +825,13 @@ fn verify_module_main_class(
     Ok(())
 }
 
-fn verify_nest_host(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    host_class_index: u16,
-) -> Result<()> {
-    if !matches!(context, AttributeContext::Class) {
-        return Err(VerificationError {
-            context: "NestHost Attribute".to_string(),
-            message: "NestHost attribute only allowed in ClassFile context".to_string(),
-        });
-    }
-    match class_file.constant_pool.get(host_class_index) {
-        Some(Constant::Class(_)) => {}
-        Some(_) => return Err(InvalidConstantPoolIndexType(host_class_index)),
-        None => return Err(InvalidConstantPoolIndex(host_class_index)),
-    }
-    Ok(())
-}
-
-fn verify_nest_members(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    class_indexes: &[u16],
-) -> Result<()> {
-    if !matches!(context, AttributeContext::Class) {
-        return Err(VerificationError {
-            context: "NestMembers Attribute".to_string(),
-            message: "NestMembers attribute only allowed in ClassFile context".to_string(),
-        });
-    }
-    for index in class_indexes {
-        match class_file.constant_pool.get(*index) {
-            Some(Constant::Class(_)) => {}
-            Some(_) => return Err(InvalidConstantPoolIndexType(*index)),
-            None => return Err(InvalidConstantPoolIndex(*index)),
-        }
-    }
-    Ok(())
-}
-
-fn verify_record(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    records: &[Record],
-) -> Result<()> {
-    if !matches!(context, AttributeContext::Class) {
-        return Err(VerificationError {
-            context: "Record Attribute".to_string(),
-            message: "Record attribute only allowed in ClassFile context".to_string(),
-        });
-    }
-    for record in records {
-        match class_file.constant_pool.get(record.name_index) {
-            Some(Constant::Utf8(_)) => {}
-            Some(_) => return Err(InvalidConstantPoolIndexType(record.name_index)),
-            None => return Err(InvalidConstantPoolIndex(record.name_index)),
-        }
-        match class_file.constant_pool.get(record.descriptor_index) {
-            Some(Constant::Utf8(_)) => {}
-            Some(_) => return Err(InvalidConstantPoolIndexType(record.descriptor_index)),
-            None => return Err(InvalidConstantPoolIndex(record.descriptor_index)),
-        }
-        verify(
-            class_file,
-            &record.attributes,
-            AttributeContext::RecordComponent,
-        )?;
-    }
-    Ok(())
-}
-
-fn verify_permitted_subclasses(
-    class_file: &ClassFile<'_>,
-    context: AttributeContext,
-    class_indexes: &[u16],
-) -> Result<()> {
-    if !matches!(context, AttributeContext::Class) {
-        return Err(VerificationError {
-            context: "PermittedSubclasses Attribute".to_string(),
-            message: "PermittedSubclasses attribute only allowed in ClassFile context".to_string(),
-        });
-    }
-    for index in class_indexes {
-        match class_file.constant_pool.get(*index) {
-            Some(Constant::Class(_)) => {}
-            Some(_) => return Err(InvalidConstantPoolIndexType(*index)),
-            None => return Err(InvalidConstantPoolIndex(*index)),
-        }
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::attributes::ExceptionTableEntry;
     use crate::attributes::{
-        AnnotationValuePair, ExportsFlags, MethodParameterAccessFlags, ModuleAccessFlags,
-        NestedClassAccessFlags, OpensFlags, RequiresFlags, TargetType,
+        AnnotationValuePair, ExportsFlags, Instruction, MethodParameterAccessFlags,
+        ModuleAccessFlags, NestedClassAccessFlags, OpensFlags, Record, RequiresFlags, TargetType,
     };
     use crate::constant::Constant;
     use crate::constant_pool::ConstantPool;
@@ -1091,6 +839,20 @@ mod tests {
     use crate::method::Method;
     use crate::{BaseType, FieldAccessFlags, FieldType};
     use {Attribute, InnerClass, LineNumber, LocalVariableTable, LocalVariableTypeTable};
+
+    fn verify(
+        class_file: &ClassFile<'_>,
+        attributes: &[Attribute],
+        context: AttributeContext,
+    ) -> Result<()> {
+        let location = context.location();
+        for (index, attribute) in attributes.iter().enumerate() {
+            if location.recognizes(attribute.name().as_bytes()) {
+                verify_attribute(class_file, attribute, &attributes[..index], context, None)?;
+            }
+        }
+        Ok(())
+    }
 
     fn create_class_file(constants: Vec<Constant<'static>>) -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
@@ -1154,6 +916,7 @@ mod tests {
             Constant::utf8("()V"),
             Constant::utf8("Code"),
             Constant::utf8("(J)V"),
+            Constant::utf8("LineNumberTable"),
         ];
         let class_file = create_class_file(constants);
         let method = Method {
@@ -1195,7 +958,7 @@ mod tests {
         ));
 
         let line_number_table = Attribute::LineNumberTable {
-            name_index: 0,
+            name_index: 4,
             line_numbers: vec![],
         };
         let attribute_recursive = Attribute::Code {
@@ -1542,7 +1305,7 @@ mod tests {
             .is_ok()
         );
 
-        // Method context is now allowed (some compilers place LineNumberTable at method level)
+        // A misplaced LineNumberTable is ignored at method level.
         assert!(
             verify(
                 &ClassFile::default(),
@@ -1552,7 +1315,7 @@ mod tests {
             .is_ok()
         );
 
-        // Class context should still fail
+        // A misplaced debug attribute is also ignored at class level.
         assert!(matches!(
             verify(
                 &ClassFile::default(),
@@ -1594,7 +1357,7 @@ mod tests {
 
         assert!(verify(&class_file, std::slice::from_ref(&attribute), context).is_ok());
 
-        // Method context is now allowed (some compilers place LocalVariableTable at method level)
+        // A misplaced LocalVariableTable is ignored at method level.
         assert!(
             verify(
                 &class_file,
@@ -1604,7 +1367,7 @@ mod tests {
             .is_ok()
         );
 
-        // Class context should still fail
+        // A misplaced debug attribute is also ignored at class level.
         assert!(matches!(
             verify(
                 &class_file,
@@ -1679,7 +1442,7 @@ mod tests {
 
         assert!(verify(&class_file, std::slice::from_ref(&attribute), context).is_ok());
 
-        // Method context is now allowed (some compilers place LocalVariableTypeTable at method level)
+        // A misplaced LocalVariableTypeTable is ignored at method level.
         assert!(
             verify(
                 &class_file,
@@ -1689,7 +1452,7 @@ mod tests {
             .is_ok()
         );
 
-        // Class context should still fail
+        // A misplaced debug attribute is also ignored at class level.
         assert!(matches!(
             verify(
                 &class_file,
@@ -2286,7 +2049,7 @@ mod tests {
 
     #[test]
     fn test_verify_record() {
-        let constants = vec![Constant::utf8("name"), Constant::utf8("descriptor")];
+        let constants = vec![Constant::utf8("name"), Constant::utf8("I")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::Record {
             name_index: 0,
@@ -3730,7 +3493,7 @@ mod tests {
     #[test]
     fn test_verify_record_invalid_paths() {
         let class_context = AttributeContext::Class;
-        let class_file = attribute_edge_class_file();
+        let mut class_file = attribute_edge_class_file();
 
         let record_attribute = |record: Record| Attribute::Record {
             name_index: 0,
@@ -3784,12 +3547,13 @@ mod tests {
             ),
             Err(InvalidConstantPoolIndex(9))
         ));
+        let descriptor_index = class_file.constant_pool.add_utf8("I").unwrap();
         assert!(matches!(
             verify(
                 &class_file,
                 &[record_attribute(Record {
                     name_index: 2,
-                    descriptor_index: 2,
+                    descriptor_index,
                     attributes: vec![Attribute::Code {
                         name_index: 0,
                         max_stack: 0,
@@ -3801,7 +3565,7 @@ mod tests {
                 })],
                 class_context,
             ),
-            Ok(())
+            Err(VerificationError { .. })
         ));
     }
 
@@ -3849,16 +3613,9 @@ mod tests {
             access_flags: NestedClassAccessFlags::empty(),
         };
         class_file.version = JAVA_7;
-        assert!(
-            verify_inner_classes(
-                &class_file,
-                AttributeContext::Class,
-                std::slice::from_ref(&inner)
-            )
-            .is_err()
-        );
+        assert!(verify_inner_classes(&class_file, std::slice::from_ref(&inner)).is_err());
         class_file.version = crate::JAVA_6;
-        assert!(verify_inner_classes(&class_file, AttributeContext::Class, &[inner]).is_ok());
+        assert!(verify_inner_classes(&class_file, &[inner]).is_ok());
     }
 
     #[test]

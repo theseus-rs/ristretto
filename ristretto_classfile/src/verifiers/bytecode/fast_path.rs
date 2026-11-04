@@ -132,16 +132,30 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     /// # Errors
     ///
     /// Returns an error if the method's code cannot be processed.
+    #[cfg(test)]
     pub fn new(
         class_file: &'a ClassFile<'a>,
         method: &'a Method,
         context: &'a C,
         config: &'a VerifierConfig,
     ) -> Result<Self> {
+        Self::with_code_info(class_file, method, context, config, None)
+    }
+
+    pub(crate) fn with_code_info(
+        class_file: &'a ClassFile<'a>,
+        method: &'a Method,
+        context: &'a C,
+        config: &'a VerifierConfig,
+        code_info: Option<CodeInfo>,
+    ) -> Result<Self> {
         let (code, max_stack, max_locals, code_attributes, exception_table) =
             Self::extract_code_attribute(method)?;
 
-        let code_info = Self::build_code_info(code)?;
+        let code_info = match code_info {
+            Some(info) => info,
+            None => CodeInfo::from_code(code)?,
+        };
         let (current_class, method_name, method_descriptor) =
             Self::extract_method_info(class_file, method)?;
         let method_descriptor_js = JavaStr::cow_from_str(&method_descriptor);
@@ -212,11 +226,6 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             .ok_or_else(|| {
                 VerifyError::ClassFormatError("Method has no Code attribute".to_string())
             })
-    }
-
-    /// Builds the code info structure from instructions.
-    fn build_code_info(code: &[Instruction]) -> Result<CodeInfo> {
-        CodeInfo::from_code(code)
     }
 
     /// Extracts method information from the constant pool.
@@ -1726,7 +1735,7 @@ mod tests {
 
         let bad_code = static_method(vec![Instruction::Goto(i16::MAX)], 0, 0);
         assert!(TestFastPathVerifier::new(&class_file, &bad_code, &context, &config).is_err());
-        assert!(TestFastPathVerifier::build_code_info(&[Instruction::Goto(i16::MAX)]).is_err());
+        assert!(CodeInfo::from_code(&[Instruction::Goto(i16::MAX)]).is_err());
 
         let bad_descriptor_for_new = method_with(
             MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
