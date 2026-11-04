@@ -103,6 +103,8 @@ pub struct FastPathVerifier<'a, C: VerificationContext> {
     method_descriptor: String,
     /// Decoded `StackMapTable`.
     stack_map_table: DecodedStackMapTable,
+    /// Recoverable Java 6 stack-map failure, retained for repeat verification.
+    stack_map_error: Option<String>,
     /// Initial frame at method entry.
     initial_frame: Frame,
     /// Set of jump targets (for merge point detection).
@@ -171,9 +173,32 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             max_locals,
             max_stack,
         )?;
-        let stack_map_table =
-            Self::decode_stack_map_table(code_attributes, &initial_frame, class_file, max_stack)?;
-        stack_map_table.validate_offsets(|offset| code_info.is_valid_offset(offset))?;
+        if major_version == crate::JAVA_6.major() {
+            for attribute in code_attributes {
+                if let Attribute::StackMapTable { frames, .. } = attribute {
+                    super::stackmap::validate_format(frames, class_file)?;
+                }
+            }
+        }
+        let decoded =
+            Self::decode_stack_map_table(code_attributes, &initial_frame, class_file, max_stack)
+                .and_then(|table| {
+                    table.validate_offsets(|offset| code_info.is_valid_offset(offset))?;
+                    table.validate_uninitialized_offsets(|offset| {
+                        matches!(
+                            code_info.index_at(offset).and_then(|index| code.get(index)),
+                            Some(Instruction::New(_))
+                        )
+                    })?;
+                    Ok(table)
+                });
+        let (stack_map_table, stack_map_error) = match decoded {
+            Ok(table) => (table, None),
+            Err(error) if major_version == crate::JAVA_6.major() => {
+                (DecodedStackMapTable::empty(), Some(error.to_string()))
+            }
+            Err(error) => return Err(error),
+        };
 
         let (jump_targets, handler_entries) =
             Self::collect_control_flow_targets(code, exception_table, &code_info);
@@ -195,6 +220,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             method_name,
             method_descriptor,
             stack_map_table,
+            stack_map_error,
             initial_frame,
             jump_targets,
             handler_entries,
@@ -378,6 +404,9 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     /// - `FastPathResult::Failed(err)` if verification fails with an error
     /// - `FastPathResult::NeedsFallback(reason)` if fast path cannot handle this method
     pub fn verify(&mut self) -> FastPathResult {
+        if let Some(error) = &self.stack_map_error {
+            return FastPathResult::Failed(VerifyError::VerifyError(error.clone()));
+        }
         // Validate exception table
         if let Err(e) = validate_exception_table(self.exception_table, &self.code_info) {
             return FastPathResult::Failed(e);

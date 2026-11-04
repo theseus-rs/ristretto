@@ -867,6 +867,13 @@ impl Attribute {
                 }
                 let attributes = Self::from_bytes_code_attributes(constant_pool, bytes)?;
                 for attribute in &attributes {
+                    // Frame encodings were parsed above. Java 6 frame offsets may
+                    // be stale and must reach type checking before inference fallback.
+                    if bytes.class_major_version == JAVA_6.major()
+                        && matches!(attribute, Attribute::StackMapTable { .. })
+                    {
+                        continue;
+                    }
                     super::code_metadata::validate(
                         attribute,
                         u16::try_from(code_length)?,
