@@ -1,8 +1,8 @@
 use crate::JAVA_7;
 use crate::attributes::{
     Annotation, AnnotationElement, Attribute, BootstrapMethod, Exports, InnerClass, LineNumber,
-    LocalVariableTable, LocalVariableTypeTable, MethodParameter, Opens, ParameterAnnotation,
-    Provides, Requires, TargetType, TypeAnnotation,
+    LocalVariableTable, LocalVariableTypeTable, MethodParameter, NestedClassAccessFlags, Opens,
+    ParameterAnnotation, Provides, Requires, TargetType, TypeAnnotation,
 };
 use crate::class_access_flags::ClassAccessFlags;
 use crate::class_file::ClassFile;
@@ -277,6 +277,13 @@ fn verify_inner_classes(class_file: &ClassFile<'_>, classes: &[InnerClass]) -> R
         if class.outer_class_info_index != 0 {
             super::format::verify_non_array_class(class_file, class.outer_class_info_index)?;
         }
+        if class.class_info_index == class.outer_class_info_index {
+            return Err(VerificationError {
+                context: "InnerClasses Attribute".to_string(),
+                message: "Inner and outer class indexes must differ".to_string(),
+            });
+        }
+        verify_inner_class_flags(class.access_flags)?;
         // inner_name_index (can be 0)
         if class.name_index == 0 {
             if class_file.version.major() >= JAVA_7.major() && class.outer_class_info_index != 0 {
@@ -288,10 +295,32 @@ fn verify_inner_classes(class_file: &ClassFile<'_>, classes: &[InnerClass]) -> R
             continue;
         }
         match class_file.constant_pool.get(class.name_index) {
-            Some(Constant::Utf8(_)) => {}
+            Some(Constant::Utf8(name)) => super::format::member_name(name, false)?,
             Some(_) => return Err(InvalidConstantPoolIndexType(class.name_index)),
             None => return Err(InvalidConstantPoolIndex(class.name_index)),
         }
+    }
+    Ok(())
+}
+
+fn verify_inner_class_flags(flags: NestedClassAccessFlags) -> Result<()> {
+    let visibility = flags
+        & (NestedClassAccessFlags::PUBLIC
+            | NestedClassAccessFlags::PRIVATE
+            | NestedClassAccessFlags::PROTECTED);
+    // Reserved bits are ignored; only combinations of defined flags matter.
+    if visibility.bits().count_ones() > 1
+        || flags.contains(NestedClassAccessFlags::FINAL | NestedClassAccessFlags::ABSTRACT)
+        || (flags.contains(NestedClassAccessFlags::ANNOTATION)
+            && !flags.contains(NestedClassAccessFlags::INTERFACE))
+        || (flags.contains(NestedClassAccessFlags::INTERFACE)
+            && (!flags.contains(NestedClassAccessFlags::ABSTRACT)
+                || flags.intersects(NestedClassAccessFlags::FINAL | NestedClassAccessFlags::ENUM)))
+    {
+        return Err(VerificationError {
+            context: "InnerClasses Attribute".to_string(),
+            message: format!("Invalid inner class access flags: {:#06x}", flags.bits()),
+        });
     }
     Ok(())
 }
@@ -2785,7 +2814,7 @@ mod tests {
                     name_index: 0,
                     classes: vec![InnerClass {
                         class_info_index: class_name,
-                        outer_class_info_index: class_name,
+                        outer_class_info_index: 0,
                         name_index: element_name,
                         access_flags: NestedClassAccessFlags::empty(),
                     }],
