@@ -107,7 +107,7 @@ pub const JAVA_PREVIEW_MINOR_VERSION: u16 = 65535;
 /// #  Reference
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1>
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq)]
 pub enum Version {
     Java1_0_2 { minor: u16 },
     Java1_1 { minor: u16 },
@@ -137,6 +137,19 @@ pub enum Version {
     Java25 { minor: u16 },
     Java26 { minor: u16 },
     Java27 { minor: u16 },
+}
+
+// Legacy Java 1.0.2 and Java 1.1 variants can represent the same wire version.
+impl PartialEq for Version {
+    fn eq(&self, other: &Self) -> bool {
+        (self.major(), self.minor()) == (other.major(), other.minor())
+    }
+}
+
+impl PartialOrd for Version {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        (self.major(), self.minor()).partial_cmp(&(other.major(), other.minor()))
+    }
 }
 
 impl Version {
@@ -762,5 +775,19 @@ mod test {
         assert!(versions_in.matches(&JAVA_11));
         assert!(versions_in.matches(&JAVA_21));
         assert!(!versions_in.matches(&JAVA_17));
+    }
+    #[test]
+    fn legacy_aliases_compare_by_wire_version() -> Result<()> {
+        for minor in [0, 3, u16::MAX] {
+            let early = Version::Java1_0_2 { minor };
+            let later = Version::Java1_1 { minor };
+            assert_eq!(early, later);
+            assert_eq!(early.partial_cmp(&later), Some(std::cmp::Ordering::Equal));
+            let mut bytes = Vec::new();
+            later.to_bytes(&mut bytes)?;
+            assert_eq!(later, Version::from_bytes(&mut ByteReader::new(&bytes))?);
+        }
+        assert!(Version::Java1_0_2 { minor: 3 } > Version::Java1_1 { minor: 0 });
+        Ok(())
     }
 }
