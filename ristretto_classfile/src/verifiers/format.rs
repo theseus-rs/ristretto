@@ -131,6 +131,7 @@ pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
 }
 
 pub(super) fn verify_method(class: &ClassFile<'_>, method: &Method) -> Result<()> {
+    super::method_access_flags::verify(class, method)?;
     let name = class.constant_pool.try_get_utf8(method.name_index)?;
     let descriptor = class.constant_pool.try_get_utf8(method.descriptor_index)?;
     let descriptor_info = FieldType::method_descriptor_info(descriptor)?;
@@ -794,6 +795,29 @@ mod tests {
                 verify_attributes(&class, &[attribute.clone(), attribute.clone()], location)?;
             }
         }
+        Ok(())
+    }
+
+    #[test]
+    fn method_verification_checks_visibility_before_code() -> Result<()> {
+        let mut class = ClassFile::default();
+        let method = Method {
+            name_index: class.constant_pool.add_utf8("method")?,
+            descriptor_index: class.constant_pool.add_utf8("()V")?,
+            access_flags: MethodAccessFlags::PUBLIC
+                | MethodAccessFlags::PRIVATE
+                | MethodAccessFlags::NATIVE,
+            attributes: vec![],
+        };
+        assert!(matches!(
+            verify_method(&class, &method),
+            Err(VerifyError::InvalidMethodAccessFlags(_))
+        ));
+        let valid = Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
+            ..method
+        };
+        verify_method(&class, &valid)?;
         Ok(())
     }
 }
