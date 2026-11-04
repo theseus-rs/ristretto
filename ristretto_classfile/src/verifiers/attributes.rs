@@ -753,6 +753,9 @@ fn verify_type_annotations(
 ) -> Result<()> {
     for type_annotation in type_annotations {
         verify_annotation_target(class_file, context, &type_annotation.target_type)?;
+        for path in &type_annotation.type_path {
+            path.validate()?;
+        }
         match class_file.constant_pool.get(type_annotation.type_index) {
             Some(Constant::Utf8(_)) => {}
             Some(_) => return Err(InvalidConstantPoolIndexType(type_annotation.type_index)),

@@ -159,17 +159,22 @@ pub fn verify_method<C: VerificationContext>(
     let major_version = class_file.version.major();
     let use_fast_path = !config.use_inference() && config.requires_stackmap(major_version);
 
-    let fast_path_result = if use_fast_path {
+    let (fast_path_result, code_info) = if use_fast_path {
         verify_with_fast_path(class_file, method, context, config)?
     } else {
-        None
+        (None, None)
     };
     if let Some(result) = fast_path_result {
         return Ok(result);
     }
 
     // Use type inference (either directly or as fallback)
-    let mut inference_verifier = InferenceVerifier::new(class_file, method, context, config)?;
+    let mut inference_verifier = match code_info {
+        Some(info) => {
+            InferenceVerifier::with_code_info(class_file, method, context, config, Some(info))?
+        }
+        None => InferenceVerifier::new(class_file, method, context, config)?,
+    };
 
     inference_verifier.verify()?;
     Ok(VerificationResult::success(VerificationPath::Inference))
@@ -180,15 +185,21 @@ fn verify_with_fast_path<C: VerificationContext>(
     method: &Method,
     context: &C,
     config: &VerifierConfig,
-) -> Result<Option<VerificationResult>> {
+) -> Result<(
+    Option<VerificationResult>,
+    Option<super::control_flow::CodeInfo>,
+)> {
     let mut fast_verifier = FastPathVerifier::new(class_file, method, context, config)?;
     match fast_verifier.verify() {
-        FastPathResult::Success => Ok(Some(VerificationResult::success(
-            VerificationPath::FastPath,
-        ))),
-        FastPathResult::Failed(_) if class_file.version.major() == JAVA_6.major() => Ok(None),
+        FastPathResult::Success => Ok((
+            Some(VerificationResult::success(VerificationPath::FastPath)),
+            None,
+        )),
+        FastPathResult::Failed(_) if class_file.version.major() == JAVA_6.major() => {
+            Ok((None, Some(fast_verifier.into_code_info())))
+        }
         FastPathResult::Failed(e) => Err(e),
-        FastPathResult::NeedsFallback(_) => Ok(None),
+        FastPathResult::NeedsFallback(_) => Ok((None, Some(fast_verifier.into_code_info()))),
     }
 }
 
@@ -823,5 +834,33 @@ mod tests {
             ErrorClass::VerifyError,
             ErrorClass::classify(&VerifyError::InvalidInstruction(0))
         );
+    }
+    #[test]
+    fn fallback_reuses_boundaries_without_changing_validation() {
+        let class = create_mock_class_file();
+        let config = VerifierConfig::permissive();
+        let mut method = Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![Attribute::Code {
+                name_index: 5,
+                max_stack: 0,
+                max_locals: 0,
+                code: vec![Instruction::Goto(3), Instruction::Return],
+                exception_table: vec![],
+                attributes: vec![],
+            }],
+        };
+        assert_eq!(
+            verify_method(&class, &method, &MockContext::PERMISSIVE, &config)
+                .unwrap()
+                .path_used,
+            VerificationPath::Inference
+        );
+        if let Some(Attribute::Code { code, .. }) = method.attributes.first_mut() {
+            *code = vec![Instruction::Goto(1), Instruction::Return];
+        }
+        assert!(verify_method(&class, &method, &MockContext::PERMISSIVE, &config).is_err());
     }
 }

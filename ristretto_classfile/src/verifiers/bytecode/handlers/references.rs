@@ -704,7 +704,7 @@ pub fn handle_checkcast(frame: &mut Frame, class_name: &str) -> Result<()> {
 pub fn handle_instanceof(frame: &mut Frame) -> Result<()> {
     let objectref = frame.pop()?;
 
-    if !objectref.is_reference() {
+    if !objectref.is_initialized_reference() {
         return Err(VerifyError::VerifyError(format!(
             "instanceof: expected reference, got {objectref}"
         )));
@@ -2104,5 +2104,16 @@ mod tests {
             parse_type_descriptor("Z").unwrap(),
             VerificationType::Integer
         );
+    }
+    #[test]
+    fn test_instanceof_rejects_uninitialized_operands() {
+        for value in [
+            VerificationType::Uninitialized(7),
+            VerificationType::UninitializedThis,
+        ] {
+            let mut frame = Frame::new(0, 1);
+            frame.push(value).unwrap();
+            assert!(handle_instanceof(&mut frame).is_err());
+        }
     }
 }
