@@ -165,7 +165,6 @@ fn analyze_legacy(
         &mut pending,
     )?;
     let mut maximum = 0;
-    let mut depths = vec![None; usize::from(info.code_length())];
     while let Some(location) = pending.pop_front() {
         let state = states
             .get(&location)
@@ -177,16 +176,6 @@ fn analyze_legacy(
                     .ok_or_else(|| error(location.pc, "invalid instruction boundary"))?,
             )
             .ok_or_else(|| error(location.pc, "branch target outside code"))?;
-        let previous_depth = depths
-            .get_mut(location.pc)
-            .ok_or_else(|| error(location.pc, "branch target outside code"))?;
-        if previous_depth.is_some_and(|depth| depth != state.depth) {
-            return Err(error(
-                location.pc,
-                "incompatible stack heights across subroutine calls",
-            ));
-        }
-        *previous_depth = Some(state.depth);
         maximum = maximum.max(state.depth);
         for handler in handlers {
             if handler.range_pc.contains(&u16::try_from(location.pc)?) {
