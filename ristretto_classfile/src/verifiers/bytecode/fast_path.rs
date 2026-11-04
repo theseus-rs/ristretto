@@ -998,16 +998,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             };
 
             // Create handler frame: same locals, stack = [exception_type]
-            let mut handler_frame = Frame::new(self.max_locals as usize, self.max_stack as usize);
-
-            // Copy locals from current frame
-            for (i, local) in current_frame.locals.iter().enumerate() {
-                if let Some(handler_local) = handler_frame.locals.get_mut(i) {
-                    *handler_local = local.clone();
-                }
-            }
-
-            handler_frame.this_uninitialized = current_frame.this_uninitialized;
+            let mut handler_frame = current_frame.exception_frame(usize::from(self.max_stack));
             super::constraints::invalidate_constructor_receiver(
                 self.class_file,
                 self.code,
@@ -1029,14 +1020,14 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
 
             // Check if StackMapTable has a frame for this handler
             if let Some(decoded) = self.stack_map_table.get(handler.handler_pc) {
-                let expected =
-                    self.stack_map_table
-                        .to_frame(decoded, self.max_locals, self.max_stack);
-                self.validate_frame_compatibility(&handler_frame, &expected, handler.handler_pc)?;
                 let anchor_state = anchor_states.get_mut(handler_index).ok_or_else(|| {
                     VerifyError::VerifyError(format!("Invalid handler index {handler_index}"))
                 })?;
-                *anchor_state = Some(expected);
+                let expected = anchor_state.get_or_insert_with(|| {
+                    self.stack_map_table
+                        .to_frame(decoded, self.max_locals, self.max_stack)
+                });
+                self.validate_frame_compatibility(&handler_frame, expected, handler.handler_pc)?;
             } else {
                 let anchor_state = anchor_states.get_mut(handler_index).ok_or_else(|| {
                     VerifyError::VerifyError(format!("Invalid handler index {handler_index}"))

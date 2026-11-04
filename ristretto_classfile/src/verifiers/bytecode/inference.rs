@@ -714,16 +714,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
             }
 
             // Create handler frame with only exception on stack
-            let mut handler_frame = Frame::new(self.max_locals as usize, self.max_stack as usize);
-
-            // Copy locals from current frame
-            for (i, local) in current_frame.locals.iter().enumerate() {
-                if let Some(handler_local) = handler_frame.locals.get_mut(i) {
-                    *handler_local = local.clone();
-                }
-            }
-
-            handler_frame.this_uninitialized = current_frame.this_uninitialized;
+            let mut handler_frame = current_frame.exception_frame(usize::from(self.max_stack));
             super::constraints::invalidate_constructor_receiver(
                 self.class_file,
                 self.code,
