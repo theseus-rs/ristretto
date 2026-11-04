@@ -1,4 +1,3 @@
-use crate::Result;
 #[cfg(not(target_family = "wasm"))]
 use crate::handles::SocketHandle;
 use crate::handles::{FileHandle, HandleManager, ThreadHandle};
@@ -6,6 +5,7 @@ use crate::module_access::ModuleAccess;
 use crate::monitor::MonitorRegistry;
 use crate::native_memory::NativeMemory;
 use crate::resource_manager::ResourceManager;
+use crate::{Result, StringFactory};
 use ahash::AHashMap;
 use ristretto_classfile::{VerifyMode, Version};
 use ristretto_classloader::{Class, ClassLoader, ClassPath, Value};
@@ -44,6 +44,9 @@ pub trait VM: Send + Sync {
 
     /// Get the Java class file version.
     fn java_class_file_version(&self) -> &Version;
+
+    /// Get the string constructors selected once when this VM was created.
+    fn string_factory(&self) -> &StringFactory;
 
     /// Get the system properties.
     fn system_properties(&self) -> &AHashMap<String, String>;
@@ -174,6 +177,10 @@ impl<V: VM> VM for Arc<V> {
         (**self).java_class_file_version()
     }
 
+    fn string_factory(&self) -> &StringFactory {
+        (**self).string_factory()
+    }
+
     fn system_properties(&self) -> &AHashMap<String, String> {
         (**self).system_properties()
     }
@@ -299,6 +306,7 @@ mod tests {
         assert_eq!(vm_ref.java_version(), "mock-java");
         assert_eq!(vm_ref.java_major_version(), JAVA_17.major());
         assert_eq!(vm_ref.java_class_file_version(), &JAVA_17);
+        assert!(std::ptr::eq(vm_ref.string_factory(), vm.string_factory()));
         assert!(vm_ref.system_properties().is_empty());
         assert_eq!(vm_ref.next_thread_id()?, 1);
         assert_eq!(vm_ref.next_hidden_class_suffix()?, 1);

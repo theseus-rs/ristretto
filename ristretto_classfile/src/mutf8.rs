@@ -73,44 +73,85 @@ pub fn to_bytes(data: &str) -> Result<Vec<u8>> {
     Ok(to_bytes_lossless(data))
 }
 
-#[expect(clippy::cast_possible_truncation)]
-pub(crate) fn to_bytes_lossless(data: &str) -> Vec<u8> {
+/// Conversion needed to represent validated UTF-8 as MUTF-8.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum Conversion {
+    None,
+    AsciiNul,
+    General,
+}
+
+/// Classify once so the encoder can reuse the ASCII check.
+pub(crate) fn conversion(data: &str) -> Conversion {
     let bytes = data.as_bytes();
-
-    // Fast path for ASCII without nulls
-    if bytes.iter().all(|&b| b > 0 && b < 128) {
-        return bytes.to_vec();
+    if bytes.is_ascii() {
+        if bytes.contains(&0) {
+            Conversion::AsciiNul
+        } else {
+            Conversion::None
+        }
+    } else if bytes.iter().all(|&byte| byte != 0 && byte < 0xF0) {
+        Conversion::None
+    } else {
+        Conversion::General
     }
+}
 
-    // Calculate capacity: worst case is 6 bytes per char (supplementary as surrogate pair)
+pub(crate) fn to_bytes_lossless(data: &str) -> Vec<u8> {
+    // All BMP characters except NUL have identical bytes in UTF-8 and MUTF-8.
+    let conversion = conversion(data);
+    if conversion == Conversion::None {
+        return data.as_bytes().to_vec();
+    }
+    encode_mutf8(data, conversion)
+}
+
+/// Encodes UTF-8 that needs conversion; callers have already checked the copy path.
+#[expect(clippy::cast_possible_truncation)]
+pub(crate) fn encode_mutf8(data: &str, conversion: Conversion) -> Vec<u8> {
+    // NUL doubles in size; supplementary characters expand from four to six bytes.
     let mut encoded = Vec::with_capacity(data.len() * 2);
+    // For longer ASCII text, avoid the Unicode decoder when only NUL needs
+    // expansion. Reuse the caller's classification instead of rescanning.
+    if data.len() >= 64 && conversion == Conversion::AsciiNul {
+        for &byte in data.as_bytes() {
+            if byte == 0 {
+                encoded.extend_from_slice(&[0xC0, 0x80]);
+            } else {
+                encoded.push(byte);
+            }
+        }
+        return encoded;
+    }
     for ch in data.chars() {
         let code = ch as u32;
         match code {
             0 => encoded.extend_from_slice(&[0xC0, 0x80]),
             1..=0x7F => encoded.push(code as u8),
             0x80..=0x7FF => {
-                encoded.push(0xC0 | ((code >> 6) as u8));
-                encoded.push(0x80 | ((code & 0x3F) as u8));
+                encoded
+                    .extend_from_slice(&[0xC0 | ((code >> 6) as u8), 0x80 | ((code & 0x3F) as u8)]);
             }
             0x800..=0xFFFF => {
-                encoded.push(0xE0 | ((code >> 12) as u8));
-                encoded.push(0x80 | (((code >> 6) & 0x3F) as u8));
-                encoded.push(0x80 | ((code & 0x3F) as u8));
+                encoded.extend_from_slice(&[
+                    0xE0 | ((code >> 12) as u8),
+                    0x80 | (((code >> 6) & 0x3F) as u8),
+                    0x80 | ((code & 0x3F) as u8),
+                ]);
             }
             _ => {
                 // Supplementary character: encode as surrogate pair (inline to avoid loop)
                 let u = code - 0x1_0000;
                 let high = 0xD800 + (u >> 10);
                 let low = 0xDC00 + (u & 0x3FF);
-                // High surrogate
-                encoded.push(0xE0 | ((high >> 12) as u8));
-                encoded.push(0x80 | (((high >> 6) & 0x3F) as u8));
-                encoded.push(0x80 | ((high & 0x3F) as u8));
-                // Low surrogate
-                encoded.push(0xE0 | ((low >> 12) as u8));
-                encoded.push(0x80 | (((low >> 6) & 0x3F) as u8));
-                encoded.push(0x80 | ((low & 0x3F) as u8));
+                encoded.extend_from_slice(&[
+                    0xE0 | ((high >> 12) as u8),
+                    0x80 | (((high >> 6) & 0x3F) as u8),
+                    0x80 | ((high & 0x3F) as u8),
+                    0xE0 | ((low >> 12) as u8),
+                    0x80 | (((low >> 6) & 0x3F) as u8),
+                    0x80 | ((low & 0x3F) as u8),
+                ]);
             }
         }
     }
@@ -535,6 +576,24 @@ fn decode_mutf8(input: &[u8]) -> Result<String> {
 mod tests {
     use super::*;
     use std::borrow::Cow;
+
+    #[test]
+    fn test_nul_expansion_in_ascii_and_mixed_text() -> Result<()> {
+        for length in [1, 63, 64, 65, 1024] {
+            for text in [
+                "\0".repeat(length),
+                "a\0b".repeat(length),
+                format!("\0{}\0{}\0", "a".repeat(length), "b".repeat(length)),
+                format!("{}\0β😀", "a".repeat(length)),
+            ] {
+                let encoded = to_bytes(&text)?;
+                validate(&encoded)?;
+                assert_eq!(from_bytes(&encoded)?, text);
+                assert_eq!(to_utf16(&encoded)?, text.encode_utf16().collect::<Vec<_>>());
+            }
+        }
+        Ok(())
+    }
 
     /// Test all valid UTF-8 characters, the only two invalid characters are U+D800 and U+DFFF
     ///

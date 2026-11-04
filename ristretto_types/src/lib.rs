@@ -28,6 +28,7 @@ pub mod native_memory;
 mod parameters;
 mod resource_manager;
 mod rust_value;
+mod string_factory;
 #[cfg(test)]
 mod test_utils;
 mod thread;
@@ -50,6 +51,7 @@ pub use parameters::Parameters;
 pub use resource_manager::ResourceManager;
 pub use rust_value::RustValue;
 use std::pin::Pin;
+pub use string_factory::StringFactory;
 pub use thread::Thread;
 pub use vm::{FIRST_NIO_FD, VM};
 

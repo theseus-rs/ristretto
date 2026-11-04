@@ -100,8 +100,8 @@ impl JavaStr {
 
     /// Creates a `&JavaStr` from a Rust `&str`.
     ///
-    /// If the string is pure ASCII (no null bytes, no multi-byte), the bytes are shared directly
-    /// since ASCII is identical in UTF-8 and MUTF-8.
+    /// For ASCII and BMP strings without null bytes, the bytes are shared directly
+    /// since their UTF-8 and MUTF-8 encodings are identical.
     ///
     /// For strings containing null bytes or supplementary characters, use [`JavaString::from`]
     /// instead and borrow the result.
@@ -112,10 +112,7 @@ impl JavaStr {
     /// MUTF-8 (null bytes or supplementary characters). In such cases, use [`JavaString::from`].
     pub fn try_from_str(s: &str) -> Result<&JavaStr> {
         let bytes = s.as_bytes();
-        // Check for characters that require different encoding in MUTF-8:
-        // - Null bytes (0x00) need to be encoded as [0xC0, 0x80]
-        // - Supplementary characters (4-byte UTF-8) need surrogate pair encoding
-        if bytes.contains(&0x00) || bytes.iter().any(|&b| b >= 0xF0) {
+        if mutf8::conversion(s) != mutf8::Conversion::None {
             return Err(FromUtf8Error(
                 "string contains characters requiring MUTF-8 conversion; use JavaString::from() instead".to_string(),
             ));
@@ -146,9 +143,14 @@ impl JavaStr {
     /// ```
     #[must_use]
     pub fn cow_from_str(s: &str) -> Cow<'_, JavaStr> {
-        match Self::try_from_str(s) {
-            Ok(js) => Cow::Borrowed(js),
-            Err(_) => Cow::Owned(JavaString::from(s)),
+        let conversion = mutf8::conversion(s);
+        if conversion == mutf8::Conversion::None {
+            // SAFETY: UTF-8 without NUL or supplementary characters is valid MUTF-8.
+            #[expect(unsafe_code)]
+            Cow::Borrowed(unsafe { Self::from_mutf8_unchecked(s.as_bytes()) })
+        } else {
+            // Conversion is expected here; do not allocate a discarded error or rescan.
+            Cow::Owned(JavaString(mutf8::encode_mutf8(s, conversion)))
         }
     }
 
@@ -176,7 +178,7 @@ impl JavaStr {
     pub fn as_str(&self) -> Option<&str> {
         // If there are no MUTF-8-specific sequences (null encoding, surrogates), the bytes
         // are valid UTF-8 because our strict validation rejects overlongs and bare nulls.
-        if mutf8::has_mutf8_specials(&self.0) {
+        if !self.0.is_ascii() && mutf8::has_mutf8_specials(&self.0) {
             None
         } else {
             // SAFETY: MUTF-8 without special sequences is valid UTF-8 because:
@@ -599,23 +601,19 @@ impl AsRef<[u8]> for JavaString {
 
 impl From<&str> for JavaString {
     fn from(s: &str) -> JavaString {
-        let bytes = s.as_bytes();
-        // Fast path: ASCII-only strings are identical in UTF-8 and MUTF-8.
-        if s.is_ascii() && !bytes.contains(&0) {
-            return JavaString(bytes.to_vec());
-        }
-        // Need to convert UTF-8 -> MUTF-8
         JavaString(mutf8::to_bytes_lossless(s))
     }
 }
 
 impl From<String> for JavaString {
     fn from(s: String) -> JavaString {
-        // UTF-8 and MUTF-8 differ only for NUL and supplementary characters.
-        if !s.as_bytes().iter().any(|byte| *byte == 0 || *byte >= 0xF0) {
-            return JavaString(s.into_bytes());
+        // Reuse the owned buffer when UTF-8 and MUTF-8 have identical bytes.
+        let conversion = mutf8::conversion(&s);
+        if conversion == mutf8::Conversion::None {
+            JavaString(s.into_bytes())
+        } else {
+            JavaString(mutf8::encode_mutf8(&s, conversion))
         }
-        JavaString::from(s.as_str())
     }
 }
 
@@ -627,7 +625,10 @@ impl From<&JavaStr> for JavaString {
 
 impl From<Cow<'_, str>> for JavaString {
     fn from(cow: Cow<'_, str>) -> JavaString {
-        JavaString::from(cow.as_ref())
+        match cow {
+            Cow::Borrowed(s) => JavaString::from(s),
+            Cow::Owned(s) => JavaString::from(s),
+        }
     }
 }
 
@@ -903,9 +904,12 @@ mod tests {
 
     #[test]
     fn test_java_string_from_cow_owned() {
-        let cow: Cow<'_, str> = Cow::Owned("Hello".to_string());
-        let js = JavaString::from(cow);
-        assert_eq!(js, "Hello");
+        for input in ["", "Hello", "café", "β中", "a\0b", "😀", "a\0β😀z"] {
+            let cow: Cow<'_, str> = Cow::Owned(input.to_string());
+            let js = JavaString::from(cow);
+            assert_eq!(js.to_rust_string(), input);
+            assert_eq!(js, JavaString::from(input));
+        }
     }
 
     #[test]
@@ -955,13 +959,16 @@ mod tests {
 
     #[test]
     fn test_java_str_cow_from_str_borrowed_and_owned() {
-        let borrowed = JavaStr::cow_from_str("Hello");
-        assert!(matches!(borrowed, Cow::Borrowed(_)));
-        assert_eq!(&*borrowed, "Hello");
-
-        let owned = JavaStr::cow_from_str("Hi\0");
-        assert!(matches!(owned, Cow::Owned(_)));
-        assert_eq!(&*owned, "Hi\0");
+        for input in ["", "Hello", "café", "β中", "\u{ffff}"] {
+            let borrowed = JavaStr::cow_from_str(input);
+            assert!(matches!(borrowed, Cow::Borrowed(_)));
+            assert_eq!(borrowed.as_bytes(), input.as_bytes());
+        }
+        for input in ["Hi\0", "😀", "\u{10000}", "\u{10ffff}", "a\0β😀z"] {
+            let owned = JavaStr::cow_from_str(input);
+            assert!(matches!(owned, Cow::Owned(_)));
+            assert_eq!(owned.to_rust_string(), input);
+        }
     }
 
     #[test]
