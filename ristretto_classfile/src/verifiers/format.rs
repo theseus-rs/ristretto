@@ -37,6 +37,16 @@ fn class_name(name: &JavaStr, arrays: bool) -> Result<()> {
     Ok(())
 }
 
+pub(super) fn verify_non_array_class(class: &ClassFile<'_>, index: u16) -> Result<()> {
+    match class.constant_pool.get(index) {
+        Some(Constant::Class(name_index)) => {
+            class_name(class.constant_pool.try_get_utf8(*name_index)?, false)
+        }
+        Some(_) => Err(VerifyError::InvalidConstantPoolIndexType(index)),
+        None => Err(VerifyError::InvalidConstantPoolIndex(index)),
+    }
+}
+
 fn module_name(name: &JavaStr) -> Result<()> {
     let mut bytes = name.as_bytes().iter().copied().peekable();
     while let Some(byte) = bytes.next() {
@@ -463,14 +473,21 @@ fn verify_module_attribute(class: &ClassFile<'_>, attribute: &Attribute) -> Resu
             unique_names(open.to_index.iter().copied(), |i| pool.try_get_module(i))?;
         }
         unique_names(uses.iter().copied(), |i| pool.try_get_class(i))?;
+        for &index in uses {
+            verify_non_array_class(class, index)?;
+        }
         unique_names(provides.iter().map(|p| p.index), |i| pool.try_get_class(i))?;
         for provider in provides {
+            verify_non_array_class(class, provider.index)?;
             if provider.with_index.is_empty() {
                 return Err(invalid("Module provider must name an implementation"));
             }
             unique_names(provider.with_index.iter().copied(), |i| {
                 pool.try_get_class(i)
             })?;
+            for &index in &provider.with_index {
+                verify_non_array_class(class, index)?;
+            }
         }
     }
     if let Attribute::ModulePackages {
