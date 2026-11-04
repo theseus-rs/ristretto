@@ -1,6 +1,6 @@
+use crate::attributes::MethodParameterAccessFlags;
 use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use crate::method_access_flags::MethodAccessFlags;
 use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
 
@@ -22,18 +22,18 @@ use std::fmt;
 ///
 /// ```rust
 /// use ristretto_classfile::attributes::MethodParameter;
-/// use ristretto_classfile::MethodAccessFlags;
+/// use ristretto_classfile::attributes::MethodParameterAccessFlags;
 ///
 /// // Create a method parameter representing a final parameter named "value"
 /// // where the name is at constant pool index 5
 /// let parameter = MethodParameter {
 ///     name_index: 5,
-///     access_flags: MethodAccessFlags::FINAL,
+///     access_flags: MethodParameterAccessFlags::FINAL,
 /// };
 ///
 /// // Access parameter information
 /// assert_eq!(parameter.name_index, 5);
-/// assert!(parameter.access_flags.contains(MethodAccessFlags::FINAL));
+/// assert!(parameter.access_flags.contains(MethodParameterAccessFlags::FINAL));
 /// ```
 ///
 /// # References
@@ -42,7 +42,7 @@ use std::fmt;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MethodParameter {
     pub name_index: u16,
-    pub access_flags: MethodAccessFlags,
+    pub access_flags: MethodParameterAccessFlags,
 }
 
 impl MethodParameter {
@@ -57,17 +57,17 @@ impl MethodParameter {
     /// ```rust
     /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::MethodParameter;
-    /// use ristretto_classfile::MethodAccessFlags;
+    /// use ristretto_classfile::attributes::MethodParameterAccessFlags;
     ///
-    /// let mut bytes = ByteReader::new(&[0x00, 0x03, 0x00, 0x01]); // name_index: 3, access_flags: ACC_PUBLIC
+    /// let mut bytes = ByteReader::new(&[0x00, 0x03, 0x00, 0x10]); // name_index: 3, access_flags: ACC_FINAL
     /// let method_parameter = MethodParameter::from_bytes(&mut bytes)?;
     /// assert_eq!(method_parameter.name_index, 3);
-    /// assert_eq!(method_parameter.access_flags, MethodAccessFlags::PUBLIC);
+    /// assert_eq!(method_parameter.access_flags, MethodParameterAccessFlags::FINAL);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<MethodParameter> {
         let name_index = bytes.read_u16()?;
-        let access_flags = MethodAccessFlags::from_bytes(bytes)?;
+        let access_flags = MethodParameterAccessFlags::from_bytes(bytes)?;
         let bootstrap_method = MethodParameter {
             name_index,
             access_flags,
@@ -85,15 +85,15 @@ impl MethodParameter {
     ///
     /// ```rust
     /// use ristretto_classfile::attributes::MethodParameter;
-    /// use ristretto_classfile::MethodAccessFlags;
+    /// use ristretto_classfile::attributes::MethodParameterAccessFlags;
     ///
     /// let method_parameter = MethodParameter {
     ///     name_index: 3,
-    ///     access_flags: MethodAccessFlags::PUBLIC,
+    ///     access_flags: MethodParameterAccessFlags::FINAL,
     /// };
     /// let mut bytes = Vec::new();
     /// method_parameter.to_bytes(&mut bytes)?;
-    /// assert_eq!(bytes, vec![0x00, 0x03, 0x00, 0x01]);
+    /// assert_eq!(bytes, vec![0x00, 0x03, 0x00, 0x10]);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
@@ -112,11 +112,11 @@ impl fmt::Display for MethodParameter {
     ///
     /// ```rust
     /// use ristretto_classfile::attributes::MethodParameter;
-    /// use ristretto_classfile::MethodAccessFlags;
+    /// use ristretto_classfile::attributes::MethodParameterAccessFlags;
     ///
     /// let method_parameter = MethodParameter {
     ///     name_index: 7,
-    ///     access_flags: MethodAccessFlags::FINAL | MethodAccessFlags::SYNTHETIC,
+    ///     access_flags: MethodParameterAccessFlags::FINAL | MethodParameterAccessFlags::SYNTHETIC,
     /// };
     ///
     /// let output = method_parameter.to_string();
@@ -142,10 +142,10 @@ mod test {
     fn test_to_string() {
         let method_parameter = MethodParameter {
             name_index: 3,
-            access_flags: MethodAccessFlags::PUBLIC,
+            access_flags: MethodParameterAccessFlags::FINAL,
         };
         assert_eq!(
-            "name_index: #3, access_flags: (0x0001) ACC_PUBLIC",
+            "name_index: #3, access_flags: (0x0010) ACC_FINAL",
             method_parameter.to_string()
         );
     }
@@ -154,15 +154,34 @@ mod test {
     fn test_serialization() -> Result<()> {
         let method_parameter = MethodParameter {
             name_index: 3,
-            access_flags: MethodAccessFlags::PUBLIC,
+            access_flags: MethodParameterAccessFlags::FINAL,
         };
-        let expected_value = [0, 3, 0, 1];
+        let expected_value = [0, 3, 0, 16];
         let mut bytes = Vec::new();
         method_parameter.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
         let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(method_parameter, MethodParameter::from_bytes(&mut bytes)?);
+        Ok(())
+    }
+
+    #[test]
+    fn all_parameter_flag_combinations_round_trip() -> Result<()> {
+        for bits in [0, 0x10, 0x1000, 0x1010, 0x8000, 0x8010, 0x9000, 0x9010] {
+            let parameter = MethodParameter {
+                name_index: 0,
+                access_flags: MethodParameterAccessFlags::from_bits_truncate(bits),
+            };
+            let mut bytes = Vec::new();
+            parameter.to_bytes(&mut bytes)?;
+            assert_eq!(
+                parameter,
+                MethodParameter::from_bytes(&mut ByteReader::new(&bytes))?
+            );
+            let [high, low] = bits.to_be_bytes();
+            assert_eq!(bytes, [0, 0, high, low]);
+        }
         Ok(())
     }
 }

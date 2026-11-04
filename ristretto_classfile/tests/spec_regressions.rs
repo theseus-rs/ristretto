@@ -801,6 +801,32 @@ fn throw_non_throwable() {
 }
 
 #[test]
+fn constant_load_opcodes_preserve_stack_limits() {
+    let mut class = base();
+    let integer = class.constant_pool.add(Constant::Integer(7)).unwrap();
+    let long = class.constant_pool.add(Constant::Long(7)).unwrap();
+    for (load, return_instruction, descriptor, slots) in [
+        (Ldc(u8::try_from(integer).unwrap()), Ireturn, "()I", 1),
+        (Ldc_w(integer), Ireturn, "()I", 1),
+        (Ldc2_w(long), Lreturn, "()J", 2),
+    ] {
+        for (max_stack, valid) in [(slots - 1, false), (slots, true)] {
+            let mut class = class.clone();
+            let test_method = method(
+                &mut class,
+                "f",
+                descriptor,
+                max_stack,
+                0,
+                vec![load.clone(), return_instruction.clone()],
+                None,
+            );
+            check(class, Some(test_method), valid);
+        }
+    }
+}
+
+#[test]
 fn valid_int_condy() {
     let mut class = base();
     let owner_index = class.constant_pool.add_class("java/lang/Integer").unwrap();

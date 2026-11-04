@@ -38,6 +38,17 @@ pub struct TargetPath {
 }
 
 impl TargetPath {
+    /// Check the path kind and the index reserved for non-argument paths.
+    pub(crate) fn validate(&self) -> Result<()> {
+        if self.type_path_kind > 3 || (self.type_path_kind != 3 && self.type_argument_index != 0) {
+            return Err(crate::verifiers::VerifyError::ClassFormatError(
+                "Invalid type annotation path".to_string(),
+            )
+            .into());
+        }
+        Ok(())
+    }
+
     /// Deserialize the target path from bytes.
     ///
     /// # Errors
@@ -66,6 +77,7 @@ impl TargetPath {
             type_path_kind,
             type_argument_index,
         };
+        target_path.validate()?;
         Ok(target_path)
     }
 
@@ -91,6 +103,7 @@ impl TargetPath {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
+        self.validate()?;
         bytes.write_u8(self.type_path_kind)?;
         bytes.write_u8(self.type_argument_index)?;
         Ok(())
@@ -133,13 +146,13 @@ mod test {
     #[test]
     fn test_serialization() -> Result<()> {
         let target_path = TargetPath {
-            type_path_kind: 1,
+            type_path_kind: 3,
             type_argument_index: 2,
         };
-        let expected_value = [1, 2];
+        let expected_value = [3, 2];
 
         assert_eq!(
-            "TargetPath[type_path_kind=1, type_argument_index=2]",
+            "TargetPath[type_path_kind=3, type_argument_index=2]",
             target_path.to_string()
         );
 
@@ -150,5 +163,25 @@ mod test {
         let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(target_path, TargetPath::from_bytes(&mut bytes)?);
         Ok(())
+    }
+    #[test]
+    fn invalid_paths_are_rejected_on_read_and_write() {
+        for pair in [[4, 0], [255, 0], [0, 1], [1, 1], [2, 1]] {
+            let [type_path_kind, type_argument_index] = pair;
+            assert!(TargetPath::from_bytes(&mut ByteReader::new(&pair)).is_err());
+            let mut bytes = vec![42];
+            assert!(
+                TargetPath {
+                    type_path_kind,
+                    type_argument_index
+                }
+                .to_bytes(&mut bytes)
+                .is_err()
+            );
+            assert_eq!(bytes, [42]);
+        }
+        for pair in [[0, 0], [1, 0], [2, 0], [3, 255]] {
+            assert!(TargetPath::from_bytes(&mut ByteReader::new(&pair)).is_ok());
+        }
     }
 }
