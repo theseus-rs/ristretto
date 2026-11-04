@@ -1283,23 +1283,35 @@ impl Attribute {
     /// assert_eq!(bytes, vec![0, 1, 0, 0, 0, 2, 0, 2]);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
+    pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
+        let start = bytes.len();
+        let result = self.write_bytes(bytes);
+        if result.is_err() {
+            bytes.truncate(start);
+        }
+        result
+    }
+
     #[expect(clippy::too_many_lines)]
     #[expect(clippy::match_same_arms)]
-    pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
-        let (name_index, info) = match self {
+    fn write_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
+        bytes.write_u16::<BigEndian>(self.name_index())?;
+        let length_offset = bytes.len();
+        bytes.write_u32::<BigEndian>(0)?;
+        let payload_start = bytes.len();
+        match self {
             Attribute::ConstantValue {
-                name_index,
+                name_index: _,
                 constant_value_index,
-            } => (name_index, constant_value_index.to_be_bytes().to_vec()),
+            } => bytes.write_u16::<BigEndian>(*constant_value_index)?,
             Attribute::Code {
-                name_index,
+                name_index: _,
                 max_stack,
                 max_locals,
                 code,
                 exception_table,
                 attributes,
             } => {
-                let mut bytes = Vec::new();
                 bytes.write_u16::<BigEndian>(*max_stack)?;
                 bytes.write_u16::<BigEndian>(*max_locals)?;
 
@@ -1314,214 +1326,185 @@ impl Attribute {
                 let exceptions_length = u16::try_from(exception_table.len())?;
                 bytes.write_u16::<BigEndian>(exceptions_length)?;
                 for exception in exception_table {
-                    exception.to_bytes(&mut bytes)?;
+                    exception.to_bytes(bytes)?;
                 }
                 bytes.write_u16::<BigEndian>(u16::try_from(attributes.len())?)?;
                 for attribute in attributes {
-                    attribute.to_bytes(&mut bytes)?;
+                    attribute.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
-            Attribute::StackMapTable { name_index, frames } => {
-                let mut bytes = Vec::new();
+            Attribute::StackMapTable {
+                name_index: _,
+                frames,
+            } => {
                 let frames_length = u16::try_from(frames.len())?;
                 bytes.write_u16::<BigEndian>(frames_length)?;
                 for frame in frames {
-                    frame.to_bytes(&mut bytes)?;
+                    frame.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::Exceptions {
-                name_index,
+                name_index: _,
                 exception_indexes,
             } => {
-                let mut bytes = Vec::new();
                 let exception_indexes_length = u16::try_from(exception_indexes.len())?;
                 bytes.write_u16::<BigEndian>(exception_indexes_length)?;
                 for exception_index in exception_indexes {
                     bytes.write_u16::<BigEndian>(*exception_index)?;
                 }
-                (name_index, bytes)
             }
             Attribute::InnerClasses {
-                name_index,
+                name_index: _,
                 classes,
             } => {
-                let mut bytes = Vec::new();
                 let classes_length = u16::try_from(classes.len())?;
                 bytes.write_u16::<BigEndian>(classes_length)?;
                 for inner_class in classes {
-                    inner_class.to_bytes(&mut bytes)?;
+                    inner_class.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::EnclosingMethod {
-                name_index,
+                name_index: _,
                 class_index,
                 method_index,
-            } => (
-                name_index,
-                [class_index.to_be_bytes(), method_index.to_be_bytes()].concat(),
-            ),
-            Attribute::Synthetic { name_index } => (name_index, Vec::new()),
+            } => {
+                bytes.write_u16::<BigEndian>(*class_index)?;
+                bytes.write_u16::<BigEndian>(*method_index)?;
+            }
+            Attribute::Synthetic { name_index: _ } => {}
             Attribute::Signature {
-                name_index,
+                name_index: _,
                 signature_index,
-            } => (name_index, signature_index.to_be_bytes().to_vec()),
+            } => bytes.write_u16::<BigEndian>(*signature_index)?,
             Attribute::SourceFile {
-                name_index,
+                name_index: _,
                 source_file_index: sourcefile_index,
-            } => (name_index, sourcefile_index.to_be_bytes().to_vec()),
+            } => bytes.write_u16::<BigEndian>(*sourcefile_index)?,
             Attribute::SourceDebugExtension {
-                name_index,
+                name_index: _,
                 debug_extension,
             } => {
-                let bytes = mutf8::to_bytes(debug_extension)?;
-                (name_index, bytes)
+                bytes.extend_from_slice(&mutf8::to_bytes(debug_extension)?);
             }
             Attribute::LineNumberTable {
-                name_index,
+                name_index: _,
                 line_numbers,
             } => {
-                let mut bytes = Vec::new();
                 let line_numbers_length = u16::try_from(line_numbers.len())?;
                 bytes.write_u16::<BigEndian>(line_numbers_length)?;
                 for line_number in line_numbers {
-                    line_number.to_bytes(&mut bytes)?;
+                    line_number.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::LocalVariableTable {
-                name_index,
+                name_index: _,
                 variables,
             } => {
-                let mut bytes = Vec::new();
                 let variables_length = u16::try_from(variables.len())?;
                 bytes.write_u16::<BigEndian>(variables_length)?;
                 for variable in variables {
-                    variable.to_bytes(&mut bytes)?;
+                    variable.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::LocalVariableTypeTable {
-                name_index,
+                name_index: _,
                 variable_types,
             } => {
-                let mut bytes = Vec::new();
                 let variable_types_length = u16::try_from(variable_types.len())?;
                 bytes.write_u16::<BigEndian>(variable_types_length)?;
                 for variable_type in variable_types {
-                    variable_type.to_bytes(&mut bytes)?;
+                    variable_type.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
-            Attribute::Deprecated { name_index } => (name_index, Vec::new()),
+            Attribute::Deprecated { name_index: _ } => {}
             Attribute::RuntimeVisibleAnnotations {
-                name_index,
+                name_index: _,
                 annotations,
             } => {
-                let mut bytes = Vec::new();
                 let annotations_length = u16::try_from(annotations.len())?;
                 bytes.write_u16::<BigEndian>(annotations_length)?;
                 for annotation in annotations {
-                    annotation.to_bytes(&mut bytes)?;
+                    annotation.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::RuntimeInvisibleAnnotations {
-                name_index,
+                name_index: _,
                 annotations,
             } => {
-                let mut bytes = Vec::new();
                 let annotations_length = u16::try_from(annotations.len())?;
                 bytes.write_u16::<BigEndian>(annotations_length)?;
                 for annotation in annotations {
-                    annotation.to_bytes(&mut bytes)?;
+                    annotation.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::RuntimeVisibleParameterAnnotations {
-                name_index,
+                name_index: _,
                 parameter_annotations,
             } => {
-                let mut bytes = Vec::new();
                 let parameter_annotations_length = u8::try_from(parameter_annotations.len())?;
                 bytes.write_u8(parameter_annotations_length)?;
                 for parameter_annotation in parameter_annotations {
-                    parameter_annotation.to_bytes(&mut bytes)?;
+                    parameter_annotation.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::RuntimeInvisibleParameterAnnotations {
-                name_index,
+                name_index: _,
                 parameter_annotations,
             } => {
-                let mut bytes = Vec::new();
                 let parameter_annotations_length = u8::try_from(parameter_annotations.len())?;
                 bytes.write_u8(parameter_annotations_length)?;
                 for parameter_annotation in parameter_annotations {
-                    parameter_annotation.to_bytes(&mut bytes)?;
+                    parameter_annotation.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::RuntimeVisibleTypeAnnotations {
-                name_index,
+                name_index: _,
                 type_annotations,
             } => {
-                let mut bytes = Vec::new();
                 let type_annotations_length = u16::try_from(type_annotations.len())?;
                 bytes.write_u16::<BigEndian>(type_annotations_length)?;
                 for type_annotation in type_annotations {
-                    type_annotation.to_bytes(&mut bytes)?;
+                    type_annotation.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::RuntimeInvisibleTypeAnnotations {
-                name_index,
+                name_index: _,
                 type_annotations,
             } => {
-                let mut bytes = Vec::new();
                 let type_annotations_length = u16::try_from(type_annotations.len())?;
                 bytes.write_u16::<BigEndian>(type_annotations_length)?;
                 for type_annotation in type_annotations {
-                    type_annotation.to_bytes(&mut bytes)?;
+                    type_annotation.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::AnnotationDefault {
-                name_index,
+                name_index: _,
                 element,
             } => {
-                let mut bytes = Vec::new();
-                element.to_bytes(&mut bytes)?;
-                (name_index, bytes)
+                element.to_bytes(bytes)?;
             }
             Attribute::BootstrapMethods {
-                name_index,
+                name_index: _,
                 methods,
             } => {
-                let mut bytes = Vec::new();
                 let methods_length = u16::try_from(methods.len())?;
                 bytes.write_u16::<BigEndian>(methods_length)?;
                 for method in methods {
-                    method.to_bytes(&mut bytes)?;
+                    method.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::MethodParameters {
-                name_index,
+                name_index: _,
                 parameters,
             } => {
-                let mut bytes = Vec::new();
                 let parameters_length = u8::try_from(parameters.len())?;
                 bytes.write_u8(parameters_length)?;
                 for parameter in parameters {
-                    parameter.to_bytes(&mut bytes)?;
+                    parameter.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::Module {
-                name_index,
+                name_index: _,
                 module_name_index,
                 flags,
                 version_index,
@@ -1531,27 +1514,26 @@ impl Attribute {
                 uses,
                 provides,
             } => {
-                let mut bytes = Vec::new();
                 bytes.write_u16::<BigEndian>(*module_name_index)?;
-                flags.to_bytes(&mut bytes)?;
+                flags.to_bytes(bytes)?;
                 bytes.write_u16::<BigEndian>(*version_index)?;
 
                 let requires_length = u16::try_from(requires.len())?;
                 bytes.write_u16::<BigEndian>(requires_length)?;
                 for require in requires {
-                    require.to_bytes(&mut bytes)?;
+                    require.to_bytes(bytes)?;
                 }
 
                 let exports_length = u16::try_from(exports.len())?;
                 bytes.write_u16::<BigEndian>(exports_length)?;
                 for export in exports {
-                    export.to_bytes(&mut bytes)?;
+                    export.to_bytes(bytes)?;
                 }
 
                 let opens_length = u16::try_from(opens.len())?;
                 bytes.write_u16::<BigEndian>(opens_length)?;
                 for open in opens {
-                    open.to_bytes(&mut bytes)?;
+                    open.to_bytes(bytes)?;
                 }
 
                 let use_index_length = u16::try_from(uses.len())?;
@@ -1563,74 +1545,68 @@ impl Attribute {
                 let provides_length = u16::try_from(provides.len())?;
                 bytes.write_u16::<BigEndian>(provides_length)?;
                 for provide in provides {
-                    provide.to_bytes(&mut bytes)?;
+                    provide.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::ModulePackages {
-                name_index,
+                name_index: _,
                 package_indexes,
             } => {
-                let mut bytes = Vec::new();
                 let package_indexes_length = u16::try_from(package_indexes.len())?;
                 bytes.write_u16::<BigEndian>(package_indexes_length)?;
                 for package_index in package_indexes {
                     bytes.write_u16::<BigEndian>(*package_index)?;
                 }
-                (name_index, bytes)
             }
             Attribute::ModuleMainClass {
-                name_index,
+                name_index: _,
                 main_class_index,
-            } => (name_index, main_class_index.to_be_bytes().to_vec()),
+            } => bytes.write_u16::<BigEndian>(*main_class_index)?,
             Attribute::NestHost {
-                name_index,
+                name_index: _,
                 host_class_index,
-            } => (name_index, host_class_index.to_be_bytes().to_vec()),
+            } => bytes.write_u16::<BigEndian>(*host_class_index)?,
             Attribute::NestMembers {
-                name_index,
+                name_index: _,
                 class_indexes,
             } => {
-                let mut bytes = Vec::new();
                 let class_indexes_length = u16::try_from(class_indexes.len())?;
                 bytes.write_u16::<BigEndian>(class_indexes_length)?;
                 for class_index in class_indexes {
                     bytes.write_u16::<BigEndian>(*class_index)?;
                 }
-                (name_index, bytes)
             }
             Attribute::Record {
-                name_index,
+                name_index: _,
                 records,
             } => {
-                let mut bytes = Vec::new();
                 let records_length = u16::try_from(records.len())?;
                 bytes.write_u16::<BigEndian>(records_length)?;
                 for record in records {
-                    record.to_bytes(&mut bytes)?;
+                    record.to_bytes(bytes)?;
                 }
-                (name_index, bytes)
             }
             Attribute::PermittedSubclasses {
-                name_index,
+                name_index: _,
                 class_indexes,
             } => {
-                let mut bytes = Vec::new();
                 let class_indexes_length = u16::try_from(class_indexes.len())?;
                 bytes.write_u16::<BigEndian>(class_indexes_length)?;
                 for class_index in class_indexes {
                     bytes.write_u16::<BigEndian>(*class_index)?;
                 }
-                (name_index, bytes)
             }
-            Attribute::Unknown { name_index, info } => (name_index, info.clone()),
-        };
+            Attribute::Unknown {
+                name_index: _,
+                info,
+            } => bytes.extend_from_slice(info),
+        }
 
-        bytes.write_u16::<BigEndian>(*name_index)?;
-
-        let info_length = u32::try_from(info.len())?;
-        bytes.write_u32::<BigEndian>(info_length)?;
-        bytes.extend_from_slice(info.as_slice());
+        let length = u32::try_from(bytes.len() - payload_start)?;
+        let slot = bytes
+            .get_mut(length_offset..payload_start)
+            .ok_or(InvalidAttributeLength(length))?;
+        slot.copy_from_slice(&length.to_be_bytes());
         Ok(())
     }
 }
@@ -2713,6 +2689,40 @@ mod test {
         );
         test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
     }
+    #[test]
+    fn failed_attribute_write_rolls_back_the_entire_payload() {
+        let attribute = Attribute::Code {
+            name_index: 1,
+            max_stack: 0,
+            max_locals: 0,
+            code: vec![],
+            exception_table: vec![],
+            attributes: vec![],
+        };
+        let mut bytes = vec![1, 2, 3];
+        assert!(attribute.to_bytes(&mut bytes).is_err());
+        assert_eq!(bytes, [1, 2, 3]);
+    }
+
+    #[test]
+    fn nested_attribute_failure_rolls_back_parent() {
+        let parameter = MethodParameter::from_bytes(&mut ByteReader::new(&[0; 4])).unwrap();
+        let attribute = Attribute::Code {
+            name_index: 1,
+            max_stack: 0,
+            max_locals: 0,
+            code: vec![Instruction::Return],
+            exception_table: vec![],
+            attributes: vec![Attribute::MethodParameters {
+                name_index: 2,
+                parameters: vec![parameter; 256],
+            }],
+        };
+        let mut bytes = vec![42];
+        assert!(attribute.to_bytes(&mut bytes).is_err());
+        assert_eq!(bytes, [42]);
+    }
+
     #[test]
     fn truncated_attribute_tables_with_maximum_counts_fail() {
         let mut pool = ConstantPool::new();
