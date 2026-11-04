@@ -1,6 +1,6 @@
 //! Class-file constraints that relate names, descriptors, flags, and attributes.
 use super::error::{Result, VerifyError};
-use crate::attributes::{Attribute, TargetType};
+use crate::attributes::{Attribute, AttributeKind, TargetType};
 use crate::{
     BaseType, CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, Constant,
     FieldType, JAVA_7, JAVA_8, JAVA_9, JAVA_10, JavaStr, Method, MethodAccessFlags, ReferenceKind,
@@ -91,6 +91,18 @@ pub(super) fn verify_class_header(class: &ClassFile<'_>) -> Result<()> {
                 != 1
         {
             return Err(invalid("Invalid module-info class"));
+        }
+        for attribute in &class.attributes {
+            // Check names even for Unknown variants: predefined attributes in an
+            // unrecognized location are retained as raw bytes by the parser.
+            let name = pool.try_get_utf8(attribute.name_index())?;
+            if AttributeKind::from_name(name.as_bytes())
+                .is_some_and(|kind| !kind.allowed_on_module())
+            {
+                return Err(invalid(
+                    "Predefined attribute is not allowed on a module class",
+                ));
+            }
         }
     } else {
         if (class.super_class == 0) != (name == "java/lang/Object") {
@@ -211,7 +223,7 @@ pub(super) fn verify_attribute(
     if name != attribute.name() {
         return Err(invalid("Attribute name index disagrees with its contents"));
     }
-    if !location.recognizes(name.as_bytes()) {
+    if !location.recognizes(attribute.kind()) {
         return Ok(false);
     }
     // Known variants have distinct, validated names. Compare their tags to

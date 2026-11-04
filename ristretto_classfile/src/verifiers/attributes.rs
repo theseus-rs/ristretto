@@ -860,7 +860,7 @@ mod tests {
     ) -> Result<()> {
         let location = context.location();
         for (index, attribute) in attributes.iter().enumerate() {
-            if location.recognizes(attribute.name().as_bytes()) {
+            if location.recognizes(attribute.kind()) {
                 verify_attribute(class_file, attribute, &attributes[..index], context, None)?;
             }
         }
