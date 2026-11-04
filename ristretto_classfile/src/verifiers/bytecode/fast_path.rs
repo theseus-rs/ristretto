@@ -188,6 +188,11 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         })
     }
 
+    /// Transfer the already validated instruction boundaries to inference fallback.
+    pub(crate) fn into_code_info(self) -> CodeInfo {
+        self.code_info
+    }
+
     /// Extracts the Code attribute from a method.
     fn extract_code_attribute(method: &'a Method) -> Result<CodeAttributeParts<'a>> {
         method
@@ -405,9 +410,11 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                     .stack_map_table
                     .has_frame_at(self.code_info.offset_at(index + 1).unwrap_or(u16::MAX))
             {
-                return FastPathResult::Failed(VerifyError::VerifyError(
-                    "Missing frame after control transfer".to_string(),
-                ));
+                let message = "Missing frame after control transfer".to_string();
+                if self.config.allows_inference_fallback() {
+                    return FastPathResult::NeedsFallback(message);
+                }
+                return FastPathResult::Failed(VerifyError::VerifyError(message));
             }
         }
         // Perform the actual verification
@@ -991,16 +998,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             };
 
             // Create handler frame: same locals, stack = [exception_type]
-            let mut handler_frame = Frame::new(self.max_locals as usize, self.max_stack as usize);
-
-            // Copy locals from current frame
-            for (i, local) in current_frame.locals.iter().enumerate() {
-                if let Some(handler_local) = handler_frame.locals.get_mut(i) {
-                    *handler_local = local.clone();
-                }
-            }
-
-            handler_frame.this_uninitialized = current_frame.this_uninitialized;
+            let mut handler_frame = current_frame.exception_frame(usize::from(self.max_stack));
             super::constraints::invalidate_constructor_receiver(
                 self.class_file,
                 self.code,
@@ -1022,14 +1020,14 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
 
             // Check if StackMapTable has a frame for this handler
             if let Some(decoded) = self.stack_map_table.get(handler.handler_pc) {
-                let expected =
-                    self.stack_map_table
-                        .to_frame(decoded, self.max_locals, self.max_stack);
-                self.validate_frame_compatibility(&handler_frame, &expected, handler.handler_pc)?;
                 let anchor_state = anchor_states.get_mut(handler_index).ok_or_else(|| {
                     VerifyError::VerifyError(format!("Invalid handler index {handler_index}"))
                 })?;
-                *anchor_state = Some(expected);
+                let expected = anchor_state.get_or_insert_with(|| {
+                    self.stack_map_table
+                        .to_frame(decoded, self.max_locals, self.max_stack)
+                });
+                self.validate_frame_compatibility(&handler_frame, expected, handler.handler_pc)?;
             } else {
                 let anchor_state = anchor_states.get_mut(handler_index).ok_or_else(|| {
                     VerifyError::VerifyError(format!("Invalid handler index {handler_index}"))
@@ -2377,5 +2375,32 @@ mod tests {
             .unwrap();
         assert!(anchors[0].is_some());
         assert_eq!(worklist, vec![0]);
+    }
+    #[test]
+    fn test_missing_post_transfer_frame_honors_fallback() {
+        let class = create_mock_class_file();
+        let method = method_with(
+            MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            4,
+            vec![Instruction::Return, Instruction::Nop, Instruction::Return],
+            0,
+            0,
+            vec![Attribute::StackMapTable {
+                name_index: 5,
+                frames: vec![StackFrame::SameFrame { frame_type: 0 }],
+            }],
+            vec![],
+        );
+        let context = MockContext::PERMISSIVE;
+        let strict = VerifierConfig::default();
+        assert!(matches!(
+            fast_verifier(&class, &method, &context, &strict).verify(),
+            FastPathResult::Failed(_)
+        ));
+        let permissive = VerifierConfig::permissive();
+        assert!(matches!(
+            fast_verifier(&class, &method, &context, &permissive).verify(),
+            FastPathResult::NeedsFallback(_)
+        ));
     }
 }
