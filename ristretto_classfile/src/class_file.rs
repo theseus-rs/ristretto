@@ -205,61 +205,7 @@ impl<'a> ClassFile<'a> {
     /// Parse from a `ByteReader` and return a `ClassFile<'static>` by converting all
     /// borrowed strings to owned.
     fn parse_from_reader(reader: &mut ByteReader<'_>) -> Result<ClassFile<'static>> {
-        let magic = reader.read_u32()?;
-        if magic != MAGIC {
-            return Err(InvalidMagicNumber(magic));
-        }
-
-        let version = Version::from_bytes(reader)?;
-        reader.class_major_version = version.major();
-        let constant_pool = ConstantPool::from_bytes(reader)?.into_owned();
-        let access_flags = ClassAccessFlags::from_bits_truncate(reader.read_u16()?);
-        let this_class = reader.read_u16()?;
-        let super_class = reader.read_u16()?;
-
-        let interfaces_count = reader.read_u16()? as usize;
-        let mut interfaces = Vec::with_capacity(interfaces_count.min(reader.remaining() / 2));
-        for _ in 0..interfaces_count {
-            interfaces.push(reader.read_u16()?);
-        }
-
-        let field_count = reader.read_u16()? as usize;
-        let mut fields = Vec::with_capacity(field_count.min(reader.remaining() / 8));
-        for _ in 0..field_count {
-            let field = Field::from_bytes(&constant_pool, reader)?;
-            fields.push(field);
-        }
-
-        let method_count = reader.read_u16()? as usize;
-        let mut methods = Vec::with_capacity(method_count.min(reader.remaining() / 8));
-        for _ in 0..method_count {
-            let method = Method::from_bytes(&constant_pool, reader)?;
-            methods.push(method);
-        }
-
-        let attribute_count = reader.read_u16()? as usize;
-        let mut attributes = Vec::with_capacity(attribute_count.min(reader.remaining() / 6));
-        for _ in 0..attribute_count {
-            let attribute = Attribute::from_bytes_in(
-                &constant_pool,
-                reader,
-                crate::attributes::attribute::AttributeLocation::Class,
-            )?;
-            attributes.push(attribute);
-        }
-
-        Ok(ClassFile {
-            version,
-            constant_pool,
-            access_flags,
-            this_class,
-            super_class,
-            interfaces,
-            fields,
-            methods,
-            attributes,
-            code_source_url: None,
-        })
+        ClassFile::from_byte_reader(reader).map(ClassFile::into_owned)
     }
 
     /// Internal fast-path parser using `ByteReader` for zero-overhead reads.
@@ -770,5 +716,20 @@ mod test {
             Err(IoError("Invalid constant pool count".to_string())),
             ClassFile::from_bytes(&bytes)
         );
+    }
+
+    #[test]
+    fn owned_and_borrowed_parsers_agree_on_success_and_truncation() {
+        let bytes = include_bytes!("../../classes/Simple.class");
+        assert_eq!(
+            ClassFile::from_bytes(bytes).unwrap(),
+            ClassFile::from_slice(bytes).unwrap().into_owned()
+        );
+        for end in 0..bytes.len() {
+            assert_eq!(
+                ClassFile::from_bytes(&bytes[..end]).unwrap_err(),
+                ClassFile::from_slice(&bytes[..end]).unwrap_err()
+            );
+        }
     }
 }
