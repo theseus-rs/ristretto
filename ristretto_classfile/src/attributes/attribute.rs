@@ -1713,10 +1713,9 @@ mod test {
     use crate::attributes::annotation_value_pair::AnnotationValuePair;
     use crate::attributes::nested_class_access_flags::NestedClassAccessFlags;
     use crate::attributes::{
-        AnnotationElement, ExportsFlags, LookupSwitch, OpensFlags, RequiresFlags, TableSwitch,
-        TargetPath, TargetType, VerificationType,
+        AnnotationElement, ExportsFlags, LookupSwitch, MethodParameterAccessFlags, OpensFlags,
+        RequiresFlags, TableSwitch, TargetPath, TargetType, VerificationType,
     };
-    use crate::method_access_flags::MethodAccessFlags;
     use indoc::indoc;
 
     const VERSION_45_0: Version = JAVA_1_0_2;
@@ -2491,16 +2490,16 @@ mod test {
     fn test_method_parameters() -> Result<()> {
         let parameter = MethodParameter {
             name_index: 2,
-            access_flags: MethodAccessFlags::PUBLIC,
+            access_flags: MethodParameterAccessFlags::FINAL,
         };
         let attribute = Attribute::MethodParameters {
             name_index: 1,
             parameters: vec![parameter],
         };
-        let expected_bytes = [0, 1, 0, 0, 0, 5, 1, 0, 2, 0, 1];
+        let expected_bytes = [0, 1, 0, 0, 0, 5, 1, 0, 2, 0, 16];
 
         assert_eq!(
-            "MethodParameters { name_index: 1, parameters: [MethodParameter { name_index: 2, access_flags: MethodAccessFlags(PUBLIC) }] }",
+            "MethodParameters { name_index: 1, parameters: [MethodParameter { name_index: 2, access_flags: MethodParameterAccessFlags(FINAL) }] }",
             attribute.to_string()
         );
         test_attribute(&attribute, &expected_bytes, &VERSION_52_0)
