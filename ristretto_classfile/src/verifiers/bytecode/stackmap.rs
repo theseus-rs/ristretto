@@ -246,6 +246,47 @@ impl DecodedStackMapTable {
         }
         Ok(())
     }
+
+    /// Check that each uninitialized value refers to an allocation instruction.
+    ///
+    /// # Errors
+    /// Returns an error if an uninitialized offset does not identify `new`.
+    pub fn validate_uninitialized_offsets(&self, is_new: impl Fn(u16) -> bool) -> Result<()> {
+        for frame in self.frames() {
+            for ty in frame.locals.iter().chain(&frame.stack) {
+                if let VerificationType::Uninitialized(offset) = ty
+                    && !is_new(*offset)
+                {
+                    return Err(VerifyError::ClassFormatError(
+                        "Stack map uninitialized type must refer to new".to_string(),
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Validate frame encodings and constant-pool types before allowing inference fallback.
+pub(super) fn validate_format(frames: &[StackFrame], class_file: &ClassFile<'_>) -> Result<()> {
+    for frame in frames {
+        frame.validate()?;
+        let (locals, stack): (&[_], &[_]) = match frame {
+            StackFrame::FullFrame { locals, stack, .. } => (locals, stack),
+            StackFrame::AppendFrame { locals, .. } => (locals, &[]),
+            StackFrame::SameLocals1StackItemFrame { stack, .. }
+            | StackFrame::SameLocals1StackItemFrameExtended { stack, .. } => (&[], stack),
+            _ => (&[], &[]),
+        };
+        for ty in locals.iter().chain(stack) {
+            // Invalid constant-pool references are malformed encodings, not
+            // stale type information that Java 6 inference can recover from.
+            if matches!(ty, ClassFileVerificationType::Object { .. }) {
+                convert_single_type(ty, class_file)?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Decodes a single stack map frame.

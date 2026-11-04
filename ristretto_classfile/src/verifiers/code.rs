@@ -1,4 +1,3 @@
-use crate::JAVA_7;
 use crate::attributes::Attribute;
 use crate::attributes::ExceptionTableEntry;
 use crate::attributes::Instruction;
@@ -10,6 +9,7 @@ use crate::verifiers::bytecode::control_flow::CodeInfo;
 use crate::verifiers::error::Result;
 use crate::verifiers::error::VerifyError::{InvalidStackFrameOffset, VerificationError};
 use crate::{CLASS_INITIALIZER_NAME, FieldType};
+use crate::{JAVA_6, JAVA_7};
 use ahash::AHashSet;
 
 /// Verify the `Code` attribute.
@@ -116,6 +116,11 @@ pub(crate) fn verify(
             let mut current_frame_index = -1i32;
             for (i, frame) in frames.iter().enumerate() {
                 frame.validate()?;
+                // Java 6 may recover from stale stack-map offsets through inference.
+                // Encoding errors still fail above; offset checks run in the fast path.
+                if class_file.version.major() == JAVA_6.major() {
+                    continue;
+                }
                 let offset_delta = i32::from(frame.offset_delta());
                 let frame_index = if i == 0 {
                     offset_delta

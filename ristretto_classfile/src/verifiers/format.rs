@@ -512,6 +512,13 @@ pub(super) fn verify_code_metadata(
         }
     }
     for nested in attributes {
+        // Keep Java 6 stack maps for type checking and its inference fallback.
+        // All other metadata retains the ordinary structural checks.
+        if class.version.major() == crate::JAVA_6.major()
+            && matches!(nested, Attribute::StackMapTable { .. })
+        {
+            continue;
+        }
         crate::attributes::code_metadata::validate(nested, count, |pc| info.is_valid_offset(pc))?;
         match nested {
             Attribute::LocalVariableTable { variables, .. } => {
