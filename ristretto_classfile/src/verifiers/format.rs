@@ -37,6 +37,22 @@ fn class_name(name: &JavaStr, arrays: bool) -> Result<()> {
     Ok(())
 }
 
+fn module_name(name: &JavaStr) -> Result<()> {
+    let mut bytes = name.as_bytes().iter().copied().peekable();
+    while let Some(byte) = bytes.next() {
+        match byte {
+            0..=31 | b':' | b'@' => return Err(invalid("Invalid module name")),
+            b'\\' if !matches!(bytes.next(), Some(b'\\' | b':' | b'@')) => {
+                return Err(invalid("Invalid module name escape"));
+            }
+            // Modified UTF-8 encodes U+0000 as C0 80.
+            0xC0 if bytes.peek() == Some(&0x80) => return Err(invalid("Invalid module name")),
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 pub(super) fn verify(class: &ClassFile<'_>) -> Result<()> {
     Version::from(class.version.major(), class.version.minor())?;
     if class.constant_pool.len() > 65534 {
@@ -210,7 +226,9 @@ fn verify_attributes(
         // attributes can repeat without making this quadratic in table length.
         if !matches!(
             attribute,
-            Attribute::LineNumberTable { .. }
+            Attribute::Synthetic { .. }
+                | Attribute::Deprecated { .. }
+                | Attribute::LineNumberTable { .. }
                 | Attribute::LocalVariableTable { .. }
                 | Attribute::LocalVariableTypeTable { .. }
         ) && attributes
@@ -353,6 +371,8 @@ fn verify_constants(class: &ClassFile<'_>) -> Result<()> {
             Constant::Module(_) | Constant::Package(_) if !module => {
                 return Err(invalid("Module and Package constants require ACC_MODULE"));
             }
+            Constant::Module(index) => module_name(pool.try_get_utf8(*index)?)?,
+            Constant::Package(index) => class_name(pool.try_get_utf8(*index)?, false)?,
             Constant::MethodType(index) => {
                 FieldType::method_descriptor_info(pool.try_get_utf8(*index)?)?;
             }
@@ -635,6 +655,66 @@ mod tests {
             &[unknown.clone(), unknown],
             AttributeLocation::Class,
         )?;
+        Ok(())
+    }
+    #[test]
+    fn module_and_package_names_follow_their_own_grammars() -> Result<()> {
+        for name in [
+            "bad:name",
+            "bad@name",
+            "bad\\q",
+            "bad\\",
+            "bad\0name",
+            "bad\u{1F}name",
+        ] {
+            assert!(module_name(&JavaStr::cow_from_str(name)).is_err());
+        }
+        for name in [
+            "java.base",
+            "module/name",
+            "escaped\\:name",
+            "escaped\\@name",
+            "escaped\\\\name",
+        ] {
+            module_name(&JavaStr::cow_from_str(name))?;
+        }
+        for (name, accepted) in [
+            ("valid/package", true),
+            ("bad.package", false),
+            ("bad//package", false),
+            ("[I", false),
+            ("", false),
+        ] {
+            let mut class = ClassFile {
+                access_flags: ClassAccessFlags::MODULE,
+                ..ClassFile::default()
+            };
+            let index = class.constant_pool.add_utf8(name)?;
+            class.constant_pool.add(Constant::Package(index))?;
+            assert_eq!(verify_constants(&class).is_ok(), accepted);
+        }
+        Ok(())
+    }
+    #[test]
+    fn marker_attributes_may_repeat() -> Result<()> {
+        let mut class = ClassFile::default();
+        let attributes = [
+            Attribute::Synthetic {
+                name_index: class.constant_pool.add_utf8("Synthetic")?,
+            },
+            Attribute::Deprecated {
+                name_index: class.constant_pool.add_utf8("Deprecated")?,
+            },
+        ];
+        for attribute in attributes {
+            for location in [
+                AttributeLocation::Class,
+                AttributeLocation::Field,
+                AttributeLocation::Method,
+            ] {
+                verify_attributes(&class, &[attribute.clone(), attribute.clone()], location)?;
+            }
+        }
         Ok(())
     }
 }

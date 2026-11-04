@@ -672,6 +672,9 @@ fn verify_type_annotations(
     }
     for type_annotation in type_annotations {
         type_annotation.target_type.validate()?;
+        for path in &type_annotation.type_path {
+            path.validate()?;
+        }
         // Verify target_info based on target_type
         // For now, just verify the annotation part
         match class_file.constant_pool.get(type_annotation.type_index) {

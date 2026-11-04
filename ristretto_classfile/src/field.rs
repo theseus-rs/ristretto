@@ -96,7 +96,7 @@ impl Field {
         let field_type = FieldType::parse_java_str(desc)?;
 
         let attribute_count = bytes.read_u16()? as usize;
-        let mut attributes = Vec::with_capacity(attribute_count);
+        let mut attributes = Vec::with_capacity(attribute_count.min(bytes.remaining() / 6));
         for _ in 0..attribute_count {
             let attribute = Attribute::from_bytes_in(
                 constant_pool,

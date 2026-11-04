@@ -52,7 +52,7 @@ use std::fmt;
 /// let type_annotation = TypeAnnotation {
 ///     target_type: TargetType::Empty { target_type: 19 },
 ///     type_path: vec![TargetPath {
-///         type_path_kind: 1,
+///         type_path_kind: 3,
 ///         type_argument_index: 2,
 ///     }],
 ///     type_index: 42,
@@ -237,7 +237,7 @@ impl fmt::Display for TypeAnnotation {
     /// let type_annotation = TypeAnnotation {
     ///     target_type: TargetType::Empty { target_type: 19 },
     ///     type_path: vec![TargetPath {
-    ///         type_path_kind: 1,
+    ///         type_path_kind: 3,
     ///         type_argument_index: 2,
     ///     }],
     ///     type_index: 42,
@@ -250,7 +250,7 @@ impl fmt::Display for TypeAnnotation {
     /// let output = type_annotation.to_string();
     /// assert_eq!(
     ///     output,
-    ///     "TypeAnnotation[target_type=Empty[target_type=19], type_path=[TargetPath { type_path_kind: 1, type_argument_index: 2 }], type_index=42, elements=[AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }]]"
+    ///     "TypeAnnotation[target_type=Empty[target_type=19], type_path=[TargetPath { type_path_kind: 3, type_argument_index: 2 }], type_index=42, elements=[AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }]]"
     /// );
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -278,14 +278,14 @@ mod test {
         let type_annotation = TypeAnnotation {
             target_type: TargetType::Empty { target_type: 19 },
             type_path: vec![TargetPath {
-                type_path_kind: 1,
+                type_path_kind: 3,
                 type_argument_index: 2,
             }],
             type_index: 42,
             elements: vec![element],
         };
         assert_eq!(
-            "TypeAnnotation[target_type=Empty[target_type=19], type_path=[TargetPath { type_path_kind: 1, type_argument_index: 2 }], type_index=42, elements=[AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }]]",
+            "TypeAnnotation[target_type=Empty[target_type=19], type_path=[TargetPath { type_path_kind: 3, type_argument_index: 2 }], type_index=42, elements=[AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }]]",
             type_annotation.to_string()
         );
     }
@@ -301,13 +301,13 @@ mod test {
         let type_annotation = TypeAnnotation {
             target_type: TargetType::Empty { target_type: 19 },
             type_path: vec![TargetPath {
-                type_path_kind: 1,
+                type_path_kind: 3,
                 type_argument_index: 2,
             }],
             type_index: 42,
             elements: vec![element],
         };
-        let expected_bytes = [19, 1, 1, 2, 0, 42, 0, 1, 0, 1, 66, 0, 42];
+        let expected_bytes = [19, 1, 3, 2, 0, 42, 0, 1, 0, 1, 66, 0, 42];
 
         let mut bytes = Vec::new();
         type_annotation.to_bytes(&mut bytes)?;
