@@ -1,5 +1,6 @@
 use crate::Result;
 use crate::Thread;
+use ristretto_classfile::JavaStr;
 use ristretto_classloader::Class;
 use std::sync::Arc;
 
@@ -54,8 +55,12 @@ impl<T: Thread + 'static> Assignable<T> for Arc<Class> {
 
                     let self_component = this.component_type().unwrap_or_default();
                     let other_component = other.component_type().unwrap_or_default();
-                    let self_component_class = thread.class(self_component).await?;
-                    let other_component_class = thread.class(other_component).await?;
+                    let self_component_class = thread
+                        .load_referenced_class(&this, &JavaStr::cow_from_str(self_component))
+                        .await?;
+                    let other_component_class = thread
+                        .load_referenced_class(&other, &JavaStr::cow_from_str(other_component))
+                        .await?;
                     return self_component_class
                         .is_assignable_from(thread, &other_component_class)
                         .await;

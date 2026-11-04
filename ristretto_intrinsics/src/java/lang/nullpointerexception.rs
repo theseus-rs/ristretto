@@ -1,4 +1,4 @@
-use crate::java::lang::class::get_class_name;
+use crate::java::lang::class::get_class_no_init;
 use ristretto_classfile::Constant;
 use ristretto_classfile::FieldType;
 use ristretto_classfile::JAVA_17;
@@ -80,15 +80,6 @@ pub async fn get_extended_npe_message<T: Thread + 'static>(
     let Some(class_value) = top_frame_info.first() else {
         return Ok(Some(Value::Object(None)));
     };
-    let class_name_str = {
-        let class_obj_ref = class_value.as_object_ref()?;
-        // java.lang.Class has a "name" field which is a String.
-        get_class_name(&class_obj_ref)?
-    };
-
-    // The name in Class object is typically "java.lang.String". Internal names use slashes "java/lang/String".
-    let internal_class_name = class_name_str.replace('.', "/");
-
     // 2. Method Name (String)
     let Some(method_name_value) = top_frame_info.get(1) else {
         return Ok(Some(Value::Object(None)));
@@ -108,8 +99,9 @@ pub async fn get_extended_npe_message<T: Thread + 'static>(
     // This is an Integer object.
     let bci = usize::try_from(bci_value.as_i32()?).unwrap_or(0);
 
-    // Load Class and Method
-    let Ok(class) = thread.class(&internal_class_name).await else {
+    // Recover the saved definition without initializing it or resolving its name
+    // through a different loader after the throwing frame has returned.
+    let Ok(class) = get_class_no_init(&*thread, class_value).await else {
         return Ok(Some(Value::Object(None)));
     };
 

@@ -30,15 +30,15 @@ pub async fn are_nest_mates<T: Thread + 'static>(
         return Ok(Some(Value::from(false)));
     }
 
-    let member_class = class::get_class(&thread, &member_class).await?;
-    let current_class = class::get_class(&thread, &current_class).await?;
-    if member_class == current_class {
+    let member_class = class::get_class_no_init(&thread, &member_class).await?;
+    let current_class = class::get_class_no_init(&thread, &current_class).await?;
+    if Arc::ptr_eq(&member_class, &current_class) {
         return Ok(Some(Value::from(true)));
     }
 
     let member_nest_host = get_nest_host(&thread, member_class).await?;
     let current_nest_host = get_nest_host(&thread, current_class).await?;
-    let are_nest_mates = member_nest_host == current_nest_host;
+    let are_nest_mates = Arc::ptr_eq(&member_nest_host, &current_nest_host);
     Ok(Some(Value::from(are_nest_mates)))
 }
 
@@ -59,7 +59,7 @@ async fn get_nest_host<T: Thread + 'static>(
 
         let constant_pool = &class_file.constant_pool;
         let host_class = constant_pool.try_get_class(*host_class_index)?;
-        let host_class = thread.class_java_str(host_class).await?;
+        let host_class = thread.load_referenced_class(&class, host_class).await?;
         return Ok(host_class);
     }
     Ok(class)
@@ -224,11 +224,7 @@ pub async fn get_class_access_flags<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class_name = {
-        let object = object.as_object_ref()?;
-        class::get_class_name(&object)?
-    };
-    let class = thread.class(&class_name).await?;
+    let class = class::get_class_no_init(&*thread, &object).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags;
     #[expect(clippy::cast_lossless)]

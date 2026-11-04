@@ -15,6 +15,7 @@
 )]
 
 mod assignable;
+mod class_registry;
 mod error;
 mod frame;
 pub mod handles;
@@ -35,6 +36,7 @@ mod thread;
 mod vm;
 
 pub use assignable::Assignable;
+pub use class_registry::ClassRegistry;
 pub use error::{Error, Result};
 pub use frame::Frame;
 pub use intrinsic::{

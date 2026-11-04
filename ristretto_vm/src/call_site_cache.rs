@@ -6,26 +6,54 @@
 
 use crate::Result;
 use dashmap::DashMap;
-use ristretto_classloader::Value;
+use ristretto_classloader::{Class, Value};
+use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use tokio::sync::Notify;
 
 /// Unique identifier for an invokedynamic call site
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone)]
 pub struct CallSiteKey {
-    /// Class name containing the invokedynamic instruction
-    pub class_name: String,
+    /// Retain the defining class so identities cannot be reused while a site is cached.
+    pub class: Arc<Class>,
     /// Constant pool index of the invokedynamic instruction
     pub instruction_index: u16,
 }
 
+impl fmt::Debug for CallSiteKey {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CallSiteKey")
+            .field("class", &self.class.name())
+            .field("identity", &Arc::as_ptr(&self.class))
+            .field("instruction_index", &self.instruction_index)
+            .finish()
+    }
+}
+
 impl CallSiteKey {
     /// Create a new call site key
-    pub fn new(class_name: String, instruction_index: u16) -> Self {
+    pub fn new(class: Arc<Class>, instruction_index: u16) -> Self {
         Self {
-            class_name,
+            class,
             instruction_index,
         }
+    }
+}
+
+impl PartialEq for CallSiteKey {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.class, &other.class) && self.instruction_index == other.instruction_index
+    }
+}
+
+impl Eq for CallSiteKey {}
+
+impl Hash for CallSiteKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(Arc::as_ptr(&self.class), state);
+        self.instruction_index.hash(state);
     }
 }
 
@@ -169,10 +197,44 @@ mod tests {
     use super::*;
     use std::sync::Arc;
 
+    fn test_class() -> Result<Arc<Class>> {
+        let mut constant_pool = ristretto_classfile::ConstantPool::new();
+        let this_class = constant_pool.add_class("TestClass")?;
+        Ok(Class::from(
+            None,
+            ristretto_classfile::ClassFile {
+                constant_pool,
+                this_class,
+                ..Default::default()
+            },
+        )?)
+    }
+
+    #[tokio::test]
+    async fn test_same_named_definitions_have_separate_call_sites() -> Result<()> {
+        let cache = CallSiteCache::new();
+        let first = CallSiteKey::new(test_class()?, 42);
+        let second = CallSiteKey::new(test_class()?, 42);
+        assert_eq!(first.class.name(), second.class.name());
+        assert_ne!(first, second);
+        cache
+            .resolve_with_cache(first.clone(), || async { Ok(Value::Int(1)) })
+            .await?;
+        let result = cache
+            .resolve_with_cache(second, || async { Ok(Value::Int(2)) })
+            .await?;
+        assert_eq!(result, Value::Int(2));
+        let cached = cache
+            .resolve_with_cache(first, || async { Ok(Value::Int(3)) })
+            .await?;
+        assert_eq!(cached, Value::Int(1));
+        Ok(())
+    }
+
     #[tokio::test]
     async fn test_call_site_cache_basic_resolution() -> Result<()> {
         let cache = CallSiteCache::new();
-        let key = CallSiteKey::new("TestClass".to_string(), 42);
+        let key = CallSiteKey::new(test_class()?, 42);
         let expected_value = Value::Object(None);
 
         let result = cache
@@ -186,7 +248,7 @@ mod tests {
     #[tokio::test]
     async fn test_call_site_cache_concurrent_resolution() -> Result<()> {
         let cache = Arc::new(CallSiteCache::new());
-        let key = CallSiteKey::new("TestClass".to_string(), 42);
+        let key = CallSiteKey::new(test_class()?, 42);
         let expected_value = Value::Object(None);
 
         // Spawn two tasks that try to resolve the same key concurrently
@@ -219,7 +281,7 @@ mod tests {
     #[tokio::test]
     async fn test_call_site_cache_returns_cached_result() -> Result<()> {
         let cache = CallSiteCache::new();
-        let key = CallSiteKey::new("TestClass".to_string(), 42);
+        let key = CallSiteKey::new(test_class()?, 42);
         let expected_value = Value::Object(None);
 
         // First resolution

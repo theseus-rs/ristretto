@@ -86,6 +86,26 @@ pub trait Thread: Send + Sync {
         class_name: &'a JavaStr,
     ) -> crate::BoxFuture<'a, Result<Arc<Class>>>;
 
+    /// Link a specific class definition, optionally initializing it, without resolving its name.
+    ///
+    /// # Errors
+    /// Returns an error if linking or initialization fails.
+    fn resolve_class<'a>(
+        &'a self,
+        class: &'a Arc<Class>,
+        initialize: bool,
+    ) -> crate::BoxFuture<'a, Result<Arc<Class>>>;
+
+    /// Resolve a symbolic class reference using its referring class's defining loader.
+    ///
+    /// # Errors
+    /// Returns an error if the referenced class cannot be loaded or linked.
+    fn load_referenced_class<'a>(
+        &'a self,
+        caller: &'a Arc<Class>,
+        name: &'a JavaStr,
+    ) -> crate::BoxFuture<'a, Result<Arc<Class>>>;
+
     /// Register a class with the class loader.
     ///
     /// # Errors
@@ -228,6 +248,22 @@ impl<T: Thread> Thread for Arc<T> {
 
     fn register_class(&self, class: Arc<Class>) -> crate::BoxFuture<'_, Result<()>> {
         (**self).register_class(class)
+    }
+
+    fn load_referenced_class<'a>(
+        &'a self,
+        caller: &'a Arc<Class>,
+        name: &'a JavaStr,
+    ) -> crate::BoxFuture<'a, Result<Arc<Class>>> {
+        (**self).load_referenced_class(caller, name)
+    }
+
+    fn resolve_class<'a>(
+        &'a self,
+        class: &'a Arc<Class>,
+        initialize: bool,
+    ) -> crate::BoxFuture<'a, Result<Arc<Class>>> {
+        (**self).resolve_class(class, initialize)
     }
 
     fn invoke<'a>(

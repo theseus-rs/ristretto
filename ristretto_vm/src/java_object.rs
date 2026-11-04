@@ -306,6 +306,7 @@ async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
 
     // Return cached object if available, updating module if necessary
     if let Some(object) = class.object()? {
+        ristretto_types::ClassRegistry::for_vm(&*vm)?.register_mirror(&object, class.clone());
         if *java_version > JAVA_8 {
             update_cached_class_module(thread, class, &object).await?;
         }
@@ -356,6 +357,7 @@ async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
     }
 
     let result = class.set_object_if_absent(object_value)?;
+    ristretto_types::ClassRegistry::for_vm(&*vm)?.register_mirror(&result, class.clone());
     Ok(result)
 }
 
@@ -737,11 +739,14 @@ async fn build_class_constructor_params(
 ///
 /// An error will be returned if the component type cannot be converted to a Class object.
 async fn get_component_type_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
-    if let Some(component_type) = class.component_type() {
-        let component_type_class = thread
-            .load_and_link_class(&JavaStr::cow_from_str(component_type))
-            .await?;
-        Box::pin(to_class_object(thread, &component_type_class)).await
+    if !class.is_array() {
+        return Ok(Value::Object(None));
+    }
+    let vm = thread.vm()?;
+    let loader = vm.class_loader().read().await.clone();
+    if let Some(component) = loader.array_component_class(class).await? {
+        let component = ristretto_types::Thread::resolve_class(thread, &component, false).await?;
+        Box::pin(to_class_object(thread, &component)).await
     } else {
         Ok(Value::Object(None))
     }

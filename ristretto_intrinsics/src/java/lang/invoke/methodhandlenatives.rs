@@ -1340,15 +1340,10 @@ pub async fn resolve<T: Thread + 'static>(
         let flags = member_self.value("flags")?.as_i32()?;
         (class_object, name, flags)
     };
-    let class_name = {
-        let class_object = class_object.as_object_ref()?;
-        get_class_name(&class_object)?
-    };
     // Per JVM spec §5.4.3, member resolution should only load and link the class,
     // NOT initialize it. Class initialization (§5.5) only occurs on active use
     // (e.g., new, getstatic, invokestatic), not during resolution.
-    let class_name_java = JavaStr::cow_from_str(&class_name);
-    let class = thread.load_and_link_class(&class_name_java).await?;
+    let class = crate::java::lang::class::get_class_no_init(&*thread, &class_object).await?;
     let member_name_flags = MemberNameFlags::from_bits_truncate(flags);
 
     if member_name_flags.contains(MemberNameFlags::IS_METHOD)

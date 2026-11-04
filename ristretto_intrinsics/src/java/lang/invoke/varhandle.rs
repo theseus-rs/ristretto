@@ -1,5 +1,4 @@
 use crate::bounds;
-use crate::java::lang::class::get_class_name;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{Reference, Value};
@@ -333,12 +332,7 @@ async fn dispatch_field_static<T: Thread + 'static>(
     base_object: &Value,
     args: &[Value],
 ) -> Result<Option<Value>> {
-    // base_obj is the Class mirror; get the class name from it
-    let class_name = {
-        let base_ref = base_object.as_object_ref()?;
-        get_class_name(&base_ref)?
-    };
-    let class = thread.class(&class_name).await?;
+    let class = crate::java::lang::class::get_class(&**thread, base_object).await?;
     let field_name = class.field_name(offset)?;
 
     match access_mode {

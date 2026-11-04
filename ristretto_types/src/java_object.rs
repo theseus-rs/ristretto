@@ -352,6 +352,7 @@ fn to_class_object<'a, T: Thread + 'static>(
 
         // Return cached object if available, updating module if necessary
         if let Some(object) = class.object()? {
+            crate::ClassRegistry::for_vm(&*vm)?.register_mirror(&object, class.clone());
             if *java_version > JAVA_8 {
                 update_cached_class_module(thread, class, &object).await?;
             }
@@ -402,6 +403,7 @@ fn to_class_object<'a, T: Thread + 'static>(
         }
 
         let result = class.set_object_if_absent(object_value)?;
+        crate::ClassRegistry::for_vm(&*vm)?.register_mirror(&result, class.clone());
         Ok(result)
     })
 }
@@ -681,11 +683,14 @@ fn get_component_type_object<'a, T: Thread + 'static>(
     class: &'a Arc<Class>,
 ) -> crate::BoxFuture<'a, Result<Value>> {
     Box::pin(async move {
-        if let Some(component_type) = class.component_type() {
-            let component_type_class = thread
-                .load_and_link_class(&JavaStr::cow_from_str(component_type))
-                .await?;
-            to_class_object(thread, &component_type_class).await
+        if !class.is_array() {
+            return Ok(Value::Object(None));
+        }
+        let vm = thread.vm()?;
+        let loader = vm.class_loader().read().await.clone();
+        if let Some(component) = loader.array_component_class(class).await? {
+            let component = thread.resolve_class(&component, false).await?;
+            to_class_object(thread, &component).await
         } else {
             Ok(Value::Object(None))
         }
@@ -1224,9 +1229,12 @@ mod tests {
     #[tokio::test]
     async fn test_array_class_to_object_sets_component_type() -> Result<()> {
         let thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_17));
-        let array_class = test_utils::class("[I", &[])?;
+        let component_class = thread.class("int").await?;
+        let loader = thread.vm()?.class_loader().read().await.clone();
+        loader.register(component_class.clone()).await?;
+        let array_class = loader.array_class(&component_class, 1).await?;
         let array = array_class.to_object(&*thread).await?;
-        let component = thread.class("int").await?.to_object(&*thread).await?;
+        let component = component_class.to_object(&*thread).await?;
         assert_eq!(array.as_object_ref()?.value("componentType")?, component);
         let cached = array_class.to_object(&*thread).await?;
         assert_eq!(cached, array);

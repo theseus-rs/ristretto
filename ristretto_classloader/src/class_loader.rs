@@ -300,30 +300,100 @@ impl ClassLoader {
             Some(base_name) => Some(self.load(&JavaStr::cow_from_str(base_name)).await?),
             None => None,
         };
-        let defining_loader = if let Some(component) = &array_base_class {
-            component.class_loader()?
-        } else {
-            let mut bootstrap = self.parent().await;
-            while let Some(loader) = &bootstrap {
-                let Some(parent) = loader.parent().await else {
-                    break;
-                };
-                bootstrap = Some(parent);
-            }
-            bootstrap
-        };
-
+        let defining_loader = self
+            .array_defining_loader(array_base_class.as_ref())
+            .await?;
         let defining_loader = defining_loader.as_deref().unwrap_or(self);
-        let is_defining_loader = std::ptr::eq(self, defining_loader);
-
-        if !is_defining_loader {
-            let cached = defining_loader.classes.read().await.get(name).cloned();
-            if let Some(class) = cached {
-                let (class, _) = self.cache_class(name.to_owned(), class).await;
-                return Ok((class, true));
-            }
+        let (class, loaded) = defining_loader
+            .create_array_class(name, array_base_class)
+            .await?;
+        if std::ptr::eq(self, defining_loader) {
+            return Ok((class, loaded));
         }
+        let (class, raced) = self.cache_class(name.to_owned(), class).await;
+        Ok((class, loaded || raced))
+    }
 
+    /// Get an array class from an already resolved component, without loading its name again.
+    /// Only the defining loader caches the result; a component mirror does not establish an
+    /// initiating-loader relationship with this loader.
+    ///
+    /// # Errors
+    /// Returns an error for void components, invalid dimensions, or invalid class metadata.
+    pub async fn array_class(
+        &self,
+        component: &Arc<Class>,
+        dimensions: usize,
+    ) -> Result<Arc<Class>> {
+        if dimensions == 0
+            || dimensions > 255 - component.array_dimensions()
+            || component.name() == "void"
+        {
+            return Err(InternalError(
+                "Invalid array component or dimensions".to_string(),
+            ));
+        }
+        let component_descriptor = Class::convert_to_descriptor(component.name());
+        let mut descriptor = String::with_capacity(dimensions + component_descriptor.len());
+        descriptor.extend(std::iter::repeat_n('[', dimensions));
+        descriptor.push_str(&component_descriptor);
+        let name = JavaStr::cow_from_str(&descriptor);
+        let base = if component.is_array() {
+            component.array_base_class().cloned()
+        } else if component.is_primitive() {
+            None
+        } else {
+            Some(component.clone())
+        };
+        let defining_loader = self.array_defining_loader(base.as_ref()).await?;
+        let defining_loader = defining_loader.as_deref().unwrap_or(self);
+        let (class, _) = defining_loader.create_array_class(&name, base).await?;
+        Ok(class)
+    }
+
+    /// Get an array's component definition, preserving its defining-loader identity.
+    ///
+    /// # Errors
+    /// Returns an error if the component cannot be resolved.
+    pub async fn array_component_class(&self, array: &Arc<Class>) -> Result<Option<Arc<Class>>> {
+        let Some(name) = array.component_type() else {
+            return Ok(None);
+        };
+        if let Some(base) = array.array_base_class() {
+            let dimensions = array.array_dimensions() - 1;
+            return Ok(Some(if dimensions == 0 {
+                base.clone()
+            } else {
+                self.array_class(base, dimensions).await?
+            }));
+        }
+        let loader = array.class_loader()?;
+        let loader = loader.as_deref().unwrap_or(self);
+        Ok(Some(loader.load(&JavaStr::cow_from_str(name)).await?))
+    }
+
+    async fn array_defining_loader(&self, base: Option<&Arc<Class>>) -> Result<Option<Arc<Self>>> {
+        if let Some(component) = base {
+            return component.class_loader();
+        }
+        let mut bootstrap = self.parent().await;
+        while let Some(loader) = &bootstrap {
+            let Some(parent) = loader.parent().await else {
+                break;
+            };
+            bootstrap = Some(parent);
+        }
+        Ok(bootstrap)
+    }
+
+    async fn create_array_class(
+        &self,
+        name: &JavaStr,
+        array_base_class: Option<Arc<Class>>,
+    ) -> Result<(Arc<Class>, bool)> {
+        if let Some(class) = self.classes.read().await.get(name).cloned() {
+            return Ok((class, true));
+        }
         let mut class_file = ARRAY_CLASS_TEMPLATE
             .as_ref()
             .map_err(|error| InternalError(error.to_string()))?
@@ -331,17 +401,8 @@ impl ClassLoader {
         class_file
             .constant_pool
             .set(1, Constant::Utf8(Cow::Owned(name.to_owned())))?;
-        let class = Class::from_array(
-            Some(defining_loader.this.clone()),
-            class_file,
-            array_base_class,
-        )?;
-        let (class, loaded) = defining_loader.cache_class(name.to_owned(), class).await;
-        if is_defining_loader {
-            return Ok((class, loaded));
-        }
-        let (class, raced) = self.cache_class(name.to_owned(), class).await;
-        Ok((class, loaded || raced))
+        let class = Class::from_array(Some(self.this.clone()), class_file, array_base_class)?;
+        Ok(self.cache_class(name.to_owned(), class).await)
     }
 
     /// Register a class with the class loader.
@@ -432,10 +493,20 @@ impl ClassLoader {
     /// Unlike [`load`](Self::load), this method never reads from disk or creates new classes.
     /// It only checks the in-memory caches.
     ///
-    /// Per [JVMS §5.3.4](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.4),
-    /// `ClassLoader.findLoadedClass` must return a previously loaded class without triggering
-    /// new class loading.
     pub async fn find_loaded(&self, class_name: &JavaStr) -> Option<Arc<Class>> {
+        let mut current = self.this.upgrade()?;
+        loop {
+            if let Some(class) = current.find_loaded_local(class_name).await {
+                return Some(class);
+            }
+            current = current.parent().await?;
+        }
+    }
+
+    /// Find a cached class in this loader only, without consulting native parents.
+    /// Java loaders combine this with their initiating associations before applying
+    /// their own delegation policy.
+    pub async fn find_loaded_local(&self, class_name: &JavaStr) -> Option<Arc<Class>> {
         let class_name_internal: Cow<'_, JavaStr> =
             if memchr::memchr(b'.', class_name.as_bytes()).is_none() {
                 Cow::Borrowed(class_name)
@@ -452,21 +523,11 @@ impl ClassLoader {
                 Cow::Owned(unsafe { JavaString::from_mutf8_unchecked(bytes) })
             };
 
-        // Walk the classloader hierarchy iteratively
-        let mut current = self.this.upgrade()?;
-        loop {
-            {
-                let classes = current.classes.read().await;
-                if let Some(class) = classes.get(&*class_name_internal) {
-                    return Some(Arc::clone(class));
-                }
-            }
-
-            match current.parent().await {
-                Some(parent) => current = parent,
-                None => return None,
-            }
-        }
+        self.classes
+            .read()
+            .await
+            .get(&*class_name_internal)
+            .cloned()
     }
 
     /// Traverse the classloader hierarchy to find the bootstrap (root) classloader.
@@ -810,6 +871,68 @@ mod tests {
                 .await?
                 .is_array()
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_array_from_resolved_sibling_component() -> Result<()> {
+        let initiating = ClassLoader::new("initiating", ClassPath::new(Vec::new()));
+        let mut arrays = Vec::new();
+        for name in ["first", "second"] {
+            let defining = ClassLoader::new(name, ClassPath::new(Vec::new()));
+            let mut constant_pool = ConstantPool::new();
+            let this_class = constant_pool.add_class("example/Element")?;
+            let component = Class::from(
+                Some(Arc::downgrade(&defining)),
+                ClassFile {
+                    constant_pool,
+                    this_class,
+                    ..Default::default()
+                },
+            )?;
+            // The component need not be discoverable by name in either loader.
+            let array = initiating.array_class(&component, 1).await?;
+            assert!(Arc::ptr_eq(
+                array.array_base_class().expect("base"),
+                &component
+            ));
+            assert_eq!(array.class_loader()?, Some(defining.clone()));
+            assert!(Arc::ptr_eq(
+                &array,
+                &defining.load(array.java_name()).await?
+            ));
+            assert!(Arc::ptr_eq(
+                &array,
+                &initiating.array_class(&component, 1).await?
+            ));
+            assert!(initiating.find_loaded(array.java_name()).await.is_none());
+            assert!(defining.find_loaded(component.java_name()).await.is_none());
+
+            let matrix = initiating.array_class(&component, 2).await?;
+            assert!(Arc::ptr_eq(
+                &matrix,
+                &initiating.array_class(&array, 1).await?
+            ));
+            assert!(Arc::ptr_eq(
+                &array,
+                &initiating
+                    .array_component_class(&matrix)
+                    .await?
+                    .expect("component")
+            ));
+            assert!(Arc::ptr_eq(
+                &component,
+                &initiating
+                    .array_component_class(&array)
+                    .await?
+                    .expect("component")
+            ));
+            arrays.push(array);
+        }
+        let first = arrays.first().expect("first array");
+        let second = arrays.last().expect("second array");
+        assert_eq!(first.name(), second.name());
+        assert!(!Arc::ptr_eq(first, second));
         Ok(())
     }
 

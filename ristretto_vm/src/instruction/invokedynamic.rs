@@ -122,7 +122,7 @@
 //!   - If validation fails, throw `BootstrapMethodError`
 //!
 //! 5.3 Create call site cache entry:
-//!   - Store result indexed by class name and invokedynamic instruction index
+//!   - Store result indexed by class identity and invokedynamic instruction index
 //!   - Mark call site as resolved
 //!   - Subsequent invocations use the cached result
 //!
@@ -241,6 +241,7 @@ fn get_bootstrap_method_attribute(
 /// does not match the expected pattern, or if any constant pool entries are invalid.
 async fn resolve_bootstrap_method<'a>(
     thread: &Arc<Thread>,
+    caller: &Arc<Class>,
     constant_pool: &'a ConstantPool<'a>,
     bootstrap_method_attribute: &BootstrapMethod,
 ) -> Result<(&'a ReferenceKind, Arc<Class>, Cow<'a, str>, Arc<Method>)> {
@@ -248,7 +249,9 @@ async fn resolve_bootstrap_method<'a>(
         constant_pool.try_get_method_handle(bootstrap_method_attribute.bootstrap_method_ref)?;
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(*method_ref)?;
     let bootstrap_class_name = constant_pool.try_get_class(*class_index)?;
-    let bootstrap_class = thread.class_java_str(bootstrap_class_name).await?;
+    let bootstrap_class = thread
+        .load_referenced_class(caller, bootstrap_class_name)
+        .await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
 
@@ -264,6 +267,7 @@ async fn resolve_bootstrap_method<'a>(
         declaring_class: bootstrap_class,
         method: bootstrap_method,
     } = bootstrap_class.resolve_method(&bootstrap_method_name, &bootstrap_method_descriptor)?;
+    thread.initialize_class(&bootstrap_class).await?;
 
     // 2.4 Validate bootstrap method signature matches required pattern:
     //     (MethodHandles.Lookup, String, MethodType|TypeDescriptor, ...additionalArgs) -> CallSite|Object
@@ -366,7 +370,11 @@ async fn get_private_lookup(thread: &Thread, caller_class: &Arc<Class>) -> Resul
 /// # Errors
 ///
 /// Returns an error if the class cannot be resolved or if the field type is invalid.
-async fn get_field_type_class(thread: &Thread, field_type: Option<FieldType>) -> Result<Value> {
+async fn get_field_type_class(
+    thread: &Thread,
+    caller: &Arc<Class>,
+    field_type: Option<FieldType>,
+) -> Result<Value> {
     let class_name = if let Some(field_type) = field_type {
         field_type.class_name()
     } else {
@@ -375,7 +383,9 @@ async fn get_field_type_class(thread: &Thread, field_type: Option<FieldType>) ->
     // Per JVM spec §5.4.3.5, resolving field/method types for method handles and
     // method types should NOT trigger class initialization.
     let class_name_java = JavaStr::cow_from_str(&class_name);
-    let class = thread.load_and_link_class(&class_name_java).await?;
+    let class = thread
+        .load_referenced_class(caller, &class_name_java)
+        .await?;
     class.to_object(thread).await
 }
 
@@ -394,10 +404,14 @@ async fn get_field_type_class(thread: &Thread, field_type: Option<FieldType>) ->
 ///
 /// Returns an error if the method descriptor is invalid or if any of the field types cannot be
 /// resolved.
-async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Value> {
+async fn get_method_type(
+    thread: &Thread,
+    caller: &Arc<Class>,
+    method_descriptor: &str,
+) -> Result<Value> {
     let method_descriptor = JavaStr::cow_from_str(method_descriptor);
     let (argument_types, return_type) = FieldType::parse_method_descriptor(&method_descriptor)?;
-    let return_class = get_field_type_class(thread, return_type).await?;
+    let return_class = get_field_type_class(thread, caller, return_type).await?;
 
     let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
     if argument_types.is_empty() {
@@ -410,10 +424,12 @@ async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Val
             .await;
     }
 
-    let first_argument = get_field_type_class(thread, argument_types.first().cloned()).await?;
+    let first_argument =
+        get_field_type_class(thread, caller, argument_types.first().cloned()).await?;
     let mut argument_classes: Vec<Value> = Vec::with_capacity(argument_types.len() - 1);
     for argument_type in argument_types.iter().skip(1) {
-        let argument_class = get_field_type_class(thread, Some(argument_type.clone())).await?;
+        let argument_class =
+            get_field_type_class(thread, caller, Some(argument_type.clone())).await?;
         argument_classes.push(argument_class);
     }
     let class_array = thread.class("[Ljava/lang/Class;").await?;
@@ -444,6 +460,7 @@ async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Val
 #[expect(clippy::too_many_lines)]
 pub async fn get_method_handle(
     thread: &Arc<Thread>,
+    caller: &Arc<Class>,
     constant_pool: &ConstantPool<'_>,
     reference_kind: &ReferenceKind,
     reference_index: u16,
@@ -487,6 +504,7 @@ pub async fn get_method_handle(
             // Recursively resolve the nested method handle reference
             return Box::pin(get_method_handle(
                 thread,
+                caller,
                 constant_pool,
                 nested_reference_kind,
                 *nested_reference_index,
@@ -504,7 +522,7 @@ pub async fn get_method_handle(
     // Per JVM spec §5.5, method handle resolution should NOT trigger class initialization.
     // Class initialization only occurs when the method handle is invoked (for REF_getStatic,
     // REF_putStatic, REF_invokeStatic, REF_newInvokeSpecial).
-    let class = thread.load_and_link_class(class_name).await?;
+    let class = thread.load_referenced_class(caller, class_name).await?;
     let class_object = class.to_object(thread).await?;
     let lookup_class = thread
         .class("java.lang.invoke.MethodHandles$Lookup")
@@ -535,7 +553,7 @@ pub async fn get_method_handle(
     // 4. Build the Java String and MethodType for the member
     let name_value = member_name.to_object(thread).await?;
     let method_type = if is_method {
-        get_method_type(thread, &member_descriptor.to_str_lossy()).await?
+        get_method_type(thread, caller, &member_descriptor.to_str_lossy()).await?
     } else {
         // not used for fields
         Value::Object(None)
@@ -613,7 +631,9 @@ pub async fn get_method_handle(
             )?;
             // field type from descriptor
             let field_type = FieldType::parse_java_str(member_descriptor)?.class_name();
-            let field_class = thread.class(field_type).await?;
+            let field_class = thread
+                .load_referenced_class(caller, &JavaStr::cow_from_str(&field_type))
+                .await?;
             let field_class_object = field_class.to_object(thread).await?;
             thread
                 .try_execute(
@@ -634,7 +654,9 @@ pub async fn get_method_handle(
                 "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
             )?;
             let field_type = FieldType::parse_java_str(member_descriptor)?.class_name();
-            let field_class = thread.class(field_type).await?;
+            let field_class = thread
+                .load_referenced_class(caller, &JavaStr::cow_from_str(&field_type))
+                .await?;
             let field_class_object = field_class.to_object(thread).await?;
             thread
                 .try_execute(
@@ -680,6 +702,7 @@ pub async fn get_method_handle(
 /// objects fails.
 async fn resolve_static_bootstrap_arguments(
     thread: &Arc<Thread>,
+    caller: &Arc<Class>,
     constant_pool: &ConstantPool<'_>,
     bootstrap_method: &BootstrapMethod,
 ) -> Result<Vec<Value>> {
@@ -707,23 +730,28 @@ async fn resolve_static_bootstrap_arguments(
             Constant::Class(class_index) => {
                 let class_name = constant_pool.try_get_utf8(*class_index)?;
                 // Per JVM spec §5.4.3.1, class resolution should NOT trigger initialization
-                let class = thread.load_and_link_class(class_name).await?;
+                let class = thread.load_referenced_class(caller, class_name).await?;
                 let class_object = class.to_object(thread).await?;
                 arguments.push(class_object);
             }
             Constant::MethodType(descriptor_index) => {
                 let descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
                 let s = descriptor.to_str_lossy();
-                let method_type = get_method_type(thread, &s).await?;
+                let method_type = get_method_type(thread, caller, &s).await?;
                 arguments.push(method_type);
             }
             Constant::MethodHandle {
                 reference_kind,
                 reference_index,
             } => {
-                let method_handle =
-                    get_method_handle(thread, constant_pool, reference_kind, *reference_index)
-                        .await?;
+                let method_handle = get_method_handle(
+                    thread,
+                    caller,
+                    constant_pool,
+                    reference_kind,
+                    *reference_index,
+                )
+                .await?;
                 arguments.push(method_handle);
             }
             _ => {
@@ -757,6 +785,7 @@ async fn resolve_static_bootstrap_arguments(
 /// The adjusted static arguments with varargs collected into an array if needed.
 async fn adjust_varargs_static_arguments(
     thread: &Arc<Thread>,
+    bootstrap_class: &Arc<Class>,
     bootstrap_method_descriptor: &str,
     mut static_arguments: Vec<Value>,
 ) -> Result<Vec<Value>> {
@@ -805,7 +834,9 @@ async fn adjust_varargs_static_arguments(
 
             // Create the array type name
             let array_type_name = ["[", &component_type.descriptor()].concat();
-            let array_class = thread.class(&array_type_name).await?;
+            let array_class = thread
+                .load_referenced_class(bootstrap_class, &JavaStr::cow_from_str(&array_type_name))
+                .await?;
 
             // Box primitives if the array is Object[] (needed for varargs like Object...)
             let boxed_varargs = if array_type_name == "[Ljava/lang/Object;" {
@@ -864,11 +895,12 @@ async fn adjust_varargs_static_arguments(
 async fn resolve_call_site(frame: &Frame, method_index: u16) -> Result<Value> {
     let thread = frame.thread()?;
     let current_class = frame.class();
-    let cache_key = CallSiteKey::new(current_class.name().to_string(), method_index);
+    let cache_key = CallSiteKey::new(current_class.clone(), method_index);
 
     debug!(
         "resolve_call_site: Attempting to resolve call site for class '{}' at CP index {}",
-        cache_key.class_name, cache_key.instruction_index
+        cache_key.class.name(),
+        cache_key.instruction_index
     );
 
     // Check if we can access the VM and cache
@@ -916,7 +948,13 @@ async fn resolve_call_site_uncached(frame: &Frame, method_index: u16) -> Result<
     //     - num_bootstrap_arguments (count of static arguments)
     //     - bootstrap_arguments[] (array of constant pool indices)
     let (reference_kind, bootstrap_class, _bootstrap_method_descriptor, bootstrap_method) =
-        resolve_bootstrap_method(&thread, constant_pool, &bootstrap_method_attribute).await?;
+        resolve_bootstrap_method(
+            &thread,
+            current_class,
+            constant_pool,
+            &bootstrap_method_attribute,
+        )
+        .await?;
 
     debug!(
         "invokedynamic: bootstrap method({reference_kind}): {}.{}{}",
@@ -942,18 +980,27 @@ async fn resolve_call_site_uncached(frame: &Frame, method_index: u16) -> Result<
 
     // 3.2 Prepare method name and method type for the invokedynamic call site
     let method_name = bootstrap_method_attr_name.to_object(&thread).await?;
-    let method_type = get_method_type(&thread, &bootstrap_method_attr_descriptor).await?;
+    let method_type =
+        get_method_type(&thread, current_class, &bootstrap_method_attr_descriptor).await?;
 
     // 3.4 Resolve static arguments
-    let static_arguments =
-        resolve_static_bootstrap_arguments(&thread, constant_pool, &bootstrap_method_attribute)
-            .await?;
+    let static_arguments = resolve_static_bootstrap_arguments(
+        &thread,
+        current_class,
+        constant_pool,
+        &bootstrap_method_attribute,
+    )
+    .await?;
 
     // Adjust static arguments for varargs bootstrap methods (e.g., ObjectMethods.bootstrap)
     let bootstrap_method_descriptor = bootstrap_method.descriptor();
-    let static_arguments =
-        adjust_varargs_static_arguments(&thread, bootstrap_method_descriptor, static_arguments)
-            .await?;
+    let static_arguments = adjust_varargs_static_arguments(
+        &thread,
+        &bootstrap_class,
+        bootstrap_method_descriptor,
+        static_arguments,
+    )
+    .await?;
 
     // 4.1 Construct argument array for bootstrap method:
     let mut arguments = vec![caller_lookup, method_name, method_type];

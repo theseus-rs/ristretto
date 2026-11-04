@@ -1,7 +1,7 @@
 use crate::java::lang::class;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
-use ristretto_classloader::{Class, Value};
+use ristretto_classloader::{Class, Object, Value};
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Frame;
@@ -147,8 +147,7 @@ pub async fn new_instance_0<T: Thread + 'static>(
         }
     }
 
-    let class_name = class.name();
-    let mut descriptor = String::new();
+    let mut descriptor = String::from("(");
     for (index, parameter_type) in parameter_types.iter().enumerate() {
         let parameter_type_class = class::get_class(&thread, parameter_type).await?;
         let class_name = parameter_type_class.name();
@@ -158,8 +157,15 @@ pub async fn new_instance_0<T: Thread + 'static>(
             unbox_primitive(&mut arguments, index)?;
         }
     }
+    descriptor.push_str(")V");
 
-    let result = thread.object(class_name, &descriptor, &arguments).await?;
+    let result = Value::from_object(
+        thread.vm()?.garbage_collector(),
+        Object::new(class.clone())?,
+    );
+    let constructor = class.try_get_method("<init>", &descriptor)?;
+    arguments.insert(0, result.clone());
+    thread.execute(&class, &constructor, &arguments).await?;
     Ok(Some(result))
 }
 

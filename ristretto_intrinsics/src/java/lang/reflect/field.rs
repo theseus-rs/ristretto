@@ -1,4 +1,4 @@
-use crate::java::lang::class::get_class_name;
+use crate::java::lang::class::get_class_no_init;
 use byteorder::{BigEndian, WriteBytesExt};
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::attributes::Attribute;
@@ -17,20 +17,17 @@ pub async fn get_type_annotation_bytes_0<T: Thread + 'static>(
     // 'this' is the Field object
     let field_obj = parameters.pop()?;
 
-    let (class_name, slot) = {
+    let (declaring_class_value, slot) = {
         let field_ref = field_obj.as_object_ref()?;
         let declaring_class_value = field_ref.value("clazz")?;
         let slot_i32 = field_ref.value("slot")?.as_i32()?;
         let slot = usize::try_from(slot_i32).map_err(|_| {
             ristretto_types::Error::InternalError(format!("Invalid slot value: {slot_i32}"))
         })?;
-        let declaring_class_obj = declaring_class_value.as_object_ref()?;
-        let class_name = get_class_name(&declaring_class_obj)?;
-        let class_name = class_name.replace('.', "/");
-        (class_name, slot)
+        (declaring_class_value, slot)
     };
 
-    let declaring_class = thread.class(&class_name).await?;
+    let declaring_class = get_class_no_init(&thread, &declaring_class_value).await?;
 
     // Get the field name from the slot (offset)
     let field_name = declaring_class.field_name(slot)?;
@@ -42,7 +39,13 @@ pub async fn get_type_annotation_bytes_0<T: Thread + 'static>(
         .find(|f| f.name() == field_name)
         .ok_or_else(|| {
             ristretto_types::Error::InternalError(
-                ["Field ", &field_name, " not found in ", &class_name].concat(),
+                [
+                    "Field ",
+                    &field_name,
+                    " not found in ",
+                    declaring_class.name(),
+                ]
+                .concat(),
             )
         })?;
 

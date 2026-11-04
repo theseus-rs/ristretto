@@ -589,6 +589,11 @@ impl ModuleSystem {
         to_module: Option<&str>,
         to_class_name: &str,
     ) -> AccessCheckResult {
+        // Unnamed modules open every package. Reflection assumes readability,
+        // including JDK code instantiating a custom-loader lambda constructor.
+        if to_module.is_none() || to_module == Some(ALL_UNNAMED) {
+            return AccessCheckResult::Allowed;
+        }
         let from = from_module.unwrap_or(ALL_UNNAMED);
         let to = to_module.unwrap_or(ALL_UNNAMED);
         let package = Self::package_from_class_name(to_class_name);
@@ -1773,6 +1778,20 @@ mod tests {
             "other/internal/Secret",
         );
         assert_eq!(result, AccessCheckResult::Allowed);
+    }
+
+    #[test]
+    fn test_reflection_into_unnamed_module() {
+        let module_system = ModuleSystem::empty();
+        for target in [None, Some(ALL_UNNAMED)] {
+            assert_eq!(
+                module_system.check_reflection_access(Some("java.base"), target, "example/Lambda"),
+                AccessCheckResult::Allowed,
+            );
+        }
+        assert!(module_system.check_reflection_access(
+            Some("java.base"), Some("closed.module"), "example/Secret",
+        ).is_denied());
     }
 
     #[test]

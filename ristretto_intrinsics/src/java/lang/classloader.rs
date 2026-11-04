@@ -3,7 +3,7 @@ use crate::java::lang::class::{get_class, get_class_no_init};
 use ristretto_classfile::VerifyMode;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{ClassFile, JAVA_8, JAVA_11, JavaStr};
-use ristretto_classloader::{Class, ClassLoader, ClassLoaderType, Reference, Value};
+use ristretto_classloader::{Class, ClassLoader, Reference, Value};
 use ristretto_gc::Gc;
 use ristretto_gc::sync::RwLock;
 use ristretto_macros::intrinsic_method;
@@ -13,7 +13,7 @@ use ristretto_types::JavaError::{
 use ristretto_types::JavaObject;
 use ristretto_types::Thread;
 use ristretto_types::VM;
-use ristretto_types::{Parameters, Result};
+use ristretto_types::{ClassRegistry, Parameters, Result};
 use std::sync::{Arc, Weak};
 use zerocopy::transmute_ref;
 
@@ -52,57 +52,13 @@ fn set_defining_class_loader(class: &Value, class_loader: &Value) -> Result<()> 
     Ok(())
 }
 
-/// Recover Rust loader metadata when Java calls a native definition method. A built-in
-/// application loader can have a JDK-created mirror as well as the VM-created mirror.
+/// Recover or create the defining loader's native metadata.
 pub(crate) async fn defining_class_loader<T: Thread + 'static>(
     thread: &Arc<T>,
     java_loader: &Value,
 ) -> Result<Option<Weak<ClassLoader>>> {
-    let vm = thread.vm()?;
-    let root = vm.class_loader().read().await.clone();
-    if let Value::Object(Some(expected)) = java_loader
-        && let Some(Value::Object(Some(actual))) = root.object().await
-        && Gc::ptr_eq(expected, &actual)
-    {
-        return Ok(Some(Arc::downgrade(&root)));
-    }
-    let builtin_type = if java_loader.is_null() {
-        Some(ClassLoaderType::Bootstrap)
-    } else {
-        let (holder, field) = if *vm.java_class_file_version() <= JAVA_8 {
-            ("java/lang/ClassLoader", "scl")
-        } else {
-            ("jdk/internal/loader/ClassLoaders", "APP_LOADER")
-        };
-        // Read existing metadata only: do not initialize a loader while defining a class.
-        let app_loader = root
-            .find_loaded(JavaStr::try_from_str(holder)?)
-            .await
-            .and_then(|class| class.static_value(field).ok());
-        matches!(
-            (java_loader, app_loader),
-            (Value::Object(Some(expected)), Some(Value::Object(Some(actual))))
-                if Gc::ptr_eq(expected, &actual)
-        )
-        .then_some(ClassLoaderType::System)
-    };
-    let mut current = Some(root);
-    while let Some(loader) = current {
-        if builtin_type.is_some() && loader.loader_type() == builtin_type {
-            if !java_loader.is_null() {
-                loader.set_object(Some(java_loader.clone())).await;
-            }
-            return Ok(Some(Arc::downgrade(&loader)));
-        }
-        if let (Value::Object(Some(expected)), Some(Value::Object(Some(actual)))) =
-            (java_loader, loader.object().await)
-            && Gc::ptr_eq(expected, &actual)
-        {
-            return Ok(Some(Arc::downgrade(&loader)));
-        }
-        current = loader.parent().await;
-    }
-    Ok(None)
+    let loader = ClassRegistry::loader(&**thread, java_loader).await?;
+    Ok(Some(Arc::downgrade(&loader)))
 }
 
 /// Create a `java.lang.Class` object from a byte array.
@@ -499,14 +455,22 @@ pub async fn find_loaded_class_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let class_name = parameters.pop()?.as_string()?;
+    let java_loader = parameters.pop()?;
     // Per JVM spec, findLoadedClass only checks whether the class was already loaded;
-    // it must NOT trigger new class loading (which would recurse through Java
-    // classloaders).  Use find_loaded which only checks the in-memory cache.
+    // it must not trigger new class loading. Delegated resolutions belong to the
+    // initiating loader even when the definition lives outside its parent chain.
     let vm = thread.vm()?;
-    let class_loader_lock = vm.class_loader();
-    let class_loader = class_loader_lock.read().await;
+    if let Some(class) = ClassRegistry::for_vm(&*vm)?.initiated_class(&java_loader, &class_name) {
+        return Ok(Some(class));
+    }
+    let class_loader = ClassRegistry::loader(&*thread, &java_loader).await?;
     let class_name_jstr = JavaStr::cow_from_str(&class_name);
-    let Some(class) = class_loader.find_loaded(&class_name_jstr).await else {
+    let class = if class_loader.loader_type().is_none() {
+        class_loader.find_loaded_local(&class_name_jstr).await
+    } else {
+        class_loader.find_loaded(&class_name_jstr).await
+    };
+    let Some(class) = class else {
         return Ok(Some(Value::Object(None)));
     };
     let class = class.to_object(&thread).await?;
@@ -572,6 +536,7 @@ pub fn retrieve_directives<T: Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_classloader::ClassLoaderType;
 
     #[tokio::test]
     async fn test_native_definition_preserves_builtin_loader_identity() -> Result<()> {
@@ -618,19 +583,27 @@ mod tests {
             vm.garbage_collector(),
             ristretto_classloader::Object::new(app_class.clone())?,
         );
-        assert!(
-            defining_class_loader(&thread, &other_instance)
-                .await?
-                .is_none()
-        );
+        let other_loader = defining_class_loader(&thread, &other_instance)
+            .await?
+            .and_then(|loader| loader.upgrade())
+            .expect("custom loader metadata");
+        assert_eq!(other_loader.loader_type(), None);
+        assert!(!Arc::ptr_eq(&expected, &other_loader));
 
         // A same-named class from an unrelated loader must not acquire system privileges.
         let unrelated = Class::from(None, app_class.class_file().clone())?;
+        unrelated.set_parent(app_class.parent()?)?;
         let unrelated = Value::from_object(
             vm.garbage_collector(),
             ristretto_classloader::Object::new(unrelated)?,
         );
-        assert!(defining_class_loader(&thread, &unrelated).await?.is_none());
+        let unrelated_loader = defining_class_loader(&thread, &unrelated)
+            .await?
+            .and_then(|loader| loader.upgrade())
+            .expect("unrelated loader metadata");
+        assert_eq!(unrelated_loader.loader_type(), None);
+        assert!(!Arc::ptr_eq(&expected, &unrelated_loader));
+        assert!(!Arc::ptr_eq(&other_loader, &unrelated_loader));
         Ok(())
     }
 

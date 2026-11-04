@@ -83,7 +83,9 @@ pub(crate) async fn load_constant_async(
         Constant::Class(class_index) => {
             let class_name = constant_pool.try_get_utf8(*class_index)?;
             let thread = frame.thread()?;
-            let class = thread.load_and_link_class(class_name).await?;
+            let class = thread
+                .load_referenced_class(frame.class(), class_name)
+                .await?;
             class.to_object(&thread).await?
         }
         _ => return Err(InvalidConstantIndex(index)),

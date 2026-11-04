@@ -114,11 +114,8 @@ pub async fn get_class<T: Thread + 'static>(
         return Err(InternalError("no object reference defined".to_string()));
     };
 
-    let class_name = {
-        let guard = object.read();
-        guard.class_name()?.clone()
-    };
-    let class = thread.class(&class_name).await?;
+    let object = Value::Object(Some(object));
+    let class = ristretto_types::method_resolution::receiver_class(&*thread, &object).await?;
     let class = class.to_object(&thread).await?;
     Ok(Some(class))
 }
