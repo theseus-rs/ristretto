@@ -39,37 +39,41 @@ pub(crate) enum AttributeLocation {
 }
 
 impl AttributeLocation {
-    pub(crate) fn recognizes(self, name: &[u8]) -> bool {
+    pub(crate) fn recognizes(self, kind: AttributeKind) -> bool {
         use AttributeLocation::{Any, Class, Code, Field, Method, RecordComponent};
         if self == Any {
             return true;
         }
-        match name {
-            b"ConstantValue" => self == Field,
-            b"Code"
-            | b"Exceptions"
-            | b"RuntimeVisibleParameterAnnotations"
-            | b"RuntimeInvisibleParameterAnnotations"
-            | b"AnnotationDefault"
-            | b"MethodParameters" => self == Method,
-            b"StackMapTable"
-            | b"LineNumberTable"
-            | b"LocalVariableTable"
-            | b"LocalVariableTypeTable" => self == Code,
-            b"InnerClasses"
-            | b"EnclosingMethod"
-            | b"SourceFile"
-            | b"SourceDebugExtension"
-            | b"BootstrapMethods"
-            | b"Module"
-            | b"ModulePackages"
-            | b"ModuleMainClass"
-            | b"NestHost"
-            | b"NestMembers"
-            | b"Record"
-            | b"PermittedSubclasses" => self == Class,
-            b"Synthetic" | b"Deprecated" => matches!(self, Class | Field | Method),
-            b"Signature" | b"RuntimeVisibleAnnotations" | b"RuntimeInvisibleAnnotations" => {
+        match kind {
+            AttributeKind::ConstantValue => self == Field,
+            AttributeKind::Code
+            | AttributeKind::Exceptions
+            | AttributeKind::RuntimeVisibleParameterAnnotations
+            | AttributeKind::RuntimeInvisibleParameterAnnotations
+            | AttributeKind::AnnotationDefault
+            | AttributeKind::MethodParameters => self == Method,
+            AttributeKind::StackMapTable
+            | AttributeKind::LineNumberTable
+            | AttributeKind::LocalVariableTable
+            | AttributeKind::LocalVariableTypeTable => self == Code,
+            AttributeKind::InnerClasses
+            | AttributeKind::EnclosingMethod
+            | AttributeKind::SourceFile
+            | AttributeKind::SourceDebugExtension
+            | AttributeKind::BootstrapMethods
+            | AttributeKind::Module
+            | AttributeKind::ModulePackages
+            | AttributeKind::ModuleMainClass
+            | AttributeKind::NestHost
+            | AttributeKind::NestMembers
+            | AttributeKind::Record
+            | AttributeKind::PermittedSubclasses => self == Class,
+            AttributeKind::Synthetic | AttributeKind::Deprecated => {
+                matches!(self, Class | Field | Method)
+            }
+            AttributeKind::Signature
+            | AttributeKind::RuntimeVisibleAnnotations
+            | AttributeKind::RuntimeInvisibleAnnotations => {
                 matches!(self, Class | Field | Method | RecordComponent)
             }
             _ => true,
@@ -561,31 +565,214 @@ pub enum Attribute {
     Unknown { name_index: u16, info: Vec<u8> },
 }
 
-fn minimum_major_version(name: &[u8]) -> u16 {
-    match name {
-        b"EnclosingMethod"
-        | b"Signature"
-        | b"SourceDebugExtension"
-        | b"LocalVariableTypeTable"
-        | b"RuntimeVisibleAnnotations"
-        | b"RuntimeInvisibleAnnotations"
-        | b"RuntimeVisibleParameterAnnotations"
-        | b"RuntimeInvisibleParameterAnnotations"
-        | b"AnnotationDefault" => JAVA_5.major(),
-        b"StackMapTable" => JAVA_6.major(),
-        b"BootstrapMethods" => JAVA_7.major(),
-        b"RuntimeVisibleTypeAnnotations"
-        | b"RuntimeInvisibleTypeAnnotations"
-        | b"MethodParameters" => JAVA_8.major(),
-        b"Module" | b"ModulePackages" | b"ModuleMainClass" => JAVA_9.major(),
-        b"NestHost" | b"NestMembers" => JAVA_11.major(),
-        b"Record" => JAVA_16.major(),
-        b"PermittedSubclasses" => JAVA_17.major(),
-        _ => JAVA_1_0_2.major(),
+/// Identifies an attribute format independently of its payload.
+///
+/// Resolve the constant-pool name with [`Self::from_name`] when a raw
+/// [`Attribute::Unknown`] may contain a predefined attribute.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AttributeKind {
+    ConstantValue,
+    Code,
+    StackMapTable,
+    Exceptions,
+    InnerClasses,
+    EnclosingMethod,
+    Synthetic,
+    Signature,
+    SourceFile,
+    SourceDebugExtension,
+    LineNumberTable,
+    LocalVariableTable,
+    LocalVariableTypeTable,
+    Deprecated,
+    RuntimeVisibleAnnotations,
+    RuntimeInvisibleAnnotations,
+    RuntimeVisibleParameterAnnotations,
+    RuntimeInvisibleParameterAnnotations,
+    RuntimeVisibleTypeAnnotations,
+    RuntimeInvisibleTypeAnnotations,
+    AnnotationDefault,
+    BootstrapMethods,
+    MethodParameters,
+    Module,
+    ModulePackages,
+    ModuleMainClass,
+    NestHost,
+    NestMembers,
+    Record,
+    PermittedSubclasses,
+    Unknown,
+}
+
+impl AttributeKind {
+    /// Resolves a predefined JVM attribute name, regardless of location
+    /// or class-file version. Vendor-defined names return `None`.
+    #[must_use]
+    pub fn from_name(name: &[u8]) -> Option<Self> {
+        match name {
+            b"ConstantValue" => Some(Self::ConstantValue),
+            b"Code" => Some(Self::Code),
+            b"StackMapTable" => Some(Self::StackMapTable),
+            b"Exceptions" => Some(Self::Exceptions),
+            b"InnerClasses" => Some(Self::InnerClasses),
+            b"EnclosingMethod" => Some(Self::EnclosingMethod),
+            b"Synthetic" => Some(Self::Synthetic),
+            b"Signature" => Some(Self::Signature),
+            b"SourceFile" => Some(Self::SourceFile),
+            b"SourceDebugExtension" => Some(Self::SourceDebugExtension),
+            b"LineNumberTable" => Some(Self::LineNumberTable),
+            b"LocalVariableTable" => Some(Self::LocalVariableTable),
+            b"LocalVariableTypeTable" => Some(Self::LocalVariableTypeTable),
+            b"Deprecated" => Some(Self::Deprecated),
+            b"RuntimeVisibleAnnotations" => Some(Self::RuntimeVisibleAnnotations),
+            b"RuntimeInvisibleAnnotations" => Some(Self::RuntimeInvisibleAnnotations),
+            b"RuntimeVisibleParameterAnnotations" => Some(Self::RuntimeVisibleParameterAnnotations),
+            b"RuntimeInvisibleParameterAnnotations" => {
+                Some(Self::RuntimeInvisibleParameterAnnotations)
+            }
+            b"RuntimeVisibleTypeAnnotations" => Some(Self::RuntimeVisibleTypeAnnotations),
+            b"RuntimeInvisibleTypeAnnotations" => Some(Self::RuntimeInvisibleTypeAnnotations),
+            b"AnnotationDefault" => Some(Self::AnnotationDefault),
+            b"BootstrapMethods" => Some(Self::BootstrapMethods),
+            b"MethodParameters" => Some(Self::MethodParameters),
+            b"Module" => Some(Self::Module),
+            b"ModulePackages" => Some(Self::ModulePackages),
+            b"ModuleMainClass" => Some(Self::ModuleMainClass),
+            b"NestHost" => Some(Self::NestHost),
+            b"NestMembers" => Some(Self::NestMembers),
+            b"Record" => Some(Self::Record),
+            b"PermittedSubclasses" => Some(Self::PermittedSubclasses),
+            _ => None,
+        }
+    }
+
+    /// Returns the standard name, or `"Unknown"` for a raw attribute.
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::ConstantValue => "ConstantValue",
+            Self::Code => "Code",
+            Self::StackMapTable => "StackMapTable",
+            Self::Exceptions => "Exceptions",
+            Self::InnerClasses => "InnerClasses",
+            Self::EnclosingMethod => "EnclosingMethod",
+            Self::Synthetic => "Synthetic",
+            Self::Signature => "Signature",
+            Self::SourceFile => "SourceFile",
+            Self::SourceDebugExtension => "SourceDebugExtension",
+            Self::LineNumberTable => "LineNumberTable",
+            Self::LocalVariableTable => "LocalVariableTable",
+            Self::LocalVariableTypeTable => "LocalVariableTypeTable",
+            Self::Deprecated => "Deprecated",
+            Self::RuntimeVisibleAnnotations => "RuntimeVisibleAnnotations",
+            Self::RuntimeInvisibleAnnotations => "RuntimeInvisibleAnnotations",
+            Self::RuntimeVisibleParameterAnnotations => "RuntimeVisibleParameterAnnotations",
+            Self::RuntimeInvisibleParameterAnnotations => "RuntimeInvisibleParameterAnnotations",
+            Self::RuntimeVisibleTypeAnnotations => "RuntimeVisibleTypeAnnotations",
+            Self::RuntimeInvisibleTypeAnnotations => "RuntimeInvisibleTypeAnnotations",
+            Self::AnnotationDefault => "AnnotationDefault",
+            Self::BootstrapMethods => "BootstrapMethods",
+            Self::MethodParameters => "MethodParameters",
+            Self::Module => "Module",
+            Self::ModulePackages => "ModulePackages",
+            Self::ModuleMainClass => "ModuleMainClass",
+            Self::NestHost => "NestHost",
+            Self::NestMembers => "NestMembers",
+            Self::Record => "Record",
+            Self::PermittedSubclasses => "PermittedSubclasses",
+            Self::Unknown => "Unknown",
+        }
+    }
+
+    /// Whether this predefined attribute is permitted on an `ACC_MODULE` class
+    /// by JVMS §4.1. Vendor attributes are handled separately by name resolution.
+    pub(crate) fn allowed_on_module(self) -> bool {
+        matches!(
+            self,
+            Self::Module
+                | Self::ModulePackages
+                | Self::ModuleMainClass
+                | Self::InnerClasses
+                | Self::SourceFile
+                | Self::SourceDebugExtension
+                | Self::RuntimeVisibleAnnotations
+                | Self::RuntimeInvisibleAnnotations
+        )
+    }
+
+    fn minimum_major_version(self) -> u16 {
+        match self {
+            Self::EnclosingMethod
+            | Self::Signature
+            | Self::SourceDebugExtension
+            | Self::LocalVariableTypeTable
+            | Self::RuntimeVisibleAnnotations
+            | Self::RuntimeInvisibleAnnotations
+            | Self::RuntimeVisibleParameterAnnotations
+            | Self::RuntimeInvisibleParameterAnnotations
+            | Self::AnnotationDefault => JAVA_5.major(),
+            Self::StackMapTable => JAVA_6.major(),
+            Self::BootstrapMethods => JAVA_7.major(),
+            Self::RuntimeVisibleTypeAnnotations
+            | Self::RuntimeInvisibleTypeAnnotations
+            | Self::MethodParameters => JAVA_8.major(),
+            Self::Module | Self::ModulePackages | Self::ModuleMainClass => JAVA_9.major(),
+            Self::NestHost | Self::NestMembers => JAVA_11.major(),
+            Self::Record => JAVA_16.major(),
+            Self::PermittedSubclasses => JAVA_17.major(),
+            _ => JAVA_1_0_2.major(),
+        }
     }
 }
 
 impl Attribute {
+    /// Returns the kind of the parsed payload. Raw attributes return
+    /// [`AttributeKind::Unknown`], even if their constant-pool name is predefined.
+    #[must_use]
+    pub fn kind(&self) -> AttributeKind {
+        match self {
+            Self::ConstantValue { .. } => AttributeKind::ConstantValue,
+            Self::Code { .. } => AttributeKind::Code,
+            Self::StackMapTable { .. } => AttributeKind::StackMapTable,
+            Self::Exceptions { .. } => AttributeKind::Exceptions,
+            Self::InnerClasses { .. } => AttributeKind::InnerClasses,
+            Self::EnclosingMethod { .. } => AttributeKind::EnclosingMethod,
+            Self::Synthetic { .. } => AttributeKind::Synthetic,
+            Self::Signature { .. } => AttributeKind::Signature,
+            Self::SourceFile { .. } => AttributeKind::SourceFile,
+            Self::SourceDebugExtension { .. } => AttributeKind::SourceDebugExtension,
+            Self::LineNumberTable { .. } => AttributeKind::LineNumberTable,
+            Self::LocalVariableTable { .. } => AttributeKind::LocalVariableTable,
+            Self::LocalVariableTypeTable { .. } => AttributeKind::LocalVariableTypeTable,
+            Self::Deprecated { .. } => AttributeKind::Deprecated,
+            Self::RuntimeVisibleAnnotations { .. } => AttributeKind::RuntimeVisibleAnnotations,
+            Self::RuntimeInvisibleAnnotations { .. } => AttributeKind::RuntimeInvisibleAnnotations,
+            Self::RuntimeVisibleParameterAnnotations { .. } => {
+                AttributeKind::RuntimeVisibleParameterAnnotations
+            }
+            Self::RuntimeInvisibleParameterAnnotations { .. } => {
+                AttributeKind::RuntimeInvisibleParameterAnnotations
+            }
+            Self::RuntimeVisibleTypeAnnotations { .. } => {
+                AttributeKind::RuntimeVisibleTypeAnnotations
+            }
+            Self::RuntimeInvisibleTypeAnnotations { .. } => {
+                AttributeKind::RuntimeInvisibleTypeAnnotations
+            }
+            Self::AnnotationDefault { .. } => AttributeKind::AnnotationDefault,
+            Self::BootstrapMethods { .. } => AttributeKind::BootstrapMethods,
+            Self::MethodParameters { .. } => AttributeKind::MethodParameters,
+            Self::Module { .. } => AttributeKind::Module,
+            Self::ModulePackages { .. } => AttributeKind::ModulePackages,
+            Self::ModuleMainClass { .. } => AttributeKind::ModuleMainClass,
+            Self::NestHost { .. } => AttributeKind::NestHost,
+            Self::NestMembers { .. } => AttributeKind::NestMembers,
+            Self::Record { .. } => AttributeKind::Record,
+            Self::PermittedSubclasses { .. } => AttributeKind::PermittedSubclasses,
+            Self::Unknown { .. } => AttributeKind::Unknown,
+        }
+    }
+
     /// Returns the constant pool index of this attribute's name.
     #[must_use]
     pub fn name_index(&self) -> u16 {
@@ -643,43 +830,7 @@ impl Attribute {
     /// ```
     #[must_use]
     pub fn name(&self) -> &'static str {
-        match self {
-            Attribute::ConstantValue { .. } => "ConstantValue",
-            Attribute::Code { .. } => "Code",
-            Attribute::StackMapTable { .. } => "StackMapTable",
-            Attribute::Exceptions { .. } => "Exceptions",
-            Attribute::InnerClasses { .. } => "InnerClasses",
-            Attribute::EnclosingMethod { .. } => "EnclosingMethod",
-            Attribute::Synthetic { .. } => "Synthetic",
-            Attribute::Signature { .. } => "Signature",
-            Attribute::SourceFile { .. } => "SourceFile",
-            Attribute::SourceDebugExtension { .. } => "SourceDebugExtension",
-            Attribute::LineNumberTable { .. } => "LineNumberTable",
-            Attribute::LocalVariableTable { .. } => "LocalVariableTable",
-            Attribute::LocalVariableTypeTable { .. } => "LocalVariableTypeTable",
-            Attribute::Deprecated { .. } => "Deprecated",
-            Attribute::RuntimeVisibleAnnotations { .. } => "RuntimeVisibleAnnotations",
-            Attribute::RuntimeInvisibleAnnotations { .. } => "RuntimeInvisibleAnnotations",
-            Attribute::RuntimeVisibleParameterAnnotations { .. } => {
-                "RuntimeVisibleParameterAnnotations"
-            }
-            Attribute::RuntimeInvisibleParameterAnnotations { .. } => {
-                "RuntimeInvisibleParameterAnnotations"
-            }
-            Attribute::RuntimeVisibleTypeAnnotations { .. } => "RuntimeVisibleTypeAnnotations",
-            Attribute::RuntimeInvisibleTypeAnnotations { .. } => "RuntimeInvisibleTypeAnnotations",
-            Attribute::AnnotationDefault { .. } => "AnnotationDefault",
-            Attribute::BootstrapMethods { .. } => "BootstrapMethods",
-            Attribute::MethodParameters { .. } => "MethodParameters",
-            Attribute::Module { .. } => "Module",
-            Attribute::ModulePackages { .. } => "ModulePackages",
-            Attribute::ModuleMainClass { .. } => "ModuleMainClass",
-            Attribute::NestHost { .. } => "NestHost",
-            Attribute::NestMembers { .. } => "NestMembers",
-            Attribute::Record { .. } => "Record",
-            Attribute::PermittedSubclasses { .. } => "PermittedSubclasses",
-            Attribute::Unknown { .. } => "Unknown",
-        }
+        self.kind().name()
     }
 
     /// Checks if the Attribute is valid for the given Java version.
@@ -813,16 +964,14 @@ impl Attribute {
         let info_length = bytes.read_u32()?;
         let mut info = bytes.read_nested(info_length as usize)?;
         let bytes = &mut info;
-        let name = attribute_name.as_bytes();
-        let name = if location.recognizes(name)
-            && bytes.class_major_version >= minimum_major_version(name)
-        {
-            name
-        } else {
-            &[]
-        };
-        let attribute = match name {
-            b"ConstantValue" => {
+        let kind = AttributeKind::from_name(attribute_name.as_bytes())
+            .filter(|kind| {
+                location.recognizes(*kind)
+                    && bytes.class_major_version >= kind.minimum_major_version()
+            })
+            .unwrap_or(AttributeKind::Unknown);
+        let attribute = match kind {
+            AttributeKind::ConstantValue => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
                 }
@@ -831,7 +980,7 @@ impl Attribute {
                     constant_value_index: bytes.read_u16()?,
                 }
             }
-            b"Code" => {
+            AttributeKind::Code => {
                 let max_stack = bytes.read_u16()?;
                 let max_locals = bytes.read_u16()?;
 
@@ -889,7 +1038,7 @@ impl Attribute {
                     attributes,
                 }
             }
-            b"StackMapTable" => {
+            AttributeKind::StackMapTable => {
                 let frames_count = bytes.read_u16()?;
                 let mut frames = Vec::with_capacity((frames_count as usize).min(bytes.remaining()));
                 for _ in 0..frames_count {
@@ -898,7 +1047,7 @@ impl Attribute {
                 }
                 Attribute::StackMapTable { name_index, frames }
             }
-            b"Exceptions" => {
+            AttributeKind::Exceptions => {
                 let exception_indexes_count = bytes.read_u16()?;
                 let mut exception_indexes =
                     Vec::with_capacity((exception_indexes_count as usize).min(bytes.remaining()));
@@ -910,7 +1059,7 @@ impl Attribute {
                     exception_indexes,
                 }
             }
-            b"InnerClasses" => {
+            AttributeKind::InnerClasses => {
                 let classes_count = bytes.read_u16()?;
                 let mut classes =
                     Vec::with_capacity((classes_count as usize).min(bytes.remaining()));
@@ -923,7 +1072,7 @@ impl Attribute {
                     classes,
                 }
             }
-            b"EnclosingMethod" => {
+            AttributeKind::EnclosingMethod => {
                 if info_length != 4 {
                     return Err(InvalidAttributeLength(info_length));
                 }
@@ -933,13 +1082,13 @@ impl Attribute {
                     method_index: bytes.read_u16()?,
                 }
             }
-            b"Synthetic" => {
+            AttributeKind::Synthetic => {
                 if info_length != 0 {
                     return Err(InvalidAttributeLength(info_length));
                 }
                 Attribute::Synthetic { name_index }
             }
-            b"Signature" => {
+            AttributeKind::Signature => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
                 }
@@ -948,7 +1097,7 @@ impl Attribute {
                     signature_index: bytes.read_u16()?,
                 }
             }
-            b"SourceFile" => {
+            AttributeKind::SourceFile => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
                 }
@@ -957,7 +1106,7 @@ impl Attribute {
                     source_file_index: bytes.read_u16()?,
                 }
             }
-            b"SourceDebugExtension" => {
+            AttributeKind::SourceDebugExtension => {
                 let debug_extension_bytes = bytes.read_bytes(info_length as usize)?;
                 let debug_extension = mutf8::from_bytes(debug_extension_bytes)?;
                 if mutf8::to_bytes(&debug_extension)? == debug_extension_bytes {
@@ -973,7 +1122,7 @@ impl Attribute {
                     }
                 }
             }
-            b"LineNumberTable" => {
+            AttributeKind::LineNumberTable => {
                 let line_number_table_count = bytes.read_u16()?;
                 let mut line_numbers =
                     Vec::with_capacity((line_number_table_count as usize).min(bytes.remaining()));
@@ -985,7 +1134,7 @@ impl Attribute {
                     line_numbers,
                 }
             }
-            b"LocalVariableTable" => {
+            AttributeKind::LocalVariableTable => {
                 let variables_count = bytes.read_u16()?;
                 let mut variables =
                     Vec::with_capacity((variables_count as usize).min(bytes.remaining()));
@@ -997,7 +1146,7 @@ impl Attribute {
                     variables,
                 }
             }
-            b"LocalVariableTypeTable" => {
+            AttributeKind::LocalVariableTypeTable => {
                 let variable_types_count = bytes.read_u16()?;
                 let mut variable_types =
                     Vec::with_capacity((variable_types_count as usize).min(bytes.remaining()));
@@ -1009,13 +1158,13 @@ impl Attribute {
                     variable_types,
                 }
             }
-            b"Deprecated" => {
+            AttributeKind::Deprecated => {
                 if info_length != 0 {
                     return Err(InvalidAttributeLength(info_length));
                 }
                 Attribute::Deprecated { name_index }
             }
-            b"RuntimeVisibleAnnotations" => {
+            AttributeKind::RuntimeVisibleAnnotations => {
                 let annotations_count = bytes.read_u16()?;
                 let mut annotations =
                     Vec::with_capacity((annotations_count as usize).min(bytes.remaining()));
@@ -1028,7 +1177,7 @@ impl Attribute {
                     annotations,
                 }
             }
-            b"RuntimeInvisibleAnnotations" => {
+            AttributeKind::RuntimeInvisibleAnnotations => {
                 let annotations_count = bytes.read_u16()?;
                 let mut annotations =
                     Vec::with_capacity((annotations_count as usize).min(bytes.remaining()));
@@ -1041,7 +1190,7 @@ impl Attribute {
                     annotations,
                 }
             }
-            b"RuntimeVisibleParameterAnnotations" => {
+            AttributeKind::RuntimeVisibleParameterAnnotations => {
                 let parameter_annotations_count = bytes.read_u8()?;
                 let mut parameter_annotations = Vec::with_capacity(
                     (parameter_annotations_count as usize).min(bytes.remaining()),
@@ -1055,7 +1204,7 @@ impl Attribute {
                     parameter_annotations,
                 }
             }
-            b"RuntimeInvisibleParameterAnnotations" => {
+            AttributeKind::RuntimeInvisibleParameterAnnotations => {
                 let parameter_annotations_count = bytes.read_u8()?;
                 let mut parameter_annotations = Vec::with_capacity(
                     (parameter_annotations_count as usize).min(bytes.remaining()),
@@ -1069,7 +1218,7 @@ impl Attribute {
                     parameter_annotations,
                 }
             }
-            b"RuntimeVisibleTypeAnnotations" => {
+            AttributeKind::RuntimeVisibleTypeAnnotations => {
                 let type_annotations_count = bytes.read_u16()?;
                 let mut type_annotations =
                     Vec::with_capacity((type_annotations_count as usize).min(bytes.remaining()));
@@ -1082,7 +1231,7 @@ impl Attribute {
                     type_annotations,
                 }
             }
-            b"RuntimeInvisibleTypeAnnotations" => {
+            AttributeKind::RuntimeInvisibleTypeAnnotations => {
                 let type_annotations_count = bytes.read_u16()?;
                 let mut type_annotations =
                     Vec::with_capacity((type_annotations_count as usize).min(bytes.remaining()));
@@ -1095,14 +1244,14 @@ impl Attribute {
                     type_annotations,
                 }
             }
-            b"AnnotationDefault" => {
+            AttributeKind::AnnotationDefault => {
                 let element = AnnotationElement::from_bytes(bytes)?;
                 Attribute::AnnotationDefault {
                     name_index,
                     element,
                 }
             }
-            b"BootstrapMethods" => {
+            AttributeKind::BootstrapMethods => {
                 let bootstrap_methods_count = bytes.read_u16()?;
                 let mut methods =
                     Vec::with_capacity((bootstrap_methods_count as usize).min(bytes.remaining()));
@@ -1115,7 +1264,7 @@ impl Attribute {
                     methods,
                 }
             }
-            b"MethodParameters" => {
+            AttributeKind::MethodParameters => {
                 let parameters_count = bytes.read_u8()?;
                 let mut parameters =
                     Vec::with_capacity((parameters_count as usize).min(bytes.remaining()));
@@ -1128,7 +1277,7 @@ impl Attribute {
                     parameters,
                 }
             }
-            b"Module" => {
+            AttributeKind::Module => {
                 let module_name_index = bytes.read_u16()?;
                 let flags = ModuleAccessFlags::from_bytes(bytes)?;
                 let version_index = bytes.read_u16()?;
@@ -1176,7 +1325,7 @@ impl Attribute {
                     provides,
                 }
             }
-            b"ModulePackages" => {
+            AttributeKind::ModulePackages => {
                 let package_indexes_count = bytes.read_u16()?;
                 let mut package_indexes =
                     Vec::with_capacity((package_indexes_count as usize).min(bytes.remaining()));
@@ -1188,7 +1337,7 @@ impl Attribute {
                     package_indexes,
                 }
             }
-            b"ModuleMainClass" => {
+            AttributeKind::ModuleMainClass => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
                 }
@@ -1197,7 +1346,7 @@ impl Attribute {
                     main_class_index: bytes.read_u16()?,
                 }
             }
-            b"NestHost" => {
+            AttributeKind::NestHost => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
                 }
@@ -1206,7 +1355,7 @@ impl Attribute {
                     host_class_index: bytes.read_u16()?,
                 }
             }
-            b"NestMembers" => {
+            AttributeKind::NestMembers => {
                 let class_indexes_count = bytes.read_u16()?;
                 let mut class_indexes =
                     Vec::with_capacity((class_indexes_count as usize).min(bytes.remaining()));
@@ -1218,7 +1367,7 @@ impl Attribute {
                     class_indexes,
                 }
             }
-            b"Record" => {
+            AttributeKind::Record => {
                 let record_count = bytes.read_u16()?;
                 let mut records =
                     Vec::with_capacity((record_count as usize).min(bytes.remaining()));
@@ -1231,7 +1380,7 @@ impl Attribute {
                     records,
                 }
             }
-            b"PermittedSubclasses" => {
+            AttributeKind::PermittedSubclasses => {
                 let class_indexes_count = bytes.read_u16()?;
                 let mut class_indexes =
                     Vec::with_capacity((class_indexes_count as usize).min(bytes.remaining()));
@@ -1243,7 +1392,7 @@ impl Attribute {
                     class_indexes,
                 }
             }
-            _ => {
+            AttributeKind::Unknown => {
                 let info = bytes.read_bytes(info_length as usize)?.to_vec();
                 Attribute::Unknown { name_index, info }
             }
