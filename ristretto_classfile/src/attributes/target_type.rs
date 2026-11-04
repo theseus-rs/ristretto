@@ -105,6 +105,28 @@ pub enum TargetType {
 }
 
 impl TargetType {
+    /// Validate that the raw tag agrees with this target payload.
+    pub(crate) fn validate(&self) -> Result<()> {
+        let tag = self.target_type();
+        let valid = match self {
+            Self::TypeParameter { .. } => matches!(tag, 0x00 | 0x01),
+            Self::SuperType { .. } => tag == 0x10,
+            Self::TypeParameterBound { .. } => matches!(tag, 0x11 | 0x12),
+            Self::Empty { .. } => matches!(tag, 0x13..=0x15),
+            Self::FormalParameter { .. } => tag == 0x16,
+            Self::Throws { .. } => tag == 0x17,
+            Self::LocalVar { .. } => matches!(tag, 0x40 | 0x41),
+            Self::Catch { .. } => tag == 0x42,
+            Self::Offset { .. } => matches!(tag, 0x43..=0x46),
+            Self::TypeArgument { .. } => matches!(tag, 0x47..=0x4B),
+        };
+        if valid {
+            Ok(())
+        } else {
+            Err(InvalidTargetTypeCode(tag))
+        }
+    }
+
     /// Return the raw `target_type` byte value.
     ///
     /// This value indicates the kind of target being annotated, as defined in the JVM specification.
@@ -296,6 +318,7 @@ impl TargetType {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
+        self.validate()?;
         match self {
             TargetType::TypeParameter {
                 target_type,
@@ -626,5 +649,32 @@ mod test {
             target_type.to_string()
         );
         test_array_type(&target_type, &[71, 0, 1, 42])
+    }
+    #[test]
+    fn target_payload_must_agree_with_tag_before_writing() {
+        let targets = [
+            TargetType::Empty { target_type: 0x42 },
+            TargetType::Catch {
+                target_type: 0x13,
+                exception_table_index: 0,
+            },
+            TargetType::SuperType {
+                target_type: 0x00,
+                supertype_index: 0,
+            },
+            TargetType::TypeArgument {
+                target_type: 0x46,
+                offset: 0,
+                type_argument_index: 0,
+            },
+        ];
+        for target in targets {
+            let mut bytes = vec![42];
+            assert_eq!(
+                target.to_bytes(&mut bytes),
+                Err(InvalidTargetTypeCode(target.target_type()))
+            );
+            assert_eq!(bytes, [42]);
+        }
     }
 }

@@ -671,6 +671,7 @@ fn verify_type_annotations(
         // We should verify target_type here if we want to be strict.
     }
     for type_annotation in type_annotations {
+        type_annotation.target_type.validate()?;
         for path in &type_annotation.type_path {
             path.validate()?;
         }
