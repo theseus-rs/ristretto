@@ -38,6 +38,9 @@ fn class_name(name: &JavaStr, arrays: bool) -> Result<()> {
 }
 
 fn module_name(name: &JavaStr) -> Result<()> {
+    if name.is_empty() {
+        return Err(invalid("Invalid module name"));
+    }
     let mut bytes = name.as_bytes().iter().copied().peekable();
     while let Some(byte) = bytes.next() {
         match byte {
@@ -704,6 +707,7 @@ mod tests {
     #[test]
     fn module_and_package_names_follow_their_own_grammars() -> Result<()> {
         for name in [
+            "",
             "bad:name",
             "bad@name",
             "bad\\q",
