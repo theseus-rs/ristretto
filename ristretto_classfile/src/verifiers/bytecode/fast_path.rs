@@ -188,6 +188,11 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         })
     }
 
+    /// Transfer the already validated instruction boundaries to inference fallback.
+    pub(crate) fn into_code_info(self) -> CodeInfo {
+        self.code_info
+    }
+
     /// Extracts the Code attribute from a method.
     fn extract_code_attribute(method: &'a Method) -> Result<CodeAttributeParts<'a>> {
         method
