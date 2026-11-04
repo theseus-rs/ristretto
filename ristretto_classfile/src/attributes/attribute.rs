@@ -2401,7 +2401,7 @@ mod test {
         let type_annotation = TypeAnnotation {
             target_type: TargetType::Empty { target_type: 19 },
             type_path: vec![TargetPath {
-                type_path_kind: 1,
+                type_path_kind: 3,
                 type_argument_index: 2,
             }],
             type_index: 42,
@@ -2412,11 +2412,11 @@ mod test {
             type_annotations: vec![type_annotation],
         };
         let expected_bytes = [
-            0, 1, 0, 0, 0, 15, 0, 1, 19, 1, 1, 2, 0, 42, 0, 1, 0, 1, 66, 0, 42,
+            0, 1, 0, 0, 0, 15, 0, 1, 19, 1, 3, 2, 0, 42, 0, 1, 0, 1, 66, 0, 42,
         ];
 
         assert_eq!(
-            "RuntimeVisibleTypeAnnotations { name_index: 1, type_annotations: [TypeAnnotation { target_type: Empty { target_type: 19 }, type_path: [TargetPath { type_path_kind: 1, type_argument_index: 2 }], type_index: 42, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }] }",
+            "RuntimeVisibleTypeAnnotations { name_index: 1, type_annotations: [TypeAnnotation { target_type: Empty { target_type: 19 }, type_path: [TargetPath { type_path_kind: 3, type_argument_index: 2 }], type_index: 42, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }] }",
             attribute.to_string()
         );
         test_attribute(&attribute, &expected_bytes, &VERSION_52_0)
@@ -2433,7 +2433,7 @@ mod test {
         let type_annotation = TypeAnnotation {
             target_type: TargetType::Empty { target_type: 19 },
             type_path: vec![TargetPath {
-                type_path_kind: 1,
+                type_path_kind: 3,
                 type_argument_index: 2,
             }],
             type_index: 42,
@@ -2444,11 +2444,11 @@ mod test {
             type_annotations: vec![type_annotation],
         };
         let expected_bytes = [
-            0, 1, 0, 0, 0, 15, 0, 1, 19, 1, 1, 2, 0, 42, 0, 1, 0, 1, 66, 0, 42,
+            0, 1, 0, 0, 0, 15, 0, 1, 19, 1, 3, 2, 0, 42, 0, 1, 0, 1, 66, 0, 42,
         ];
 
         assert_eq!(
-            "RuntimeInvisibleTypeAnnotations { name_index: 1, type_annotations: [TypeAnnotation { target_type: Empty { target_type: 19 }, type_path: [TargetPath { type_path_kind: 1, type_argument_index: 2 }], type_index: 42, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }] }",
+            "RuntimeInvisibleTypeAnnotations { name_index: 1, type_annotations: [TypeAnnotation { target_type: Empty { target_type: 19 }, type_path: [TargetPath { type_path_kind: 3, type_argument_index: 2 }], type_index: 42, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }] }",
             attribute.to_string()
         );
         test_attribute(&attribute, &expected_bytes, &VERSION_52_0)
