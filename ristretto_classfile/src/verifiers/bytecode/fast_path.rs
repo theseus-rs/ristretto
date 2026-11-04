@@ -1029,12 +1029,13 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 });
                 self.validate_frame_compatibility(&handler_frame, expected, handler.handler_pc)?;
             } else {
-                let anchor_state = anchor_states.get_mut(handler_index).ok_or_else(|| {
-                    VerifyError::VerifyError(format!("Invalid handler index {handler_index}"))
-                })?;
-                if anchor_state.is_none() {
-                    *anchor_state = Some(handler_frame);
-                }
+                return Err(VerifyError::VerifyError(
+                    [
+                        "Missing frame for exception handler at ",
+                        &handler.handler_pc.to_string(),
+                    ]
+                    .concat(),
+                ));
             }
 
             worklist.push(handler_index);
@@ -1066,7 +1067,9 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
 mod tests {
     use super::*;
     use crate::Version;
-    use crate::attributes::{ArrayType, StackFrame, TableSwitch};
+    use crate::attributes::{
+        ArrayType, StackFrame, TableSwitch, VerificationType as ClassFileVerificationType,
+    };
     use crate::constant::Constant;
     use crate::constant_pool::ConstantPool;
     use crate::verifiers::bytecode::handlers::test_utils::MockContext;
@@ -1660,7 +1663,17 @@ mod tests {
             code,
             1,
             1,
-            Vec::new(),
+            vec![Attribute::StackMapTable {
+                name_index: 5,
+                frames: vec![StackFrame::FullFrame {
+                    frame_type: 255,
+                    offset_delta: 1,
+                    locals: vec![ClassFileVerificationType::Integer],
+                    stack: vec![ClassFileVerificationType::Object {
+                        cpool_index: catch_index,
+                    }],
+                }],
+            }],
             vec![ExceptionTableEntry {
                 range_pc: 0..1,
                 handler_pc: 1,
@@ -2222,6 +2235,10 @@ mod tests {
             .constant_pool
             .add_method_ref(class_file.this_class, "ordinary", "()V")
             .unwrap();
+        let throwable = class_file
+            .constant_pool
+            .add_class("java/lang/Throwable")
+            .unwrap();
         let context = MockContext::PERMISSIVE;
         let config = VerifierConfig::default();
         for (index, valid) in [(0, false), (ordinary_method, true)] {
@@ -2231,7 +2248,17 @@ mod tests {
                 vec![Instruction::Invokespecial(index), Instruction::Return],
                 1,
                 1,
-                Vec::new(),
+                vec![Attribute::StackMapTable {
+                    name_index: 5,
+                    frames: vec![StackFrame::FullFrame {
+                        frame_type: 255,
+                        offset_delta: 3,
+                        locals: vec![ClassFileVerificationType::Integer],
+                        stack: vec![ClassFileVerificationType::Object {
+                            cpool_index: throwable,
+                        }],
+                    }],
+                }],
                 vec![ExceptionTableEntry {
                     range_pc: 0..3,
                     handler_pc: 3,
@@ -2259,7 +2286,11 @@ mod tests {
 
     #[test]
     fn test_fast_path_exception_handler_catch_all_edges() {
-        let class_file = create_mock_class_file();
+        let mut class_file = create_mock_class_file();
+        let throwable = class_file
+            .constant_pool
+            .add_class("java/lang/Throwable")
+            .unwrap();
         let context = MockContext::PERMISSIVE;
         let strict = VerifierConfig::default();
 
@@ -2269,7 +2300,17 @@ mod tests {
             vec![Instruction::Nop],
             1,
             1,
-            Vec::new(),
+            vec![Attribute::StackMapTable {
+                name_index: 5,
+                frames: vec![StackFrame::FullFrame {
+                    frame_type: 255,
+                    offset_delta: 0,
+                    locals: vec![],
+                    stack: vec![ClassFileVerificationType::Object {
+                        cpool_index: throwable,
+                    }],
+                }],
+            }],
             vec![ExceptionTableEntry {
                 range_pc: 0..1,
                 handler_pc: 0,
@@ -2355,7 +2396,7 @@ mod tests {
                     frame_type: 255,
                     offset_delta: 0,
                     locals: Vec::new(),
-                    stack: vec![crate::attributes::VerificationType::Object {
+                    stack: vec![ClassFileVerificationType::Object {
                         cpool_index: class_file.this_class,
                     }],
                 }],
@@ -2376,6 +2417,39 @@ mod tests {
         assert!(anchors[0].is_some());
         assert_eq!(worklist, vec![0]);
     }
+
+    #[test]
+    fn test_handler_frame_cannot_supply_normal_fallthrough_stack() {
+        let class = create_mock_class_file();
+        let method = method_with(
+            MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            4,
+            vec![Instruction::Nop, Instruction::Astore_0, Instruction::Return],
+            1,
+            1,
+            vec![Attribute::StackMapTable {
+                name_index: 5,
+                frames: vec![StackFrame::SameFrame { frame_type: 0 }],
+            }],
+            vec![ExceptionTableEntry {
+                range_pc: 0..1,
+                handler_pc: 1,
+                catch_type: 0,
+            }],
+        );
+        let context = MockContext::PERMISSIVE;
+        let strict = VerifierConfig::default();
+        assert!(matches!(
+            fast_verifier(&class, &method, &context, &strict).verify(),
+            FastPathResult::Failed(_)
+        ));
+        let permissive = VerifierConfig::permissive();
+        assert!(matches!(
+            fast_verifier(&class, &method, &context, &permissive).verify(),
+            FastPathResult::NeedsFallback(_)
+        ));
+    }
+
     #[test]
     fn test_missing_post_transfer_frame_honors_fallback() {
         let class = create_mock_class_file();

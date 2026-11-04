@@ -2030,11 +2030,14 @@ mod tests {
     async fn test_park_interrupted() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         thread.interrupt();
-        let start_time = std::time::Instant::now();
-        thread.park(false, 100_000_000).await?;
-        let elapsed_time = start_time.elapsed();
-        // Thread should return immediately when interrupted
-        assert!(elapsed_time < Duration::from_millis(1));
+        let mut park = std::pin::pin!(thread.park(false, 100_000_000));
+        let mut context = std::task::Context::from_waker(std::task::Waker::noop());
+        // An interrupted park must complete without yielding, regardless of scheduler delays.
+        let std::task::Poll::Ready(result) = park.as_mut().poll(&mut context) else {
+            panic!("interrupted park should return immediately");
+        };
+        result?;
+        assert!(thread.is_interrupted(false));
         Ok(())
     }
 

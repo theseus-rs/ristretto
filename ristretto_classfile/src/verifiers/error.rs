@@ -89,7 +89,7 @@ pub enum VerifyError {
     InvalidStackFrameType(u8),
     /// Invalid stack frame offset
     #[error("Invalid stack frame offset: {0}")]
-    InvalidStackFrameOffset(u16),
+    InvalidStackFrameOffset(i32),
     /// Invalid target type code
     #[error("Invalid target type code {0}")]
     InvalidTargetTypeCode(u8),

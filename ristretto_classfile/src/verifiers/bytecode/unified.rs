@@ -23,7 +23,7 @@ use crate::attributes::Attribute;
 use crate::class_file::ClassFile;
 use crate::method::Method;
 use crate::method_access_flags::MethodAccessFlags;
-use crate::verifiers::bytecode::cache::{CachedResult, MethodKey, VerificationCache};
+use crate::verifiers::bytecode::cache::{CacheScope, CachedResult, MethodKey, VerificationCache};
 use crate::verifiers::bytecode::config::VerifierConfig;
 use crate::verifiers::bytecode::diagnostics::VerificationDiagnostic;
 use crate::verifiers::bytecode::fast_path::{FastPathResult, FastPathVerifier};
@@ -31,6 +31,7 @@ use crate::verifiers::bytecode::inference::InferenceVerifier;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
 use crate::{CLASS_INITIALIZER_NAME, JAVA_6};
+use std::io::Write;
 
 /// Verification result with additional metadata.
 #[derive(Debug)]
@@ -218,6 +219,26 @@ pub fn verify_method_cached<C: VerificationContext>(
     config: &VerifierConfig,
     cache: &VerificationCache,
 ) -> Result<VerificationResult> {
+    let Some(context_token) = context.cache_token().filter(|_| cache.is_enabled()) else {
+        return verify_method(class_file, method, context, config);
+    };
+    let mut scope = vec![0]; // Standalone method may differ from the class's method table.
+    class_file.to_bytes(&mut scope)?;
+    method.to_bytes(&mut scope)?;
+    scope.extend_from_slice(&context_token.to_be_bytes());
+    write!(scope, "{config:?}").map_err(crate::Error::from)?;
+    let scope = cache.intern_scope(scope);
+    verify_method_scoped(class_file, method, context, config, cache, &scope)
+}
+
+fn verify_method_scoped<C: VerificationContext>(
+    class_file: &ClassFile<'_>,
+    method: &Method,
+    context: &C,
+    config: &VerifierConfig,
+    cache: &VerificationCache,
+    scope: &CacheScope,
+) -> Result<VerificationResult> {
     // Build cache key
     let class_name = class_file
         .constant_pool
@@ -234,20 +255,11 @@ pub fn verify_method_cached<C: VerificationContext>(
         .try_get_utf8(method.descriptor_index)
         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
-    // Zero-allocation lookup: borrow directly from the constant pool's JavaStr references
-    let Some(context_token) = context.cache_token() else {
-        return verify_method(class_file, method, context, config);
-    };
-    let mut scope = Vec::new();
-    class_file.to_bytes(&mut scope)?;
-    method.to_bytes(&mut scope)?;
-    scope.extend_from_slice(&context_token.to_be_bytes());
-    scope.extend_from_slice(format!("{config:?}").as_bytes());
     let mut key = MethodKey::borrowed(class_name, method_name, descriptor);
-    key.scope = std::borrow::Cow::Owned(scope);
+    key.scope = std::borrow::Cow::Borrowed(scope.as_ref());
 
     // Check cache
-    if let Some(cached) = cache.get_result(&key) {
+    if let Some(cached) = cache.get_result_scoped(&key, scope) {
         return match cached {
             CachedResult::Success => Ok(VerificationResult::success(VerificationPath::Cached)),
             CachedResult::Failed(msg) => Err(VerifyError::VerifyError(msg)),
@@ -259,8 +271,8 @@ pub fn verify_method_cached<C: VerificationContext>(
 
     // Cache result
     match &result {
-        Ok(_) => cache.put_result(&key, CachedResult::Success),
-        Err(e) => cache.put_result(&key, CachedResult::Failed(e.to_string())),
+        Ok(_) => cache.put_result_scoped(&key, scope, CachedResult::Success),
+        Err(e) => cache.put_result_scoped(&key, scope, CachedResult::Failed(e.to_string())),
     }
 
     result
@@ -304,12 +316,22 @@ pub fn verify_class_cached<C: VerificationContext>(
     config: &VerifierConfig,
     cache: &VerificationCache,
 ) -> Result<Vec<VerificationResult>> {
+    let Some(context_token) = context.cache_token().filter(|_| cache.is_enabled()) else {
+        return verify_class(class_file, context, config);
+    };
     class_file.verify()?;
+    // Method names/descriptors are unique after class verification. The complete
+    // class bytes include every method, so all keys can borrow one exact scope.
+    let mut scope = vec![1]; // Distinguish class-wide from standalone method scopes.
+    class_file.to_bytes(&mut scope)?;
+    scope.extend_from_slice(&context_token.to_be_bytes());
+    write!(scope, "{config:?}").map_err(crate::Error::from)?;
+    let scope = cache.intern_scope(scope);
     let mut results = Vec::with_capacity(class_file.methods.len());
-
     for method in &class_file.methods {
-        let result = verify_method_cached(class_file, method, context, config, cache)?;
-        results.push(result);
+        results.push(verify_method_scoped(
+            class_file, method, context, config, cache, &scope,
+        )?);
     }
 
     Ok(results)
@@ -835,6 +857,85 @@ mod tests {
             ErrorClass::classify(&VerifyError::InvalidInstruction(0))
         );
     }
+    #[test]
+    fn class_cache_scope_tracks_contents_and_context() {
+        let mut class = create_mock_class_file();
+        class.methods.push(Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![Attribute::Code {
+                name_index: 5,
+                max_stack: 0,
+                max_locals: 0,
+                code: vec![Instruction::Return],
+                exception_table: vec![],
+                attributes: vec![],
+            }],
+        });
+        let cache = VerificationCache::new(true);
+        let config = VerifierConfig::default();
+        let first = verify_class_cached(&class, &MockContext::PERMISSIVE, &config, &cache).unwrap();
+        assert!(
+            first
+                .iter()
+                .all(|r| r.path_used != VerificationPath::Cached)
+        );
+        let second =
+            verify_class_cached(&class, &MockContext::PERMISSIVE, &config, &cache).unwrap();
+        assert!(
+            second
+                .iter()
+                .all(|r| r.path_used == VerificationPath::Cached)
+        );
+        let different_context =
+            verify_class_cached(&class, &MockContext::STRICT, &config, &cache).unwrap();
+        assert!(
+            different_context
+                .iter()
+                .all(|r| r.path_used != VerificationPath::Cached)
+        );
+        class.constant_pool.add(Constant::Integer(42)).unwrap();
+        let changed =
+            verify_class_cached(&class, &MockContext::PERMISSIVE, &config, &cache).unwrap();
+        assert!(
+            changed
+                .iter()
+                .all(|r| r.path_used != VerificationPath::Cached)
+        );
+    }
+
+    #[test]
+    fn class_cache_bypasses_disabled_cache_and_unversioned_context() {
+        let mut class = create_mock_class_file();
+        class.methods.push(Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![],
+        });
+        let config = VerifierConfig::default();
+        let cache = VerificationCache::new(true);
+        let disabled = VerificationCache::disabled();
+        for _ in 0..2 {
+            let unversioned =
+                verify_class_cached(&class, &UnversionedContext, &config, &cache).unwrap();
+            let uncached =
+                verify_class_cached(&class, &MockContext::PERMISSIVE, &config, &disabled).unwrap();
+            for results in [unversioned, uncached] {
+                assert_eq!(results.len(), 1);
+                assert!(
+                    results
+                        .iter()
+                        .all(|result| result.success
+                            && result.path_used == VerificationPath::Skipped)
+                );
+            }
+        }
+        assert_eq!(cache.result_count(), 0);
+        assert_eq!(disabled.result_count(), 0);
+    }
+
     #[test]
     fn fallback_reuses_boundaries_without_changing_validation() {
         let class = create_mock_class_file();

@@ -37,9 +37,9 @@ fn bootstrap_class(kind: ReferenceKind, loadable: bool) -> Result<ClassFile<'sta
 }
 
 #[test]
-fn bootstrap_rejects_virtual_invocation_handle() -> Result<()> {
+fn bootstrap_accepts_unused_virtual_invocation_handle() -> Result<()> {
     let class = bootstrap_class(ReferenceKind::InvokeVirtual, true)?;
-    assert!(class.verify().is_err());
+    assert!(class.verify().is_ok());
     Ok(())
 }
 

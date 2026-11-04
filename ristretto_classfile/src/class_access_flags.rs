@@ -1,5 +1,6 @@
 use crate::byte_reader::ByteReader;
 use crate::error::Result;
+use crate::verifiers::VerifyError;
 use bitflags::bitflags;
 use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
@@ -118,6 +119,9 @@ impl ClassAccessFlags {
     /// ```
     pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<ClassAccessFlags> {
         let access_flags = bytes.read_u16()?;
+        if access_flags & Self::MODULE.bits() != 0 && access_flags != Self::MODULE.bits() {
+            return Err(VerifyError::InvalidClassAccessFlags(access_flags).into());
+        }
         let access_flags = ClassAccessFlags::from_bits_truncate(access_flags);
         Ok(access_flags)
     }
@@ -280,21 +284,8 @@ mod test {
 
     #[test]
     fn test_all_access_flags() {
-        let access_flags: u16 = u16::MAX;
-        let binding = access_flags.to_be_bytes();
-        let mut bytes = ByteReader::new(&binding);
-        assert_eq!(
-            Ok(ClassAccessFlags::PUBLIC
-                | ClassAccessFlags::FINAL
-                | ClassAccessFlags::SUPER
-                | ClassAccessFlags::INTERFACE
-                | ClassAccessFlags::ABSTRACT
-                | ClassAccessFlags::SYNTHETIC
-                | ClassAccessFlags::ANNOTATION
-                | ClassAccessFlags::ENUM
-                | ClassAccessFlags::MODULE),
-            ClassAccessFlags::from_bytes(&mut bytes)
-        );
+        let bytes = u16::MAX.to_be_bytes();
+        assert!(ClassAccessFlags::from_bytes(&mut ByteReader::new(&bytes)).is_err());
     }
 
     #[test]
@@ -346,5 +337,22 @@ mod test {
 
         let access_flags = ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER;
         assert_eq!("(0x0021) ACC_PUBLIC, ACC_SUPER", access_flags.to_string());
+    }
+
+    #[test]
+    fn module_flags_are_checked_before_reserved_bits_are_discarded() {
+        for bits in [0x8001_u16, 0x8002, 0x8080] {
+            assert!(
+                ClassAccessFlags::from_bytes(&mut ByteReader::new(&bits.to_be_bytes())).is_err()
+            );
+        }
+        assert_eq!(
+            ClassAccessFlags::from_bytes(&mut ByteReader::new(&[0x80, 0x00])).unwrap(),
+            ClassAccessFlags::MODULE
+        );
+        assert_eq!(
+            ClassAccessFlags::from_bytes(&mut ByteReader::new(&[0x00, 0x03])).unwrap(),
+            ClassAccessFlags::PUBLIC
+        );
     }
 }

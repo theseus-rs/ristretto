@@ -91,6 +91,9 @@ mod max_stack;
 /// Contains information about method parameters, part of the `MethodParameters` attribute.
 mod method_parameter;
 
+/// Access flags for formal method parameters.
+mod method_parameter_access_flags;
+
 /// Defines access flags for Java modules (e.g., `ACC_OPEN`, `ACC_SYNTHETIC`, `ACC_MANDATED`).
 mod module_access_flags;
 
@@ -151,6 +154,7 @@ pub use local_variable_type_table::LocalVariableTypeTable;
 pub use max_locals::MaxLocals;
 pub use max_stack::MaxStack;
 pub use method_parameter::MethodParameter;
+pub use method_parameter_access_flags::MethodParameterAccessFlags;
 pub use module_access_flags::ModuleAccessFlags;
 pub use nested_class_access_flags::NestedClassAccessFlags;
 pub use opens::Opens;

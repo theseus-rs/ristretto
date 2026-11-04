@@ -10,8 +10,8 @@
 )]
 
 use ristretto_classfile::attributes::{
-    Attribute, InnerClass, Instruction, MethodParameter, ModuleAccessFlags, NestedClassAccessFlags,
-    Requires, RequiresFlags, StackFrame,
+    Attribute, InnerClass, Instruction, MethodParameter, MethodParameterAccessFlags,
+    ModuleAccessFlags, NestedClassAccessFlags, Requires, RequiresFlags, StackFrame,
 };
 use ristretto_classfile::verifiers::bytecode::{
     FallbackStrategy, VerificationPath, VerifierConfig, VerifyMode, verify_class, verify_method,
@@ -216,7 +216,7 @@ fn test_class_verify_accepts_attribute_optional_indexes() -> Result<()> {
             name_index: class_file.constant_pool.add_utf8("MethodParameters")?,
             parameters: vec![MethodParameter {
                 name_index: parameter_name,
-                access_flags: MethodAccessFlags::empty(),
+                access_flags: MethodParameterAccessFlags::empty(),
             }],
         }],
     });
