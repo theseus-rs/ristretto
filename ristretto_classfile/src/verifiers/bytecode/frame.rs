@@ -78,6 +78,16 @@ impl Frame {
         }
     }
 
+    /// Copy locals for an exception edge without reserving a full operand stack.
+    pub(crate) fn exception_frame(&self, max_stack: usize) -> Self {
+        Self {
+            locals: self.locals.clone(),
+            stack: Vec::with_capacity(max_stack.min(1)),
+            max_stack,
+            this_uninitialized: self.this_uninitialized,
+        }
+    }
+
     /// Creates a frame with the given locals and an empty stack.
     ///
     /// # Arguments

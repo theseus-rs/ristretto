@@ -223,27 +223,27 @@ impl<'a> ClassFile<'a> {
         let super_class = reader.read_u16()?;
 
         let interfaces_count = reader.read_u16()? as usize;
-        let mut interfaces = Vec::with_capacity(interfaces_count);
+        let mut interfaces = Vec::with_capacity(interfaces_count.min(reader.remaining() / 2));
         for _ in 0..interfaces_count {
             interfaces.push(reader.read_u16()?);
         }
 
         let field_count = reader.read_u16()? as usize;
-        let mut fields = Vec::with_capacity(field_count);
+        let mut fields = Vec::with_capacity(field_count.min(reader.remaining() / 8));
         for _ in 0..field_count {
             let field = Field::from_bytes(&constant_pool, reader)?;
             fields.push(field);
         }
 
         let method_count = reader.read_u16()? as usize;
-        let mut methods = Vec::with_capacity(method_count);
+        let mut methods = Vec::with_capacity(method_count.min(reader.remaining() / 8));
         for _ in 0..method_count {
             let method = Method::from_bytes(&constant_pool, reader)?;
             methods.push(method);
         }
 
         let attribute_count = reader.read_u16()? as usize;
-        let mut attributes = Vec::with_capacity(attribute_count);
+        let mut attributes = Vec::with_capacity(attribute_count.min(reader.remaining() / 6));
         for _ in 0..attribute_count {
             let attribute = Attribute::from_bytes_in(
                 &constant_pool,
@@ -717,6 +717,7 @@ mod test {
             ClassFile::from_bytes(&bytes)
         );
     }
+
     #[test]
     fn owned_and_borrowed_parsers_agree_on_success_and_truncation() {
         let bytes = include_bytes!("../../classes/Simple.class");

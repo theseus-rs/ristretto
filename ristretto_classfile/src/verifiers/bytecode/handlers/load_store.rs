@@ -551,9 +551,9 @@ pub fn handle_dastore<C: VerificationContext>(frame: &mut Frame, _context: &C) -
 /// # References
 ///
 /// - [JVMS §6.5.aastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aastore)
-pub fn handle_aastore<C: VerificationContext>(frame: &mut Frame, context: &C) -> Result<()> {
+pub fn handle_aastore<C: VerificationContext>(frame: &mut Frame, _context: &C) -> Result<()> {
     let value = frame.pop()?;
-    if !value.is_reference() {
+    if !value.is_initialized_reference() {
         return Err(VerifyError::VerifyError(format!(
             "aastore: expected reference value, got {value}"
         )));
@@ -567,6 +567,12 @@ pub fn handle_aastore<C: VerificationContext>(frame: &mut Frame, context: &C) ->
     }
 
     let array_type = frame.pop()?;
+    let array_type = match &array_type {
+        VerificationType::Object(name) if name.as_bytes().starts_with(b"[") => {
+            VerificationType::from_field_type(&crate::FieldType::parse_java_str(name)?)
+        }
+        _ => array_type,
+    };
 
     // Null array is allowed (will throw at runtime)
     if array_type == VerificationType::Null {
@@ -576,19 +582,12 @@ pub fn handle_aastore<C: VerificationContext>(frame: &mut Frame, context: &C) ->
     // Verify it's an array of references
     match &array_type {
         VerificationType::Array(component) => {
-            if !component.is_reference() && !component.is_null() {
+            if !component.is_initialized_reference() {
                 return Err(VerifyError::VerifyError(format!(
                     "aastore: expected array of references, got array of {component}"
                 )));
             }
-            // Check assignability
-            if !value.is_null() {
-                value.is_assignable_to(component, context)?;
-            }
-            Ok(())
-        }
-        VerificationType::Object(name) if name.as_bytes().first() == Some(&b'[') => {
-            // Legacy representation
+            // Component compatibility is checked at runtime by ArrayStoreException.
             Ok(())
         }
         _ => Err(VerifyError::VerifyError(format!(
@@ -2829,5 +2828,40 @@ mod tests {
             frame.push(VerificationType::java_lang_object()).unwrap();
             assert!(dispatch_load_store(&instruction, &mut frame, &ctx).unwrap());
         }
+    }
+    #[test]
+    fn test_aastore_initialized_reference_constraints() {
+        for value in [
+            VerificationType::Uninitialized(0),
+            VerificationType::UninitializedThis,
+        ] {
+            for array in [
+                VerificationType::Null,
+                VerificationType::Array(Box::new(VerificationType::java_lang_object())),
+            ] {
+                let mut frame = Frame::new(0, 3);
+                frame.push(array).unwrap();
+                frame.push(VerificationType::Integer).unwrap();
+                frame.push(value.clone()).unwrap();
+                assert!(handle_aastore(&mut frame, &MockContext::PERMISSIVE).is_err());
+            }
+        }
+        // An initialized Object may be stored into String[]; a mismatch is a runtime exception.
+        let mut frame = Frame::new(0, 3);
+        frame
+            .push(VerificationType::Array(Box::new(
+                VerificationType::java_lang_string(),
+            )))
+            .unwrap();
+        frame.push(VerificationType::Integer).unwrap();
+        frame.push(VerificationType::java_lang_object()).unwrap();
+        assert!(handle_aastore(&mut frame, &MockContext::STRICT).is_ok());
+        let mut frame = Frame::new(0, 3);
+        frame
+            .push(VerificationType::Object(JavaString::from("[I")))
+            .unwrap();
+        frame.push(VerificationType::Integer).unwrap();
+        frame.push(VerificationType::Null).unwrap();
+        assert!(handle_aastore(&mut frame, &MockContext::PERMISSIVE).is_err());
     }
 }
