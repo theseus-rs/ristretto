@@ -3,7 +3,7 @@ use crate::handles::{FileHandle, HandleManager, ThreadHandle};
 use crate::handles::{SocketHandle, SocketType};
 use crate::module_access::{AccessCheckResult, DefinedModule, ModuleAccess};
 use crate::monitor::MonitorRegistry;
-use crate::{Frame, NativeMemory, ResourceManager, Result, Thread, VM};
+use crate::{Frame, NativeMemory, ResourceManager, Result, StringFactory, Thread, VM};
 use ahash::{AHashMap, AHashSet};
 use ristretto_classfile::{
     ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, FieldType, JAVA_17, VerifyMode,
@@ -263,6 +263,8 @@ pub(crate) struct MockVm {
     java_version: String,
     java_major_version: u16,
     java_class_file_version: Version,
+    java_class_file_version_reads: AtomicUsize,
+    string_factory: StringFactory,
     system_properties: AHashMap<String, String>,
     next_thread_id: AtomicU64,
     next_hidden_class_suffix: AtomicU64,
@@ -297,7 +299,9 @@ impl MockVm {
             java_home: PathBuf::from("/mock/java/home"),
             java_version: "mock-java".to_string(),
             java_major_version: version.major(),
+            string_factory: StringFactory::new(&version),
             java_class_file_version: version,
+            java_class_file_version_reads: AtomicUsize::new(0),
             system_properties: AHashMap::default(),
             next_thread_id: AtomicU64::new(1),
             next_hidden_class_suffix: AtomicU64::new(1),
@@ -330,6 +334,10 @@ impl MockVm {
 
     pub(crate) fn garbage_collector(&self) -> &Arc<GarbageCollector> {
         &self.garbage_collector
+    }
+
+    pub(crate) fn java_class_file_version_reads(&self) -> usize {
+        self.java_class_file_version_reads.load(Ordering::Relaxed)
     }
 
     fn normalized_class_name(name: &str) -> String {
@@ -413,7 +421,13 @@ impl VM for MockVm {
     }
 
     fn java_class_file_version(&self) -> &Version {
+        self.java_class_file_version_reads
+            .fetch_add(1, Ordering::Relaxed);
         &self.java_class_file_version
+    }
+
+    fn string_factory(&self) -> &StringFactory {
+        &self.string_factory
     }
 
     fn system_properties(&self) -> &AHashMap<String, String> {
@@ -533,6 +547,8 @@ impl MockVm {
             java_version: self.java_version.clone(),
             java_major_version: self.java_major_version,
             java_class_file_version: self.java_class_file_version.clone(),
+            java_class_file_version_reads: AtomicUsize::new(0),
+            string_factory: self.string_factory.clone(),
             system_properties: self.system_properties.clone(),
             next_thread_id: AtomicU64::new(self.next_thread_id.load(Ordering::SeqCst)),
             next_hidden_class_suffix: AtomicU64::new(

@@ -99,3 +99,7 @@ name = "intrinsics"
 [[bench]]
 harness = false
 name = "class_resolution"
+
+[[bench]]
+harness = false
+name = "strings"

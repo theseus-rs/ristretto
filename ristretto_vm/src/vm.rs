@@ -26,6 +26,7 @@ use ristretto_classloader::{
 use ristretto_gc::{GarbageCollector, Statistics};
 use ristretto_types::NativeMemory;
 use ristretto_types::ResourceManager;
+use ristretto_types::StringFactory;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_types::handles::SocketHandle;
 use ristretto_types::handles::{FileHandle, HandleManager, MemberHandle};
@@ -81,6 +82,8 @@ pub struct VM {
     java_major_version: u16,
     /// The Java class file version (e.g. 65.0 for Java 21)
     java_class_file_version: Version,
+    /// String constructors selected once for the runtime's immutable layout.
+    string_factory: StringFactory,
     /// The method registry for intrinsic methods
     method_registry: MethodRegistry,
     /// The JIT compiler (per-VM instance with its own cache and background compilation)
@@ -206,6 +209,7 @@ impl VM {
                 java_home,
                 java_version,
                 java_major_version,
+                string_factory: StringFactory::new(&java_class_file_version),
                 java_class_file_version,
                 method_registry,
                 compiler,
@@ -418,6 +422,11 @@ impl VM {
     #[must_use]
     pub fn java_class_file_version(&self) -> &Version {
         &self.java_class_file_version
+    }
+
+    /// Get the string constructors selected during VM creation.
+    pub(crate) fn string_factory(&self) -> &StringFactory {
+        &self.string_factory
     }
 
     /// Get the system properties
@@ -1116,6 +1125,10 @@ impl ristretto_types::VM for VM {
 
     fn java_class_file_version(&self) -> &Version {
         &self.java_class_file_version
+    }
+
+    fn string_factory(&self) -> &StringFactory {
+        &self.string_factory
     }
 
     fn system_properties(&self) -> &AHashMap<String, String> {

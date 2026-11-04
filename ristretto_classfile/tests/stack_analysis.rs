@@ -1237,7 +1237,7 @@ fn legacy_subroutine_accepts_different_caller_stack_depths() -> Result<()> {
 
 #[test]
 fn legacy_subroutine_with_temporary_values_accepts_different_callers() -> Result<()> {
-    let code = vec![
+    let code = [
         Instruction::Jsr(10),
         Instruction::Iconst_0,
         Instruction::Jsr(6),
