@@ -842,7 +842,8 @@ impl Attribute {
                 let code_slice = bytes.read_bytes(code_length as usize)?;
                 let instructions = Instruction::decode(code_slice)?;
                 let exception_length = bytes.read_u16()?;
-                let mut exception_table = Vec::with_capacity(exception_length as usize);
+                let mut exception_table =
+                    Vec::with_capacity((exception_length as usize).min(bytes.remaining()));
                 let boundaries: Vec<_> = Instruction::with_offsets(&instructions)
                     .map(|(offset, _)| offset)
                     .collect();
@@ -883,7 +884,7 @@ impl Attribute {
             }
             b"StackMapTable" => {
                 let frames_count = bytes.read_u16()?;
-                let mut frames = Vec::with_capacity(frames_count as usize);
+                let mut frames = Vec::with_capacity((frames_count as usize).min(bytes.remaining()));
                 for _ in 0..frames_count {
                     let stack_frame = StackFrame::from_bytes(bytes)?;
                     frames.push(stack_frame);
@@ -892,7 +893,8 @@ impl Attribute {
             }
             b"Exceptions" => {
                 let exception_indexes_count = bytes.read_u16()?;
-                let mut exception_indexes = Vec::with_capacity(exception_indexes_count as usize);
+                let mut exception_indexes =
+                    Vec::with_capacity((exception_indexes_count as usize).min(bytes.remaining()));
                 for _ in 0..exception_indexes_count {
                     exception_indexes.push(bytes.read_u16()?);
                 }
@@ -903,7 +905,8 @@ impl Attribute {
             }
             b"InnerClasses" => {
                 let classes_count = bytes.read_u16()?;
-                let mut classes = Vec::with_capacity(classes_count as usize);
+                let mut classes =
+                    Vec::with_capacity((classes_count as usize).min(bytes.remaining()));
                 for _ in 0..classes_count {
                     let inner_class = InnerClass::from_bytes(bytes)?;
                     classes.push(inner_class);
@@ -965,7 +968,8 @@ impl Attribute {
             }
             b"LineNumberTable" => {
                 let line_number_table_count = bytes.read_u16()?;
-                let mut line_numbers = Vec::with_capacity(line_number_table_count as usize);
+                let mut line_numbers =
+                    Vec::with_capacity((line_number_table_count as usize).min(bytes.remaining()));
                 for _ in 0..line_number_table_count {
                     line_numbers.push(LineNumber::from_bytes(bytes)?);
                 }
@@ -976,7 +980,8 @@ impl Attribute {
             }
             b"LocalVariableTable" => {
                 let variables_count = bytes.read_u16()?;
-                let mut variables = Vec::with_capacity(variables_count as usize);
+                let mut variables =
+                    Vec::with_capacity((variables_count as usize).min(bytes.remaining()));
                 for _ in 0..variables_count {
                     variables.push(LocalVariableTable::from_bytes(bytes)?);
                 }
@@ -987,7 +992,8 @@ impl Attribute {
             }
             b"LocalVariableTypeTable" => {
                 let variable_types_count = bytes.read_u16()?;
-                let mut variable_types = Vec::with_capacity(variable_types_count as usize);
+                let mut variable_types =
+                    Vec::with_capacity((variable_types_count as usize).min(bytes.remaining()));
                 for _ in 0..variable_types_count {
                     variable_types.push(LocalVariableTypeTable::from_bytes(bytes)?);
                 }
@@ -1004,7 +1010,8 @@ impl Attribute {
             }
             b"RuntimeVisibleAnnotations" => {
                 let annotations_count = bytes.read_u16()?;
-                let mut annotations = Vec::with_capacity(annotations_count as usize);
+                let mut annotations =
+                    Vec::with_capacity((annotations_count as usize).min(bytes.remaining()));
                 for _ in 0..annotations_count {
                     let annotation = Annotation::from_bytes(bytes)?;
                     annotations.push(annotation);
@@ -1016,7 +1023,8 @@ impl Attribute {
             }
             b"RuntimeInvisibleAnnotations" => {
                 let annotations_count = bytes.read_u16()?;
-                let mut annotations = Vec::with_capacity(annotations_count as usize);
+                let mut annotations =
+                    Vec::with_capacity((annotations_count as usize).min(bytes.remaining()));
                 for _ in 0..annotations_count {
                     let annotation = Annotation::from_bytes(bytes)?;
                     annotations.push(annotation);
@@ -1028,8 +1036,9 @@ impl Attribute {
             }
             b"RuntimeVisibleParameterAnnotations" => {
                 let parameter_annotations_count = bytes.read_u8()?;
-                let mut parameter_annotations =
-                    Vec::with_capacity(parameter_annotations_count as usize);
+                let mut parameter_annotations = Vec::with_capacity(
+                    (parameter_annotations_count as usize).min(bytes.remaining()),
+                );
                 for _ in 0..parameter_annotations_count {
                     let parameter_annotation = ParameterAnnotation::from_bytes(bytes)?;
                     parameter_annotations.push(parameter_annotation);
@@ -1041,8 +1050,9 @@ impl Attribute {
             }
             b"RuntimeInvisibleParameterAnnotations" => {
                 let parameter_annotations_count = bytes.read_u8()?;
-                let mut parameter_annotations =
-                    Vec::with_capacity(parameter_annotations_count as usize);
+                let mut parameter_annotations = Vec::with_capacity(
+                    (parameter_annotations_count as usize).min(bytes.remaining()),
+                );
                 for _ in 0..parameter_annotations_count {
                     let parameter_annotation = ParameterAnnotation::from_bytes(bytes)?;
                     parameter_annotations.push(parameter_annotation);
@@ -1054,7 +1064,8 @@ impl Attribute {
             }
             b"RuntimeVisibleTypeAnnotations" => {
                 let type_annotations_count = bytes.read_u16()?;
-                let mut type_annotations = Vec::with_capacity(type_annotations_count as usize);
+                let mut type_annotations =
+                    Vec::with_capacity((type_annotations_count as usize).min(bytes.remaining()));
                 for _ in 0..type_annotations_count {
                     let type_annotation = TypeAnnotation::from_bytes(bytes)?;
                     type_annotations.push(type_annotation);
@@ -1066,7 +1077,8 @@ impl Attribute {
             }
             b"RuntimeInvisibleTypeAnnotations" => {
                 let type_annotations_count = bytes.read_u16()?;
-                let mut type_annotations = Vec::with_capacity(type_annotations_count as usize);
+                let mut type_annotations =
+                    Vec::with_capacity((type_annotations_count as usize).min(bytes.remaining()));
                 for _ in 0..type_annotations_count {
                     let type_annotation = TypeAnnotation::from_bytes(bytes)?;
                     type_annotations.push(type_annotation);
@@ -1085,7 +1097,8 @@ impl Attribute {
             }
             b"BootstrapMethods" => {
                 let bootstrap_methods_count = bytes.read_u16()?;
-                let mut methods = Vec::with_capacity(bootstrap_methods_count as usize);
+                let mut methods =
+                    Vec::with_capacity((bootstrap_methods_count as usize).min(bytes.remaining()));
                 for _ in 0..bootstrap_methods_count {
                     let bootstrap_method = BootstrapMethod::from_bytes(bytes)?;
                     methods.push(bootstrap_method);
@@ -1097,7 +1110,8 @@ impl Attribute {
             }
             b"MethodParameters" => {
                 let parameters_count = bytes.read_u8()?;
-                let mut parameters = Vec::with_capacity(parameters_count as usize);
+                let mut parameters =
+                    Vec::with_capacity((parameters_count as usize).min(bytes.remaining()));
                 for _ in 0..parameters_count {
                     let method_parameters = MethodParameter::from_bytes(bytes)?;
                     parameters.push(method_parameters);
@@ -1112,30 +1126,33 @@ impl Attribute {
                 let flags = ModuleAccessFlags::from_bytes(bytes)?;
                 let version_index = bytes.read_u16()?;
                 let requires_count = bytes.read_u16()?;
-                let mut requires = Vec::with_capacity(requires_count as usize);
+                let mut requires =
+                    Vec::with_capacity((requires_count as usize).min(bytes.remaining()));
                 for _ in 0..requires_count {
                     let require = Requires::from_bytes(bytes)?;
                     requires.push(require);
                 }
                 let exports_count = bytes.read_u16()?;
-                let mut exports = Vec::with_capacity(exports_count as usize);
+                let mut exports =
+                    Vec::with_capacity((exports_count as usize).min(bytes.remaining()));
                 for _ in 0..exports_count {
                     let export = Exports::from_bytes(bytes)?;
                     exports.push(export);
                 }
                 let opens_count = bytes.read_u16()?;
-                let mut opens = Vec::with_capacity(opens_count as usize);
+                let mut opens = Vec::with_capacity((opens_count as usize).min(bytes.remaining()));
                 for _ in 0..opens_count {
                     let open = Opens::from_bytes(bytes)?;
                     opens.push(open);
                 }
                 let uses_count = bytes.read_u16()?;
-                let mut uses = Vec::with_capacity(uses_count as usize);
+                let mut uses = Vec::with_capacity((uses_count as usize).min(bytes.remaining()));
                 for _ in 0..uses_count {
                     uses.push(bytes.read_u16()?);
                 }
                 let provides_count = bytes.read_u16()?;
-                let mut provides = Vec::with_capacity(provides_count as usize);
+                let mut provides =
+                    Vec::with_capacity((provides_count as usize).min(bytes.remaining()));
                 for _ in 0..provides_count {
                     let provide = Provides::from_bytes(bytes)?;
                     provides.push(provide);
@@ -1154,7 +1171,8 @@ impl Attribute {
             }
             b"ModulePackages" => {
                 let package_indexes_count = bytes.read_u16()?;
-                let mut package_indexes = Vec::with_capacity(package_indexes_count as usize);
+                let mut package_indexes =
+                    Vec::with_capacity((package_indexes_count as usize).min(bytes.remaining()));
                 for _ in 0..package_indexes_count {
                     package_indexes.push(bytes.read_u16()?);
                 }
@@ -1183,7 +1201,8 @@ impl Attribute {
             }
             b"NestMembers" => {
                 let class_indexes_count = bytes.read_u16()?;
-                let mut class_indexes = Vec::with_capacity(class_indexes_count as usize);
+                let mut class_indexes =
+                    Vec::with_capacity((class_indexes_count as usize).min(bytes.remaining()));
                 for _ in 0..class_indexes_count {
                     class_indexes.push(bytes.read_u16()?);
                 }
@@ -1194,7 +1213,8 @@ impl Attribute {
             }
             b"Record" => {
                 let record_count = bytes.read_u16()?;
-                let mut records = Vec::with_capacity(record_count as usize);
+                let mut records =
+                    Vec::with_capacity((record_count as usize).min(bytes.remaining()));
                 for _ in 0..record_count {
                     let record = Record::from_bytes(constant_pool, bytes)?;
                     records.push(record);
@@ -1206,7 +1226,8 @@ impl Attribute {
             }
             b"PermittedSubclasses" => {
                 let class_indexes_count = bytes.read_u16()?;
-                let mut class_indexes = Vec::with_capacity(class_indexes_count as usize);
+                let mut class_indexes =
+                    Vec::with_capacity((class_indexes_count as usize).min(bytes.remaining()));
                 for _ in 0..class_indexes_count {
                     class_indexes.push(bytes.read_u16()?);
                 }
@@ -2377,7 +2398,7 @@ mod test {
         let type_annotation = TypeAnnotation {
             target_type: TargetType::Empty { target_type: 19 },
             type_path: vec![TargetPath {
-                type_path_kind: 1,
+                type_path_kind: 3,
                 type_argument_index: 2,
             }],
             type_index: 42,
@@ -2388,11 +2409,11 @@ mod test {
             type_annotations: vec![type_annotation],
         };
         let expected_bytes = [
-            0, 1, 0, 0, 0, 15, 0, 1, 19, 1, 1, 2, 0, 42, 0, 1, 0, 1, 66, 0, 42,
+            0, 1, 0, 0, 0, 15, 0, 1, 19, 1, 3, 2, 0, 42, 0, 1, 0, 1, 66, 0, 42,
         ];
 
         assert_eq!(
-            "RuntimeVisibleTypeAnnotations { name_index: 1, type_annotations: [TypeAnnotation { target_type: Empty { target_type: 19 }, type_path: [TargetPath { type_path_kind: 1, type_argument_index: 2 }], type_index: 42, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }] }",
+            "RuntimeVisibleTypeAnnotations { name_index: 1, type_annotations: [TypeAnnotation { target_type: Empty { target_type: 19 }, type_path: [TargetPath { type_path_kind: 3, type_argument_index: 2 }], type_index: 42, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }] }",
             attribute.to_string()
         );
         test_attribute(&attribute, &expected_bytes, &VERSION_52_0)
@@ -2409,7 +2430,7 @@ mod test {
         let type_annotation = TypeAnnotation {
             target_type: TargetType::Empty { target_type: 19 },
             type_path: vec![TargetPath {
-                type_path_kind: 1,
+                type_path_kind: 3,
                 type_argument_index: 2,
             }],
             type_index: 42,
@@ -2420,11 +2441,11 @@ mod test {
             type_annotations: vec![type_annotation],
         };
         let expected_bytes = [
-            0, 1, 0, 0, 0, 15, 0, 1, 19, 1, 1, 2, 0, 42, 0, 1, 0, 1, 66, 0, 42,
+            0, 1, 0, 0, 0, 15, 0, 1, 19, 1, 3, 2, 0, 42, 0, 1, 0, 1, 66, 0, 42,
         ];
 
         assert_eq!(
-            "RuntimeInvisibleTypeAnnotations { name_index: 1, type_annotations: [TypeAnnotation { target_type: Empty { target_type: 19 }, type_path: [TargetPath { type_path_kind: 1, type_argument_index: 2 }], type_index: 42, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }] }",
+            "RuntimeInvisibleTypeAnnotations { name_index: 1, type_annotations: [TypeAnnotation { target_type: Empty { target_type: 19 }, type_path: [TargetPath { type_path_kind: 3, type_argument_index: 2 }], type_index: 42, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }] }",
             attribute.to_string()
         );
         test_attribute(&attribute, &expected_bytes, &VERSION_52_0)
@@ -2700,5 +2721,14 @@ mod test {
         let mut bytes = vec![42];
         assert!(attribute.to_bytes(&mut bytes).is_err());
         assert_eq!(bytes, [42]);
+    }
+
+    #[test]
+    fn truncated_attribute_tables_with_maximum_counts_fail() {
+        let mut pool = ConstantPool::new();
+        let index = pool.add_utf8("StackMapTable").unwrap();
+        let [high, low] = index.to_be_bytes();
+        let data = [high, low, 0, 0, 0, 2, 255, 255];
+        assert!(Attribute::from_bytes(&pool, &mut ByteReader::new(&data)).is_err());
     }
 }
