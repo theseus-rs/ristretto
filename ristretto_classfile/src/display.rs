@@ -4,11 +4,15 @@
 /// string. It's useful for formatting text output with consistent indentation, such as when
 /// generating code or displaying hierarchical data.
 pub(crate) fn indent_lines(input: &str, indent: &str) -> String {
-    input
-        .lines()
-        .map(|line| [indent, line].concat())
-        .collect::<Vec<String>>()
-        .join("\n")
+    let mut output = String::with_capacity(input.len());
+    for (index, line) in input.lines().enumerate() {
+        if index != 0 {
+            output.push('\n');
+        }
+        output.push_str(indent);
+        output.push_str(line);
+    }
+    output
 }
 
 #[cfg(test)]
