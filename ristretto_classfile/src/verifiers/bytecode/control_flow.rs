@@ -179,7 +179,7 @@ impl CodeInfo {
     /// # Errors
     ///
     /// Returns an error if the offset is invalid.
-    pub fn validate_offset(&self, offset: u16, context: &str) -> Result<()> {
+    pub fn validate_offset(&self, offset: u16, context: impl std::fmt::Display) -> Result<()> {
         if offset >= self.code_length {
             return Err(VerifyError::VerifyError(format!(
                 "{context}: offset {offset} exceeds code length {}",
@@ -228,7 +228,7 @@ pub fn validate_exception_table(
         let end_pc = handler.range_pc.end;
 
         // start_pc must be a valid instruction boundary
-        code_info.validate_offset(start_pc, &format!("Exception handler {i} start_pc"))?;
+        code_info.validate_offset(start_pc, format_args!("Exception handler {i} start_pc"))?;
 
         // end_pc can be code_length (exclusive end) or an instruction boundary
         if end_pc != code_info.code_length() && !code_info.is_valid_offset(end_pc) {
@@ -247,7 +247,7 @@ pub fn validate_exception_table(
         // handler_pc must be a valid instruction boundary
         code_info.validate_offset(
             handler.handler_pc,
-            &format!("Exception handler {i} handler_pc"),
+            format_args!("Exception handler {i} handler_pc"),
         )?;
     }
 

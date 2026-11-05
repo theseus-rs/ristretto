@@ -49,7 +49,7 @@ pub(crate) fn verify(
             }
 
             // Verify host_class_index points to a valid CONSTANT_Class_info
-            verify_class_index(class_file, *host_class_index, "NestHost.host_class_index")?;
+            verify_class_index(class_file, *host_class_index)?;
         }
         Attribute::NestMembers { class_indexes, .. } => {
             if has_nest_members {
@@ -68,12 +68,8 @@ pub(crate) fn verify(
             }
 
             // Verify each class index
-            for (i, &class_index) in class_indexes.iter().enumerate() {
-                verify_class_index(
-                    class_file,
-                    class_index,
-                    &format!("NestMembers.class_indexes[{i}]"),
-                )?;
+            for &class_index in class_indexes {
+                verify_class_index(class_file, class_index)?;
             }
         }
         _ => {}
@@ -83,7 +79,7 @@ pub(crate) fn verify(
 }
 
 /// Verify that an index points to a valid `CONSTANT_Class_info` entry.
-fn verify_class_index(class_file: &ClassFile<'_>, index: u16, _context: &str) -> Result<()> {
+fn verify_class_index(class_file: &ClassFile<'_>, index: u16) -> Result<()> {
     super::format::verify_non_array_class(class_file, index)
 }
 
