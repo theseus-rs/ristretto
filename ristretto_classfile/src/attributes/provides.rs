@@ -79,7 +79,8 @@ impl Provides {
     pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<Provides> {
         let index = bytes.read_u16()?;
         let to_index_count = bytes.read_u16()?;
-        let mut with_index = Vec::with_capacity(to_index_count as usize);
+        let mut with_index =
+            Vec::with_capacity((to_index_count as usize).min(bytes.remaining() / 2));
         for _ in 0..to_index_count {
             with_index.push(bytes.read_u16()?);
         }
