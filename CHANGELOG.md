@@ -7,6 +7,451 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_javac` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.34.0...ristretto_javac-v0.35.0) - 2026-11-05
+
+### Other
+- replace runtime string formatting with direct string construction
+
+## `ristretto_java` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/v0.34.0...v0.35.0) - 2026-11-05
+
+### Added
+- support Java 25 main method launch rules
+- reject duplicate type parameters within signature declarations
+
+### Fixed
+- report the offending character position in signature errors
+- bound subparser allocations by remaining input
+- require an explicit stack map for branches to offset zero
+- return descriptor errors matching the parsing context
+- preserve primitive component types in legacy array descriptors
+- enforce uninitialized alias rules for new instructions
+- revisit fast path anchors when merged frames change
+- merge fallthrough frames at anchors without stack maps
+- reject disallowed predefined attributes on module classes
+- validate InnerClasses indexes, names, and flag combinations
+- preserve Java 6 inference fallback for recoverable stack map failures
+- validate annotation descriptors and element names
+- reject array descriptors in class-only metadata
+- reject empty module names
+- local-variable type annotation bounds and max_locals sizing
+- validate anonymous inner class outer indexes
+- preserve mandated method parameter flags
+- verify method invocations on array types
+- validate module access flags before truncation
+- report overflowing stack map offsets consistently
+- require declared exception handler frames
+- validate exception catch constant references
+- reject standalone wide instruction encoding
+- validate access flags in method verification
+- canonicalize legacy class-file versions
+- accept basic constants in legacy class versions
+- permit repeated synthetic and deprecated attributes
+- validate annotation target locations and indexes
+- track stack depths by subroutine calling context
+- accept valid bootstrap method handle kinds
+- support valid array signature dimensions
+- preserve surrogate identity in string comparisons
+- bound parser reservations by remaining input
+- validate type annotation target encodings
+- validate type annotation paths
+- validate module and package constant names
+- validate modified UTF-8 before UTF-16 conversion
+- reject cyclic method handle formatting
+- honor inference fallback for missing stack map frames
+- reject uninitialized instanceof operands
+- reject uninitialized values in aastore
+- preserve hidden class identity and resolve array components correctly
+- preserve source debug payloads with isolated UTF-16 surrogates
+- validate modified UTF-8 before decoding
+- accept legal record component descriptors and repeated components
+- accept empty and duplicate PermittedSubclasses entries
+- accept duplicate NestMembers entries permitted by the specification
+- scale type-inference work limits with method length
+- implement context-sensitive legacy jsr and ret verification
+- respect attribute locations and class-file version gates
+- validate local-variable ranges and uninitialized stack-map offsets
+- validate module-info structure and module table invariants
+- validate bootstrap handle kinds and loadable arguments
+- honor special class-initializer flags and legacy descriptors
+- expose signature validation with enclosing and recursive type bounds
+- scope verification caching to exact inputs and context revisions
+- validate type-annotation context and type paths
+- validate attribute names and singleton cardinality
+- check field descriptors, cached field types and ConstantValue types
+- reject duplicate field and method signatures
+- validate constant-pool member names, descriptors and handle targets
+- correct zero-offset stack-map deltas and reject arithmetic overflow
+- validate class names, superclass rules and interface identity
+- validate method names, flags, parameters and Code cardinality
+- validate instruction operands including unreachable code
+- derive ldc and ldc2_w dynamic constant types from descriptors
+- require Throwable-compatible values for athrow
+- check invokespecial receiver and symbolic owner against the caller
+- preserve narrow primitive array component types
+- reject checkcast of an uninitialized object
+- enforce return-opcode compatibility in bytecode dispatch
+- check catch types and complete handler frame compatibility
+- expose resolved member access checks to the verification context
+- allow type-inference fallback for class-file version 50
+- promote compact stack-map frames when byte deltas exceed 63
+- invalidate constructor receiver aliases on exceptional paths
+- propagate the pre-instruction frame to exception handlers
+- enforce constructor receiver identity and uninitialized field access
+- track constructor initialization independently of local zero
+- invalidate category-two locals when their second slot is overwritten
+- verify stack-map blocks and require frames after control transfers
+- relocate local-variable, type-annotation and uninitialized offsets
+- reject promotion of unusable Top locals to concrete types
+- check explicit frame zero against the method entry state
+- validate stack-map tags, cardinality and frame bounds
+- reject trailing data in both class-file parsing entry points
+- account for category-two stack-map values and chop entries
+- validate incoming frames on already visited control-flow edges
+- exclude unused local padding when decoding append frames
+- retry incomplete runtime downloads
+- enforce constant-pool capacity and two-slot layout invariants
+- use logical instruction coordinates in bytecode verification
+- reject malformed switch ranges, counts and key order
+- enforce constant-pool capacity and two-slot layout invariants
+- check signed wide-branch offset arithmetic
+- bound recursive annotation parsing
+- bound attribute parsing to its declared payload
+- preserve class loader identity across resolution, reflection, and arrays
+- retry transient runtime connection failures
+- restore release planning and nightly class loading builds
+- correct Corretto version ordering and platform specific archive selection
+- report hidden class names with a slash
+- throw OutOfMemoryError on Java array allocation failure
+- load JDK management libraries as intrinsics
+- remove publish dependency cycle and add workspace publishing check
+- return null when speculative member resolution fails
+- provide Reference.get0 on Java 21
+- push a return value for every non-void intrinsic call
+- stop treating $$ in class names as a hidden-class marker
+
+### Other
+- remove name aliasing
+- replace runtime string formatting with direct string construction
+- update line space formatting
+- avoid per-line allocations when indenting display output
+- build field type names and descriptors in one buffer
+- defer verifier diagnostic formatting until errors occur
+- combine MUTF-8 validation and sequence classification
+- build code boundary tables only when required
+- store single-item stack map payloads inline
+- reduce inline storage for large attribute variants
+- derive Copy for scalar classfile enums
+- name method type descriptor indexes accurately
+- clarify that MUTF-8 special detection does not validate input
+- clarify legacy Java version aliases and canonical parsing
+- Consolidate classfile verification and remove unused helpers
+- optimize Java string creation, encoding, and interning
+- cover constant load opcode stack limits
+- cover scoped verification cache replacement and bypasses
+- add parsing and verification performance baselines
+- reuse class verification cache scope
+- format Java strings without temporary strings
+- serialize attribute payloads directly
+- reuse compatible owned string buffers
+- reduce signature parser allocations
+- validate constant loads without temporary frames
+- reduce exception frame allocations
+- reuse method code metadata during verification
+- share owned and borrowed class-file parsing
+- remove obsolete verifier modules
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- update dependencies
+- centralize JVM initializer method names
+- use java constants instead of literals
+- update dependencies
+- update Rust to 1.99.1
+- reduce nesting and lower nesting threshold to 8
+- update java versions
+- update Cargo.toml dependencies
+- check interrupted parking without wall-clock timing
+
+## `ristretto_resolver` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_resolver-v0.34.0...ristretto_resolver-v0.35.0) - 2026-11-05
+
+### Other
+- remove name aliasing
+- replace runtime string formatting with direct string construction
+- reduce nesting and lower nesting threshold to 8
+- update Rust to 1.99.1
+
+## `ristretto_pom` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.34.0...ristretto_pom-v0.35.0) - 2026-11-05
+
+### Other
+- remove name aliasing
+- replace runtime string formatting with direct string construction
+- update Rust to 1.99.1
+
+## `ristretto_vm` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.34.0...ristretto_vm-v0.35.0) - 2026-11-05
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- throw OutOfMemoryError on Java array allocation failure
+- preserve class loader identity across resolution, reflection, and arrays
+- preserve hidden class identity and resolve array components correctly
+- provide Reference.get0 on Java 21
+- report hidden class names with a slash
+- push a return value for every non-void intrinsic call
+
+### Other
+- remove name aliasing
+- update line space formatting
+- optimize Java string creation, encoding, and interning
+- check interrupted parking without wall-clock timing
+- replace runtime string formatting with direct string construction
+- reduce nesting and lower nesting threshold to 8
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- centralize JVM initializer method names
+- use java constants instead of literals
+- update Rust to 1.99.1
+
+## `ristretto_intrinsics` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.34.0...ristretto_intrinsics-v0.35.0) - 2026-11-05
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- throw OutOfMemoryError on Java array allocation failure
+- preserve class loader identity across resolution, reflection, and arrays
+- load JDK management libraries as intrinsics
+- restore release planning and nightly class loading builds
+- preserve hidden class identity and resolve array components correctly
+- correct Corretto version ordering and platform specific archive selection
+- remove publish dependency cycle and add workspace publishing check
+- return null when speculative member resolution fails
+- provide Reference.get0 on Java 21
+- report hidden class names with a slash
+- push a return value for every non-void intrinsic call
+- stop treating $$ in class names as a hidden-class marker
+
+### Other
+- remove name aliasing
+- update line space formatting
+- derive Copy for scalar classfile enums
+- replace runtime string formatting with direct string construction
+- reduce nesting and lower nesting threshold to 8
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- update dependencies
+- centralize JVM initializer method names
+- use java constants instead of literals
+- update dependencies
+- update Rust to 1.99.1
+
+## `ristretto_types` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.34.0...ristretto_types-v0.35.0) - 2026-11-05
+
+### Fixed
+- throw OutOfMemoryError on Java array allocation failure
+- preserve class loader identity across resolution, reflection, and arrays
+- preserve hidden class identity and resolve array components correctly
+- report hidden class names with a slash
+
+### Other
+- remove name aliasing
+- derive Copy for scalar classfile enums
+- optimize Java string creation, encoding, and interning
+- replace runtime string formatting with direct string construction
+- use java constants instead of literals
+- update Rust to 1.99.1
+
+## `ristretto_jit` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.34.0...ristretto_jit-v0.35.0) - 2026-11-05
+
+### Fixed
+- throw OutOfMemoryError on Java array allocation failure
+
+### Other
+- update line space formatting
+- replace runtime string formatting with direct string construction
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- centralize JVM initializer method names
+
+## `ristretto_macros` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.34.0...ristretto_macros-v0.35.0) - 2026-11-05
+
+### Other
+- remove name aliasing
+
+## `ristretto_classloader` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.34.0...ristretto_classloader-v0.35.0) - 2026-11-05
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- preserve class loader identity across resolution, reflection, and arrays
+- retry transient runtime connection failures
+- restore release planning and nightly class loading builds
+- preserve hidden class identity and resolve array components correctly
+- correct Corretto version ordering and platform specific archive selection
+- retry incomplete runtime downloads
+- report hidden class names with a slash
+
+### Other
+- remove name aliasing
+- reduce inline storage for large attribute variants
+- replace runtime string formatting with direct string construction
+- reduce nesting and lower nesting threshold to 8
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- update dependencies
+- centralize JVM initializer method names
+- update java versions
+- use java constants instead of literals
+- update dependencies
+- update Rust to 1.99.1
+
+## `ristretto_jimage` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.34.0...ristretto_jimage-v0.35.0) - 2026-11-05
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_gc` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.34.0...ristretto_gc-v0.35.0) - 2026-11-05
+
+### Other
+- remove name aliasing
+
+## `ristretto_classfile` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.34.0...ristretto_classfile-v0.35.0) - 2026-11-05
+
+### Added
+- reject duplicate type parameters within signature declarations
+
+### Fixed
+- report the offending character position in signature errors
+- bound subparser allocations by remaining input
+- require an explicit stack map for branches to offset zero
+- return descriptor errors matching the parsing context
+- preserve primitive component types in legacy array descriptors
+- enforce uninitialized alias rules for new instructions
+- revisit fast path anchors when merged frames change
+- merge fallthrough frames at anchors without stack maps
+- reject disallowed predefined attributes on module classes
+- validate InnerClasses indexes, names, and flag combinations
+- preserve Java 6 inference fallback for recoverable stack map failures
+- validate annotation descriptors and element names
+- reject array descriptors in class-only metadata
+- reject empty module names
+- local-variable type annotation bounds and max_locals sizing
+- validate anonymous inner class outer indexes
+- preserve mandated method parameter flags
+- verify method invocations on array types
+- validate module access flags before truncation
+- report overflowing stack map offsets consistently
+- require declared exception handler frames
+- validate exception catch constant references
+- reject standalone wide instruction encoding
+- validate access flags in method verification
+- canonicalize legacy class-file versions
+- accept basic constants in legacy class versions
+- permit repeated synthetic and deprecated attributes
+- validate annotation target locations and indexes
+- track stack depths by subroutine calling context
+- accept valid bootstrap method handle kinds
+- support valid array signature dimensions
+- preserve surrogate identity in string comparisons
+- bound parser reservations by remaining input
+- validate type annotation target encodings
+- validate type annotation paths
+- validate module and package constant names
+- validate modified UTF-8 before UTF-16 conversion
+- reject cyclic method handle formatting
+- honor inference fallback for missing stack map frames
+- reject uninitialized instanceof operands
+- reject uninitialized values in aastore
+- preserve hidden class identity and resolve array components correctly
+- preserve source debug payloads with isolated UTF-16 surrogates
+- validate modified UTF-8 before decoding
+- accept legal record component descriptors and repeated components
+- accept empty and duplicate PermittedSubclasses entries
+- accept duplicate NestMembers entries permitted by the specification
+- scale type-inference work limits with method length
+- implement context-sensitive legacy jsr and ret verification
+- respect attribute locations and class-file version gates
+- validate local-variable ranges and uninitialized stack-map offsets
+- validate module-info structure and module table invariants
+- validate bootstrap handle kinds and loadable arguments
+- honor special class-initializer flags and legacy descriptors
+- expose signature validation with enclosing and recursive type bounds
+- scope verification caching to exact inputs and context revisions
+- validate type-annotation context and type paths
+- validate attribute names and singleton cardinality
+- check field descriptors, cached field types and ConstantValue types
+- reject duplicate field and method signatures
+- validate constant-pool member names, descriptors and handle targets
+- correct zero-offset stack-map deltas and reject arithmetic overflow
+- validate class names, superclass rules and interface identity
+- validate method names, flags, parameters and Code cardinality
+- validate instruction operands including unreachable code
+- derive ldc and ldc2_w dynamic constant types from descriptors
+- require Throwable-compatible values for athrow
+- check invokespecial receiver and symbolic owner against the caller
+- preserve narrow primitive array component types
+- reject checkcast of an uninitialized object
+- enforce return-opcode compatibility in bytecode dispatch
+- check catch types and complete handler frame compatibility
+- expose resolved member access checks to the verification context
+- allow type-inference fallback for class-file version 50
+- promote compact stack-map frames when byte deltas exceed 63
+- invalidate constructor receiver aliases on exceptional paths
+- propagate the pre-instruction frame to exception handlers
+- enforce constructor receiver identity and uninitialized field access
+- track constructor initialization independently of local zero
+- invalidate category-two locals when their second slot is overwritten
+- verify stack-map blocks and require frames after control transfers
+- relocate local-variable, type-annotation and uninitialized offsets
+- reject promotion of unusable Top locals to concrete types
+- check explicit frame zero against the method entry state
+- validate stack-map tags, cardinality and frame bounds
+- reject trailing data in both class-file parsing entry points
+- account for category-two stack-map values and chop entries
+- validate incoming frames on already visited control-flow edges
+- exclude unused local padding when decoding append frames
+- retry incomplete runtime downloads
+- enforce constant-pool capacity and two-slot layout invariants
+- use logical instruction coordinates in bytecode verification
+- reject malformed switch ranges, counts and key order
+- enforce constant-pool capacity and two-slot layout invariants
+- check signed wide-branch offset arithmetic
+- bound recursive annotation parsing
+- bound attribute parsing to its declared payload
+
+### Other
+- remove name aliasing
+- update line space formatting
+- avoid per-line allocations when indenting display output
+- build field type names and descriptors in one buffer
+- defer verifier diagnostic formatting until errors occur
+- combine MUTF-8 validation and sequence classification
+- build code boundary tables only when required
+- store single-item stack map payloads inline
+- reduce inline storage for large attribute variants
+- derive Copy for scalar classfile enums
+- name method type descriptor indexes accurately
+- clarify that MUTF-8 special detection does not validate input
+- clarify legacy Java version aliases and canonical parsing
+- Consolidate classfile verification and remove unused helpers
+- optimize Java string creation, encoding, and interning
+- cover constant load opcode stack limits
+- cover scoped verification cache replacement and bypasses
+- add parsing and verification performance baselines
+- reuse class verification cache scope
+- format Java strings without temporary strings
+- serialize attribute payloads directly
+- reuse compatible owned string buffers
+- reduce signature parser allocations
+- validate constant loads without temporary frames
+- reduce exception frame allocations
+- reuse method code metadata during verification
+- share owned and borrowed class-file parsing
+- remove obsolete verifier modules
+- replace runtime string formatting with direct string construction
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- update dependencies
+- centralize JVM initializer method names
+- use java constants instead of literals
+- update dependencies
+- update Rust to 1.99.1
+
 ## `ristretto_javac` - [0.34.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.33.0...ristretto_javac-v0.34.0) - 2026-09-27
 
 ### Other
