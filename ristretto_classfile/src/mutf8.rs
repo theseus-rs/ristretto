@@ -444,6 +444,10 @@ fn validate_slow(input: &[u8]) -> Result<()> {
 ///
 /// Returns `true` if the input contains null encoding (`0xC0 0x80`), surrogate pairs
 /// (`0xED 0xA0..0xBF`), or other sequences that differ between MUTF-8 and standard UTF-8.
+///
+/// This is a sequence detector, not a validator. Neither result establishes that
+/// arbitrary bytes are valid MUTF-8 or UTF-8. Call [`validate`] first when handling
+/// untrusted input; decoding functions such as [`from_bytes`] do this themselves.
 #[inline]
 #[must_use]
 pub fn has_mutf8_specials(input: &[u8]) -> bool {
