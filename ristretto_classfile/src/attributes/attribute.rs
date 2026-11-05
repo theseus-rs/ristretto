@@ -1904,13 +1904,13 @@ mod test {
     fn test_attribute(
         attribute: &Attribute,
         expected_bytes: &[u8],
-        supported_versions: &Version,
+        supported_versions: Version,
     ) -> Result<()> {
         let name = attribute.name();
         let mut constant_pool = ConstantPool::default();
         constant_pool.add_utf8(name)?;
 
-        assert!(attribute.valid_for_version(supported_versions));
+        assert!(attribute.valid_for_version(&supported_versions));
         assert!(!attribute.valid_for_version(&VERSION_45_0));
 
         let mut bytes = Vec::new();
@@ -1937,7 +1937,7 @@ mod test {
         };
         let expected_bytes = [0, 1, 0, 0, 0, 2, 0, 42];
 
-        test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
+        test_attribute(&attribute, &expected_bytes, VERSION_45_3)
     }
 
     #[expect(clippy::too_many_lines)]
@@ -2237,7 +2237,7 @@ mod test {
             "},
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_50_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_50_0)
     }
 
     #[test]
@@ -2252,7 +2252,7 @@ mod test {
             "Exceptions { name_index: 1, exception_indexes: [42] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
+        test_attribute(&attribute, &expected_bytes, VERSION_45_3)
     }
 
     #[test]
@@ -2273,7 +2273,7 @@ mod test {
             "InnerClasses { name_index: 1, classes: [InnerClass { class_info_index: 1, outer_class_info_index: 2, name_index: 3, access_flags: NestedClassAccessFlags(PUBLIC) }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
+        test_attribute(&attribute, &expected_bytes, VERSION_45_3)
     }
 
     #[test]
@@ -2294,7 +2294,7 @@ mod test {
             "EnclosingMethod { name_index: 1, class_index: 42, method_index: 3 }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_49_0)
     }
 
     #[test]
@@ -2308,7 +2308,7 @@ mod test {
         let expected_bytes = [0, 1, 0, 0, 0, 0];
 
         assert_eq!("Synthetic { name_index: 1 }", attribute.to_string());
-        test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
+        test_attribute(&attribute, &expected_bytes, VERSION_45_3)
     }
 
     #[test]
@@ -2328,7 +2328,7 @@ mod test {
             "Signature { name_index: 1, signature_index: 42 }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_49_0)
     }
 
     #[test]
@@ -2348,7 +2348,7 @@ mod test {
             "SourceFile { name_index: 1, source_file_index: 42 }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
+        test_attribute(&attribute, &expected_bytes, VERSION_45_3)
     }
 
     #[test]
@@ -2363,7 +2363,7 @@ mod test {
             "SourceDebugExtension { name_index: 1, debug_extension: \"foo\" }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_49_0)
     }
 
     #[test]
@@ -2379,7 +2379,7 @@ mod test {
         let expected = "LineNumberTable { name_index: 1, line_numbers: [LineNumber { start_pc: 2, line_number: 42 }] }";
 
         assert_eq!(expected, attribute.to_string());
-        test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
+        test_attribute(&attribute, &expected_bytes, VERSION_45_3)
     }
 
     #[test]
@@ -2401,7 +2401,7 @@ mod test {
             "LocalVariableTable { name_index: 1, variables: [LocalVariableTable { start_pc: 1, length: 2, name_index: 3, descriptor_index: 4, index: 5 }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_49_0)
     }
 
     #[test]
@@ -2423,7 +2423,7 @@ mod test {
             "LocalVariableTypeTable { name_index: 1, variable_types: [LocalVariableTypeTable { start_pc: 1, length: 2, name_index: 3, signature_index: 4, index: 5 }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_49_0)
     }
 
     #[test]
@@ -2437,7 +2437,7 @@ mod test {
         let expected_bytes = [0, 1, 0, 0, 0, 0];
 
         assert_eq!("Deprecated { name_index: 1 }", attribute.to_string());
-        test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
+        test_attribute(&attribute, &expected_bytes, VERSION_45_3)
     }
 
     #[test]
@@ -2460,7 +2460,7 @@ mod test {
             "RuntimeVisibleAnnotations { name_index: 1, annotations: [Annotation { type_index: 1, elements: [AnnotationValuePair { name_index: 3, value: Byte { const_value_index: 42 } }] }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_49_0)
     }
 
     #[test]
@@ -2483,7 +2483,7 @@ mod test {
             "RuntimeInvisibleAnnotations { name_index: 1, annotations: [Annotation { type_index: 1, elements: [AnnotationValuePair { name_index: 3, value: Byte { const_value_index: 42 } }] }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_49_0)
     }
 
     #[test]
@@ -2511,7 +2511,7 @@ mod test {
             "RuntimeVisibleParameterAnnotations { name_index: 1, parameter_annotations: [ParameterAnnotation { annotations: [Annotation { type_index: 3, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }] }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_49_0)
     }
 
     #[test]
@@ -2539,7 +2539,7 @@ mod test {
             "RuntimeInvisibleParameterAnnotations { name_index: 1, parameter_annotations: [ParameterAnnotation { annotations: [Annotation { type_index: 3, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }] }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_49_0)
     }
 
     #[test]
@@ -2571,7 +2571,7 @@ mod test {
             "RuntimeVisibleTypeAnnotations { name_index: 1, type_annotations: [TypeAnnotation { target_type: Empty { target_type: 19 }, type_path: [TargetPath { type_path_kind: 3, type_argument_index: 2 }], type_index: 42, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_52_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_52_0)
     }
 
     #[test]
@@ -2603,7 +2603,7 @@ mod test {
             "RuntimeInvisibleTypeAnnotations { name_index: 1, type_annotations: [TypeAnnotation { target_type: Empty { target_type: 19 }, type_path: [TargetPath { type_path_kind: 3, type_argument_index: 2 }], type_index: 42, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_52_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_52_0)
     }
 
     #[test]
@@ -2620,7 +2620,7 @@ mod test {
             "AnnotationDefault { name_index: 1, element: Byte { const_value_index: 42 } }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_49_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_49_0)
     }
 
     #[test]
@@ -2639,7 +2639,7 @@ mod test {
             "BootstrapMethods { name_index: 1, methods: [BootstrapMethod { bootstrap_method_ref: 3, arguments: [42] }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_51_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_51_0)
     }
 
     #[test]
@@ -2658,7 +2658,7 @@ mod test {
             "MethodParameters { name_index: 1, parameters: [MethodParameter { name_index: 2, access_flags: MethodParameterAccessFlags(FINAL) }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_52_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_52_0)
     }
 
     #[test]
@@ -2698,7 +2698,7 @@ mod test {
             "Module { name_index: 1, module_name_index: 2, flags: ModuleAccessFlags(OPEN), version_index: 4, requires: [Requires { index: 5, flags: RequiresFlags(MANDATED), version_index: 7 }], exports: [Exports { index: 8, flags: ExportsFlags(MANDATED), to_index: [10] }], opens: [Opens { index: 11, flags: OpensFlags(MANDATED), to_index: [13] }], uses: [14], provides: [Provides { index: 15, with_index: [16] }] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_53_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_53_0)
     }
 
     #[test]
@@ -2713,7 +2713,7 @@ mod test {
             "ModulePackages { name_index: 1, package_indexes: [42] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_53_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_53_0)
     }
 
     #[test]
@@ -2733,7 +2733,7 @@ mod test {
             "ModuleMainClass { name_index: 1, main_class_index: 42 }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_53_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_53_0)
     }
 
     #[test]
@@ -2753,7 +2753,7 @@ mod test {
             "NestHost { name_index: 1, host_class_index: 42 }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_55_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_55_0)
     }
 
     #[test]
@@ -2768,7 +2768,7 @@ mod test {
             "NestMembers { name_index: 1, class_indexes: [42] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_55_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_55_0)
     }
 
     #[test]
@@ -2827,7 +2827,7 @@ mod test {
             "PermittedSubclasses { name_index: 1, class_indexes: [42] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_61_0)
+        test_attribute(&attribute, &expected_bytes, VERSION_61_0)
     }
 
     #[test]
@@ -2842,7 +2842,7 @@ mod test {
             "Unknown { name_index: 1, info: [0, 42] }",
             attribute.to_string()
         );
-        test_attribute(&attribute, &expected_bytes, &VERSION_45_3)
+        test_attribute(&attribute, &expected_bytes, VERSION_45_3)
     }
     #[test]
     fn failed_attribute_write_rolls_back_the_entire_payload() {

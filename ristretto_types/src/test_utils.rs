@@ -546,7 +546,7 @@ impl MockVm {
             java_home: self.java_home.clone(),
             java_version: self.java_version.clone(),
             java_major_version: self.java_major_version,
-            java_class_file_version: self.java_class_file_version.clone(),
+            java_class_file_version: self.java_class_file_version,
             java_class_file_version_reads: AtomicUsize::new(0),
             string_factory: self.string_factory.clone(),
             system_properties: self.system_properties.clone(),

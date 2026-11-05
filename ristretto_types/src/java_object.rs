@@ -792,7 +792,7 @@ mod tests {
                     owned.to_object(&*thread).await?,
                     java_string.as_java_str().to_object(&*thread).await?,
                 ] {
-                    assert_string_storage(&value, &expected, &version)?;
+                    assert_string_storage(&value, &expected, version)?;
                     assert_eq!(input, value.as_string()?);
                 }
             }
@@ -815,7 +815,7 @@ mod tests {
             for (bytes, expected) in inputs {
                 let java_str = JavaStr::from_mutf8(bytes)?;
                 let value = java_str.to_object(&*thread).await?;
-                assert_string_storage(&value, expected, &version)?;
+                assert_string_storage(&value, expected, version)?;
             }
             assert_eq!(0, vm.java_class_file_version_reads());
         }
@@ -825,7 +825,7 @@ mod tests {
     async fn string_thread(
         version: &Version,
     ) -> Result<(Arc<test_utils::MockVm>, Arc<test_utils::MockThread>)> {
-        let vm = test_utils::MockVm::new(version.clone());
+        let vm = test_utils::MockVm::new(*version);
         let thread = test_utils::MockThread::new(vm.clone());
         let fields: &[(&str, &str)] = if version <= &JAVA_8 {
             &[("value", "[C"), ("hash", "I")]
@@ -845,12 +845,12 @@ mod tests {
         Ok((vm, thread))
     }
 
-    fn assert_string_storage(value: &Value, expected: &[u16], version: &Version) -> Result<()> {
+    fn assert_string_storage(value: &Value, expected: &[u16], version: Version) -> Result<()> {
         let object = value.as_object_ref()?;
         assert_eq!("java/lang/String", object.class().name());
         assert_eq!(Value::Int(0), object.value("hash")?);
         let array = object.value("value")?;
-        if version <= &JAVA_8 {
+        if version <= JAVA_8 {
             assert_eq!(expected, &*array.as_char_vec_ref()?);
         } else {
             let latin1 = expected.iter().all(|&unit| unit <= 0xff);
@@ -872,7 +872,7 @@ mod tests {
                     .collect();
                 assert_eq!(expected, actual);
             }
-            if version >= &JAVA_17 {
+            if version >= JAVA_17 {
                 assert_eq!(Value::Int(0), object.value("hashIsZero")?);
             }
         }

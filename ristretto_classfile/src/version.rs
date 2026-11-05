@@ -107,7 +107,7 @@ pub const JAVA_PREVIEW_MINOR_VERSION: u16 = 65535;
 /// #  Reference
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1>
-#[derive(Clone, Debug, Eq)]
+#[derive(Clone, Copy, Debug, Eq)]
 pub enum Version {
     Java1_0_2 { minor: u16 },
     Java1_1 { minor: u16 },
@@ -746,25 +746,25 @@ mod test {
     fn test_version_specification() {
         assert!(VersionSpecification::Any.matches(&JAVA_11));
 
-        assert!(VersionSpecification::Equal(JAVA_11.clone()).matches(&JAVA_11));
-        assert!(!VersionSpecification::Equal(JAVA_17.clone()).matches(&JAVA_11));
+        assert!(VersionSpecification::Equal(JAVA_11).matches(&JAVA_11));
+        assert!(!VersionSpecification::Equal(JAVA_17).matches(&JAVA_11));
 
-        assert!(!VersionSpecification::NotEqual(JAVA_11.clone()).matches(&JAVA_11));
-        assert!(VersionSpecification::NotEqual(JAVA_17.clone()).matches(&JAVA_11));
+        assert!(!VersionSpecification::NotEqual(JAVA_11).matches(&JAVA_11));
+        assert!(VersionSpecification::NotEqual(JAVA_17).matches(&JAVA_11));
 
-        assert!(VersionSpecification::LessThan(JAVA_17.clone()).matches(&JAVA_11));
-        assert!(!VersionSpecification::LessThan(JAVA_11.clone()).matches(&JAVA_11));
+        assert!(VersionSpecification::LessThan(JAVA_17).matches(&JAVA_11));
+        assert!(!VersionSpecification::LessThan(JAVA_11).matches(&JAVA_11));
 
-        assert!(VersionSpecification::LessThanOrEqual(JAVA_11.clone()).matches(&JAVA_11));
-        assert!(VersionSpecification::LessThanOrEqual(JAVA_17.clone()).matches(&JAVA_11));
-        assert!(!VersionSpecification::LessThanOrEqual(JAVA_17.clone()).matches(&JAVA_21));
+        assert!(VersionSpecification::LessThanOrEqual(JAVA_11).matches(&JAVA_11));
+        assert!(VersionSpecification::LessThanOrEqual(JAVA_17).matches(&JAVA_11));
+        assert!(!VersionSpecification::LessThanOrEqual(JAVA_17).matches(&JAVA_21));
 
-        assert!(VersionSpecification::GreaterThan(JAVA_11.clone()).matches(&JAVA_17));
-        assert!(!VersionSpecification::GreaterThan(JAVA_17.clone()).matches(&JAVA_17));
+        assert!(VersionSpecification::GreaterThan(JAVA_11).matches(&JAVA_17));
+        assert!(!VersionSpecification::GreaterThan(JAVA_17).matches(&JAVA_17));
 
-        assert!(VersionSpecification::GreaterThanOrEqual(JAVA_11.clone()).matches(&JAVA_11));
-        assert!(VersionSpecification::GreaterThanOrEqual(JAVA_17.clone()).matches(&JAVA_21));
-        assert!(!VersionSpecification::GreaterThanOrEqual(JAVA_21.clone()).matches(&JAVA_17));
+        assert!(VersionSpecification::GreaterThanOrEqual(JAVA_11).matches(&JAVA_11));
+        assert!(VersionSpecification::GreaterThanOrEqual(JAVA_17).matches(&JAVA_21));
+        assert!(!VersionSpecification::GreaterThanOrEqual(JAVA_21).matches(&JAVA_17));
 
         let between = VersionSpecification::Between(JAVA_11, JAVA_17);
         assert!(between.matches(&JAVA_11));
