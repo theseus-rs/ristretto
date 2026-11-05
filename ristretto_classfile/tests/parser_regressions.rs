@@ -122,8 +122,8 @@ fn malformed_constructed_stack_frames_are_not_serialized() {
     for frame in [
         StackFrame::SameFrame { frame_type: 64 },
         StackFrame::SameLocals1StackItemFrame {
-            frame_type: 64,
-            stack: vec![VerificationType::Integer, VerificationType::Integer],
+            frame_type: 128,
+            stack: [VerificationType::Integer],
         },
         StackFrame::AppendFrame {
             frame_type: 252,

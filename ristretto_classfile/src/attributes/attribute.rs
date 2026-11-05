@@ -1991,12 +1991,12 @@ mod test {
             StackFrame::SameFrame { frame_type: 0 },
             StackFrame::SameLocals1StackItemFrame {
                 frame_type: 65,
-                stack: vec![VerificationType::Null],
+                stack: [VerificationType::Null],
             },
             StackFrame::SameLocals1StackItemFrameExtended {
                 frame_type: 247,
                 offset_delta: 0,
-                stack: vec![VerificationType::Null],
+                stack: [VerificationType::Null],
             },
             StackFrame::ChopFrame {
                 frame_type: 248,
