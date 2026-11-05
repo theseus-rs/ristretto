@@ -43,7 +43,7 @@ use std::fmt;
 /// # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.5>
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ReferenceKind {
     /// Reference kind 1: Read a non-static field.
     /// Used to get the value of an instance field.
