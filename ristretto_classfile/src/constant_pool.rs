@@ -1108,7 +1108,7 @@ impl<'a> ConstantPool<'a> {
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.9>
     pub fn try_get_method_type(&self, index: u16) -> Result<&u16> {
         match self.try_get(index)? {
-            Constant::MethodType(name_and_type_index) => Ok(name_and_type_index),
+            Constant::MethodType(descriptor_index) => Ok(descriptor_index),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
