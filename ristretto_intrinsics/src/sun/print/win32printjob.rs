@@ -16,6 +16,7 @@ pub fn end_print_raw_data<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/print/Win32PrintJob.printRawData([BI)Z", Any)]
 pub fn print_raw_data<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -28,6 +29,7 @@ pub fn print_raw_data<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/print/Win32PrintJob.startPrintRawData(Ljava/lang/String;Ljava/lang/String;)Z",
     Any

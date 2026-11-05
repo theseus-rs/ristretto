@@ -25,6 +25,7 @@ pub fn cng_encrypt_decrypt<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CRSACipher.encryptDecrypt([I[BIJZ)[B",
     GreaterThanOrEqual(JAVA_11)

@@ -7,12 +7,19 @@ import java.util.Comparator;
 @interface AllElementTypesAnnotation {
     // Primitive types
     boolean booleanElement() default true;
+
     byte byteElement() default 1;
+
     short shortElement() default 2;
+
     int intElement() default 3;
+
     long longElement() default 4L;
+
     char charElement() default 'A';
+
     float floatElement() default 5.0f;
+
     double doubleElement() default 6.0;
 
     // String
@@ -29,16 +36,27 @@ import java.util.Comparator;
 
     // Arrays of the above
     boolean[] booleanArrayElement() default {true, false};
+
     byte[] byteArrayElement() default {1, 2, 3};
+
     short[] shortArrayElement() default {10, 20};
+
     int[] intArrayElement() default {100, 200, 300};
+
     long[] longArrayElement() default {1000L, 2000L};
+
     char[] charArrayElement() default {'X', 'Y', 'Z'};
+
     float[] floatArrayElement() default {1.1f, 2.2f};
+
     double[] doubleArrayElement() default {3.3, 4.4};
+
     String[] stringArrayElement() default {"one", "two", "three"};
+
     ElementType[] enumArrayElement() default {ElementType.FIELD, ElementType.METHOD};
+
     Class<?>[] classArrayElement() default {String.class, Integer.class};
+
     Retention[] annotationArrayElement() default {
         @Retention(RetentionPolicy.SOURCE),
         @Retention(RetentionPolicy.RUNTIME)

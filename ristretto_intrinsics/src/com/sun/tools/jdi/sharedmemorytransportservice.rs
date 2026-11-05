@@ -22,6 +22,7 @@ pub fn accept0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "com/sun/tools/jdi/SharedMemoryTransportService.attach0(Ljava/lang/String;J)J",
     GreaterThanOrEqual(JAVA_11)
@@ -37,6 +38,7 @@ pub fn attach0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "com/sun/tools/jdi/SharedMemoryTransportService.initialize()V",
     GreaterThanOrEqual(JAVA_11)
@@ -50,6 +52,7 @@ pub fn initialize<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "com/sun/tools/jdi/SharedMemoryTransportService.name(J)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
@@ -64,6 +67,7 @@ pub fn name<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "com/sun/tools/jdi/SharedMemoryTransportService.startListening0(Ljava/lang/String;)J",
     GreaterThanOrEqual(JAVA_11)
@@ -79,6 +83,7 @@ pub fn start_listening0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "com/sun/tools/jdi/SharedMemoryTransportService.stopListening0(J)V",
     GreaterThanOrEqual(JAVA_11)

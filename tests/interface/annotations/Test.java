@@ -6,6 +6,7 @@ import java.lang.annotation.*;
 @Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
 @interface TestAnnotation {
     String value() default "test";
+
     int priority() default 1;
 }
 
@@ -19,6 +20,7 @@ import java.lang.annotation.*;
 @Target(ElementType.METHOD)
 @interface MethodInfo {
     String description();
+
     boolean deprecated() default false;
 }
 

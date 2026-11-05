@@ -21,6 +21,7 @@ pub fn get_exponent<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CPublicKey$CRSAPublicKey.getModulus([B)[B",
     GreaterThanOrEqual(JAVA_11)

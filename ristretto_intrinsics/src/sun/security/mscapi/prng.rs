@@ -23,6 +23,7 @@ pub fn generate_seed<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/security/mscapi/PRNG.getContext()J", GreaterThanOrEqual(JAVA_11))]
 pub fn get_context<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -33,6 +34,7 @@ pub fn get_context<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/PRNG.releaseContext(J)V",
     GreaterThanOrEqual(JAVA_11)

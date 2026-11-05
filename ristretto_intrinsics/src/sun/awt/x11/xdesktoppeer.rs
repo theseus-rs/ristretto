@@ -17,6 +17,7 @@ pub fn gnome_url_show<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XDesktopPeer.init(IZ)Z", Any)]
 pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,

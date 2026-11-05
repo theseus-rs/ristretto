@@ -16,15 +16,18 @@ impl VerificationContext for Context {
     fn is_subclass(&self, source: &str, target: &str) -> VResult<bool> {
         self.is_assignable(target, source)
     }
+
     fn is_assignable(&self, target: &str, source: &str) -> VResult<bool> {
         Ok(target == source
             || target == "java/lang/Object"
             || (source == "Audit" && target == "Parent"))
     }
+
     fn common_superclass(&self, a: &str, b: &str) -> VResult<String> {
         Ok(if a == b { a } else { "java/lang/Object" }.to_string())
     }
 }
+
 fn base() -> ClassFile<'static> {
     let mut c = ClassFile {
         version: JAVA_25,
@@ -35,6 +38,7 @@ fn base() -> ClassFile<'static> {
     c.super_class = c.constant_pool.add_class("java/lang/Object").unwrap();
     c
 }
+
 fn method(
     c: &mut ClassFile<'static>,
     name: &str,
@@ -69,6 +73,7 @@ fn method(
         }],
     }
 }
+
 fn full(
     offset_delta: u16,
     locals: Vec<VerificationType>,
@@ -101,6 +106,7 @@ fn check(mut class: ClassFile<'static>, method: Option<Method>, valid: bool) {
         assert_eq!(bytes, encoded);
     }
 }
+
 #[test]
 fn baseline() {
     check(base(), None, true);
@@ -554,12 +560,15 @@ fn member_access_context_can_reject_protected_receiver() {
         fn is_subclass(&self, _: &str, _: &str) -> VResult<bool> {
             Ok(true)
         }
+
         fn is_assignable(&self, _: &str, _: &str) -> VResult<bool> {
             Ok(true)
         }
+
         fn common_superclass(&self, _: &str, _: &str) -> VResult<String> {
             Ok("java/lang/Object".into())
         }
+
         #[expect(
             clippy::panic_in_result_fn,
             reason = "assert the symbolic member supplied to this test context"

@@ -59,9 +59,11 @@ final class GeneratedFrames extends ClassLoader {
     private static void utf(DataOutputStream out, String value) throws Exception {
         out.writeByte(1); out.writeUTF(value);
     }
+
     private static void entry(DataOutputStream out, int tag, int index) throws Exception {
         out.writeByte(tag); out.writeShort(index);
     }
+
     private static void pair(DataOutputStream out, int tag, int first, int second) throws Exception {
         out.writeByte(tag); out.writeShort(first); out.writeShort(second);
     }

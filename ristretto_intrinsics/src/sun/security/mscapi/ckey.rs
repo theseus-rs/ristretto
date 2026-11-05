@@ -16,6 +16,7 @@ pub fn clean_up<T: Thread + 'static>(
     let _h_crypt_prov = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/security/mscapi/CKey.cleanUp(JJ)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CKey.getContainerName(J)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
@@ -30,6 +31,7 @@ pub fn get_container_name<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CKey.getKeyType(J)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)

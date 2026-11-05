@@ -1,6 +1,7 @@
 /** Test interface casting and type checking */
 interface CastableA {
     void methodA();
+
     default void defaultA() {
         System.out.println("CastableA.defaultA");
     }
@@ -8,6 +9,7 @@ interface CastableA {
 
 interface CastableB {
     void methodB();
+
     default void defaultB() {
         System.out.println("CastableB.defaultB");
     }

@@ -3,12 +3,15 @@ import java.io.*;
 
 interface SerializableInterface extends Serializable {
     void process();
+
     String getData();
 }
 
 interface CloneableInterface extends Cloneable {
     void setValue(int value);
+
     int getValue();
+
     CloneableInterface createCopy();
 }
 

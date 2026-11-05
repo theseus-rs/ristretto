@@ -465,6 +465,7 @@ mod tests {
         let debug_str = format!("{cache:?}");
         assert!(debug_str.contains("VerificationCache"));
     }
+
     #[test]
     fn exact_scopes_are_shared_and_clear_does_not_reuse_live_identities() {
         let cache = VerificationCache::new(true);

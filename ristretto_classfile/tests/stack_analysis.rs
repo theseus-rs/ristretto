@@ -14,12 +14,14 @@ fn long_constant() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn double_constant() -> Result<()> {
     let code = [Instruction::Dconst_0, Instruction::Dreturn];
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn integer_negation() -> Result<()> {
     let code = [
@@ -32,6 +34,7 @@ fn integer_negation() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn float_negation() -> Result<()> {
     let code = [
@@ -44,6 +47,7 @@ fn float_negation() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn long_negation() -> Result<()> {
     let code = [
@@ -56,6 +60,7 @@ fn long_negation() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 4);
     Ok(())
 }
+
 #[test]
 fn double_negation() -> Result<()> {
     let code = [
@@ -68,6 +73,7 @@ fn double_negation() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 4);
     Ok(())
 }
+
 #[test]
 fn widening_conversion() -> Result<()> {
     let code = [
@@ -78,6 +84,7 @@ fn widening_conversion() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn conversion_chain() -> Result<()> {
     let code = [
@@ -91,6 +98,7 @@ fn conversion_chain() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn pop_two_category_one_values() -> Result<()> {
     let code = [
@@ -105,6 +113,7 @@ fn pop_two_category_one_values() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn pop_one_category_two_value() -> Result<()> {
     let code = [
@@ -117,6 +126,7 @@ fn pop_one_category_two_value() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn reordered_blocks() -> Result<()> {
     let code = [
@@ -131,6 +141,7 @@ fn reordered_blocks() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn reordered_wide_branches() -> Result<()> {
     let code = [
@@ -145,6 +156,7 @@ fn reordered_wide_branches() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn balanced_diamond() -> Result<()> {
     let code = [
@@ -161,6 +173,7 @@ fn balanced_diamond() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn balanced_loop() -> Result<()> {
     let code = [
@@ -176,6 +189,7 @@ fn balanced_loop() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 1);
     Ok(())
 }
+
 #[test]
 fn return_discards_remaining_stack() -> Result<()> {
     let code = [
@@ -189,6 +203,7 @@ fn return_discards_remaining_stack() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn typed_return_ends_path() -> Result<()> {
     let code = [
@@ -201,6 +216,7 @@ fn typed_return_ends_path() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 1);
     Ok(())
 }
+
 #[test]
 fn throw_ends_path() -> Result<()> {
     let code = [
@@ -214,12 +230,14 @@ fn throw_ends_path() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn unreachable_bad_constant_pool_reference() -> Result<()> {
     let code = [Instruction::Return, Instruction::Invokevirtual(42)];
     assert_eq!(code.max_stack(&ConstantPool::new())?, 0);
     Ok(())
 }
+
 #[test]
 fn shared_legacy_subroutine() -> Result<()> {
     let code = [
@@ -238,6 +256,7 @@ fn shared_legacy_subroutine() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn nested_legacy_subroutines() -> Result<()> {
     let code = [
@@ -255,6 +274,7 @@ fn nested_legacy_subroutines() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 1);
     Ok(())
 }
+
 #[test]
 fn legacy_return_to_outer_call() -> Result<()> {
     let code = [
@@ -272,6 +292,7 @@ fn legacy_return_to_outer_call() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 1);
     Ok(())
 }
+
 #[test]
 fn wide_legacy_subroutine() -> Result<()> {
     let code = [
@@ -283,6 +304,7 @@ fn wide_legacy_subroutine() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 1);
     Ok(())
 }
+
 #[test]
 fn duplicated_return_address() -> Result<()> {
     let code = [
@@ -297,6 +319,7 @@ fn duplicated_return_address() -> Result<()> {
     assert_eq!(code.max_stack(&ConstantPool::new())?, 2);
     Ok(())
 }
+
 #[test]
 fn swapped_return_address() -> Result<()> {
     let code = [

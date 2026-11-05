@@ -21,6 +21,7 @@ pub fn is_trusted_site0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/net/www/protocol/http/ntlm/NTLMAuthentication.isTrustedSiteAvailable()Z",
     Any

@@ -5,18 +5,31 @@ import java.lang.reflect.*;
 @Retention(RetentionPolicy.RUNTIME)
 @interface ComplexAnnotation {
     String[] emptyArray() default {};
+
     String[] singleElementArray() default {"single"};
+
     Class<?> voidClass() default void.class;
+
     Class<?> primitiveClass() default int.class;
+
     String nullableString() default "";
+
     int maxInt() default Integer.MAX_VALUE;
+
     int minInt() default Integer.MIN_VALUE;
+
     long maxLong() default Long.MAX_VALUE;
+
     double maxDouble() default Double.MAX_VALUE;
+
     double minDouble() default Double.MIN_VALUE;
+
     double nanDouble() default Double.NaN;
+
     double posInfinity() default Double.POSITIVE_INFINITY;
+
     double negInfinity() default Double.NEGATIVE_INFINITY;
+
     float nanFloat() default Float.NaN;
 }
 
@@ -24,10 +37,15 @@ import java.lang.reflect.*;
 @Retention(RetentionPolicy.RUNTIME)
 @interface SpecialChars {
     String unicode() default "\u0041\u0042\u0043"; // ABC
+
     String newlines() default "line1\nline2\r\nline3";
+
     String tabs() default "col1\tcol2\tcol3";
+
     String quotes() default "He said \"Hello\" to 'everyone'";
+
     String backslashes() default "path\\to\\file";
+
     String empty() default "";
 }
 
@@ -58,7 +76,9 @@ import java.lang.reflect.*;
 @Retention(RetentionPolicy.RUNTIME)
 @interface EdgeCaseAnnotation {
     String normalString() default "normal";
+
     String[] stringArray() default {"a", "b", "c"};
+
     Class<?>[] classArray() default {String.class, Object.class};
 }
 

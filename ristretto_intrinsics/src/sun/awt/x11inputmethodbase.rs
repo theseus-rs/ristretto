@@ -20,6 +20,7 @@ pub fn dispose_xic<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11InputMethodBase.initIDs()V", GreaterThanOrEqual(JAVA_11))]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -27,6 +28,7 @@ pub fn init_ids<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11InputMethodBase.initIDs()V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11InputMethodBase.isCompositionEnabledNative()Z",
     GreaterThanOrEqual(JAVA_11)
@@ -40,6 +42,7 @@ pub fn is_composition_enabled_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11InputMethodBase.resetXIC()Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
@@ -53,6 +56,7 @@ pub fn reset_xic<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11InputMethodBase.setCompositionEnabledNative(Z)Z",
     GreaterThanOrEqual(JAVA_11)
@@ -67,6 +71,7 @@ pub fn set_composition_enabled_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11InputMethodBase.turnoffStatusWindow()V",
     GreaterThanOrEqual(JAVA_11)

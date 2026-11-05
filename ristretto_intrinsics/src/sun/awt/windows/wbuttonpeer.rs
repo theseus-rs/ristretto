@@ -20,6 +20,7 @@ pub fn create<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WButtonPeer.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -30,6 +31,7 @@ pub fn init_ids<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WButtonPeer.setLabel(Ljava/lang/String;)V", Any)]
 pub fn set_label<T: Thread + 'static>(
     _thread: Arc<T>,

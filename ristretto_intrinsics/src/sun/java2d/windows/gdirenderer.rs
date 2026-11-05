@@ -23,6 +23,7 @@ pub fn dev_copy_area<T: Thread + 'static>(
     let _wsd = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.devCopyArea(Lsun/java2d/windows/GDIWindowSurfaceData;IIIIII)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIRenderer.doDrawArc(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V",
     Any
@@ -43,6 +44,7 @@ pub fn do_draw_arc<T: Thread + 'static>(
     let _s_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.doDrawArc(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIRenderer.doDrawLine(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
     Any
@@ -61,6 +63,7 @@ pub fn do_draw_line<T: Thread + 'static>(
     let _s_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.doDrawLine(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIRenderer.doDrawOval(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
     Any
@@ -79,6 +82,7 @@ pub fn do_draw_oval<T: Thread + 'static>(
     let _s_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.doDrawOval(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIRenderer.doDrawPoly(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;III[I[IIZ)V",
     Any
@@ -99,6 +103,7 @@ pub fn do_draw_poly<T: Thread + 'static>(
     let _s_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.doDrawPoly(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;III[I[IIZ)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIRenderer.doDrawRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
     Any
@@ -117,6 +122,7 @@ pub fn do_draw_rect<T: Thread + 'static>(
     let _s_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.doDrawRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIRenderer.doDrawRoundRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V",
     Any
@@ -137,6 +143,7 @@ pub fn do_draw_round_rect<T: Thread + 'static>(
     let _s_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.doDrawRoundRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIRenderer.doFillArc(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V",
     Any
@@ -157,6 +164,7 @@ pub fn do_fill_arc<T: Thread + 'static>(
     let _s_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.doFillArc(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIRenderer.doFillOval(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
     Any
@@ -175,6 +183,7 @@ pub fn do_fill_oval<T: Thread + 'static>(
     let _s_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.doFillOval(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIRenderer.doFillPoly(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;III[I[II)V",
     Any
@@ -194,6 +203,7 @@ pub fn do_fill_poly<T: Thread + 'static>(
     let _s_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.doFillPoly(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;III[I[II)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIRenderer.doFillRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V",
     Any
@@ -212,6 +222,7 @@ pub fn do_fill_rect<T: Thread + 'static>(
     let _s_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.doFillRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIII)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIRenderer.doFillRoundRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V",
     Any
@@ -232,6 +243,7 @@ pub fn do_fill_round_rect<T: Thread + 'static>(
     let _s_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.doFillRoundRect(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIIIIII)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIRenderer.doShape(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIILjava/awt/geom/Path2D$Float;Z)V",
     Any

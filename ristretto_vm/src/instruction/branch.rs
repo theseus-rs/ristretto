@@ -494,6 +494,7 @@ mod test {
         assert!(!result);
         Ok(())
     }
+
     #[test]
     fn test_if_icmplt_less_than() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(2);

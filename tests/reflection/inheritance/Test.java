@@ -3,9 +3,11 @@ public class Test {
     static abstract class AbstractBase {
         protected String baseField = "base";
         public abstract void abstractMethod();
+
         public void concreteMethod() {
             System.out.println("Base concrete method");
         }
+
         protected void protectedMethod() {
             System.out.println("Base protected method");
         }
@@ -49,6 +51,7 @@ public class Test {
 
     interface InterfaceA {
         void methodA();
+
         default void defaultMethod() {
             System.out.println("Interface A default method");
         }
@@ -56,6 +59,7 @@ public class Test {
 
     interface InterfaceB {
         void methodB();
+
         default void defaultMethod() {
             System.out.println("Interface B default method");
         }

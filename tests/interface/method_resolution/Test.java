@@ -1,6 +1,7 @@
 /** Test interface method resolution and overriding */
 interface BaseMethod {
     void commonMethod();
+
     default void defaultCommon() {
         System.out.println("BaseMethod.defaultCommon");
     }
@@ -96,6 +97,7 @@ class StaticUser implements StaticHidingChild {
 // Test covariant return types
 interface CovariantBase {
     Object getValue();
+
     Number getNumber();
 }
 

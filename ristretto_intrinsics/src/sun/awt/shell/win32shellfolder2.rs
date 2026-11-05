@@ -19,6 +19,7 @@ pub fn bind_to_object<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.combinePIDLs(JJ)J", Any)]
 pub fn combine_pidls<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -31,6 +32,7 @@ pub fn combine_pidls<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.compareIDs(JJJ)I", Any)]
 pub fn compare_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -44,6 +46,7 @@ pub fn compare_ids<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.compareIDsByColumn(JJJI)I", Any)]
 pub fn compare_ids_by_column<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -58,6 +61,7 @@ pub fn compare_ids_by_column<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.copyFirstPIDLEntry(J)J", Any)]
 pub fn copy_first_pidlentry<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -69,6 +73,7 @@ pub fn copy_first_pidlentry<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.disposeIcon(J)V", Any)]
 pub fn dispose_icon<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -80,6 +85,7 @@ pub fn dispose_icon<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.doGetColumnInfo(J)[Lsun/awt/shell/ShellFolderColumnInfo;",
     Any
@@ -95,6 +101,7 @@ pub fn do_get_column_info<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.doGetColumnValue(JJI)Ljava/lang/Object;",
     Any
@@ -111,6 +118,7 @@ pub fn do_get_column_value<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.extractIcon(JJIZ)J",
     GreaterThanOrEqual(JAVA_17)
@@ -128,6 +136,7 @@ pub fn extract_icon<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.extractIcon(JJZ)J", Equal(JAVA_8))]
 pub fn extract_icon_windows_v8<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -141,6 +150,7 @@ pub fn extract_icon_windows_v8<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.extractIcon(JJZZ)J", Equal(JAVA_11))]
 pub fn extract_icon_windows_v11<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -155,6 +165,7 @@ pub fn extract_icon_windows_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getAttributes0(JJI)I", Any)]
 pub fn get_attributes0<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -168,6 +179,7 @@ pub fn get_attributes0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.getDisplayNameOf(JJI)Ljava/lang/String;",
     Any
@@ -184,6 +196,7 @@ pub fn get_display_name_of<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getEnumObjects(JZZ)J", Any)]
 pub fn get_enum_objects<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -197,6 +210,7 @@ pub fn get_enum_objects<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.getExecutableType(Ljava/lang/String;)Ljava/lang/String;",
     Any
@@ -212,6 +226,7 @@ pub fn get_executable_type<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.getFileSystemPath0(I)Ljava/lang/String;",
     Any
@@ -226,6 +241,7 @@ pub fn get_file_system_path0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.getFolderType(J)Ljava/lang/String;",
     Any
@@ -240,6 +256,7 @@ pub fn get_folder_type<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getIShellIcon(J)J", Any)]
 pub fn get_ishell_icon<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -251,6 +268,7 @@ pub fn get_ishell_icon<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getIcon(Ljava/lang/String;Z)J", Any)]
 pub fn get_icon<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -263,6 +281,7 @@ pub fn get_icon<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.getIconBits(J)[I",
     GreaterThanOrEqual(JAVA_11)
@@ -277,6 +296,7 @@ pub fn get_icon_bits<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getIconBits(JI)[I", Equal(JAVA_8))]
 pub fn get_icon_bits_windows_v8<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -289,6 +309,7 @@ pub fn get_icon_bits_windows_v8<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getIconIndex(JJ)I", Any)]
 pub fn get_icon_index<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -301,6 +322,7 @@ pub fn get_icon_index<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.getIconResource(Ljava/lang/String;III)J",
     GreaterThanOrEqual(JAVA_17)
@@ -318,6 +340,7 @@ pub fn get_icon_resource<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.getIconResource(Ljava/lang/String;IIIZ)J",
     LessThanOrEqual(JAVA_11)
@@ -336,6 +359,7 @@ pub fn get_icon_resource_windows_le_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getLinkLocation(JJZ)J", Any)]
 pub fn get_link_location<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -349,6 +373,7 @@ pub fn get_link_location<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getNextChild(J)J", Any)]
 pub fn get_next_child<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -360,6 +385,7 @@ pub fn get_next_child<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getNextPIDLEntry(J)J", Any)]
 pub fn get_next_pidlentry<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -371,6 +397,7 @@ pub fn get_next_pidlentry<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.getStandardViewButton0(I)[I",
     Equal(JAVA_8)
@@ -385,6 +412,7 @@ pub fn get_standard_view_button0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.getStandardViewButton0(IZ)[I",
     GreaterThanOrEqual(JAVA_11)
@@ -400,6 +428,7 @@ pub fn get_standard_view_button0_windows_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.getSystemIcon(I)J", Any)]
 pub fn get_system_icon<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -411,6 +440,7 @@ pub fn get_system_icon<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.hiResIconAvailable(JJ)Z",
     GreaterThanOrEqual(JAVA_17)
@@ -426,6 +456,7 @@ pub fn hi_res_icon_available<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.initDesktop()V", Any)]
 pub fn init_desktop<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -436,6 +467,7 @@ pub fn init_desktop<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -446,6 +478,7 @@ pub fn init_ids<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.initSpecial(JI)V", Any)]
 pub fn init_special<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -458,6 +491,7 @@ pub fn init_special<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.loadKnownFolders()[Lsun/awt/shell/Win32ShellFolder2$KnownFolderDefinition;",
     GreaterThanOrEqual(JAVA_11)
@@ -468,6 +502,7 @@ pub fn load_known_folders<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/shell/Win32ShellFolder2.loadKnownFolders()[Lsun/awt/shell/Win32ShellFolder2$KnownFolderDefinition;".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/awt/shell/Win32ShellFolder2.parseDisplayName0(JLjava/lang/String;)J",
     Any
@@ -483,6 +518,7 @@ pub fn parse_display_name0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.releaseEnumObjects(J)V", Any)]
 pub fn release_enum_objects<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -494,6 +530,7 @@ pub fn release_enum_objects<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.releaseIShellFolder(J)V", Any)]
 pub fn release_ishell_folder<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -505,6 +542,7 @@ pub fn release_ishell_folder<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolder2.releasePIDL(J)V", Any)]
 pub fn release_pidl<T: Thread + 'static>(
     _thread: Arc<T>,

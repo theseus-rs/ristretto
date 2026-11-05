@@ -20,6 +20,7 @@ pub fn drag_query_file<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WDataTransferer.getClipboardFormatName(J)Ljava/lang/String;",
     Any
@@ -34,6 +35,7 @@ pub fn get_clipboard_format_name<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WDataTransferer.imageDataToPlatformImageBytes([BIIJ)[B",
     Any
@@ -51,6 +53,7 @@ pub fn image_data_to_platform_image_bytes<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WDataTransferer.platformImageBytesToImageData([BJ)[I",
     Any
@@ -66,6 +69,7 @@ pub fn platform_image_bytes_to_image_data<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WDataTransferer.registerClipboardFormat(Ljava/lang/String;)J",
     Any

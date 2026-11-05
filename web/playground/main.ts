@@ -105,6 +105,7 @@ function rememberDraft() {
     example: examplePicker.value,
   };
 }
+
 function persist() {
   clearTimeout(saveTimer);
   rememberDraft();
@@ -114,6 +115,7 @@ function persist() {
     /* Storage is optional. */
   }
 }
+
 function save() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(persist, 200);
@@ -204,21 +206,25 @@ function flushOutput() {
   pending = [];
   if (nearBottom) output.scrollTop = output.scrollHeight;
 }
+
 function append(text: string, stream = 'stdout') {
   const last = pending.at(-1);
   if (last?.stream === stream) last.text += text;
   else pending.push({ text, stream });
   if (!renderFrame) renderFrame = requestAnimationFrame(flushOutput);
 }
+
 function clearOutput() {
   pending = [];
   output.replaceChildren();
   emptyOutput.hidden = false;
 }
+
 function setStatus(text: string, state = 'ready') {
   statusText.textContent = text;
   status.dataset.state = state;
 }
+
 function updateElapsed() {
   if (timingPhase) phaseDurations[timingPhase] = performance.now() - phaseStarted;
   const times: string[] = [];
@@ -234,12 +240,14 @@ function updateElapsed() {
       ? `Loading: ${(phaseDurations.loading / 1000).toFixed(2)}s`
       : '';
 }
+
 function setTimingPhase(phase: typeof timingPhase) {
   updateElapsed();
   timingPhase = phase;
   phaseStarted = performance.now();
   updateElapsed();
 }
+
 function finish(text: string, state = 'ready') {
   setTimingPhase(undefined);
   worker?.terminate();
@@ -255,6 +263,7 @@ function finish(text: string, state = 'ready') {
   flushOutput();
   setStatus(text, state);
 }
+
 function timeout(ms: number, phase: string) {
   clearTimeout(watchdog);
   watchdog = setTimeout(() => {
@@ -265,6 +274,7 @@ function timeout(ms: number, phase: string) {
     finish('Time limit reached', 'error');
   }, ms);
 }
+
 async function start(action: Request['action']) {
   if (active) return;
   const name = className.value.trim();
@@ -436,12 +446,14 @@ function updateVersion() {
       example.title + (option.disabled ? ` (Java ${example.minimumVersion}+)` : '');
   }
 }
+
 function updateFilename() {
   element('filename').textContent =
     language === 'java'
       ? `${className.value.split('.').at(-1) || 'Main'}.java`
       : filenames[language];
 }
+
 function populateExamples() {
   examplePicker.replaceChildren(
     ...Object.entries(examplesFor(target, state.javaVersion)).map(
@@ -451,6 +463,7 @@ function populateExamples() {
   const selected = state.drafts[target]?.example;
   examplePicker.value = selected && examples[target][selected] ? selected : 'hello';
 }
+
 function switchLanguage() {
   rememberDraft();
   language = state.language = languagePicker.value as Language;

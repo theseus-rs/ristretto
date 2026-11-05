@@ -23,6 +23,7 @@ pub fn create_cursor_indirect<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WCustomCursor.getCursorHeight()I", Any)]
 pub fn get_cursor_height<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -33,6 +34,7 @@ pub fn get_cursor_height<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WCustomCursor.getCursorWidth()I", Any)]
 pub fn get_cursor_width<T: Thread + 'static>(
     _thread: Arc<T>,

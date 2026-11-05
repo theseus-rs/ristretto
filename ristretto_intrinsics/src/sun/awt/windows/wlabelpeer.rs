@@ -20,6 +20,7 @@ pub fn create<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WLabelPeer.lazyPaint()V", Any)]
 pub fn lazy_paint<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -30,6 +31,7 @@ pub fn lazy_paint<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WLabelPeer.setAlignment(I)V", Any)]
 pub fn set_alignment<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -41,6 +43,7 @@ pub fn set_alignment<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WLabelPeer.setText(Ljava/lang/String;)V", Any)]
 pub fn set_text<T: Thread + 'static>(
     _thread: Arc<T>,

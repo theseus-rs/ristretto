@@ -955,6 +955,7 @@ mod tests {
             ErrorClass::classify(&VerifyError::InvalidInstruction(0))
         );
     }
+
     #[test]
     fn class_cache_scope_tracks_contents_and_context() {
         let mut class = create_mock_class_file();

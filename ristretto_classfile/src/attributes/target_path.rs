@@ -164,6 +164,7 @@ mod test {
         assert_eq!(target_path, TargetPath::from_bytes(&mut bytes)?);
         Ok(())
     }
+
     #[test]
     fn invalid_paths_are_rejected_on_read_and_write() {
         for pair in [[4, 0], [255, 0], [0, 1], [1, 1], [2, 1]] {

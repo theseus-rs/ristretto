@@ -38,6 +38,7 @@ public final class BrowserJShell {
     private static void start(boolean welcome) {
         ExecutionControlProvider provider = new ExecutionControlProvider() {
             public String name() { return "ristretto"; }
+
             public ExecutionControl generate(ExecutionEnv env, Map<String, String> parameters) {
                 return new DirectExecutionControl() {
                     protected String invoke(Method method) throws Exception {
@@ -392,7 +393,9 @@ public final class BrowserJShell {
     }
 
     private static void notice(String text) { System.out.println("|  " + text.replace("\n", "\n|  ")); }
+
     private static void error(String text) { System.err.println("|  " + text.replace("\n", "\n|  ")); }
+
     private static String json(String text) {
         StringBuilder result = new StringBuilder("\"");
         for (int i = 0; i < text.length(); i++) {

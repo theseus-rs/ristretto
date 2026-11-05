@@ -162,24 +162,31 @@ fn alloc_primitive_array(ctx: *const u8, count: i32, element_size: usize) -> i64
 extern "C" fn jit_new_bool_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
     alloc_primitive_array(ctx, count, 1)
 }
+
 extern "C" fn jit_new_byte_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
     alloc_primitive_array(ctx, count, 1)
 }
+
 extern "C" fn jit_new_char_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
     alloc_primitive_array(ctx, count, 2)
 }
+
 extern "C" fn jit_new_short_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
     alloc_primitive_array(ctx, count, 2)
 }
+
 extern "C" fn jit_new_int_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
     alloc_primitive_array(ctx, count, 4)
 }
+
 extern "C" fn jit_new_long_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
     alloc_primitive_array(ctx, count, 8)
 }
+
 extern "C" fn jit_new_float_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
     alloc_primitive_array(ctx, count, 4)
 }
+
 extern "C" fn jit_new_double_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
     alloc_primitive_array(ctx, count, 8)
 }
@@ -192,62 +199,77 @@ extern "C" fn jit_baload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32)
     let data = (array_ptr as usize + HEADER_SIZE) as *const i8;
     unsafe { *data.add(index as usize) as i32 }
 }
+
 extern "C" fn jit_bastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: i32) {
     let data = (array_ptr as usize + HEADER_SIZE) as *mut i8;
     unsafe { *data.add(index as usize) = value as i8 };
 }
+
 extern "C" fn jit_caload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> i32 {
     let data = (array_ptr as usize + HEADER_SIZE) as *const u16;
     unsafe { *data.add(index as usize) as i32 }
 }
+
 extern "C" fn jit_castore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: i32) {
     let data = (array_ptr as usize + HEADER_SIZE) as *mut u16;
     unsafe { *data.add(index as usize) = value as u16 };
 }
+
 extern "C" fn jit_saload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> i32 {
     let data = (array_ptr as usize + HEADER_SIZE) as *const i16;
     unsafe { *data.add(index as usize) as i32 }
 }
+
 extern "C" fn jit_sastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: i32) {
     let data = (array_ptr as usize + HEADER_SIZE) as *mut i16;
     unsafe { *data.add(index as usize) = value as i16 };
 }
+
 extern "C" fn jit_iaload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> i32 {
     let data = (array_ptr as usize + HEADER_SIZE) as *const i32;
     unsafe { *data.add(index as usize) }
 }
+
 extern "C" fn jit_iastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: i32) {
     let data = (array_ptr as usize + HEADER_SIZE) as *mut i32;
     unsafe { *data.add(index as usize) = value };
 }
+
 extern "C" fn jit_laload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> i64 {
     let data = (array_ptr as usize + HEADER_SIZE) as *const i64;
     unsafe { *data.add(index as usize) }
 }
+
 extern "C" fn jit_lastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: i64) {
     let data = (array_ptr as usize + HEADER_SIZE) as *mut i64;
     unsafe { *data.add(index as usize) = value };
 }
+
 extern "C" fn jit_faload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> f32 {
     let data = (array_ptr as usize + HEADER_SIZE) as *const f32;
     unsafe { *data.add(index as usize) }
 }
+
 extern "C" fn jit_fastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: f32) {
     let data = (array_ptr as usize + HEADER_SIZE) as *mut f32;
     unsafe { *data.add(index as usize) = value };
 }
+
 extern "C" fn jit_daload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> f64 {
     let data = (array_ptr as usize + HEADER_SIZE) as *const f64;
     unsafe { *data.add(index as usize) }
 }
+
 extern "C" fn jit_dastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: f64) {
     let data = (array_ptr as usize + HEADER_SIZE) as *mut f64;
     unsafe { *data.add(index as usize) = value };
 }
+
 extern "C" fn jit_aaload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> i64 {
     let data = (array_ptr as usize + HEADER_SIZE) as *const i64;
     unsafe { *data.add(index as usize) }
 }
+
 extern "C" fn jit_aastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: i64) {
     let data = (array_ptr as usize + HEADER_SIZE) as *mut i64;
     unsafe { *data.add(index as usize) = value };
@@ -412,6 +434,7 @@ extern "C" fn jit_getstatic_int(ctx: *const u8, _bci: i32, field_ref: i32) -> i3
         _ => 0,
     }
 }
+
 extern "C" fn jit_getstatic_long(ctx: *const u8, _bci: i32, field_ref: i32) -> i64 {
     match static_storage()
         .lock()
@@ -423,6 +446,7 @@ extern "C" fn jit_getstatic_long(ctx: *const u8, _bci: i32, field_ref: i32) -> i
         _ => 0,
     }
 }
+
 extern "C" fn jit_getstatic_float(ctx: *const u8, _bci: i32, field_ref: i32) -> f32 {
     match static_storage()
         .lock()
@@ -434,6 +458,7 @@ extern "C" fn jit_getstatic_float(ctx: *const u8, _bci: i32, field_ref: i32) -> 
         _ => 0.0,
     }
 }
+
 extern "C" fn jit_getstatic_double(ctx: *const u8, _bci: i32, field_ref: i32) -> f64 {
     match static_storage()
         .lock()
@@ -445,6 +470,7 @@ extern "C" fn jit_getstatic_double(ctx: *const u8, _bci: i32, field_ref: i32) ->
         _ => 0.0,
     }
 }
+
 extern "C" fn jit_getstatic_object(ctx: *const u8, _bci: i32, field_ref: i32) -> i64 {
     match static_storage()
         .lock()
@@ -463,24 +489,28 @@ extern "C" fn jit_putstatic_int(ctx: *const u8, _bci: i32, field_ref: i32, value
         .expect("test")
         .insert((ctx as usize, field_ref as u32), TestFieldValue::Int(value));
 }
+
 extern "C" fn jit_putstatic_long(ctx: *const u8, _bci: i32, field_ref: i32, value: i64) {
     static_storage().lock().expect("test").insert(
         (ctx as usize, field_ref as u32),
         TestFieldValue::Long(value),
     );
 }
+
 extern "C" fn jit_putstatic_float(ctx: *const u8, _bci: i32, field_ref: i32, value: f32) {
     static_storage().lock().expect("test").insert(
         (ctx as usize, field_ref as u32),
         TestFieldValue::Float(value),
     );
 }
+
 extern "C" fn jit_putstatic_double(ctx: *const u8, _bci: i32, field_ref: i32, value: f64) {
     static_storage().lock().expect("test").insert(
         (ctx as usize, field_ref as u32),
         TestFieldValue::Double(value),
     );
 }
+
 extern "C" fn jit_putstatic_object(ctx: *const u8, _bci: i32, field_ref: i32, value: i64) {
     static_storage().lock().expect("test").insert(
         (ctx as usize, field_ref as u32),
@@ -503,6 +533,7 @@ extern "C" fn jit_getfield_int(ctx: *const u8, _bci: i32, field_ref: i32, obj: i
         _ => 0,
     }
 }
+
 extern "C" fn jit_getfield_long(ctx: *const u8, _bci: i32, field_ref: i32, obj: i64) -> i64 {
     if obj == 0 {
         set_pending(ctx, next_object_id());
@@ -518,6 +549,7 @@ extern "C" fn jit_getfield_long(ctx: *const u8, _bci: i32, field_ref: i32, obj: 
         _ => 0,
     }
 }
+
 extern "C" fn jit_getfield_float(ctx: *const u8, _bci: i32, field_ref: i32, obj: i64) -> f32 {
     if obj == 0 {
         set_pending(ctx, next_object_id());
@@ -533,6 +565,7 @@ extern "C" fn jit_getfield_float(ctx: *const u8, _bci: i32, field_ref: i32, obj:
         _ => 0.0,
     }
 }
+
 extern "C" fn jit_getfield_double(ctx: *const u8, _bci: i32, field_ref: i32, obj: i64) -> f64 {
     if obj == 0 {
         set_pending(ctx, next_object_id());
@@ -548,6 +581,7 @@ extern "C" fn jit_getfield_double(ctx: *const u8, _bci: i32, field_ref: i32, obj
         _ => 0.0,
     }
 }
+
 extern "C" fn jit_getfield_object(ctx: *const u8, _bci: i32, field_ref: i32, obj: i64) -> i64 {
     if obj == 0 {
         set_pending(ctx, next_object_id());
@@ -574,6 +608,7 @@ extern "C" fn jit_putfield_int(ctx: *const u8, _bci: i32, field_ref: i32, obj: i
         .expect("test")
         .insert((obj, field_ref as u32), TestFieldValue::Int(value));
 }
+
 extern "C" fn jit_putfield_long(ctx: *const u8, _bci: i32, field_ref: i32, obj: i64, value: i64) {
     if obj == 0 {
         set_pending(ctx, next_object_id());
@@ -584,6 +619,7 @@ extern "C" fn jit_putfield_long(ctx: *const u8, _bci: i32, field_ref: i32, obj: 
         .expect("test")
         .insert((obj, field_ref as u32), TestFieldValue::Long(value));
 }
+
 extern "C" fn jit_putfield_float(ctx: *const u8, _bci: i32, field_ref: i32, obj: i64, value: f32) {
     if obj == 0 {
         set_pending(ctx, next_object_id());
@@ -594,6 +630,7 @@ extern "C" fn jit_putfield_float(ctx: *const u8, _bci: i32, field_ref: i32, obj:
         .expect("test")
         .insert((obj, field_ref as u32), TestFieldValue::Float(value));
 }
+
 extern "C" fn jit_putfield_double(ctx: *const u8, _bci: i32, field_ref: i32, obj: i64, value: f64) {
     if obj == 0 {
         set_pending(ctx, next_object_id());
@@ -604,6 +641,7 @@ extern "C" fn jit_putfield_double(ctx: *const u8, _bci: i32, field_ref: i32, obj
         .expect("test")
         .insert((obj, field_ref as u32), TestFieldValue::Double(value));
 }
+
 extern "C" fn jit_putfield_object(ctx: *const u8, _bci: i32, field_ref: i32, obj: i64, value: i64) {
     if obj == 0 {
         set_pending(ctx, next_object_id());

@@ -22,6 +22,7 @@ pub fn fill_console_output_attribute<T: Thread + 'static>(
     let _in_h_console_output = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.FillConsoleOutputAttribute(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;SILjdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;Ljdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.FillConsoleOutputCharacter(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;CILjdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;Ljdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V",
     Between(JAVA_11, JAVA_21)
@@ -37,6 +38,7 @@ pub fn fill_console_output_character<T: Thread + 'static>(
     let _in_h_console_output = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.FillConsoleOutputCharacter(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;CILjdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;Ljdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.GetConsoleMode(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V",
     Between(JAVA_11, JAVA_21)
@@ -49,6 +51,7 @@ pub fn get_console_mode<T: Thread + 'static>(
     let _in_h_console_output = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.GetConsoleMode(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.GetConsoleScreenBufferInfo(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$CONSOLE_SCREEN_BUFFER_INFO;)V",
     Between(JAVA_11, JAVA_21)
@@ -61,6 +64,7 @@ pub fn get_console_screen_buffer_info<T: Thread + 'static>(
     let _in_h_console_output = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.GetConsoleScreenBufferInfo(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$CONSOLE_SCREEN_BUFFER_INFO;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.GetStdHandle(I)Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;",
     Between(JAVA_11, JAVA_21)
@@ -72,6 +76,7 @@ pub fn get_std_handle<T: Thread + 'static>(
     let _n_std_handle = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.GetStdHandle(I)Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.ReadConsoleInput(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;[Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$INPUT_RECORD;ILjdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V",
     Between(JAVA_11, JAVA_21)
@@ -86,6 +91,7 @@ pub fn read_console_input<T: Thread + 'static>(
     let _in_h_console_output = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.ReadConsoleInput(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;[Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$INPUT_RECORD;ILjdk/internal/org/jline/terminal/impl/jna/win/IntByReference;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.ScrollConsoleScreenBuffer(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$SMALL_RECT;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$SMALL_RECT;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$CHAR_INFO;)V",
     Between(JAVA_11, JAVA_21)
@@ -101,6 +107,7 @@ pub fn scroll_console_screen_buffer<T: Thread + 'static>(
     let _in_h_console_output = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.ScrollConsoleScreenBuffer(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$SMALL_RECT;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$SMALL_RECT;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$CHAR_INFO;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleCursorPosition(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;)V",
     Between(JAVA_11, JAVA_21)
@@ -113,6 +120,7 @@ pub fn set_console_cursor_position<T: Thread + 'static>(
     let _in_h_console_output = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleCursorPosition(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;Ljdk/internal/org/jline/terminal/impl/jna/win/Kernel32$COORD;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleMode(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;I)V",
     Between(JAVA_11, JAVA_21)
@@ -125,6 +133,7 @@ pub fn set_console_mode<T: Thread + 'static>(
     let _in_h_console_output = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleMode(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;I)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleTextAttribute(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;S)V",
     Between(JAVA_11, JAVA_21)
@@ -137,6 +146,7 @@ pub fn set_console_text_attribute<T: Thread + 'static>(
     let _in_h_console_output = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleTextAttribute(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;S)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleTitle(Ljava/lang/String;)V",
     Between(JAVA_11, JAVA_21)
@@ -148,6 +158,7 @@ pub fn set_console_title<T: Thread + 'static>(
     let _in_lp_console_title = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.SetConsoleTitle(Ljava/lang/String;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.WaitForSingleObject(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;I)I",
     Between(JAVA_11, JAVA_21)
@@ -160,6 +171,7 @@ pub fn wait_for_single_object<T: Thread + 'static>(
     let _in_h_handle = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.WaitForSingleObject(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;I)I".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.WriteConsoleW(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;[CILjdk/internal/org/jline/terminal/impl/jna/win/IntByReference;Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;)V",
     Between(JAVA_11, JAVA_21)
@@ -175,6 +187,7 @@ pub fn write_console_w<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.WriteConsoleW(Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;[CILjdk/internal/org/jline/terminal/impl/jna/win/IntByReference;Ljdk/internal/org/jline/terminal/impl/jna/win/Pointer;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/win/Kernel32Impl.initIDs()V",
     Between(JAVA_11, JAVA_21)

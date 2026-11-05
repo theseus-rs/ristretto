@@ -8,8 +8,11 @@ public class Test {
     @Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PARAMETER})
     @interface CustomAnnotation {
         String value() default "default";
+
         int number() default 42;
+
         String[] array() default {"a", "b"};
+
         Class<?> type() default String.class;
     }
 

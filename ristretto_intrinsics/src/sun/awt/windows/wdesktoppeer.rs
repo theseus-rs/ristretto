@@ -19,6 +19,7 @@ pub fn shell_execute<T: Thread + 'static>(
     let _file_or_uri_j = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WDesktopPeer.ShellExecute(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WDesktopPeer.getDefaultBrowser()Ljava/lang/String;",
     Any
@@ -32,6 +33,7 @@ pub fn get_default_browser<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WDesktopPeer.init()V", GreaterThanOrEqual(JAVA_11))]
 pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -39,6 +41,7 @@ pub fn init<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WDesktopPeer.init()V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WDesktopPeer.moveToTrash(Ljava/lang/String;)Z",
     GreaterThanOrEqual(JAVA_11)
@@ -53,6 +56,7 @@ pub fn move_to_trash<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WDesktopPeer.setSuddenTerminationEnabled(Z)V",
     GreaterThanOrEqual(JAVA_11)

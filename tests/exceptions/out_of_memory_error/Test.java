@@ -24,6 +24,7 @@ public class Test {
 
     static class Loader extends ClassLoader {
         Loader() { super(null); }
+
         void load(byte[] bytes) {
             Class<?> type = defineClass(null, bytes, 0, bytes.length);
             resolveClass(type);
@@ -57,6 +58,7 @@ public class Test {
     }
 
     private static native boolean limitAddressSpace();
+
     private static native boolean restoreAddressSpace();
 
     public static void main(String[] args) throws Exception {

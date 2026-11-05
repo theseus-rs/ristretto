@@ -8,6 +8,7 @@ public class Test {
     @Target(ElementType.METHOD)
     @interface TestAnnotation {
         String value() default "default";
+
         int priority() default 0;
     }
 

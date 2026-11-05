@@ -23,6 +23,7 @@ pub fn init<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XTaskbarPeer.runloop()V", GreaterThanOrEqual(JAVA_11))]
 pub fn runloop<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -30,6 +31,7 @@ pub fn runloop<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XTaskbarPeer.runloop()V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/X11/XTaskbarPeer.setBadge(JZ)V", GreaterThanOrEqual(JAVA_11))]
 pub fn set_badge<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -42,6 +44,7 @@ pub fn set_badge<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XTaskbarPeer.setNativeMenu([Ljava/awt/MenuItem;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -56,6 +59,7 @@ pub fn set_native_menu<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XTaskbarPeer.setUrgent(Z)V", GreaterThanOrEqual(JAVA_11))]
 pub fn set_urgent<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -67,6 +71,7 @@ pub fn set_urgent<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XTaskbarPeer.updateProgress(DZ)V",
     GreaterThanOrEqual(JAVA_11)

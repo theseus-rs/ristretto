@@ -20,7 +20,9 @@ public class Test {
     interface Action { void call(); }
     static class VirtualCall implements Action {
         public void call() { enter(); call(); }
+
         private void special() { enter(); special(); }
+
         synchronized void synchronizedCall() { enter(); synchronizedCall(); }
     }
     static class InterfaceCall implements Action {
@@ -39,26 +41,37 @@ public class Test {
     }
 
     private static native void nativeRecurse();
+
     private static native void prepareNative();
 
     public static void enter() {
         if (++entries > 100000) throw new AssertionError("Recursion limit did not produce StackOverflowError");
     }
+
     public static void direct() { enter(); direct(); }
+
     private static void mutualA() { enter(); mutualB(); }
+
     private static void mutualB() { enter(); mutualA(); }
+
     public static void reflective() throws Exception { enter(); reflected.invoke(null); }
+
     public static void methodHandle() throws Throwable { enter(); handle.invokeExact(); }
+
     private static void lambdaCall() { enter(); lambda.run(); }
+
     public static void nativeCallback() { enter(); nativeRecurse(); }
+
     private static void withFinally() {
         enter();
         try { withFinally(); } finally { cleanups++; }
     }
+
     private static void withMonitor() {
         enter();
         synchronized (LOCK) { withMonitor(); }
     }
+
     private static int finite(int n) { return n == 0 ? 0 : 1 + finite(n - 1); }
 
     /** Bootstrap for an actual recursive invokedynamic instruction in GeneratedFrames. */

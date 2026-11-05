@@ -42,6 +42,7 @@ public class Test {
             byte[] bytes = buffer.toByteArray();
             return defineClass(name, bytes, 0, bytes.length);
         }
+
         void method(DataOutputStream out, int flags, int name, int descriptor, byte[] code) throws Exception {
             out.writeShort(flags); out.writeShort(name); out.writeShort(descriptor);
             if ((flags & 0x400) != 0) { out.writeShort(0); return; }
@@ -51,6 +52,7 @@ public class Test {
             out.writeShort(0); out.writeShort(0);
         }
     }
+
     public static void main(String[] args) throws Throwable {
         Loader loader = new Loader();
         Method method = Base.class.getMethod("value");

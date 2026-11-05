@@ -19,6 +19,7 @@ pub fn db_get_pixel_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.dbSetPixelNative(JIII)V", Any)]
 pub fn db_set_pixel_native<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -33,6 +34,7 @@ pub fn db_set_pixel_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.getNativeResourceNative(JI)J", Any)]
 pub fn get_native_resource_native<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -45,6 +47,7 @@ pub fn get_native_resource_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.initFlipBackbuffer(JJIII)Z", Any)]
 pub fn init_flip_backbuffer<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -60,6 +63,7 @@ pub fn init_flip_backbuffer<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.initOps(III)V", Any)]
 pub fn init_ops<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -73,6 +77,7 @@ pub fn init_ops<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.initRTSurface(JZ)Z", Any)]
 pub fn init_rtsurface<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -85,6 +90,7 @@ pub fn init_rtsurface<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.initTexture(JZZ)Z", Any)]
 pub fn init_texture<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -98,6 +104,7 @@ pub fn init_texture<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.updateWindowAccelImpl(JJII)Z", Any)]
 pub fn update_window_accel_impl<T: Thread + 'static>(
     _thread: Arc<T>,

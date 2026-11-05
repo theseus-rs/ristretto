@@ -1,6 +1,7 @@
 /** Test multiple interface inheritance and implementation */
 interface InterfaceA {
     void methodA();
+
     default void defaultA() {
         System.out.println("InterfaceA.defaultA");
     }
@@ -8,6 +9,7 @@ interface InterfaceA {
 
 interface InterfaceB {
     void methodB();
+
     default void defaultB() {
         System.out.println("InterfaceB.defaultB");
     }
@@ -15,6 +17,7 @@ interface InterfaceB {
 
 interface InterfaceC extends InterfaceA, InterfaceB {
     void methodC();
+
     default void defaultC() {
         System.out.println("InterfaceC.defaultC");
     }

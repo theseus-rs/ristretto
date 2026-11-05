@@ -27,6 +27,7 @@ pub fn config_display_mode<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/Win32GraphicsDevice.enterFullScreenExclusive(ILjava/awt/peer/WindowPeer;)V",
     Any
@@ -43,6 +44,7 @@ pub fn enter_full_screen_exclusive<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/Win32GraphicsDevice.enumDisplayModes(ILjava/util/ArrayList;)V",
     Any
@@ -58,6 +60,7 @@ pub fn enum_display_modes<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/Win32GraphicsDevice.exitFullScreenExclusive(ILjava/awt/peer/WindowPeer;)V",
     Any
@@ -74,6 +77,7 @@ pub fn exit_full_screen_exclusive<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/Win32GraphicsDevice.getCurrentDisplayMode(I)Ljava/awt/DisplayMode;",
     Any
@@ -88,6 +92,7 @@ pub fn get_current_display_mode<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/Win32GraphicsDevice.getDefaultPixIDImpl(I)I", Any)]
 pub fn get_default_pix_idimpl<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -99,6 +104,7 @@ pub fn get_default_pix_idimpl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/Win32GraphicsDevice.getMaxConfigsImpl(I)I", Any)]
 pub fn get_max_configs_impl<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -110,6 +116,7 @@ pub fn get_max_configs_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/Win32GraphicsDevice.getNativeScaleX(I)F",
     GreaterThanOrEqual(JAVA_11)
@@ -124,6 +131,7 @@ pub fn get_native_scale_x<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/Win32GraphicsDevice.getNativeScaleY(I)F",
     GreaterThanOrEqual(JAVA_11)
@@ -138,6 +146,7 @@ pub fn get_native_scale_y<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/Win32GraphicsDevice.initDevice(I)V", Any)]
 pub fn init_device<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -149,6 +158,7 @@ pub fn init_device<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/Win32GraphicsDevice.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -159,6 +169,7 @@ pub fn init_ids<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/Win32GraphicsDevice.initNativeScale(I)V",
     GreaterThanOrEqual(JAVA_11)
@@ -173,6 +184,7 @@ pub fn init_native_scale<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/Win32GraphicsDevice.isPixFmtSupported(II)Z", Any)]
 pub fn is_pix_fmt_supported<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -185,6 +197,7 @@ pub fn is_pix_fmt_supported<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/Win32GraphicsDevice.makeColorModel(IZ)Ljava/awt/image/ColorModel;",
     Any
@@ -200,6 +213,7 @@ pub fn make_color_model<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/Win32GraphicsDevice.setNativeScale(IFF)V",
     GreaterThanOrEqual(JAVA_11)

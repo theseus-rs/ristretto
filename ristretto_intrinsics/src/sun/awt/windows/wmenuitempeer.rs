@@ -17,6 +17,7 @@ pub fn dispose<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WMenuItemPeer._setFont(Ljava/awt/Font;)V", Any)]
 pub fn set_font<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -28,6 +29,7 @@ pub fn set_font<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WMenuItemPeer._setLabel()V", Equal(JAVA_25))]
 pub fn set_label<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -38,6 +40,7 @@ pub fn set_label<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WMenuItemPeer._setLabel(Ljava/lang/String;)V",
     LessThanOrEqual(JAVA_21)
@@ -52,6 +55,7 @@ pub fn set_label_windows_le_v21<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WMenuItemPeer.create(Lsun/awt/windows/WMenuPeer;)V",
     Any
@@ -66,6 +70,7 @@ pub fn create<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WMenuItemPeer.enable(Z)V", Any)]
 pub fn enable<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -77,6 +82,7 @@ pub fn enable<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WMenuItemPeer.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,

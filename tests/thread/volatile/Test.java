@@ -124,8 +124,11 @@ public class Test {
         private volatile boolean done = false;
 
         public void setValue(int value) { this.value = value; }
+
         public int getValue() { return value; }
+
         public void setDone(boolean done) { this.done = done; }
+
         public boolean isDone() { return done; }
     }
 
@@ -136,12 +139,19 @@ public class Test {
         private boolean nonVolatileFlag = false;
 
         public void setVolatileValue(int value) { this.volatileValue = value; }
+
         public int getVolatileValue() { return volatileValue; }
+
         public void setNonVolatileValue(int value) { this.nonVolatileValue = value; }
+
         public int getNonVolatileValue() { return nonVolatileValue; }
+
         public void setVolatileFlag(boolean flag) { this.volatileFlag = flag; }
+
         public boolean getVolatileFlag() { return volatileFlag; }
+
         public void setNonVolatileFlag(boolean flag) { this.nonVolatileFlag = flag; }
+
         public boolean getNonVolatileFlag() { return nonVolatileFlag; }
     }
 
@@ -167,6 +177,7 @@ public class Test {
         private volatile DataObject data = null;
 
         public void setData(DataObject data) { this.data = data; }
+
         public DataObject getData() { return data; }
     }
 

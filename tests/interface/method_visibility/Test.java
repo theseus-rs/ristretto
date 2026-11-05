@@ -2,6 +2,7 @@
 interface PublicInterface {
     // All interface methods are implicitly public
     void implicitlyPublic();
+
     public void explicitlyPublic();
 
     // Default methods are also public

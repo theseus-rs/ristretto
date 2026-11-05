@@ -6,6 +6,7 @@ import java.lang.annotation.*;
 @Inherited
 @interface InheritableAnnotation {
     String value() default "inherited";
+
     int level() default 1;
 }
 

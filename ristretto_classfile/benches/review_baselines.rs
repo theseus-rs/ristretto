@@ -23,12 +23,15 @@ impl VerificationContext for Context {
     fn cache_token(&self) -> Option<u64> {
         Some(1)
     }
+
     fn is_subclass(&self, child: &str, parent: &str) -> error::Result<bool> {
         Ok(child == parent || parent == "java/lang/Object" || parent == "java/lang/Throwable")
     }
+
     fn is_assignable(&self, target: &str, source: &str) -> error::Result<bool> {
         self.is_subclass(source, target)
     }
+
     fn common_superclass(&self, _: &str, _: &str) -> error::Result<String> {
         Ok("java/lang/Object".to_string())
     }

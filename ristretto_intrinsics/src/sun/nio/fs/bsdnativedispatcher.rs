@@ -116,6 +116,7 @@ unsafe extern "C" {
         attr_buf_size: libc::size_t,
         options: libc::c_ulong,
     ) -> libc::c_int;
+
     fn fsetattrlist(
         fd: libc::c_int,
         attr_list: *mut libc::c_void,

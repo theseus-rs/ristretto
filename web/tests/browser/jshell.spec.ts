@@ -4,6 +4,7 @@ const ready = (page: Page) =>
   expect(page.locator('#shell-status')).toHaveAttribute('data-state', 'ready', {
     timeout: 755_000,
   });
+
 async function send(page: Page, source: string) {
   await ready(page);
   await page.getByRole('textbox', { name: 'JShell input' }).fill(source);

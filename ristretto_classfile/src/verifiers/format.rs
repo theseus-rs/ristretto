@@ -800,6 +800,7 @@ mod tests {
         }
         Ok(())
     }
+
     #[test]
     fn marker_attributes_may_repeat() -> Result<()> {
         let mut class = ClassFile::default();

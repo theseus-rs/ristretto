@@ -1062,6 +1062,7 @@ mod tests {
         assert_ne!(mismatch, "x");
         assert_ne!(mismatch, "\0x");
     }
+
     #[test]
     fn owned_compatible_strings_reuse_their_allocation() {
         for value in ["plain ASCII", "Greek β and Japanese 日本語"] {
@@ -1087,6 +1088,7 @@ mod tests {
         assert_eq!(format!("{java}"), "\u{FFFD}");
         assert_eq!(format!("{java:?}"), "\"\u{FFFD}\"");
     }
+
     #[test]
     fn formatting_preserves_characters_across_buffer_boundaries() {
         let value = "β\0😀".repeat(200);

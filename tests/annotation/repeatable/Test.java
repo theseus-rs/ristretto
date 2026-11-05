@@ -13,7 +13,9 @@ import java.lang.annotation.*;
 @Repeatable(Schedules.class)
 @interface Schedule {
     String dayOfMonth() default "first";
+
     String dayOfWeek() default "Mon";
+
     int hour() default 12;
 }
 
@@ -29,6 +31,7 @@ import java.lang.annotation.*;
 @Repeatable(Authors.class)
 @interface Author {
     String name();
+
     String email() default "";
 }
 

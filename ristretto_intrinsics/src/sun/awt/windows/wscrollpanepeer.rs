@@ -16,6 +16,7 @@ pub fn get_hscrollbar_height<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WScrollPanePeer._getVScrollbarWidth()I", Any)]
 pub fn get_vscrollbar_width<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -26,6 +27,7 @@ pub fn get_vscrollbar_width<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WScrollPanePeer.create(Lsun/awt/windows/WComponentPeer;)V",
     Any
@@ -40,6 +42,7 @@ pub fn create<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WScrollPanePeer.getOffset(I)I", Any)]
 pub fn get_offset<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -51,6 +54,7 @@ pub fn get_offset<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WScrollPanePeer.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -61,6 +65,7 @@ pub fn init_ids<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WScrollPanePeer.setInsets()V", Any)]
 pub fn set_insets<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -71,6 +76,7 @@ pub fn set_insets<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WScrollPanePeer.setScrollPosition(II)V", Any)]
 pub fn set_scroll_position<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -83,6 +89,7 @@ pub fn set_scroll_position<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WScrollPanePeer.setSpans(IIII)V", Any)]
 pub fn set_spans<T: Thread + 'static>(
     _thread: Arc<T>,

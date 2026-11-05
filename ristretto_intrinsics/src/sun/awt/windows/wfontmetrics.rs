@@ -19,6 +19,7 @@ pub fn bytes_width<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WFontMetrics.charsWidth([CII)I", Any)]
 pub fn chars_width<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -32,6 +33,7 @@ pub fn chars_width<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WFontMetrics.init()V", Any)]
 pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -39,6 +41,7 @@ pub fn init<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WFontMetrics.init()V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/windows/WFontMetrics.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -49,6 +52,7 @@ pub fn init_ids<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WFontMetrics.stringWidth(Ljava/lang/String;)I", Any)]
 pub fn string_width<T: Thread + 'static>(
     _thread: Arc<T>,

@@ -2,7 +2,9 @@
 public class Test {
     // Native method declarations
     public static native int nativeAdd(int a, int b);
+
     public static native String nativeGetSystemProperty(String key);
+
     public native void nativeInstanceMethod(int value);
 
     // Static block to load native library (commented out as we don't have actual native lib)
@@ -58,15 +60,25 @@ public class Test {
 
     // Method demonstrating JNI parameter types
     public native boolean nativeBooleanMethod(boolean flag);
+
     public native byte nativeByteMethod(byte b);
+
     public native char nativeCharMethod(char c);
+
     public native short nativeShortMethod(short s);
+
     public native int nativeIntMethod(int i);
+
     public native long nativeLongMethod(long l);
+
     public native float nativeFloatMethod(float f);
+
     public native double nativeDoubleMethod(double d);
+
     public native String nativeStringMethod(String str);
+
     public native int[] nativeArrayMethod(int[] array);
+
     public native Object nativeObjectMethod(Object obj);
 
     // Simulated versions for demonstration

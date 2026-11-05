@@ -18,6 +18,7 @@ public class Test {
         }
 
         public int getSize() { return size; }
+
         public String getDescription() { return description; }
     }
 

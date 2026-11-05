@@ -19,6 +19,7 @@ pub fn display_message<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WTrayIconPeer._displayMessage(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/windows/WTrayIconPeer._dispose()V", Any)]
 pub fn dispose<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -29,6 +30,7 @@ pub fn dispose<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WTrayIconPeer.create()V", Any)]
 pub fn create<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -39,6 +41,7 @@ pub fn create<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WTrayIconPeer.setNativeIcon([I[BIII)V", Any)]
 pub fn set_native_icon<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -54,6 +57,7 @@ pub fn set_native_icon<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WTrayIconPeer.setToolTip(Ljava/lang/String;)V", Any)]
 pub fn set_tool_tip<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -65,6 +69,7 @@ pub fn set_tool_tip<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WTrayIconPeer.updateNativeIcon(Z)V", Any)]
 pub fn update_native_icon<T: Thread + 'static>(
     _thread: Arc<T>,

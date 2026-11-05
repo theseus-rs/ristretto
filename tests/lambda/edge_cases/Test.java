@@ -9,7 +9,9 @@ public class Test {
 
         // These don't count - they're from Object
         boolean equals(Object o);
+
         int hashCode();
+
         String toString();
     }
 

@@ -16,6 +16,7 @@ pub fn create_native_context<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WInputMethod.destroyNativeContext(I)V", Any)]
 pub fn destroy_native_context<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -27,6 +28,7 @@ pub fn destroy_native_context<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WInputMethod.disableNativeIME(Lsun/awt/windows/WComponentPeer;)V",
     Any
@@ -42,6 +44,7 @@ pub fn disable_native_ime<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WInputMethod.enableNativeIME(Lsun/awt/windows/WComponentPeer;IZ)V",
     Any
@@ -59,6 +62,7 @@ pub fn enable_native_ime<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WInputMethod.endCompositionNative(IZ)V", Any)]
 pub fn end_composition_native<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -71,6 +75,7 @@ pub fn end_composition_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WInputMethod.getConversionStatus(I)I", Any)]
 pub fn get_conversion_status<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -82,6 +87,7 @@ pub fn get_conversion_status<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WInputMethod.getNativeIMMDescription()Ljava/lang/String;",
     Any
@@ -95,6 +101,7 @@ pub fn get_native_immdescription<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WInputMethod.getNativeLocale()Ljava/util/Locale;",
     Any
@@ -108,6 +115,7 @@ pub fn get_native_locale<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WInputMethod.getOpenStatus(I)Z", Any)]
 pub fn get_open_status<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -119,6 +127,7 @@ pub fn get_open_status<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WInputMethod.handleNativeIMEEvent(Lsun/awt/windows/WComponentPeer;Ljava/awt/AWTEvent;)V",
     Any
@@ -131,6 +140,7 @@ pub fn handle_native_imeevent<T: Thread + 'static>(
     let _peer = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WInputMethod.handleNativeIMEEvent(Lsun/awt/windows/WComponentPeer;Ljava/awt/AWTEvent;)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/windows/WInputMethod.isCompositionStringAvailable(I)Z", Any)]
 pub fn is_composition_string_available<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -142,6 +152,7 @@ pub fn is_composition_string_available<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WInputMethod.openCandidateWindow(Lsun/awt/windows/WComponentPeer;II)V",
     Any
@@ -159,6 +170,7 @@ pub fn open_candidate_window<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WInputMethod.setConversionStatus(II)V", Any)]
 pub fn set_conversion_status<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -171,6 +183,7 @@ pub fn set_conversion_status<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WInputMethod.setNativeLocale(Ljava/lang/String;Z)Z",
     Any
@@ -186,6 +199,7 @@ pub fn set_native_locale<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WInputMethod.setOpenStatus(IZ)V", Any)]
 pub fn set_open_status<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -198,6 +212,7 @@ pub fn set_open_status<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WInputMethod.setStatusWindowVisible(Lsun/awt/windows/WComponentPeer;Z)V",
     Any

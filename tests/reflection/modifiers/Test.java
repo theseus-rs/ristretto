@@ -25,17 +25,26 @@ public class Test {
 
     // Method modifiers
     public static void publicStaticMethod() {}
+
     public final void publicFinalMethod() {}
+
     public synchronized void synchronizedMethod() {}
+
     public native void nativeMethod();
+
     public strictfp void strictfpMethod() {}
+
     protected void protectedMethod() {}
+
     private void privateMethod() {}
+
     void packageMethod() {}
 
     // Constructor modifiers
     public Test() {}
+
     protected Test(int x) {}
+
     private Test(String s) {}
 
     public static void main(String[] args) throws Exception {

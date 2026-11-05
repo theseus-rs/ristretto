@@ -41,6 +41,7 @@ pub async fn get_total_memory_size0<T: Thread + 'static>(
         unsupported_operation_error(GET_TOTAL_MEMORY_SIZE)
     }
 }
+
 #[intrinsic_method(
     "jdk/internal/platform/CgroupMetrics.getTotalSwapSize0()J",
     GreaterThanOrEqual(JAVA_11)
@@ -58,6 +59,7 @@ pub async fn get_total_swap_size0<T: Thread + 'static>(
         unsupported_operation_error(GET_TOTAL_SWAP_SIZE)
     }
 }
+
 #[intrinsic_method(
     "jdk/internal/platform/CgroupMetrics.isContainerized0()Z",
     GreaterThanOrEqual(JAVA_21)
@@ -75,6 +77,7 @@ pub async fn is_containerized0<T: Thread + 'static>(
         unsupported_operation_error(IS_CONTAINERIZED)
     }
 }
+
 #[intrinsic_method("jdk/internal/platform/CgroupMetrics.isUseContainerSupport()Z", Any)]
 pub fn is_use_container_support<T: Thread + 'static>(
     _thread: Arc<T>,

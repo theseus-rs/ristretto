@@ -11,13 +11,16 @@ impl VerificationContext for Context {
     fn is_subclass(&self, a: &str, b: &str) -> VerifyResult<bool> {
         Ok(a == b || b == "java/lang/Object")
     }
+
     fn is_assignable(&self, target: &str, source: &str) -> VerifyResult<bool> {
         self.is_subclass(source, target)
     }
+
     fn common_superclass(&self, _: &str, _: &str) -> VerifyResult<String> {
         Ok("java/lang/Object".to_string())
     }
 }
+
 fn fixture(code: Vec<Instruction>) -> Result<ClassFile<'static>> {
     let mut class = ClassFile {
         version: JAVA_6,
@@ -43,6 +46,7 @@ fn fixture(code: Vec<Instruction>) -> Result<ClassFile<'static>> {
     });
     Ok(class)
 }
+
 #[test]
 fn fallthrough_types_are_merged_with_branch_types() -> Result<()> {
     use Instruction::{Aconst_null, Astore_0, Iconst_0, Ifeq, Iload_0, Istore_0, Pop, Return};

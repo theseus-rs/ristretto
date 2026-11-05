@@ -25,6 +25,7 @@ class ExtendedImplementingClass extends ImplementingClass implements ExtendedInt
 
 class MultipleInterfaceClass implements TestInterface, AnotherInterface {
     public void testMethod() {}
+
     public void anotherMethod() {}
 }
 

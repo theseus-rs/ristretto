@@ -23,6 +23,7 @@ unsafe extern "C" {
         tag: CFStringRef,
         conforming_to_uti: CFStringRef,
     ) -> CFStringRef;
+
     fn UTTypeCopyPreferredTagWithClass(uti: CFStringRef, tag_class: CFStringRef) -> CFStringRef;
 }
 

@@ -1,7 +1,9 @@
 /** Test generic interfaces and type parameters */
 interface GenericInterface<T> {
     void process(T item);
+
     T get();
+
     boolean isValid(T item);
 
     default void printType(T item) {
@@ -12,6 +14,7 @@ interface GenericInterface<T> {
 
 interface BoundedGeneric<T extends Number> {
     T calculate(T a, T b);
+
     default void printNumber(T num) {
         System.out.println("Number: " + num + ", doubleValue: " + num.doubleValue());
     }
@@ -19,7 +22,9 @@ interface BoundedGeneric<T extends Number> {
 
 interface MultipleGenerics<T, U, V> {
     V combine(T first, U second);
+
     T getFirst();
+
     U getSecond();
 }
 

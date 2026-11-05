@@ -82,6 +82,7 @@ let clock: ReturnType<typeof setInterval> | undefined;
 function updateElapsed() {
   element('shell-elapsed').textContent = `${((performance.now() - started) / 1000).toFixed(2)}s`;
 }
+
 function stopClock() {
   if (clock !== undefined) updateElapsed();
   clearInterval(clock);
@@ -188,12 +189,14 @@ function save() {
     /* Sessions work without storage. */
   }
 }
+
 function setInput(text: string) {
   editor.dispatch({
     changes: { from: 0, to: editor.state.doc.length, insert: text },
     selection: { anchor: text.length },
   });
 }
+
 function append(text: string, stream = 'stdout') {
   const nearBottom = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 80;
   const last = output.lastElementChild;
@@ -209,6 +212,7 @@ function append(text: string, stream = 'stdout') {
     output.firstChild!.remove();
   if (nearBottom) scroll.scrollTop = scroll.scrollHeight;
 }
+
 function echo(text: string) {
   append(
     `${continuation ? '   ...>' : 'jshell>'} ${text.replaceAll('\n', '\n   ...> ')}\n`,
@@ -216,10 +220,12 @@ function echo(text: string) {
   );
   scroll.scrollTop = scroll.scrollHeight;
 }
+
 function setStatus(text: string, state = 'ready') {
   element('shell-status-text').textContent = text;
   status.dataset.state = state;
 }
+
 function controls() {
   submitButton.disabled = busy || closed;
   resetButton.disabled = busy;
@@ -230,6 +236,7 @@ function controls() {
   editor.dispatch({ effects: editable.reconfigure(EditorView.editable.of(!closed && !busy)) });
   prompt.textContent = closed ? 'exited' : continuation ? '   ...>' : 'jshell>';
 }
+
 function finish() {
   clearTimeout(watchdog);
   stopClock();
@@ -239,6 +246,7 @@ function finish() {
   if (focusOnReady && !closed) editor.focus();
   focusOnReady = false;
 }
+
 function abandon(message?: string, state = 'error') {
   generation++;
   requestId++;
@@ -252,6 +260,7 @@ function abandon(message?: string, state = 'error') {
   finish();
   setStatus('Session ended', state);
 }
+
 function timeout(milliseconds: number) {
   clearTimeout(watchdog);
   watchdog = setTimeout(
@@ -259,6 +268,7 @@ function timeout(milliseconds: number) {
     milliseconds,
   );
 }
+
 function receive(event: Event) {
   if (!worker || event.id !== requestId) return;
   switch (event.type) {
@@ -303,6 +313,7 @@ function receive(event: Event) {
       break;
   }
 }
+
 async function request(source: string, operation: Request['operation'] = 'input') {
   if (busy || closed) return;
   busy = true;
@@ -360,6 +371,7 @@ async function request(source: string, operation: Request['operation'] = 'input'
       abandon(error instanceof Error ? error.message : String(error));
   }
 }
+
 async function submit(text = editor.state.doc.toString()) {
   if (busy || closed) return;
   if (!text.trim() && !continuation) return;
@@ -384,6 +396,7 @@ async function submit(text = editor.state.doc.toString()) {
   }
   await request(text);
 }
+
 function recall(direction: number) {
   if (busy) return true;
   if (candidates.length) {
@@ -403,12 +416,14 @@ function recall(direction: number) {
   setInput(historyIndex === history.length ? draft : history[historyIndex]);
   return true;
 }
+
 function hideCompletions() {
   candidates = [];
   candidateIndex = -1;
   completionList.hidden = true;
   completionList.replaceChildren();
 }
+
 async function complete() {
   if (busy || closed) return;
   if (candidates.length) {
@@ -420,6 +435,7 @@ async function complete() {
   completionCursor = editor.state.selection.main.head;
   await request(completionSource, 'complete');
 }
+
 function showCompletions(anchor: number, suggestions: string[]) {
   if (editor.state.doc.toString() !== completionSource || !suggestions.length) return;
   completionAnchor = anchor;
@@ -443,6 +459,7 @@ function showCompletions(anchor: number, suggestions: string[]) {
   }
   renderCompletions();
 }
+
 function renderCompletions() {
   completionList.replaceChildren();
   completionList.hidden = false;
@@ -456,6 +473,7 @@ function renderCompletions() {
     completionList.append(button);
   });
 }
+
 function chooseCompletion(index: number) {
   const candidate = candidates[index];
   if (candidate === undefined) return;
@@ -466,6 +484,7 @@ function chooseCompletion(index: number) {
   hideCompletions();
   editor.focus();
 }
+
 function interrupt() {
   if (busy) {
     abandon('Execution interrupted.');
@@ -478,10 +497,12 @@ function interrupt() {
   setInput('');
   void request('', 'cancel');
 }
+
 function clearScreen() {
   output.replaceChildren();
   editor.focus();
 }
+
 function restart() {
   stopClock();
   generation++;
@@ -493,6 +514,7 @@ function restart() {
   setInput('');
   void request('');
 }
+
 function download(source: string, filename: string) {
   const url = URL.createObjectURL(new Blob([source], { type: 'text/plain;charset=utf-8' }));
   const link = document.createElement('a');

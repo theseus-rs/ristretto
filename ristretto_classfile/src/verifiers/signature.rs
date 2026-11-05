@@ -877,6 +877,7 @@ mod regression_tests {
         }
         assert!(verify_class_signature("Lfoo/Bar;").is_ok());
     }
+
     #[test]
     fn array_dimensions_do_not_consume_generic_nesting_budget() {
         use super::verify_field_signature;

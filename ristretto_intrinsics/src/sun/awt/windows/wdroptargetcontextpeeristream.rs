@@ -17,6 +17,7 @@ pub fn available<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WDropTargetContextPeerIStream.Close(J)V", Any)]
 pub fn close<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -28,6 +29,7 @@ pub fn close<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WDropTargetContextPeerIStream.Read(J)I", Any)]
 pub fn read<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -39,6 +41,7 @@ pub fn read<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WDropTargetContextPeerIStream.ReadBytes(J[BII)I", Any)]
 pub fn read_bytes<T: Thread + 'static>(
     _thread: Arc<T>,

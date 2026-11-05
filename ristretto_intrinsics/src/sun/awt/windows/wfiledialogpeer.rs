@@ -17,6 +17,7 @@ pub fn dispose<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WFileDialogPeer._hide()V", Any)]
 pub fn hide<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -27,6 +28,7 @@ pub fn hide<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WFileDialogPeer._show()V", Any)]
 pub fn show<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -37,6 +39,7 @@ pub fn show<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WFileDialogPeer.getLocationOnScreen()Ljava/awt/Point;",
     GreaterThanOrEqual(JAVA_11)
@@ -50,6 +53,7 @@ pub fn get_location_on_screen<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WFileDialogPeer.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -60,6 +64,7 @@ pub fn init_ids<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WFileDialogPeer.setFilterString(Ljava/lang/String;)V",
     Any
@@ -74,6 +79,7 @@ pub fn set_filter_string<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WFileDialogPeer.toBack()V", Any)]
 pub fn to_back<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -84,6 +90,7 @@ pub fn to_back<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WFileDialogPeer.toFront()V", Any)]
 pub fn to_front<T: Thread + 'static>(
     _thread: Arc<T>,

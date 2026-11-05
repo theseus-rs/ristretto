@@ -349,30 +349,37 @@ fn interface_flags(_name: &str) -> Option<u32> {
 const fn flag_up() -> u32 {
     libc::IFF_UP as u32
 }
+
 #[cfg(not(unix))]
 const fn flag_up() -> u32 {
     0
 }
+
 #[cfg(unix)]
 const fn flag_loopback() -> u32 {
     libc::IFF_LOOPBACK as u32
 }
+
 #[cfg(not(unix))]
 const fn flag_loopback() -> u32 {
     0
 }
+
 #[cfg(unix)]
 const fn flag_point_to_point() -> u32 {
     libc::IFF_POINTOPOINT as u32
 }
+
 #[cfg(not(unix))]
 const fn flag_point_to_point() -> u32 {
     0
 }
+
 #[cfg(unix)]
 const fn flag_multicast() -> u32 {
     libc::IFF_MULTICAST as u32
 }
+
 #[cfg(not(unix))]
 const fn flag_multicast() -> u32 {
     0

@@ -5,7 +5,9 @@ import java.lang.annotation.*;
 @Target(ElementType.ANNOTATION_TYPE)
 @interface MetaInfo {
     String author() default "unknown";
+
     String version() default "1.0";
+
     String description() default "";
 }
 
@@ -16,6 +18,7 @@ import java.lang.annotation.*;
 @MetaInfo(author = "TestAuthor", version = "2.0", description = "Test annotation with meta-info")
 @interface CustomAnnotation {
     String value() default "custom";
+
     int priority() default 1;
 }
 

@@ -16,6 +16,7 @@ public class Test {
         }
 
         public List<String> getStringList() { return stringList; }
+
         public void setGenericField(T value) { this.genericField = value; }
     }
 

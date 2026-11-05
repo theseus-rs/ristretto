@@ -43,8 +43,11 @@ public final class InterpreterBench {
     }
 
     private static int mix(int x) { return (x * 1664525 + 1013904223) ^ (x >>> 13); }
+
     private static int fib(int n) { return n < 2 ? n : fib(n - 1) + fib(n - 2); }
+
     private static void throwReused() { throw REUSED_EXCEPTION; }
+
     private static void throwFresh() { throw new IllegalArgumentException("benchmark"); }
 
     // Each unit is the fixed amount of work documented in src/workloads.rs and README.md.

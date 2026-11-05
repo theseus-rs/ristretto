@@ -49,6 +49,7 @@ async function select(page: Page, target: (typeof targets)[number]) {
   await page.getByLabel('Language').selectOption(target.language);
   if (target.version) await page.getByLabel('Scala version').selectOption(target.version);
 }
+
 async function finish(page: Page) {
   await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeDisabled({
     timeout: 755_000,

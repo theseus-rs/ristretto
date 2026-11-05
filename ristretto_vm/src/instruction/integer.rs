@@ -886,6 +886,7 @@ mod tests {
         assert_eq!(-1, stack.pop_int()?);
         Ok(())
     }
+
     #[test]
     fn test_ineg_minimum() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);

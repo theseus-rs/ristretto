@@ -4,7 +4,9 @@ import java.lang.reflect.*;
 public class Test {
     interface TestInterface {
         String getValue();
+
         void setValue(String value);
+
         int calculate(int a, int b);
     }
 

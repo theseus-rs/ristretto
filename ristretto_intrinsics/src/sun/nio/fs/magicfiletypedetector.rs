@@ -57,6 +57,7 @@ pub fn initialize0<T: Thread + 'static>(
     }
     Ok(Some(Value::from(guard.is_some())))
 }
+
 #[intrinsic_method("sun/nio/fs/MagicFileTypeDetector.probe0(J)[B", Equal(JAVA_8))]
 pub fn probe0<T: Thread + 'static>(
     thread: Arc<T>,

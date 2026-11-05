@@ -2,6 +2,7 @@ public class Test {
     static class A {
         int v;
         public A() { this.v = 5; }
+
         public A(int x) { this.v = x; }
     }
 

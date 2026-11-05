@@ -6,8 +6,11 @@ public final class ClojureScript {
         // Syntax checking must not evaluate #= or resolve user namespace aliases by executing ns.
         LispReader.Resolver resolver = new LispReader.Resolver() {
             public Symbol currentNS() { return Symbol.intern("user"); }
+
             public Symbol resolveClass(Symbol symbol) { return null; }
+
             public Symbol resolveAlias(Symbol symbol) { return symbol; }
+
             public Symbol resolveVar(Symbol symbol) { return symbol; }
         };
         Var.pushThreadBindings(RT.map(RT.READEVAL, Boolean.FALSE, RT.var("clojure.core", "*reader-resolver*"), resolver));

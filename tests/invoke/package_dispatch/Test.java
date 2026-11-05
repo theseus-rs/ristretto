@@ -25,6 +25,7 @@ public class Test {
             return defineClass("p.Child", bytes, 0, bytes.length);
         }
     }
+
     public static void main(String[] args) throws Throwable {
         p.Base child = new q.Child();
         p.Base transitive = new q.Transitive();

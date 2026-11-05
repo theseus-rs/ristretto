@@ -1,11 +1,13 @@
 /** Test interfaces with arrays and collections */
 interface Drawable {
     void draw();
+
     String getName();
 }
 
 interface Colorable {
     void setColor(String color);
+
     String getColor();
 }
 

@@ -17,6 +17,7 @@ pub fn add_menu<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WMenuBarPeer.create(Lsun/awt/windows/WFramePeer;)V",
     Any
@@ -31,6 +32,7 @@ pub fn create<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WMenuBarPeer.delMenu(I)V", Any)]
 pub fn del_menu<T: Thread + 'static>(
     _thread: Arc<T>,

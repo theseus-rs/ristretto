@@ -26,6 +26,7 @@ public class Test {
     public interface Single extends A {}
     public static class SingleSpecial implements Single, SpecialInvoker {
         public int value() { return 3; }
+
         public int call() { return Single.super.value(); }
     }
 

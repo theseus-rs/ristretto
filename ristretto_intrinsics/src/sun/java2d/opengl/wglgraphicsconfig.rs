@@ -17,6 +17,7 @@ pub fn get_default_pix_fmt<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/java2d/opengl/WGLGraphicsConfig.getOGLCapabilities(J)I", Any)]
 pub fn get_oglcapabilities<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -28,6 +29,7 @@ pub fn get_oglcapabilities<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/java2d/opengl/WGLGraphicsConfig.getWGLConfigInfo(II)J", Any)]
 pub fn get_wglconfig_info<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -40,6 +42,7 @@ pub fn get_wglconfig_info<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/java2d/opengl/WGLGraphicsConfig.initWGL()Z", Any)]
 pub fn init_wgl<T: Thread + 'static>(
     _thread: Arc<T>,

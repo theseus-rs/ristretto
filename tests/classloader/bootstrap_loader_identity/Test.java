@@ -44,12 +44,17 @@ public class Test {
         final DataOutputStream out = new DataOutputStream(bytes);
         int count = 1;
         int utf(String text) throws Exception { out.writeByte(1); out.writeUTF(text); return count++; }
+
         int one(int tag, int index) throws Exception { out.writeByte(tag); out.writeShort(index); return count++; }
+
         int two(int tag, int first, int second) throws Exception {
             out.writeByte(tag); out.writeShort(first); out.writeShort(second); return count++;
         }
+
         int clazz(String name) throws Exception { return one(7, utf(name)); }
+
         int nameType(String name, String type) throws Exception { return two(12, utf(name), utf(type)); }
+
         int handle(int kind, int ref) throws Exception {
             out.writeByte(15); out.writeByte(kind); out.writeShort(ref); return count++;
         }

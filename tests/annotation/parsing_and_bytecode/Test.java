@@ -7,10 +7,15 @@ import java.util.Comparator;
 @Retention(RetentionPolicy.RUNTIME)
 @interface ComplexParsingAnnotation {
     String normalString() default "normal";
+
     String unicodeString() default "\u0048\u0065\u006C\u006C\u006F"; // "Hello"
+
     String escapedString() default "line1\nline2\ttab\"quote'apostrophe\\backslash";
+
     int[] largeIntArray() default {-2147483648, 2147483647, 0, 1, -1};
+
     double[] specialDoubles() default {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, 0.0, -0.0};
+
     Class<?>[] primitiveClasses() default {boolean.class, byte.class, char.class, short.class, int.class, long.class, float.class, double.class, void.class};
 }
 
@@ -18,10 +23,15 @@ import java.util.Comparator;
 @Retention(RetentionPolicy.RUNTIME)
 @interface ConstantPoolTestAnnotation {
     String constantString() default "CONSTANT_STRING";
+
     int constantInt() default 12345;
+
     long constantLong() default 9876543210L;
+
     float constantFloat() default 3.14159f;
+
     double constantDouble() default 2.718281828;
+
     Class<?> constantClass() default String.class;
 }
 
@@ -37,6 +47,7 @@ import java.util.Comparator;
 @Repeatable(OrderTestAnnotations.class)
 @interface OrderTestAnnotation {
     int order() default 0;
+
     String name() default "test";
 }
 

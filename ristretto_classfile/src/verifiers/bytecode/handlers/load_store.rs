@@ -2861,6 +2861,7 @@ mod tests {
             assert!(dispatch_load_store(&instruction, &mut frame, &ctx).unwrap());
         }
     }
+
     #[test]
     fn test_aastore_initialized_reference_constraints() {
         for value in [

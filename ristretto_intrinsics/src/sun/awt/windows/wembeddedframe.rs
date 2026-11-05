@@ -16,6 +16,7 @@ pub fn init_ids<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WEmbeddedFrame.isPrinterDC(J)Z", Any)]
 pub fn is_printer_dc<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -27,6 +28,7 @@ pub fn is_printer_dc<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WEmbeddedFrame.notifyModalBlockedImpl(Lsun/awt/windows/WEmbeddedFramePeer;Lsun/awt/windows/WWindowPeer;Z)V",
     Any
@@ -40,6 +42,7 @@ pub fn notify_modal_blocked_impl<T: Thread + 'static>(
     let _peer = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WEmbeddedFrame.notifyModalBlockedImpl(Lsun/awt/windows/WEmbeddedFramePeer;Lsun/awt/windows/WWindowPeer;Z)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/windows/WEmbeddedFrame.printBand(J[BIIIIIIIII)V", Any)]
 pub fn print_band<T: Thread + 'static>(
     _thread: Arc<T>,

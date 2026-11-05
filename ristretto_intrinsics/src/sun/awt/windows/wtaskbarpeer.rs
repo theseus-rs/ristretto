@@ -21,6 +21,7 @@ pub fn flash_window<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WTaskbarPeer.nativeInit()Z",
     GreaterThanOrEqual(JAVA_11)
@@ -34,6 +35,7 @@ pub fn native_init<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WTaskbarPeer.setOverlayIcon(J[III)V",
     GreaterThanOrEqual(JAVA_11)
@@ -51,6 +53,7 @@ pub fn set_overlay_icon<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WTaskbarPeer.setProgressState(JLjava/awt/Taskbar$State;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -66,6 +69,7 @@ pub fn set_progress_state<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WTaskbarPeer.setProgressValue(JI)V",
     GreaterThanOrEqual(JAVA_11)

@@ -20,6 +20,7 @@ pub fn import_ecpublic_key<T: Thread + 'static>(
     let _alg = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/security/mscapi/CSignature.importECPublicKey(Ljava/lang/String;[BI)Lsun/security/mscapi/CPublicKey;".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CSignature.importPublicKey(Ljava/lang/String;[BI)Lsun/security/mscapi/CPublicKey;",
     GreaterThanOrEqual(JAVA_11)
@@ -33,6 +34,7 @@ pub fn import_public_key<T: Thread + 'static>(
     let _alg = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/security/mscapi/CSignature.importPublicKey(Ljava/lang/String;[BI)Lsun/security/mscapi/CPublicKey;".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CSignature.signCngHash(I[BIILjava/lang/String;JJ)[B",
     GreaterThanOrEqual(JAVA_11)
@@ -53,6 +55,7 @@ pub fn sign_cng_hash<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CSignature.signHash(Z[BILjava/lang/String;JJ)[B",
     GreaterThanOrEqual(JAVA_11)
@@ -72,6 +75,7 @@ pub fn sign_hash<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CSignature.verifyCngSignedHash(I[BI[BIILjava/lang/String;JJ)Z",
     GreaterThanOrEqual(JAVA_11)
@@ -95,6 +99,7 @@ pub fn verify_cng_signed_hash<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CSignature.verifySignedHash([BILjava/lang/String;[BIJJ)Z",
     GreaterThanOrEqual(JAVA_11)

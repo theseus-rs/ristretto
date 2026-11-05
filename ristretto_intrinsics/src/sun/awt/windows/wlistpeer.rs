@@ -19,6 +19,7 @@ pub fn add_items<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WListPeer.create(Lsun/awt/windows/WComponentPeer;)V",
     Any
@@ -33,6 +34,7 @@ pub fn create<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WListPeer.delItems(II)V", Any)]
 pub fn del_items<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -45,6 +47,7 @@ pub fn del_items<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WListPeer.deselect(I)V", Any)]
 pub fn deselect<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -56,6 +59,7 @@ pub fn deselect<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WListPeer.getMaxWidth()I", Any)]
 pub fn get_max_width<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -66,6 +70,7 @@ pub fn get_max_width<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WListPeer.isSelected(I)Z", Any)]
 pub fn is_selected<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -77,6 +82,7 @@ pub fn is_selected<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WListPeer.makeVisible(I)V", Any)]
 pub fn make_visible<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -88,6 +94,7 @@ pub fn make_visible<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WListPeer.select(I)V", Any)]
 pub fn select<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -96,6 +103,7 @@ pub fn select<T: Thread + 'static>(
     let _pos = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WListPeer.select(I)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/windows/WListPeer.setMultipleSelections(Z)V", Any)]
 pub fn set_multiple_selections<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -107,6 +115,7 @@ pub fn set_multiple_selections<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WListPeer.updateMaxItemWidth()V", Any)]
 pub fn update_max_item_width<T: Thread + 'static>(
     _thread: Arc<T>,

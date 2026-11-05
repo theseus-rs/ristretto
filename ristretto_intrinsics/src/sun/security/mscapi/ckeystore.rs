@@ -21,6 +21,7 @@ pub fn destroy_key_container<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CKeyStore.generateRSAPrivateKeyBlob(I[B[B[B[B[B[B[B[B)[B",
     GreaterThanOrEqual(JAVA_11)
@@ -43,6 +44,7 @@ pub fn generate_rsaprivate_key_blob<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CKeyStore.loadKeysOrCertificateChains(Ljava/lang/String;I)V",
     GreaterThanOrEqual(JAVA_11)
@@ -59,6 +61,7 @@ pub fn load_keys_or_certificate_chains<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CKeyStore.removeCertificate(Ljava/lang/String;Ljava/lang/String;[BI)V",
     GreaterThanOrEqual(JAVA_11)
@@ -77,6 +80,7 @@ pub fn remove_certificate<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CKeyStore.removeCngKey(J)V",
     GreaterThanOrEqual(JAVA_21)
@@ -91,6 +95,7 @@ pub fn remove_cng_key<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CKeyStore.storeCertificate(Ljava/lang/String;Ljava/lang/String;[BIJJ)V",
     GreaterThanOrEqual(JAVA_11)
@@ -107,6 +112,7 @@ pub fn store_certificate<T: Thread + 'static>(
     let _j_cert_store_name = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/security/mscapi/CKeyStore.storeCertificate(Ljava/lang/String;Ljava/lang/String;[BIJJ)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/security/mscapi/CKeyStore.storePrivateKey(Ljava/lang/String;[BLjava/lang/String;I)Lsun/security/mscapi/CPrivateKey;",
     GreaterThanOrEqual(JAVA_11)

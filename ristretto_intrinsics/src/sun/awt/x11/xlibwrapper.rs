@@ -20,6 +20,7 @@ pub fn call_error_handler<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.DefaultScreen(J)J", Any)]
 pub fn default_screen<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -31,6 +32,7 @@ pub fn default_screen<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.DisplayHeight(JJ)J", Any)]
 pub fn display_height<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -43,6 +45,7 @@ pub fn display_height<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.DisplayHeightMM(JJ)J", Any)]
 pub fn display_height_mm<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -55,6 +58,7 @@ pub fn display_height_mm<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.DisplayWidth(JJ)J", Any)]
 pub fn display_width<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -67,6 +71,7 @@ pub fn display_width<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.DisplayWidthMM(JJ)J", Any)]
 pub fn display_width_mm<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -79,6 +84,7 @@ pub fn display_width_mm<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.DoesBackingStore(J)I", Any)]
 pub fn does_backing_store<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -90,6 +96,7 @@ pub fn does_backing_store<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.ExitSecondaryLoop()V", Any)]
 pub fn exit_secondary_loop<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -100,6 +107,7 @@ pub fn exit_secondary_loop<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.GetProperty(JJJ)Ljava/lang/String;", Any)]
 pub fn get_property<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -113,6 +121,7 @@ pub fn get_property<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.InternAtom(JLjava/lang/String;I)J", Any)]
 pub fn intern_atom<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -126,6 +135,7 @@ pub fn intern_atom<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.IsKanaKeyboard(J)Z", Any)]
 pub fn is_kana_keyboard<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -137,6 +147,7 @@ pub fn is_kana_keyboard<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.IsKeypadKey(J)Z", Any)]
 pub fn is_keypad_key<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -148,6 +159,7 @@ pub fn is_keypad_key<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.IsSunKeyboard(J)Z", Any)]
 pub fn is_sun_keyboard<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -159,6 +171,7 @@ pub fn is_sun_keyboard<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.IsXsunKPBehavior(J)Z", Any)]
 pub fn is_xsun_kpbehavior<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -170,6 +183,7 @@ pub fn is_xsun_kpbehavior<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.PrintXErrorEvent(JJ)V", Any)]
 pub fn print_xerror_event<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -182,6 +196,7 @@ pub fn print_xerror_event<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.RootWindow(JJ)J", Any)]
 pub fn root_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -194,6 +209,7 @@ pub fn root_window<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.ScreenCount(J)I", Any)]
 pub fn screen_count<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -205,6 +221,7 @@ pub fn screen_count<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.ScreenOfDisplay(JJ)J", Any)]
 pub fn screen_of_display<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -217,6 +234,7 @@ pub fn screen_of_display<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.ServerVendor(J)Ljava/lang/String;", Any)]
 pub fn server_vendor<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -228,6 +246,7 @@ pub fn server_vendor<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.SetBitmapShape(JJII[I)V", Any)]
 pub fn set_bitmap_shape<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -243,6 +262,7 @@ pub fn set_bitmap_shape<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.SetProperty(JJJLjava/lang/String;)V", Any)]
 pub fn set_property<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -257,6 +277,7 @@ pub fn set_property<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XlibWrapper.SetRectangularShape(JJIIIILsun/java2d/pipe/Region;)V",
     Any
@@ -277,6 +298,7 @@ pub fn set_rectangular_shape<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.SetToolkitErrorHandler()J", Any)]
 pub fn set_toolkit_error_handler<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -287,6 +309,7 @@ pub fn set_toolkit_error_handler<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.SetZOrder(JJJ)V", Any)]
 pub fn set_zorder<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -300,6 +323,7 @@ pub fn set_zorder<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.VendorRelease(J)I", Any)]
 pub fn vendor_release<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -311,6 +335,7 @@ pub fn vendor_release<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XAllocColor(JJJ)Z", Any)]
 pub fn xalloc_color<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -324,6 +349,7 @@ pub fn xalloc_color<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XAllocSizeHints()J", Any)]
 pub fn xalloc_size_hints<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -334,6 +360,7 @@ pub fn xalloc_size_hints<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XAllocWMHints()J", Any)]
 pub fn xalloc_wmhints<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -344,6 +371,7 @@ pub fn xalloc_wmhints<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XBell(JI)V", Any)]
 pub fn xbell<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -353,6 +381,7 @@ pub fn xbell<T: Thread + 'static>(
     let _display = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.XBell(JI)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XChangeActivePointerGrab(JIJJ)V", Any)]
 pub fn xchange_active_pointer_grab<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -367,6 +396,7 @@ pub fn xchange_active_pointer_grab<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XChangePropertyImpl(JJJJIIJI)V", Any)]
 pub fn xchange_property_impl<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -385,6 +415,7 @@ pub fn xchange_property_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XlibWrapper.XChangePropertyS(JJJJIILjava/lang/String;)V",
     Any
@@ -405,6 +436,7 @@ pub fn xchange_property_s<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XChangeWindowAttributes(JJJJ)V", Any)]
 pub fn xchange_window_attributes<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -419,6 +451,7 @@ pub fn xchange_window_attributes<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XClearWindow(JJ)V", Any)]
 pub fn xclear_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -431,6 +464,7 @@ pub fn xclear_window<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCloseDisplay(J)V", Any)]
 pub fn xclose_display<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -442,6 +476,7 @@ pub fn xclose_display<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XConfigureWindow(JJJJ)V", Any)]
 pub fn xconfigure_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -456,6 +491,7 @@ pub fn xconfigure_window<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XConvertCase(JJJ)V", Any)]
 pub fn xconvert_case<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -469,6 +505,7 @@ pub fn xconvert_case<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XConvertSelection(JJJJJJ)V", Any)]
 pub fn xconvert_selection<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -485,6 +522,7 @@ pub fn xconvert_selection<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreateBitmapFromData(JJJII)J", Any)]
 pub fn xcreate_bitmap_from_data<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -500,6 +538,7 @@ pub fn xcreate_bitmap_from_data<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreateFontCursor(JI)I", Any)]
 pub fn xcreate_font_cursor<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -512,6 +551,7 @@ pub fn xcreate_font_cursor<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreateGC(JJJJ)J", Any)]
 pub fn xcreate_gc<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -526,6 +566,7 @@ pub fn xcreate_gc<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreateImage(JJIIIJIIII)J", Any)]
 pub fn xcreate_image<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -546,6 +587,7 @@ pub fn xcreate_image<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreatePixmap(JJIII)J", Any)]
 pub fn xcreate_pixmap<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -561,6 +603,7 @@ pub fn xcreate_pixmap<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreatePixmapCursor(JJJJJII)J", Any)]
 pub fn xcreate_pixmap_cursor<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -578,6 +621,7 @@ pub fn xcreate_pixmap_cursor<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreateWindow(JJIIIIIIJJJJ)J", Any)]
 pub fn xcreate_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -600,6 +644,7 @@ pub fn xcreate_window<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XDeleteProperty(JJJ)V", Any)]
 pub fn xdelete_property<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -613,6 +658,7 @@ pub fn xdelete_property<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XDestroyImage(J)V", Any)]
 pub fn xdestroy_image<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -624,6 +670,7 @@ pub fn xdestroy_image<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XDestroyWindow(JJ)V", Any)]
 pub fn xdestroy_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -636,6 +683,7 @@ pub fn xdestroy_window<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XDisplayString(J)J", Any)]
 pub fn xdisplay_string<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -647,6 +695,7 @@ pub fn xdisplay_string<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XEventsQueued(JI)I", Any)]
 pub fn xevents_queued<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -659,6 +708,7 @@ pub fn xevents_queued<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFilterEvent(JJ)Z", Any)]
 pub fn xfilter_event<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -671,6 +721,7 @@ pub fn xfilter_event<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFlush(J)V", Any)]
 pub fn xflush<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -679,6 +730,7 @@ pub fn xflush<T: Thread + 'static>(
     let _display = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.XFlush(J)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFree(J)V", Any)]
 pub fn xfree<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -687,6 +739,7 @@ pub fn xfree<T: Thread + 'static>(
     let _ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.XFree(J)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFreeCursor(JJ)V", Any)]
 pub fn xfree_cursor<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -699,6 +752,7 @@ pub fn xfree_cursor<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFreeGC(JJ)V", Any)]
 pub fn xfree_gc<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -708,6 +762,7 @@ pub fn xfree_gc<T: Thread + 'static>(
     let _display = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.XFreeGC(JJ)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFreeModifiermap(J)V", Any)]
 pub fn xfree_modifiermap<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -719,6 +774,7 @@ pub fn xfree_modifiermap<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFreePixmap(JJ)V", Any)]
 pub fn xfree_pixmap<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -731,6 +787,7 @@ pub fn xfree_pixmap<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetAtomName(JJ)Ljava/lang/String;", Any)]
 pub fn xget_atom_name<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -743,6 +800,7 @@ pub fn xget_atom_name<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XlibWrapper.XGetDefault(JLjava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
     Any
@@ -756,6 +814,7 @@ pub fn xget_default<T: Thread + 'static>(
     let _display = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.XGetDefault(JLjava/lang/String;Ljava/lang/String;)Ljava/lang/String;".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetGeometry(JJJJJJJJJ)I", Any)]
 pub fn xget_geometry<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -775,6 +834,7 @@ pub fn xget_geometry<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetIconSizes(JJJJ)I", Any)]
 pub fn xget_icon_sizes<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -789,6 +849,7 @@ pub fn xget_icon_sizes<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetInputFocus(J)J", Any)]
 pub fn xget_input_focus<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -800,6 +861,7 @@ pub fn xget_input_focus<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetModifierMapping(J)J", Any)]
 pub fn xget_modifier_mapping<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -811,6 +873,7 @@ pub fn xget_modifier_mapping<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetPointerMapping(JJI)I", Any)]
 pub fn xget_pointer_mapping<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -824,6 +887,7 @@ pub fn xget_pointer_mapping<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetSelectionOwner(JJ)J", Any)]
 pub fn xget_selection_owner<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -836,6 +900,7 @@ pub fn xget_selection_owner<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetVisualInfo(JJJJ)J", Any)]
 pub fn xget_visual_info<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -850,6 +915,7 @@ pub fn xget_visual_info<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetWMHints(JJJ)V", Any)]
 pub fn xget_wmhints<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -863,6 +929,7 @@ pub fn xget_wmhints<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetWMNormalHints(JJJJ)I", Any)]
 pub fn xget_wmnormal_hints<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -877,6 +944,7 @@ pub fn xget_wmnormal_hints<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetWindowAttributes(JJJ)I", Any)]
 pub fn xget_window_attributes<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -890,6 +958,7 @@ pub fn xget_window_attributes<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetWindowProperty(JJJJJJJJJJJJ)I", Any)]
 pub fn xget_window_property<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -912,6 +981,7 @@ pub fn xget_window_property<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGrabKeyboard(JJIIIJ)I", Any)]
 pub fn xgrab_keyboard<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -928,6 +998,7 @@ pub fn xgrab_keyboard<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGrabPointer(JJIIIIJJJ)I", Any)]
 pub fn xgrab_pointer<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -947,6 +1018,7 @@ pub fn xgrab_pointer<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGrabServer(J)V", Any)]
 pub fn xgrab_server<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -958,6 +1030,7 @@ pub fn xgrab_server<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XIconifyWindow(JJJ)I", Any)]
 pub fn xiconify_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -971,6 +1044,7 @@ pub fn xiconify_window<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XInternAtoms(J[Ljava/lang/String;ZJ)I", Any)]
 pub fn xintern_atoms<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -985,6 +1059,7 @@ pub fn xintern_atoms<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XKeycodeToKeysym(JII)J", Any)]
 pub fn xkeycode_to_keysym<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -998,6 +1073,7 @@ pub fn xkeycode_to_keysym<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XKeysymToKeycode(JJ)I", Any)]
 pub fn xkeysym_to_keycode<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1010,6 +1086,7 @@ pub fn xkeysym_to_keycode<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XLowerWindow(JJ)V", Any)]
 pub fn xlower_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1022,6 +1099,7 @@ pub fn xlower_window<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XMapRaised(JJ)V", Any)]
 pub fn xmap_raised<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1034,6 +1112,7 @@ pub fn xmap_raised<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XMapWindow(JJ)V", Any)]
 pub fn xmap_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1046,6 +1125,7 @@ pub fn xmap_window<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XMaskEvent(JJJ)V", Any)]
 pub fn xmask_event<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1059,6 +1139,7 @@ pub fn xmask_event<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XMaxRequestSize(J)J", Any)]
 pub fn xmax_request_size<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1070,6 +1151,7 @@ pub fn xmax_request_size<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XMoveResizeWindow(JJIIII)V", Any)]
 pub fn xmove_resize_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1086,6 +1168,7 @@ pub fn xmove_resize_window<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XMoveWindow(JJII)V", Any)]
 pub fn xmove_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1100,6 +1183,7 @@ pub fn xmove_window<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XNextEvent(JJ)V", Any)]
 pub fn xnext_event<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1112,6 +1196,7 @@ pub fn xnext_event<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XNextSecondaryLoopEvent(JJ)Z", Any)]
 pub fn xnext_secondary_loop_event<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1124,6 +1209,7 @@ pub fn xnext_secondary_loop_event<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XOpenDisplay(J)J", Any)]
 pub fn xopen_display<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1135,6 +1221,7 @@ pub fn xopen_display<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XPeekEvent(JJ)V", Any)]
 pub fn xpeek_event<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1147,6 +1234,7 @@ pub fn xpeek_event<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XPutBackEvent(JJ)V", Any)]
 pub fn xput_back_event<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1159,6 +1247,7 @@ pub fn xput_back_event<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XPutImage(JJJJIIIIII)V", Any)]
 pub fn xput_image<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1179,6 +1268,7 @@ pub fn xput_image<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XQueryBestCursor(JJIIJJ)Z", Any)]
 pub fn xquery_best_cursor<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1195,6 +1285,7 @@ pub fn xquery_best_cursor<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XlibWrapper.XQueryExtension(JLjava/lang/String;JJJ)Z",
     Any
@@ -1213,6 +1304,7 @@ pub fn xquery_extension<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XQueryKeymap(JJ)V", Any)]
 pub fn xquery_keymap<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1225,6 +1317,7 @@ pub fn xquery_keymap<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XQueryPointer(JJJJJJJJJ)Z", Any)]
 pub fn xquery_pointer<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1244,6 +1337,7 @@ pub fn xquery_pointer<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XQueryTree(JJJJJJ)I", Any)]
 pub fn xquery_tree<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1260,6 +1354,7 @@ pub fn xquery_tree<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XRaiseWindow(JJ)V", Any)]
 pub fn xraise_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1272,6 +1367,7 @@ pub fn xraise_window<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XRefreshKeyboardMapping(J)V", Any)]
 pub fn xrefresh_keyboard_mapping<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1283,6 +1379,7 @@ pub fn xrefresh_keyboard_mapping<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XReparentWindow(JJJII)V", Any)]
 pub fn xreparent_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1298,6 +1395,7 @@ pub fn xreparent_window<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XResizeWindow(JJII)V", Any)]
 pub fn xresize_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1312,6 +1410,7 @@ pub fn xresize_window<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XRestackWindows(JJI)V", Any)]
 pub fn xrestack_windows<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1325,6 +1424,7 @@ pub fn xrestack_windows<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XScreenNumberOfScreen(J)J", Any)]
 pub fn xscreen_number_of_screen<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1336,6 +1436,7 @@ pub fn xscreen_number_of_screen<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSelectInput(JJJ)V", Any)]
 pub fn xselect_input<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1349,6 +1450,7 @@ pub fn xselect_input<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSendEvent(JJZJJ)I", Any)]
 pub fn xsend_event<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1364,6 +1466,7 @@ pub fn xsend_event<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetCloseDownMode(JI)V", Any)]
 pub fn xset_close_down_mode<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1376,6 +1479,7 @@ pub fn xset_close_down_mode<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetErrorHandler(J)V", Any)]
 pub fn xset_error_handler<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1387,6 +1491,7 @@ pub fn xset_error_handler<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetInputFocus(JJ)V", Any)]
 pub fn xset_input_focus<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1399,6 +1504,7 @@ pub fn xset_input_focus<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetInputFocus2(JJJ)V", Any)]
 pub fn xset_input_focus2<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1412,6 +1518,7 @@ pub fn xset_input_focus2<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XlibWrapper.XSetLocaleModifiers(Ljava/lang/String;)Ljava/lang/String;",
     Any
@@ -1427,6 +1534,7 @@ pub fn xset_locale_modifiers<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetMinMaxHints(JJIIIIJ)V", Any)]
 pub fn xset_min_max_hints<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1444,6 +1552,7 @@ pub fn xset_min_max_hints<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetSelectionOwner(JJJJ)V", Any)]
 pub fn xset_selection_owner<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1458,6 +1567,7 @@ pub fn xset_selection_owner<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetTransientFor(JJJ)V", Any)]
 pub fn xset_transient_for<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1471,6 +1581,7 @@ pub fn xset_transient_for<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetWMHints(JJJ)V", Any)]
 pub fn xset_wmhints<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1484,6 +1595,7 @@ pub fn xset_wmhints<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetWMNormalHints(JJJ)V", Any)]
 pub fn xset_wmnormal_hints<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1497,6 +1609,7 @@ pub fn xset_wmnormal_hints<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetWindowBackground(JJJ)V", Any)]
 pub fn xset_window_background<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1510,6 +1623,7 @@ pub fn xset_window_background<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetWindowBackgroundPixmap(JJJ)V", Any)]
 pub fn xset_window_background_pixmap<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1523,6 +1637,7 @@ pub fn xset_window_background_pixmap<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XShapeQueryExtension(JJJ)Z", Any)]
 pub fn xshape_query_extension<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1536,6 +1651,7 @@ pub fn xshape_query_extension<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSupportsLocale()Z", Any)]
 pub fn xsupports_locale<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1546,6 +1662,7 @@ pub fn xsupports_locale<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSync(JI)V", Any)]
 pub fn xsync<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1555,6 +1672,7 @@ pub fn xsync<T: Thread + 'static>(
     let _display = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.XSync(JI)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSynchronize(JZ)I", LessThanOrEqual(JAVA_17))]
 pub fn xsynchronize<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1567,6 +1685,7 @@ pub fn xsynchronize<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XlibWrapper.XTextPropertyToStringList([BJ)[Ljava/lang/String;",
     Any
@@ -1582,6 +1701,7 @@ pub fn xtext_property_to_string_list<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XTranslateCoordinates(JJJJJJJJ)I", Any)]
 pub fn xtranslate_coordinates<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1600,6 +1720,7 @@ pub fn xtranslate_coordinates<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XUngrabKeyboard(JJ)V", Any)]
 pub fn xungrab_keyboard<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1612,6 +1733,7 @@ pub fn xungrab_keyboard<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XUngrabPointer(JJ)V", Any)]
 pub fn xungrab_pointer<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1624,6 +1746,7 @@ pub fn xungrab_pointer<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XUngrabServer(J)V", Any)]
 pub fn xungrab_server<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1635,6 +1758,7 @@ pub fn xungrab_server<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XUnmapWindow(JJ)V", Any)]
 pub fn xunmap_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1647,6 +1771,7 @@ pub fn xunmap_window<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XWindowEvent(JJJJ)V", Any)]
 pub fn xwindow_event<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1661,6 +1786,7 @@ pub fn xwindow_event<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XdbeAllocateBackBufferName(JJI)J", Any)]
 pub fn xdbe_allocate_back_buffer_name<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1674,6 +1800,7 @@ pub fn xdbe_allocate_back_buffer_name<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XdbeBeginIdiom(J)I", Any)]
 pub fn xdbe_begin_idiom<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1685,6 +1812,7 @@ pub fn xdbe_begin_idiom<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XdbeDeallocateBackBufferName(JJ)I", Any)]
 pub fn xdbe_deallocate_back_buffer_name<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1697,6 +1825,7 @@ pub fn xdbe_deallocate_back_buffer_name<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XdbeEndIdiom(J)I", Any)]
 pub fn xdbe_end_idiom<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1708,6 +1837,7 @@ pub fn xdbe_end_idiom<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XdbeQueryExtension(JJJ)I", Any)]
 pub fn xdbe_query_extension<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1721,6 +1851,7 @@ pub fn xdbe_query_extension<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XdbeSwapBuffers(JJI)I", Any)]
 pub fn xdbe_swap_buffers<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1734,6 +1865,7 @@ pub fn xdbe_swap_buffers<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbFreeKeyboard(JJZ)V", Any)]
 pub fn xkb_free_keyboard<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1747,6 +1879,7 @@ pub fn xkb_free_keyboard<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbGetEffectiveGroup(J)I", Any)]
 pub fn xkb_get_effective_group<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1758,6 +1891,7 @@ pub fn xkb_get_effective_group<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbGetMap(JJJ)J", Any)]
 pub fn xkb_get_map<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1771,6 +1905,7 @@ pub fn xkb_get_map<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbGetUpdatedMap(JJJ)J", Any)]
 pub fn xkb_get_updated_map<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1784,6 +1919,7 @@ pub fn xkb_get_updated_map<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbKeycodeToKeysym(JIII)J", Any)]
 pub fn xkb_keycode_to_keysym<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1798,6 +1934,7 @@ pub fn xkb_keycode_to_keysym<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbLibraryVersion(JJ)Z", Any)]
 pub fn xkb_library_version<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1810,6 +1947,7 @@ pub fn xkb_library_version<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbQueryExtension(JJJJJJ)Z", Any)]
 pub fn xkb_query_extension<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1826,6 +1964,7 @@ pub fn xkb_query_extension<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbSelectEventDetails(JJJJJ)V", Any)]
 pub fn xkb_select_event_details<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1841,6 +1980,7 @@ pub fn xkb_select_event_details<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbSelectEvents(JJJJ)V", Any)]
 pub fn xkb_select_events<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1855,6 +1995,7 @@ pub fn xkb_select_events<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbSetDetectableAutoRepeat(JZ)V", Any)]
 pub fn xkb_set_detectable_auto_repeat<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1867,6 +2008,7 @@ pub fn xkb_set_detectable_auto_repeat<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbTranslateKeyCode(JIJJJ)Z", Any)]
 pub fn xkb_translate_key_code<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1882,6 +2024,7 @@ pub fn xkb_translate_key_code<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.copyIntArray(JLjava/lang/Object;I)V", Any)]
 pub fn copy_int_array<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1895,6 +2038,7 @@ pub fn copy_int_array<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.copyLongArray(JLjava/lang/Object;I)V", Any)]
 pub fn copy_long_array<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1908,6 +2052,7 @@ pub fn copy_long_array<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.getAddress(Ljava/lang/Object;)J", Any)]
 pub fn get_address<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1919,6 +2064,7 @@ pub fn get_address<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.getScreenOfWindow(JJ)J", Any)]
 pub fn get_screen_of_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1931,6 +2077,7 @@ pub fn get_screen_of_window<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.getStringBytes(J)[B", Any)]
 pub fn get_string_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -1942,6 +2089,7 @@ pub fn get_string_bytes<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XlibWrapper.memcpy(JJJ)V", Any)]
 pub fn memcpy<T: Thread + 'static>(
     _thread: Arc<T>,

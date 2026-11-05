@@ -14,6 +14,7 @@ pub fn beep<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WToolkit.beep()V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WToolkit.disableCustomPalette()V",
     LessThanOrEqual(JAVA_11)
@@ -27,6 +28,7 @@ pub fn disable_custom_palette<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WToolkit.embeddedDispose()Z",
     LessThanOrEqual(JAVA_21)
@@ -40,6 +42,7 @@ pub fn embedded_dispose<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WToolkit.embeddedEventLoopIdleProcessing()V",
     LessThanOrEqual(JAVA_21)
@@ -53,6 +56,7 @@ pub fn embedded_event_loop_idle_processing<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.embeddedInit()Z", LessThanOrEqual(JAVA_21))]
 pub fn embedded_init<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -63,6 +67,7 @@ pub fn embedded_init<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.eventLoop()V", Any)]
 pub fn event_loop<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -70,6 +75,7 @@ pub fn event_loop<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WToolkit.eventLoop()V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.getLockingKeyStateNative(I)Z", Any)]
 pub fn get_locking_key_state_native<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -81,6 +87,7 @@ pub fn get_locking_key_state_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.getMaximumCursorColors()I", Any)]
 pub fn get_maximum_cursor_colors<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -91,6 +98,7 @@ pub fn get_maximum_cursor_colors<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.getNumberOfButtonsImpl()I", Any)]
 pub fn get_number_of_buttons_impl<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -101,6 +109,7 @@ pub fn get_number_of_buttons_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.getScreenHeight()I", Equal(JAVA_8))]
 pub fn get_screen_height<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -111,6 +120,7 @@ pub fn get_screen_height<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.getScreenInsets(I)Ljava/awt/Insets;", Any)]
 pub fn get_screen_insets<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -122,6 +132,7 @@ pub fn get_screen_insets<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.getScreenWidth()I", Equal(JAVA_8))]
 pub fn get_screen_width<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -132,6 +143,7 @@ pub fn get_screen_width<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.getWindowsVersion()Ljava/lang/String;", Any)]
 pub fn get_windows_version<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -142,6 +154,7 @@ pub fn get_windows_version<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.hideTouchKeyboard()V", Any)]
 pub fn hide_touch_keyboard<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -152,6 +165,7 @@ pub fn hide_touch_keyboard<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.init()Z", Any)]
 pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -159,6 +173,7 @@ pub fn init<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WToolkit.init()Z".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -166,6 +181,7 @@ pub fn init_ids<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WToolkit.initIDs()V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.isDynamicLayoutSupportedNative()Z", Any)]
 pub fn is_dynamic_layout_supported_native<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -176,6 +192,7 @@ pub fn is_dynamic_layout_supported_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.loadSystemColors([I)V", Any)]
 pub fn load_system_colors<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -187,6 +204,7 @@ pub fn load_system_colors<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WToolkit.makeColorModel()Ljava/awt/image/ColorModel;",
     Any
@@ -200,6 +218,7 @@ pub fn make_color_model<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.nativeSync()V", Any)]
 pub fn native_sync<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -210,6 +229,7 @@ pub fn native_sync<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.postDispose()V", Any)]
 pub fn post_dispose<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -220,6 +240,7 @@ pub fn post_dispose<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.quitSecondaryEventLoop()V", Any)]
 pub fn quit_secondary_event_loop<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -230,6 +251,7 @@ pub fn quit_secondary_event_loop<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.setDynamicLayoutNative(Z)V", Any)]
 pub fn set_dynamic_layout_native<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -241,6 +263,7 @@ pub fn set_dynamic_layout_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.setExtraMouseButtonsEnabledNative(Z)V", Any)]
 pub fn set_extra_mouse_buttons_enabled_native<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -252,6 +275,7 @@ pub fn set_extra_mouse_buttons_enabled_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.setLockingKeyStateNative(IZ)V", Any)]
 pub fn set_locking_key_state_native<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -264,6 +288,7 @@ pub fn set_locking_key_state_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.showTouchKeyboard(Z)V", Any)]
 pub fn show_touch_keyboard<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -275,6 +300,7 @@ pub fn show_touch_keyboard<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.shutdown()V", Any)]
 pub fn shutdown<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -282,6 +308,7 @@ pub fn shutdown<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WToolkit.shutdown()V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.startSecondaryEventLoop()V", Any)]
 pub fn start_secondary_event_loop<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -292,6 +319,7 @@ pub fn start_secondary_event_loop<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WToolkit.startToolkitThread(Ljava/lang/Runnable;Ljava/lang/ThreadGroup;)Z",
     Any
@@ -308,6 +336,7 @@ pub fn start_toolkit_thread<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WToolkit.syncNativeQueue(J)Z", Any)]
 pub fn sync_native_queue<T: Thread + 'static>(
     _thread: Arc<T>,

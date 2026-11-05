@@ -6,6 +6,7 @@ import java.lang.reflect.*;
 @Target({ElementType.TYPE, ElementType.RECORD_COMPONENT, ElementType.PARAMETER})
 @interface MyAnnotation {
     String value() default "";
+
     int priority() default 1;
 }
 
@@ -18,6 +19,7 @@ import java.lang.reflect.*;
 @Target(ElementType.RECORD_COMPONENT)
 @interface Range {
     int min() default 0;
+
     int max() default 100;
 }
 

@@ -13,6 +13,7 @@ pub fn get_jvm_pid<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XWindowPeer.getJvmPID()I".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/X11/XWindowPeer.getLocalHostname()Ljava/lang/String;", Any)]
 pub fn get_local_hostname<T: Thread + 'static>(
     _thread: Arc<T>,

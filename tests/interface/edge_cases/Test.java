@@ -11,15 +11,21 @@ interface MarkerInterface {
 
 interface OverloadedMethods {
     void method();
+
     void method(int param);
+
     void method(String param);
+
     void method(int param1, String param2);
+
     int method(double param); // Different return type with different params is OK
 }
 
 interface CovariantReturns {
     Object getObject();
+
     Number getNumber();
+
     String getString();
 }
 
@@ -79,7 +85,9 @@ class CovariantImplementation extends CovariantBase {
 // Test interface with throws clauses
 interface ThrowingInterface {
     void mayThrow() throws Exception;
+
     void specificThrow() throws IllegalArgumentException;
+
     void multipleThrows() throws IllegalArgumentException, IllegalStateException;
 }
 

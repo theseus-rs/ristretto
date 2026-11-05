@@ -784,6 +784,7 @@ mod test {
         assert!(versions_in.matches(&JAVA_21));
         assert!(!versions_in.matches(&JAVA_17));
     }
+
     #[test]
     fn legacy_aliases_compare_by_wire_version() -> Result<()> {
         for minor in [0, 3, u16::MAX] {

@@ -19,6 +19,7 @@ pub fn caret_update<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.caretUpdate(Ljavax/swing/event/CaretEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.focusGained(Ljava/awt/event/FocusEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -31,6 +32,7 @@ pub fn focus_gained<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.focusGained(Ljava/awt/event/FocusEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.focusLost(Ljava/awt/event/FocusEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -43,6 +45,7 @@ pub fn focus_lost<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.focusLost(Ljava/awt/event/FocusEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.isSysWow()Z",
     GreaterThanOrEqual(JAVA_11)
@@ -56,6 +59,7 @@ pub fn is_sys_wow<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.javaShutdown()V",
     GreaterThanOrEqual(JAVA_11)
@@ -69,6 +73,7 @@ pub fn java_shutdown<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.jawtGetComponentFromNativeWindowHandle(I)Ljava/awt/Component;",
     GreaterThanOrEqual(JAVA_11)
@@ -80,6 +85,7 @@ pub fn jawt_get_component_from_native_window_handle<T: Thread + 'static>(
     let _window_handle = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.jawtGetComponentFromNativeWindowHandle(I)Ljava/awt/Component;".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.jawtGetNativeWindowHandleFromComponent(Ljava/awt/Component;)I",
     GreaterThanOrEqual(JAVA_11)
@@ -91,6 +97,7 @@ pub fn jawt_get_native_window_handle_from_component<T: Thread + 'static>(
     let _component = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.jawtGetNativeWindowHandleFromComponent(Ljava/awt/Component;)I".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.menuCanceled(Ljavax/swing/event/MenuEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -103,6 +110,7 @@ pub fn menu_canceled<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.menuCanceled(Ljavax/swing/event/MenuEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.menuDeselected(Ljavax/swing/event/MenuEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -115,6 +123,7 @@ pub fn menu_deselected<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.menuDeselected(Ljavax/swing/event/MenuEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.menuSelected(Ljavax/swing/event/MenuEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -127,6 +136,7 @@ pub fn menu_selected<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.menuSelected(Ljavax/swing/event/MenuEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.mouseClicked(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -139,6 +149,7 @@ pub fn mouse_clicked<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.mouseClicked(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.mouseEntered(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -151,6 +162,7 @@ pub fn mouse_entered<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.mouseEntered(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.mouseExited(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -163,6 +175,7 @@ pub fn mouse_exited<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.mouseExited(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.mousePressed(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -175,6 +188,7 @@ pub fn mouse_pressed<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.mousePressed(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.mouseReleased(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -187,6 +201,7 @@ pub fn mouse_released<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.mouseReleased(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.popupMenuCanceled(Ljavax/swing/event/PopupMenuEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -199,6 +214,7 @@ pub fn popup_menu_canceled<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.popupMenuCanceled(Ljavax/swing/event/PopupMenuEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.popupMenuWillBecomeInvisible(Ljavax/swing/event/PopupMenuEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -211,6 +227,7 @@ pub fn popup_menu_will_become_invisible<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.popupMenuWillBecomeInvisible(Ljavax/swing/event/PopupMenuEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.popupMenuWillBecomeVisible(Ljavax/swing/event/PopupMenuEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -223,6 +240,7 @@ pub fn popup_menu_will_become_visible<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.popupMenuWillBecomeVisible(Ljavax/swing/event/PopupMenuEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.propertyActiveDescendentChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -237,6 +255,7 @@ pub fn property_active_descendent_change<T: Thread + 'static>(
     let _event = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.propertyActiveDescendentChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.propertyCaretChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;II)V",
     GreaterThanOrEqual(JAVA_11)
@@ -251,6 +270,7 @@ pub fn property_caret_change<T: Thread + 'static>(
     let _event = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.propertyCaretChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;II)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.propertyChildChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -265,6 +285,7 @@ pub fn property_child_change<T: Thread + 'static>(
     let _event = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.propertyChildChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.propertyDescriptionChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -279,6 +300,7 @@ pub fn property_description_change<T: Thread + 'static>(
     let _event = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.propertyDescriptionChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.propertyNameChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -293,6 +315,7 @@ pub fn property_name_change<T: Thread + 'static>(
     let _event = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.propertyNameChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.propertySelectionChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -305,6 +328,7 @@ pub fn property_selection_change<T: Thread + 'static>(
     let _event = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.propertySelectionChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.propertyStateChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -319,6 +343,7 @@ pub fn property_state_change<T: Thread + 'static>(
     let _event = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.propertyStateChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.propertyTextChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -331,6 +356,7 @@ pub fn property_text_change<T: Thread + 'static>(
     let _event = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.propertyTextChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.propertyValueChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -345,6 +371,7 @@ pub fn property_value_change<T: Thread + 'static>(
     let _event = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.propertyValueChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.propertyVisibleDataChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
@@ -357,6 +384,7 @@ pub fn property_visible_data_change<T: Thread + 'static>(
     let _event = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/accessibility/internal/AccessBridge.propertyVisibleDataChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.runDLL()V",
     GreaterThanOrEqual(JAVA_11)
@@ -370,6 +398,7 @@ pub fn run_dll<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "com/sun/java/accessibility/internal/AccessBridge.sendDebugString(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)

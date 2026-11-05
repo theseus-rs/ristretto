@@ -26,6 +26,7 @@ pub fn get_rgbpixels_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XRobotPeer.getRGBPixelsImpl(Lsun/awt/X11GraphicsConfig;IIII[IZ)V",
     GreaterThanOrEqual(JAVA_11)
@@ -46,6 +47,7 @@ pub fn get_rgbpixels_impl_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XRobotPeer.keyPressImpl(I)V", Any)]
 pub fn key_press_impl<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -57,6 +59,7 @@ pub fn key_press_impl<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XRobotPeer.keyReleaseImpl(I)V", Any)]
 pub fn key_release_impl<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -68,6 +71,7 @@ pub fn key_release_impl<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XRobotPeer.loadNativeLibraries()V", Any)]
 pub fn load_native_libraries<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -78,6 +82,7 @@ pub fn load_native_libraries<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XRobotPeer.mouseMoveImpl(Lsun/awt/X11GraphicsConfig;II)V",
     Any
@@ -94,6 +99,7 @@ pub fn mouse_move_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XRobotPeer.mousePressImpl(I)V", Any)]
 pub fn mouse_press_impl<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -105,6 +111,7 @@ pub fn mouse_press_impl<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XRobotPeer.mouseReleaseImpl(I)V", Any)]
 pub fn mouse_release_impl<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -116,6 +123,7 @@ pub fn mouse_release_impl<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XRobotPeer.mouseWheelImpl(I)V", Any)]
 pub fn mouse_wheel_impl<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -127,6 +135,7 @@ pub fn mouse_wheel_impl<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XRobotPeer.setup(I[I)V", Any)]
 pub fn setup<T: Thread + 'static>(
     _thread: Arc<T>,

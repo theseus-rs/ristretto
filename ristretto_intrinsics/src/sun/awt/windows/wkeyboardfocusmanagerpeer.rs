@@ -20,6 +20,7 @@ pub fn get_native_focus_owner<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WKeyboardFocusManagerPeer.getNativeFocusedWindow()Ljava/awt/Window;",
     Any
@@ -34,6 +35,7 @@ pub fn get_native_focused_window<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WKeyboardFocusManagerPeer.setNativeFocusOwner(Ljava/awt/peer/ComponentPeer;)V",
     Any

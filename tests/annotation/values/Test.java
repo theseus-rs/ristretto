@@ -16,12 +16,19 @@ enum Priority {
 @interface AllValueTypes {
     // Primitive types
     boolean booleanValue() default true;
+
     byte byteValue() default 42;
+
     short shortValue() default 1000;
+
     int intValue() default 12345;
+
     long longValue() default 9876543210L;
+
     float floatValue() default 3.14f;
+
     double doubleValue() default 2.718281828;
+
     char charValue() default 'A';
 
     // String
@@ -38,9 +45,13 @@ enum Priority {
 
     // Arrays
     int[] intArray() default {1, 2, 3};
+
     String[] stringArray() default {"a", "b", "c"};
+
     Class<?>[] classArray() default {String.class, Integer.class};
+
     Priority[] priorityArray() default {Priority.LOW, Priority.HIGH};
+
     SimpleAnnotation[] annotationArray() default {@SimpleAnnotation("first"), @SimpleAnnotation("second")};
 }
 

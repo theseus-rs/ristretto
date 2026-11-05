@@ -16,6 +16,7 @@ pub fn awt_output_flush<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XToolkit.awt_toolkit_init()V", Any)]
 pub fn awt_toolkit_init<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -26,6 +27,7 @@ pub fn awt_toolkit_init<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XToolkit.getDefaultXColormap()J", Any)]
 pub fn get_default_xcolormap<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -36,6 +38,7 @@ pub fn get_default_xcolormap<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XToolkit.getEnv(Ljava/lang/String;)Ljava/lang/String;",
     Any
@@ -50,6 +53,7 @@ pub fn get_env<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XToolkit.getNumberOfButtonsImpl()I", Any)]
 pub fn get_number_of_buttons_impl<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -60,6 +64,7 @@ pub fn get_number_of_buttons_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XToolkit.getTrayIconDisplayTimeout()J", Any)]
 pub fn get_tray_icon_display_timeout<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -70,6 +75,7 @@ pub fn get_tray_icon_display_timeout<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XToolkit.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -77,6 +83,7 @@ pub fn init_ids<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XToolkit.initIDs()V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/X11/XToolkit.nativeLoadSystemColors([I)V", Any)]
 pub fn native_load_system_colors<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -88,6 +95,7 @@ pub fn native_load_system_colors<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XToolkit.waitForEvents(J)V", Any)]
 pub fn wait_for_events<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -99,6 +107,7 @@ pub fn wait_for_events<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XToolkit.wakeup_poll()V", Any)]
 pub fn wakeup_poll<T: Thread + 'static>(
     _thread: Arc<T>,

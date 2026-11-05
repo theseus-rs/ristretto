@@ -21,6 +21,7 @@ pub fn fill_point_with_coords<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z",
     GreaterThanOrEqual(JAVA_11)

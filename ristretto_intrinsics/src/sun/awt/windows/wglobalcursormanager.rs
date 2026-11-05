@@ -21,6 +21,7 @@ pub fn find_heavyweight_under_cursor<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WGlobalCursorManager.getCursorPos(Ljava/awt/Point;)V",
     Any
@@ -35,6 +36,7 @@ pub fn get_cursor_pos<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WGlobalCursorManager.getLocationOnScreen(Ljava/awt/Component;)Ljava/awt/Point;",
     Any
@@ -46,6 +48,7 @@ pub fn get_location_on_screen<T: Thread + 'static>(
     let _component = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WGlobalCursorManager.getLocationOnScreen(Ljava/awt/Component;)Ljava/awt/Point;".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WGlobalCursorManager.setCursor(Ljava/awt/Component;Ljava/awt/Cursor;Z)V",
     Any

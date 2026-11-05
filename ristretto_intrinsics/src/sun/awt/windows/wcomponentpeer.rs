@@ -16,6 +16,7 @@ pub fn dispose<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer._setBackground(I)V", Any)]
 pub fn set_background<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -27,6 +28,7 @@ pub fn set_background<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer._setFont(Ljava/awt/Font;)V", Any)]
 pub fn set_font<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -38,6 +40,7 @@ pub fn set_font<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer._setForeground(I)V", Any)]
 pub fn set_foreground<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -49,6 +52,7 @@ pub fn set_foreground<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.addNativeDropTarget()J", Any)]
 pub fn add_native_drop_target<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -59,6 +63,7 @@ pub fn add_native_drop_target<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.beginValidate()V", Any)]
 pub fn begin_validate<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -69,6 +74,7 @@ pub fn begin_validate<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.createPrintedPixels(IIIII)[I", Any)]
 pub fn create_printed_pixels<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -84,6 +90,7 @@ pub fn create_printed_pixels<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.disable()V", Any)]
 pub fn disable<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -94,6 +101,7 @@ pub fn disable<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.enable()V", Any)]
 pub fn enable<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -104,6 +112,7 @@ pub fn enable<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.endValidate()V", Any)]
 pub fn end_validate<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -114,6 +123,7 @@ pub fn end_validate<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WComponentPeer.getLocationOnScreen()Ljava/awt/Point;",
     Any
@@ -127,6 +137,7 @@ pub fn get_location_on_screen<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.hide()V", Any)]
 pub fn hide<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -137,6 +148,7 @@ pub fn hide<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.isObscured()Z", Any)]
 pub fn is_obscured<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -147,6 +159,7 @@ pub fn is_obscured<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WComponentPeer.nativeHandleEvent(Ljava/awt/AWTEvent;)V",
     Any
@@ -161,6 +174,7 @@ pub fn native_handle_event<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.nativeHandlesWheelScrolling()Z", Any)]
 pub fn native_handles_wheel_scrolling<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -171,6 +185,7 @@ pub fn native_handles_wheel_scrolling<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WComponentPeer.pSetParent(Ljava/awt/peer/ComponentPeer;)V",
     Any
@@ -185,6 +200,7 @@ pub fn p_set_parent<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.pShow()V", Any)]
 pub fn p_show<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -195,6 +211,7 @@ pub fn p_show<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.removeNativeDropTarget()V", Any)]
 pub fn remove_native_drop_target<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -205,6 +222,7 @@ pub fn remove_native_drop_target<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.reshape(IIII)V", Any)]
 pub fn reshape<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -219,6 +237,7 @@ pub fn reshape<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.reshapeNoCheck(IIII)V", Any)]
 pub fn reshape_no_check<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -233,6 +252,7 @@ pub fn reshape_no_check<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.setFocus(Z)V", Any)]
 pub fn set_focus<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -244,6 +264,7 @@ pub fn set_focus<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WComponentPeer.setRectangularShape(IIIILsun/java2d/pipe/Region;)V",
     Any
@@ -263,6 +284,7 @@ pub fn set_rectangular_shape<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.setZOrder(J)V", Any)]
 pub fn set_zorder<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -274,6 +296,7 @@ pub fn set_zorder<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.start()V", Any)]
 pub fn start<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -284,6 +307,7 @@ pub fn start<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WComponentPeer.updateWindow()V", Any)]
 pub fn update_window<T: Thread + 'static>(
     _thread: Arc<T>,

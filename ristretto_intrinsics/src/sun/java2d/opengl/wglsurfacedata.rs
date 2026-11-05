@@ -20,6 +20,7 @@ pub fn init_ops<T: Thread + 'static>(
     let _gc = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/opengl/WGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JLsun/awt/windows/WComponentPeer;J)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/java2d/opengl/WGLSurfaceData.updateWindowAccelImpl(JLsun/awt/windows/WComponentPeer;II)Z",
     Any

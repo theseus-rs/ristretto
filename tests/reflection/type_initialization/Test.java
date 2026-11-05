@@ -9,8 +9,10 @@ public class Test {
         static { initialized++; }
         FieldType field;
         Inspected(ParameterType parameter) throws CheckedType { }
+
         ReturnType method(ParameterType parameter) throws CheckedType { return null; }
     }
+
     public static void main(String[] args) throws Exception {
         System.out.println("Interfaces: " + Inspected.class.getInterfaces().length);
         System.out.println(Inspected.class.getDeclaredFields()[0].getType().getSimpleName());

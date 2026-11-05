@@ -17,6 +17,7 @@ pub fn dispose<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WRobotPeer.create()V", Equal(JAVA_8))]
 pub fn create<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -24,6 +25,7 @@ pub fn create<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WRobotPeer.create()V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/windows/WRobotPeer.getRGBPixels(IIII[I)V", Any)]
 pub fn get_rgbpixels<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -39,6 +41,7 @@ pub fn get_rgbpixels<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WRobotPeer.keyPress(I)V", Any)]
 pub fn key_press<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -50,6 +53,7 @@ pub fn key_press<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WRobotPeer.keyRelease(I)V", Any)]
 pub fn key_release<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -61,6 +65,7 @@ pub fn key_release<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WRobotPeer.mouseMoveImpl(II)V", Any)]
 pub fn mouse_move_impl<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -73,6 +78,7 @@ pub fn mouse_move_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WRobotPeer.mousePress(I)V", Any)]
 pub fn mouse_press<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -84,6 +90,7 @@ pub fn mouse_press<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WRobotPeer.mouseRelease(I)V", Any)]
 pub fn mouse_release<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -95,6 +102,7 @@ pub fn mouse_release<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WRobotPeer.mouseWheel(I)V", Any)]
 pub fn mouse_wheel<T: Thread + 'static>(
     _thread: Arc<T>,

@@ -2,21 +2,31 @@
 public class Test {
     static class A {
         public static void staticMethod() {}
+
         public void publicMethod() {}
+
         protected void protectedMethod() {}
+
         private void privateMethod() {}
+
         void packageMethod() {}
 
         public String methodWithReturn() { return "test"; }
+
         public void methodWithParams(int x, String s) {}
+
         public void methodWithVarargs(String... args) {}
 
         public synchronized void synchronizedMethod() {}
+
         public final void finalMethod() {}
+
         public native void nativeMethod();
 
         public void overloadedMethod() {}
+
         public void overloadedMethod(int x) {}
+
         public void overloadedMethod(String s) {}
     }
 

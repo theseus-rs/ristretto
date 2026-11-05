@@ -23,6 +23,7 @@ public class Test {
     static class Loader extends ClassLoader {
         Class<?> define(byte[] bytes) { return defineClass("Dynamic", bytes, 0, bytes.length); }
     }
+
     public static void main(String[] args) throws Exception {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         DataOutputStream out = new DataOutputStream(buffer);

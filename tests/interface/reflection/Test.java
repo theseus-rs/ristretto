@@ -3,9 +3,11 @@ import java.lang.reflect.*;
 
 interface ReflectionTarget {
     void publicMethod();
+
     default void defaultMethod() {
         System.out.println("ReflectionTarget.defaultMethod");
     }
+
     static void staticMethod() {
         System.out.println("ReflectionTarget.staticMethod");
     }
@@ -14,6 +16,7 @@ interface ReflectionTarget {
 
 interface GenericReflection<T extends Number> {
     T process(T input);
+
     Class<T> getType();
 }
 

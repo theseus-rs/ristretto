@@ -21,6 +21,7 @@ pub fn close_registry_key<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "jdk/jpackage/internal/WindowsRegistry.comparePaths(Ljava/lang/String;Ljava/lang/String;)Z",
     GreaterThanOrEqual(JAVA_17)
@@ -37,6 +38,7 @@ pub fn compare_paths<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "jdk/jpackage/internal/WindowsRegistry.enumRegistryValue(JI)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_17)
@@ -52,6 +54,7 @@ pub fn enum_registry_value<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "jdk/jpackage/internal/WindowsRegistry.openRegistryKey(ILjava/lang/String;)J",
     GreaterThanOrEqual(JAVA_17)
@@ -67,6 +70,7 @@ pub fn open_registry_key<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "jdk/jpackage/internal/WindowsRegistry.readDwordValue(ILjava/lang/String;Ljava/lang/String;I)I",
     GreaterThanOrEqual(JAVA_17)

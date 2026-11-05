@@ -693,6 +693,7 @@ impl Bits {
         }
         self.value &= (1 << self.count) - 1;
     }
+
     fn flush(&mut self) {
         if self.count > 0 {
             let count = 8 - self.count;

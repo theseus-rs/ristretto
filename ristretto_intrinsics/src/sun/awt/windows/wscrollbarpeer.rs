@@ -20,6 +20,7 @@ pub fn create<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WScrollbarPeer.getScrollbarSize(I)I", Any)]
 pub fn get_scrollbar_size<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -31,6 +32,7 @@ pub fn get_scrollbar_size<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WScrollbarPeer.setLineIncrement(I)V", Any)]
 pub fn set_line_increment<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -42,6 +44,7 @@ pub fn set_line_increment<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WScrollbarPeer.setPageIncrement(I)V", Any)]
 pub fn set_page_increment<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -53,6 +56,7 @@ pub fn set_page_increment<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WScrollbarPeer.setValues(IIII)V", Any)]
 pub fn set_values<T: Thread + 'static>(
     _thread: Arc<T>,

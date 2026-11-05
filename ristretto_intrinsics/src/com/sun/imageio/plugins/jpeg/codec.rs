@@ -353,6 +353,7 @@ impl Header {
         self.multiple |= count < self.components.len();
         Ok(())
     }
+
     fn info(&self) -> CodecResult<[i32; 6]> {
         Ok([
             i32::try_from(self.width).map_err(message)?,
@@ -363,6 +364,7 @@ impl Header {
             i32::from(self.multiple),
         ])
     }
+
     fn default_color(&self) -> i32 {
         match self.color {
             3 => 2,
@@ -835,6 +837,7 @@ mod tests {
         assert!(encoder.write_tables(&Tables { nq: 5, ..tables }).is_err());
         Ok(())
     }
+
     #[test]
     fn progressive_refinement_with_unusual_components() -> CodecResult<()> {
         for (input, color, components) in [(0, 0, 2), (2, 2, 3), (2, 3, 3), (4, 4, 4), (4, 5, 4)] {

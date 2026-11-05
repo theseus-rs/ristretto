@@ -30,6 +30,7 @@ fn pop2_category_1() -> ristretto_jit::Result<()> {
     assert_eq!(value, Value::I32(2));
     Ok(())
 }
+
 #[test]
 fn pop2_category_2() -> ristretto_jit::Result<()> {
     let instructions = vec![

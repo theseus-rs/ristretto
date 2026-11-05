@@ -19,6 +19,7 @@ pub fn get_all_printer_names<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/print/PrintServiceLookupProvider.getDefaultPrinterName()Ljava/lang/String;",
     Any
@@ -33,6 +34,7 @@ pub fn get_default_printer_name<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/print/PrintServiceLookupProvider.notifyLocalPrinterChange()V",
     Any
@@ -46,6 +48,7 @@ pub fn notify_local_printer_change<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/print/PrintServiceLookupProvider.notifyRemotePrinterChange()V",
     Any

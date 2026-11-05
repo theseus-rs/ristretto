@@ -17,6 +17,7 @@ pub fn get_bounds<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/Win32GraphicsConfig.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,

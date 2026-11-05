@@ -18,6 +18,7 @@ pub fn get_awtkey_code_for_key_sym<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XWindow.getKeySymForAWTKeyCode(I)I", Any)]
 pub fn get_key_sym_for_awtkey_code<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -29,6 +30,7 @@ pub fn get_key_sym_for_awtkey_code<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XWindow.getNativeColor(Ljava/awt/Color;Ljava/awt/GraphicsConfiguration;)I",
     LessThanOrEqual(JAVA_11)
@@ -45,6 +47,7 @@ pub fn get_native_color<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XWindow.getTopWindow(JJ)J", LessThanOrEqual(JAVA_11))]
 pub fn get_top_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -54,6 +57,7 @@ pub fn get_top_window<T: Thread + 'static>(
     let _window = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XWindow.getTopWindow(JJ)J".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/X11/XWindow.getWMInsets(JJJJJJ)V", LessThanOrEqual(JAVA_11))]
 pub fn get_wminsets<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -70,6 +74,7 @@ pub fn get_wminsets<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/X11/XWindow.getWindowBounds(JJJJJ)V",
     LessThanOrEqual(JAVA_11)
@@ -88,6 +93,7 @@ pub fn get_window_bounds<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XWindow.haveCurrentX11InputMethodInstance()Z", Any)]
 pub fn have_current_x11_input_method_instance<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -98,6 +104,7 @@ pub fn have_current_x11_input_method_instance<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XWindow.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -105,6 +112,7 @@ pub fn init_ids<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XWindow.initIDs()V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/X11/XWindow.x11inputMethodLookupString(J[J)Z", Any)]
 pub fn x11input_method_lookup_string<T: Thread + 'static>(
     _thread: Arc<T>,

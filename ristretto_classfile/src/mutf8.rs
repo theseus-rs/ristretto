@@ -746,6 +746,7 @@ mod tests {
             "\u{FFFD}ABC"
         );
     }
+
     #[test]
     fn utf16_conversion_rejects_noncanonical_encodings() -> Result<()> {
         for bytes in [

@@ -20,6 +20,7 @@ pub fn de_register_font_with_platform<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/Win32FontManager.getEUDCFontFile()Ljava/lang/String;", Any)]
 pub fn get_eudcfont_file<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -30,6 +31,7 @@ pub fn get_eudcfont_file<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/Win32FontManager.getFontPath(Z)Ljava/lang/String;", Any)]
 pub fn get_font_path<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -41,6 +43,7 @@ pub fn get_font_path<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/Win32FontManager.populateFontFileNameMap0(Ljava/util/HashMap;Ljava/util/HashMap;Ljava/util/HashMap;Ljava/util/Locale;)V",
     Any
@@ -55,6 +58,7 @@ pub fn populate_font_file_name_map0<T: Thread + 'static>(
     let _font_to_file_map = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/Win32FontManager.populateFontFileNameMap0(Ljava/util/HashMap;Ljava/util/HashMap;Ljava/util/HashMap;Ljava/util/Locale;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/awt/Win32FontManager.registerFontWithPlatform(Ljava/lang/String;)V",
     Any

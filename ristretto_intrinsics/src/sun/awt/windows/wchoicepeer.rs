@@ -18,6 +18,7 @@ pub fn add_items<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WChoicePeer.closeList()V", Any)]
 pub fn close_list<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -28,6 +29,7 @@ pub fn close_list<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WChoicePeer.create(Lsun/awt/windows/WComponentPeer;)V",
     Any
@@ -42,6 +44,7 @@ pub fn create<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WChoicePeer.remove(I)V", Any)]
 pub fn remove<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -53,6 +56,7 @@ pub fn remove<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WChoicePeer.removeAll()V", Any)]
 pub fn remove_all<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -63,6 +67,7 @@ pub fn remove_all<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WChoicePeer.reshape(IIII)V", Any)]
 pub fn reshape<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -77,6 +82,7 @@ pub fn reshape<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WChoicePeer.select(I)V", Any)]
 pub fn select<T: Thread + 'static>(
     _thread: Arc<T>,

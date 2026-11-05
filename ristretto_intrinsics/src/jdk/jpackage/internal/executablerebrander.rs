@@ -22,6 +22,7 @@ pub fn icon_swap<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "jdk/jpackage/internal/ExecutableRebrander.lockResource(Ljava/lang/String;)J",
     GreaterThanOrEqual(JAVA_17)
@@ -36,6 +37,7 @@ pub fn lock_resource<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "jdk/jpackage/internal/ExecutableRebrander.unlockResource(J)V",
     Between(JAVA_17, JAVA_21)
@@ -50,6 +52,7 @@ pub fn unlock_resource<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "jdk/jpackage/internal/ExecutableRebrander.unlockResource(J)Z",
     Equal(JAVA_25)
@@ -64,6 +67,7 @@ pub fn unlock_resource_windows_v25<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "jdk/jpackage/internal/ExecutableRebrander.versionSwap(J[Ljava/lang/String;)I",
     GreaterThanOrEqual(JAVA_17)

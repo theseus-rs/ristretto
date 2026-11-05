@@ -16,6 +16,7 @@ pub fn get_default_screen<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/Win32GraphicsEnvironment.getNumScreens()I", Any)]
 pub fn get_num_screens<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -26,6 +27,7 @@ pub fn get_num_screens<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/Win32GraphicsEnvironment.getXResolution()I", Any)]
 pub fn get_xresolution<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -36,6 +38,7 @@ pub fn get_xresolution<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/Win32GraphicsEnvironment.getYResolution()I", Any)]
 pub fn get_yresolution<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -46,6 +49,7 @@ pub fn get_yresolution<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/Win32GraphicsEnvironment.initDisplay()V", Any)]
 pub fn init_display<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -56,6 +60,7 @@ pub fn init_display<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/Win32GraphicsEnvironment.isVistaOS()Z", Any)]
 pub fn is_vista_os<T: Thread + 'static>(
     _thread: Arc<T>,

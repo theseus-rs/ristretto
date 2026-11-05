@@ -21,6 +21,7 @@ pub fn create_awt_dialog<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WDialogPeer.endModal()V", Any)]
 pub fn end_modal<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -31,6 +32,7 @@ pub fn end_modal<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WDialogPeer.pSetIMMOption(Ljava/lang/String;)V", Any)]
 pub fn p_set_immoption<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -42,6 +44,7 @@ pub fn p_set_immoption<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WDialogPeer.showModal()V", Any)]
 pub fn show_modal<T: Thread + 'static>(
     _thread: Arc<T>,

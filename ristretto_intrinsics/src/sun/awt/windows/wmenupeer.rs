@@ -17,6 +17,7 @@ pub fn add_separator<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WMenuPeer.createMenu(Lsun/awt/windows/WMenuBarPeer;)V",
     Any
@@ -31,6 +32,7 @@ pub fn create_menu<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WMenuPeer.createSubMenu(Lsun/awt/windows/WMenuPeer;)V",
     Any
@@ -45,6 +47,7 @@ pub fn create_sub_menu<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WMenuPeer.delItem(I)V", Any)]
 pub fn del_item<T: Thread + 'static>(
     _thread: Arc<T>,

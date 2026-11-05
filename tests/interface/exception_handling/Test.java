@@ -3,8 +3,11 @@ import java.io.*;
 
 interface ThrowsInterface {
     void mayThrowChecked() throws IOException;
+
     void mayThrowMultiple() throws IOException, ClassNotFoundException;
+
     void mayThrowUnchecked() throws RuntimeException;
+
     void noThrowsClause();
 
     default void defaultWithThrows() throws Exception {
@@ -20,6 +23,7 @@ interface ThrowsInterface {
 
 interface ExceptionHierarchy {
     void throwsParent() throws Exception;
+
     void throwsChild() throws IOException;
 }
 

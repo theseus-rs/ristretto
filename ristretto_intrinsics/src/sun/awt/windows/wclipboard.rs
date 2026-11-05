@@ -20,6 +20,7 @@ pub fn close_clipboard<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WClipboard.closeClipboard0()V",
     GreaterThanOrEqual(JAVA_17)
@@ -33,6 +34,7 @@ pub fn close_clipboard0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WClipboard.getClipboardData(J)[B", Any)]
 pub fn get_clipboard_data<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -44,6 +46,7 @@ pub fn get_clipboard_data<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WClipboard.getClipboardFormats()[J", Any)]
 pub fn get_clipboard_formats<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -54,6 +57,7 @@ pub fn get_clipboard_formats<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WClipboard.init()V", Any)]
 pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -61,6 +65,7 @@ pub fn init<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WClipboard.init()V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WClipboard.openClipboard(Lsun/awt/datatransfer/SunClipboard;)V",
     LessThanOrEqual(JAVA_11)
@@ -76,6 +81,7 @@ pub fn open_clipboard<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WClipboard.openClipboard0(Lsun/awt/datatransfer/SunClipboard;)V",
     GreaterThanOrEqual(JAVA_17)
@@ -91,6 +97,7 @@ pub fn open_clipboard0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WClipboard.publishClipboardData(J[B)V", Any)]
 pub fn publish_clipboard_data<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -103,6 +110,7 @@ pub fn publish_clipboard_data<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WClipboard.registerClipboard()V",
     GreaterThanOrEqual(JAVA_17)
@@ -116,6 +124,7 @@ pub fn register_clipboard<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WClipboard.registerClipboardViewer()V", Any)]
 pub fn register_clipboard_viewer<T: Thread + 'static>(
     _thread: Arc<T>,

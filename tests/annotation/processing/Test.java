@@ -8,7 +8,9 @@ import java.util.Comparator;
 @Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PARAMETER, ElementType.CONSTRUCTOR})
 @interface TestAnnotation {
     String value() default "test";
+
     int number() default 42;
+
     boolean flag() default true;
 }
 
@@ -16,7 +18,9 @@ import java.util.Comparator;
 @Target(ElementType.METHOD)
 @interface MethodInfo {
     String description();
+
     String[] tags() default {};
+
     int version() default 1;
 }
 

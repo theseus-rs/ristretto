@@ -9,9 +9,13 @@ enum TestEnum {
 @Retention(RetentionPolicy.RUNTIME)
 @interface ArrayTestAnnotation {
     String[] stringArray() default {};
+
     int[] intArray() default {};
+
     Class<?>[] classArray() default {};
+
     TestEnum[] enumArray() default {};
+
     SimpleNestedAnnotation[] annotationArray() default {};
 }
 
@@ -19,6 +23,7 @@ enum TestEnum {
 @Retention(RetentionPolicy.RUNTIME)
 @interface SimpleNestedAnnotation {
     String name();
+
     int value() default 0;
 }
 
@@ -26,8 +31,11 @@ enum TestEnum {
 @Retention(RetentionPolicy.RUNTIME)
 @interface MixedArrayAnnotation {
     String singleString() default "single";
+
     String[] stringArray() default {"default1", "default2"};
+
     int singleInt() default 42;
+
     int[] intArray() default {1, 2, 3};
 }
 
@@ -35,7 +43,9 @@ enum TestEnum {
 @Retention(RetentionPolicy.RUNTIME)
 @interface SingleElementArrayAnnotation {
     String[] singleElementArray() default {"single"};
+
     int[] singleIntArray() default {99};
+
     Class<?>[] singleClassArray() default {String.class};
 }
 

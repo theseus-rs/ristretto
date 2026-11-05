@@ -2887,6 +2887,7 @@ mod test {
         );
         test_attribute(&attribute, &expected_bytes, VERSION_45_3)
     }
+
     #[test]
     fn failed_attribute_write_rolls_back_the_entire_payload() {
         let attribute = Attribute::Code {

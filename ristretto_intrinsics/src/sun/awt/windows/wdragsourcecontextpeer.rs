@@ -22,6 +22,7 @@ pub fn create_drag_source<T: Thread + 'static>(
     let _component = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WDragSourceContextPeer.createDragSource(Ljava/awt/Component;Ljava/awt/datatransfer/Transferable;Ljava/awt/event/InputEvent;I[JLjava/util/Map;)J".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WDragSourceContextPeer.doDragDrop(JLjava/awt/Cursor;[IIIII)V",
     Any
@@ -42,6 +43,7 @@ pub fn do_drag_drop<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WDragSourceContextPeer.setNativeCursor(JLjava/awt/Cursor;I)V",
     Any

@@ -8,8 +8,11 @@ public class Test {
 
     public static class Factory {
         public static Class<?> tag() { return Element.tag(); }
+
         public static Class<?> literal() { return Element[].class; }
+
         public static Object array() { return new Element[1]; }
+
         public static Object matrix() { return new Element[1][2]; }
     }
 

@@ -13,9 +13,11 @@ impl VerificationContext for Context {
     fn is_subclass(&self, source: &str, target: &str) -> VerifyResult<bool> {
         self.is_assignable(target, source)
     }
+
     fn is_assignable(&self, target: &str, source: &str) -> VerifyResult<bool> {
         Ok(source == target || target == "java/lang/Object")
     }
+
     fn common_superclass(&self, a: &str, b: &str) -> VerifyResult<String> {
         Ok(if a == b { a } else { "java/lang/Object" }.to_string())
     }

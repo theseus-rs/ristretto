@@ -1,6 +1,7 @@
 /** Test basic interface declaration, implementation, and usage */
 interface BasicInterface {
     void method1();
+
     int method2(String param);
 }
 

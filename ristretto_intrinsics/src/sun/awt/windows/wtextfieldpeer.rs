@@ -20,6 +20,7 @@ pub fn create<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WTextFieldPeer.setEchoChar(C)V", Any)]
 pub fn set_echo_char<T: Thread + 'static>(
     _thread: Arc<T>,

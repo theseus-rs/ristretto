@@ -17,6 +17,7 @@ pub fn show<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WPopupMenuPeer.createMenu(Lsun/awt/windows/WComponentPeer;)V",
     Any

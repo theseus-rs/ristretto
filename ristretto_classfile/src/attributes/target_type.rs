@@ -650,6 +650,7 @@ mod test {
         );
         test_array_type(&target_type, &[71, 0, 1, 42])
     }
+
     #[test]
     fn target_payload_must_agree_with_tag_before_writing() {
         let targets = [

@@ -28,9 +28,13 @@ mod win32 {
     #[expect(unsafe_code)]
     unsafe extern "system" {
         pub safe fn WaitForSingleObject(hHandle: Handle, dwMilliseconds: u32) -> u32;
+
         pub safe fn GetExitCodeProcess(hProcess: Handle, lpExitCode: *mut u32) -> i32;
+
         pub safe fn TerminateProcess(hProcess: Handle, uExitCode: u32) -> i32;
+
         pub safe fn CloseHandle(hObject: Handle) -> i32;
+
         pub safe fn GetProcessId(hProcess: Handle) -> u32;
     }
 }

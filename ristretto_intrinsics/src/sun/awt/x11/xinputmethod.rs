@@ -17,6 +17,7 @@ pub fn adjust_status_window<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/XInputMethod.createXICNative(J)Z", Any)]
 pub fn create_xicnative<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -28,6 +29,7 @@ pub fn create_xicnative<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XInputMethod.openXIMNative(J)Z", Any)]
 pub fn open_ximnative<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -39,6 +41,7 @@ pub fn open_ximnative<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/XInputMethod.setXICFocusNative(JZZ)V", Any)]
 pub fn set_xicfocus_native<T: Thread + 'static>(
     _thread: Arc<T>,

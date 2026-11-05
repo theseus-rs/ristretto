@@ -28,6 +28,7 @@ export function initializeAppearance(onChange: (theme: Theme) => void) {
       (themePreferences.indexOf(themePreference) + 1) % themePreferences.length
     ];
   }
+
   function applyTheme() {
     const theme = selectedTheme();
     const label = `Color theme: ${themeLabels[themePreference]}. Switch to ${themeLabels[nextThemePreference()]}.`;

@@ -22,6 +22,7 @@ pub fn get_draw_buffer<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WBufferStrategy.initIDs(Ljava/lang/Class;)V",
     Equal(JAVA_8)

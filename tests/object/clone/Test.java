@@ -17,8 +17,11 @@ public class Test {
         }
 
         public int getValue() { return value; }
+
         public String getName() { return name; }
+
         public void setValue(int value) { this.value = value; }
+
         public void setName(String name) { this.name = name; }
     }
 
@@ -49,6 +52,7 @@ public class Test {
         }
 
         public int[] getArray() { return array; }
+
         public String getName() { return name; }
     }
 
@@ -68,7 +72,9 @@ public class Test {
         }
 
         public StringBuilder getStringBuilder() { return sb; }
+
         public int getValue() { return value; }
+
         public void setValue(int value) { this.value = value; }
     }
 

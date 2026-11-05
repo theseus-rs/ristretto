@@ -16,6 +16,7 @@ pub fn clear_maximized_bounds<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WFramePeer.createAwtFrame(Lsun/awt/windows/WComponentPeer;)V",
     Any
@@ -30,6 +31,7 @@ pub fn create_awt_frame<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WFramePeer.getState()I", Any)]
 pub fn get_state<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -40,6 +42,7 @@ pub fn get_state<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WFramePeer.getSysMenuHeight()I", Any)]
 pub fn get_sys_menu_height<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -50,6 +53,7 @@ pub fn get_sys_menu_height<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WFramePeer.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -57,6 +61,7 @@ pub fn init_ids<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WFramePeer.initIDs()V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/windows/WFramePeer.pSetIMMOption(Ljava/lang/String;)V", Any)]
 pub fn p_set_immoption<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -68,6 +73,7 @@ pub fn p_set_immoption<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WFramePeer.setMaximizedBounds(IIII)V", Any)]
 pub fn set_maximized_bounds<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -82,6 +88,7 @@ pub fn set_maximized_bounds<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WFramePeer.setMenuBar0(Lsun/awt/windows/WMenuBarPeer;)V",
     Any
@@ -96,6 +103,7 @@ pub fn set_menu_bar0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WFramePeer.setState(I)V", Any)]
 pub fn set_state<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -107,6 +115,7 @@ pub fn set_state<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WFramePeer.synthesizeWmActivate(Z)V", Any)]
 pub fn synthesize_wm_activate<T: Thread + 'static>(
     _thread: Arc<T>,

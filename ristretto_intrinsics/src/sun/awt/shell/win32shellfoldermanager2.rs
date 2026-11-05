@@ -16,6 +16,7 @@ pub fn initialize_com<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/shell/Win32ShellFolderManager2.uninitializeCom()V", Any)]
 pub fn uninitialize_com<T: Thread + 'static>(
     _thread: Arc<T>,

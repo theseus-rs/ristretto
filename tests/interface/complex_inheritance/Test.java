@@ -1,6 +1,7 @@
 /** Test complex interface inheritance hierarchies */
 interface GrandParent {
     void grandParentMethod();
+
     default void sharedDefault() {
         System.out.println("GrandParent.sharedDefault");
     }
@@ -8,6 +9,7 @@ interface GrandParent {
 
 interface Parent1 extends GrandParent {
     void parent1Method();
+
     @Override
     default void sharedDefault() {
         System.out.println("Parent1.sharedDefault");
@@ -16,6 +18,7 @@ interface Parent1 extends GrandParent {
 
 interface Parent2 extends GrandParent {
     void parent2Method();
+
     @Override
     default void sharedDefault() {
         System.out.println("Parent2.sharedDefault");
@@ -24,6 +27,7 @@ interface Parent2 extends GrandParent {
 
 interface Child extends Parent1, Parent2 {
     void childMethod();
+
     // Must override sharedDefault due to conflict from Parent1 and Parent2
     @Override
     default void sharedDefault() {
@@ -35,6 +39,7 @@ interface Child extends Parent1, Parent2 {
 
 interface SiblingInterface {
     void siblingMethod();
+
     default void anotherDefault() {
         System.out.println("SiblingInterface.anotherDefault");
     }

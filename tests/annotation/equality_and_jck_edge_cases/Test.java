@@ -7,8 +7,11 @@ import java.util.Comparator;
 @Retention(RetentionPolicy.RUNTIME)
 @interface EqualityTestAnnotation {
     String stringValue() default "test";
+
     int intValue() default 42;
+
     String[] arrayValue() default {"a", "b", "c"};
+
     Class<?> classValue() default Object.class;
 }
 
@@ -16,8 +19,11 @@ import java.util.Comparator;
 @Retention(RetentionPolicy.RUNTIME)
 @interface IdenticalStructureAnnotation {
     String stringValue() default "test";
+
     int intValue() default 42;
+
     String[] arrayValue() default {"a", "b", "c"};
+
     Class<?> classValue() default Object.class;
 }
 
@@ -25,6 +31,7 @@ import java.util.Comparator;
 @Retention(RetentionPolicy.RUNTIME)
 @interface ProxyTestAnnotation {
     String value() default "proxy";
+
     int number() default 123;
 }
 
@@ -32,6 +39,7 @@ import java.util.Comparator;
 @Retention(RetentionPolicy.RUNTIME)
 @interface ValidationTestAnnotation {
     String requiredValue();
+
     String optionalValue() default "optional";
 }
 

@@ -15,6 +15,7 @@ public class Test {
         private int parentField;
 
         public void interfaceMethod() {}
+
         public void parentMethod() {}
     }
 
@@ -22,6 +23,7 @@ public class Test {
         private String childField;
 
         public void anotherMethod() {}
+
         public void childMethod() {}
 
         static class NestedStaticClass {}

@@ -17,12 +17,15 @@ abstract class Shape implements Drawable {
 
 class Rectangle extends Shape implements Resizable, Colorable {
     public void draw() {}
+
     public void resize() {}
+
     public void setColor(String color) {}
 }
 
 class Circle extends Shape implements Resizable {
     public void draw() {}
+
     public void resize() {}
 }
 

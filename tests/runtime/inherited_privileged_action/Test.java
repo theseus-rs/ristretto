@@ -51,6 +51,7 @@ public class Test {
             byte[] bytes = buffer.toByteArray();
             return (PrivilegedAction<?>) defineClass(name, bytes, 0, bytes.length).getConstructor().newInstance();
         }
+
         void method(DataOutputStream out, int flags, int name, int descriptor, byte[] code) throws Exception {
             out.writeShort(flags); out.writeShort(name); out.writeShort(descriptor);
             out.writeShort(1); out.writeShort(9); out.writeInt(12 + code.length);

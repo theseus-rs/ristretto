@@ -22,6 +22,7 @@ pub fn enum_processes<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/tools/attach/AttachProviderImpl.isLibraryLoadedByProcess(Ljava/lang/String;I)Z",
     GreaterThanOrEqual(JAVA_11)
@@ -38,6 +39,7 @@ pub fn is_library_loaded_by_process<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/tools/attach/AttachProviderImpl.tempPath()Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
@@ -51,6 +53,7 @@ pub fn temp_path<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/tools/attach/AttachProviderImpl.volumeFlags(Ljava/lang/String;)J",
     GreaterThanOrEqual(JAVA_11)

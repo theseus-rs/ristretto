@@ -84,6 +84,7 @@ pub fn sha256(path: &Path) -> Result<String> {
 fn args(parts: &[&str]) -> Vec<String> {
     parts.iter().map(ToString::to_string).collect()
 }
+
 fn path_text(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }

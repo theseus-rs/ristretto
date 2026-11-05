@@ -16,6 +16,7 @@ pub fn get_windows_parameters<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WDesktopProperties.init()V", Any)]
 pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -26,6 +27,7 @@ pub fn init<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WDesktopProperties.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -36,6 +38,7 @@ pub fn init_ids<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WDesktopProperties.playWindowsSound(Ljava/lang/String;)V",
     Any

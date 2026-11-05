@@ -144,6 +144,7 @@ fn get_rss_bytes() -> usize {
         #[expect(unsafe_code)]
         unsafe extern "system" {
             fn GetCurrentProcess() -> *mut std::ffi::c_void;
+
             fn K32GetProcessMemoryInfo(
                 process: *mut std::ffi::c_void,
                 pmc: *mut PROCESS_MEMORY_COUNTERS,

@@ -94,6 +94,7 @@ public class Test {
     private static void check(boolean condition, String message) {
         if (!condition) throw new AssertionError(message);
     }
+
     private static BufferedImage image(boolean gray) {
         BufferedImage image = new BufferedImage(24, 16,
                 gray ? BufferedImage.TYPE_BYTE_GRAY : BufferedImage.TYPE_INT_RGB);
@@ -105,8 +106,11 @@ public class Test {
         }
         return image;
     }
+
     private static ImageWriter writer() { return ImageIO.getImageWritersByFormatName("JPEG").next(); }
+
     private static ImageReader reader() { return ImageIO.getImageReadersByFormatName("JPEG").next(); }
+
     private static byte[] encode(BufferedImage image, boolean progressive) throws Exception {
         ImageWriter writer = writer();
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -121,6 +125,7 @@ public class Test {
         } finally { writer.dispose(); }
         return bytes.toByteArray();
     }
+
     private static void testRoundTrip(boolean progressive, boolean gray) throws Exception {
         byte[] jpeg = encode(image(gray), progressive);
         check((jpeg[0] & 255) == 255 && (jpeg[1] & 255) == 216, "SOI");
@@ -143,6 +148,7 @@ public class Test {
             reader.reset();
         } finally { reader.dispose(); }
     }
+
     private static void testRegions() throws Exception {
         byte[] jpeg = encode(image(false), false);
         ImageReader reader = reader();
@@ -166,6 +172,7 @@ public class Test {
         BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(bytes.toByteArray()));
         check(decoded.getWidth() == 8 && decoded.getHeight() == 4, "write region and subsampling");
     }
+
     private static void testAbbreviatedTables() throws Exception {
         byte[] jpeg = java.util.Base64.getDecoder().decode(REFERENCE);
         ByteArrayOutputStream stripped = new ByteArrayOutputStream();
@@ -191,6 +198,7 @@ public class Test {
             check(Math.abs(raster.getSample(12, 12, 0) - 192) <= 3, "abbreviated decoding tables");
         } finally { reader.dispose(); }
     }
+
     private static void testProgressivePasses() throws Exception {
         byte[] jpeg = encode(image(false), true);
         ImageReader reader = reader();
@@ -200,12 +208,17 @@ public class Test {
                     int minX, int minY, int periodX, int periodY, int[] bands) {
                 check(pass >= 1 && pass <= 2, "progressive pass range"); passes[0]++;
             }
+
             public void passComplete(ImageReader source, BufferedImage image) { passes[1]++; }
+
             public void imageUpdate(ImageReader source, BufferedImage image, int minX, int minY,
                     int width, int height, int periodX, int periodY, int[] bands) {}
+
             public void thumbnailPassStarted(ImageReader source, BufferedImage image, int pass, int min, int max,
                     int minX, int minY, int periodX, int periodY, int[] bands) {}
+
             public void thumbnailPassComplete(ImageReader source, BufferedImage image) {}
+
             public void thumbnailUpdate(ImageReader source, BufferedImage image, int minX, int minY,
                     int width, int height, int periodX, int periodY, int[] bands) {}
         });
@@ -217,6 +230,7 @@ public class Test {
             check(passes[0] == 2 && passes[1] == 2, "progressive pass callbacks");
         } finally { reader.dispose(); }
     }
+
     private static BufferedImage detailedGray() {
         BufferedImage source = new BufferedImage(31, 19, BufferedImage.TYPE_BYTE_GRAY);
         for (int y = 0; y < 19; y++) for (int x = 0; x < 31; x++) {
@@ -224,6 +238,7 @@ public class Test {
         }
         return source;
     }
+
     private static void testProgressiveSamples() throws Exception {
         BufferedImage source = detailedGray();
         byte[] baseline = encode(source, false);
@@ -246,6 +261,7 @@ public class Test {
             check(changed > 100, "early progressive pass must contain an intermediate image");
         } finally { reader.dispose(); }
     }
+
     private static void testCustomTables() throws Exception {
         BufferedImage source = detailedGray();
         ImageWriter writer = writer();
@@ -299,6 +315,7 @@ public class Test {
             }
         } finally { reader.dispose(); }
     }
+
     private static void testMetadataAndOutputFailure() throws Exception {
         ImageWriter writer = writer();
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -343,6 +360,7 @@ public class Test {
             writer.reset();
         } finally { writer.dispose(); }
     }
+
     private static void testSequence() throws Exception {
         ImageWriter writer = writer();
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -362,16 +380,23 @@ public class Test {
             check(reader.read(0).getHeight() == 16, "seek back to first image");
         } finally { reader.dispose(); }
     }
+
     private static void testAbortAndReuse() throws Exception {
         ImageWriter writer = writer();
         final boolean[] writeAborted = { false };
         writer.addIIOWriteProgressListener(new IIOWriteProgressListener() {
             public void imageStarted(ImageWriter source, int index) { source.abort(); }
+
             public void imageProgress(ImageWriter source, float percentage) {}
+
             public void imageComplete(ImageWriter source) {}
+
             public void thumbnailStarted(ImageWriter source, int image, int thumbnail) {}
+
             public void thumbnailProgress(ImageWriter source, float percentage) {}
+
             public void thumbnailComplete(ImageWriter source) {}
+
             public void writeAborted(ImageWriter source) { writeAborted[0] = true; }
         });
         try (MemoryCacheImageOutputStream out = new MemoryCacheImageOutputStream(new ByteArrayOutputStream())) {
@@ -385,13 +410,21 @@ public class Test {
         final boolean[] readAborted = { false };
         reader.addIIOReadProgressListener(new IIOReadProgressListener() {
             public void imageStarted(ImageReader source, int index) { source.abort(); }
+
             public void imageProgress(ImageReader source, float percentage) {}
+
             public void imageComplete(ImageReader source) {}
+
             public void sequenceStarted(ImageReader source, int minimum) {}
+
             public void sequenceComplete(ImageReader source) {}
+
             public void thumbnailStarted(ImageReader source, int image, int thumbnail) {}
+
             public void thumbnailProgress(ImageReader source, float percentage) {}
+
             public void thumbnailComplete(ImageReader source) {}
+
             public void readAborted(ImageReader source) { readAborted[0] = true; }
         });
         try (MemoryCacheImageInputStream in = new MemoryCacheImageInputStream(new ByteArrayInputStream(jpeg))) {
@@ -402,6 +435,7 @@ public class Test {
             check(reader.read(0).getWidth() == 24, "reader reuse after abort");
         } finally { reader.dispose(); }
     }
+
     private static void testErrors() throws Exception {
         ImageReader reader = reader();
         try (MemoryCacheImageInputStream in = new MemoryCacheImageInputStream(new ByteArrayInputStream(new byte[] {1, 2, 3, 4}))) {

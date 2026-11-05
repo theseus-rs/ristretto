@@ -18,6 +18,7 @@ pub fn enable_editing<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WTextComponentPeer.getSelectionEnd()I", Any)]
 pub fn get_selection_end<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -28,6 +29,7 @@ pub fn get_selection_end<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WTextComponentPeer.getSelectionStart()I", Any)]
 pub fn get_selection_start<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -38,6 +40,7 @@ pub fn get_selection_start<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WTextComponentPeer.getText()Ljava/lang/String;", Any)]
 pub fn get_text<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -48,6 +51,7 @@ pub fn get_text<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WTextComponentPeer.initIDs()V",
     LessThanOrEqual(JAVA_21)
@@ -61,6 +65,7 @@ pub fn init_ids<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WTextComponentPeer.select(II)V", Any)]
 pub fn select<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -73,6 +78,7 @@ pub fn select<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WTextComponentPeer.setText(Ljava/lang/String;)V", Any)]
 pub fn set_text<T: Thread + 'static>(
     _thread: Arc<T>,

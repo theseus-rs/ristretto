@@ -18,6 +18,7 @@ pub fn set_resizable<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer._setTitle(Ljava/lang/String;)V", Any)]
 pub fn set_title<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -29,6 +30,7 @@ pub fn set_title<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer._toFront()V", Any)]
 pub fn to_front<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -39,6 +41,7 @@ pub fn to_front<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WWindowPeer.createAwtWindow(Lsun/awt/windows/WComponentPeer;)V",
     Any
@@ -54,6 +57,7 @@ pub fn create_awt_window<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WWindowPeer.getNativeWindowSize()Ljava/awt/Dimension;",
     GreaterThanOrEqual(JAVA_11)
@@ -67,6 +71,7 @@ pub fn get_native_window_size<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.getScreenImOn()I", Any)]
 pub fn get_screen_im_on<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -77,6 +82,7 @@ pub fn get_screen_im_on<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.getSysIconHeight()I", Any)]
 pub fn get_sys_icon_height<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -87,6 +93,7 @@ pub fn get_sys_icon_height<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.getSysIconWidth()I", Any)]
 pub fn get_sys_icon_width<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -97,6 +104,7 @@ pub fn get_sys_icon_width<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.getSysMinHeight()I", Any)]
 pub fn get_sys_min_height<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -107,6 +115,7 @@ pub fn get_sys_min_height<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.getSysMinWidth()I", Any)]
 pub fn get_sys_min_width<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -117,6 +126,7 @@ pub fn get_sys_min_width<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.getSysSmIconHeight()I", Any)]
 pub fn get_sys_sm_icon_height<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -127,6 +137,7 @@ pub fn get_sys_sm_icon_height<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.getSysSmIconWidth()I", Any)]
 pub fn get_sys_sm_icon_width<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -137,6 +148,7 @@ pub fn get_sys_sm_icon_width<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -147,6 +159,7 @@ pub fn init_ids<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.modalDisable(Ljava/awt/Dialog;J)V", Any)]
 pub fn modal_disable<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -159,6 +172,7 @@ pub fn modal_disable<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.modalEnable(Ljava/awt/Dialog;)V", Any)]
 pub fn modal_enable<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -170,6 +184,7 @@ pub fn modal_enable<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.nativeGrab()V", Any)]
 pub fn native_grab<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -180,6 +195,7 @@ pub fn native_grab<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.nativeUngrab()V", Any)]
 pub fn native_ungrab<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -190,6 +206,7 @@ pub fn native_ungrab<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WWindowPeer.repositionSecurityWarning()V",
     LessThanOrEqual(JAVA_21)
@@ -203,6 +220,7 @@ pub fn reposition_security_warning<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.requestWindowFocus(Z)Z", Any)]
 pub fn request_window_focus<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -214,6 +232,7 @@ pub fn request_window_focus<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.reshapeFrame(IIII)V", Any)]
 pub fn reshape_frame<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -228,6 +247,7 @@ pub fn reshape_frame<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.setAlwaysOnTopNative(Z)V", Any)]
 pub fn set_always_on_top_native<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -239,6 +259,7 @@ pub fn set_always_on_top_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.setFocusableWindow(Z)V", Any)]
 pub fn set_focusable_window<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -250,6 +271,7 @@ pub fn set_focusable_window<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.setFullScreenExclusiveModeState(Z)V", Any)]
 pub fn set_full_screen_exclusive_mode_state<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -261,6 +283,7 @@ pub fn set_full_screen_exclusive_mode_state<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.setIconImagesData([III[III)V", Any)]
 pub fn set_icon_images_data<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -277,6 +300,7 @@ pub fn set_icon_images_data<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.setMinSize(II)V", Any)]
 pub fn set_min_size<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -289,6 +313,7 @@ pub fn set_min_size<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.setOpacity(I)V", Any)]
 pub fn set_opacity<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -300,6 +325,7 @@ pub fn set_opacity<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.setOpaqueImpl(Z)V", Any)]
 pub fn set_opaque_impl<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -311,6 +337,7 @@ pub fn set_opaque_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.toBack()V", Any)]
 pub fn to_back<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -318,6 +345,7 @@ pub fn to_back<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WWindowPeer.toBack()V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.updateInsets(Ljava/awt/Insets;)V", Any)]
 pub fn update_insets<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -329,6 +357,7 @@ pub fn update_insets<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WWindowPeer.updateWindowImpl([III)V", Any)]
 pub fn update_window_impl<T: Thread + 'static>(
     _thread: Arc<T>,

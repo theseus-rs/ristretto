@@ -7,7 +7,9 @@ import java.lang.reflect.Method;
 public class Test {
     public static class Base {
         private String secret() { return "base private"; }
+
         public String value() { return "base"; }
+
         public static String inheritedStatic() { return "static"; }
     }
     public static class Child extends Base {

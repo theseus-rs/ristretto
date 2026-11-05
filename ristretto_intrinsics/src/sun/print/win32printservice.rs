@@ -22,6 +22,7 @@ pub fn get_all_media_ids<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/print/Win32PrintService.getAllMediaNames(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;",
     Any
@@ -34,6 +35,7 @@ pub fn get_all_media_names<T: Thread + 'static>(
     let _printer = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/print/Win32PrintService.getAllMediaNames(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/print/Win32PrintService.getAllMediaSizes(Ljava/lang/String;Ljava/lang/String;)[I",
     Any
@@ -50,6 +52,7 @@ pub fn get_all_media_sizes<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/print/Win32PrintService.getAllMediaTrayNames(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;",
     Any
@@ -62,6 +65,7 @@ pub fn get_all_media_tray_names<T: Thread + 'static>(
     let _printer = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/print/Win32PrintService.getAllMediaTrayNames(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/print/Win32PrintService.getAllMediaTrays(Ljava/lang/String;Ljava/lang/String;)[I",
     Any
@@ -78,6 +82,7 @@ pub fn get_all_media_trays<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/print/Win32PrintService.getAllResolutions(Ljava/lang/String;Ljava/lang/String;)[I",
     Any
@@ -94,6 +99,7 @@ pub fn get_all_resolutions<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/print/Win32PrintService.getCapabilities(Ljava/lang/String;Ljava/lang/String;)I",
     Any
@@ -110,6 +116,7 @@ pub fn get_capabilities<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/print/Win32PrintService.getCopiesSupported(Ljava/lang/String;Ljava/lang/String;)I",
     Any
@@ -126,6 +133,7 @@ pub fn get_copies_supported<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/print/Win32PrintService.getDefaultSettings(Ljava/lang/String;Ljava/lang/String;)[I",
     Any
@@ -142,6 +150,7 @@ pub fn get_default_settings<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/print/Win32PrintService.getJobStatus(Ljava/lang/String;I)I", Any)]
 pub fn get_job_status<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -154,6 +163,7 @@ pub fn get_job_status<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/print/Win32PrintService.getMediaPrintableArea(Ljava/lang/String;I)[F",
     Any
@@ -169,6 +179,7 @@ pub fn get_media_printable_area<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/print/Win32PrintService.getPrinterPort(Ljava/lang/String;)Ljava/lang/String;",
     Any

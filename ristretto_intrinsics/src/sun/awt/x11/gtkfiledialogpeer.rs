@@ -16,6 +16,7 @@ pub fn init_ids<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/X11/GtkFileDialogPeer.quit()V", Any)]
 pub fn quit<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -23,6 +24,7 @@ pub fn quit<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/GtkFileDialogPeer.quit()V".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/awt/X11/GtkFileDialogPeer.run(Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/io/FilenameFilter;ZII)V",
     Any
@@ -41,6 +43,7 @@ pub fn run<T: Thread + 'static>(
     let _jtitle = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/GtkFileDialogPeer.run(Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/io/FilenameFilter;ZII)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/awt/X11/GtkFileDialogPeer.setBounds(IIIII)V", Any)]
 pub fn set_bounds<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -56,6 +59,7 @@ pub fn set_bounds<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/X11/GtkFileDialogPeer.toFront()V", Any)]
 pub fn to_front<T: Thread + 'static>(
     _thread: Arc<T>,

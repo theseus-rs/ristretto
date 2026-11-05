@@ -51,6 +51,7 @@ use tracing::{debug, warn};
 async fn run_local<F: Future>(future: F) -> F::Output {
     tokio::task::LocalSet::new().run_until(future).await
 }
+
 #[cfg(not(target_os = "wasi"))]
 async fn run_local<F: Future>(future: F) -> F::Output {
     future.await

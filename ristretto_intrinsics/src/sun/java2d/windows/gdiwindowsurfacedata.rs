@@ -20,6 +20,7 @@ pub fn init_ids<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/java2d/windows/GDIWindowSurfaceData.initOps(Lsun/awt/windows/WComponentPeer;IIIII)V",
     Any
@@ -40,6 +41,7 @@ pub fn init_ops<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/java2d/windows/GDIWindowSurfaceData.invalidateSD()V", Any)]
 pub fn invalidate_sd<T: Thread + 'static>(
     _thread: Arc<T>,

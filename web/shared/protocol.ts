@@ -15,6 +15,7 @@ export type ScriptTarget = 'kotlin' | 'groovy' | 'scala2' | 'scala3' | 'clojure'
 export type Target = 'java' | ScriptTarget;
 export const isLanguage = (value: unknown): value is Language =>
   LANGUAGES.some((language) => language === value);
+
 export function executionTarget(language: Language, scalaVersion: ScalaVersion): Target {
   return language === 'scala' ? (scalaVersion === '2.13' ? 'scala2' : 'scala3') : language;
 }

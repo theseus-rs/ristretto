@@ -20,6 +20,7 @@ pub fn init_ids<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.ioctl0(IILjdk/internal/org/jline/terminal/impl/jna/linux/CLibrary$winsize;)V",
     Equal(JAVA_21)
@@ -33,6 +34,7 @@ pub fn ioctl0<T: Thread + 'static>(
     let _arg0 = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.ioctl0(IILjdk/internal/org/jline/terminal/impl/jna/linux/CLibrary$winsize;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.isatty(I)I",
     Equal(JAVA_21)
@@ -47,6 +49,7 @@ pub fn isatty<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.tcgetattr(ILjdk/internal/org/jline/terminal/impl/jna/linux/CLibrary$termios;)V",
     Equal(JAVA_21)
@@ -59,6 +62,7 @@ pub fn tcgetattr<T: Thread + 'static>(
     let _arg0 = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.tcgetattr(ILjdk/internal/org/jline/terminal/impl/jna/linux/CLibrary$termios;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.tcsetattr(IILjdk/internal/org/jline/terminal/impl/jna/linux/CLibrary$termios;)V",
     Equal(JAVA_21)
@@ -72,6 +76,7 @@ pub fn tcsetattr<T: Thread + 'static>(
     let _arg0 = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.tcsetattr(IILjdk/internal/org/jline/terminal/impl/jna/linux/CLibrary$termios;)V".to_string()).into())
 }
+
 #[intrinsic_method(
     "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.ttyname_r(I[BI)V",
     Equal(JAVA_21)

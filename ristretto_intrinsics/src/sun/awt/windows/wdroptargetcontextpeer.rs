@@ -19,6 +19,7 @@ pub fn drop_done<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WDropTargetContextPeer.getData(JJ)Ljava/lang/Object;",
     Any

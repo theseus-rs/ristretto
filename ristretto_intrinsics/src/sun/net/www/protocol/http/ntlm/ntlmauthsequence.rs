@@ -19,6 +19,7 @@ pub fn get_credentials_handle<T: Thread + 'static>(
     let _user = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/net/www/protocol/http/ntlm/NTLMAuthSequence.getCredentialsHandle(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)J".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/net/www/protocol/http/ntlm/NTLMAuthSequence.getNextToken(J[BLsun/net/www/protocol/http/ntlm/NTLMAuthSequence$Status;)[B",
     Any
@@ -32,6 +33,7 @@ pub fn get_next_token<T: Thread + 'static>(
     let _crd_handle = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/net/www/protocol/http/ntlm/NTLMAuthSequence.getNextToken(J[BLsun/net/www/protocol/http/ntlm/NTLMAuthSequence$Status;)[B".to_string()).into())
 }
+
 #[intrinsic_method(
     "sun/net/www/protocol/http/ntlm/NTLMAuthSequence.initFirst(Ljava/lang/Class;)V",
     Any

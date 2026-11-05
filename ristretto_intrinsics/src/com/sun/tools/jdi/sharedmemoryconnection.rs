@@ -21,6 +21,7 @@ pub fn close0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "com/sun/tools/jdi/SharedMemoryConnection.receiveByte0(J)B",
     GreaterThanOrEqual(JAVA_11)
@@ -35,6 +36,7 @@ pub fn receive_byte0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "com/sun/tools/jdi/SharedMemoryConnection.receivePacket0(J)[B",
     GreaterThanOrEqual(JAVA_11)
@@ -49,6 +51,7 @@ pub fn receive_packet0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "com/sun/tools/jdi/SharedMemoryConnection.sendByte0(JB)V",
     GreaterThanOrEqual(JAVA_11)
@@ -64,6 +67,7 @@ pub fn send_byte0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "com/sun/tools/jdi/SharedMemoryConnection.sendPacket0(J[B)V",
     GreaterThanOrEqual(JAVA_11)

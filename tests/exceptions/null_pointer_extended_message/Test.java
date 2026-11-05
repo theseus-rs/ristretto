@@ -60,7 +60,7 @@ public class Test {
          Test t = null;
          Object x = t.nullObj;
     }
-    
+
     public void arrayLoad() {
         int x = nullArray[0];
     }

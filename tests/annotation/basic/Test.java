@@ -12,7 +12,9 @@ import java.lang.annotation.*;
 // Annotation with multiple elements
 @interface MultipleElements {
     String name();
+
     int version();
+
     boolean enabled() default true;
 }
 

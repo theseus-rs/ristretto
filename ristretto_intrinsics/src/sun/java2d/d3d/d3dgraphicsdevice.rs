@@ -25,6 +25,7 @@ pub fn config_display_mode_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/java2d/d3d/D3DGraphicsDevice.enterFullScreenExclusiveNative(IJ)Z",
     Any
@@ -40,6 +41,7 @@ pub fn enter_full_screen_exclusive_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/java2d/d3d/D3DGraphicsDevice.enumDisplayModesNative(ILjava/util/ArrayList;)V",
     Any
@@ -56,6 +58,7 @@ pub fn enum_display_modes_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/java2d/d3d/D3DGraphicsDevice.exitFullScreenExclusiveNative(I)Z",
     Any
@@ -70,6 +73,7 @@ pub fn exit_full_screen_exclusive_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/java2d/d3d/D3DGraphicsDevice.getAvailableAcceleratedMemoryNative(I)J",
     Any
@@ -84,6 +88,7 @@ pub fn get_available_accelerated_memory_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/java2d/d3d/D3DGraphicsDevice.getCurrentDisplayModeNative(I)Ljava/awt/DisplayMode;",
     Any
@@ -99,6 +104,7 @@ pub fn get_current_display_mode_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/java2d/d3d/D3DGraphicsDevice.getDeviceCapsNative(I)I", Any)]
 pub fn get_device_caps_native<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -110,6 +116,7 @@ pub fn get_device_caps_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/java2d/d3d/D3DGraphicsDevice.getDeviceIdNative(I)Ljava/lang/String;",
     Any
@@ -124,6 +131,7 @@ pub fn get_device_id_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/java2d/d3d/D3DGraphicsDevice.initD3D()Z", Any)]
 pub fn init_d3_d<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -134,6 +142,7 @@ pub fn init_d3_d<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/java2d/d3d/D3DGraphicsDevice.isD3DAvailableOnDeviceNative(I)Z",
     Any

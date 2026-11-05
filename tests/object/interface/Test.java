@@ -5,6 +5,7 @@ interface Swimmer { void swim(); }
 
 class Person implements Walker, Swimmer {
     public void walk() { System.out.println("Walking"); }
+
     public void swim() { System.out.println("Swimming"); }
 }
 

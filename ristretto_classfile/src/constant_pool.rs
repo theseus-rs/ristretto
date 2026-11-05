@@ -2484,6 +2484,7 @@ mod test {
             ConstantPool::from_bytes(&mut bytes)
         );
     }
+
     #[test]
     fn test_format_method_handle_rejects_cycles() {
         for target in [1, 2] {

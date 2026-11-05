@@ -20,6 +20,7 @@ pub fn close_session<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/screencast/ScreencastHelper.getRGBPixelsImpl(IIII[I[ILjava/lang/String;)I",
     GreaterThanOrEqual(JAVA_17)
@@ -41,6 +42,7 @@ pub fn get_rgbpixels_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/screencast/ScreencastHelper.loadPipewire(IZ)Z",
     GreaterThanOrEqual(JAVA_17)
@@ -56,6 +58,7 @@ pub fn load_pipewire<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/screencast/ScreencastHelper.remoteDesktopKeyImpl(ZILjava/lang/String;)I",
     GreaterThanOrEqual(JAVA_17)
@@ -73,6 +76,7 @@ pub fn remote_desktop_key_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/screencast/ScreencastHelper.remoteDesktopMouseButtonImpl(ZILjava/lang/String;)I",
     GreaterThanOrEqual(JAVA_17)
@@ -90,6 +94,7 @@ pub fn remote_desktop_mouse_button_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/screencast/ScreencastHelper.remoteDesktopMouseMoveImpl(IILjava/lang/String;)I",
     GreaterThanOrEqual(JAVA_17)
@@ -107,6 +112,7 @@ pub fn remote_desktop_mouse_move_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/screencast/ScreencastHelper.remoteDesktopMouseWheelImpl(ILjava/lang/String;)I",
     GreaterThanOrEqual(JAVA_17)

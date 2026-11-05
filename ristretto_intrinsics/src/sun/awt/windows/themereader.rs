@@ -18,6 +18,7 @@ pub fn close_theme<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/ThemeReader.getBoolean(JIII)Z", Any)]
 pub fn get_boolean<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -32,6 +33,7 @@ pub fn get_boolean<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/ThemeReader.getColor(JIII)Ljava/awt/Color;", Any)]
 pub fn get_color<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -46,6 +48,7 @@ pub fn get_color<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/ThemeReader.getEnum(JIII)I", Any)]
 pub fn get_enum<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -60,6 +63,7 @@ pub fn get_enum<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/ThemeReader.getInt(JIII)I", Any)]
 pub fn get_int<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -74,6 +78,7 @@ pub fn get_int<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/ThemeReader.getPartSize(JII)Ljava/awt/Dimension;",
     Any
@@ -90,6 +95,7 @@ pub fn get_part_size<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/ThemeReader.getPoint(JIII)Ljava/awt/Point;", Any)]
 pub fn get_point<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -104,6 +110,7 @@ pub fn get_point<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/ThemeReader.getPosition(JIII)Ljava/awt/Dimension;",
     Any
@@ -121,6 +128,7 @@ pub fn get_position<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/ThemeReader.getSysBoolean(JI)Z", Any)]
 pub fn get_sys_boolean<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -133,6 +141,7 @@ pub fn get_sys_boolean<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/ThemeReader.getThemeBackgroundContentMargins(JIIII)Ljava/awt/Insets;",
     Any
@@ -152,6 +161,7 @@ pub fn get_theme_background_content_margins<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/ThemeReader.getThemeMargins(JIII)Ljava/awt/Insets;",
     Any
@@ -169,6 +179,7 @@ pub fn get_theme_margins<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/ThemeReader.getThemeTransitionDuration(JIIII)J", Any)]
 pub fn get_theme_transition_duration<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -184,6 +195,7 @@ pub fn get_theme_transition_duration<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/ThemeReader.initThemes()Z", Any)]
 pub fn init_themes<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -194,6 +206,7 @@ pub fn init_themes<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method(
     "sun/awt/windows/ThemeReader.isGetThemeTransitionDurationDefined()Z",
     LessThanOrEqual(JAVA_11)
@@ -207,6 +220,7 @@ pub fn is_get_theme_transition_duration_defined<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/ThemeReader.isThemePartDefined(JII)Z", Any)]
 pub fn is_theme_part_defined<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -220,6 +234,7 @@ pub fn is_theme_part_defined<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/ThemeReader.openTheme(Ljava/lang/String;)J",
     Equal(JAVA_8)
@@ -234,6 +249,7 @@ pub fn open_theme<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/ThemeReader.openTheme(Ljava/lang/String;I)J",
     GreaterThanOrEqual(JAVA_11)
@@ -249,6 +265,7 @@ pub fn open_theme_windows_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/ThemeReader.paintBackground([IJIIIIIII)V", Any)]
 pub fn paint_background<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -268,6 +285,7 @@ pub fn paint_background<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/ThemeReader.setWindowTheme(Ljava/lang/String;)V", Any)]
 pub fn set_window_theme<T: Thread + 'static>(
     _thread: Arc<T>,

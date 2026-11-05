@@ -20,6 +20,7 @@ pub fn create<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WCheckboxPeer.getCheckMarkSize()I", Any)]
 pub fn get_check_mark_size<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -30,6 +31,7 @@ pub fn get_check_mark_size<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WCheckboxPeer.setCheckboxGroup(Ljava/awt/CheckboxGroup;)V",
     Any
@@ -44,6 +46,7 @@ pub fn set_checkbox_group<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WCheckboxPeer.setLabel(Ljava/lang/String;)V", Any)]
 pub fn set_label<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -55,6 +58,7 @@ pub fn set_label<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WCheckboxPeer.setState(Z)V", Any)]
 pub fn set_state<T: Thread + 'static>(
     _thread: Arc<T>,

@@ -8,8 +8,10 @@ import java.util.Comparator;
 @Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PARAMETER, ElementType.CONSTRUCTOR})
 @interface CompatibilityAnnotation {
     String value() default "default";
+
     // Test default value compatibility
     String[] arrayWithDefaults() default {"default1", "default2"};
+
     int version() default 1;
 }
 

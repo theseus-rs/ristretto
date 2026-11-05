@@ -20,6 +20,7 @@ pub fn create<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/awt/windows/WTextAreaPeer.replaceRange(Ljava/lang/String;II)V",
     Any

@@ -75,6 +75,7 @@ pub fn initialize_gio<T: Thread + 'static>(
     }
     Ok(Some(Value::from(guard.is_some())))
 }
+
 #[intrinsic_method(
     "sun/nio/fs/GnomeFileTypeDetector.initializeGnomeVfs()Z",
     Equal(JAVA_8)
@@ -111,6 +112,7 @@ pub fn initialize_gnome_vfs<T: Thread + 'static>(
     }
     Ok(Some(Value::from(guard.is_some())))
 }
+
 #[intrinsic_method("sun/nio/fs/GnomeFileTypeDetector.probeUsingGio(J)[B", Equal(JAVA_8))]
 pub fn probe_using_gio<T: Thread + 'static>(
     thread: Arc<T>,
@@ -182,6 +184,7 @@ pub fn probe_using_gio<T: Thread + 'static>(
         None => Ok(Some(Value::Object(None))),
     }
 }
+
 #[intrinsic_method(
     "sun/nio/fs/GnomeFileTypeDetector.probeUsingGnomeVfs(J)[B",
     Equal(JAVA_8)

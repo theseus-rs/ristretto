@@ -37,6 +37,7 @@ export async function loadRuntime(
     }),
   );
 }
+
 async function fetchAsset(entry: Asset, report: (size: number) => void) {
   let cache: Cache | undefined;
   try {

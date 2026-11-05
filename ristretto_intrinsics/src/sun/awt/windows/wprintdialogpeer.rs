@@ -16,6 +16,7 @@ pub fn show<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WPrintDialogPeer.initIDs()V", Any)]
 pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -26,6 +27,7 @@ pub fn init_ids<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WPrintDialogPeer.toBack()V", Any)]
 pub fn to_back<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -36,6 +38,7 @@ pub fn to_back<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/awt/windows/WPrintDialogPeer.toFront()V", Any)]
 pub fn to_front<T: Thread + 'static>(
     _thread: Arc<T>,

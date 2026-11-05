@@ -15,6 +15,7 @@ public class Test {
             }
             return super.loadClass(name);
         }
+
         Class<?> define(String name, boolean entry) throws Exception {
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             DataOutputStream out = new DataOutputStream(buffer);

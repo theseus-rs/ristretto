@@ -48,6 +48,7 @@ mod tests {
         ristretto_test_util::init_wasi_tempdir();
         tempfile::NamedTempFile::new()
     }
+
     #[tokio::test]
     async fn test_get_native_map() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;

@@ -20,6 +20,7 @@ pub fn create<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/awt/windows/WCanvasPeer.setNativeBackgroundErase(ZZ)V", Any)]
 pub fn set_native_background_erase<T: Thread + 'static>(
     _thread: Arc<T>,

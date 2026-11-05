@@ -27,6 +27,7 @@ interface FunctionalWithReturn {
 // Not a functional interface - has multiple abstract methods
 interface NotFunctional {
     void method1();
+
     void method2();
 }
 
