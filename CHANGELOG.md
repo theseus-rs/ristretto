@@ -10,6 +10,622 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## `ristretto_javac` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.34.0...ristretto_javac-v0.35.0) - 2026-11-05
 
 ### Other
+- release ristretto v0.35.0
+- replace runtime string formatting with direct string construction
+
+## `ristretto_java` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/v0.34.0...v0.35.0) - 2026-11-05
+
+### Added
+- support Java 25 main method launch rules
+- reject duplicate type parameters within signature declarations
+
+### Fixed
+- report the offending character position in signature errors
+- bound subparser allocations by remaining input
+- require an explicit stack map for branches to offset zero
+- return descriptor errors matching the parsing context
+- preserve primitive component types in legacy array descriptors
+- enforce uninitialized alias rules for new instructions
+- revisit fast path anchors when merged frames change
+- merge fallthrough frames at anchors without stack maps
+- reject disallowed predefined attributes on module classes
+- validate InnerClasses indexes, names, and flag combinations
+- preserve Java 6 inference fallback for recoverable stack map failures
+- validate annotation descriptors and element names
+- reject array descriptors in class-only metadata
+- reject empty module names
+- local-variable type annotation bounds and max_locals sizing
+- validate anonymous inner class outer indexes
+- preserve mandated method parameter flags
+- verify method invocations on array types
+- validate module access flags before truncation
+- report overflowing stack map offsets consistently
+- require declared exception handler frames
+- validate exception catch constant references
+- reject standalone wide instruction encoding
+- validate access flags in method verification
+- canonicalize legacy class-file versions
+- accept basic constants in legacy class versions
+- permit repeated synthetic and deprecated attributes
+- validate annotation target locations and indexes
+- track stack depths by subroutine calling context
+- accept valid bootstrap method handle kinds
+- support valid array signature dimensions
+- preserve surrogate identity in string comparisons
+- bound parser reservations by remaining input
+- validate type annotation target encodings
+- validate type annotation paths
+- validate module and package constant names
+- validate modified UTF-8 before UTF-16 conversion
+- reject cyclic method handle formatting
+- honor inference fallback for missing stack map frames
+- reject uninitialized instanceof operands
+- reject uninitialized values in aastore
+- preserve hidden class identity and resolve array components correctly
+- preserve source debug payloads with isolated UTF-16 surrogates
+- validate modified UTF-8 before decoding
+- accept legal record component descriptors and repeated components
+- accept empty and duplicate PermittedSubclasses entries
+- accept duplicate NestMembers entries permitted by the specification
+- scale type-inference work limits with method length
+- implement context-sensitive legacy jsr and ret verification
+- respect attribute locations and class-file version gates
+- validate local-variable ranges and uninitialized stack-map offsets
+- validate module-info structure and module table invariants
+- validate bootstrap handle kinds and loadable arguments
+- honor special class-initializer flags and legacy descriptors
+- expose signature validation with enclosing and recursive type bounds
+- scope verification caching to exact inputs and context revisions
+- validate type-annotation context and type paths
+- validate attribute names and singleton cardinality
+- check field descriptors, cached field types and ConstantValue types
+- reject duplicate field and method signatures
+- validate constant-pool member names, descriptors and handle targets
+- correct zero-offset stack-map deltas and reject arithmetic overflow
+- validate class names, superclass rules and interface identity
+- validate method names, flags, parameters and Code cardinality
+- validate instruction operands including unreachable code
+- derive ldc and ldc2_w dynamic constant types from descriptors
+- require Throwable-compatible values for athrow
+- check invokespecial receiver and symbolic owner against the caller
+- preserve narrow primitive array component types
+- reject checkcast of an uninitialized object
+- enforce return-opcode compatibility in bytecode dispatch
+- check catch types and complete handler frame compatibility
+- expose resolved member access checks to the verification context
+- allow type-inference fallback for class-file version 50
+- promote compact stack-map frames when byte deltas exceed 63
+- invalidate constructor receiver aliases on exceptional paths
+- propagate the pre-instruction frame to exception handlers
+- enforce constructor receiver identity and uninitialized field access
+- track constructor initialization independently of local zero
+- invalidate category-two locals when their second slot is overwritten
+- verify stack-map blocks and require frames after control transfers
+- relocate local-variable, type-annotation and uninitialized offsets
+- reject promotion of unusable Top locals to concrete types
+- check explicit frame zero against the method entry state
+- validate stack-map tags, cardinality and frame bounds
+- reject trailing data in both class-file parsing entry points
+- account for category-two stack-map values and chop entries
+- validate incoming frames on already visited control-flow edges
+- exclude unused local padding when decoding append frames
+- retry incomplete runtime downloads
+- enforce constant-pool capacity and two-slot layout invariants
+- use logical instruction coordinates in bytecode verification
+- reject malformed switch ranges, counts and key order
+- enforce constant-pool capacity and two-slot layout invariants
+- check signed wide-branch offset arithmetic
+- bound recursive annotation parsing
+- bound attribute parsing to its declared payload
+- preserve class loader identity across resolution, reflection, and arrays
+- retry transient runtime connection failures
+- restore release planning and nightly class loading builds
+- correct Corretto version ordering and platform specific archive selection
+- report hidden class names with a slash
+- throw OutOfMemoryError on Java array allocation failure
+- load JDK management libraries as intrinsics
+- remove publish dependency cycle and add workspace publishing check
+- return null when speculative member resolution fails
+- provide Reference.get0 on Java 21
+- push a return value for every non-void intrinsic call
+- stop treating $$ in class names as a hidden-class marker
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+- replace runtime string formatting with direct string construction
+- update line space formatting
+- Merge pull request #1040 from theseus-rs/perf-display-indentation
+- Merge pull request #1039 from theseus-rs/perf-field-type-formatting
+- Merge pull request #1038 from theseus-rs/perf-defer-verifier-diagnostics
+- Merge pull request #1037 from theseus-rs/perf-mutf8-validation
+- Merge pull request #1036 from theseus-rs/perf-lazy-code-boundaries
+- Merge pull request #1035 from theseus-rs/perf-inline-stackmap-items
+- Merge pull request #1034 from theseus-rs/perf-box-module-attribute
+- Merge pull request #1033 from theseus-rs/refactor-copy-classfile-enums
+- Merge pull request #1032 from theseus-rs/refactor-method-type-index-name
+- Merge pull request #1031 from theseus-rs/docs-mutf8-special-detection
+- Merge pull request #1030 from theseus-rs/docs-legacy-version-aliases
+- Merge pull request #1029 from theseus-rs/fix-subparser-allocation-bounds
+- Merge pull request #1028 from theseus-rs/feat-reject-duplicate-type-parameters
+- Merge pull request #1027 from theseus-rs/fix-signature-error-position
+- Merge pull request #1026 from theseus-rs/fix-stackmap-offset-zero
+- Merge pull request #1025 from theseus-rs/fix-descriptor-error-context
+- Merge pull request #1024 from theseus-rs/fix-legacy-array-components
+- Merge pull request #1023 from theseus-rs/fix-new-uninitialized-aliases
+- avoid per-line allocations when indenting display output
+- build field type names and descriptors in one buffer
+- defer verifier diagnostic formatting until errors occur
+- combine MUTF-8 validation and sequence classification
+- build code boundary tables only when required
+- store single-item stack map payloads inline
+- reduce inline storage for large attribute variants
+- derive Copy for scalar classfile enums
+- name method type descriptor indexes accurately
+- clarify that MUTF-8 special detection does not validate input
+- clarify legacy Java version aliases and canonical parsing
+- Merge pull request #1018 from theseus-rs/fix-java6-verifier-fallback
+- Merge pull request #1017 from theseus-rs/fix-annotation-syntax-validation
+- Merge pull request #1012 from theseus-rs/localvar-type-annotation-bounds
+- Merge pull request #1016 from theseus-rs/fix-inner-classes-validation
+- Merge pull request #1013 from theseus-rs/fix-empty-module-names
+- Consolidate classfile verification and remove unused helpers
+- optimize Java string creation, encoding, and interning
+- Merge pull request #1004 from theseus-rs/classfile-benchmarks
+- Merge main and retain verifier test imports
+- Merge main and retain annotation tag and target validation
+- Merge pull request #1003 from theseus-rs/module-flags
+- Merge main and preserve module flag checks in shared parser
+- Merge pull request #1002 from theseus-rs/parameter-flags
+- Merge pull request #1000 from theseus-rs/subroutine-stack
+- Merge pull request #984 from theseus-rs/classfile-parser
+- Merge pull request #1001 from theseus-rs/frame-offset-errors
+- Merge main and retain allocation bounds in the shared parser
+- Merge pull request #997 from theseus-rs/bootstrap-handles
+- Merge main and preserve bootstrap handle and module name tests
+- Merge pull request #994 from theseus-rs/string-buffers
+- Merge pull request #982 from theseus-rs/cache-scope
+- Merge main and preserve string buffer and formatting tests
+- Merge pull request #989 from theseus-rs/constant-checks
+- Merge pull request #993 from theseus-rs/attribute-writes
+- Merge pull request #998 from theseus-rs/string-formatting
+- Merge pull request #996 from theseus-rs/signature-arrays
+- Merge pull request #992 from theseus-rs/mutf8-validation
+- Merge pull request #991 from theseus-rs/signature-allocations
+- Merge pull request #979 from theseus-rs/annotation-tags
+- Merge pull request #988 from theseus-rs/legacy-constants
+- Merge main and preserve string formatting and equality tests
+- Merge main and preserve string buffer and equality tests
+- Merge main and combine annotation target and path checks
+- Merge main and preserve attribute rollback and capacity tests
+- Merge main and preserve cache-scope and fallback regression tests
+- Merge main and combine annotation target and path validation
+- Merge pull request #995 from theseus-rs/string-equality
+- Merge pull request #983 from theseus-rs/parser-capacity
+- Merge pull request #981 from theseus-rs/old-verifier
+- Merge pull request #978 from theseus-rs/annotation-paths
+- Merge pull request #987 from theseus-rs/handler-allocations
+- Merge pull request #986 from theseus-rs/code-metadata
+- Merge pull request #977 from theseus-rs/module-names
+- Merge pull request #973 from theseus-rs/handle-cycles
+- Merge pull request #971 from theseus-rs/verifier-fallback
+- Merge pull request #970 from theseus-rs/instanceof-init
+- cover constant load opcode stack limits
+- cover scoped verification cache replacement and bypasses
+- add parsing and verification performance baselines
+- reuse class verification cache scope
+- format Java strings without temporary strings
+- serialize attribute payloads directly
+- reuse compatible owned string buffers
+- reduce signature parser allocations
+- validate constant loads without temporary frames
+- reduce exception frame allocations
+- reuse method code metadata during verification
+- share owned and borrowed class-file parsing
+- remove obsolete verifier modules
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- update dependencies
+- centralize JVM initializer method names
+- Merge pull request #895 from theseus-rs/failed-constructor-aliases
+- Merge pull request #894 from theseus-rs/exception-input-state
+- Merge pull request #911 from theseus-rs/code-metadata-relocation
+- Merge pull request #888 from theseus-rs/initial-frame-check
+- Merge pull request #885 from theseus-rs/category-two-stack-maps
+- Merge pull request #920 from theseus-rs/trailing-class-data
+- use java constants instead of literals
+- Merge pull request #881 from theseus-rs/switch-operands
+- update dependencies
+- update Rust to 1.99.0
+- reduce nesting and lower nesting threshold to 8
+- Merge pull request #952 from icefery/fix/hidden-class-name-format
+- Merge branch 'main' into fix/hidden-class-name-format
+- update java versions
+- Merge pull request #966 from theseus-rs/array-allocation-errors
+- Merge pull request #951 from icefery/fix/management-libraries
+- Merge branch 'main' into fix/speculative-membername
+- Merge pull request #958 from theseus-rs/workspace-publishing
+- Merge pull request #944 from icefery/fix/cglib-generated-name
+- Merge branch 'main' into fix/intrinsic-null-return
+- Merge branch 'main' into fix/cglib-generated-name
+- update Cargo.toml dependencies
+- check interrupted parking without wall-clock timing
+
+## `ristretto_resolver` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_resolver-v0.34.0...ristretto_resolver-v0.35.0) - 2026-11-05
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+- replace runtime string formatting with direct string construction
+- reduce nesting and lower nesting threshold to 8
+- update Rust to 1.99.0
+
+## `ristretto_pom` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.34.0...ristretto_pom-v0.35.0) - 2026-11-05
+
+### Other
+- remove name aliasing
+- replace runtime string formatting with direct string construction
+- update Rust to 1.99.0
+
+## `ristretto_vm` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.34.0...ristretto_vm-v0.35.0) - 2026-11-05
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- throw OutOfMemoryError on Java array allocation failure
+- preserve class loader identity across resolution, reflection, and arrays
+- preserve hidden class identity and resolve array components correctly
+- provide Reference.get0 on Java 21
+- report hidden class names with a slash
+- push a return value for every non-void intrinsic call
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+- update line space formatting
+- optimize Java string creation, encoding, and interning
+- check interrupted parking without wall-clock timing
+- replace runtime string formatting with direct string construction
+- reduce nesting and lower nesting threshold to 8
+- Merge pull request #952 from icefery/fix/hidden-class-name-format
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- Merge branch 'main' into fix/hidden-class-name-format
+- centralize JVM initializer method names
+- use java constants instead of literals
+- Merge branch 'main' into fix/intrinsic-null-return
+- update Rust to 1.99.0
+
+## `ristretto_intrinsics` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.34.0...ristretto_intrinsics-v0.35.0) - 2026-11-05
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- throw OutOfMemoryError on Java array allocation failure
+- preserve class loader identity across resolution, reflection, and arrays
+- load JDK management libraries as intrinsics
+- restore release planning and nightly class loading builds
+- preserve hidden class identity and resolve array components correctly
+- correct Corretto version ordering and platform specific archive selection
+- remove publish dependency cycle and add workspace publishing check
+- return null when speculative member resolution fails
+- provide Reference.get0 on Java 21
+- report hidden class names with a slash
+- push a return value for every non-void intrinsic call
+- stop treating $$ in class names as a hidden-class marker
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+- update line space formatting
+- derive Copy for scalar classfile enums
+- Merge pull request #966 from theseus-rs/array-allocation-errors
+- Merge pull request #951 from icefery/fix/management-libraries
+- replace runtime string formatting with direct string construction
+- reduce nesting and lower nesting threshold to 8
+- Merge pull request #952 from icefery/fix/hidden-class-name-format
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- Merge branch 'main' into fix/hidden-class-name-format
+- Merge branch 'main' into fix/speculative-membername
+- update dependencies
+- Merge pull request #958 from theseus-rs/workspace-publishing
+- centralize JVM initializer method names
+- use java constants instead of literals
+- Merge pull request #944 from icefery/fix/cglib-generated-name
+- Merge branch 'main' into fix/intrinsic-null-return
+- Merge branch 'main' into fix/cglib-generated-name
+- update dependencies
+- update Rust to 1.99.0
+
+## `ristretto_types` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.34.0...ristretto_types-v0.35.0) - 2026-11-05
+
+### Fixed
+- throw OutOfMemoryError on Java array allocation failure
+- preserve class loader identity across resolution, reflection, and arrays
+- preserve hidden class identity and resolve array components correctly
+- report hidden class names with a slash
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+- derive Copy for scalar classfile enums
+- optimize Java string creation, encoding, and interning
+- replace runtime string formatting with direct string construction
+- Merge branch 'main' into fix/hidden-class-name-format
+- use java constants instead of literals
+- update Rust to 1.99.0
+
+## `ristretto_jit` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.34.0...ristretto_jit-v0.35.0) - 2026-11-05
+
+### Fixed
+- throw OutOfMemoryError on Java array allocation failure
+
+### Other
+- release ristretto v0.35.0
+- update line space formatting
+- replace runtime string formatting with direct string construction
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- centralize JVM initializer method names
+
+## `ristretto_macros` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.34.0...ristretto_macros-v0.35.0) - 2026-11-05
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+
+## `ristretto_classloader` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.34.0...ristretto_classloader-v0.35.0) - 2026-11-05
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- preserve class loader identity across resolution, reflection, and arrays
+- retry transient runtime connection failures
+- restore release planning and nightly class loading builds
+- preserve hidden class identity and resolve array components correctly
+- correct Corretto version ordering and platform specific archive selection
+- retry incomplete runtime downloads
+- report hidden class names with a slash
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+- reduce inline storage for large attribute variants
+- replace runtime string formatting with direct string construction
+- reduce nesting and lower nesting threshold to 8
+- Merge pull request #952 from icefery/fix/hidden-class-name-format
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- Merge branch 'main' into fix/hidden-class-name-format
+- update dependencies
+- centralize JVM initializer method names
+- update java versions
+- use java constants instead of literals
+- update dependencies
+- update Rust to 1.99.0
+
+## `ristretto_jimage` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.34.0...ristretto_jimage-v0.35.0) - 2026-11-05
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_gc` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.34.0...ristretto_gc-v0.35.0) - 2026-11-05
+
+### Other
+- remove name aliasing
+
+## `ristretto_classfile` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.34.0...ristretto_classfile-v0.35.0) - 2026-11-05
+
+### Added
+- reject duplicate type parameters within signature declarations
+
+### Fixed
+- report the offending character position in signature errors
+- bound subparser allocations by remaining input
+- require an explicit stack map for branches to offset zero
+- return descriptor errors matching the parsing context
+- preserve primitive component types in legacy array descriptors
+- enforce uninitialized alias rules for new instructions
+- revisit fast path anchors when merged frames change
+- merge fallthrough frames at anchors without stack maps
+- reject disallowed predefined attributes on module classes
+- validate InnerClasses indexes, names, and flag combinations
+- preserve Java 6 inference fallback for recoverable stack map failures
+- validate annotation descriptors and element names
+- reject array descriptors in class-only metadata
+- reject empty module names
+- local-variable type annotation bounds and max_locals sizing
+- validate anonymous inner class outer indexes
+- preserve mandated method parameter flags
+- verify method invocations on array types
+- validate module access flags before truncation
+- report overflowing stack map offsets consistently
+- require declared exception handler frames
+- validate exception catch constant references
+- reject standalone wide instruction encoding
+- validate access flags in method verification
+- canonicalize legacy class-file versions
+- accept basic constants in legacy class versions
+- permit repeated synthetic and deprecated attributes
+- validate annotation target locations and indexes
+- track stack depths by subroutine calling context
+- accept valid bootstrap method handle kinds
+- support valid array signature dimensions
+- preserve surrogate identity in string comparisons
+- bound parser reservations by remaining input
+- validate type annotation target encodings
+- validate type annotation paths
+- validate module and package constant names
+- validate modified UTF-8 before UTF-16 conversion
+- reject cyclic method handle formatting
+- honor inference fallback for missing stack map frames
+- reject uninitialized instanceof operands
+- reject uninitialized values in aastore
+- preserve hidden class identity and resolve array components correctly
+- preserve source debug payloads with isolated UTF-16 surrogates
+- validate modified UTF-8 before decoding
+- accept legal record component descriptors and repeated components
+- accept empty and duplicate PermittedSubclasses entries
+- accept duplicate NestMembers entries permitted by the specification
+- scale type-inference work limits with method length
+- implement context-sensitive legacy jsr and ret verification
+- respect attribute locations and class-file version gates
+- validate local-variable ranges and uninitialized stack-map offsets
+- validate module-info structure and module table invariants
+- validate bootstrap handle kinds and loadable arguments
+- honor special class-initializer flags and legacy descriptors
+- expose signature validation with enclosing and recursive type bounds
+- scope verification caching to exact inputs and context revisions
+- validate type-annotation context and type paths
+- validate attribute names and singleton cardinality
+- check field descriptors, cached field types and ConstantValue types
+- reject duplicate field and method signatures
+- validate constant-pool member names, descriptors and handle targets
+- correct zero-offset stack-map deltas and reject arithmetic overflow
+- validate class names, superclass rules and interface identity
+- validate method names, flags, parameters and Code cardinality
+- validate instruction operands including unreachable code
+- derive ldc and ldc2_w dynamic constant types from descriptors
+- require Throwable-compatible values for athrow
+- check invokespecial receiver and symbolic owner against the caller
+- preserve narrow primitive array component types
+- reject checkcast of an uninitialized object
+- enforce return-opcode compatibility in bytecode dispatch
+- check catch types and complete handler frame compatibility
+- expose resolved member access checks to the verification context
+- allow type-inference fallback for class-file version 50
+- promote compact stack-map frames when byte deltas exceed 63
+- invalidate constructor receiver aliases on exceptional paths
+- propagate the pre-instruction frame to exception handlers
+- enforce constructor receiver identity and uninitialized field access
+- track constructor initialization independently of local zero
+- invalidate category-two locals when their second slot is overwritten
+- verify stack-map blocks and require frames after control transfers
+- relocate local-variable, type-annotation and uninitialized offsets
+- reject promotion of unusable Top locals to concrete types
+- check explicit frame zero against the method entry state
+- validate stack-map tags, cardinality and frame bounds
+- reject trailing data in both class-file parsing entry points
+- account for category-two stack-map values and chop entries
+- validate incoming frames on already visited control-flow edges
+- exclude unused local padding when decoding append frames
+- retry incomplete runtime downloads
+- enforce constant-pool capacity and two-slot layout invariants
+- use logical instruction coordinates in bytecode verification
+- reject malformed switch ranges, counts and key order
+- enforce constant-pool capacity and two-slot layout invariants
+- check signed wide-branch offset arithmetic
+- bound recursive annotation parsing
+- bound attribute parsing to its declared payload
+
+### Other
+- remove name aliasing
+- update line space formatting
+- Merge pull request #1040 from theseus-rs/perf-display-indentation
+- Merge pull request #1039 from theseus-rs/perf-field-type-formatting
+- Merge pull request #1038 from theseus-rs/perf-defer-verifier-diagnostics
+- Merge pull request #1037 from theseus-rs/perf-mutf8-validation
+- Merge pull request #1036 from theseus-rs/perf-lazy-code-boundaries
+- Merge pull request #1035 from theseus-rs/perf-inline-stackmap-items
+- Merge pull request #1034 from theseus-rs/perf-box-module-attribute
+- Merge pull request #1033 from theseus-rs/refactor-copy-classfile-enums
+- Merge pull request #1032 from theseus-rs/refactor-method-type-index-name
+- Merge pull request #1031 from theseus-rs/docs-mutf8-special-detection
+- Merge pull request #1030 from theseus-rs/docs-legacy-version-aliases
+- Merge pull request #1029 from theseus-rs/fix-subparser-allocation-bounds
+- Merge pull request #1028 from theseus-rs/feat-reject-duplicate-type-parameters
+- Merge pull request #1027 from theseus-rs/fix-signature-error-position
+- Merge pull request #1026 from theseus-rs/fix-stackmap-offset-zero
+- Merge pull request #1025 from theseus-rs/fix-descriptor-error-context
+- Merge pull request #1024 from theseus-rs/fix-legacy-array-components
+- Merge pull request #1023 from theseus-rs/fix-new-uninitialized-aliases
+- avoid per-line allocations when indenting display output
+- build field type names and descriptors in one buffer
+- defer verifier diagnostic formatting until errors occur
+- combine MUTF-8 validation and sequence classification
+- build code boundary tables only when required
+- store single-item stack map payloads inline
+- reduce inline storage for large attribute variants
+- derive Copy for scalar classfile enums
+- name method type descriptor indexes accurately
+- clarify that MUTF-8 special detection does not validate input
+- clarify legacy Java version aliases and canonical parsing
+- Merge pull request #1018 from theseus-rs/fix-java6-verifier-fallback
+- Merge pull request #1017 from theseus-rs/fix-annotation-syntax-validation
+- Merge pull request #1012 from theseus-rs/localvar-type-annotation-bounds
+- Merge pull request #1016 from theseus-rs/fix-inner-classes-validation
+- Merge pull request #1013 from theseus-rs/fix-empty-module-names
+- Consolidate classfile verification and remove unused helpers
+- optimize Java string creation, encoding, and interning
+- Merge pull request #1004 from theseus-rs/classfile-benchmarks
+- Merge main and retain verifier test imports
+- Merge main and retain annotation tag and target validation
+- Merge pull request #1003 from theseus-rs/module-flags
+- Merge main and preserve module flag checks in shared parser
+- Merge pull request #1002 from theseus-rs/parameter-flags
+- Merge pull request #1000 from theseus-rs/subroutine-stack
+- Merge pull request #984 from theseus-rs/classfile-parser
+- Merge pull request #1001 from theseus-rs/frame-offset-errors
+- Merge main and retain allocation bounds in the shared parser
+- Merge pull request #997 from theseus-rs/bootstrap-handles
+- Merge main and preserve bootstrap handle and module name tests
+- Merge pull request #994 from theseus-rs/string-buffers
+- Merge pull request #982 from theseus-rs/cache-scope
+- Merge main and preserve string buffer and formatting tests
+- Merge pull request #989 from theseus-rs/constant-checks
+- Merge pull request #993 from theseus-rs/attribute-writes
+- Merge pull request #998 from theseus-rs/string-formatting
+- Merge pull request #996 from theseus-rs/signature-arrays
+- Merge pull request #992 from theseus-rs/mutf8-validation
+- Merge pull request #991 from theseus-rs/signature-allocations
+- Merge pull request #979 from theseus-rs/annotation-tags
+- Merge pull request #988 from theseus-rs/legacy-constants
+- Merge main and preserve string formatting and equality tests
+- Merge main and preserve string buffer and equality tests
+- Merge main and combine annotation target and path checks
+- Merge main and preserve attribute rollback and capacity tests
+- Merge main and preserve cache-scope and fallback regression tests
+- Merge main and combine annotation target and path validation
+- Merge pull request #995 from theseus-rs/string-equality
+- Merge pull request #983 from theseus-rs/parser-capacity
+- Merge pull request #981 from theseus-rs/old-verifier
+- Merge pull request #978 from theseus-rs/annotation-paths
+- Merge pull request #987 from theseus-rs/handler-allocations
+- Merge pull request #986 from theseus-rs/code-metadata
+- Merge pull request #977 from theseus-rs/module-names
+- Merge pull request #973 from theseus-rs/handle-cycles
+- Merge pull request #971 from theseus-rs/verifier-fallback
+- Merge pull request #970 from theseus-rs/instanceof-init
+- cover constant load opcode stack limits
+- cover scoped verification cache replacement and bypasses
+- add parsing and verification performance baselines
+- reuse class verification cache scope
+- format Java strings without temporary strings
+- serialize attribute payloads directly
+- reuse compatible owned string buffers
+- reduce signature parser allocations
+- validate constant loads without temporary frames
+- reduce exception frame allocations
+- reuse method code metadata during verification
+- share owned and borrowed class-file parsing
+- remove obsolete verifier modules
+- replace runtime string formatting with direct string construction
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- update dependencies
+- centralize JVM initializer method names
+- Merge pull request #895 from theseus-rs/failed-constructor-aliases
+- Merge pull request #894 from theseus-rs/exception-input-state
+- Merge pull request #911 from theseus-rs/code-metadata-relocation
+- Merge pull request #888 from theseus-rs/initial-frame-check
+- Merge pull request #885 from theseus-rs/category-two-stack-maps
+- Merge pull request #920 from theseus-rs/trailing-class-data
+- use java constants instead of literals
+- Merge pull request #881 from theseus-rs/switch-operands
+- update dependencies
+- update Rust to 1.99.0
+
+## `ristretto_javac` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.34.0...ristretto_javac-v0.35.0) - 2026-11-05
+
+### Other
 - replace runtime string formatting with direct string construction
 
 ## `ristretto_java` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/v0.34.0...v0.35.0) - 2026-11-05
