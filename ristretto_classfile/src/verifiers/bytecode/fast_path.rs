@@ -596,7 +596,11 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         current_frame: &Frame,
         state: &mut StackMapWorkState,
     ) -> Result<()> {
-        self.handle_successor(index, offset, current_frame, &mut state.anchor_states)?;
+        let changed =
+            self.handle_successor(index, offset, current_frame, &mut state.anchor_states)?;
+        if changed {
+            Self::reset_visited(&mut state.visited, index)?;
+        }
 
         if !Self::is_visited(&state.visited, index, "instruction")? {
             state.worklist.push(index);
@@ -643,12 +647,15 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 .code_info
                 .index_at(*succ_offset)
                 .ok_or(VerifyError::VerifyError("Invalid successor".to_string()))?;
-            self.handle_successor(
+            let changed = self.handle_successor(
                 succ_index,
                 *succ_offset,
                 next_frame,
                 &mut state.anchor_states,
             )?;
+            if changed {
+                Self::reset_visited(&mut state.visited, succ_index)?;
+            }
             if !Self::is_visited(&state.visited, succ_index, "successor")? {
                 state.worklist.push(succ_index);
             }
@@ -695,6 +702,14 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         Ok(())
     }
 
+    fn reset_visited(visited: &mut [bool], index: usize) -> Result<()> {
+        let entry = visited.get_mut(index).ok_or_else(|| {
+            VerifyError::VerifyError(format!("Invalid instruction index {index}"))
+        })?;
+        *entry = false;
+        Ok(())
+    }
+
     /// Checks if an offset is an anchor point (`StackMapTable` frame, jump target, or handler).
     fn is_anchor_point(&self, offset: u16) -> bool {
         self.stack_map_table.has_frame_at(offset)
@@ -714,7 +729,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         succ_offset: u16,
         next_frame: &Frame,
         anchor_states: &mut [Option<Frame>],
-    ) -> Result<()> {
+    ) -> Result<bool> {
         // Check if there's a StackMapTable frame
         let anchor_state = anchor_states.get_mut(succ_index).ok_or_else(|| {
             VerifyError::VerifyError(format!("Invalid successor index {succ_index}"))
@@ -736,14 +751,15 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             }
             // Store computed frame for merge
             if let Some(existing) = anchor_state.as_mut() {
-                existing.merge(next_frame, self.context)?;
+                return existing.merge(next_frame, self.context);
             } else {
                 *anchor_state = Some(next_frame.clone());
+                return Ok(true);
             }
         } else {
             *anchor_state = Some(next_frame.clone());
         }
-        Ok(())
+        Ok(false)
     }
 
     /// Validates that the computed frame is compatible with the expected frame.
