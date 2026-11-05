@@ -236,7 +236,7 @@ impl TargetType {
             64..=65 => {
                 // 0x40 | 0x41
                 let targets_count = bytes.read_u16()? as usize;
-                let mut targets = Vec::with_capacity(targets_count);
+                let mut targets = Vec::with_capacity(targets_count.min(bytes.remaining() / 6));
                 for _ in 0..targets_count {
                     let target = LocalVariableTarget::from_bytes(bytes)?;
                     targets.push(target);

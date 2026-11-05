@@ -72,7 +72,7 @@ impl BootstrapMethod {
     pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<BootstrapMethod> {
         let bootstrap_method_ref = bytes.read_u16()?;
         let arguments_count = bytes.read_u16()? as usize;
-        let mut arguments = Vec::with_capacity(arguments_count);
+        let mut arguments = Vec::with_capacity(arguments_count.min(bytes.remaining() / 2));
         for _ in 0..arguments_count {
             arguments.push(bytes.read_u16()?);
         }
