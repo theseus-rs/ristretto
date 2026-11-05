@@ -3,11 +3,12 @@ include!(concat!(env!("OUT_DIR"), "/intrinsic_registry.rs"));
 
 #[cfg(test)]
 mod tests {
+    use ristretto_classfile::JAVA_21;
+
     #[test]
     fn audio_registration_uses_intrinsics_features() -> ristretto_types::Result<()> {
-        let mut registry = ristretto_types::IntrinsicRegistry::<ristretto_vm::Thread>::new(
-            &ristretto_classfile::JAVA_21,
-        );
+        let mut registry =
+            ristretto_types::IntrinsicRegistry::<ristretto_vm::Thread>::new(&JAVA_21);
         super::register(&mut registry)?;
         assert_eq!(
             registry

@@ -838,7 +838,7 @@ mod tests {
     use crate::constant_pool::ConstantPool;
     use crate::field::Field;
     use crate::method::Method;
-    use crate::{BaseType, FieldAccessFlags, FieldType};
+    use crate::{BaseType, FieldAccessFlags, FieldType, JAVA_6};
     use {Attribute, InnerClass, LineNumber, LocalVariableTable, LocalVariableTypeTable};
 
     fn verify(
@@ -3630,7 +3630,7 @@ mod tests {
         };
         class_file.version = JAVA_7;
         assert!(verify_inner_classes(&class_file, std::slice::from_ref(&inner)).is_err());
-        class_file.version = crate::JAVA_6;
+        class_file.version = JAVA_6;
         assert!(verify_inner_classes(&class_file, &[inner]).is_ok());
     }
 

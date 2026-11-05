@@ -27,6 +27,14 @@ use ristretto_classfile::{
 struct TestContext;
 
 impl VerificationContext for TestContext {
+    fn verify_member_access(
+        &self,
+        _access: &ristretto_classfile::verifiers::context::MemberAccess<'_>,
+    ) -> Result<()> {
+        // This fixture models accessible members; access-policy failures have dedicated cases.
+        Ok(())
+    }
+
     fn is_subclass(&self, subclass: &JavaStr, superclass: &JavaStr) -> Result<bool> {
         // Simple hierarchy for testing
         if superclass == "java/lang/Object" {

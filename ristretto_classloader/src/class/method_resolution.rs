@@ -495,7 +495,7 @@ mod tests {
     use super::*;
     use crate::{ClassLoader, ClassPath};
     use ristretto_classfile::{
-        ClassAccessFlags, ClassFile, ConstantPool, JAVA_8, JAVA_11, JAVA_17, JAVA_21,
+        ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_1, JAVA_8, JAVA_11, JAVA_17, JAVA_21,
     };
 
     fn launch_class(methods: &[(&str, MethodAccessFlags)]) -> crate::Result<Arc<Class>> {
@@ -833,8 +833,8 @@ mod tests {
         let parent = class("Parent", Some(&grandparent), None, methods)?;
         let resolved = grandparent.resolve_method("run", "()V")?;
         for (version, flags) in [
-            (ristretto_classfile::JAVA_1_1, ClassAccessFlags::empty()),
-            (ristretto_classfile::JAVA_1_1, ClassAccessFlags::SUPER),
+            (JAVA_1_1, ClassAccessFlags::empty()),
+            (JAVA_1_1, ClassAccessFlags::SUPER),
             (JAVA_8, ClassAccessFlags::empty()),
         ] {
             let mut definition = class("Caller", None, None, methods)?.class_file().clone();
