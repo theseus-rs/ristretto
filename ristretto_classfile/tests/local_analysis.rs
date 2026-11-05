@@ -881,16 +881,16 @@ fn same_frames_preserve_locals_without_counting_operand_stack() -> Result<()> {
         },
         StackFrame::SameLocals1StackItemFrame {
             frame_type: 64,
-            stack: vec![VerificationType::Double],
+            stack: [VerificationType::Double],
         },
         StackFrame::SameLocals1StackItemFrame {
             frame_type: 127,
-            stack: vec![VerificationType::Long],
+            stack: [VerificationType::Long],
         },
         StackFrame::SameLocals1StackItemFrameExtended {
             frame_type: 247,
             offset_delta: 0,
-            stack: vec![VerificationType::Long],
+            stack: [VerificationType::Long],
         },
     ] {
         let frames = vec![
@@ -1006,12 +1006,12 @@ fn malformed_frame_kinds_and_append_counts_are_errors() {
         },
         StackFrame::SameLocals1StackItemFrame {
             frame_type: 63,
-            stack: vec![VerificationType::Integer],
+            stack: [VerificationType::Integer],
         },
         StackFrame::SameLocals1StackItemFrameExtended {
             frame_type: 246,
             offset_delta: 0,
-            stack: vec![VerificationType::Integer],
+            stack: [VerificationType::Integer],
         },
         StackFrame::ChopFrame {
             frame_type: 247,

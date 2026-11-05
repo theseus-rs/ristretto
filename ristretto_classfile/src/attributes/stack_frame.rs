@@ -89,13 +89,13 @@ pub enum StackFrame {
     ///
     /// let frame = StackFrame::SameLocals1StackItemFrame {
     ///     frame_type: 70,
-    ///     stack: vec![VerificationType::Integer]
+    ///     stack: [VerificationType::Integer]
     /// };
     /// assert_eq!(frame.offset_delta(), 6); // 70 - 64 = 6
     /// ```
     SameLocals1StackItemFrame {
         frame_type: u8,
-        stack: Vec<VerificationType>,
+        stack: [VerificationType; 1],
     },
 
     /// Represents a frame with the same locals as the previous frame and a single one-item stack,
@@ -111,14 +111,14 @@ pub enum StackFrame {
     /// let frame = StackFrame::SameLocals1StackItemFrameExtended {
     ///     frame_type: 247,
     ///     offset_delta: 1000,
-    ///     stack: vec![VerificationType::Double]
+    ///     stack: [VerificationType::Double]
     /// };
     /// assert_eq!(frame.offset_delta(), 1000);
     /// ```
     SameLocals1StackItemFrameExtended {
         frame_type: u8,
         offset_delta: u16,
-        stack: Vec<VerificationType>,
+        stack: [VerificationType; 1],
     },
 
     /// Represents a frame with the same locals as the previous frame, except that the last `k` are
@@ -266,7 +266,7 @@ impl StackFrame {
     /// // For SameLocals1StackItemFrame, offset_delta is frame_type - 64
     /// let frame2 = StackFrame::SameLocals1StackItemFrame {
     ///     frame_type: 75,
-    ///     stack: vec![VerificationType::Integer]
+    ///     stack: [VerificationType::Integer]
     /// };
     /// assert_eq!(frame2.offset_delta(), 11); // 75 - 64 = 11
     ///
@@ -329,13 +329,13 @@ impl StackFrame {
             0..=63 => StackFrame::SameFrame { frame_type },
             64..=127 => {
                 let verification_type = VerificationType::from_bytes(bytes)?;
-                let stack = vec![verification_type];
+                let stack = [verification_type];
                 StackFrame::SameLocals1StackItemFrame { frame_type, stack }
             }
             247 => {
                 let offset_delta = bytes.read_u16()?;
                 let verification_type = VerificationType::from_bytes(bytes)?;
-                let stack = vec![verification_type];
+                let stack = [verification_type];
                 StackFrame::SameLocals1StackItemFrameExtended {
                     frame_type,
                     offset_delta,
@@ -401,12 +401,8 @@ impl StackFrame {
     pub(crate) fn validate(&self) -> Result<()> {
         let valid = match self {
             Self::SameFrame { frame_type } => *frame_type <= 63,
-            Self::SameLocals1StackItemFrame { frame_type, stack } => {
-                (64..=127).contains(frame_type) && stack.len() == 1
-            }
-            Self::SameLocals1StackItemFrameExtended {
-                frame_type, stack, ..
-            } => *frame_type == 247 && stack.len() == 1,
+            Self::SameLocals1StackItemFrame { frame_type, .. } => (64..=127).contains(frame_type),
+            Self::SameLocals1StackItemFrameExtended { frame_type, .. } => *frame_type == 247,
             Self::ChopFrame { frame_type, .. } => (248..=250).contains(frame_type),
             Self::SameFrameExtended { frame_type, .. } => *frame_type == 251,
             Self::AppendFrame {
@@ -676,7 +672,7 @@ mod test {
         let frame_type = 65;
         let stack_frame = StackFrame::SameLocals1StackItemFrame {
             frame_type,
-            stack: vec![VerificationType::Null],
+            stack: [VerificationType::Null],
         };
         let expected_bytes = [65, 5];
 
@@ -697,7 +693,7 @@ mod test {
         let stack_frame = StackFrame::SameLocals1StackItemFrameExtended {
             frame_type,
             offset_delta: 42,
-            stack: vec![VerificationType::Null],
+            stack: [VerificationType::Null],
         };
         let expected_bytes = [247, 0, 42, 5];
 

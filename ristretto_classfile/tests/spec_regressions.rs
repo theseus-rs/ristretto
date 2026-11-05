@@ -182,7 +182,7 @@ fn valid_long_stackmap() {
         vec![Lconst_0, Nop, Pop2, Return],
         Some(vec![StackFrame::SameLocals1StackItemFrame {
             frame_type: 65,
-            stack: vec![T::Long],
+            stack: [T::Long],
         }]),
     );
     check(c, Some(m), true);
