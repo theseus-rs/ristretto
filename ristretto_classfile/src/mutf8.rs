@@ -269,60 +269,25 @@ pub fn to_utf16(input: &[u8]) -> Result<Vec<u16>> {
 /// # Errors
 /// Returns an error if the byte sequence is not valid Modified UTF-8.
 pub fn from_bytes(input: &[u8]) -> Result<String> {
-    validate(input)?;
-    // if let Ok(s) = std::str::from_utf8(input) {
-    //     return Ok(s.to_owned());
-    // }
-
-    // Fast path: if all bytes are ASCII (and non-zero in MUTF-8 means regular ASCII),
-    // we can skip all decoding. ASCII bytes are always valid UTF-8.
-    if input.is_ascii() {
-        // SAFETY: We just verified all bytes are ASCII (0x00..=0x7F), which is valid UTF-8.
-        #[expect(unsafe_code)]
-        let s = unsafe { std::str::from_utf8_unchecked(input) };
-        return Ok(s.to_owned());
-    }
-
-    // Check if input contains no MUTF-8 special sequences (no 0xC0 0x80 null encoding,
-    // no surrogate pairs). In that case, the bytes are already valid UTF-8.
-    if !has_mutf8_special_sequences(input) {
-        return std::str::from_utf8(input)
-            .map(ToOwned::to_owned)
-            .map_err(|e| FromUtf8Error(e.to_string()));
-    }
-
-    // Slow path: decode MUTF-8 to UTF-8
-    decode_mutf8(input)
+    from_bytes_cow(input).map(std::borrow::Cow::into_owned)
 }
 
 /// Zero-copy version of `from_bytes` that returns a `Cow<'a, str>`.
 ///
-/// For ASCII input (the vast majority of constant pool strings), this returns a borrowed
-/// `&str` pointing directly into the input slice; no allocation at all.
-/// For non-ASCII MUTF-8, it allocates a new `String`.
+/// For ASCII and non-null BMP input, this returns a borrowed `&str` pointing directly
+/// into the input slice. MUTF-8 NUL and surrogate sequences require an owned `String`.
 ///
 /// # Errors
 /// Returns an error if the input contains invalid MUTF-8 sequences.
 pub fn from_bytes_cow(input: &[u8]) -> Result<std::borrow::Cow<'_, str>> {
     use std::borrow::Cow;
-    validate(input)?;
-
-    // Fast path: if all bytes are ASCII, return a zero-copy borrowed &str.
-    if input.is_ascii() {
-        // SAFETY: We just verified all bytes are ASCII (0x00..=0x7F), which is valid UTF-8.
+    if !validate_and_classify(input)? {
+        // SAFETY: validation rejected invalid UTF-8 encodings and found no MUTF-8
+        // NUL or surrogate sequences, so these bytes are also valid Rust UTF-8.
         #[expect(unsafe_code)]
-        let s = unsafe { std::str::from_utf8_unchecked(input) };
-        return Ok(Cow::Borrowed(s));
+        let value = unsafe { std::str::from_utf8_unchecked(input) };
+        return Ok(Cow::Borrowed(value));
     }
-
-    // Check if input is valid standard UTF-8 without MUTF-8 special sequences.
-    if !has_mutf8_special_sequences(input) {
-        return std::str::from_utf8(input)
-            .map(Cow::Borrowed)
-            .map_err(|e| FromUtf8Error(e.to_string()));
-    }
-
-    // Slow path: decode MUTF-8 to UTF-8 (must allocate)
     decode_mutf8(input).map(Cow::Owned)
 }
 
@@ -352,16 +317,16 @@ pub fn from_bytes_cow(input: &[u8]) -> Result<std::borrow::Cow<'_, str>> {
 /// ```
 #[inline]
 pub fn validate(input: &[u8]) -> Result<()> {
-    // Fast path: check all bytes are non-null ASCII (0x01..=0x7F) in a single pass.
-    // Covers the vast majority of constant pool strings in class files.
-    if input.iter().all(|&b| b.wrapping_sub(1) < 0x7F) {
-        return Ok(());
-    }
-    validate_slow(input)
+    validate_and_classify(input).map(|_| ())
 }
 
-/// Full MUTF-8 validation for non-ASCII or null-containing inputs.
-fn validate_slow(input: &[u8]) -> Result<()> {
+/// Validate input and report whether decoding is needed to obtain standard UTF-8.
+fn validate_and_classify(input: &[u8]) -> Result<bool> {
+    // Preserve the inexpensive path for ordinary constant-pool strings.
+    if input.iter().all(|&b| b.wrapping_sub(1) < 0x7F) {
+        return Ok(false);
+    }
+    let mut specials = false;
     let mut iter = input.iter();
 
     while let Some(&byte1) = iter.next() {
@@ -396,6 +361,7 @@ fn validate_slow(input: &[u8]) -> Result<()> {
                         "Invalid MUTF-8: overlong 2-byte encoding".to_string(),
                     ));
                 }
+                specials |= byte1 == 0xC0;
                 if byte1 == 0xC1 {
                     return Err(FromUtf8Error(
                         "Invalid MUTF-8: overlong 2-byte encoding".to_string(),
@@ -419,6 +385,7 @@ fn validate_slow(input: &[u8]) -> Result<()> {
                         "Invalid MUTF-8: invalid continuation byte".to_string(),
                     ));
                 }
+                specials |= byte1 == 0xED && byte2 >= 0xA0;
                 // Reject overlong 3-byte encodings: 0xE0 with byte2 < 0xA0 encodes
                 // U+0000..U+07FF which should use 1 or 2-byte encoding per JVM spec §4.4.7.
                 if byte1 == 0xE0 && byte2 < 0xA0 {
@@ -437,7 +404,7 @@ fn validate_slow(input: &[u8]) -> Result<()> {
         }
     }
 
-    Ok(())
+    Ok(specials)
 }
 
 /// Check if the input contains MUTF-8 special sequences that differ from standard UTF-8.
