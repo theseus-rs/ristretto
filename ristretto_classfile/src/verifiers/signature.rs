@@ -73,14 +73,12 @@ impl<'a> SignatureParser<'a> {
     }
 
     fn expect(&mut self, expected: char) -> Result<()> {
+        let position = self.pos;
         match self.advance() {
             Some(c) if c == expected => Ok(()),
             Some(c) => Err(VerificationError {
                 context: "Signature".to_string(),
-                message: format!(
-                    "Expected '{expected}' but found '{c}' at position {}",
-                    self.pos
-                ),
+                message: format!("Expected '{expected}' but found '{c}' at position {position}"),
             }),
             None => Err(VerificationError {
                 context: "Signature".to_string(),
@@ -508,6 +506,14 @@ mod tests {
     use super::*;
 
     // Class signature tests
+
+    #[test]
+    fn unexpected_character_reports_its_start_offset() {
+        let mut parser = SignatureParser::new("βX");
+        parser.advance();
+        let error = parser.expect('L').unwrap_err().to_string();
+        assert!(error.contains("position 2"), "{error}");
+    }
 
     #[test]
     fn test_simple_class_signature() {
