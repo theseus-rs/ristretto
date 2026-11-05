@@ -536,25 +536,16 @@ mod tests {
             StackFrame::SameFrame { frame_type: 64 },
             StackFrame::SameLocals1StackItemFrame {
                 frame_type: 63,
-                stack: vec![ClassFileVerificationType::Integer],
+                stack: [ClassFileVerificationType::Integer],
             },
             StackFrame::SameLocals1StackItemFrame {
                 frame_type: 128,
-                stack: vec![ClassFileVerificationType::Integer],
-            },
-            StackFrame::SameLocals1StackItemFrame {
-                frame_type: 64,
-                stack: vec![],
+                stack: [ClassFileVerificationType::Integer],
             },
             StackFrame::SameLocals1StackItemFrameExtended {
                 frame_type: 246,
                 offset_delta: 0,
-                stack: vec![ClassFileVerificationType::Integer],
-            },
-            StackFrame::SameLocals1StackItemFrameExtended {
-                frame_type: 247,
-                offset_delta: 0,
-                stack: vec![ClassFileVerificationType::Integer; 2],
+                stack: [ClassFileVerificationType::Integer],
             },
             StackFrame::ChopFrame {
                 frame_type: 251,
@@ -733,12 +724,12 @@ mod tests {
         let stack_frames = vec![
             StackFrame::SameLocals1StackItemFrame {
                 frame_type: 64,
-                stack: vec![ClassFileVerificationType::Object { cpool_index: 2 }],
+                stack: [ClassFileVerificationType::Object { cpool_index: 2 }],
             },
             StackFrame::SameLocals1StackItemFrameExtended {
                 frame_type: 247,
                 offset_delta: 0,
-                stack: vec![ClassFileVerificationType::Uninitialized { offset: 3 }],
+                stack: [ClassFileVerificationType::Uninitialized { offset: 3 }],
             },
             StackFrame::AppendFrame {
                 frame_type: 253,
@@ -811,7 +802,7 @@ mod tests {
         let initial_frame = Frame::new(0, 1);
         let stack_frames = vec![StackFrame::SameLocals1StackItemFrame {
             frame_type: 64,
-            stack: vec![ClassFileVerificationType::Object { cpool_index: 99 }],
+            stack: [ClassFileVerificationType::Object { cpool_index: 99 }],
         }];
 
         assert!(matches!(
