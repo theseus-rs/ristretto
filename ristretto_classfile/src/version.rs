@@ -7,6 +7,9 @@ use std::fmt;
 /// Constants representing the Java version 1.0.2.
 pub const JAVA_1_0_2: Version = Version::Java1_0_2 { minor: 0 };
 /// Constants representing the Java version 1.1.
+///
+/// This release label uses wire version 45.0, just like [`JAVA_1_0_2`]. The two
+/// constants compare equal; their display names preserve the chosen release label.
 pub const JAVA_1_1: Version = Version::Java1_1 { minor: 0 };
 /// Constants representing the Java version 1.2.
 pub const JAVA_1_2: Version = Version::Java1_2 { minor: 0 };
@@ -157,6 +160,11 @@ impl Version {
     ///
     /// The major version determines the Java version, while the minor version typically
     /// indicates incremental updates or preview status.
+    ///
+    /// Major version 45 cannot distinguish the Java 1.0.2 and Java 1.1 release
+    /// labels. Parsing always returns [`Version::Java1_0_2`] and preserves the minor
+    /// version. Equality and ordering compare the wire `(major, minor)` pair, not
+    /// the release label used by [`std::fmt::Display`].
     ///
     /// # Errors
     ///
