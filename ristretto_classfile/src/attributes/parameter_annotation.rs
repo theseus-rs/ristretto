@@ -85,7 +85,7 @@ impl ParameterAnnotation {
     /// ```
     pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<ParameterAnnotation> {
         let annotations_count = bytes.read_u16()? as usize;
-        let mut annotations = Vec::with_capacity(annotations_count);
+        let mut annotations = Vec::with_capacity(annotations_count.min(bytes.remaining() / 4));
         for _ in 0..annotations_count {
             let annotation = Annotation::from_bytes(bytes)?;
             annotations.push(annotation);

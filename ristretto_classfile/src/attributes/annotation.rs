@@ -96,7 +96,7 @@ impl Annotation {
     pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<Annotation> {
         let type_index = bytes.read_u16()?;
         let elements_count = bytes.read_u16()? as usize;
-        let mut elements = Vec::with_capacity(elements_count);
+        let mut elements = Vec::with_capacity(elements_count.min(bytes.remaining() / 3));
         for _ in 0..elements_count {
             let annotation_element = AnnotationValuePair::from_bytes(bytes)?;
             elements.push(annotation_element);

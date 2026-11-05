@@ -358,7 +358,8 @@ impl StackFrame {
             }
             252..=254 => {
                 let offset_delta = bytes.read_u16()?;
-                let mut locals = Vec::with_capacity((frame_type - 251) as usize);
+                let mut locals =
+                    Vec::with_capacity(((frame_type - 251) as usize).min(bytes.remaining()));
                 for _ in 0..(frame_type - 251) {
                     let verification_type = VerificationType::from_bytes(bytes)?;
                     locals.push(verification_type);
@@ -372,13 +373,15 @@ impl StackFrame {
             255 => {
                 let offset_delta = bytes.read_u16()?;
                 let number_of_locals = bytes.read_u16()?;
-                let mut locals = Vec::with_capacity(number_of_locals as usize);
+                let mut locals =
+                    Vec::with_capacity((number_of_locals as usize).min(bytes.remaining()));
                 for _ in 0..number_of_locals {
                     let verification_type = VerificationType::from_bytes(bytes)?;
                     locals.push(verification_type);
                 }
                 let number_of_stack_items = bytes.read_u16()?;
-                let mut stack = Vec::with_capacity(number_of_stack_items as usize);
+                let mut stack =
+                    Vec::with_capacity((number_of_stack_items as usize).min(bytes.remaining()));
                 for _ in 0..number_of_stack_items {
                     let verification_type = VerificationType::from_bytes(bytes)?;
                     stack.push(verification_type);

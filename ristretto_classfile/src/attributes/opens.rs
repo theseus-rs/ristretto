@@ -76,7 +76,7 @@ impl Opens {
         let index = bytes.read_u16()?;
         let flags = OpensFlags::from_bytes(bytes)?;
         let to_index_count = bytes.read_u16()?;
-        let mut to_index = Vec::with_capacity(to_index_count as usize);
+        let mut to_index = Vec::with_capacity((to_index_count as usize).min(bytes.remaining() / 2));
         for _ in 0..to_index_count {
             to_index.push(bytes.read_u16()?);
         }
