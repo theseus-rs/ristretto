@@ -11,6 +11,7 @@ use ristretto_types::JavaError::{
 };
 use ristretto_types::Thread;
 use ristretto_types::VM;
+use ristretto_types::array::{allocate_array, allocate_primitive_array};
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -594,10 +595,7 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
     if remaining_dimensions.is_empty()
         && let Some(primitive) = &primitive
     {
-        return Ok(create_primitive_array(
-            primitive,
-            usize::try_from(first_length)?,
-        ));
+        return allocate_primitive_array(primitive, usize::try_from(first_length)?);
     }
 
     let vm = thread.vm()?;
@@ -607,7 +605,8 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
         let class = thread.resolve_class(&class, false).await?;
         return Ok(Reference::Array(ObjectArray {
             class,
-            elements: vec![Value::Object(None); usize::try_from(first_length)?].into_boxed_slice(),
+            elements: allocate_array(usize::try_from(first_length)?, Value::Object(None))?
+                .into_boxed_slice(),
         }));
     }
 
@@ -632,19 +631,6 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
     allocate_array_dimensions(thread.vm()?.garbage_collector(), &levels)
 }
 
-fn create_primitive_array(primitive: &BaseType, length: usize) -> Reference {
-    match primitive {
-        BaseType::Boolean => Reference::BooleanArray(vec![0_i8; length].into_boxed_slice()),
-        BaseType::Byte => Reference::ByteArray(vec![0_i8; length].into_boxed_slice()),
-        BaseType::Char => Reference::CharArray(vec![0_u16; length].into_boxed_slice()),
-        BaseType::Short => Reference::ShortArray(vec![0_i16; length].into_boxed_slice()),
-        BaseType::Int => Reference::IntArray(vec![0_i32; length].into_boxed_slice()),
-        BaseType::Long => Reference::LongArray(vec![0_i64; length].into_boxed_slice()),
-        BaseType::Float => Reference::FloatArray(vec![0.0_f32; length].into_boxed_slice()),
-        BaseType::Double => Reference::DoubleArray(vec![0.0_f64; length].into_boxed_slice()),
-    }
-}
-
 fn allocate_array_dimensions(
     collector: &Arc<GarbageCollector>,
     levels: &[(usize, ArrayKind)],
@@ -653,19 +639,16 @@ fn allocate_array_dimensions(
         return Err(InternalError("Missing array dimension".to_string()));
     };
     let class = match kind {
-        ArrayKind::Primitive(primitive) => return Ok(create_primitive_array(primitive, *length)),
+        ArrayKind::Primitive(primitive) => return allocate_primitive_array(primitive, *length),
         ArrayKind::Reference(class) => class,
     };
-    let elements = if remaining.is_empty() {
-        vec![Value::Object(None); *length]
-    } else {
-        let mut elements = Vec::with_capacity(*length);
-        for _ in 0..*length {
+    let mut elements = allocate_array(*length, Value::Object(None))?;
+    if !remaining.is_empty() {
+        for element in &mut elements {
             let child = allocate_array_dimensions(collector, remaining)?;
-            elements.push(Value::new_object(collector, child));
+            *element = Value::new_object(collector, child);
         }
-        elements
-    };
+    }
     // Fill the final Value buffer directly instead of building and converting a
     // temporary Vec<Option<Reference>> for every reference array.
     Ok(Reference::Array(ObjectArray {
@@ -702,19 +685,41 @@ pub async fn new_array<T: Thread + 'static>(
     let vm = thread.vm()?;
     let collector = vm.garbage_collector();
     let array = match component.name() {
-        "boolean" => Value::new_object(collector, Reference::from(vec![false; length])),
-        "byte" => Value::new_object(collector, Reference::from(vec![0i8; length])),
-        "char" => Value::new_object(collector, Reference::from(vec![0 as char; length])),
-        "float" => Value::new_object(collector, Reference::from(vec![0.0f32; length])),
-        "double" => Value::new_object(collector, Reference::from(vec![0.0f64; length])),
-        "int" => Value::new_object(collector, Reference::from(vec![0i32; length])),
-        "long" => Value::new_object(collector, Reference::from(vec![0i64; length])),
-        "short" => Value::new_object(collector, Reference::from(vec![0i16; length])),
+        "boolean" => Value::new_object(
+            collector,
+            allocate_primitive_array(&BaseType::Boolean, length)?,
+        ),
+        "byte" => Value::new_object(
+            collector,
+            allocate_primitive_array(&BaseType::Byte, length)?,
+        ),
+        "char" => Value::new_object(
+            collector,
+            allocate_primitive_array(&BaseType::Char, length)?,
+        ),
+        "float" => Value::new_object(
+            collector,
+            allocate_primitive_array(&BaseType::Float, length)?,
+        ),
+        "double" => Value::new_object(
+            collector,
+            allocate_primitive_array(&BaseType::Double, length)?,
+        ),
+        "int" => Value::new_object(collector, allocate_primitive_array(&BaseType::Int, length)?),
+        "long" => Value::new_object(
+            collector,
+            allocate_primitive_array(&BaseType::Long, length)?,
+        ),
+        "short" => Value::new_object(
+            collector,
+            allocate_primitive_array(&BaseType::Short, length)?,
+        ),
         _ => {
             let loader = vm.class_loader().read().await.clone();
             let class = loader.array_class(&component, 1).await?;
             let class = thread.resolve_class(&class, false).await?;
-            let reference = Reference::try_from((class, vec![Value::Object(None); length]))?;
+            let reference =
+                Reference::try_from((class, allocate_array(length, Value::Object(None))?))?;
             Value::new_object(collector, reference)
         }
     };
@@ -982,6 +987,54 @@ pub fn set_short<T: Thread + 'static>(
 mod tests {
     use super::*;
     use ristretto_types::JavaObject;
+
+    #[tokio::test]
+    async fn test_multi_array_empty_and_reference_dimensions() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        for (component, dimensions, descriptor, length) in [
+            ("int", vec![0, 3], "[[I", 0),
+            ("java/lang/Object", vec![2], "[Ljava/lang/Object;", 2),
+        ] {
+            let component = thread.class(component).await?;
+            let reference =
+                create_multi_dimensional_array(&*thread, &component, &dimensions).await?;
+            let Reference::Array(array) = reference else {
+                panic!("expected reference array");
+            };
+            assert_eq!(array.class.name(), descriptor);
+            assert_eq!(array.elements.len(), length);
+            assert!(
+                array
+                    .elements
+                    .iter()
+                    .all(|value| matches!(value, Value::Object(None)))
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_multi_array_capacity_overflow() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let array = thread.class("[Ljava/lang/Object;").await?;
+        let outer = thread.class("[[Ljava/lang/Object;").await?;
+        for levels in [
+            vec![(usize::MAX, ArrayKind::Primitive(BaseType::Long))],
+            vec![(usize::MAX, ArrayKind::Reference(Arc::clone(&array)))],
+            vec![
+                (1, ArrayKind::Reference(outer)),
+                (usize::MAX, ArrayKind::Reference(array)),
+            ],
+        ] {
+            assert!(matches!(
+                allocate_array_dimensions(vm.garbage_collector(), &levels),
+                Err(ristretto_types::Error::JavaError(
+                    ristretto_types::JavaError::OutOfMemoryError(_)
+                ))
+            ));
+        }
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_get_and_set() -> Result<()> {

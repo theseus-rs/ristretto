@@ -8,6 +8,7 @@ use crate::thread::Thread;
 use ristretto_classfile::BaseType;
 use ristretto_classfile::attributes::ArrayType;
 use ristretto_classloader::{Class, Reference, Value};
+use ristretto_types::array::{allocate_array, allocate_primitive_array};
 use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray>
@@ -25,16 +26,17 @@ pub(crate) fn newarray(
     }
     let count = usize::try_from(count)?;
     let collector = vm.garbage_collector();
-    let array = match array_type {
-        ArrayType::Boolean => Value::new_object(collector, Reference::from(vec![false; count])),
-        ArrayType::Byte => Value::new_object(collector, Reference::from(vec![0i8; count])),
-        ArrayType::Char => Value::new_object(collector, Reference::from(vec![0 as char; count])),
-        ArrayType::Float => Value::new_object(collector, Reference::from(vec![0.0f32; count])),
-        ArrayType::Double => Value::new_object(collector, Reference::from(vec![0.0f64; count])),
-        ArrayType::Short => Value::new_object(collector, Reference::from(vec![0i16; count])),
-        ArrayType::Int => Value::new_object(collector, Reference::from(vec![0i32; count])),
-        ArrayType::Long => Value::new_object(collector, Reference::from(vec![0i64; count])),
+    let base_type = match array_type {
+        ArrayType::Boolean => BaseType::Boolean,
+        ArrayType::Byte => BaseType::Byte,
+        ArrayType::Char => BaseType::Char,
+        ArrayType::Float => BaseType::Float,
+        ArrayType::Double => BaseType::Double,
+        ArrayType::Short => BaseType::Short,
+        ArrayType::Int => BaseType::Int,
+        ArrayType::Long => BaseType::Long,
     };
+    let array = Value::new_object(collector, allocate_primitive_array(&base_type, count)?);
     stack.push(array)?;
     Ok(())
 }
@@ -59,7 +61,7 @@ pub(crate) async fn anewarray(
     }
     let count = usize::try_from(count)?;
     let vm = thread.vm()?;
-    let reference = Reference::try_from((class, vec![Value::Object(None); count]))?;
+    let reference = Reference::try_from((class, allocate_array(count, Value::Object(None))?))?;
     let array = Value::new_object(vm.garbage_collector(), reference);
     stack.push(array)?;
     Ok(Continue)
@@ -144,52 +146,30 @@ async fn create_multidimensional_array(
             let base_type = BaseType::parse(component_type.chars().next().unwrap_or_default())?;
             let vm = thread.vm()?;
             let collector = vm.garbage_collector();
-            let array = match base_type {
-                BaseType::Char => {
-                    Value::new_object(collector, Reference::from(vec![0 as char; current_size]))
-                }
-                BaseType::Float => {
-                    Value::new_object(collector, Reference::from(vec![0.0f32; current_size]))
-                }
-                BaseType::Double => {
-                    Value::new_object(collector, Reference::from(vec![0.0f64; current_size]))
-                }
-                BaseType::Boolean => {
-                    Value::new_object(collector, Reference::from(vec![false; current_size]))
-                }
-                BaseType::Byte => {
-                    Value::new_object(collector, Reference::from(vec![0i8; current_size]))
-                }
-                BaseType::Short => {
-                    Value::new_object(collector, Reference::from(vec![0i16; current_size]))
-                }
-                BaseType::Int => {
-                    Value::new_object(collector, Reference::from(vec![0i32; current_size]))
-                }
-                BaseType::Long => {
-                    Value::new_object(collector, Reference::from(vec![0i64; current_size]))
-                }
-            };
+            let array = Value::new_object(
+                collector,
+                allocate_primitive_array(&base_type, current_size)?,
+            );
             Ok(array)
         } else {
             // Object array
             let vm = thread.vm()?;
-            let reference = Reference::try_from((class, vec![Value::Object(None); current_size]))?;
+            let reference =
+                Reference::try_from((class, allocate_array(current_size, Value::Object(None))?))?;
             let array = Value::new_object(vm.garbage_collector(), reference);
             Ok(array)
         }
     } else {
         let component = thread.array_component_class(&class).await?;
-        let mut elements = Vec::new();
-        for _ in 0..current_size {
-            let sub_array = Box::pin(create_multidimensional_array(
+        let mut elements = allocate_array(current_size, Value::Object(None))?;
+        for element in &mut elements {
+            *element = Box::pin(create_multidimensional_array(
                 thread,
                 component.clone(),
                 dimension_sizes,
                 depth + 1,
             ))
             .await?;
-            elements.push(sub_array);
         }
 
         let vm = thread.vm()?;
@@ -207,6 +187,43 @@ mod tests {
     use crate::java_object::JavaObject;
     use ristretto_classfile::attributes::ArrayType;
     use std::sync::Arc;
+
+    /// Reproduce #940 without allocating gigabytes on a 64-bit test host.
+    #[tokio::test]
+    async fn test_multianewarray_capacity_overflow() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        for component in ["J", "Ljava/lang/Object;"] {
+            for dimensions in [&[usize::MAX][..], &[usize::MAX, 1], &[1, usize::MAX]] {
+                let class_name = format!("{}{component}", "[".repeat(dimensions.len()));
+                let class = thread.class(&class_name).await?;
+                let result = create_multidimensional_array(&thread, class, dimensions, 0).await;
+                assert!(matches!(
+                    result,
+                    Err(JavaError(crate::JavaError::OutOfMemoryError(_)))
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// The exact playground reproducer overflows Vec's capacity on wasm32.
+    #[cfg(target_pointer_width = "32")]
+    #[tokio::test]
+    async fn test_newarray_capacity_overflow() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
+        let stack = &mut OperandStack::with_max_size(1);
+        stack.push_int(i32::MAX - 8)?;
+        let result = newarray(&frame, stack, &ArrayType::Long);
+        assert!(matches!(
+            result,
+            Err(JavaError(crate::JavaError::OutOfMemoryError(_)))
+        ));
+        // A failed allocation must leave the VM usable.
+        stack.push_int(1)?;
+        newarray(&frame, stack, &ArrayType::Long)?;
+        assert_eq!(&[0_i64], &*stack.pop()?.as_long_vec_ref()?);
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_newarray_boolean() -> Result<()> {
@@ -479,6 +496,11 @@ mod tests {
         let reference = object.as_reference()?;
         assert_eq!(class_name, reference.class_name()?);
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_multianewarray_boolean() -> Result<()> {
+        test_multianewarray_single_dimension("[Z").await
     }
 
     #[tokio::test]

@@ -150,29 +150,38 @@ unsafe fn alloc_array(count: i32, element_size: usize) -> i64 {
     ptr as i64
 }
 
-extern "C" fn jit_new_bool_array(_ctx: *const u8, count: i32) -> i64 {
-    unsafe { alloc_array(count, 1) }
+// Fail impossible requests deterministically, without exhausting the test process.
+fn alloc_primitive_array(ctx: *const u8, count: i32, element_size: usize) -> i64 {
+    if count < 0 || count == i32::MAX {
+        set_pending(ctx, next_object_id());
+        return 0;
+    }
+    unsafe { alloc_array(count, element_size) }
 }
-extern "C" fn jit_new_byte_array(_ctx: *const u8, count: i32) -> i64 {
-    unsafe { alloc_array(count, 1) }
+
+extern "C" fn jit_new_bool_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
+    alloc_primitive_array(ctx, count, 1)
 }
-extern "C" fn jit_new_char_array(_ctx: *const u8, count: i32) -> i64 {
-    unsafe { alloc_array(count, 2) }
+extern "C" fn jit_new_byte_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
+    alloc_primitive_array(ctx, count, 1)
 }
-extern "C" fn jit_new_short_array(_ctx: *const u8, count: i32) -> i64 {
-    unsafe { alloc_array(count, 2) }
+extern "C" fn jit_new_char_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
+    alloc_primitive_array(ctx, count, 2)
 }
-extern "C" fn jit_new_int_array(_ctx: *const u8, count: i32) -> i64 {
-    unsafe { alloc_array(count, 4) }
+extern "C" fn jit_new_short_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
+    alloc_primitive_array(ctx, count, 2)
 }
-extern "C" fn jit_new_long_array(_ctx: *const u8, count: i32) -> i64 {
-    unsafe { alloc_array(count, 8) }
+extern "C" fn jit_new_int_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
+    alloc_primitive_array(ctx, count, 4)
 }
-extern "C" fn jit_new_float_array(_ctx: *const u8, count: i32) -> i64 {
-    unsafe { alloc_array(count, 4) }
+extern "C" fn jit_new_long_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
+    alloc_primitive_array(ctx, count, 8)
 }
-extern "C" fn jit_new_double_array(_ctx: *const u8, count: i32) -> i64 {
-    unsafe { alloc_array(count, 8) }
+extern "C" fn jit_new_float_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
+    alloc_primitive_array(ctx, count, 4)
+}
+extern "C" fn jit_new_double_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
+    alloc_primitive_array(ctx, count, 8)
 }
 
 extern "C" fn jit_arraylength(_ctx: *const u8, _bci: i32, array_ptr: i64) -> i32 {

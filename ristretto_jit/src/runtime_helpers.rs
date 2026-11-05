@@ -130,8 +130,8 @@ impl RuntimeHelpers {
             Ok(jit_module.declare_func_in_func(id, function_builder.func))
         };
 
-        // Array allocation: (gc_ptr: ptr, count: i32) -> i64 (Gc pointer)
-        let alloc_params = &[ptr_type, types::I32];
+        // Array allocation: (ctx: ptr, bci: i32, count: i32) -> i64 (Gc pointer)
+        let alloc_params = &[ptr_type, types::I32, types::I32];
         let alloc_returns = &[types::I64];
 
         let new_bool_array = declare("jit_new_bool_array", alloc_params, alloc_returns)?;

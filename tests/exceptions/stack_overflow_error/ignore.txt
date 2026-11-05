@@ -1,0 +1,2 @@
+Run with the ristretto_vm resource_errors integration harness. Stack exhaustion must run in a bounded subprocess;
+the in-process compatibility harness cannot contain a native-stack crash or set JVM flags.

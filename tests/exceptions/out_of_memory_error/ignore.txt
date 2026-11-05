@@ -1,0 +1,2 @@
+Run with the ristretto_vm resource_errors integration harness. These fixtures require isolated processes and explicit
+heap/metaspace/direct-memory limits; the in-process compatibility harness cannot supply them.
