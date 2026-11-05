@@ -2,7 +2,7 @@ use crate::Error::{InvalidFieldTypeCode, InvalidFieldTypeDescriptor, InvalidMeth
 use crate::base_type::BaseType;
 use crate::error::Result;
 use crate::java_string::{JavaStr, JavaString};
-use std::fmt;
+use std::fmt::{self, Write};
 
 /// Represents a Java field type descriptor as defined in the JVM specification.
 ///
@@ -201,16 +201,7 @@ impl FieldType {
         match self {
             FieldType::Base(base_type) => base_type.class_name().to_string(),
             FieldType::Object(class_name) => class_name.to_rust_string(),
-            FieldType::Array(component_type) => match &**component_type {
-                FieldType::Base(base_type) => {
-                    let mut name = String::with_capacity(2);
-                    name.push('[');
-                    name.push(base_type.code());
-                    name
-                }
-                FieldType::Object(class_name) => ["[L", &class_name.to_str_lossy(), ";"].concat(),
-                FieldType::Array(_) => ["[", &component_type.class_name()].concat(),
-            },
+            FieldType::Array(_) => self.descriptor(),
         }
     }
 
@@ -242,10 +233,30 @@ impl FieldType {
     /// ```
     #[must_use]
     pub fn descriptor(&self) -> String {
+        let mut descriptor = String::with_capacity(self.descriptor_capacity());
+        self.append_descriptor(&mut descriptor);
+        descriptor
+    }
+
+    fn descriptor_capacity(&self) -> usize {
         match self {
-            FieldType::Base(base_type) => base_type.code().to_string(),
-            FieldType::Object(class_name) => ["L", &class_name.to_str_lossy(), ";"].concat(),
-            FieldType::Array(component_type) => ["[", &component_type.descriptor()].concat(),
+            Self::Base(_) => 1,
+            Self::Object(name) => name.len() + 2,
+            Self::Array(component) => component.descriptor_capacity() + 1,
+        }
+    }
+
+    fn append_descriptor(&self, output: &mut String) {
+        match self {
+            Self::Base(base) => output.push(base.code()),
+            Self::Object(name) => {
+                // Formatting Java strings streams decoded characters into the same buffer.
+                let _ = write!(output, "L{name};");
+            }
+            Self::Array(component) => {
+                output.push('[');
+                component.append_descriptor(output);
+            }
         }
     }
 
