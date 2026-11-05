@@ -254,6 +254,8 @@ pub fn is_intrinsic_native_library(path: &str) -> bool {
             | "javajpeg"
             | "jpeg"
             | "jimage"
+            | "management"
+            | "management_ext"
             | "net"
             | "nio"
             | "prefs"
@@ -426,6 +428,11 @@ mod tests {
             "libjavajpeg.so",
             "javajpeg.dll",
             "jimage",
+            "management",
+            "libmanagement.so",
+            "management_ext",
+            "libmanagement_ext.dylib",
+            "management_ext.dll",
             "net",
             "nio.dll",
             "libprefs.so",
@@ -445,6 +452,8 @@ mod tests {
             "network.dll",
             "libzip.so.1",
             "libextnet_extra.so",
+            "jvm",
+            "libmanagement_ext.so.1",
         ] {
             assert!(!is_intrinsic_native_library(path), "{path}");
         }
