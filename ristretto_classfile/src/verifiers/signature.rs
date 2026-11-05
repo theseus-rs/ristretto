@@ -152,9 +152,15 @@ impl<'a> SignatureParser<'a> {
     fn parse_type_parameters(&mut self) -> Result<Vec<TypeParameter<'a>>> {
         self.expect('<')?;
         let mut params = Vec::new();
+        let mut names = AHashSet::new();
         while self.peek() != Some('>') {
             let param = self.parse_type_parameter()?;
-            self.context.add_type_variable(param.name);
+            if !names.insert(param.name) {
+                return Err(VerificationError {
+                    context: "Signature".to_string(),
+                    message: ["Duplicate type parameter '", param.name, "'"].concat(),
+                });
+            }
             params.push(param);
         }
         self.expect('>')?;
@@ -522,6 +528,25 @@ mod tests {
     #[test]
     fn test_class_signature_with_type_parameters() {
         assert!(verify_class_signature("<T:Ljava/lang/Object;>Ljava/lang/Object;").is_ok());
+    }
+
+    #[test]
+    fn duplicate_parameters_are_rejected_but_enclosing_names_can_be_shadowed() {
+        assert!(
+            verify_class_signature("<T:Ljava/lang/Object;T:Ljava/lang/String;>Ljava/lang/Object;")
+                .is_err()
+        );
+        assert!(verify_method_signature("<T:Ljava/lang/Object;T:Ljava/lang/String;>()V").is_err());
+        assert!(
+            verify_method_signature_with_context(
+                "<T:Ljava/lang/Object;>(TT;)TT;",
+                &["T".to_string()]
+            )
+            .is_ok()
+        );
+        assert!(
+            verify_class_signature("<T:Ljava/lang/Comparable<TT;>;>Ljava/lang/Object;").is_ok()
+        );
     }
 
     #[test]
