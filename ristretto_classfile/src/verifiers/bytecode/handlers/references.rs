@@ -40,12 +40,12 @@ impl<'a> ConstantPoolResolver<'a> {
     /// # Errors
     ///
     /// Returns an error if the constant pool reference is invalid.
-    pub fn resolve_field_ref(&self, index: u16) -> Result<(String, String, String)> {
+    pub fn resolve_field_ref(&self, index: u16) -> Result<(JavaString, JavaString, JavaString)> {
         let (class_name, name, descriptor) = self.resolve_field_ref_borrowed(index)?;
         Ok((
-            class_name.to_string(),
-            name.to_string(),
-            descriptor.to_string(),
+            class_name.to_owned(),
+            name.to_owned(),
+            descriptor.to_owned(),
         ))
     }
 
@@ -94,12 +94,12 @@ impl<'a> ConstantPoolResolver<'a> {
     /// # Errors
     ///
     /// Returns an error if the constant pool reference is invalid.
-    pub fn resolve_method_ref(&self, index: u16) -> Result<(String, String, String)> {
+    pub fn resolve_method_ref(&self, index: u16) -> Result<(JavaString, JavaString, JavaString)> {
         let (class_name, name, descriptor) = self.resolve_method_ref_borrowed(index)?;
         Ok((
-            class_name.to_string(),
-            name.to_string(),
-            descriptor.to_string(),
+            class_name.to_owned(),
+            name.to_owned(),
+            descriptor.to_owned(),
         ))
     }
 
@@ -152,8 +152,8 @@ impl<'a> ConstantPoolResolver<'a> {
     /// # Errors
     ///
     /// Returns an error if the constant pool reference is invalid.
-    pub fn resolve_class(&self, index: u16) -> Result<String> {
-        self.resolve_class_borrowed(index).map(ToString::to_string)
+    pub fn resolve_class(&self, index: u16) -> Result<JavaString> {
+        self.resolve_class_borrowed(index).map(ToOwned::to_owned)
     }
 
     pub(crate) fn resolve_class_borrowed(&self, index: u16) -> Result<&'a JavaStr> {
@@ -170,9 +170,9 @@ impl<'a> ConstantPoolResolver<'a> {
     /// # Errors
     ///
     /// Returns an error if the constant pool reference is invalid.
-    pub fn resolve_invoke_dynamic(&self, index: u16) -> Result<String> {
+    pub fn resolve_invoke_dynamic(&self, index: u16) -> Result<JavaString> {
         self.resolve_invoke_dynamic_borrowed(index)
-            .map(ToString::to_string)
+            .map(ToOwned::to_owned)
     }
 
     pub(crate) fn resolve_invoke_dynamic_borrowed(&self, index: u16) -> Result<&'a JavaStr> {
@@ -209,8 +209,8 @@ impl<'a> ConstantPoolResolver<'a> {
 /// # References
 ///
 /// - [JVMS §6.5.new](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.new)
-pub fn handle_new(frame: &mut Frame, offset: u16, class_name: &str) -> Result<()> {
-    if class_name.starts_with('[') {
+pub fn handle_new(frame: &mut Frame, offset: u16, class_name: &JavaStr) -> Result<()> {
+    if class_name.as_bytes().starts_with(b"[") {
         return Err(VerifyError::VerifyError(
             "new cannot allocate an array".to_string(),
         ));
@@ -276,8 +276,15 @@ pub fn handle_newarray(frame: &mut Frame, atype: &ArrayType) -> Result<()> {
 /// # References
 ///
 /// - [JVMS §6.5.anewarray](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.anewarray)
-pub fn handle_anewarray(frame: &mut Frame, class_name: &str) -> Result<()> {
-    if class_name.bytes().take_while(|&b| b == b'[').count() >= 255 {
+pub fn handle_anewarray(frame: &mut Frame, class_name: &JavaStr) -> Result<()> {
+    if class_name
+        .as_bytes()
+        .iter()
+        .copied()
+        .take_while(|&b| b == b'[')
+        .count()
+        >= 255
+    {
         return Err(VerifyError::VerifyError(
             "anewarray exceeds 255 dimensions".to_string(),
         ));
@@ -290,7 +297,7 @@ pub fn handle_anewarray(frame: &mut Frame, class_name: &str) -> Result<()> {
     }
 
     // The component type is the referenced class
-    let component = if class_name.starts_with('[') {
+    let component = if class_name.as_bytes().starts_with(b"[") {
         // Creating an array of arrays
         parse_type_descriptor(class_name)?
     } else {
@@ -311,9 +318,19 @@ pub fn handle_anewarray(frame: &mut Frame, class_name: &str) -> Result<()> {
 /// # References
 ///
 /// - [JVMS §6.5.multianewarray](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray)
-pub fn handle_multianewarray(frame: &mut Frame, class_name: &str, dimensions: u8) -> Result<()> {
+pub fn handle_multianewarray(
+    frame: &mut Frame,
+    class_name: &JavaStr,
+    dimensions: u8,
+) -> Result<()> {
     if dimensions == 0
-        || usize::from(dimensions) > class_name.bytes().take_while(|&b| b == b'[').count()
+        || usize::from(dimensions)
+            > class_name
+                .as_bytes()
+                .iter()
+                .copied()
+                .take_while(|&b| b == b'[')
+                .count()
     {
         return Err(VerifyError::VerifyError(
             "Invalid multianewarray dimensions".to_string(),
@@ -347,8 +364,8 @@ pub fn handle_multianewarray(frame: &mut Frame, class_name: &str, dimensions: u8
 /// - [JVMS §6.5.getfield](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getfield)
 pub fn handle_getfield<C: VerificationContext>(
     frame: &mut Frame,
-    class_name: &str,
-    field_descriptor: &str,
+    class_name: &JavaStr,
+    field_descriptor: &JavaStr,
     context: &C,
 ) -> Result<()> {
     let objectref = frame.pop()?;
@@ -386,8 +403,8 @@ pub fn handle_getfield<C: VerificationContext>(
 /// - [JVMS §6.5.putfield](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putfield)
 pub fn handle_putfield<C: VerificationContext>(
     frame: &mut Frame,
-    class_name: &str,
-    field_descriptor: &str,
+    class_name: &JavaStr,
+    field_descriptor: &JavaStr,
     context: &C,
 ) -> Result<()> {
     let field_type = parse_type_descriptor(field_descriptor)?;
@@ -434,7 +451,7 @@ pub fn handle_putfield<C: VerificationContext>(
 /// # References
 ///
 /// - [JVMS §6.5.getstatic](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getstatic)
-pub fn handle_getstatic(frame: &mut Frame, field_descriptor: &str) -> Result<()> {
+pub fn handle_getstatic(frame: &mut Frame, field_descriptor: &JavaStr) -> Result<()> {
     let field_type = parse_type_descriptor(field_descriptor)?;
     if field_type.is_category2() {
         frame.push(field_type)?;
@@ -457,7 +474,7 @@ pub fn handle_getstatic(frame: &mut Frame, field_descriptor: &str) -> Result<()>
 /// - [JVMS §6.5.putstatic](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic)
 pub fn handle_putstatic<C: VerificationContext>(
     frame: &mut Frame,
-    field_descriptor: &str,
+    field_descriptor: &JavaStr,
     context: &C,
 ) -> Result<()> {
     let field_type = parse_type_descriptor(field_descriptor)?;
@@ -486,9 +503,9 @@ pub fn handle_putstatic<C: VerificationContext>(
 /// Returns an error if the argument types are incorrect.
 pub fn handle_invoke<C: VerificationContext>(
     frame: &mut Frame,
-    class_name: &str,
-    method_name: &str,
-    descriptor: &str,
+    class_name: &JavaStr,
+    method_name: &JavaStr,
+    descriptor: &JavaStr,
     is_static: bool,
     context: &C,
 ) -> Result<Option<VerificationType>> {
@@ -498,8 +515,7 @@ pub fn handle_invoke<C: VerificationContext>(
         ));
     }
 
-    let descriptor = JavaStr::cow_from_str(descriptor);
-    let (params, return_type) = FieldType::parse_method_descriptor(&descriptor)
+    let (params, return_type) = FieldType::parse_method_descriptor(descriptor)
         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
     // Pop arguments in reverse order
@@ -522,7 +538,7 @@ pub fn handle_invoke<C: VerificationContext>(
     if !is_static {
         let objectref = frame.pop()?;
 
-        let expected = if class_name.starts_with('[') {
+        let expected = if class_name.as_bytes().starts_with(b"[") {
             parse_type_descriptor(class_name)?
         } else {
             VerificationType::Object(JavaString::from(class_name))
@@ -556,14 +572,13 @@ pub fn handle_invoke<C: VerificationContext>(
 /// Returns an error if the argument types are incorrect.
 pub fn handle_invokespecial<C: VerificationContext>(
     frame: &mut Frame,
-    class_name: &str,
-    method_name: &str,
-    descriptor: &str,
-    current_class: &str,
+    class_name: &JavaStr,
+    method_name: &JavaStr,
+    descriptor: &JavaStr,
+    current_class: &JavaStr,
     context: &C,
 ) -> Result<()> {
-    let descriptor = JavaStr::cow_from_str(descriptor);
-    let (params, return_type) = FieldType::parse_method_descriptor(&descriptor)
+    let (params, return_type) = FieldType::parse_method_descriptor(descriptor)
         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
     // Pop arguments in reverse order
@@ -637,11 +652,10 @@ pub fn handle_invokespecial<C: VerificationContext>(
 /// - [JVMS §6.5.invokedynamic](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokedynamic)
 pub fn handle_invokedynamic<C: VerificationContext>(
     frame: &mut Frame,
-    descriptor: &str,
+    descriptor: &JavaStr,
     context: &C,
 ) -> Result<()> {
-    let descriptor = JavaStr::cow_from_str(descriptor);
-    let (params, return_type) = FieldType::parse_method_descriptor(&descriptor)
+    let (params, return_type) = FieldType::parse_method_descriptor(descriptor)
         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
     // Pop arguments in reverse order
@@ -685,7 +699,7 @@ pub fn handle_invokedynamic<C: VerificationContext>(
 /// # References
 ///
 /// - [JVMS §6.5.checkcast](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.checkcast)
-pub fn handle_checkcast(frame: &mut Frame, class_name: &str) -> Result<()> {
+pub fn handle_checkcast(frame: &mut Frame, class_name: &JavaStr) -> Result<()> {
     let objectref = frame.pop()?;
 
     // Must be a reference type
@@ -696,7 +710,7 @@ pub fn handle_checkcast(frame: &mut Frame, class_name: &str) -> Result<()> {
     }
 
     // Push the cast type (the reference is now known to be this type or null)
-    let cast_type = if class_name.starts_with('[') {
+    let cast_type = if class_name.as_bytes().starts_with(b"[") {
         parse_type_descriptor(class_name)?
     } else {
         VerificationType::Object(JavaString::from(class_name))
@@ -766,9 +780,9 @@ pub fn handle_arraylength(frame: &mut Frame) -> Result<()> {
 }
 
 /// Parses a type descriptor into a `VerificationType`.
-fn parse_type_descriptor(descriptor: &str) -> Result<VerificationType> {
-    let field_type =
-        FieldType::parse(descriptor).map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
+fn parse_type_descriptor(descriptor: &JavaStr) -> Result<VerificationType> {
+    let field_type = FieldType::parse_java_str(descriptor)
+        .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
     Ok(VerificationType::from_field_type(&field_type))
 }
 
@@ -1183,7 +1197,7 @@ mod tests {
     fn test_handle_new_success() {
         let mut frame = Frame::new(5, 10);
 
-        handle_new(&mut frame, 0, "java/lang/Object").unwrap();
+        handle_new(&mut frame, 0, &JavaStr::cow_from_str("java/lang/Object")).unwrap();
 
         assert_eq!(*frame.peek().unwrap(), VerificationType::Uninitialized(0));
     }
@@ -1192,8 +1206,8 @@ mod tests {
     fn new_rejects_a_live_stack_alias() {
         let mut frame = Frame::new(0, 2);
         frame.push(VerificationType::Uninitialized(42)).unwrap();
-        assert!(handle_new(&mut frame, 42, "java/lang/Object").is_err());
-        assert!(handle_new(&mut frame, 43, "java/lang/Object").is_ok());
+        assert!(handle_new(&mut frame, 42, &JavaStr::cow_from_str("java/lang/Object")).is_err());
+        assert!(handle_new(&mut frame, 43, &JavaStr::cow_from_str("java/lang/Object")).is_ok());
     }
 
     #[test]
@@ -1204,7 +1218,7 @@ mod tests {
             VerificationType::Uninitialized(43),
             VerificationType::Uninitialized(42),
         ];
-        handle_new(&mut frame, 42, "java/lang/Object").unwrap();
+        handle_new(&mut frame, 42, &JavaStr::cow_from_str("java/lang/Object")).unwrap();
         assert_eq!(
             frame.locals,
             vec![
@@ -1220,7 +1234,7 @@ mod tests {
     fn test_handle_new_with_offset() {
         let mut frame = Frame::new(5, 10);
 
-        handle_new(&mut frame, 42, "java/lang/String").unwrap();
+        handle_new(&mut frame, 42, &JavaStr::cow_from_str("java/lang/String")).unwrap();
 
         assert_eq!(*frame.peek().unwrap(), VerificationType::Uninitialized(42));
     }
@@ -1271,7 +1285,7 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
-        handle_anewarray(&mut frame, "java/lang/String").unwrap();
+        handle_anewarray(&mut frame, &JavaStr::cow_from_str("java/lang/String")).unwrap();
 
         assert_eq!(
             *frame.peek().unwrap(),
@@ -1286,7 +1300,7 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Float).unwrap();
 
-        let result = handle_anewarray(&mut frame, "java/lang/String");
+        let result = handle_anewarray(&mut frame, &JavaStr::cow_from_str("java/lang/String"));
         assert!(result.is_err());
         assert!(
             result
@@ -1302,7 +1316,7 @@ mod tests {
         frame.push(VerificationType::Integer).unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
-        handle_multianewarray(&mut frame, "[[I", 2).unwrap();
+        handle_multianewarray(&mut frame, &JavaStr::cow_from_str("[[I"), 2).unwrap();
 
         // Should have an array on the stack
         assert!(matches!(frame.peek().unwrap(), VerificationType::Array(_)));
@@ -1314,7 +1328,7 @@ mod tests {
         frame.push(VerificationType::Integer).unwrap();
         frame.push(VerificationType::Float).unwrap();
 
-        let result = handle_multianewarray(&mut frame, "[[I", 2);
+        let result = handle_multianewarray(&mut frame, &JavaStr::cow_from_str("[[I"), 2);
         assert!(result.is_err());
         assert!(
             result
@@ -1328,7 +1342,7 @@ mod tests {
     fn test_handle_getstatic_int() {
         let mut frame = Frame::new(5, 10);
 
-        handle_getstatic(&mut frame, "I").unwrap();
+        handle_getstatic(&mut frame, &JavaStr::cow_from_str("I")).unwrap();
         assert_eq!(*frame.peek().unwrap(), VerificationType::Integer);
     }
 
@@ -1336,7 +1350,7 @@ mod tests {
     fn test_handle_getstatic_long() {
         let mut frame = Frame::new(5, 10);
 
-        handle_getstatic(&mut frame, "J").unwrap();
+        handle_getstatic(&mut frame, &JavaStr::cow_from_str("J")).unwrap();
         assert_eq!(frame.stack_depth(), 2); // Long takes 2 slots
     }
 
@@ -1344,7 +1358,7 @@ mod tests {
     fn test_handle_getstatic_object() {
         let mut frame = Frame::new(5, 10);
 
-        handle_getstatic(&mut frame, "Ljava/lang/String;").unwrap();
+        handle_getstatic(&mut frame, &JavaStr::cow_from_str("Ljava/lang/String;")).unwrap();
         assert_eq!(
             *frame.peek().unwrap(),
             VerificationType::Object(JavaString::from("java/lang/String"))
@@ -1357,7 +1371,7 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
-        handle_putstatic(&mut frame, "I", &ctx).unwrap();
+        handle_putstatic(&mut frame, &JavaStr::cow_from_str("I"), &ctx).unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1367,7 +1381,7 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Float).unwrap();
 
-        let result = handle_putstatic(&mut frame, "I", &ctx);
+        let result = handle_putstatic(&mut frame, &JavaStr::cow_from_str("I"), &ctx);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
@@ -1378,7 +1392,13 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
-        handle_getfield(&mut frame, "java/lang/Object", "I", &ctx).unwrap();
+        handle_getfield(
+            &mut frame,
+            &JavaStr::cow_from_str("java/lang/Object"),
+            &JavaStr::cow_from_str("I"),
+            &ctx,
+        )
+        .unwrap();
         assert_eq!(*frame.peek().unwrap(), VerificationType::Integer);
     }
 
@@ -1388,7 +1408,13 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Null).unwrap();
 
-        handle_getfield(&mut frame, "java/lang/Object", "I", &ctx).unwrap();
+        handle_getfield(
+            &mut frame,
+            &JavaStr::cow_from_str("java/lang/Object"),
+            &JavaStr::cow_from_str("I"),
+            &ctx,
+        )
+        .unwrap();
         assert_eq!(*frame.peek().unwrap(), VerificationType::Integer);
     }
 
@@ -1400,7 +1426,12 @@ mod tests {
             .push(VerificationType::Object(JavaString::from("some/Other")))
             .unwrap();
 
-        let result = handle_getfield(&mut frame, "java/lang/String", "I", &ctx);
+        let result = handle_getfield(
+            &mut frame,
+            &JavaStr::cow_from_str("java/lang/String"),
+            &JavaStr::cow_from_str("I"),
+            &ctx,
+        );
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
@@ -1412,7 +1443,13 @@ mod tests {
         frame.push(VerificationType::java_lang_object()).unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
-        handle_putfield(&mut frame, "java/lang/Object", "I", &ctx).unwrap();
+        handle_putfield(
+            &mut frame,
+            &JavaStr::cow_from_str("java/lang/Object"),
+            &JavaStr::cow_from_str("I"),
+            &ctx,
+        )
+        .unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1423,7 +1460,12 @@ mod tests {
         frame.push(VerificationType::java_lang_object()).unwrap();
         frame.push(VerificationType::Float).unwrap();
 
-        let result = handle_putfield(&mut frame, "java/lang/Object", "I", &ctx);
+        let result = handle_putfield(
+            &mut frame,
+            &JavaStr::cow_from_str("java/lang/Object"),
+            &JavaStr::cow_from_str("I"),
+            &ctx,
+        );
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
@@ -1432,13 +1474,33 @@ mod tests {
     fn test_handle_invoke_invalid_descriptor_errors() {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(1, 1);
-        assert!(handle_invoke(&mut frame, "Test", "test", "invalid", true, &ctx).is_err());
+        assert!(
+            handle_invoke(
+                &mut frame,
+                &JavaStr::cow_from_str("Test"),
+                &JavaStr::cow_from_str("test"),
+                &JavaStr::cow_from_str("invalid"),
+                true,
+                &ctx
+            )
+            .is_err()
+        );
 
         let mut frame = Frame::new(1, 1);
-        assert!(handle_invokespecial(&mut frame, "Test", "test", "invalid", "Test", &ctx).is_err());
+        assert!(
+            handle_invokespecial(
+                &mut frame,
+                &JavaStr::cow_from_str("Test"),
+                &JavaStr::cow_from_str("test"),
+                &JavaStr::cow_from_str("invalid"),
+                &JavaStr::cow_from_str("Test"),
+                &ctx
+            )
+            .is_err()
+        );
 
         let mut frame = Frame::new(1, 1);
-        assert!(handle_invokedynamic(&mut frame, "invalid", &ctx).is_err());
+        assert!(handle_invokedynamic(&mut frame, &JavaStr::cow_from_str("invalid"), &ctx).is_err());
     }
 
     #[test]
@@ -1446,7 +1508,7 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
-        handle_checkcast(&mut frame, "java/lang/String").unwrap();
+        handle_checkcast(&mut frame, &JavaStr::cow_from_str("java/lang/String")).unwrap();
 
         assert_eq!(
             *frame.peek().unwrap(),
@@ -1459,7 +1521,7 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Null).unwrap();
 
-        handle_checkcast(&mut frame, "java/lang/String").unwrap();
+        handle_checkcast(&mut frame, &JavaStr::cow_from_str("java/lang/String")).unwrap();
 
         // After checkcast, the type is known to be the cast type
         assert_eq!(
@@ -1473,7 +1535,7 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
-        let result = handle_checkcast(&mut frame, "java/lang/String");
+        let result = handle_checkcast(&mut frame, &JavaStr::cow_from_str("java/lang/String"));
         assert!(result.is_err());
         assert!(
             result
@@ -1553,25 +1615,31 @@ mod tests {
     #[test]
     fn test_parse_type_descriptor_int() {
         assert_eq!(
-            parse_type_descriptor("I").unwrap(),
+            parse_type_descriptor(&JavaStr::cow_from_str("I")).unwrap(),
             VerificationType::Integer
         );
     }
 
     #[test]
     fn test_parse_type_descriptor_long() {
-        assert_eq!(parse_type_descriptor("J").unwrap(), VerificationType::Long);
+        assert_eq!(
+            parse_type_descriptor(&JavaStr::cow_from_str("J")).unwrap(),
+            VerificationType::Long
+        );
     }
 
     #[test]
     fn test_parse_type_descriptor_float() {
-        assert_eq!(parse_type_descriptor("F").unwrap(), VerificationType::Float);
+        assert_eq!(
+            parse_type_descriptor(&JavaStr::cow_from_str("F")).unwrap(),
+            VerificationType::Float
+        );
     }
 
     #[test]
     fn test_parse_type_descriptor_double() {
         assert_eq!(
-            parse_type_descriptor("D").unwrap(),
+            parse_type_descriptor(&JavaStr::cow_from_str("D")).unwrap(),
             VerificationType::Double
         );
     }
@@ -1579,7 +1647,7 @@ mod tests {
     #[test]
     fn test_parse_type_descriptor_object() {
         assert_eq!(
-            parse_type_descriptor("Ljava/lang/String;").unwrap(),
+            parse_type_descriptor(&JavaStr::cow_from_str("Ljava/lang/String;")).unwrap(),
             VerificationType::Object(JavaString::from("java/lang/String"))
         );
     }
@@ -1587,7 +1655,7 @@ mod tests {
     #[test]
     fn test_parse_type_descriptor_array() {
         assert_eq!(
-            parse_type_descriptor("[I").unwrap(),
+            parse_type_descriptor(&JavaStr::cow_from_str("[I")).unwrap(),
             VerificationType::Array(Box::new(VerificationType::Integer))
         );
     }
@@ -1595,7 +1663,7 @@ mod tests {
     #[test]
     fn test_parse_type_descriptor_nested_array() {
         assert_eq!(
-            parse_type_descriptor("[[I").unwrap(),
+            parse_type_descriptor(&JavaStr::cow_from_str("[[I")).unwrap(),
             VerificationType::Array(Box::new(VerificationType::Array(Box::new(
                 VerificationType::Integer
             ))))
@@ -1607,7 +1675,15 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        let result = handle_invoke(&mut frame, "Test", "test", "()V", true, &ctx).unwrap();
+        let result = handle_invoke(
+            &mut frame,
+            &JavaStr::cow_from_str("Test"),
+            &JavaStr::cow_from_str("test"),
+            &JavaStr::cow_from_str("()V"),
+            true,
+            &ctx,
+        )
+        .unwrap();
         assert!(result.is_none());
         assert!(frame.is_stack_empty());
     }
@@ -1618,7 +1694,15 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
-        let result = handle_invoke(&mut frame, "Test", "test", "(I)V", true, &ctx).unwrap();
+        let result = handle_invoke(
+            &mut frame,
+            &JavaStr::cow_from_str("Test"),
+            &JavaStr::cow_from_str("test"),
+            &JavaStr::cow_from_str("(I)V"),
+            true,
+            &ctx,
+        )
+        .unwrap();
         assert!(result.is_none());
         assert!(frame.is_stack_empty());
     }
@@ -1628,7 +1712,15 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        let result = handle_invoke(&mut frame, "Test", "test", "()I", true, &ctx).unwrap();
+        let result = handle_invoke(
+            &mut frame,
+            &JavaStr::cow_from_str("Test"),
+            &JavaStr::cow_from_str("test"),
+            &JavaStr::cow_from_str("()I"),
+            true,
+            &ctx,
+        )
+        .unwrap();
         assert!(result.is_some());
         assert_eq!(*frame.peek().unwrap(), VerificationType::Integer);
     }
@@ -1641,9 +1733,9 @@ mod tests {
 
         let result = handle_invoke(
             &mut frame,
-            "java/lang/Object",
-            "toString",
-            "()Ljava/lang/String;",
+            &JavaStr::cow_from_str("java/lang/Object"),
+            &JavaStr::cow_from_str("toString"),
+            &JavaStr::cow_from_str("()Ljava/lang/String;"),
             false,
             &ctx,
         )
@@ -1661,9 +1753,9 @@ mod tests {
 
         let result = handle_invoke(
             &mut frame,
-            "java/lang/String",
-            CONSTRUCTOR_NAME,
-            "()V",
+            &JavaStr::cow_from_str("java/lang/String"),
+            &JavaStr::cow_from_str(CONSTRUCTOR_NAME),
+            &JavaStr::cow_from_str("()V"),
             false,
             &ctx,
         );
@@ -1676,7 +1768,14 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Float).unwrap();
 
-        let result = handle_invoke(&mut frame, "Test", "test", "(I)V", true, &ctx);
+        let result = handle_invoke(
+            &mut frame,
+            &JavaStr::cow_from_str("Test"),
+            &JavaStr::cow_from_str("test"),
+            &JavaStr::cow_from_str("(I)V"),
+            true,
+            &ctx,
+        );
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
@@ -1691,9 +1790,9 @@ mod tests {
 
         let result = handle_invoke(
             &mut frame,
-            "java/lang/String",
-            "toString",
-            "()Ljava/lang/String;",
+            &JavaStr::cow_from_str("java/lang/String"),
+            &JavaStr::cow_from_str("toString"),
+            &JavaStr::cow_from_str("()Ljava/lang/String;"),
             false,
             &ctx,
         );
@@ -1707,7 +1806,15 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push_category2(VerificationType::Long).unwrap();
 
-        let result = handle_invoke(&mut frame, "Test", "test", "(J)V", true, &ctx).unwrap();
+        let result = handle_invoke(
+            &mut frame,
+            &JavaStr::cow_from_str("Test"),
+            &JavaStr::cow_from_str("test"),
+            &JavaStr::cow_from_str("(J)V"),
+            true,
+            &ctx,
+        )
+        .unwrap();
         assert!(result.is_none());
         assert!(frame.is_stack_empty());
     }
@@ -1717,7 +1824,15 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        let result = handle_invoke(&mut frame, "Test", "test", "()J", true, &ctx).unwrap();
+        let result = handle_invoke(
+            &mut frame,
+            &JavaStr::cow_from_str("Test"),
+            &JavaStr::cow_from_str("test"),
+            &JavaStr::cow_from_str("()J"),
+            true,
+            &ctx,
+        )
+        .unwrap();
         assert!(result.is_some());
         assert_eq!(frame.stack_depth(), 2); // Long takes 2 slots
     }
@@ -1730,10 +1845,10 @@ mod tests {
 
         handle_invokespecial(
             &mut frame,
-            "java/lang/Object",
-            CONSTRUCTOR_NAME,
-            "()V",
-            "java/lang/Object",
+            &JavaStr::cow_from_str("java/lang/Object"),
+            &JavaStr::cow_from_str(CONSTRUCTOR_NAME),
+            &JavaStr::cow_from_str("()V"),
+            &JavaStr::cow_from_str("java/lang/Object"),
             &ctx,
         )
         .unwrap();
@@ -1749,10 +1864,10 @@ mod tests {
 
         handle_invokespecial(
             &mut frame,
-            "java/lang/Object",
-            CONSTRUCTOR_NAME,
-            "()V",
-            "java/lang/Object",
+            &JavaStr::cow_from_str("java/lang/Object"),
+            &JavaStr::cow_from_str(CONSTRUCTOR_NAME),
+            &JavaStr::cow_from_str("()V"),
+            &JavaStr::cow_from_str("java/lang/Object"),
             &ctx,
         )
         .unwrap();
@@ -1766,7 +1881,15 @@ mod tests {
         frame.push(VerificationType::Uninitialized(0)).unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
-        handle_invokespecial(&mut frame, "Test", CONSTRUCTOR_NAME, "(I)V", "Test", &ctx).unwrap();
+        handle_invokespecial(
+            &mut frame,
+            &JavaStr::cow_from_str("Test"),
+            &JavaStr::cow_from_str(CONSTRUCTOR_NAME),
+            &JavaStr::cow_from_str("(I)V"),
+            &JavaStr::cow_from_str("Test"),
+            &ctx,
+        )
+        .unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1778,10 +1901,10 @@ mod tests {
 
         let result = handle_invokespecial(
             &mut frame,
-            "java/lang/Object",
-            CONSTRUCTOR_NAME,
-            "()V",
-            "java/lang/Object",
+            &JavaStr::cow_from_str("java/lang/Object"),
+            &JavaStr::cow_from_str(CONSTRUCTOR_NAME),
+            &JavaStr::cow_from_str("()V"),
+            &JavaStr::cow_from_str("java/lang/Object"),
             &ctx,
         );
         assert!(result.is_err());
@@ -1801,10 +1924,10 @@ mod tests {
 
         handle_invokespecial(
             &mut frame,
-            "java/lang/Object",
-            "privateMethod",
-            "()V",
-            "java/lang/Object",
+            &JavaStr::cow_from_str("java/lang/Object"),
+            &JavaStr::cow_from_str("privateMethod"),
+            &JavaStr::cow_from_str("()V"),
+            &JavaStr::cow_from_str("java/lang/Object"),
             &ctx,
         )
         .unwrap();
@@ -1819,10 +1942,10 @@ mod tests {
 
         handle_invokespecial(
             &mut frame,
-            "java/lang/Object",
-            "privateMethod",
-            "()I",
-            "java/lang/Object",
+            &JavaStr::cow_from_str("java/lang/Object"),
+            &JavaStr::cow_from_str("privateMethod"),
+            &JavaStr::cow_from_str("()I"),
+            &JavaStr::cow_from_str("java/lang/Object"),
             &ctx,
         )
         .unwrap();
@@ -1836,8 +1959,14 @@ mod tests {
         frame.push(VerificationType::Uninitialized(0)).unwrap();
         frame.push(VerificationType::Float).unwrap();
 
-        let result =
-            handle_invokespecial(&mut frame, "Test", CONSTRUCTOR_NAME, "(I)V", "Test", &ctx);
+        let result = handle_invokespecial(
+            &mut frame,
+            &JavaStr::cow_from_str("Test"),
+            &JavaStr::cow_from_str(CONSTRUCTOR_NAME),
+            &JavaStr::cow_from_str("(I)V"),
+            &JavaStr::cow_from_str("Test"),
+            &ctx,
+        );
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
@@ -1852,10 +1981,10 @@ mod tests {
 
         let result = handle_invokespecial(
             &mut frame,
-            "java/lang/String",
-            "privateMethod",
-            "()V",
-            "java/lang/String",
+            &JavaStr::cow_from_str("java/lang/String"),
+            &JavaStr::cow_from_str("privateMethod"),
+            &JavaStr::cow_from_str("()V"),
+            &JavaStr::cow_from_str("java/lang/String"),
             &ctx,
         );
         assert!(result.is_err());
@@ -1867,7 +1996,7 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        handle_invokedynamic(&mut frame, "()V", &ctx).unwrap();
+        handle_invokedynamic(&mut frame, &JavaStr::cow_from_str("()V"), &ctx).unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1878,7 +2007,7 @@ mod tests {
         frame.push(VerificationType::Integer).unwrap();
         frame.push(VerificationType::Integer).unwrap();
 
-        handle_invokedynamic(&mut frame, "(II)V", &ctx).unwrap();
+        handle_invokedynamic(&mut frame, &JavaStr::cow_from_str("(II)V"), &ctx).unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1888,7 +2017,7 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
-        handle_invokedynamic(&mut frame, "(I)I", &ctx).unwrap();
+        handle_invokedynamic(&mut frame, &JavaStr::cow_from_str("(I)I"), &ctx).unwrap();
         assert_eq!(*frame.peek().unwrap(), VerificationType::Integer);
     }
 
@@ -1897,7 +2026,7 @@ mod tests {
         let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
-        handle_invokedynamic(&mut frame, "()J", &ctx).unwrap();
+        handle_invokedynamic(&mut frame, &JavaStr::cow_from_str("()J"), &ctx).unwrap();
         assert_eq!(frame.stack_depth(), 2); // Long takes 2 slots
     }
 
@@ -1907,7 +2036,7 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Float).unwrap();
 
-        let result = handle_invokedynamic(&mut frame, "(I)V", &ctx);
+        let result = handle_invokedynamic(&mut frame, &JavaStr::cow_from_str("(I)V"), &ctx);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
@@ -1918,7 +2047,12 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_string()).unwrap();
 
-        handle_invokedynamic(&mut frame, "(Ljava/lang/String;)V", &ctx).unwrap();
+        handle_invokedynamic(
+            &mut frame,
+            &JavaStr::cow_from_str("(Ljava/lang/String;)V"),
+            &ctx,
+        )
+        .unwrap();
         assert!(frame.is_stack_empty());
     }
 
@@ -1987,7 +2121,7 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
-        handle_anewarray(&mut frame, "[I").unwrap();
+        handle_anewarray(&mut frame, &JavaStr::cow_from_str("[I")).unwrap();
 
         assert_eq!(
             *frame.peek().unwrap(),
@@ -2025,18 +2159,30 @@ mod tests {
 
         let mut getfield = Frame::new(5, 10);
         getfield.push(VerificationType::Null).unwrap();
-        handle_getfield(&mut getfield, "TestClass", "J", &ctx).unwrap();
+        handle_getfield(
+            &mut getfield,
+            &JavaStr::cow_from_str("TestClass"),
+            &JavaStr::cow_from_str("J"),
+            &ctx,
+        )
+        .unwrap();
         assert_eq!(getfield.pop_category2().unwrap(), VerificationType::Long);
 
         let mut putfield = Frame::new(5, 10);
         putfield.push(VerificationType::Null).unwrap();
         putfield.push_category2(VerificationType::Long).unwrap();
-        handle_putfield(&mut putfield, "TestClass", "J", &ctx).unwrap();
+        handle_putfield(
+            &mut putfield,
+            &JavaStr::cow_from_str("TestClass"),
+            &JavaStr::cow_from_str("J"),
+            &ctx,
+        )
+        .unwrap();
         assert!(putfield.is_stack_empty());
 
         let mut putstatic = Frame::new(5, 10);
         putstatic.push_category2(VerificationType::Long).unwrap();
-        handle_putstatic(&mut putstatic, "J", &ctx).unwrap();
+        handle_putstatic(&mut putstatic, &JavaStr::cow_from_str("J"), &ctx).unwrap();
         assert!(putstatic.is_stack_empty());
 
         let mut special_argument = Frame::new(5, 10);
@@ -2048,10 +2194,10 @@ mod tests {
             .unwrap();
         handle_invokespecial(
             &mut special_argument,
-            "TestClass",
-            CONSTRUCTOR_NAME,
-            "(J)V",
-            "TestClass",
+            &JavaStr::cow_from_str("TestClass"),
+            &JavaStr::cow_from_str(CONSTRUCTOR_NAME),
+            &JavaStr::cow_from_str("(J)V"),
+            &JavaStr::cow_from_str("TestClass"),
             &ctx,
         )
         .unwrap();
@@ -2061,10 +2207,10 @@ mod tests {
         special_return.push(VerificationType::Null).unwrap();
         handle_invokespecial(
             &mut special_return,
-            "TestClass",
-            "special",
-            "()J",
-            "TestClass",
+            &JavaStr::cow_from_str("TestClass"),
+            &JavaStr::cow_from_str("special"),
+            &JavaStr::cow_from_str("()J"),
+            &JavaStr::cow_from_str("TestClass"),
             &ctx,
         )
         .unwrap();
@@ -2075,12 +2221,12 @@ mod tests {
 
         let mut dynamic = Frame::new(5, 10);
         dynamic.push_category2(VerificationType::Long).unwrap();
-        handle_invokedynamic(&mut dynamic, "(J)J", &ctx).unwrap();
+        handle_invokedynamic(&mut dynamic, &JavaStr::cow_from_str("(J)J"), &ctx).unwrap();
         assert_eq!(dynamic.pop_category2().unwrap(), VerificationType::Long);
 
         let mut cast = Frame::new(5, 10);
         cast.push(VerificationType::Null).unwrap();
-        handle_checkcast(&mut cast, "[I").unwrap();
+        handle_checkcast(&mut cast, &JavaStr::cow_from_str("[I")).unwrap();
         assert_eq!(
             *cast.peek().unwrap(),
             VerificationType::Array(Box::new(VerificationType::Integer))
@@ -2095,32 +2241,58 @@ mod tests {
         getfield
             .push(VerificationType::Object(JavaString::from("OtherClass")))
             .unwrap();
-        assert!(handle_getfield(&mut getfield, "TestClass", "I", &ctx).is_err());
+        assert!(
+            handle_getfield(
+                &mut getfield,
+                &JavaStr::cow_from_str("TestClass"),
+                &JavaStr::cow_from_str("I"),
+                &ctx
+            )
+            .is_err()
+        );
 
         let mut putfield = Frame::new(5, 10);
         putfield
             .push(VerificationType::Object(JavaString::from("OtherClass")))
             .unwrap();
         putfield.push(VerificationType::Integer).unwrap();
-        assert!(handle_putfield(&mut putfield, "TestClass", "I", &ctx).is_err());
+        assert!(
+            handle_putfield(
+                &mut putfield,
+                &JavaStr::cow_from_str("TestClass"),
+                &JavaStr::cow_from_str("I"),
+                &ctx
+            )
+            .is_err()
+        );
 
         let mut invoke = Frame::new(5, 10);
         invoke
             .push(VerificationType::Object(JavaString::from("OtherClass")))
             .unwrap();
-        assert!(handle_invoke(&mut invoke, "TestClass", "method", "()V", false, &ctx).is_err());
+        assert!(
+            handle_invoke(
+                &mut invoke,
+                &JavaStr::cow_from_str("TestClass"),
+                &JavaStr::cow_from_str("method"),
+                &JavaStr::cow_from_str("()V"),
+                false,
+                &ctx
+            )
+            .is_err()
+        );
     }
 
     #[test]
     fn test_parse_type_descriptor_invalid_fails() {
-        let result = parse_type_descriptor("X");
+        let result = parse_type_descriptor(&JavaStr::cow_from_str("X"));
         assert!(result.is_err());
     }
 
     #[test]
     fn test_parse_type_descriptor_byte() {
         assert_eq!(
-            parse_type_descriptor("B").unwrap(),
+            parse_type_descriptor(&JavaStr::cow_from_str("B")).unwrap(),
             VerificationType::Integer
         );
     }
@@ -2128,7 +2300,7 @@ mod tests {
     #[test]
     fn test_parse_type_descriptor_char() {
         assert_eq!(
-            parse_type_descriptor("C").unwrap(),
+            parse_type_descriptor(&JavaStr::cow_from_str("C")).unwrap(),
             VerificationType::Integer
         );
     }
@@ -2136,7 +2308,7 @@ mod tests {
     #[test]
     fn test_parse_type_descriptor_short() {
         assert_eq!(
-            parse_type_descriptor("S").unwrap(),
+            parse_type_descriptor(&JavaStr::cow_from_str("S")).unwrap(),
             VerificationType::Integer
         );
     }
@@ -2144,7 +2316,7 @@ mod tests {
     #[test]
     fn test_parse_type_descriptor_boolean() {
         assert_eq!(
-            parse_type_descriptor("Z").unwrap(),
+            parse_type_descriptor(&JavaStr::cow_from_str("Z")).unwrap(),
             VerificationType::Integer
         );
     }
@@ -2154,14 +2326,14 @@ mod tests {
         for descriptor in ["[I", "[Ljava/lang/String;", "[[I"] {
             let mut frame = Frame::new(0, 1);
             frame
-                .push(parse_type_descriptor(descriptor).unwrap())
+                .push(parse_type_descriptor(&JavaStr::cow_from_str(descriptor)).unwrap())
                 .unwrap();
             assert!(
                 handle_invoke(
                     &mut frame,
-                    descriptor,
-                    "clone",
-                    "()Ljava/lang/Object;",
+                    &JavaStr::cow_from_str(descriptor),
+                    &JavaStr::cow_from_str("clone"),
+                    &JavaStr::cow_from_str("()Ljava/lang/Object;"),
                     false,
                     &MockContext::STRICT
                 )
@@ -2176,9 +2348,9 @@ mod tests {
             assert!(
                 handle_invoke(
                     &mut frame,
-                    descriptor,
-                    "clone",
-                    "()Ljava/lang/Object;",
+                    &JavaStr::cow_from_str(descriptor),
+                    &JavaStr::cow_from_str("clone"),
+                    &JavaStr::cow_from_str("()Ljava/lang/Object;"),
                     false,
                     &MockContext::STRICT
                 )

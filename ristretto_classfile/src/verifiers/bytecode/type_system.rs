@@ -352,18 +352,22 @@ impl VerificationType {
     /// types normalized to `Integer` by `from_field_type` produce `I`.
     /// Returns `None` for verification types without a field descriptor.
     #[must_use]
-    pub fn to_descriptor(&self) -> Option<String> {
+    pub fn to_descriptor(&self) -> Option<JavaString> {
         match self {
-            Self::Integer => Some("I".to_string()),
-            Self::Boolean => Some("Z".to_string()),
-            Self::Byte => Some("B".to_string()),
-            Self::Char => Some("C".to_string()),
-            Self::Short => Some("S".to_string()),
-            Self::Float => Some("F".to_string()),
-            Self::Long => Some("J".to_string()),
-            Self::Double => Some("D".to_string()),
-            Self::Object(name) => Some(["L", &name.to_str_lossy(), ";"].concat()),
-            Self::Array(component) => component.to_descriptor().map(|desc| ["[", &desc].concat()),
+            Self::Integer => Some(JavaString::from("I")),
+            Self::Boolean => Some(JavaString::from("Z")),
+            Self::Byte => Some(JavaString::from("B")),
+            Self::Char => Some(JavaString::from("C")),
+            Self::Short => Some(JavaString::from("S")),
+            Self::Float => Some(JavaString::from("F")),
+            Self::Long => Some(JavaString::from("J")),
+            Self::Double => Some(JavaString::from("D")),
+            Self::Object(name) => {
+                JavaString::from_mutf8([b"L", name.as_bytes(), b";"].concat()).ok()
+            }
+            Self::Array(component) => component
+                .to_descriptor()
+                .and_then(|desc| JavaString::from_mutf8([b"[", desc.as_bytes()].concat()).ok()),
             _ => None,
         }
     }
@@ -412,9 +416,7 @@ impl VerificationType {
 
             // Object-to-Object assignability
             (VerificationType::Object(source), VerificationType::Object(target)) => {
-                let target_str = target.to_str_lossy();
-                let source_str = source.to_str_lossy();
-                context.is_assignable(&target_str, &source_str)
+                context.is_assignable(target, source)
             }
 
             // Array-to-Object assignability
@@ -495,10 +497,8 @@ impl VerificationType {
 
             // Object-to-Object merge: find common superclass
             (VerificationType::Object(c1), VerificationType::Object(c2)) => {
-                let c1_str = c1.to_str_lossy();
-                let c2_str = c2.to_str_lossy();
-                let common = context.common_superclass(&c1_str, &c2_str)?;
-                Ok(VerificationType::Object(JavaString::from(common)))
+                let common = context.common_superclass(c1, c2)?;
+                Ok(VerificationType::Object(common))
             }
 
             // Array-to-Object merge
@@ -585,13 +585,13 @@ impl Display for VerificationType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::JavaString;
     use crate::verifiers::bytecode::handlers::test_utils;
+    use crate::{JavaStr, JavaString};
 
     struct MockContext;
 
     impl VerificationContext for MockContext {
-        fn is_subclass(&self, subclass: &str, superclass: &str) -> Result<bool> {
+        fn is_subclass(&self, subclass: &JavaStr, superclass: &JavaStr) -> Result<bool> {
             // Simple mock: String is a subclass of Object
             if (subclass == "java/lang/String" && superclass == "java/lang/Object")
                 || subclass == superclass
@@ -602,20 +602,20 @@ mod tests {
             }
         }
 
-        fn is_assignable(&self, target: &str, source: &str) -> Result<bool> {
+        fn is_assignable(&self, target: &JavaStr, source: &JavaStr) -> Result<bool> {
             self.is_subclass(source, target)
         }
 
-        fn common_superclass(&self, class1: &str, class2: &str) -> Result<String> {
+        fn common_superclass(&self, class1: &JavaStr, class2: &JavaStr) -> Result<JavaString> {
             if class1 == "error" || class2 == "error" {
                 return Err(VerifyError::VerifyError(
                     "common superclass failure".to_string(),
                 ));
             }
             if class1 == class2 {
-                Ok(class1.to_string())
+                Ok(class1.to_owned())
             } else {
-                Ok("java/lang/Object".to_string())
+                Ok("java/lang/Object".into())
             }
         }
     }
@@ -850,27 +850,27 @@ mod tests {
         );
 
         assert_eq!(
-            Some("I".to_string()),
+            Some(JavaString::from("I")),
             VerificationType::Integer.to_descriptor()
         );
         assert_eq!(
-            Some("F".to_string()),
+            Some(JavaString::from("F")),
             VerificationType::Float.to_descriptor()
         );
         assert_eq!(
-            Some("J".to_string()),
+            Some(JavaString::from("J")),
             VerificationType::Long.to_descriptor()
         );
         assert_eq!(
-            Some("D".to_string()),
+            Some(JavaString::from("D")),
             VerificationType::Double.to_descriptor()
         );
         assert_eq!(
-            Some("Ljava/lang/String;".to_string()),
+            Some(JavaString::from("Ljava/lang/String;")),
             VerificationType::java_lang_string().to_descriptor()
         );
         assert_eq!(
-            Some("[I".to_string()),
+            Some(JavaString::from("[I")),
             VerificationType::Integer.make_array().to_descriptor()
         );
         assert_eq!(None, VerificationType::Top.to_descriptor());
@@ -986,8 +986,11 @@ mod tests {
         let ctx = MockContext;
         assert_eq!(
             "java/lang/String",
-            ctx.common_superclass("java/lang/String", "java/lang/String")
-                .unwrap()
+            ctx.common_superclass(
+                &JavaStr::cow_from_str("java/lang/String"),
+                &JavaStr::cow_from_str("java/lang/String")
+            )
+            .unwrap()
         );
         assert_eq!(
             VerificationType::Top,

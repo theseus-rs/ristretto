@@ -763,6 +763,7 @@ impl JavaObject for Arc<Class> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_classfile::JavaString;
 
     #[tokio::test]
     async fn test_bool_to_object() -> Result<()> {
@@ -937,7 +938,7 @@ mod tests {
             "\u{100}",
             "\u{1f600}",
         ] {
-            let java_string = ristretto_classfile::JavaString::from(input);
+            let java_string = JavaString::from(input);
             let value = java_string.as_java_str().to_object(&thread).await?;
             assert_eq!(input, value.as_string()?);
         }

@@ -1,5 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
+use ristretto_classfile::JavaStr;
 use syn::parse::{self, Parse, ParseStream};
 use syn::{Expr, ItemFn, LitStr};
 
@@ -108,9 +109,9 @@ fn validate_signature(signature: &str) -> Result<(), String> {
     {
         return Err(format!("invalid intrinsic signature {signature}"));
     }
-    ristretto_classfile::FieldType::parse_method_descriptor(
-        &ristretto_classfile::JavaStr::cow_from_str(&format!("({descriptor}")),
-    )
+    ristretto_classfile::FieldType::parse_method_descriptor(&JavaStr::cow_from_str(&format!(
+        "({descriptor}"
+    )))
     .map(|_| ())
     .map_err(|error| error.to_string())
 }

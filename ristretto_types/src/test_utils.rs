@@ -6,8 +6,8 @@ use crate::monitor::MonitorRegistry;
 use crate::{Frame, NativeMemory, ResourceManager, Result, StringFactory, Thread, VM};
 use ahash::{AHashMap, AHashSet};
 use ristretto_classfile::{
-    ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, FieldType, JAVA_17, VerifyMode,
-    Version,
+    ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, FieldType, JAVA_17, JavaStr,
+    VerifyMode, Version,
 };
 use ristretto_classloader::module::ResolvedConfiguration;
 use ristretto_classloader::{
@@ -627,7 +627,7 @@ impl Thread for MockThread {
     fn load_referenced_class<'a>(
         &'a self,
         caller: &'a Arc<Class>,
-        name: &'a ristretto_classfile::JavaStr,
+        name: &'a JavaStr,
     ) -> crate::BoxFuture<'a, Result<Arc<Class>>> {
         Box::pin(async move {
             if caller.java_name() == name {
@@ -708,14 +708,14 @@ impl Thread for MockThread {
 
     fn class_java_str<'a>(
         &'a self,
-        class_name: &'a ristretto_classfile::JavaStr,
+        class_name: &'a JavaStr,
     ) -> crate::BoxFuture<'a, Result<Arc<Class>>> {
         Box::pin(async move { self.class(&class_name.to_str_lossy()).await })
     }
 
     fn load_and_link_class<'a>(
         &'a self,
-        class_name: &'a ristretto_classfile::JavaStr,
+        class_name: &'a JavaStr,
     ) -> crate::BoxFuture<'a, Result<Arc<Class>>> {
         Box::pin(async move { self.class_java_str(class_name).await })
     }
@@ -853,7 +853,7 @@ async fn test_mock_vm_thread_and_module_system_methods() -> Result<()> {
         thread.class("java/lang/Object").await?.name(),
         "java/lang/Object"
     );
-    let java_str = ristretto_classfile::JavaStr::try_from_str("java/lang/String")?;
+    let java_str = JavaStr::try_from_str("java/lang/String")?;
     assert_eq!(
         thread.class_java_str(java_str).await?.name(),
         "java/lang/String"

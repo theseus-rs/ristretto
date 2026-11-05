@@ -9,7 +9,7 @@
 //!
 //! - [JVMS §6.5 - Instructions](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5)
 
-use crate::{FieldType, JavaString};
+use crate::{FieldType, JavaStr};
 
 use crate::attributes::Instruction;
 use crate::verifiers::bytecode::frame::Frame;
@@ -347,7 +347,7 @@ pub fn handle_aaload<C: VerificationContext>(frame: &mut Frame, _context: &C) ->
         }
         VerificationType::Object(name) if name.as_bytes().first() == Some(&b'[') => {
             // Legacy array representation; parse component type
-            let component = parse_array_component(&name.to_str_lossy())?;
+            let component = parse_array_component(name)?;
             if !component.is_initialized_reference() {
                 return Err(VerifyError::VerifyError(
                     "aaload: expected array of references".to_string(),
@@ -736,38 +736,12 @@ fn verify_byte_or_boolean_array(array_type: &VerificationType, instruction: &str
 }
 
 /// Parses the component type from an array descriptor.
-fn parse_array_component(descriptor: &str) -> Result<VerificationType> {
-    if !descriptor.starts_with('[') {
-        return Err(VerifyError::VerifyError(
-            ["Invalid array descriptor: ", descriptor].concat(),
-        ));
-    }
-
-    let component_desc = &descriptor[1..];
-    match component_desc.chars().next() {
-        Some('I' | 'B' | 'Z' | 'C' | 'S') => Ok(VerificationType::Integer),
-        Some('J') => Ok(VerificationType::Long),
-        Some('F') => Ok(VerificationType::Float),
-        Some('D') => Ok(VerificationType::Double),
-        Some('[') => {
-            // Array elements preserve their primitive types, unlike scalar stack values.
-            let field_type = FieldType::parse(component_desc)?;
-            Ok(VerificationType::from_field_type(&field_type))
-        }
-        Some('L') => {
-            // Object type; extract class name
-            if let Some(end) = component_desc.find(';') {
-                let class_name = &component_desc[1..end];
-                Ok(VerificationType::Object(JavaString::from(class_name)))
-            } else {
-                Err(VerifyError::VerifyError(
-                    ["Invalid object descriptor: ", component_desc].concat(),
-                ))
-            }
-        }
-        _ => Err(VerifyError::VerifyError(
-            ["Unknown array component: ", component_desc].concat(),
-        )),
+fn parse_array_component(descriptor: &JavaStr) -> Result<VerificationType> {
+    match FieldType::parse_java_str(descriptor) {
+        Ok(FieldType::Array(component)) => Ok(VerificationType::from_field_type(&component)),
+        _ => Err(VerifyError::VerifyError(format!(
+            "Invalid array descriptor: {descriptor}"
+        ))),
     }
 }
 
@@ -892,6 +866,7 @@ pub fn dispatch_load_store<C: VerificationContext>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::JavaString;
     use crate::verifiers::bytecode::handlers::test_utils::MockContext;
 
     #[test]
@@ -1314,7 +1289,7 @@ mod tests {
     #[test]
     fn test_parse_array_component_int() {
         assert_eq!(
-            parse_array_component("[I").unwrap(),
+            parse_array_component(&JavaStr::cow_from_str("[I")).unwrap(),
             VerificationType::Integer
         );
     }
@@ -1322,7 +1297,7 @@ mod tests {
     #[test]
     fn test_parse_array_component_object() {
         assert_eq!(
-            parse_array_component("[Ljava/lang/String;").unwrap(),
+            parse_array_component(&JavaStr::cow_from_str("[Ljava/lang/String;")).unwrap(),
             VerificationType::java_lang_string()
         );
     }
@@ -1357,20 +1332,23 @@ mod tests {
     #[test]
     fn test_parse_array_component_nested_array() {
         assert_eq!(
-            parse_array_component("[[I").unwrap(),
+            parse_array_component(&JavaStr::cow_from_str("[[I")).unwrap(),
             VerificationType::Array(Box::new(VerificationType::Integer))
         );
     }
 
     #[test]
     fn test_parse_array_component_long() {
-        assert_eq!(parse_array_component("[J").unwrap(), VerificationType::Long);
+        assert_eq!(
+            parse_array_component(&JavaStr::cow_from_str("[J")).unwrap(),
+            VerificationType::Long
+        );
     }
 
     #[test]
     fn test_parse_array_component_float() {
         assert_eq!(
-            parse_array_component("[F").unwrap(),
+            parse_array_component(&JavaStr::cow_from_str("[F")).unwrap(),
             VerificationType::Float
         );
     }
@@ -1378,7 +1356,7 @@ mod tests {
     #[test]
     fn test_parse_array_component_double() {
         assert_eq!(
-            parse_array_component("[D").unwrap(),
+            parse_array_component(&JavaStr::cow_from_str("[D")).unwrap(),
             VerificationType::Double
         );
     }
@@ -2168,7 +2146,7 @@ mod tests {
     #[test]
     fn test_parse_array_component_byte() {
         assert_eq!(
-            parse_array_component("[B").unwrap(),
+            parse_array_component(&JavaStr::cow_from_str("[B")).unwrap(),
             VerificationType::Integer
         );
     }
@@ -2176,7 +2154,7 @@ mod tests {
     #[test]
     fn test_parse_array_component_char() {
         assert_eq!(
-            parse_array_component("[C").unwrap(),
+            parse_array_component(&JavaStr::cow_from_str("[C")).unwrap(),
             VerificationType::Integer
         );
     }
@@ -2184,7 +2162,7 @@ mod tests {
     #[test]
     fn test_parse_array_component_short() {
         assert_eq!(
-            parse_array_component("[S").unwrap(),
+            parse_array_component(&JavaStr::cow_from_str("[S")).unwrap(),
             VerificationType::Integer
         );
     }
@@ -2192,14 +2170,14 @@ mod tests {
     #[test]
     fn test_parse_array_component_boolean() {
         assert_eq!(
-            parse_array_component("[Z").unwrap(),
+            parse_array_component(&JavaStr::cow_from_str("[Z")).unwrap(),
             VerificationType::Integer
         );
     }
 
     #[test]
     fn test_parse_array_component_invalid_no_bracket() {
-        let result = parse_array_component("I");
+        let result = parse_array_component(&JavaStr::cow_from_str("I"));
         assert!(result.is_err());
         assert!(
             result
@@ -2211,25 +2189,38 @@ mod tests {
 
     #[test]
     fn test_parse_array_component_invalid_object_no_semicolon() {
-        let result = parse_array_component("[Ljava/lang/String");
+        let result = parse_array_component(&JavaStr::cow_from_str("[Ljava/lang/String"));
         assert!(result.is_err());
         assert!(
             result
                 .unwrap_err()
                 .to_string()
-                .contains("Invalid object descriptor")
+                .contains("Invalid array descriptor")
         );
     }
 
     #[test]
     fn test_parse_array_component_unknown_type() {
-        let result = parse_array_component("[X");
+        let result = parse_array_component(&JavaStr::cow_from_str("[X"));
         assert!(result.is_err());
         assert!(
             result
                 .unwrap_err()
                 .to_string()
-                .contains("Unknown array component")
+                .contains("Invalid array descriptor")
+        );
+    }
+
+    #[test]
+    fn test_aaload_legacy_array_preserves_lone_surrogates() {
+        let name = JavaString::from_mutf8(b"[LA\xed\xa0\x80;".to_vec()).unwrap();
+        let mut frame = Frame::new(0, 2);
+        frame.push(VerificationType::Object(name)).unwrap();
+        frame.push(VerificationType::Integer).unwrap();
+        handle_aaload(&mut frame, &MockContext::PERMISSIVE).unwrap();
+        assert_eq!(
+            frame.pop().unwrap(),
+            VerificationType::Object(JavaString::from_mutf8(b"A\xed\xa0\x80".to_vec()).unwrap())
         );
     }
 

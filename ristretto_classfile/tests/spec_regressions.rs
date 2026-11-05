@@ -13,18 +13,22 @@ use ristretto_classfile::verifiers::error::{self, VerifyError};
 
 struct Context;
 impl VerificationContext for Context {
-    fn is_subclass(&self, source: &str, target: &str) -> error::Result<bool> {
+    fn is_subclass(&self, source: &JavaStr, target: &JavaStr) -> error::Result<bool> {
         self.is_assignable(target, source)
     }
 
-    fn is_assignable(&self, target: &str, source: &str) -> error::Result<bool> {
+    fn is_assignable(&self, target: &JavaStr, source: &JavaStr) -> error::Result<bool> {
         Ok(target == source
             || target == "java/lang/Object"
             || (source == "Audit" && target == "Parent"))
     }
 
-    fn common_superclass(&self, a: &str, b: &str) -> error::Result<String> {
-        Ok(if a == b { a } else { "java/lang/Object" }.to_string())
+    fn common_superclass(&self, a: &JavaStr, b: &JavaStr) -> error::Result<JavaString> {
+        Ok(if a == b {
+            a.to_owned()
+        } else {
+            "java/lang/Object".into()
+        })
     }
 }
 
@@ -564,15 +568,15 @@ fn valid_v50_inference_fallback() {
 fn member_access_context_can_reject_protected_receiver() {
     struct Deny;
     impl VerificationContext for Deny {
-        fn is_subclass(&self, _: &str, _: &str) -> error::Result<bool> {
+        fn is_subclass(&self, _: &JavaStr, _: &JavaStr) -> error::Result<bool> {
             Ok(true)
         }
 
-        fn is_assignable(&self, _: &str, _: &str) -> error::Result<bool> {
+        fn is_assignable(&self, _: &JavaStr, _: &JavaStr) -> error::Result<bool> {
             Ok(true)
         }
 
-        fn common_superclass(&self, _: &str, _: &str) -> error::Result<String> {
+        fn common_superclass(&self, _: &JavaStr, _: &JavaStr) -> error::Result<JavaString> {
             Ok("java/lang/Object".into())
         }
 

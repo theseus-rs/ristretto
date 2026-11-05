@@ -31,7 +31,7 @@ mod tests {
     use crate::method_access_flags::MethodAccessFlags;
     use crate::verifiers::bytecode::handlers::test_utils::MockContext;
     use crate::verifiers::error::VerifyError;
-    use crate::{ClassAccessFlags, Version};
+    use crate::{ClassAccessFlags, JavaStr, Version};
 
     fn create_mock_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
@@ -74,11 +74,21 @@ mod tests {
     #[test]
     fn test_mock_context_methods() {
         let context = MockContext::PERMISSIVE;
-        assert!(context.is_subclass("A", "B").unwrap());
-        assert!(context.is_assignable("A", "B").unwrap());
+        assert!(
+            context
+                .is_subclass(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
+        );
+        assert!(
+            context
+                .is_assignable(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
+        );
         assert_eq!(
             "java/lang/Object",
-            context.common_superclass("A", "B").unwrap()
+            context
+                .common_superclass(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
         );
     }
 
