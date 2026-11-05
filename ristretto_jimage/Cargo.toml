@@ -22,5 +22,5 @@ thiserror = { workspace = true }
 memmap2 = { workspace = true }
 
 [dev-dependencies]
-ristretto_test_util = { workspace = true }
+ristretto_test_util = { path = "../ristretto_test_util" }
 tempfile = { workspace = true }

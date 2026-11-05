@@ -45,32 +45,6 @@ repository = "https://github.com/theseus-rs/ristretto"
 rust-version = "1.99.1"
 version = "0.35.0"
 
-[workspace.lints.rust]
-dead_code = "allow"
-missing_debug_implementations = "deny"
-unsafe_code = "deny"
-unexpected_cfgs = { level = "deny", check-cfg = ["cfg(coverage)"] }
-unused_qualifications = "deny"
-warnings = "deny"
-
-[workspace.lints.clippy]
-pedantic = { level = "deny", priority = -1 }
-allow_attributes = "deny"
-excessive_nesting = "deny"
-expect_used = "deny"
-fallible_impl_from = "deny"
-indexing_slicing = "deny"
-large_stack_arrays = "allow"
-mod_module_files = "deny"
-panic = "deny"
-panic_in_result_fn = "deny"
-result_large_err = "allow"
-todo = "deny"
-unreachable = "deny"
-unimplemented = "deny"
-unwrap_in_result = "deny"
-unwrap_used = "deny"
-
 [workspace.dependencies]
 ahash = "0.8.12"
 anstyle = "1.0.14"
@@ -132,7 +106,6 @@ sys-locale = "0.3.2"
 tar = "0.4.46"
 tempfile = "3.27.0"
 test-log = "0.2.21"
-ristretto_test_util = { path = "ristretto_test_util", version = "0.35.0" }
 thiserror = "2.0.21"
 thread-priority = "3.1.1"
 tokio = { version = "1.54.1", default-features = false, features = ["macros", "rt", "sync", "time"] }
@@ -146,6 +119,32 @@ windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Stora
 wstd = "0.6.8"
 zerocopy = "0.8.63"
 zip = { version = "9.3.0", default-features = false }
+
+[workspace.lints.rust]
+dead_code = "allow"
+missing_debug_implementations = "deny"
+unsafe_code = "deny"
+unexpected_cfgs = { level = "deny", check-cfg = ["cfg(coverage)"] }
+unused_qualifications = "deny"
+warnings = "deny"
+
+[workspace.lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+allow_attributes = "deny"
+excessive_nesting = "deny"
+expect_used = "deny"
+fallible_impl_from = "deny"
+indexing_slicing = "deny"
+large_stack_arrays = "allow"
+mod_module_files = "deny"
+panic = "deny"
+panic_in_result_fn = "deny"
+result_large_err = "allow"
+todo = "deny"
+unreachable = "deny"
+unimplemented = "deny"
+unwrap_in_result = "deny"
+unwrap_used = "deny"
 
 [workspace.metadata.release]
 shared-version = true

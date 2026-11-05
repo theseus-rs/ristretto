@@ -52,7 +52,7 @@ wstd = { workspace = true }
 [dev-dependencies]
 criterion = { workspace = true }
 indoc = { workspace = true }
-ristretto_test_util = { workspace = true }
+ristretto_test_util = { path = "../ristretto_test_util" }
 
 [target.'cfg(target_family = "wasm")'.dev-dependencies]
 tokio = { workspace = true }

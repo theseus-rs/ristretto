@@ -123,7 +123,7 @@ audio = [
 proc-macro2 = { workspace = true }
 quote = { workspace = true }
 syn = { workspace = true, features = ["full", "extra-traits"] }
-ristretto_test_util = { path = "../ristretto_test_util", version = "0.35.0" }
+ristretto_test_util = { path = "../ristretto_test_util" }
 # Keep this test-only dependency out of published manifests: the VM depends on this crate.
 ristretto_vm = { path = "../ristretto_vm", default-features = false }
 tempfile = { workspace = true }

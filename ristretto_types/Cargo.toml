@@ -35,7 +35,7 @@ socket2 = { workspace = true }
 tokio = { workspace = true, features = ["net"] }
 
 [dev-dependencies]
-ristretto_test_util = { workspace = true }
+ristretto_test_util = { path = "../ristretto_test_util" }
 tempfile = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
