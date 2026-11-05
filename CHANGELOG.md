@@ -10,6 +10,222 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## `ristretto_javac` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.34.0...ristretto_javac-v0.35.0) - 2026-11-05
 
 ### Other
+- release ristretto v0.35.0
+- replace runtime string formatting with direct string construction
+
+## `ristretto_java` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/v0.34.0...v0.35.0) - 2026-11-05
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- keep test utilities out of published crates
+- preserve class loader identity across resolution, reflection, and arrays
+- retry transient runtime connection failures
+- restore release planning and nightly class loading builds
+- preserve hidden class identity and resolve array components correctly
+- correct Corretto version ordering and platform specific archive selection
+- retry incomplete runtime downloads
+- report hidden class names with a slash
+- throw OutOfMemoryError on Java array allocation failure
+- load JDK management libraries as intrinsics
+- remove publish dependency cycle and add workspace publishing check
+- return null when speculative member resolution fails
+- provide Reference.get0 on Java 21
+- push a return value for every non-void intrinsic call
+- stop treating $$ in class names as a hidden-class marker
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+- replace runtime string formatting with direct string construction
+- reduce inline storage for large attribute variants
+- reduce nesting and lower nesting threshold to 8
+- Merge pull request #952 from icefery/fix/hidden-class-name-format
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- Merge branch 'main' into fix/hidden-class-name-format
+- update dependencies
+- centralize JVM initializer method names
+- update java versions
+- use java constants instead of literals
+- update dependencies
+- update Rust to 1.99.0
+- update line space formatting
+- derive Copy for scalar classfile enums
+- Merge pull request #966 from theseus-rs/array-allocation-errors
+- Merge pull request #951 from icefery/fix/management-libraries
+- Merge branch 'main' into fix/speculative-membername
+- Merge pull request #958 from theseus-rs/workspace-publishing
+- Merge pull request #944 from icefery/fix/cglib-generated-name
+- Merge branch 'main' into fix/intrinsic-null-return
+- Merge branch 'main' into fix/cglib-generated-name
+- optimize Java string creation, encoding, and interning
+- check interrupted parking without wall-clock timing
+
+## `ristretto_resolver` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_resolver-v0.34.0...ristretto_resolver-v0.35.0) - 2026-11-05
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+- replace runtime string formatting with direct string construction
+- reduce nesting and lower nesting threshold to 8
+- update Rust to 1.99.0
+
+## `ristretto_pom` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.34.0...ristretto_pom-v0.35.0) - 2026-11-05
+
+### Other
+- remove name aliasing
+- replace runtime string formatting with direct string construction
+- update Rust to 1.99.0
+
+## `ristretto_vm` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.34.0...ristretto_vm-v0.35.0) - 2026-11-05
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- throw OutOfMemoryError on Java array allocation failure
+- preserve class loader identity across resolution, reflection, and arrays
+- preserve hidden class identity and resolve array components correctly
+- provide Reference.get0 on Java 21
+- report hidden class names with a slash
+- push a return value for every non-void intrinsic call
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+- update line space formatting
+- optimize Java string creation, encoding, and interning
+- check interrupted parking without wall-clock timing
+- replace runtime string formatting with direct string construction
+- reduce nesting and lower nesting threshold to 8
+- Merge pull request #952 from icefery/fix/hidden-class-name-format
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- Merge branch 'main' into fix/hidden-class-name-format
+- centralize JVM initializer method names
+- use java constants instead of literals
+- Merge branch 'main' into fix/intrinsic-null-return
+- update Rust to 1.99.0
+
+## `ristretto_intrinsics` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.34.0...ristretto_intrinsics-v0.35.0) - 2026-11-05
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- keep test utilities out of published crates
+- throw OutOfMemoryError on Java array allocation failure
+- preserve class loader identity across resolution, reflection, and arrays
+- load JDK management libraries as intrinsics
+- restore release planning and nightly class loading builds
+- preserve hidden class identity and resolve array components correctly
+- correct Corretto version ordering and platform specific archive selection
+- remove publish dependency cycle and add workspace publishing check
+- return null when speculative member resolution fails
+- provide Reference.get0 on Java 21
+- report hidden class names with a slash
+- push a return value for every non-void intrinsic call
+- stop treating $$ in class names as a hidden-class marker
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+- update line space formatting
+- derive Copy for scalar classfile enums
+- Merge pull request #966 from theseus-rs/array-allocation-errors
+- Merge pull request #951 from icefery/fix/management-libraries
+- replace runtime string formatting with direct string construction
+- reduce nesting and lower nesting threshold to 8
+- Merge pull request #952 from icefery/fix/hidden-class-name-format
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- Merge branch 'main' into fix/hidden-class-name-format
+- Merge branch 'main' into fix/speculative-membername
+- update dependencies
+- Merge pull request #958 from theseus-rs/workspace-publishing
+- centralize JVM initializer method names
+- use java constants instead of literals
+- Merge pull request #944 from icefery/fix/cglib-generated-name
+- Merge branch 'main' into fix/intrinsic-null-return
+- Merge branch 'main' into fix/cglib-generated-name
+- update dependencies
+- update Rust to 1.99.0
+
+## `ristretto_types` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.34.0...ristretto_types-v0.35.0) - 2026-11-05
+
+### Fixed
+- keep test utilities out of published crates
+- throw OutOfMemoryError on Java array allocation failure
+- preserve class loader identity across resolution, reflection, and arrays
+- preserve hidden class identity and resolve array components correctly
+- report hidden class names with a slash
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+- derive Copy for scalar classfile enums
+- optimize Java string creation, encoding, and interning
+- replace runtime string formatting with direct string construction
+- Merge branch 'main' into fix/hidden-class-name-format
+- use java constants instead of literals
+- update Rust to 1.99.0
+
+## `ristretto_jit` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.34.0...ristretto_jit-v0.35.0) - 2026-11-05
+
+### Fixed
+- throw OutOfMemoryError on Java array allocation failure
+
+### Other
+- release ristretto v0.35.0
+- update line space formatting
+- replace runtime string formatting with direct string construction
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- centralize JVM initializer method names
+
+## `ristretto_macros` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.34.0...ristretto_macros-v0.35.0) - 2026-11-05
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+
+## `ristretto_classloader` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.34.0...ristretto_classloader-v0.35.0) - 2026-11-05
+
+### Added
+- support Java 25 main method launch rules
+
+### Fixed
+- keep test utilities out of published crates
+- preserve class loader identity across resolution, reflection, and arrays
+- retry transient runtime connection failures
+- restore release planning and nightly class loading builds
+- preserve hidden class identity and resolve array components correctly
+- correct Corretto version ordering and platform specific archive selection
+- retry incomplete runtime downloads
+- report hidden class names with a slash
+
+### Other
+- release ristretto v0.35.0
+- remove name aliasing
+- reduce inline storage for large attribute variants
+- replace runtime string formatting with direct string construction
+- reduce nesting and lower nesting threshold to 8
+- Merge pull request #952 from icefery/fix/hidden-class-name-format
+- [**breaking**] preserve JVM byte offsets across classfiles, verification, and execution
+- Merge branch 'main' into fix/hidden-class-name-format
+- update dependencies
+- centralize JVM initializer method names
+- update java versions
+- use java constants instead of literals
+- update dependencies
+- update Rust to 1.99.0
+
+## `ristretto_jimage` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.34.0...ristretto_jimage-v0.35.0) - 2026-11-05
+
+### Fixed
+- keep test utilities out of published crates
+
+## `ristretto_javac` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.34.0...ristretto_javac-v0.35.0) - 2026-11-05
+
+### Other
 - replace runtime string formatting with direct string construction
 
 ## `ristretto_java` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/v0.34.0...v0.35.0) - 2026-11-05
