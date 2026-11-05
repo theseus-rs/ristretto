@@ -454,7 +454,8 @@ impl FieldType {
             let field_bytes = bytes
                 .get(pos..)
                 .ok_or_else(|| InvalidMethodDescriptor(display_desc.to_string()))?;
-            let (field_type, consumed) = Self::parse_field_descriptor(field_bytes, display_desc)?;
+            let (field_type, consumed) = Self::parse_field_descriptor(field_bytes, display_desc)
+                .map_err(|_| InvalidMethodDescriptor(display_desc.to_string()))?;
             slots += field_type.slot_count();
             if slots > 255 {
                 return Err(InvalidMethodDescriptor(display_desc.to_string()));
@@ -473,7 +474,8 @@ impl FieldType {
                     .get(pos..)
                     .ok_or_else(|| InvalidMethodDescriptor(display_desc.to_string()))?;
                 let (field_type, consumed) =
-                    Self::parse_field_descriptor(field_bytes, display_desc)?;
+                    Self::parse_field_descriptor(field_bytes, display_desc)
+                        .map_err(|_| InvalidMethodDescriptor(display_desc.to_string()))?;
                 pos += consumed;
                 Some(field_type)
             }
@@ -532,7 +534,7 @@ impl FieldType {
                 (ParsedBase::Object(class_bytes), end + 1)
             }
             Some(code) => (ParsedBase::Primitive(BaseType::parse(code as char)?), 1),
-            None => return Err(InvalidMethodDescriptor(display_desc.to_string())),
+            None => return Err(InvalidFieldTypeDescriptor(display_desc.to_string())),
         };
         Ok((ParsedField { dimensions, base }, dimensions + consumed))
     }
@@ -795,6 +797,27 @@ mod test {
     }
 
     #[test]
+    fn descriptor_errors_match_the_public_parser() {
+        for descriptor in ["", "[", "[["] {
+            assert_eq!(
+                FieldType::parse(descriptor),
+                Err(InvalidFieldTypeDescriptor(descriptor.to_string()))
+            );
+        }
+        for descriptor in ["(X)V", "(L;)V", "([)V", "()X", "()L;"] {
+            let descriptor = JavaString::from(descriptor);
+            assert_eq!(
+                FieldType::parse_method_descriptor(&descriptor),
+                Err(InvalidMethodDescriptor(descriptor.to_string()))
+            );
+            assert!(matches!(
+                FieldType::method_descriptor_info(&descriptor),
+                Err(InvalidMethodDescriptor(_))
+            ));
+        }
+    }
+
+    #[test]
     fn test_parse_method_descriptor_invalid() {
         let descriptor = String::new();
         assert!(matches!(
@@ -846,7 +869,7 @@ mod test {
     fn test_parse_field_type_bytes_invalid() {
         assert!(matches!(
             FieldType::parse_field_type_bytes(b"", ""),
-            Err(InvalidMethodDescriptor(_))
+            Err(InvalidFieldTypeDescriptor(_))
         ));
         assert!(matches!(
             FieldType::parse_field_type_bytes(b"Lmissing-semicolon", "Lmissing-semicolon"),
