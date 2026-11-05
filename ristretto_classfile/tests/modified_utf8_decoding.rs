@@ -5,6 +5,7 @@
 )]
 use ristretto_classfile::Result;
 use ristretto_classfile::mutf8;
+use std::borrow::Cow;
 
 #[test]
 fn modified_utf8_owned_decoder_rejects_invalid_encodings() {
@@ -41,7 +42,7 @@ fn modified_utf8_decoders_accept_encoded_null_and_surrogate_pair() -> Result<()>
     assert_eq!(mutf8::from_bytes_cow(&bytes)?, "a\0😀");
     assert!(matches!(
         mutf8::from_bytes_cow(b"ascii")?,
-        std::borrow::Cow::Borrowed("ascii")
+        Cow::Borrowed("ascii")
     ));
     Ok(())
 }

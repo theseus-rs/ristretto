@@ -1,5 +1,7 @@
 use crate::Result;
-use crate::intrinsic_methods::intrinsics;
+use crate::intrinsic_methods::intrinsics::{
+    JAVA_8_REGISTRY, JAVA_11_REGISTRY, JAVA_17_REGISTRY, JAVA_21_REGISTRY, JAVA_25_REGISTRY,
+};
 use crate::thread::Thread;
 use ahash::AHashMap;
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25, Version};
@@ -46,11 +48,11 @@ impl MethodRegistry {
     /// Reports conflicting active registrations.
     pub fn new(version: &Version) -> Result<Self> {
         let registry = match version.major() {
-            major if major >= JAVA_25.major() => &*intrinsics::JAVA_25_REGISTRY,
-            major if major >= JAVA_21.major() => &*intrinsics::JAVA_21_REGISTRY,
-            major if major >= JAVA_17.major() => &*intrinsics::JAVA_17_REGISTRY,
-            major if major >= JAVA_11.major() => &*intrinsics::JAVA_11_REGISTRY,
-            _ => &*intrinsics::JAVA_8_REGISTRY,
+            major if major >= JAVA_25.major() => &*JAVA_25_REGISTRY,
+            major if major >= JAVA_21.major() => &*JAVA_21_REGISTRY,
+            major if major >= JAVA_17.major() => &*JAVA_17_REGISTRY,
+            major if major >= JAVA_11.major() => &*JAVA_11_REGISTRY,
+            _ => &*JAVA_8_REGISTRY,
         };
         let registry = registry
             .as_ref()

@@ -22,16 +22,38 @@ pub struct MemberAccess<'a> {
 /// Names and descriptors retain their exact modified UTF-8 identity, including lone surrogates.
 ///
 /// A trait that allows the verifier to resolve type relationships without knowing about the VM.
+///
+/// A context must supply an explicit member-access policy in addition to its hierarchy checks:
+///
+/// ```compile_fail,E0046
+/// use ristretto_classfile::verifiers::context::VerificationContext;
+/// use ristretto_classfile::verifiers::error::Result;
+/// use ristretto_classfile::{JavaStr, JavaString};
+///
+/// struct HierarchyOnly;
+/// impl VerificationContext for HierarchyOnly {
+///     fn is_subclass(&self, source: &JavaStr, target: &JavaStr) -> Result<bool> {
+///         self.is_assignable(target, source)
+///     }
+///     fn is_assignable(&self, target: &JavaStr, source: &JavaStr) -> Result<bool> {
+///         Ok(target == source || target == "java/lang/Object")
+///     }
+///     fn common_superclass(&self, a: &JavaStr, b: &JavaStr) -> Result<JavaString> {
+///         Ok(if a == b { a.to_owned() } else { "java/lang/Object".into() })
+///     }
+///     // Missing verify_member_access: hierarchy checks alone are insufficient.
+/// }
+/// ```
 pub trait VerificationContext {
     /// Validate member access using resolved flags and loader identities.
-    /// Override this hook to enforce contextual constraints such as protected receiver
-    /// access; the default leaves member resolution and access checking to the VM.
+    /// Implementations must explicitly enforce contextual constraints, including protected
+    /// receiver access, using the resolved member's flags, package, and loader identity.
+    /// A context may delegate these checks to its VM, but must make that policy explicit;
+    /// there is no default that silently accepts every access.
     ///
     /// # Errors
     /// Returns an error when the member is inaccessible or resolution fails.
-    fn verify_member_access(&self, _access: &MemberAccess<'_>) -> error::Result<()> {
-        Ok(())
-    }
+    fn verify_member_access(&self, access: &MemberAccess<'_>) -> error::Result<()>;
 
     /// Identity of the class-loading environment and its current hierarchy revision.
     /// Return `None` (the default) to disable reuse of verification results. A token

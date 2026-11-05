@@ -3,7 +3,7 @@
 //! This module provides mock implementations of [`VerificationContext`] for testing
 //! bytecode verification handlers.
 
-use crate::verifiers::context::VerificationContext;
+use crate::verifiers::context::{MemberAccess, VerificationContext};
 use crate::verifiers::error::{Result, VerifyError};
 use crate::{JavaStr, JavaString};
 
@@ -24,6 +24,11 @@ impl MockContext {
 }
 
 impl VerificationContext for MockContext {
+    fn verify_member_access(&self, _access: &MemberAccess<'_>) -> Result<()> {
+        // This fixture models accessible members; access-policy failures have dedicated cases.
+        Ok(())
+    }
+
     fn cache_token(&self) -> Option<u64> {
         Some(u64::from(self.checks_pass))
     }

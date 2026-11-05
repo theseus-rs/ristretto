@@ -4,6 +4,7 @@ use super::frame::Frame;
 use super::handlers::references::ConstantPoolResolver;
 use super::type_system::VerificationType;
 use crate::attributes::{Attribute, Instruction};
+use crate::verifiers::context::MemberAccess;
 use crate::verifiers::error::{Result, VerifyError};
 use crate::{
     CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassFile, Constant, FieldType, JAVA_7, JavaStr,
@@ -237,7 +238,7 @@ fn verify_member_access<C: crate::verifiers::context::VerificationContext>(
                 ty.to_descriptor()
             }
         });
-        context.verify_member_access(&crate::verifiers::context::MemberAccess {
+        context.verify_member_access(&MemberAccess {
             current_class: current,
             owner: &owner,
             name: &name,

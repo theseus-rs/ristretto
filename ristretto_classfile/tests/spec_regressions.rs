@@ -8,11 +8,16 @@ use ristretto_classfile::attributes::*;
 use ristretto_classfile::*;
 
 use ristretto_classfile::verifiers::bytecode::{VerifierConfig, verify_class};
-use ristretto_classfile::verifiers::context::VerificationContext;
+use ristretto_classfile::verifiers::context::{MemberAccess, VerificationContext};
 use ristretto_classfile::verifiers::error::{self, VerifyError};
 
 struct Context;
 impl VerificationContext for Context {
+    fn verify_member_access(&self, _access: &MemberAccess<'_>) -> error::Result<()> {
+        // This fixture models accessible members; access-policy failures have dedicated cases.
+        Ok(())
+    }
+
     fn is_subclass(&self, source: &JavaStr, target: &JavaStr) -> error::Result<bool> {
         self.is_assignable(target, source)
     }
@@ -584,10 +589,7 @@ fn member_access_context_can_reject_protected_receiver() {
             clippy::panic_in_result_fn,
             reason = "assert the symbolic member supplied to this test context"
         )]
-        fn verify_member_access(
-            &self,
-            access: &verifiers::context::MemberAccess<'_>,
-        ) -> error::Result<()> {
+        fn verify_member_access(&self, access: &MemberAccess<'_>) -> error::Result<()> {
             assert_eq!(access.name, "x");
             Err(VerifyError::VerifyError("inaccessible member".into()))
         }

@@ -3,13 +3,18 @@
 use ristretto_classfile::attributes::{Attribute, Instruction, StackFrame};
 use ristretto_classfile::verifiers;
 use ristretto_classfile::verifiers::bytecode::{VerifierConfig, verify_class};
-use ristretto_classfile::verifiers::context::VerificationContext;
+use ristretto_classfile::verifiers::context::{MemberAccess, VerificationContext};
 use ristretto_classfile::{
     ClassFile, JAVA_6, JavaStr, JavaString, Method, MethodAccessFlags, Result,
 };
 
 struct Context;
 impl VerificationContext for Context {
+    fn verify_member_access(&self, _access: &MemberAccess<'_>) -> verifiers::error::Result<()> {
+        // This fixture models accessible members; access-policy failures have dedicated cases.
+        Ok(())
+    }
+
     fn is_subclass(&self, a: &JavaStr, b: &JavaStr) -> verifiers::Result<bool> {
         Ok(a == b || b == "java/lang/Object")
     }

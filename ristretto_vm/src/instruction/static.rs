@@ -65,6 +65,7 @@ mod test {
     use crate::frame::Frame;
     use crate::operand_stack::OperandStack;
     use crate::thread::Thread;
+    use ristretto_classfile::{JAVA_8, JAVA_9};
     use ristretto_classloader::Value;
     use std::sync::Arc;
 
@@ -147,10 +148,7 @@ mod test {
 
     #[tokio::test]
     async fn test_final_static_helper_depends_on_class_file_version() -> Result<()> {
-        for (version, allowed) in [
-            (ristretto_classfile::JAVA_8, true),
-            (ristretto_classfile::JAVA_9, false),
-        ] {
+        for (version, allowed) in [(JAVA_8, true), (JAVA_9, false)] {
             let (_vm, thread, original_frame) = crate::test::frame().await?;
             let mut definition = original_frame.class().class_file().clone();
             definition.version = version;

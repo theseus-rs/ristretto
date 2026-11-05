@@ -33,6 +33,7 @@ use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
 use crate::verifiers::methods::VerifiedMethod;
 use crate::{CLASS_INITIALIZER_NAME, JAVA_6};
+use std::borrow::Cow;
 use std::io::Write;
 
 /// Verification result with additional metadata.
@@ -269,7 +270,7 @@ fn verify_method_scoped<C: VerificationContext>(
         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
     let mut key = MethodKey::borrowed(class_name, method_name, descriptor);
-    key.scope = std::borrow::Cow::Borrowed(scope.as_ref());
+    key.scope = Cow::Borrowed(scope.as_ref());
 
     // Check cache
     if let Some(cached) = cache.get_result_scoped(&key, scope) {
@@ -405,12 +406,18 @@ mod tests {
     use crate::verifiers::bytecode::config::FallbackStrategy;
     use crate::verifiers::bytecode::control_flow::CODE_INFO_BUILDS;
     use crate::verifiers::bytecode::handlers::test_utils::MockContext;
+    use crate::verifiers::context::MemberAccess;
     use crate::verifiers::method_access_flags::METHOD_FLAG_CHECKS;
-    use crate::{JavaStr, JavaString, Version};
+    use crate::{JAVA_5, JAVA_8, JavaStr, JavaString, Version};
 
     struct UnversionedContext;
 
     impl VerificationContext for UnversionedContext {
+        fn verify_member_access(&self, _access: &MemberAccess<'_>) -> Result<()> {
+            // This fixture models accessible members; access-policy failures have dedicated cases.
+            Ok(())
+        }
+
         fn is_subclass(&self, subclass: &JavaStr, superclass: &JavaStr) -> Result<bool> {
             MockContext::PERMISSIVE.is_subclass(subclass, superclass)
         }
@@ -491,7 +498,7 @@ mod tests {
             assert_once();
         }
         // An incompatible dead return exercises structural reachability analysis.
-        class.version = crate::JAVA_5;
+        class.version = JAVA_5;
         if let Some(Attribute::Code { code, .. }) = class
             .methods
             .first_mut()
@@ -607,7 +614,7 @@ mod tests {
         if let Attribute::Code { code, .. } = &mut method.attributes[0] {
             *code = vec![Instruction::Return];
         }
-        class.version = crate::JAVA_5;
+        class.version = JAVA_5;
         let config = VerifierConfig::strict()
             .with_fallback_strategy(FallbackStrategy::AlwaysInference)
             .with_max_inference_iterations(0);
@@ -734,7 +741,7 @@ mod tests {
         )
         .expect("permissive verifier should fall back to inference");
         assert_eq!(VerificationPath::Inference, result.path_used);
-        class_file.version = crate::JAVA_8;
+        class_file.version = JAVA_8;
 
         let mismatched_stackmap_method = Method {
             access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
