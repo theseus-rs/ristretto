@@ -63,3 +63,27 @@ fn fallthrough_types_are_merged_with_branch_types() -> Result<()> {
     }
     Ok(())
 }
+
+#[test]
+fn backedges_recheck_instructions_after_local_types_change() -> Result<()> {
+    use Instruction::{Aconst_null, Astore_0, Iconst_0, Ifeq, Iload_0, Istore_0, Nop, Pop, Return};
+    for (value, store, valid) in [(Aconst_null, Astore_0, false), (Iconst_0, Istore_0, true)] {
+        let class = fixture(vec![
+            Iconst_0,
+            Istore_0,
+            Iconst_0,
+            Ifeq(4),
+            Nop,
+            Iload_0,
+            Pop,
+            value,
+            store,
+            Iconst_0,
+            Ifeq(-5),
+            Return,
+        ])?;
+        let result = verify_class(&class, &Context, &VerifierConfig::permissive());
+        assert_eq!(result.is_ok(), valid, "{result:?}");
+    }
+    Ok(())
+}
