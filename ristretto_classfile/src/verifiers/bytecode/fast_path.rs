@@ -596,12 +596,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         current_frame: &Frame,
         state: &mut StackMapWorkState,
     ) -> Result<()> {
-        if let Some(decoded) = self.stack_map_table.get(offset) {
-            let expected = self
-                .stack_map_table
-                .to_frame(decoded, self.max_locals, self.max_stack);
-            self.validate_frame_compatibility(current_frame, &expected, offset)?;
-        }
+        self.handle_successor(index, offset, current_frame, &mut state.anchor_states)?;
 
         if !Self::is_visited(&state.visited, index, "instruction")? {
             state.worklist.push(index);
@@ -1434,12 +1429,12 @@ mod tests {
             }],
             Vec::new(),
         );
-        let mut missing_frame_verifier =
+        let mut inferred_frame_verifier =
             fast_verifier(&class_file, &seeded_stackmap_method, &context, &permissive);
-        missing_frame_verifier.jump_targets.insert(1);
+        inferred_frame_verifier.jump_targets.insert(1);
         assert!(matches!(
-            missing_frame_verifier.verify(),
-            FastPathResult::NeedsFallback(reason) if reason.contains("Missing frame")
+            inferred_frame_verifier.verify(),
+            FastPathResult::Success
         ));
 
         assert!(TestFastPathVerifier::is_fallback_eligible(
