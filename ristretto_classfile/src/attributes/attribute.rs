@@ -993,10 +993,18 @@ impl Attribute {
                 let exception_length = bytes.read_u16()?;
                 let mut exception_table =
                     Vec::with_capacity((exception_length as usize).min(bytes.remaining()));
-                let boundaries: Vec<_> = Instruction::with_offsets(&instructions)
-                    .map(|(offset, _)| offset)
-                    .collect();
-                let boundary = |pc: u16| boundaries.binary_search(&usize::from(pc)).is_ok();
+                // Most methods have no metadata that refers to bytecode boundaries.
+                let boundaries = std::cell::OnceCell::new();
+                let boundary = |pc: u16| {
+                    boundaries
+                        .get_or_init(|| {
+                            Instruction::with_offsets(&instructions)
+                                .map(|(offset, _)| offset)
+                                .collect::<Vec<_>>()
+                        })
+                        .binary_search(&usize::from(pc))
+                        .is_ok()
+                };
                 for _ in 0..exception_length {
                     let entry = ExceptionTableEntry::from_bytes(bytes)?;
                     for pc in [entry.range_pc.start, entry.handler_pc] {
