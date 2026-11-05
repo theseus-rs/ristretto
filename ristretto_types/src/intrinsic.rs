@@ -74,7 +74,7 @@ impl<T> IntrinsicRegistry<T> {
     #[must_use]
     pub fn new(version: &Version) -> Self {
         Self {
-            version: version.clone(),
+            version: *version,
             methods: AHashMap::default(),
             metadata: AHashMap::default(),
         }

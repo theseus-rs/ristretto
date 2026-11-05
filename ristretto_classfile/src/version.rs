@@ -754,25 +754,25 @@ mod test {
     fn test_version_specification() {
         assert!(VersionSpecification::Any.matches(&JAVA_11));
 
-        assert!(VersionSpecification::Equal(JAVA_11.clone()).matches(&JAVA_11));
-        assert!(!VersionSpecification::Equal(JAVA_17.clone()).matches(&JAVA_11));
+        assert!(VersionSpecification::Equal(JAVA_11).matches(&JAVA_11));
+        assert!(!VersionSpecification::Equal(JAVA_17).matches(&JAVA_11));
 
-        assert!(!VersionSpecification::NotEqual(JAVA_11.clone()).matches(&JAVA_11));
-        assert!(VersionSpecification::NotEqual(JAVA_17.clone()).matches(&JAVA_11));
+        assert!(!VersionSpecification::NotEqual(JAVA_11).matches(&JAVA_11));
+        assert!(VersionSpecification::NotEqual(JAVA_17).matches(&JAVA_11));
 
-        assert!(VersionSpecification::LessThan(JAVA_17.clone()).matches(&JAVA_11));
-        assert!(!VersionSpecification::LessThan(JAVA_11.clone()).matches(&JAVA_11));
+        assert!(VersionSpecification::LessThan(JAVA_17).matches(&JAVA_11));
+        assert!(!VersionSpecification::LessThan(JAVA_11).matches(&JAVA_11));
 
-        assert!(VersionSpecification::LessThanOrEqual(JAVA_11.clone()).matches(&JAVA_11));
-        assert!(VersionSpecification::LessThanOrEqual(JAVA_17.clone()).matches(&JAVA_11));
-        assert!(!VersionSpecification::LessThanOrEqual(JAVA_17.clone()).matches(&JAVA_21));
+        assert!(VersionSpecification::LessThanOrEqual(JAVA_11).matches(&JAVA_11));
+        assert!(VersionSpecification::LessThanOrEqual(JAVA_17).matches(&JAVA_11));
+        assert!(!VersionSpecification::LessThanOrEqual(JAVA_17).matches(&JAVA_21));
 
-        assert!(VersionSpecification::GreaterThan(JAVA_11.clone()).matches(&JAVA_17));
-        assert!(!VersionSpecification::GreaterThan(JAVA_17.clone()).matches(&JAVA_17));
+        assert!(VersionSpecification::GreaterThan(JAVA_11).matches(&JAVA_17));
+        assert!(!VersionSpecification::GreaterThan(JAVA_17).matches(&JAVA_17));
 
-        assert!(VersionSpecification::GreaterThanOrEqual(JAVA_11.clone()).matches(&JAVA_11));
-        assert!(VersionSpecification::GreaterThanOrEqual(JAVA_17.clone()).matches(&JAVA_21));
-        assert!(!VersionSpecification::GreaterThanOrEqual(JAVA_21.clone()).matches(&JAVA_17));
+        assert!(VersionSpecification::GreaterThanOrEqual(JAVA_11).matches(&JAVA_11));
+        assert!(VersionSpecification::GreaterThanOrEqual(JAVA_17).matches(&JAVA_21));
+        assert!(!VersionSpecification::GreaterThanOrEqual(JAVA_21).matches(&JAVA_17));
 
         let between = VersionSpecification::Between(JAVA_11, JAVA_17);
         assert!(between.matches(&JAVA_11));

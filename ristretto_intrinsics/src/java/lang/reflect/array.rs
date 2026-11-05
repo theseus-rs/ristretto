@@ -616,7 +616,7 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
         let kind = if depth + 1 == dimensions.len()
             && let Some(primitive) = &primitive
         {
-            ArrayKind::Primitive(primitive.clone())
+            ArrayKind::Primitive(*primitive)
         } else {
             let class = loader
                 .array_class(component, dimensions.len() - depth)

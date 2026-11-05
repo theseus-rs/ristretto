@@ -752,10 +752,9 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             // Store computed frame for merge
             if let Some(existing) = anchor_state.as_mut() {
                 return existing.merge(next_frame, self.context);
-            } else {
-                *anchor_state = Some(next_frame.clone());
-                return Ok(true);
             }
+            *anchor_state = Some(next_frame.clone());
+            return Ok(true);
         } else {
             *anchor_state = Some(next_frame.clone());
         }
