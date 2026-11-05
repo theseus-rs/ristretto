@@ -108,24 +108,26 @@ fn module_service_and_main_class_names_cannot_be_arrays() -> Result<()> {
             let service = class.constant_pool.add_class("example/Service")?;
             class.attributes.push(Attribute::Module {
                 name_index: class.constant_pool.add_utf8("Module")?,
-                module_name_index: class.constant_pool.add_module("java.base")?,
-                flags: ModuleAccessFlags::empty(),
-                version_index: 0,
-                requires: vec![],
-                exports: vec![],
-                opens: vec![],
-                uses: if kind == "uses" { vec![index] } else { vec![] },
-                provides: match kind {
-                    "provides" => vec![Provides {
-                        index,
-                        with_index: vec![service],
-                    }],
-                    "with" => vec![Provides {
-                        index: service,
-                        with_index: vec![index],
-                    }],
-                    _ => vec![],
-                },
+                module: Box::new(ristretto_classfile::attributes::ModuleAttribute {
+                    module_name_index: class.constant_pool.add_module("java.base")?,
+                    flags: ModuleAccessFlags::empty(),
+                    version_index: 0,
+                    requires: vec![],
+                    exports: vec![],
+                    opens: vec![],
+                    uses: if kind == "uses" { vec![index] } else { vec![] },
+                    provides: match kind {
+                        "provides" => vec![Provides {
+                            index,
+                            with_index: vec![service],
+                        }],
+                        "with" => vec![Provides {
+                            index: service,
+                            with_index: vec![index],
+                        }],
+                        _ => vec![],
+                    },
+                }),
             });
             if kind == "main" {
                 class.attributes.push(Attribute::ModuleMainClass {

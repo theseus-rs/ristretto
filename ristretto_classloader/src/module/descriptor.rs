@@ -223,7 +223,13 @@ impl ModuleDescriptor {
             }
         }
 
-        let Some(Attribute::Module {
+        let Some(Attribute::Module { module, .. }) = module_attr else {
+            return Err(ModuleError::DescriptorParseError(
+                "No Module attribute found".to_string(),
+            ));
+        };
+
+        let ristretto_classfile::attributes::ModuleAttribute {
             module_name_index,
             flags,
             version_index,
@@ -232,13 +238,7 @@ impl ModuleDescriptor {
             opens,
             uses,
             provides,
-            ..
-        }) = module_attr
-        else {
-            return Err(ModuleError::DescriptorParseError(
-                "No Module attribute found".to_string(),
-            ));
-        };
+        } = module.as_ref();
 
         let constant_pool = &class_file.constant_pool;
         let name = Self::get_module_name(constant_pool, *module_name_index)?;

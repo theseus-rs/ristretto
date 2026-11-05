@@ -18,6 +18,27 @@ use crate::{JAVA_1_0_2, JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_11, JAVA_16
 use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
 
+/// Module descriptor payload, boxed so its five tables do not enlarge every [`Attribute`].
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ModuleAttribute {
+    /// Constant-pool index of the module name.
+    pub module_name_index: u16,
+    /// Module access flags.
+    pub flags: ModuleAccessFlags,
+    /// Optional constant-pool index of the module version (zero when absent).
+    pub version_index: u16,
+    /// Required modules.
+    pub requires: Vec<Requires>,
+    /// Exported packages.
+    pub exports: Vec<Exports>,
+    /// Opened packages.
+    pub opens: Vec<Opens>,
+    /// Service interfaces used by this module.
+    pub uses: Vec<u16>,
+    /// Service implementations provided by this module.
+    pub provides: Vec<Provides>,
+}
+
 const VERSION_45_3: Version = Version::Java1_0_2 { minor: 3 };
 const VERSION_49_0: Version = JAVA_5;
 const VERSION_50_0: Version = JAVA_6;
@@ -454,14 +475,7 @@ pub enum Attribute {
     /// - [JVMS §4.7.25](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.25)
     Module {
         name_index: u16,
-        module_name_index: u16,
-        flags: ModuleAccessFlags,
-        version_index: u16,
-        requires: Vec<Requires>,
-        exports: Vec<Exports>,
-        opens: Vec<Opens>,
-        uses: Vec<u16>,
-        provides: Vec<Provides>,
+        module: Box<ModuleAttribute>,
     },
 
     /// Lists all packages exported or opened by a module.
@@ -1315,14 +1329,16 @@ impl Attribute {
                 }
                 Attribute::Module {
                     name_index,
-                    module_name_index,
-                    flags,
-                    version_index,
-                    requires,
-                    exports,
-                    opens,
-                    uses,
-                    provides,
+                    module: Box::new(ModuleAttribute {
+                        module_name_index,
+                        flags,
+                        version_index,
+                        requires,
+                        exports,
+                        opens,
+                        uses,
+                        provides,
+                    }),
                 }
             }
             AttributeKind::ModulePackages => {
@@ -1659,17 +1675,17 @@ impl Attribute {
                     parameter.to_bytes(bytes)?;
                 }
             }
-            Attribute::Module {
-                name_index: _,
-                module_name_index,
-                flags,
-                version_index,
-                requires,
-                exports,
-                opens,
-                uses,
-                provides,
-            } => {
+            Attribute::Module { module, .. } => {
+                let ModuleAttribute {
+                    module_name_index,
+                    flags,
+                    version_index,
+                    requires,
+                    exports,
+                    opens,
+                    uses,
+                    provides,
+                } = module.as_ref();
                 bytes.write_u16::<BigEndian>(*module_name_index)?;
                 flags.to_bytes(bytes)?;
                 bytes.write_u16::<BigEndian>(*version_index)?;
@@ -1814,6 +1830,18 @@ impl fmt::Display for Attribute {
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Attribute::Module { name_index, module } => f
+                .debug_struct("Module")
+                .field("name_index", name_index)
+                .field("module_name_index", &module.module_name_index)
+                .field("flags", &module.flags)
+                .field("version_index", &module.version_index)
+                .field("requires", &module.requires)
+                .field("exports", &module.exports)
+                .field("opens", &module.opens)
+                .field("uses", &module.uses)
+                .field("provides", &module.provides)
+                .finish()?,
             Attribute::Code {
                 max_stack,
                 max_locals,
@@ -1875,6 +1903,11 @@ mod test {
     use indoc::indoc;
 
     const VERSION_45_0: Version = JAVA_1_0_2;
+
+    #[test]
+    fn module_payload_does_not_determine_attribute_size() {
+        assert!(size_of::<Attribute>() < size_of::<ModuleAttribute>());
+    }
 
     #[test]
     fn test_invalid_attribute_name_index_error() {
@@ -2665,29 +2698,31 @@ mod test {
     fn test_module() -> Result<()> {
         let attribute = Attribute::Module {
             name_index: 1,
-            module_name_index: 2,
-            flags: ModuleAccessFlags::OPEN,
-            version_index: 4,
-            requires: vec![Requires {
-                index: 5,
-                flags: RequiresFlags::MANDATED,
-                version_index: 7,
-            }],
-            exports: vec![Exports {
-                index: 8,
-                flags: ExportsFlags::MANDATED,
-                to_index: vec![10],
-            }],
-            opens: vec![Opens {
-                index: 11,
-                flags: OpensFlags::MANDATED,
-                to_index: vec![13],
-            }],
-            uses: vec![14],
-            provides: vec![Provides {
-                index: 15,
-                with_index: vec![16],
-            }],
+            module: Box::new(ModuleAttribute {
+                module_name_index: 2,
+                flags: ModuleAccessFlags::OPEN,
+                version_index: 4,
+                requires: vec![Requires {
+                    index: 5,
+                    flags: RequiresFlags::MANDATED,
+                    version_index: 7,
+                }],
+                exports: vec![Exports {
+                    index: 8,
+                    flags: ExportsFlags::MANDATED,
+                    to_index: vec![10],
+                }],
+                opens: vec![Opens {
+                    index: 11,
+                    flags: OpensFlags::MANDATED,
+                    to_index: vec![13],
+                }],
+                uses: vec![14],
+                provides: vec![Provides {
+                    index: 15,
+                    with_index: vec![16],
+                }],
+            }),
         };
         let expected_bytes = [
             0, 1, 0, 0, 0, 46, 0, 2, 0, 32, 0, 4, 0, 1, 0, 5, 128, 0, 0, 7, 0, 1, 0, 8, 128, 0, 0,
