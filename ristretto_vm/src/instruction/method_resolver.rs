@@ -103,7 +103,10 @@ pub async fn resolve_method_ref(
 
     // Get class name and load the class
     let class_name = constant_pool.try_get_class(class_index)?;
-    let target_class = thread.class_java_str(class_name).await?;
+    let target_class = thread
+        .load_referenced_class(frame.class(), class_name)
+        .await?;
+    thread.initialize_class(&target_class).await?;
     let class_name = class_name.to_str_lossy();
 
     // Validate class vs interface for the invoke kind

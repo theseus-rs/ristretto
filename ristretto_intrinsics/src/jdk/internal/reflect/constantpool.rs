@@ -1,6 +1,6 @@
 use crate::java::lang::class;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
-use ristretto_classfile::{CONSTRUCTOR_NAME, Constant, FieldType, JAVA_11};
+use ristretto_classfile::{CONSTRUCTOR_NAME, Constant, FieldType, JAVA_11, JavaStr};
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
@@ -23,7 +23,7 @@ pub async fn get_class_at_0<T: Thread + 'static>(
     let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = thread.class_java_str(class_name).await?;
+    let class = thread.load_referenced_class(&class, class_name).await?;
     let result = class.to_object(&thread).await?;
     Ok(Some(result))
 }
@@ -41,7 +41,7 @@ pub async fn get_class_at_if_loaded_0<T: Thread + 'static>(
     let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = thread.class_java_str(class_name).await?;
+    let class = thread.load_referenced_class(&class, class_name).await?;
     let result = class.to_object(&thread).await?;
     Ok(Some(result))
 }
@@ -102,7 +102,7 @@ pub async fn get_field_at_0<T: Thread + 'static>(
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = thread.class_java_str(class_name).await?;
+    let class = thread.load_referenced_class(&class, class_name).await?;
     let class_object = class.to_object(&thread).await?;
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
@@ -237,8 +237,8 @@ pub async fn get_method_at_0<T: Thread + 'static>(
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = thread.class_java_str(class_name).await?;
-    let class_object = class.to_object(&thread).await?;
+    let declaring_class = thread.load_referenced_class(&class, class_name).await?;
+    let class_object = declaring_class.to_object(&thread).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
@@ -248,7 +248,9 @@ pub async fn get_method_at_0<T: Thread + 'static>(
     let (parameter_types, _return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
     for parameter_type in parameter_types {
         let parameter_type = parameter_type.class_name();
-        let parameter_type = thread.class(&parameter_type).await?;
+        let parameter_type = thread
+            .load_referenced_class(&class, &JavaStr::cow_from_str(&parameter_type))
+            .await?;
         let parameter_type = parameter_type.to_object(&thread).await?;
         parameters_classes.push(parameter_type);
     }

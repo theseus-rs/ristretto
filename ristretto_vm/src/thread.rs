@@ -89,6 +89,22 @@ impl Drop for MonitorGuard {
     }
 }
 
+/// Remove an in-progress Java class lookup even when loading fails or panics.
+struct ClassLoadingGuard<'a> {
+    loading: &'a Mutex<HashSet<(usize, String)>>,
+    name: Option<(usize, String)>,
+}
+
+impl Drop for ClassLoadingGuard<'_> {
+    fn drop(&mut self) {
+        if let Some(name) = self.name.take()
+            && let Ok(mut set) = self.loading.lock()
+        {
+            set.remove(&name);
+        }
+    }
+}
+
 #[derive(Debug)]
 struct StackEntry {
     frame: Arc<Frame>,
@@ -414,11 +430,10 @@ pub struct Thread {
     stack: ParkingRwLock<JavaStack>,
     instruction_yield_count: AtomicU32,
     jit_runtime: ThreadRuntime,
-    /// Tracks class names currently being loaded via a Java classloader on this
-    /// thread, preventing infinite recursion when `loadClass()` internally
-    /// triggers further class resolution.
+    /// Tracks (loader, name) pairs currently being loaded on this thread, preventing infinite
+    /// recursion when `loadClass()` internally triggers further class resolution.
     /// Uses `std::sync::Mutex` (not tokio) so it can be accessed from `Drop`.
-    java_cl_loading: Mutex<HashSet<String>>,
+    java_cl_loading: Mutex<HashSet<(usize, String)>>,
     park_state: ParkState,
 }
 
@@ -747,7 +762,7 @@ impl Thread {
                     // use D's defining classloader to load C.  If D was loaded by a
                     // user-defined (Java) classloader, the JVM invokes loadClass() on it.
                     drop(class_loader);
-                    match self.load_class_via_java_classloader(&vm, class_name).await {
+                    match self.load_class_via_java_classloader(None, class_name).await {
                         Ok(c) => c,
                         Err(e) => return Err(e),
                     }
@@ -769,13 +784,38 @@ impl Thread {
         if caller.java_name() == name {
             return self.link_class(caller.clone()).await;
         }
+        // Primitive mirrors are VM-defined and never go through Java loadClass.
+        if matches!(
+            name.as_bytes(),
+            b"boolean"
+                | b"byte"
+                | b"char"
+                | b"double"
+                | b"float"
+                | b"int"
+                | b"long"
+                | b"short"
+                | b"void"
+        ) {
+            return self.load_and_link_class(name).await;
+        }
         if let Some(loader) = caller.class_loader()? {
+            // A custom loader may delegate outside its parent chain or reject a
+            // parent definition. Honor its initiating cache and Java policy first.
+            if loader.loader_type().is_none()
+                && let Some(java_loader) = loader.object().await
+            {
+                let class = self
+                    .load_class_via_java_classloader(Some(java_loader), name)
+                    .await?;
+                return self.link_class(class).await;
+            }
             let class = match loader.load(name).await {
                 Ok(class) => class,
                 Err(ristretto_classloader::Error::ClassNotFound(_)) => {
                     // Java-defined loaders register definitions through the existing native
                     // defineClass bridge. Preserve that fallback after the defining loader.
-                    self.load_class_via_java_classloader(&self.vm()?, name)
+                    self.load_class_via_java_classloader(loader.object().await, name)
                         .await?
                 }
                 Err(error) => return Err(error.into()),
@@ -783,6 +823,29 @@ impl Thread {
             return self.link_class(class).await;
         }
         self.load_and_link_class(name).await
+    }
+
+    /// Synthesize and link an array from its resolved component without initialization.
+    pub(crate) async fn array_class(
+        &self,
+        component: &Arc<Class>,
+        dimensions: usize,
+    ) -> Result<Arc<Class>> {
+        let vm = self.vm()?;
+        let loader = vm.class_loader().read().await.clone();
+        let class = loader.array_class(component, dimensions).await?;
+        self.link_class(class).await
+    }
+
+    /// Resolve and link an array's component without losing its defining loader.
+    pub(crate) async fn array_component_class(&self, array: &Arc<Class>) -> Result<Arc<Class>> {
+        let vm = self.vm()?;
+        let loader = vm.class_loader().read().await.clone();
+        let component = loader
+            .array_component_class(array)
+            .await?
+            .ok_or_else(|| InternalError([array.name(), " is not an array"].concat()))?;
+        self.link_class(component).await
     }
 
     #[async_method]
@@ -824,6 +887,22 @@ impl Thread {
 
         if class.is_linked() {
             return Ok(class);
+        }
+
+        if class.is_array() {
+            // The VM synthesizes array hierarchies. Their supertypes always come from the
+            // bootstrap loader, regardless of the component's defining loader or its policy.
+            let loader = vm.class_loader().read().await.clone();
+            let bootstrap = loader.bootstrap().await?;
+            let parent = bootstrap
+                .load(JavaStr::try_from_str("java/lang/Object")?)
+                .await?;
+            let mut interfaces = Vec::with_capacity(2);
+            for name in ["java/lang/Cloneable", "java/io/Serializable"] {
+                interfaces.push(bootstrap.load(JavaStr::try_from_str(name)?).await?);
+            }
+            class.set_parent(Some(parent))?;
+            class.set_interfaces(interfaces)?;
         }
 
         // Link: resolve interfaces and recursively link them
@@ -886,72 +965,20 @@ impl Thread {
     /// was loaded by a user-defined classloader, the JVM must invoke that classloader's
     /// `loadClass()` method so the classloader can locate, define, and register the class.
     ///
-    /// This method walks the call stack from newest to oldest frame looking for a class whose
-    /// Java mirror object carries a non-null `classLoader` field.  When found it invokes
-    /// `ClassLoader.loadClass(className)` on that object.  The Java `loadClass` implementation
-    /// ultimately calls the native `defineClass()`, which registers the class with the VM's
-    /// Rust classloader so that subsequent lookups succeed.
+    /// Uses the given loader, or searches the call stack for a Java loader when no referring
+    /// class was supplied. The returned mirror identifies the definition, including its loader;
+    /// resolving its name again through the VM's application loader would lose that identity.
     async fn load_class_via_java_classloader(
         &self,
-        vm: &Arc<VM>,
+        java_loader: Option<Value>,
         class_name: &JavaStr,
     ) -> Result<Arc<Class>> {
-        // RAII guard that removes the class name from the loading set on drop,
-        // ensuring cleanup even if a panic occurs during loadClass invocation.
-        struct LoadGuard<'a> {
-            loading: &'a Mutex<HashSet<String>>,
-            name: Option<String>,
-        }
-        impl Drop for LoadGuard<'_> {
-            fn drop(&mut self) {
-                if let Some(name) = self.name.take()
-                    && let Ok(mut set) = self.loading.lock()
-                {
-                    set.remove(&name);
-                }
-            }
-        }
-
         let class_name_str = class_name.to_rust_string();
-
-        // Java loaders resolve component classes, never array descriptors. Resolve
-        // the base component through the same Rust/Java loading path without
-        // initializing it, then retry synthesis now that the definition is registered.
-        if class_name_str.starts_with('[')
-            && let Some(component) = class_name_str
-                .trim_start_matches('[')
-                .strip_prefix('L')
-                .and_then(|name| name.strip_suffix(';'))
-        {
-            self.load_and_link_class(&JavaStr::cow_from_str(component))
-                .await?;
-            let class_loader_lock = vm.class_loader();
-            let class_loader = class_loader_lock.read().await;
-            return Ok(class_loader.load(class_name).await?);
-        }
-
-        // Re-entrance guard: if this class is already being loaded via a Java
-        // classloader on this thread, bail out to prevent infinite recursion
-        // (e.g. loadClass -> findLoadedClass -> load_and_link -> loadClass …).
-        {
-            let mut loading = self
-                .java_cl_loading
-                .lock()
-                .map_err(|e| InternalError(e.to_string()))?;
-            if !loading.insert(class_name_str.clone()) {
-                return Err(ristretto_classloader::Error::ClassNotFound(class_name_str).into());
-            }
-        }
-
-        let mut load_guard = LoadGuard {
-            loading: &self.java_cl_loading,
-            name: Some(class_name_str.clone()),
-        };
 
         // Walk the call stack to find a Java classloader from the referencing class.
         // We must drop the frames lock before invoking any Java methods to avoid
         // deadlocks (execute() modifies frames).
-        let java_classloader = {
+        let java_classloader = java_loader.or_else(|| {
             let stack = self.stack.read();
             let mut found = None;
             for entry in stack.entries.iter().rev() {
@@ -967,21 +994,73 @@ impl Thread {
                 }
             }
             found
-        };
+        });
 
         let Some(java_classloader) = java_classloader else {
             return Err(ristretto_classloader::Error::ClassNotFound(class_name_str).into());
         };
 
-        // Convert from internal format (slashes) to Java format (dots) for loadClass().
+        let vm = self.vm()?;
+        let registry = ristretto_types::ClassRegistry::for_vm(&*vm)?;
         let dot_name = class_name_str.replace('/', ".");
+        if let Some(class) = registry.initiated_class(&java_classloader, &dot_name) {
+            return ristretto_intrinsics::java::lang::class::get_class_no_init(self, &class).await;
+        }
+        let loader = ristretto_types::ClassRegistry::loader(self, &java_classloader).await?;
+        if let Some(class) = loader.find_loaded_local(class_name).await {
+            return Ok(class);
+        }
+
+        // Java loaders resolve component classes, never array descriptors. Resolve
+        // the component without initializing it, then synthesize the array from
+        // that definition, which may belong to a sibling of the initiating loader.
+        if class_name_str.starts_with('[') {
+            let Some(component) = class_name_str
+                .trim_start_matches('[')
+                .strip_prefix('L')
+                .and_then(|name| name.strip_suffix(';'))
+            else {
+                // Primitive arrays are synthesized by the VM, not Java loaders.
+                return Ok(loader.load(class_name).await?);
+            };
+            let component = JavaStr::cow_from_str(component);
+            let component =
+                Box::pin(self.load_class_via_java_classloader(Some(java_classloader), &component))
+                    .await?;
+            let component = self.link_class(component).await?;
+            let dimensions = class_name_str.len() - class_name_str.trim_start_matches('[').len();
+            return Ok(loader.array_class(&component, dimensions).await?);
+        }
+
+        let loader_id = match &java_classloader {
+            Value::Object(Some(reference)) => reference.as_ptr() as usize,
+            _ => return Err(InternalError("invalid Java class loader".to_string())),
+        };
+        let loading_key = (loader_id, class_name_str.clone());
+        // Re-entrance guard: if this class is already being loaded via a Java
+        // classloader on this thread, bail out to prevent infinite recursion
+        // (e.g. loadClass -> findLoadedClass -> load_and_link -> loadClass …).
+        {
+            let mut loading = self
+                .java_cl_loading
+                .lock()
+                .map_err(|e| InternalError(e.to_string()))?;
+            if !loading.insert(loading_key.clone()) {
+                return Err(ristretto_classloader::Error::ClassNotFound(class_name_str).into());
+            }
+        }
+
+        let mut load_guard = ClassLoadingGuard {
+            loading: &self.java_cl_loading,
+            name: Some(loading_key.clone()),
+        };
 
         let load_result = async {
             let name_value: Value = dot_name.to_object(self).await?;
             self.invoke(
                 "java/lang/ClassLoader",
                 "loadClass(Ljava/lang/String;)Ljava/lang/Class;",
-                &[java_classloader, name_value],
+                &[java_classloader.clone(), name_value],
             )
             .await
         }
@@ -990,19 +1069,20 @@ impl Thread {
         // Explicitly remove the guard before proceeding; disarm the drop.
         load_guard.name.take();
         if let Ok(mut set) = self.java_cl_loading.lock() {
-            set.remove(&class_name_str);
+            set.remove(&loading_key);
         }
 
         let result = load_result?;
         if let Some(ref value) = result
             && !value.is_null()
         {
-            // loadClass succeeded.  The class should now be registered in the Rust
-            // classloader via the defineClass native call that loadClass ultimately made.
-            let class_loader_lock = vm.class_loader();
-            let class_loader = class_loader_lock.read().await;
-            let loaded_class: Arc<Class> = class_loader.load(class_name).await?;
-            return Ok(loaded_class);
+            registry.register_initiated_class(
+                vm.garbage_collector(),
+                &java_classloader,
+                &dot_name,
+                value,
+            );
+            return ristretto_intrinsics::java::lang::class::get_class_no_init(self, value).await;
         }
 
         Err(ristretto_classloader::Error::ClassNotFound(class_name_str).into())
@@ -1220,18 +1300,14 @@ impl Thread {
     /// if the class cannot be registered
     pub(crate) async fn register_class(&self, class: Arc<Class>) -> Result<()> {
         debug!("register class: {class}");
-        let initiating_loader = self.vm()?.class_loader().read().await.clone();
-        // Native definitions belong to their defining loader and are initiated
-        // by the VM loader. Update both registrations together so bootstrap-only
-        // lookup works without slowing subsequent mirror resolution. Ordinary
-        // parent delegation does not create aliases for replaceable anonymous
-        // definitions (see ClassLoader::load_with_status).
-        if let Some(defining_loader) = class.class_loader()?
-            && !Arc::ptr_eq(&defining_loader, &initiating_loader)
-        {
-            defining_loader.register(class.clone()).await?;
+        if let Some(loader) = class.class_loader()? {
+            loader.register(class).await?;
+            return Ok(());
         }
-        initiating_loader.register(class).await?;
+        let vm = self.vm()?;
+        let class_loader_lock = vm.class_loader();
+        let class_loader = class_loader_lock.read().await;
+        class_loader.register(class).await?;
         Ok(())
     }
 
@@ -1893,6 +1969,28 @@ impl ristretto_types::Thread for Thread {
 
     fn register_class(&self, class: Arc<Class>) -> ristretto_types::BoxFuture<'_, Result<()>> {
         Box::pin(async move { Thread::register_class(self, class).await })
+    }
+
+    fn load_referenced_class<'a>(
+        &'a self,
+        caller: &'a Arc<Class>,
+        name: &'a JavaStr,
+    ) -> ristretto_types::BoxFuture<'a, Result<Arc<Class>>> {
+        Box::pin(async move { Thread::load_referenced_class(self, caller, name).await })
+    }
+
+    fn resolve_class<'a>(
+        &'a self,
+        class: &'a Arc<Class>,
+        initialize: bool,
+    ) -> ristretto_types::BoxFuture<'a, Result<Arc<Class>>> {
+        Box::pin(async move {
+            let class = self.link_class(class.clone()).await?;
+            if initialize {
+                self.initialize_class(&class).await?;
+            }
+            Ok(class)
+        })
     }
 
     fn invoke<'a>(

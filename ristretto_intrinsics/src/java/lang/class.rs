@@ -4,9 +4,8 @@ use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError::{ClassNotFoundException, NullPointerException};
 use ristretto_types::JavaObject;
 use ristretto_types::VM;
-use ristretto_types::{BoxFuture, Parameters, Result};
+use ristretto_types::{BoxFuture, ClassRegistry, Parameters, Result};
 
-use ahash::AHashMap;
 use byteorder::{BigEndian, WriteBytesExt};
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
@@ -17,8 +16,8 @@ use ristretto_classfile::{
     JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodAccessFlags,
 };
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
+use ristretto_gc::Gc;
 use ristretto_gc::sync::RwLock;
-use ristretto_gc::{GarbageCollector, Gc, GcRootGuard};
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use std::sync::Arc;
@@ -67,6 +66,10 @@ fn internal_name_from_mirror(mut name: String) -> String {
 /// # Errors
 /// Returns an error if the class cannot be loaded or the object is invalid.
 pub async fn get_class<T: Thread + 'static>(thread: &T, object: &Value) -> Result<Arc<Class>> {
+    let vm = thread.vm()?;
+    if let Some(class) = ClassRegistry::for_vm(&*vm)?.class(object) {
+        return thread.resolve_class(&class, true).await;
+    }
     {
         let object = object.as_object_ref()?;
         let class = object.class();
@@ -92,6 +95,10 @@ pub async fn get_class_no_init<T: Thread + 'static>(
     thread: &T,
     object: &Value,
 ) -> Result<Arc<Class>> {
+    let vm = thread.vm()?;
+    if let Some(class) = ClassRegistry::for_vm(&*vm)?.class(object) {
+        return thread.resolve_class(&class, false).await;
+    }
     {
         let object = object.as_object_ref()?;
         let class = object.class();
@@ -241,8 +248,11 @@ async fn for_name_array<T: Thread + 'static>(
         .strip_prefix('L')
         .and_then(|name| name.strip_suffix(';'))
     {
+        if component.is_empty() || component.contains(['[', ';']) {
+            return Err(ClassNotFoundException(class_name.to_string()).into());
+        }
         let component_name = component.to_object(thread).await?;
-        for_name_0_boxed(
+        let component = for_name_0_boxed(
             thread.clone(),
             Parameters::new(vec![
                 component_name,
@@ -251,7 +261,16 @@ async fn for_name_array<T: Thread + 'static>(
                 Value::Object(None),
             ]),
         )
-        .await?;
+        .await?
+        .ok_or_else(|| ClassNotFoundException(class_name.to_string()))?;
+        let component = get_class_no_init(&**thread, &component).await?;
+        let vm = thread.vm()?;
+        let loader = vm.class_loader().read().await.clone();
+        let class = loader
+            .array_class(&component, class_name.len() - base.len())
+            .await
+            .map_err(|_| ClassNotFoundException(class_name.to_string()))?;
+        return class.to_object(thread).await;
     }
     let vm = thread.vm()?;
     let loader = vm.class_loader().read().await.clone();
@@ -271,50 +290,6 @@ fn for_name_0_boxed<T: Thread + 'static>(
     Box::pin(for_name_0(thread, parameters))
 }
 
-/// Successful Java resolutions belong to the initiating loader, which can differ
-/// from the defining loader. Keep this cache separate from the VM's name cache:
-/// a class found by one custom loader must not bypass another loader's `loadClass`.
-#[derive(Default)]
-struct InitiatedClasses {
-    loaders: RwLock<AHashMap<i64, InitiatingLoaderClasses>>,
-}
-
-struct InitiatingLoaderClasses {
-    // Root the loader as well as its mirrors so pointer keys cannot be reused by GC.
-    _loader: GcRootGuard<RwLock<Reference>>,
-    classes: AHashMap<String, GcRootGuard<RwLock<Reference>>>,
-}
-
-impl InitiatedClasses {
-    fn get(&self, loader: &Gc<RwLock<Reference>>, name: &str) -> Option<Value> {
-        self.loaders
-            .read()
-            .get(&loader.as_ptr_i64())?
-            .classes
-            .get(name)
-            .map(|class| Value::Object(Some(class.clone_gc())))
-    }
-
-    fn insert(
-        &self,
-        collector: &Arc<GarbageCollector>,
-        loader: &Gc<RwLock<Reference>>,
-        name: &str,
-        class: &Gc<RwLock<Reference>>,
-    ) {
-        self.loaders
-            .write()
-            .entry(loader.as_ptr_i64())
-            .or_insert_with(|| InitiatingLoaderClasses {
-                _loader: collector.create_root_guard(loader.clone()),
-                classes: AHashMap::default(),
-            })
-            .classes
-            .entry(name.to_string())
-            .or_insert_with(|| collector.create_root_guard(class.clone()));
-    }
-}
-
 /// Resolve without initialization, consulting only this initiating loader's cache.
 async fn load_class_for_name<T: Thread + 'static>(
     thread: &Arc<T>,
@@ -322,10 +297,9 @@ async fn load_class_for_name<T: Thread + 'static>(
     name: &str,
 ) -> Result<Option<Value>> {
     let vm = thread.vm()?;
-    let initiated_classes = vm
-        .resource_manager()
-        .get_or_init(InitiatedClasses::default)?;
-    if let Some(value) = initiated_classes.get(loader, name) {
+    let registry = ClassRegistry::for_vm(&*vm)?;
+    let loader = Value::Object(Some(loader.clone()));
+    if let Some(value) = registry.initiated_class(&loader, name) {
         return Ok(Some(value));
     }
 
@@ -334,13 +308,13 @@ async fn load_class_for_name<T: Thread + 'static>(
         .invoke(
             "java/lang/ClassLoader",
             "loadClass(Ljava/lang/String;)Ljava/lang/Class;",
-            &[Value::Object(Some(loader.clone())), class_name],
+            &[loader.clone(), class_name],
         )
         .await?;
     // Record loading before initialization: even a failed initializer does
     // not undo successful resolution through this initiating loader.
-    if let Some(Value::Object(Some(class))) = &result {
-        initiated_classes.insert(vm.garbage_collector(), loader, name, class);
+    if let Some(class) = &result {
+        registry.register_initiated_class(vm.garbage_collector(), &loader, name, class);
     }
     Ok(result)
 }
@@ -531,15 +505,13 @@ pub async fn get_component_type<T: Thread + 'static>(
         return Ok(Some(Value::Object(None)));
     }
 
-    // Class.name uses binary names (`[Ljava.lang.String;`) while the loader uses
-    // internal names (`[Ljava/lang/String;`). Derive the component from the loaded
-    // class so one-dimensional object arrays do not retain the descriptor's `L...;`.
-    let component = class
-        .component_type()
+    let vm = thread.vm()?;
+    let loader = vm.class_loader().read().await.clone();
+    let component_class = loader
+        .array_component_class(&class)
+        .await?
         .ok_or_else(|| InternalError("array class has no component type".to_string()))?;
-    let component_class = thread
-        .load_and_link_class(&JavaStr::cow_from_str(component))
-        .await?;
+    let component_class = thread.resolve_class(&component_class, false).await?;
     let class_object = component_class.to_object(&thread).await?;
 
     Ok(Some(class_object))
@@ -587,13 +559,7 @@ pub async fn get_declared_classes_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let class = parameters.pop()?;
-    let class_name = {
-        let class = class.as_object_ref()?;
-        get_class_name(&class)?
-    };
-    let class = thread
-        .load_and_link_class(&JavaStr::cow_from_str(&class_name))
-        .await?;
+    let class = get_class_no_init(&*thread, &class).await?;
     let mut declared_classes = Vec::new();
 
     let class_file = class.class_file();
@@ -610,18 +576,19 @@ pub async fn get_declared_classes_0<T: Thread + 'static>(
         })
         .flatten()
         .collect::<Vec<InnerClass>>();
-    let class_name = class.name();
     for inner_class in inner_classes {
         // Skip entries with outer_class_info_index of 0 (top-level, local, or anonymous classes)
         if inner_class.outer_class_info_index == 0 {
             continue;
         }
         let outer_class_name = constant_pool.try_get_class(inner_class.outer_class_info_index)?;
-        if outer_class_name != class_name {
+        if outer_class_name != class.java_name() {
             continue;
         }
         let inner_class_name = constant_pool.try_get_class(inner_class.class_info_index)?;
-        let class = thread.load_and_link_class(inner_class_name).await?;
+        let class = thread
+            .load_referenced_class(&class, inner_class_name)
+            .await?;
         let class = class.to_object(&thread).await?;
         declared_classes.push(class);
     }
@@ -666,7 +633,7 @@ pub async fn get_declared_constructors_0<T: Thread + 'static>(
         for parameter in method.parameters() {
             let class_name = parameter.class_name();
             let class = thread
-                .load_and_link_class(&JavaStr::cow_from_str(&class_name))
+                .load_referenced_class(&class, &JavaStr::cow_from_str(&class_name))
                 .await?;
             parameters.push(class.to_object(&thread).await?);
         }
@@ -775,7 +742,7 @@ pub async fn get_declared_fields_0<T: Thread + 'static>(
 
         let field_type_class_name = field.field_type().class_name();
         let field_type_class = thread
-            .load_and_link_class(&JavaStr::cow_from_str(&field_type_class_name))
+            .load_referenced_class(&class, &JavaStr::cow_from_str(&field_type_class_name))
             .await?;
         let field_type = field_type_class.to_object(&thread).await?;
         let modifiers = Value::Int(i32::from(access_flags.bits()));
@@ -895,7 +862,7 @@ pub async fn get_declared_methods_0<T: Thread + 'static>(
         for parameter in method.parameters() {
             let class_name = parameter.class_name();
             let class = thread
-                .load_and_link_class(&JavaStr::cow_from_str(&class_name))
+                .load_referenced_class(&class, &JavaStr::cow_from_str(&class_name))
                 .await?;
             parameters.push(class.to_object(&thread).await?);
         }
@@ -906,7 +873,7 @@ pub async fn get_declared_methods_0<T: Thread + 'static>(
         let return_type = if let Some(return_type) = method.return_type() {
             let class_name = return_type.class_name();
             let class = thread
-                .load_and_link_class(&JavaStr::cow_from_str(&class_name))
+                .load_referenced_class(&class, &JavaStr::cow_from_str(&class_name))
                 .await?;
             class.to_object(&thread).await?
         } else {
@@ -1024,26 +991,25 @@ pub async fn get_declaring_class_0<T: Thread + 'static>(
         return Ok(Some(Value::Object(None)));
     }
 
-    let class_name = class.name();
-
-    // Lambda/hidden classes contain "$$Lambda" in their name and shouldn't have a declaring class
-    if class_name.contains("$$Lambda") {
-        return Ok(Some(Value::Object(None)));
-    }
-
-    match class_name
-        .rsplit_once('$')
-        .map(|(class_name, _)| class_name)
-    {
-        Some(outer_class_name) if !outer_class_name.is_empty() => {
-            let class = thread
-                .load_and_link_class(&JavaStr::cow_from_str(outer_class_name))
-                .await?;
-            let class = class.to_object(&thread).await?;
-            Ok(Some(class))
+    // A dollar sign is legal in an ordinary binary name. Only InnerClasses metadata
+    // establishes a declaring class; local and anonymous classes have no outer index.
+    let class_file = class.class_file();
+    let constant_pool = &class_file.constant_pool;
+    for attribute in &class_file.attributes {
+        if let Attribute::InnerClasses { classes, .. } = attribute {
+            for inner in classes {
+                if inner.outer_class_info_index == 0
+                    || constant_pool.try_get_class(inner.class_info_index)? != class.java_name()
+                {
+                    continue;
+                }
+                let outer_name = constant_pool.try_get_class(inner.outer_class_info_index)?;
+                let outer = thread.load_referenced_class(&class, outer_name).await?;
+                return Ok(Some(outer.to_object(&thread).await?));
+            }
         }
-        _ => Ok(Some(Value::Object(None))),
     }
+    Ok(Some(Value::Object(None)))
 }
 
 #[intrinsic_method("java/lang/Class.getEnclosingMethod0()[Ljava/lang/Object;", Any)]
@@ -1063,7 +1029,7 @@ pub async fn get_enclosing_method_0<T: Thread + 'static>(
         {
             let constant_pool = &class_file.constant_pool;
             let class_name = constant_pool.try_get_class(*class_index)?;
-            let class = thread.load_and_link_class(class_name).await?;
+            let class = thread.load_referenced_class(&class, class_name).await?;
             let class = class.to_object(&thread).await?;
             let (method_name, method_descriptor) = if *method_index == 0 {
                 (Value::Object(None), Value::Object(None))
@@ -1110,7 +1076,7 @@ pub async fn get_exceptions<T: Thread + 'static>(
         {
             for exception_index in exception_indexes {
                 let class_name = constant_pool.try_get_class(*exception_index)?;
-                let exception = thread.load_and_link_class(class_name).await?;
+                let exception = thread.load_referenced_class(class, class_name).await?;
                 let exception = exception.to_object(thread).await?;
                 exceptions.push(exception);
             }
@@ -1154,13 +1120,7 @@ pub async fn get_interfaces_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let class = parameters.pop()?;
-    let class_name = {
-        let class = class.as_object_ref()?;
-        get_class_name(&class)?
-    };
-    let class = thread
-        .load_and_link_class(&JavaStr::cow_from_str(&class_name))
-        .await?;
+    let class = get_class_no_init(&*thread, &class).await?;
     let mut interfaces = Vec::new();
 
     for interface in class.interfaces()? {
@@ -1248,7 +1208,9 @@ pub async fn get_nest_host_0<T: Thread + 'static>(
         {
             let constant_pool = &class_file.constant_pool;
             let host_class_name = constant_pool.try_get_class(*host_class_index)?;
-            let host_class = thread.load_and_link_class(host_class_name).await?;
+            let host_class = thread
+                .load_referenced_class(&class, host_class_name)
+                .await?;
             let host_class_object = host_class.to_object(&thread).await?;
             return Ok(Some(host_class_object));
         }
@@ -1275,7 +1237,7 @@ pub async fn get_nest_members_0<T: Thread + 'static>(
             let constant_pool = &class_file.constant_pool;
             for class_index in class_indexes {
                 let class_name = constant_pool.try_get_class(*class_index)?;
-                let member_class = thread.load_and_link_class(class_name).await?;
+                let member_class = thread.load_referenced_class(&class, class_name).await?;
                 let member_object = member_class.to_object(&thread).await?;
                 members.push(member_object);
             }
@@ -1449,7 +1411,7 @@ pub async fn get_record_components_0<T: Thread + 'static>(
                 // Resolve type from descriptor
                 let type_class_name = FieldType::parse_java_str(descriptor)?.class_name();
                 let type_class = thread
-                    .load_and_link_class(&JavaStr::cow_from_str(&type_class_name))
+                    .load_referenced_class(&class, &JavaStr::cow_from_str(&type_class_name))
                     .await?;
                 let type_object = type_class.to_object(&thread).await?;
 
@@ -1580,7 +1542,7 @@ async fn create_accessor_method<T: Thread + 'static>(
 
         let return_type_class_name = expected_return_type.class_name();
         let return_type_class = thread
-            .load_and_link_class(&JavaStr::cow_from_str(&return_type_class_name))
+            .load_referenced_class(class, &JavaStr::cow_from_str(&return_type_class_name))
             .await?;
         let return_type_value = return_type_class.to_object(thread).await?;
 
@@ -1839,11 +1801,8 @@ pub async fn is_instance<T: Thread + 'static>(
     if compare_object.is_null() || !compare_object.is_object() {
         return Ok(Some(Value::from(false)));
     }
-    let compare_class_name = {
-        let reference = compare_object.as_reference()?;
-        reference.class_name()?
-    };
-    let compare_object_class = thread.class(&compare_class_name).await?;
+    let compare_object_class =
+        ristretto_types::method_resolution::receiver_class(&*thread, &compare_object).await?;
     if self_class
         .is_assignable_from(&thread, &compare_object_class)
         .await?

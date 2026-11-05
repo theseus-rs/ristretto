@@ -7,7 +7,8 @@ use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use ristretto_classfile::BaseType;
 use ristretto_classfile::attributes::ArrayType;
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::{Class, Reference, Value};
+use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray>
 #[inline]
@@ -48,14 +49,10 @@ pub(crate) async fn anewarray(
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class_name_str = class_name.to_str_lossy();
-    let array_class_name = if class_name_str.starts_with('[') {
-        ["[", &class_name_str].concat()
-    } else {
-        ["[L", &class_name_str, ";"].concat()
-    };
-
-    let class = thread.class(array_class_name.as_str()).await?;
+    let component = thread
+        .load_referenced_class(frame.class(), class_name)
+        .await?;
+    let class = thread.array_class(&component, 1).await?;
     let count = stack.pop_int()?;
     if count < 0 {
         return Err(NegativeArraySizeException(count.to_string()).into());
@@ -106,7 +103,9 @@ pub(crate) async fn multianewarray(
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = thread.class_java_str(class_name).await?;
+    let class = thread
+        .load_referenced_class(frame.class(), class_name)
+        .await?;
 
     // Pop dimension sizes from stack (in reverse order)
     let mut dimension_sizes = Vec::new();
@@ -120,11 +119,7 @@ pub(crate) async fn multianewarray(
     }
     dimension_sizes.reverse();
 
-    // Create the nested array structure
-    // For multidimensional arrays, we need the base element type (strip all '[' prefixes)
-    let base_component_type = class.array_base_element_type();
-    let array =
-        create_multidimensional_array(&thread, base_component_type, &dimension_sizes, 0).await?;
+    let array = create_multidimensional_array(&thread, class, &dimension_sizes, 0).await?;
 
     stack.push(array)?;
     Ok(Continue)
@@ -132,7 +127,7 @@ pub(crate) async fn multianewarray(
 
 async fn create_multidimensional_array(
     thread: &Thread,
-    component_type: &str,
+    class: Arc<Class>,
     dimension_sizes: &[usize],
     depth: usize,
 ) -> Result<Value> {
@@ -141,8 +136,10 @@ async fn create_multidimensional_array(
         .ok_or_else(|| InternalError(format!("Invalid array dimension depth: {depth}")))?;
 
     if depth.checked_add(1) == Some(dimension_sizes.len()) {
-        // This is the innermost dimension; create the actual array
-        if component_type.len() == 1 {
+        // Only a one-dimensional primitive array needs primitive backing storage.
+        // Partially allocated arrays retain their full rank and null inner dimensions.
+        let component_type = class.array_component_type();
+        if class.name().len() == 2 {
             // Primitive array
             let base_type = BaseType::parse(component_type.chars().next().unwrap_or_default())?;
             let vm = thread.vm()?;
@@ -157,7 +154,10 @@ async fn create_multidimensional_array(
                 BaseType::Double => {
                     Value::new_object(collector, Reference::from(vec![0.0f64; current_size]))
                 }
-                BaseType::Boolean | BaseType::Byte => {
+                BaseType::Boolean => {
+                    Value::new_object(collector, Reference::from(vec![false; current_size]))
+                }
+                BaseType::Byte => {
                     Value::new_object(collector, Reference::from(vec![0i8; current_size]))
                 }
                 BaseType::Short => {
@@ -173,21 +173,18 @@ async fn create_multidimensional_array(
             Ok(array)
         } else {
             // Object array
-            let array_class_name = ["[L", component_type, ";"].concat();
-            let array_class = thread.class(&array_class_name).await?;
             let vm = thread.vm()?;
-            let reference =
-                Reference::try_from((array_class, vec![Value::Object(None); current_size]))?;
+            let reference = Reference::try_from((class, vec![Value::Object(None); current_size]))?;
             let array = Value::new_object(vm.garbage_collector(), reference);
             Ok(array)
         }
     } else {
-        // This is not the innermost dimension; create array of arrays
+        let component = thread.array_component_class(&class).await?;
         let mut elements = Vec::new();
         for _ in 0..current_size {
             let sub_array = Box::pin(create_multidimensional_array(
                 thread,
-                component_type,
+                component.clone(),
                 dimension_sizes,
                 depth + 1,
             ))
@@ -195,19 +192,8 @@ async fn create_multidimensional_array(
             elements.push(sub_array);
         }
 
-        // Build the array class name for this dimension
-        let mut array_class_name = "[".repeat(dimension_sizes.len() - depth);
-        if component_type.len() == 1 {
-            array_class_name.push_str(component_type);
-        } else {
-            array_class_name.push('L');
-            array_class_name.push_str(component_type);
-            array_class_name.push(';');
-        }
-
-        let array_class = thread.class(&array_class_name).await?;
         let vm = thread.vm()?;
-        let reference = Reference::try_from((array_class, elements))?;
+        let reference = Reference::try_from((class, elements))?;
         let array = Value::new_object(vm.garbage_collector(), reference);
         Ok(array)
     }

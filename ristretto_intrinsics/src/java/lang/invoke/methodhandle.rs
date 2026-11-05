@@ -632,7 +632,7 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
 
     debug!("call_method_handle_target: NOT a holder class: {target_class_name}");
 
-    let target_class = match thread.class(&target_class_name).await {
+    let target_class = match crate::java::lang::class::get_class(&*thread, &member_class).await {
         Ok(c) => c,
         Err(e) => {
             debug!(
@@ -912,7 +912,13 @@ async fn invoke_special<T: Thread + 'static>(
         if let Some(allocation_class_name) = object_return_class_name(&method_descriptor)
             && allocation_class_name != target_class.name()
         {
-            let allocation_class = thread.class(&allocation_class_name).await?;
+            let allocation_class = thread
+                .load_referenced_class(
+                    &target_class,
+                    &ristretto_classfile::JavaStr::cow_from_str(&allocation_class_name),
+                )
+                .await?;
+            let allocation_class = thread.resolve_class(&allocation_class, true).await?;
             if is_same_or_subclass_of(&allocation_class, &target_class)? {
                 let instance = Value::from_object(
                     thread.vm()?.garbage_collector(),
@@ -980,7 +986,7 @@ fn object_return_class_name(method_descriptor: &str) -> Option<String> {
     Some(class_name.to_string())
 }
 
-fn direct_constructor_instance_class_name(method_handle: &Value) -> Result<Option<String>> {
+fn direct_constructor_instance_class(method_handle: &Value) -> Result<Option<Value>> {
     let method_handle = method_handle.as_object_ref()?;
     if method_handle.class().name() != "java/lang/invoke/DirectMethodHandle$Constructor" {
         return Ok(None);
@@ -991,11 +997,10 @@ fn direct_constructor_instance_class_name(method_handle: &Value) -> Result<Optio
     if instance_class.is_null() {
         return Ok(None);
     }
-    let instance_class = instance_class.as_object_ref()?;
-    Ok(Some(get_class_name(&instance_class)?))
+    Ok(Some(instance_class))
 }
 
-fn method_handle_return_class_name(method_handle: &Value) -> Result<Option<String>> {
+fn method_handle_return_class(method_handle: &Value) -> Result<Option<Value>> {
     let method_handle = method_handle.as_object_ref()?;
     let Ok(method_type) = method_handle.value("type") else {
         return Ok(None);
@@ -1010,17 +1015,16 @@ fn method_handle_return_class_name(method_handle: &Value) -> Result<Option<Strin
     if return_type.is_null() {
         return Ok(None);
     }
-    let return_type = return_type.as_object_ref()?;
-    Ok(Some(get_class_name(&return_type)?))
+    Ok(Some(return_type))
 }
 
 fn is_same_or_subclass_of(class: &Arc<Class>, target_class: &Class) -> Result<bool> {
-    if class.name() == target_class.name() {
+    if std::ptr::eq(class.as_ref(), target_class) {
         return Ok(true);
     }
     let mut parent = class.parent()?;
     while let Some(parent_class) = parent {
-        if parent_class.name() == target_class.name() {
+        if std::ptr::eq(parent_class.as_ref(), target_class) {
             return Ok(true);
         }
         parent = parent_class.parent()?;
@@ -1192,13 +1196,13 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
             if is_holder_class(class_name) {
                 debug!("newInvokeSpecial: member points to holder class, skipping");
             } else {
-                let target_class = thread.class(class_name).await?;
-                let allocation_class_name = direct_constructor_instance_class_name(&method_handle)?
-                    .or(method_handle_return_class_name(&method_handle)?);
-                if let Some(allocation_class_name) = allocation_class_name
-                    && allocation_class_name != *class_name
-                {
-                    let allocation_class = thread.class(&allocation_class_name).await?;
+                let mirror = member.as_object_ref()?.value("clazz")?;
+                let target_class = crate::java::lang::class::get_class(&*thread, &mirror).await?;
+                let allocation_mirror = direct_constructor_instance_class(&method_handle)?
+                    .or(method_handle_return_class(&method_handle)?);
+                if let Some(allocation_mirror) = allocation_mirror {
+                    let allocation_class =
+                        crate::java::lang::class::get_class(&*thread, &allocation_mirror).await?;
                     let can_initialize_with_target_constructor =
                         is_same_or_subclass_of(&allocation_class, &target_class)?;
                     if !can_initialize_with_target_constructor {
@@ -1912,8 +1916,8 @@ mod tests {
         let vm = thread.vm()?;
         let collector = vm.garbage_collector();
         let object = Value::new_object(collector, Reference::Object(Object::new(object_class)?));
-        assert_eq!(None, direct_constructor_instance_class_name(&object)?);
-        assert_eq!(None, method_handle_return_class_name(&object)?);
+        assert_eq!(None, direct_constructor_instance_class(&object)?);
+        assert_eq!(None, method_handle_return_class(&object)?);
 
         let constructor_class = thread
             .class("java/lang/invoke/DirectMethodHandle$Constructor")
@@ -1922,14 +1926,14 @@ mod tests {
             collector,
             Reference::Object(Object::new(constructor_class)?),
         );
-        assert_eq!(None, direct_constructor_instance_class_name(&constructor)?);
+        assert_eq!(None, direct_constructor_instance_class(&constructor)?);
 
         let method_handle_class = thread.class("java/lang/invoke/MethodHandle").await?;
         let method_handle = Value::new_object(
             collector,
             Reference::Object(Object::new(method_handle_class)?),
         );
-        assert_eq!(None, method_handle_return_class_name(&method_handle)?);
+        assert_eq!(None, method_handle_return_class(&method_handle)?);
         Ok(())
     }
 }

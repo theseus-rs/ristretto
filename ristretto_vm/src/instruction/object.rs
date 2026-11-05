@@ -289,7 +289,10 @@ pub(crate) async fn new(
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
     // Initialize the class (triggers <clinit> for static fields if not already done)
-    let class = thread.class_java_str(class_name).await?;
+    let class = thread
+        .load_referenced_class(frame.class(), class_name)
+        .await?;
+    thread.initialize_class(&class).await?;
     // Allocate object with all instance fields zeroed (does NOT call constructor)
     let object = Object::new(class)?;
     let reference = Value::new_object(thread.vm()?.garbage_collector(), Reference::Object(object));
@@ -317,7 +320,9 @@ pub(crate) async fn checkcast(
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(class_index)?;
     let thread = frame.thread()?;
-    let class = thread.load_and_link_class(class_name).await?;
+    let class = thread
+        .load_referenced_class(frame.class(), class_name)
+        .await?;
     if !is_instance_of(&thread, &object, &class).await? {
         let object = object.read();
         let source_class_name = object.class_name()?.replace('/', ".");
@@ -350,7 +355,9 @@ pub(crate) async fn instanceof(
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(class_index)?;
     let thread = frame.thread()?;
-    let class = thread.load_and_link_class(class_name).await?;
+    let class = thread
+        .load_referenced_class(frame.class(), class_name)
+        .await?;
     if is_instance_of(&thread, &object, &class).await? {
         stack.push_int(1)?;
     } else {

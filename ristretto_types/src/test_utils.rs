@@ -624,6 +624,27 @@ impl MockThread {
 }
 
 impl Thread for MockThread {
+    fn load_referenced_class<'a>(
+        &'a self,
+        caller: &'a Arc<Class>,
+        name: &'a ristretto_classfile::JavaStr,
+    ) -> crate::BoxFuture<'a, Result<Arc<Class>>> {
+        Box::pin(async move {
+            if caller.java_name() == name {
+                Ok(caller.clone())
+            } else {
+                self.load_and_link_class(name).await
+            }
+        })
+    }
+
+    fn resolve_class<'a>(
+        &'a self,
+        class: &'a Arc<Class>,
+        _initialize: bool,
+    ) -> crate::BoxFuture<'a, Result<Arc<Class>>> {
+        Box::pin(async move { Ok(class.clone()) })
+    }
     type Vm = MockVm;
     type Frame = MockFrame;
 

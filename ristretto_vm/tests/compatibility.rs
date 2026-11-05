@@ -61,6 +61,7 @@ struct TestCase {
     source_dir: PathBuf,
     class_dir: PathBuf,
     java_version: String,
+    java_release: Option<String>,
     java_home: PathBuf,
     system_properties: Vec<(String, String)>,
 }
@@ -314,6 +315,7 @@ fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<
                 source_dir: source_dir.clone(),
                 class_dir: source_dir,
                 java_version: version,
+                java_release: None,
                 java_home: home,
                 system_properties: Vec::new(),
             });
@@ -358,6 +360,7 @@ fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<
                 source_dir: source_dir.clone(),
                 class_dir: output_root.join(version).join(relative_dir),
                 java_version: version.to_string(),
+                java_release: properties.get("java.release").cloned(),
                 java_home: home,
                 system_properties: system_properties.clone(),
             });
@@ -417,7 +420,11 @@ fn compile_test(test_case: &TestCase) -> Result<()> {
 
     let java_file = source_dir.join(TEST_FILE);
     let mut arguments = vec!["-parameters"];
-    if test_case.source_dir != test_case.class_dir {
+    if let Some(release) = &test_case.java_release {
+        // Fixtures using records or nest attributes can opt into newer bytecode
+        // with java.release while still running against multiple JDK versions.
+        arguments.extend(["--release", release.as_str()]);
+    } else if test_case.source_dir != test_case.class_dir {
         // Cross-runtime fixtures exercise the selected JDK's class library but
         // intentionally use Java 8 bytecode. This keeps the test focused on the
         // native surface instead of newer invokedynamic bootstrap machinery.

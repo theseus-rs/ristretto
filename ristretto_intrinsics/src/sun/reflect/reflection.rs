@@ -1,4 +1,3 @@
-use crate::java::lang::class::get_class_name;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
@@ -68,11 +67,7 @@ pub async fn get_class_access_flags<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class_name = {
-        let object = object.as_object_ref()?;
-        get_class_name(&object)?
-    };
-    let class = thread.class(&class_name).await?;
+    let class = crate::java::lang::class::get_class_no_init(&*thread, &object).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags;
     #[expect(clippy::cast_lossless)]

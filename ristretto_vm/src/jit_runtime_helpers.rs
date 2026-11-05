@@ -1440,7 +1440,7 @@ fn resolve_class_ref_no_init(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(cp_index)?;
     let thread = thread_from_ctx(ctx);
-    match run_async(async { thread.load_and_link_class(class_name).await }) {
+    match run_async(async { thread.load_referenced_class(&ctx.class, class_name).await }) {
         Ok(resolved) => Ok(entry.get_or_init(|| resolved).clone()),
         Err(error) => {
             let cached = CachedResolutionError::from_error(&error);
@@ -1484,7 +1484,11 @@ fn resolve_field_ref(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<Resolved
         let descriptor: Arc<str> =
             Arc::from(constant_pool.try_get_utf8(*descriptor_index)?.to_string());
         let thread = thread_from_ctx(ctx);
-        let field_class = run_async(async { thread.load_and_link_class(field_class_name).await })?;
+        let field_class = run_async(async {
+            thread
+                .load_referenced_class(&ctx.class, field_class_name)
+                .await
+        })?;
         Ok(Arc::new(ResolvedField {
             field_class,
             field_name,
@@ -1653,28 +1657,10 @@ extern "C" fn jit_anewarray(context: *const u8, bci: i32, cp_class_index: i32, c
 }
 
 fn jit_anewarray_impl(ctx: &RuntimeContext, cp_class_index: u16, count: i32) -> Result<i64> {
-    // JVMS §6.5.anewarray: resolve the *component* type's symbolic reference first
-    // (triggering its potential LinkageError / class initialization side effects), THEN
-    // synthesize and resolve the array class. Resolving the array name directly would
-    // hide a component-resolution failure behind an array-class-not-found error, and
-    // would never observably trigger `<clinit>` of the component class itself per the
-    // spec ordering.
-    let class = class_from_ctx(ctx);
-    let constant_pool = class.constant_pool();
-    let class_name = constant_pool.try_get_class(cp_class_index)?;
-    let class_name_str = class_name.to_str_lossy();
+    // Resolve the component through the referring class without initializing it.
+    let component = resolve_class_ref_no_init(ctx, cp_class_index)?;
     let thread = thread_from_ctx(ctx);
-    if !class_name_str.starts_with('[') {
-        // Component is a class type ("Lfoo/Bar;" form): resolve it explicitly first to
-        // surface any LinkageError before we ask the loader for the array form.
-        run_async(async { thread.class(class_name_str.as_ref()).await })?;
-    }
-    let array_class_name = if class_name_str.starts_with('[') {
-        ["[", &class_name_str].concat()
-    } else {
-        ["[L", &class_name_str, ";"].concat()
-    };
-    let array_class = run_async(async { thread.class(array_class_name.as_str()).await })?;
+    let array_class = run_async(async { thread.array_class(&component, 1).await })?;
     if count < 0 {
         return Err(NegativeArraySizeException(count.to_string()).into());
     }
@@ -1732,10 +1718,8 @@ fn jit_multianewarray_impl(
             "multianewarray: invalid dimension count".to_string(),
         ));
     }
-    // JVMS §6.5.multianewarray: resolve the symbolic class reference (with potential
-    // LinkageError / class initialization side effects) *before* checking dimension
-    // counts for NegativeArraySizeException.
-    let class = resolve_class_ref(ctx, cp_class_index)?;
+    // Resolve without initialization before validating allocation sizes.
+    let class = resolve_class_ref_no_init(ctx, cp_class_index)?;
     let dims_len_usize = dims_len as usize;
     if !class.is_array() || class.array_dimensions() < dims_len_usize {
         return Err(InternalError(format!(
@@ -1813,7 +1797,7 @@ fn build_multianewarray<'a>(
             // with `dims_len == 1` allocates a `[[Ljava/lang/String;`
             // (object array of `[Ljava/lang/String;`-typed nulls), NOT a `[Ljava/lang/String;`.
             let component = class.array_component_type();
-            if component.len() == 1 && !component.starts_with('[') {
+            if class.name().len() == 2 {
                 let component_char = component.chars().next().ok_or_else(|| {
                     InternalError("multianewarray: empty component type".to_string())
                 })?;
@@ -1852,7 +1836,7 @@ fn build_multianewarray<'a>(
             }
         } else {
             // Recurse into the actual single-step component class, *not* a synthesized name.
-            let component_class = component_class_of(thread, &class).await?;
+            let component_class = thread.array_component_class(&class).await?;
             let mut elements = Vec::with_capacity(current_size);
             for _ in 0..current_size {
                 let sub_array = build_multianewarray(
@@ -1868,20 +1852,6 @@ fn build_multianewarray<'a>(
             Ok(Value::new_object(collector, reference))
         }
     })
-}
-
-/// Resolve a class's single-step component class via the thread's class loader.
-async fn component_class_of(thread: &Thread, class: &Class) -> Result<Arc<Class>> {
-    let component = class.array_component_type();
-    if component.is_empty() {
-        return Err(InternalError(
-            ["multianewarray: class ", class.name(), " is not an array"].concat(),
-        ));
-    }
-    // `array_component_type` returns either a class name like `java/lang/String`, an
-    // array descriptor like `[Ljava/lang/String;` / `[I`, or a single-character primitive
-    // descriptor (only for 1-D primitive arrays;should not be reached at non-leaf depth).
-    thread.class(component).await
 }
 
 // ---------------------------------------------------------------------------
