@@ -108,7 +108,8 @@ pub(crate) fn verify(
     }
 
     // Stack map deltas count bytes from the preceding frame plus one.
-    let mut frame_instruction_indices = AHashSet::from_iter([0]);
+    // The implicit entry frame is not an explicit branch-target stack map.
+    let mut frame_instruction_indices = AHashSet::default();
     let mut has_stack_map = false;
     for attribute in attributes {
         if let Attribute::StackMapTable { frames, .. } = attribute {
@@ -144,7 +145,7 @@ pub(crate) fn verify(
 
     // Verify that all jump targets have a corresponding StackFrame for Java 7 and later.
     if class_file.version.major() >= JAVA_7.major() {
-        if jump_target_indices.iter().any(|&target| target != 0) && !has_stack_map {
+        if !jump_target_indices.is_empty() && !has_stack_map {
             return Err(VerificationError {
                 context: "Code Attribute".to_string(),
                 message: format!(
@@ -273,6 +274,22 @@ mod test {
             Err(InvalidInstructionOffset(10)),
             verify(&class_file, &method, 0, 10, &code, &[], &[])
         );
+    }
+
+    #[test]
+    fn branches_to_entry_require_an_explicit_stack_map() {
+        let class_file = ClassFile {
+            version: JAVA_7,
+            ..ClassFile::default()
+        };
+        let method = get_dummy_method();
+        let code = [Instruction::Goto(0)];
+        assert!(verify(&class_file, &method, 0, 0, &code, &[], &[]).is_err());
+        let table = Attribute::StackMapTable {
+            name_index: 0,
+            frames: vec![StackFrame::SameFrame { frame_type: 0 }],
+        };
+        assert!(verify(&class_file, &method, 0, 0, &code, &[], &[table]).is_ok());
     }
 
     #[test]
