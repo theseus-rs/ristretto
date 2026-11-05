@@ -202,27 +202,15 @@ fn verify_attribute(
         (Attribute::MethodParameters { parameters, .. }, _) => {
             verify_method_parameters(class_file, parameters)?;
         }
-        (
-            Attribute::Module {
-                module_name_index,
-                version_index,
-                requires,
-                exports,
-                opens,
-                uses,
-                provides,
-                ..
-            },
-            _,
-        ) => verify_module(
+        (Attribute::Module { module, .. }, _) => verify_module(
             class_file,
-            *module_name_index,
-            *version_index,
-            requires,
-            exports,
-            opens,
-            uses,
-            provides,
+            module.module_name_index,
+            module.version_index,
+            &module.requires,
+            &module.exports,
+            &module.opens,
+            &module.uses,
+            &module.provides,
         )?,
         (
             Attribute::ModulePackages {
@@ -1901,18 +1889,20 @@ mod tests {
                 &class_file,
                 &[Attribute::Module {
                     name_index: 0,
-                    module_name_index: 3,
-                    flags: ModuleAccessFlags::empty(),
-                    version_index: 0,
-                    requires: vec![Requires {
-                        index: 3,
-                        flags: RequiresFlags::empty(),
+                    module: Box::new(crate::attributes::ModuleAttribute {
+                        module_name_index: 3,
+                        flags: ModuleAccessFlags::empty(),
                         version_index: 0,
-                    }],
-                    exports: Vec::new(),
-                    opens: Vec::new(),
-                    uses: Vec::new(),
-                    provides: Vec::new(),
+                        requires: vec![Requires {
+                            index: 3,
+                            flags: RequiresFlags::empty(),
+                            version_index: 0,
+                        }],
+                        exports: Vec::new(),
+                        opens: Vec::new(),
+                        uses: Vec::new(),
+                        provides: Vec::new()
+                    })
                 }],
                 class_context,
             )
@@ -1934,29 +1924,31 @@ mod tests {
         let class_file = create_class_file(constants);
         let attribute = Attribute::Module {
             name_index: 0,
-            module_name_index: 1,
-            flags: ModuleAccessFlags::empty(),
-            version_index: 3,
-            requires: vec![Requires {
-                index: 1,
-                flags: RequiresFlags::empty(),
+            module: Box::new(crate::attributes::ModuleAttribute {
+                module_name_index: 1,
+                flags: ModuleAccessFlags::empty(),
                 version_index: 3,
-            }],
-            exports: vec![Exports {
-                index: 4,
-                flags: ExportsFlags::empty(),
-                to_index: vec![1],
-            }],
-            opens: vec![Opens {
-                index: 4,
-                flags: OpensFlags::empty(),
-                to_index: vec![1],
-            }],
-            uses: vec![6],
-            provides: vec![Provides {
-                index: 6,
-                with_index: vec![6],
-            }],
+                requires: vec![Requires {
+                    index: 1,
+                    flags: RequiresFlags::empty(),
+                    version_index: 3,
+                }],
+                exports: vec![Exports {
+                    index: 4,
+                    flags: ExportsFlags::empty(),
+                    to_index: vec![1],
+                }],
+                opens: vec![Opens {
+                    index: 4,
+                    flags: OpensFlags::empty(),
+                    to_index: vec![1],
+                }],
+                uses: vec![6],
+                provides: vec![Provides {
+                    index: 6,
+                    with_index: vec![6],
+                }],
+            }),
         };
         let context = AttributeContext::Class;
 
@@ -2855,22 +2847,24 @@ mod tests {
                 &class_file,
                 &[Attribute::Module {
                     name_index: 0,
-                    module_name_index: module_name,
-                    flags: ModuleAccessFlags::empty(),
-                    version_index: module_version,
-                    requires: vec![Requires {
-                        index: module_name,
-                        flags: RequiresFlags::empty(),
+                    module: Box::new(crate::attributes::ModuleAttribute {
+                        module_name_index: module_name,
+                        flags: ModuleAccessFlags::empty(),
                         version_index: module_version,
-                    }],
-                    exports: vec![Exports {
-                        index: package_name,
-                        flags: ExportsFlags::empty(),
-                        to_index: Vec::new(),
-                    }],
-                    opens: Vec::new(),
-                    uses: Vec::new(),
-                    provides: Vec::new(),
+                        requires: vec![Requires {
+                            index: module_name,
+                            flags: RequiresFlags::empty(),
+                            version_index: module_version,
+                        }],
+                        exports: vec![Exports {
+                            index: package_name,
+                            flags: ExportsFlags::empty(),
+                            to_index: Vec::new(),
+                        }],
+                        opens: Vec::new(),
+                        uses: Vec::new(),
+                        provides: Vec::new()
+                    })
                 }],
                 AttributeContext::Class,
             )
@@ -2889,14 +2883,16 @@ mod tests {
     ) -> Attribute {
         Attribute::Module {
             name_index: 0,
-            module_name_index,
-            flags: ModuleAccessFlags::empty(),
-            version_index,
-            requires,
-            exports,
-            opens,
-            uses,
-            provides,
+            module: Box::new(crate::attributes::ModuleAttribute {
+                module_name_index,
+                flags: ModuleAccessFlags::empty(),
+                version_index,
+                requires,
+                exports,
+                opens,
+                uses,
+                provides,
+            }),
         }
     }
 

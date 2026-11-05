@@ -484,18 +484,20 @@ mod tests {
         let this_class = constant_pool.add_class("module-info")?;
         let module = Attribute::Module {
             name_index: constant_pool.add_utf8("Module")?,
-            module_name_index: constant_pool.add_module("test.module")?,
-            flags: ModuleAccessFlags::empty(),
-            version_index: 0,
-            requires: vec![Requires {
-                index: constant_pool.add_module("java.base")?,
-                flags: RequiresFlags::MANDATED,
+            module: Box::new(ristretto_classfile::attributes::ModuleAttribute {
+                module_name_index: constant_pool.add_module("test.module")?,
+                flags: ModuleAccessFlags::empty(),
                 version_index: 0,
-            }],
-            exports: Vec::new(),
-            opens: Vec::new(),
-            uses: Vec::new(),
-            provides: Vec::new(),
+                requires: vec![Requires {
+                    index: constant_pool.add_module("java.base")?,
+                    flags: RequiresFlags::MANDATED,
+                    version_index: 0,
+                }],
+                exports: Vec::new(),
+                opens: Vec::new(),
+                uses: Vec::new(),
+                provides: Vec::new(),
+            }),
         };
         let module_info = ClassFile {
             version: JAVA_17,

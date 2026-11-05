@@ -140,7 +140,7 @@ pub use annotation::Annotation;
 pub use annotation_element::AnnotationElement;
 pub use annotation_value_pair::AnnotationValuePair;
 pub use array_type::ArrayType;
-pub use attribute::{Attribute, AttributeKind};
+pub use attribute::{Attribute, AttributeKind, ModuleAttribute};
 pub use bootstrap_method::BootstrapMethod;
 pub use exception_table_entry::ExceptionTableEntry;
 pub use exports::Exports;

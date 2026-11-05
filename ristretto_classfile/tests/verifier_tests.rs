@@ -176,14 +176,16 @@ fn test_class_verify_ignores_misplaced_attributes_and_reports_invalid_indexes() 
     let mut class_file = create_test_class_file(Version::Java9 { minor: 0 })?;
     class_file.attributes.push(Attribute::Module {
         name_index: 0,
-        module_name_index: u16::MAX,
-        flags: ModuleAccessFlags::empty(),
-        version_index: 0,
-        requires: Vec::new(),
-        exports: Vec::new(),
-        opens: Vec::new(),
-        uses: Vec::new(),
-        provides: Vec::new(),
+        module: Box::new(ristretto_classfile::attributes::ModuleAttribute {
+            module_name_index: u16::MAX,
+            flags: ModuleAccessFlags::empty(),
+            version_index: 0,
+            requires: Vec::new(),
+            exports: Vec::new(),
+            opens: Vec::new(),
+            uses: Vec::new(),
+            provides: Vec::new(),
+        }),
     });
     assert!(class_file.verify().is_err());
 
@@ -242,18 +244,20 @@ fn test_class_verify_accepts_attribute_optional_indexes() -> Result<()> {
     let module_version_index = class_file.constant_pool.add_utf8("1.0")?;
     class_file.attributes.push(Attribute::Module {
         name_index: class_file.constant_pool.add_utf8("Module")?,
-        module_name_index: module_index,
-        flags: ModuleAccessFlags::empty(),
-        version_index: 0,
-        requires: vec![Requires {
-            index: class_file.constant_pool.add_module("java.base")?,
-            flags: RequiresFlags::empty(),
-            version_index: module_version_index,
-        }],
-        exports: Vec::new(),
-        opens: Vec::new(),
-        uses: Vec::new(),
-        provides: Vec::new(),
+        module: Box::new(ristretto_classfile::attributes::ModuleAttribute {
+            module_name_index: module_index,
+            flags: ModuleAccessFlags::empty(),
+            version_index: 0,
+            requires: vec![Requires {
+                index: class_file.constant_pool.add_module("java.base")?,
+                flags: RequiresFlags::empty(),
+                version_index: module_version_index,
+            }],
+            exports: Vec::new(),
+            opens: Vec::new(),
+            uses: Vec::new(),
+            provides: Vec::new(),
+        }),
     });
 
     assert!(class_file.verify().is_ok());
