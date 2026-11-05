@@ -216,7 +216,18 @@ pub fn handle_new(frame: &mut Frame, offset: u16, class_name: &str) -> Result<()
         ));
     }
     // Push an uninitialized reference
-    frame.push(VerificationType::Uninitialized(offset))
+    let receiver = VerificationType::Uninitialized(offset);
+    if frame.stack.contains(&receiver) {
+        return Err(VerifyError::VerifyError(
+            "new cannot reuse an allocation with a live operand stack alias".to_string(),
+        ));
+    }
+    for local in &mut frame.locals {
+        if *local == receiver {
+            *local = VerificationType::Top;
+        }
+    }
+    frame.push(receiver)
 }
 
 /// Handles `newarray` - create new primitive array.
@@ -1175,6 +1186,34 @@ mod tests {
         handle_new(&mut frame, 0, "java/lang/Object").unwrap();
 
         assert_eq!(*frame.peek().unwrap(), VerificationType::Uninitialized(0));
+    }
+
+    #[test]
+    fn new_rejects_a_live_stack_alias() {
+        let mut frame = Frame::new(0, 2);
+        frame.push(VerificationType::Uninitialized(42)).unwrap();
+        assert!(handle_new(&mut frame, 42, "java/lang/Object").is_err());
+        assert!(handle_new(&mut frame, 43, "java/lang/Object").is_ok());
+    }
+
+    #[test]
+    fn new_invalidates_only_locals_from_the_same_allocation() {
+        let mut frame = Frame::new(3, 1);
+        frame.locals = vec![
+            VerificationType::Uninitialized(42),
+            VerificationType::Uninitialized(43),
+            VerificationType::Uninitialized(42),
+        ];
+        handle_new(&mut frame, 42, "java/lang/Object").unwrap();
+        assert_eq!(
+            frame.locals,
+            vec![
+                VerificationType::Top,
+                VerificationType::Uninitialized(43),
+                VerificationType::Top
+            ]
+        );
+        assert_eq!(frame.stack, vec![VerificationType::Uninitialized(42)]);
     }
 
     #[test]
