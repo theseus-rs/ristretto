@@ -3,7 +3,7 @@ use ristretto_classloader::{
     ClassPath, DEFAULT_JAVA_VERSION, JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION,
     JAVA_21_VERSION, JAVA_25_VERSION,
 };
-use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
+use ristretto_gc::GarbageCollector;
 use ristretto_vm::{ConfigurationBuilder, Thread, VM};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -45,7 +45,7 @@ pub(crate) async fn version_thread(
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let classes_path = cargo_manifest.join("..").join("classes");
     let class_path = ClassPath::from(&[classes_path]);
-    let gc_config = GcConfigurationBuilder::new().threads(1).build();
+    let gc_config = ristretto_gc::ConfigurationBuilder::new().threads(1).build();
     let garbage_collector = GarbageCollector::with_config(gc_config);
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())

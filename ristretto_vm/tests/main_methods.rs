@@ -3,7 +3,7 @@
 use ristretto_classfile::{ClassFile, JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::runtime;
 use ristretto_vm::{ClassPath, Compiler, ConfigurationBuilder, Error, JavaError, VM};
-use std::error::Error as StdError;
+use std::error;
 use std::ffi::OsString;
 use std::fs;
 use std::path::PathBuf;
@@ -11,7 +11,7 @@ use std::process::Command;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-type TestResult = Result<(), Box<dyn StdError>>;
+type TestResult = Result<(), Box<dyn error::Error>>;
 
 #[tokio::test]
 #[expect(

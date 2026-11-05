@@ -2,7 +2,7 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
-use ristretto_types::{JavaError, JavaObject, Parameters, Result, Thread, VM as _};
+use ristretto_types::{JavaError, JavaObject, Parameters, Result, Thread, VM};
 use std::collections::{HashMap, VecDeque};
 use std::path::Path;
 use std::sync::{Arc, Mutex};

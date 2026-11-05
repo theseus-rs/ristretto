@@ -28,7 +28,7 @@ mod imp {
     use std::marker::PhantomData;
     use std::ops::{Deref, DerefMut};
     use std::ptr::NonNull;
-    use std::sync::{self as ssync};
+    use std::sync;
 
     /// Empty marker trait used to type-erase a parent guard while keeping it
     /// alive for the duration of a mapped guard.
@@ -37,18 +37,18 @@ mod imp {
 
     /// Acquire a poisoned guard's inner value, matching `parking_lot`'s
     /// non-poisoning semantics.
-    fn unpoison<G>(result: ssync::LockResult<G>) -> G {
+    fn unpoison<G>(result: sync::LockResult<G>) -> G {
         match result {
             Ok(guard) => guard,
             Err(poison) => poison.into_inner(),
         }
     }
 
-    fn try_unpoison<G>(result: ssync::TryLockResult<G>) -> Option<G> {
+    fn try_unpoison<G>(result: sync::TryLockResult<G>) -> Option<G> {
         match result {
             Ok(guard) => Some(guard),
-            Err(ssync::TryLockError::Poisoned(poison)) => Some(poison.into_inner()),
-            Err(ssync::TryLockError::WouldBlock) => None,
+            Err(sync::TryLockError::Poisoned(poison)) => Some(poison.into_inner()),
+            Err(sync::TryLockError::WouldBlock) => None,
         }
     }
 
@@ -56,11 +56,11 @@ mod imp {
     // RwLock
     // ----------------------------------------------------------------------
 
-    pub struct RwLock<T: ?Sized>(ssync::RwLock<T>);
+    pub struct RwLock<T: ?Sized>(sync::RwLock<T>);
 
     impl<T> RwLock<T> {
         pub const fn new(value: T) -> Self {
-            Self(ssync::RwLock::new(value))
+            Self(sync::RwLock::new(value))
         }
 
         pub fn into_inner(self) -> T {
@@ -105,7 +105,7 @@ mod imp {
         }
     }
 
-    pub struct RwLockReadGuard<'a, T: ?Sized>(ssync::RwLockReadGuard<'a, T>);
+    pub struct RwLockReadGuard<'a, T: ?Sized>(sync::RwLockReadGuard<'a, T>);
 
     impl<'a, T: ?Sized> RwLockReadGuard<'a, T> {
         pub fn map<U: ?Sized, F>(s: Self, f: F) -> MappedRwLockReadGuard<'a, U>
@@ -165,7 +165,7 @@ mod imp {
         }
     }
 
-    pub struct RwLockWriteGuard<'a, T: ?Sized>(ssync::RwLockWriteGuard<'a, T>);
+    pub struct RwLockWriteGuard<'a, T: ?Sized>(sync::RwLockWriteGuard<'a, T>);
 
     impl<'a, T: ?Sized> RwLockWriteGuard<'a, T> {
         pub fn map<U: ?Sized, F>(mut s: Self, f: F) -> MappedRwLockWriteGuard<'a, U>
@@ -340,7 +340,7 @@ mod imp {
     /// Upgradable read guards aren't natively provided by `std::sync`. Since
     /// no caller in the workspace currently uses them on wasm, this is a
     /// thin wrapper around a write guard that preserves the `upgrade` API.
-    pub struct RwLockUpgradableReadGuard<'a, T: ?Sized>(ssync::RwLockWriteGuard<'a, T>);
+    pub struct RwLockUpgradableReadGuard<'a, T: ?Sized>(sync::RwLockWriteGuard<'a, T>);
 
     impl<'a, T: ?Sized> RwLockUpgradableReadGuard<'a, T> {
         pub fn upgrade(s: Self) -> RwLockWriteGuard<'a, T> {
@@ -365,11 +365,11 @@ mod imp {
     // Mutex
     // ----------------------------------------------------------------------
 
-    pub struct Mutex<T: ?Sized>(ssync::Mutex<T>);
+    pub struct Mutex<T: ?Sized>(sync::Mutex<T>);
 
     impl<T> Mutex<T> {
         pub const fn new(value: T) -> Self {
-            Self(ssync::Mutex::new(value))
+            Self(sync::Mutex::new(value))
         }
 
         pub fn into_inner(self) -> T {
@@ -406,7 +406,7 @@ mod imp {
         }
     }
 
-    pub struct MutexGuard<'a, T: ?Sized>(ssync::MutexGuard<'a, T>);
+    pub struct MutexGuard<'a, T: ?Sized>(sync::MutexGuard<'a, T>);
 
     impl<'a, T: ?Sized> MutexGuard<'a, T> {
         pub fn map<U: ?Sized, F>(mut s: Self, f: F) -> MappedMutexGuard<'a, U>

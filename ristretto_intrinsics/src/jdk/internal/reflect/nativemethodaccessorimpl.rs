@@ -2,7 +2,7 @@ use crate::java::lang::class;
 use ristretto_classfile::MethodAccessFlags;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
-use ristretto_classloader::{Class as RistrettoClass, ResolvedMethod, Value};
+use ristretto_classloader::{Class, ResolvedMethod, Value};
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result};
 use ristretto_types::{Thread, method_resolution};
@@ -38,13 +38,13 @@ pub async fn invoke_0<T: Thread + 'static>(
     let mut method_parameters = String::new();
     for parameter_type in &parameter_types {
         let parameter_type_class = class::get_class(&thread, parameter_type).await?;
-        let descriptor = RistrettoClass::convert_to_descriptor(parameter_type_class.name());
+        let descriptor = Class::convert_to_descriptor(parameter_type_class.name());
         method_parameters.push_str(&descriptor);
     }
 
     let return_type_class = class::get_class(&thread, &return_type).await?;
     let is_void = return_type_class.name() == "void";
-    let return_type_descriptor = RistrettoClass::convert_to_descriptor(return_type_class.name());
+    let return_type_descriptor = Class::convert_to_descriptor(return_type_class.name());
     let descriptor = ["(", &method_parameters, ")", &return_type_descriptor].concat();
 
     let method = class.try_get_method(&name, &descriptor)?;

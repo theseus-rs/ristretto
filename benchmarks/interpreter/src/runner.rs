@@ -75,7 +75,7 @@ pub fn sha256(path: &Path) -> Result<String> {
     }
     let mut hex = String::with_capacity(64);
     for byte in digest.finalize() {
-        use std::fmt::Write as _;
+        use std::fmt::Write;
         write!(hex, "{byte:02x}")?;
     }
     Ok(hex)

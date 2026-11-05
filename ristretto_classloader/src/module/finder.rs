@@ -5,7 +5,7 @@ use crate::module::error::{ModuleError, Result};
 use crate::module::reference::{ModuleReference, ModuleSource};
 use parking_lot::RwLock;
 use ristretto_classfile::ClassFile;
-use ristretto_jimage::Image as JImage;
+use ristretto_jimage::Image;
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
@@ -67,7 +67,7 @@ impl ModuleDescriptorCache {
             return Ok(descriptor.clone());
         }
 
-        let image = JImage::from_file(jimage_path)
+        let image = Image::from_file(jimage_path)
             .map_err(|error| ModuleError::IoError(error.to_string()))?;
         let resource_name = ["/", module_name, "/module-info.class"].concat();
         let resource = image
@@ -193,7 +193,7 @@ impl SystemModuleFinder {
     /// Loads modules from a jimage file (sync implementation, single pass).
     fn load_from_jimage(jimage_path: &Path) -> Result<HashMap<String, ModuleReference>> {
         let image =
-            JImage::from_file(jimage_path).map_err(|e| ModuleError::IoError(e.to_string()))?;
+            Image::from_file(jimage_path).map_err(|e| ModuleError::IoError(e.to_string()))?;
         let module_names = image
             .module_names()
             .map_err(|e| ModuleError::IoError(e.to_string()))?;

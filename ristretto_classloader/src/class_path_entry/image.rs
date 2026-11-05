@@ -4,7 +4,6 @@ use ahash::{AHashMap, RandomState};
 use dashmap::DashMap;
 use parking_lot::RwLock;
 use ristretto_classfile::ClassFile;
-use ristretto_jimage::Image as JImage;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -14,7 +13,7 @@ type ClassCache = DashMap<Box<str>, Arc<ClassFile<'static>>, RandomState>;
 
 #[derive(Clone)]
 struct CachedImage {
-    image: Arc<JImage>,
+    image: Arc<ristretto_jimage::Image>,
     packages: Arc<AHashMap<Box<str>, u16>>,
     modules: Arc<Vec<String>>,
     classes: Arc<ClassCache>,
@@ -30,7 +29,7 @@ static IMAGE_CACHE: LazyLock<RwLock<AHashMap<OsString, CachedImage>>> =
 pub struct Image {
     name: OsString,
     #[expect(clippy::struct_field_names)]
-    image: Arc<JImage>,
+    image: Arc<ristretto_jimage::Image>,
     packages: Arc<AHashMap<Box<str>, u16>>,
     modules: Arc<Vec<String>>,
     classes: Arc<ClassCache>,
@@ -67,7 +66,7 @@ impl Image {
             });
         }
 
-        let image = JImage::from_file(PathBuf::from(path).as_path())
+        let image = ristretto_jimage::Image::from_file(PathBuf::from(path).as_path())
             .map_err(|error| ArchiveError(error.to_string()))?;
         let mut packages = AHashMap::with_capacity_and_hasher(1_000, RandomState::new());
         let mut modules = Vec::with_capacity(100);

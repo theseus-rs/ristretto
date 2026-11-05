@@ -7,21 +7,21 @@ use ristretto_classfile::attributes::{
 };
 use ristretto_classfile::verifiers::bytecode::{VerifierConfig, verify_class};
 use ristretto_classfile::verifiers::context::VerificationContext;
-use ristretto_classfile::verifiers::error::{Result as VerifyResult, VerifyError};
+use ristretto_classfile::verifiers::error::{self, VerifyError};
 use ristretto_classfile::{ClassAccessFlags, ClassFile, JAVA_8, Method, MethodAccessFlags, Result};
 
 struct Context;
 
 impl VerificationContext for Context {
-    fn is_subclass(&self, source: &str, target: &str) -> VerifyResult<bool> {
+    fn is_subclass(&self, source: &str, target: &str) -> error::Result<bool> {
         self.is_assignable(target, source)
     }
 
-    fn is_assignable(&self, target: &str, source: &str) -> VerifyResult<bool> {
+    fn is_assignable(&self, target: &str, source: &str) -> error::Result<bool> {
         Ok(source == target || target == "java/lang/Object")
     }
 
-    fn common_superclass(&self, a: &str, b: &str) -> VerifyResult<String> {
+    fn common_superclass(&self, a: &str, b: &str) -> error::Result<String> {
         Ok(if a == b { a } else { "java/lang/Object" }.to_string())
     }
 }

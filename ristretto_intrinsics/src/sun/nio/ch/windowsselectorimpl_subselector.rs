@@ -9,15 +9,14 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use windows_sys::Win32::Foundation::HANDLE;
 use windows_sys::Win32::Networking::WinSock::{
-    FD_ACCEPT, FD_CLOSE, FD_CONNECT, FD_OOB, FD_READ, FD_WRITE, FIONBIO, POLLIN as WSA_POLLIN,
-    POLLOUT as WSA_POLLOUT, SOCKET, SOCKET_ERROR, WSA_INVALID_EVENT, WSA_MAXIMUM_WAIT_EVENTS,
-    WSA_WAIT_FAILED, WSA_WAIT_TIMEOUT, WSACloseEvent, WSACreateEvent, WSAEVENT,
-    WSAEnumNetworkEvents, WSAEventSelect, WSAGetLastError, WSANETWORKEVENTS,
-    WSAWaitForMultipleEvents, ioctlsocket,
+    FD_ACCEPT, FD_CLOSE, FD_CONNECT, FD_OOB, FD_READ, FD_WRITE, FIONBIO, POLLIN, POLLOUT, SOCKET,
+    SOCKET_ERROR, WSA_INVALID_EVENT, WSA_MAXIMUM_WAIT_EVENTS, WSA_WAIT_FAILED, WSA_WAIT_TIMEOUT,
+    WSACloseEvent, WSACreateEvent, WSAEVENT, WSAEnumNetworkEvents, WSAEventSelect, WSAGetLastError,
+    WSANETWORKEVENTS, WSAWaitForMultipleEvents, ioctlsocket,
 };
 
-const JAVA_POLLIN: i16 = WSA_POLLIN;
-const JAVA_POLLOUT: i16 = WSA_POLLOUT;
+const JAVA_POLLIN: i16 = POLLIN;
+const JAVA_POLLOUT: i16 = POLLOUT;
 const MAX_SELECTABLE_FDS: i32 = 1024;
 const POLLFD_SIZE: i64 = 8;
 const POLLFD_EVENTS_OFFSET: i64 = 4;

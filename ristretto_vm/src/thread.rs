@@ -11,7 +11,6 @@ use crate::jit_runtime_helpers::ThreadRuntime;
 use crate::rust_value::process_values;
 use crate::{Frame, Result, VM, jit};
 
-use parking_lot::RwLock as ParkingRwLock;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
     CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldAccessFlags, FieldType, JavaStr,
@@ -427,7 +426,7 @@ pub struct Thread {
     thread: Weak<Thread>,
     name: Arc<RwLock<String>>,
     java_object: Arc<RwLock<Value>>,
-    stack: ParkingRwLock<JavaStack>,
+    stack: parking_lot::RwLock<JavaStack>,
     instruction_yield_count: AtomicU32,
     jit_runtime: ThreadRuntime,
     /// Tracks (loader, name) pairs currently being loaded on this thread, preventing infinite
@@ -454,7 +453,7 @@ impl Thread {
             thread: thread.clone(),
             name: Arc::new(RwLock::new(name)),
             java_object: Arc::new(RwLock::new(java_object)),
-            stack: ParkingRwLock::new(JavaStack::new(max_stack_slots)),
+            stack: parking_lot::RwLock::new(JavaStack::new(max_stack_slots)),
             instruction_yield_count: AtomicU32::new(0),
             jit_runtime: ThreadRuntime::default(),
             java_cl_loading: Mutex::new(HashSet::new()),
@@ -2056,7 +2055,7 @@ mod tests {
     use ristretto_classfile::attributes::{Attribute, ExceptionTableEntry, Instruction};
     use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool};
     use ristretto_classloader::ClassPath;
-    use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
+    use ristretto_gc::GarbageCollector;
     use std::path::PathBuf;
 
     #[test]
@@ -2168,7 +2167,7 @@ mod tests {
     }
 
     async fn interpreted_test_thread() -> Result<(Arc<VM>, Arc<Thread>)> {
-        let gc_configuration = GcConfigurationBuilder::new().threads(1).build();
+        let gc_configuration = ristretto_gc::ConfigurationBuilder::new().threads(1).build();
         let garbage_collector = GarbageCollector::with_config(gc_configuration);
         let configuration = ConfigurationBuilder::new()
             .interpreted(true)

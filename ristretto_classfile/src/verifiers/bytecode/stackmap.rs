@@ -15,7 +15,7 @@
 use ahash::{AHashMap, RandomState};
 
 use crate::JavaString;
-use crate::attributes::{StackFrame, VerificationType as ClassFileVerificationType};
+use crate::attributes::{self, StackFrame};
 use crate::class_file::ClassFile;
 use crate::verifiers::bytecode::frame::Frame;
 use crate::verifiers::bytecode::type_system::VerificationType;
@@ -281,7 +281,7 @@ pub(super) fn validate_format(frames: &[StackFrame], class_file: &ClassFile<'_>)
         for ty in locals.iter().chain(stack) {
             // Invalid constant-pool references are malformed encodings, not
             // stale type information that Java 6 inference can recover from.
-            if matches!(ty, ClassFileVerificationType::Object { .. }) {
+            if matches!(ty, attributes::VerificationType::Object { .. }) {
                 convert_single_type(ty, class_file)?;
             }
         }
@@ -372,7 +372,7 @@ fn decode_frame(
 /// In `StackMapTable`, category 2 types are represented as single entries,
 /// but in the actual frame they occupy two slots.
 fn expand_locals(
-    locals: &[ClassFileVerificationType],
+    locals: &[attributes::VerificationType],
     class_file: &ClassFile<'_>,
 ) -> Result<Vec<VerificationType>> {
     let mut result = Vec::with_capacity(locals.len() * 2);
@@ -392,7 +392,7 @@ fn expand_locals(
 
 /// Converts a slice of class file verification types to internal types.
 fn convert_verification_types(
-    types: &[ClassFileVerificationType],
+    types: &[attributes::VerificationType],
     class_file: &ClassFile<'_>,
 ) -> Result<Vec<VerificationType>> {
     types
@@ -403,18 +403,18 @@ fn convert_verification_types(
 
 /// Converts a single class file verification type to internal type.
 fn convert_single_type(
-    v_type: &ClassFileVerificationType,
+    v_type: &attributes::VerificationType,
     class_file: &ClassFile<'_>,
 ) -> Result<VerificationType> {
     match v_type {
-        ClassFileVerificationType::Top => Ok(VerificationType::Top),
-        ClassFileVerificationType::Integer => Ok(VerificationType::Integer),
-        ClassFileVerificationType::Float => Ok(VerificationType::Float),
-        ClassFileVerificationType::Long => Ok(VerificationType::Long),
-        ClassFileVerificationType::Double => Ok(VerificationType::Double),
-        ClassFileVerificationType::Null => Ok(VerificationType::Null),
-        ClassFileVerificationType::UninitializedThis => Ok(VerificationType::UninitializedThis),
-        ClassFileVerificationType::Object { cpool_index } => {
+        attributes::VerificationType::Top => Ok(VerificationType::Top),
+        attributes::VerificationType::Integer => Ok(VerificationType::Integer),
+        attributes::VerificationType::Float => Ok(VerificationType::Float),
+        attributes::VerificationType::Long => Ok(VerificationType::Long),
+        attributes::VerificationType::Double => Ok(VerificationType::Double),
+        attributes::VerificationType::Null => Ok(VerificationType::Null),
+        attributes::VerificationType::UninitializedThis => Ok(VerificationType::UninitializedThis),
+        attributes::VerificationType::Object { cpool_index } => {
             let name = class_file
                 .constant_pool
                 .try_get_class(*cpool_index)
@@ -428,7 +428,7 @@ fn convert_single_type(
                 Ok(VerificationType::Object(JavaString::from(name)))
             }
         }
-        ClassFileVerificationType::Uninitialized { offset } => {
+        attributes::VerificationType::Uninitialized { offset } => {
             Ok(VerificationType::Uninitialized(*offset))
         }
     }
@@ -536,16 +536,16 @@ mod tests {
             StackFrame::SameFrame { frame_type: 64 },
             StackFrame::SameLocals1StackItemFrame {
                 frame_type: 63,
-                stack: [ClassFileVerificationType::Integer],
+                stack: [attributes::VerificationType::Integer],
             },
             StackFrame::SameLocals1StackItemFrame {
                 frame_type: 128,
-                stack: [ClassFileVerificationType::Integer],
+                stack: [attributes::VerificationType::Integer],
             },
             StackFrame::SameLocals1StackItemFrameExtended {
                 frame_type: 246,
                 offset_delta: 0,
-                stack: [ClassFileVerificationType::Integer],
+                stack: [attributes::VerificationType::Integer],
             },
             StackFrame::ChopFrame {
                 frame_type: 251,
@@ -568,7 +568,7 @@ mod tests {
             StackFrame::AppendFrame {
                 frame_type: 254,
                 offset_delta: 0,
-                locals: vec![ClassFileVerificationType::Integer; 4],
+                locals: vec![attributes::VerificationType::Integer; 4],
             },
             StackFrame::FullFrame {
                 frame_type: 254,
@@ -601,10 +601,10 @@ mod tests {
     fn test_decode_rejects_frames_exceeding_slot_limits() {
         let class_file = create_test_class_file();
         for (locals, stack, max_locals, max_stack) in [
-            (vec![ClassFileVerificationType::Integer], vec![], 0, 0),
-            (vec![ClassFileVerificationType::Long], vec![], 1, 0),
-            (vec![], vec![ClassFileVerificationType::Integer], 0, 0),
-            (vec![], vec![ClassFileVerificationType::Double], 0, 1),
+            (vec![attributes::VerificationType::Integer], vec![], 0, 0),
+            (vec![attributes::VerificationType::Long], vec![], 1, 0),
+            (vec![], vec![attributes::VerificationType::Integer], 0, 0),
+            (vec![], vec![attributes::VerificationType::Double], 0, 1),
         ] {
             let initial_frame = Frame::new(max_locals, usize::from(max_stack));
             let stack_frames = [StackFrame::FullFrame {
@@ -724,36 +724,36 @@ mod tests {
         let stack_frames = vec![
             StackFrame::SameLocals1StackItemFrame {
                 frame_type: 64,
-                stack: [ClassFileVerificationType::Object { cpool_index: 2 }],
+                stack: [attributes::VerificationType::Object { cpool_index: 2 }],
             },
             StackFrame::SameLocals1StackItemFrameExtended {
                 frame_type: 247,
                 offset_delta: 0,
-                stack: [ClassFileVerificationType::Uninitialized { offset: 3 }],
+                stack: [attributes::VerificationType::Uninitialized { offset: 3 }],
             },
             StackFrame::AppendFrame {
                 frame_type: 253,
                 offset_delta: 0,
                 locals: vec![
-                    ClassFileVerificationType::Long,
-                    ClassFileVerificationType::Double,
+                    attributes::VerificationType::Long,
+                    attributes::VerificationType::Double,
                 ],
             },
             StackFrame::FullFrame {
                 frame_type: 255,
                 offset_delta: 0,
                 locals: vec![
-                    ClassFileVerificationType::Top,
-                    ClassFileVerificationType::Integer,
-                    ClassFileVerificationType::Float,
-                    ClassFileVerificationType::Long,
-                    ClassFileVerificationType::Double,
-                    ClassFileVerificationType::Null,
-                    ClassFileVerificationType::UninitializedThis,
-                    ClassFileVerificationType::Object { cpool_index: 2 },
-                    ClassFileVerificationType::Uninitialized { offset: 7 },
+                    attributes::VerificationType::Top,
+                    attributes::VerificationType::Integer,
+                    attributes::VerificationType::Float,
+                    attributes::VerificationType::Long,
+                    attributes::VerificationType::Double,
+                    attributes::VerificationType::Null,
+                    attributes::VerificationType::UninitializedThis,
+                    attributes::VerificationType::Object { cpool_index: 2 },
+                    attributes::VerificationType::Uninitialized { offset: 7 },
                 ],
-                stack: vec![ClassFileVerificationType::Integer],
+                stack: vec![attributes::VerificationType::Integer],
             },
         ];
 
@@ -802,7 +802,7 @@ mod tests {
         let initial_frame = Frame::new(0, 1);
         let stack_frames = vec![StackFrame::SameLocals1StackItemFrame {
             frame_type: 64,
-            stack: [ClassFileVerificationType::Object { cpool_index: 99 }],
+            stack: [attributes::VerificationType::Object { cpool_index: 99 }],
         }];
 
         assert!(matches!(
@@ -818,7 +818,7 @@ mod tests {
         let stack_frames = vec![StackFrame::FullFrame {
             frame_type: 255,
             offset_delta: 0,
-            locals: vec![ClassFileVerificationType::Object { cpool_index: 99 }],
+            locals: vec![attributes::VerificationType::Object { cpool_index: 99 }],
             stack: vec![],
         }];
 

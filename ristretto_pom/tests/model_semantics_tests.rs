@@ -3,7 +3,7 @@
 
 use ristretto_pom::*;
 use serde::Deserialize;
-use serde::de::value::{Error as ValueError, StrDeserializer};
+use serde::de::value::{self, StrDeserializer};
 
 fn valid_project() -> Project {
     Project::new("com.example", "app", "1.0")
@@ -86,7 +86,7 @@ fn model_builders_preserve_configured_values() {
     let xml = quick_xml::se::to_string(&dependency).expect("serialize dependency");
     assert!(xml.contains("<optional>true</optional>"));
 
-    let invalid = Configuration::deserialize(StrDeserializer::<ValueError>::new("not a map"));
+    let invalid = Configuration::deserialize(StrDeserializer::<value::Error>::new("not a map"));
     assert!(invalid.is_err());
 }
 

@@ -1,22 +1,22 @@
 //! Inferred anchors must account for every predecessor and propagate changed types.
 #![expect(clippy::panic_in_result_fn, reason = "regression assertions")]
 use ristretto_classfile::attributes::{Attribute, Instruction, StackFrame};
-use ristretto_classfile::verifiers::Result as VerifyResult;
+use ristretto_classfile::verifiers;
 use ristretto_classfile::verifiers::bytecode::{VerifierConfig, verify_class};
 use ristretto_classfile::verifiers::context::VerificationContext;
 use ristretto_classfile::{ClassFile, JAVA_6, Method, MethodAccessFlags, Result};
 
 struct Context;
 impl VerificationContext for Context {
-    fn is_subclass(&self, a: &str, b: &str) -> VerifyResult<bool> {
+    fn is_subclass(&self, a: &str, b: &str) -> verifiers::Result<bool> {
         Ok(a == b || b == "java/lang/Object")
     }
 
-    fn is_assignable(&self, target: &str, source: &str) -> VerifyResult<bool> {
+    fn is_assignable(&self, target: &str, source: &str) -> verifiers::Result<bool> {
         self.is_subclass(source, target)
     }
 
-    fn common_superclass(&self, _: &str, _: &str) -> VerifyResult<String> {
+    fn common_superclass(&self, _: &str, _: &str) -> verifiers::Result<String> {
         Ok("java/lang/Object".to_string())
     }
 }

@@ -3409,9 +3409,8 @@ mod checksum_tests {
     use futures_util::stream;
     use ristretto_pom::DependencyScope::{Compile, Provided, Runtime};
     use ristretto_pom::{
-        ActivationFile, ActivationOs, ChecksumPolicy as PomChecksumPolicy, Exclusion, Parent,
-        Profile, Profiles, Repositories, Repository as PomRepository, RepositoryLayout,
-        RepositoryPolicy as PomRepositoryPolicy, UpdatePolicy as PomUpdatePolicy,
+        ActivationFile, ActivationOs, Exclusion, Parent, Profile, Profiles, Repositories,
+        Repository, RepositoryLayout,
     };
     use tempfile::TempDir;
 
@@ -4096,12 +4095,12 @@ mod checksum_tests {
             ("checksum".to_string(), "fail".to_string()),
         ]);
         let context = ResolutionContext::default();
-        let policy: PomRepositoryPolicy = quick_xml::de::from_str(
+        let policy: ristretto_pom::RepositoryPolicy = quick_xml::de::from_str(
             "<releases><enabled>${enabled}</enabled><updatePolicy>${update}</updatePolicy>\
              <checksumPolicy>${checksum}</checksumPolicy></releases>",
         )
         .expect("policy");
-        let repository = PomRepository::builder("${repo.id}", "${repo.url}")
+        let repository = Repository::builder("${repo.id}", "${repo.url}")
             .layout(RepositoryLayout::Default)
             .releases(policy.clone())
             .snapshots(policy)
@@ -4128,7 +4127,7 @@ mod checksum_tests {
         assert_eq!(converted.len(), 1);
         append_pom_repositories(&mut converted, None, &properties, &context).expect("none");
 
-        let legacy = PomRepository::builder("legacy", "https://repo.example")
+        let legacy = Repository::builder("legacy", "https://repo.example")
             .layout(RepositoryLayout::Legacy)
             .build();
         assert!(
@@ -4142,11 +4141,11 @@ mod checksum_tests {
         );
 
         for (pom, expected) in [
-            (PomUpdatePolicy::Always, UpdatePolicy::Always),
-            (PomUpdatePolicy::Daily, UpdatePolicy::Daily),
-            (PomUpdatePolicy::Never, UpdatePolicy::Never),
+            (ristretto_pom::UpdatePolicy::Always, UpdatePolicy::Always),
+            (ristretto_pom::UpdatePolicy::Daily, UpdatePolicy::Daily),
+            (ristretto_pom::UpdatePolicy::Never, UpdatePolicy::Never),
             (
-                PomUpdatePolicy::Interval("interval:5".to_string()),
+                ristretto_pom::UpdatePolicy::Interval("interval:5".to_string()),
                 UpdatePolicy::IntervalMinutes(5),
             ),
         ] {
@@ -4157,27 +4156,30 @@ mod checksum_tests {
             UpdatePolicy::Daily
         );
         assert!(
-            pom_update_policy(Some(&PomUpdatePolicy::Interval("invalid".to_string()))).is_err()
+            pom_update_policy(Some(&ristretto_pom::UpdatePolicy::Interval(
+                "invalid".to_string()
+            )))
+            .is_err()
         );
         assert_eq!(
-            pom_checksum_policy(Some(&PomChecksumPolicy::Fail)),
+            pom_checksum_policy(Some(&ristretto_pom::ChecksumPolicy::Fail)),
             ChecksumPolicy::Fail
         );
         assert_eq!(
-            pom_checksum_policy(Some(&PomChecksumPolicy::Ignore)),
+            pom_checksum_policy(Some(&ristretto_pom::ChecksumPolicy::Ignore)),
             ChecksumPolicy::Ignore
         );
         assert_eq!(
-            pom_checksum_policy(Some(&PomChecksumPolicy::Warn)),
+            pom_checksum_policy(Some(&ristretto_pom::ChecksumPolicy::Warn)),
             ChecksumPolicy::Warn
         );
         assert_eq!(pom_checksum_policy(None), ChecksumPolicy::Warn);
 
-        let invalid_update: PomRepositoryPolicy =
+        let invalid_update: ristretto_pom::RepositoryPolicy =
             quick_xml::de::from_str("<releases><updatePolicy>${missing}</updatePolicy></releases>")
                 .expect("expression");
         assert!(interpolated_update_policy(&invalid_update, &properties, &context).is_err());
-        let invalid_checksum: PomRepositoryPolicy = quick_xml::de::from_str(
+        let invalid_checksum: ristretto_pom::RepositoryPolicy = quick_xml::de::from_str(
             "<releases><checksumPolicy>${missing}</checksumPolicy></releases>",
         )
         .expect("expression");

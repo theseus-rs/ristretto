@@ -1,5 +1,8 @@
 //! Class-file constraints that relate names, descriptors, flags, and attributes.
 use super::error::{Result, VerifyError};
+use crate::attributes::StackFrame::{
+    AppendFrame, FullFrame, SameLocals1StackItemFrame, SameLocals1StackItemFrameExtended,
+};
 use crate::attributes::{Attribute, AttributeKind, TargetType};
 use crate::{
     BaseType, CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, Constant,
@@ -597,12 +600,11 @@ pub(super) fn verify_code_metadata(
             }
             Attribute::StackMapTable { frames, .. } => {
                 for frame in frames {
-                    use crate::attributes::StackFrame as F;
                     let (locals, stack): (&[_], &[_]) = match frame {
-                        F::FullFrame { locals, stack, .. } => (locals, stack),
-                        F::AppendFrame { locals, .. } => (locals, &[]),
-                        F::SameLocals1StackItemFrame { stack, .. }
-                        | F::SameLocals1StackItemFrameExtended { stack, .. } => (&[], stack),
+                        FullFrame { locals, stack, .. } => (locals, stack),
+                        AppendFrame { locals, .. } => (locals, &[]),
+                        SameLocals1StackItemFrame { stack, .. }
+                        | SameLocals1StackItemFrameExtended { stack, .. } => (&[], stack),
                         _ => (&[], &[]),
                     };
                     for ty in locals.iter().chain(stack) {

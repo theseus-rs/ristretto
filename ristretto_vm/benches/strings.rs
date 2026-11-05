@@ -6,7 +6,7 @@
 
 use criterion::{BatchSize, BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use ristretto_classfile::{JavaString, VerifyMode};
-use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
+use ristretto_gc::GarbageCollector;
 use ristretto_types::JavaObject;
 use ristretto_vm::{ConfigurationBuilder, Thread, VM};
 use std::hint::black_box;
@@ -25,7 +25,7 @@ impl<'a> Fixture<'a> {
             .interpreted(true)
             .verify_mode(VerifyMode::None)
             .garbage_collector(GarbageCollector::with_config(
-                GcConfigurationBuilder::new().threads(1).build(),
+                ristretto_gc::ConfigurationBuilder::new().threads(1).build(),
             ))
             .build()
             .expect("configuration");

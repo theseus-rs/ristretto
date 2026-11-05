@@ -1455,7 +1455,7 @@ pub async fn fstat_0<T: Thread + 'static>(
 
     #[cfg(target_os = "macos")]
     {
-        use std::os::macos::fs::MetadataExt as MacMetadataExt;
+        use std::os::macos::fs::MetadataExt;
         set_birthtime_fields(
             object,
             metadata.st_birthtime(),
@@ -1987,7 +1987,7 @@ pub async fn lstat_0<T: Thread + 'static>(
 
     #[cfg(target_os = "macos")]
     {
-        use std::os::macos::fs::MetadataExt as MacMetadataExt;
+        use std::os::macos::fs::MetadataExt;
         set_birthtime_fields(
             object,
             metadata.st_birthtime(),
@@ -2719,7 +2719,7 @@ pub fn stat_0_1<T: Thread + 'static>(
     // Birth time; macOS supports it, Linux may not
     #[cfg(target_os = "macos")]
     {
-        use std::os::macos::fs::MetadataExt as MacMetadataExt;
+        use std::os::macos::fs::MetadataExt;
         set_birthtime_fields(
             object,
             metadata.st_birthtime(),

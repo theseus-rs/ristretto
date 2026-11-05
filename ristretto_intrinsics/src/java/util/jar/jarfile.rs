@@ -4,7 +4,7 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
-use ristretto_types::{Parameters, Result, VM as _};
+use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
 
 /// Implementation of `JarFile.getMetaInfEntryNames` for Java 8 and earlier.

@@ -6,12 +6,11 @@
 //! the same lifetime semantics as a `HotSpot` runtime stub without relying on pointer width, host
 //! endianness, or an architecture-specific executable-memory implementation.
 
-use parking_lot::RwLock as ParkingRwLock;
 use portable_atomic::{AtomicI64, Ordering};
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_21, JAVA_25};
 use ristretto_classloader::{Reference, Value};
-use ristretto_gc::sync::RwLock as GcRwLock;
+use ristretto_gc::sync;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -65,7 +64,7 @@ struct DowncallStub {
 
 #[derive(Debug, Default)]
 struct DowncallStubs {
-    stubs: ParkingRwLock<HashMap<i64, DowncallStub>>,
+    stubs: parking_lot::RwLock<HashMap<i64, DowncallStub>>,
 }
 
 impl DowncallStubs {
@@ -108,7 +107,7 @@ fn class_name(value: &Value) -> Result<String> {
 }
 
 fn decode_method_type(
-    reference: &ristretto_gc::Gc<GcRwLock<Reference>>,
+    reference: &ristretto_gc::Gc<sync::RwLock<Reference>>,
 ) -> Result<MethodTypeDescriptor> {
     let method_type = reference.read();
     let method_type = method_type.as_object_ref()?;
@@ -167,7 +166,7 @@ fn decode_vm_storage(value: &Value) -> Result<Option<VMStorageDescriptor>> {
 }
 
 fn decode_vm_storages(
-    reference: &ristretto_gc::Gc<GcRwLock<Reference>>,
+    reference: &ristretto_gc::Gc<sync::RwLock<Reference>>,
 ) -> Result<Vec<Option<VMStorageDescriptor>>> {
     let storages = reference.read();
     let (storage_array_class, storages) = storages.as_class_vec_ref()?;
@@ -224,7 +223,7 @@ fn decode_vm_storage_matrix(value: &Value) -> Result<Vec<Vec<VMStorageDescriptor
         .collect()
 }
 
-fn decode_abi(reference: &ristretto_gc::Gc<GcRwLock<Reference>>) -> Result<AbiDescriptor> {
+fn decode_abi(reference: &ristretto_gc::Gc<sync::RwLock<Reference>>) -> Result<AbiDescriptor> {
     let (
         architecture,
         input_storage,

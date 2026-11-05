@@ -1700,7 +1700,7 @@ mod tests {
     #[tokio::test]
     #[cfg(target_family = "unix")]
     async fn test_readv_returns_after_one_partial_socket_read() {
-        use std::io::Write as _;
+        use std::io::Write;
         use std::os::fd::{AsRawFd, OwnedFd};
         use std::os::unix::net::UnixStream;
         use std::time::Duration;

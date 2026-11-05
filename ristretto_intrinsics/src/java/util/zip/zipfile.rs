@@ -6,7 +6,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_gc::sync::RwLock;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
-use ristretto_types::{Parameters, Result, VM as _};
+use ristretto_types::{Parameters, Result, VM};
 use std::collections::HashMap;
 use std::io::{self, Read};
 use std::sync::Arc;

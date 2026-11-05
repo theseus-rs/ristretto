@@ -19,7 +19,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tokio::sync::{Mutex as TokioMutex, RwLock};
+use tokio::sync::{self, RwLock};
 
 #[expect(clippy::unnecessary_wraps)]
 pub(crate) fn class_file(
@@ -271,9 +271,9 @@ pub(crate) struct MockVm {
     next_nio_fd: AtomicUsize,
     module_system: MockModuleSystem,
     class_path: ClassPath,
-    stdin: Arc<TokioMutex<dyn Read + Send + Sync>>,
-    stdout: Arc<TokioMutex<dyn Write + Send + Sync>>,
-    stderr: Arc<TokioMutex<dyn Write + Send + Sync>>,
+    stdin: Arc<sync::Mutex<dyn Read + Send + Sync>>,
+    stdout: Arc<sync::Mutex<dyn Write + Send + Sync>>,
+    stderr: Arc<sync::Mutex<dyn Write + Send + Sync>>,
     native_memory: NativeMemory,
     resource_manager: ResourceManager,
     file_handles: HandleManager<i64, FileHandle>,
@@ -310,9 +310,9 @@ impl MockVm {
             ),
             module_system: MockModuleSystem::with_resolved_configuration(resolved_configuration),
             class_path: ClassPath::new(Vec::new()),
-            stdin: Arc::new(TokioMutex::new(Cursor::new(Vec::new()))),
-            stdout: Arc::new(TokioMutex::new(Cursor::new(Vec::new()))),
-            stderr: Arc::new(TokioMutex::new(Cursor::new(Vec::new()))),
+            stdin: Arc::new(sync::Mutex::new(Cursor::new(Vec::new()))),
+            stdout: Arc::new(sync::Mutex::new(Cursor::new(Vec::new()))),
+            stderr: Arc::new(sync::Mutex::new(Cursor::new(Vec::new()))),
             native_memory: NativeMemory::new(),
             resource_manager: ResourceManager::new(),
             file_handles: HandleManager::new(),
@@ -473,15 +473,15 @@ impl VM for MockVm {
         false
     }
 
-    fn stdin(&self) -> Arc<TokioMutex<dyn Read + Send + Sync>> {
+    fn stdin(&self) -> Arc<sync::Mutex<dyn Read + Send + Sync>> {
         self.stdin.clone()
     }
 
-    fn stdout(&self) -> Arc<TokioMutex<dyn Write + Send + Sync>> {
+    fn stdout(&self) -> Arc<sync::Mutex<dyn Write + Send + Sync>> {
         self.stdout.clone()
     }
 
-    fn stderr(&self) -> Arc<TokioMutex<dyn Write + Send + Sync>> {
+    fn stderr(&self) -> Arc<sync::Mutex<dyn Write + Send + Sync>> {
         self.stderr.clone()
     }
 

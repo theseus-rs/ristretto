@@ -15,9 +15,9 @@ mod module;
 mod source;
 mod version;
 
-use argument::{Arguments, VerifyMode as CliVerifyMode};
+use argument::Arguments;
 use clap::CommandFactory;
-use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
+use ristretto_gc::GarbageCollector;
 use ristretto_vm::Error::{InternalError, Throwable};
 use ristretto_vm::{
     ClassPath, ConfigurationBuilder, Error, Result, VM, Value, VerifyMode, startup_trace,
@@ -113,7 +113,7 @@ async fn common_main(mut cli: Arguments) -> Result<()> {
         configuration_builder = configuration_builder.jar(PathBuf::from(jar));
     }
 
-    let gc_config = GcConfigurationBuilder::new().build();
+    let gc_config = ristretto_gc::ConfigurationBuilder::new().build();
     let garbage_collector = GarbageCollector::with_config(gc_config);
     configuration_builder = configuration_builder.garbage_collector(garbage_collector);
 
@@ -135,9 +135,9 @@ async fn common_main(mut cli: Arguments) -> Result<()> {
     configuration_builder = configuration_builder.interpreted(cli.x_options.interpreted);
 
     let verify_mode = match cli.x_options.verify {
-        CliVerifyMode::All => VerifyMode::All,
-        CliVerifyMode::Remote => VerifyMode::Remote,
-        CliVerifyMode::None => VerifyMode::None,
+        argument::VerifyMode::All => VerifyMode::All,
+        argument::VerifyMode::Remote => VerifyMode::Remote,
+        argument::VerifyMode::None => VerifyMode::None,
     };
     configuration_builder = configuration_builder.verify_mode(verify_mode);
 

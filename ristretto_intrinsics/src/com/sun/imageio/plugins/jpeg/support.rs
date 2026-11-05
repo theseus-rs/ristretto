@@ -5,7 +5,7 @@ use portable_atomic::{AtomicI32, AtomicI64};
 use ristretto_classloader::{Reference, Value};
 use ristretto_gc::sync::RwLock;
 use ristretto_gc::{Gc, GcRootGuard};
-use ristretto_types::{Error, JavaError, JavaObject, Result, Thread, VM as _};
+use ristretto_types::{Error, JavaError, JavaObject, Result, Thread, VM};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};

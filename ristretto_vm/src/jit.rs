@@ -1,5 +1,5 @@
 use crate::Error::InternalError;
-use crate::jit_runtime_helpers::{self as runtime_helpers, RuntimeContext};
+use crate::jit_runtime_helpers::{self, RuntimeContext};
 use crate::{Result, Thread, VM};
 use dashmap::DashMap;
 #[cfg(not(target_family = "wasm"))]
@@ -230,7 +230,7 @@ impl Compiler {
         // Fast-fail: skip methods that contain unsupported instructions
         let function = if ristretto_jit::Compiler::can_compile(definition) {
             let class_file = class.class_file();
-            let symbols = runtime_helpers::symbols();
+            let symbols = jit_runtime_helpers::symbols();
             match self.jit_compiler.compile(class_file, definition, &symbols) {
                 Ok(function) => {
                     let function = Arc::new(function);
@@ -349,7 +349,7 @@ fn process_compilation_batch(
             // Fast-fail: skip methods that contain unsupported instructions
             let function = if ristretto_jit::Compiler::can_compile(definition) {
                 let class_file = request.class.class_file();
-                let symbols = runtime_helpers::symbols();
+                let symbols = jit_runtime_helpers::symbols();
                 match jit_compiler.compile(class_file, definition, &symbols) {
                     Ok(function) => {
                         let function = Arc::new(function);

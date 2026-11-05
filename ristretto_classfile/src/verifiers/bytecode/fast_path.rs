@@ -1115,9 +1115,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
 mod tests {
     use super::*;
     use crate::Version;
-    use crate::attributes::{
-        ArrayType, StackFrame, TableSwitch, VerificationType as ClassFileVerificationType,
-    };
+    use crate::attributes::{self, ArrayType, StackFrame, TableSwitch};
     use crate::constant::Constant;
     use crate::constant_pool::ConstantPool;
     use crate::verifiers::bytecode::handlers::test_utils::MockContext;
@@ -1716,8 +1714,8 @@ mod tests {
                 frames: vec![StackFrame::FullFrame {
                     frame_type: 255,
                     offset_delta: 1,
-                    locals: vec![ClassFileVerificationType::Integer],
-                    stack: vec![ClassFileVerificationType::Object {
+                    locals: vec![attributes::VerificationType::Integer],
+                    stack: vec![attributes::VerificationType::Object {
                         cpool_index: catch_index,
                     }],
                 }],
@@ -2301,8 +2299,8 @@ mod tests {
                     frames: vec![StackFrame::FullFrame {
                         frame_type: 255,
                         offset_delta: 3,
-                        locals: vec![ClassFileVerificationType::Integer],
-                        stack: vec![ClassFileVerificationType::Object {
+                        locals: vec![attributes::VerificationType::Integer],
+                        stack: vec![attributes::VerificationType::Object {
                             cpool_index: throwable,
                         }],
                     }],
@@ -2354,7 +2352,7 @@ mod tests {
                     frame_type: 255,
                     offset_delta: 0,
                     locals: vec![],
-                    stack: vec![ClassFileVerificationType::Object {
+                    stack: vec![attributes::VerificationType::Object {
                         cpool_index: throwable,
                     }],
                 }],
@@ -2444,7 +2442,7 @@ mod tests {
                     frame_type: 255,
                     offset_delta: 0,
                     locals: Vec::new(),
-                    stack: vec![ClassFileVerificationType::Object {
+                    stack: vec![attributes::VerificationType::Object {
                         cpool_index: class_file.this_class,
                     }],
                 }],

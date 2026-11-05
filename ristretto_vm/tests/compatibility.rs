@@ -16,14 +16,14 @@
 mod common;
 
 #[cfg(not(target_family = "wasm"))]
-use common::java::{home as java_home, runtime_properties as parse_runtime_properties};
+use common::java;
 #[cfg(not(target_family = "wasm"))]
 use rayon::ThreadPoolBuilder;
 #[cfg(not(target_family = "wasm"))]
 use rayon::prelude::*;
 use regex::Regex;
 use ristretto_classloader::DEFAULT_JAVA_VERSION;
-use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
+use ristretto_gc::GarbageCollector;
 use ristretto_vm::Error::InternalError;
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
 use std::num::NonZero;
@@ -33,7 +33,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 #[cfg(not(target_family = "wasm"))]
 use std::{collections::HashMap, fs};
-use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync;
 use tracing::metadata::LevelFilter;
 use tracing::{debug, error, info, trace, warn};
 use tracing_subscriber::{EnvFilter, fmt};
@@ -301,7 +301,7 @@ fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<
             let home = if let Some(home) = java_homes.get(&version) {
                 home.clone()
             } else {
-                let home = java_home(&version)?;
+                let home = java::home(&version)?;
                 java_homes.insert(version.clone(), home.clone());
                 home
             };
@@ -316,7 +316,7 @@ fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<
             });
             continue;
         }
-        let properties = parse_runtime_properties(&properties_file)?;
+        let properties = java::runtime_properties(&properties_file)?;
         //  Skip platform specific fixtures before runtime setup and compilation
         if let Some(os) = properties.get("os")
             && os != std::env::consts::OS
@@ -346,7 +346,7 @@ fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<
             let home = if let Some(home) = java_homes.get(version) {
                 home.clone()
             } else {
-                let home = java_home(version)?;
+                let home = java::home(version)?;
                 java_homes.insert(version.to_string(), home.clone());
                 home
             };
@@ -392,7 +392,7 @@ fn compile_test(test_case: &TestCase) -> Result<()> {
         }
     }
 
-    let output = common::java::compile(
+    let output = java::compile(
         &test_case.java_home,
         source_dir,
         class_dir,
@@ -423,7 +423,7 @@ fn expected_output(test_case: &TestCase) -> Result<(Duration, String)> {
         test_case.class_dir.to_string_lossy().into_owned(),
         TEST_CLASS_NAME.to_string(),
     ]);
-    let mut java = common::java::command(&test_case.java_home, "java");
+    let mut java = java::command(&test_case.java_home, "java");
     java.args(&arguments).current_dir(&test_case.source_dir);
     let output = common::process::run(&mut java, Duration::from_secs(120))?;
     output.require_success()?;
@@ -525,8 +525,8 @@ fn run_vm_once(
                     .build()
                     .map_err(|error| InternalError(error.to_string()))?;
                 runtime.block_on(async {
-                    let stdout = Arc::new(AsyncMutex::new(Vec::new()));
-                    let stderr = Arc::new(AsyncMutex::new(Vec::new()));
+                    let stdout = Arc::new(sync::Mutex::new(Vec::new()));
+                    let stderr = Arc::new(sync::Mutex::new(Vec::new()));
                     match tokio::time::timeout(
                         test_timeout,
                         run_test(
@@ -586,14 +586,14 @@ async fn run_test(
     source_dir: &Path,
     system_properties: &[(String, String)],
     interpreted: bool,
-    stdout: Arc<AsyncMutex<Vec<u8>>>,
-    stderr: Arc<AsyncMutex<Vec<u8>>>,
+    stdout: Arc<sync::Mutex<Vec<u8>>>,
+    stderr: Arc<sync::Mutex<Vec<u8>>>,
 ) -> Result<(Duration, String)> {
     let start_time = Instant::now();
     let class_path = ClassPath::from(&[class_dir]);
 
     // Create a garbage collector configured to use only one thread
-    let gc_config = GcConfigurationBuilder::new().threads(1).build();
+    let gc_config = ristretto_gc::ConfigurationBuilder::new().threads(1).build();
     let garbage_collector = GarbageCollector::with_config(gc_config);
     let user_dir = {
         let s = source_dir.to_string_lossy().to_string();

@@ -5,7 +5,7 @@ use crate::vm::VM;
 use crate::{Class, ConfigurationBuilder, Result};
 use ristretto_classfile::{ClassFile, ConstantPool, MethodAccessFlags};
 use ristretto_classloader::ClassPath;
-use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
+use ristretto_gc::GarbageCollector;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -13,7 +13,7 @@ pub(crate) async fn thread() -> Result<(Arc<VM>, Arc<Thread>)> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let classes_path = cargo_manifest.join("..").join("classes");
     let class_path = ClassPath::from(&[classes_path]);
-    let gc_config = GcConfigurationBuilder::new().threads(1).build();
+    let gc_config = ristretto_gc::ConfigurationBuilder::new().threads(1).build();
     let garbage_collector = GarbageCollector::with_config(gc_config);
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())

@@ -9,21 +9,21 @@ use ristretto_classfile::*;
 
 use ristretto_classfile::verifiers::bytecode::{VerifierConfig, verify_class};
 use ristretto_classfile::verifiers::context::VerificationContext;
-use ristretto_classfile::verifiers::error::{Result as VResult, VerifyError};
+use ristretto_classfile::verifiers::error::{self, VerifyError};
 
 struct Context;
 impl VerificationContext for Context {
-    fn is_subclass(&self, source: &str, target: &str) -> VResult<bool> {
+    fn is_subclass(&self, source: &str, target: &str) -> error::Result<bool> {
         self.is_assignable(target, source)
     }
 
-    fn is_assignable(&self, target: &str, source: &str) -> VResult<bool> {
+    fn is_assignable(&self, target: &str, source: &str) -> error::Result<bool> {
         Ok(target == source
             || target == "java/lang/Object"
             || (source == "Audit" && target == "Parent"))
     }
 
-    fn common_superclass(&self, a: &str, b: &str) -> VResult<String> {
+    fn common_superclass(&self, a: &str, b: &str) -> error::Result<String> {
         Ok(if a == b { a } else { "java/lang/Object" }.to_string())
     }
 }
@@ -88,7 +88,6 @@ fn full(
 }
 
 use Instruction::*;
-use VerificationType as T;
 
 fn check(mut class: ClassFile<'static>, method: Option<Method>, valid: bool) {
     if let Some(method) = method {
@@ -171,7 +170,11 @@ fn oversized_frame_truncated() {
         0,
         0,
         vec![Return],
-        Some(vec![full(0, vec![T::Integer], vec![T::Integer])]),
+        Some(vec![full(
+            0,
+            vec![VerificationType::Integer],
+            vec![VerificationType::Integer],
+        )]),
     );
     check(c, Some(m), false);
 }
@@ -188,7 +191,7 @@ fn valid_long_stackmap() {
         vec![Lconst_0, Nop, Pop2, Return],
         Some(vec![StackFrame::SameLocals1StackItemFrame {
             frame_type: 65,
-            stack: [T::Long],
+            stack: [VerificationType::Long],
         }]),
     );
     check(c, Some(m), true);
@@ -207,7 +210,7 @@ fn valid_append_frame() {
         Some(vec![StackFrame::AppendFrame {
             frame_type: 252,
             offset_delta: 2,
-            locals: vec![T::Integer],
+            locals: vec![VerificationType::Integer],
         }]),
     );
     check(c, Some(m), true);
@@ -223,7 +226,7 @@ fn stackmap_overflow_discarded() {
         0,
         0,
         vec![Nop, Return],
-        Some(vec![full(1, vec![], vec![T::Integer])]),
+        Some(vec![full(1, vec![], vec![VerificationType::Integer])]),
     );
     check(c, Some(m), false);
 }
@@ -238,7 +241,11 @@ fn valid_handler_byte_index_mismatch() {
         1,
         0,
         vec![Bipush(0), Pop, Return, Pop, Return],
-        Some(vec![full(4, vec![], vec![T::Object { cpool_index: 4 }])]),
+        Some(vec![full(
+            4,
+            vec![],
+            vec![VerificationType::Object { cpool_index: 4 }],
+        )]),
     );
     if let Attribute::Code {
         exception_table, ..
@@ -301,7 +308,7 @@ fn initial_frame_overridden() {
         1,
         1,
         vec![Fload_0, Pop, Return],
-        Some(vec![full(0, vec![T::Float], vec![])]),
+        Some(vec![full(0, vec![VerificationType::Float], vec![])]),
     );
     check(c, Some(m), false);
 }
@@ -316,7 +323,7 @@ fn top_local_promoted() {
         1,
         1,
         vec![Nop, Nop, Iload_0, Pop, Return],
-        Some(vec![full(2, vec![T::Integer], vec![])]),
+        Some(vec![full(2, vec![VerificationType::Integer], vec![])]),
     );
     check(c, Some(m), false);
 }
@@ -369,7 +376,7 @@ fn overwritten_long_slot_cannot_be_restored_by_stackmap() {
         vec![
             Lconst_0, Lstore_0, Iconst_0, Istore_1, Nop, Lload_0, Pop2, Return,
         ],
-        Some(vec![full(4, vec![T::Long], vec![])]),
+        Some(vec![full(4, vec![VerificationType::Long], vec![])]),
     );
     check(class, Some(method), false);
 }
@@ -408,7 +415,7 @@ fn constructor_stack_map_cannot_clear_initialization_state() {
         1,
         1,
         vec![Aconst_null, Astore_0, Return],
-        Some(vec![full(2, vec![T::Null], vec![])]),
+        Some(vec![full(2, vec![VerificationType::Null], vec![])]),
     );
     method.access_flags = MethodAccessFlags::PUBLIC;
     class.methods.push(method);
@@ -557,15 +564,15 @@ fn valid_v50_inference_fallback() {
 fn member_access_context_can_reject_protected_receiver() {
     struct Deny;
     impl VerificationContext for Deny {
-        fn is_subclass(&self, _: &str, _: &str) -> VResult<bool> {
+        fn is_subclass(&self, _: &str, _: &str) -> error::Result<bool> {
             Ok(true)
         }
 
-        fn is_assignable(&self, _: &str, _: &str) -> VResult<bool> {
+        fn is_assignable(&self, _: &str, _: &str) -> error::Result<bool> {
             Ok(true)
         }
 
-        fn common_superclass(&self, _: &str, _: &str) -> VResult<String> {
+        fn common_superclass(&self, _: &str, _: &str) -> error::Result<String> {
             Ok("java/lang/Object".into())
         }
 
@@ -576,7 +583,7 @@ fn member_access_context_can_reject_protected_receiver() {
         fn verify_member_access(
             &self,
             access: &verifiers::context::MemberAccess<'_>,
-        ) -> VResult<()> {
+        ) -> error::Result<()> {
             assert_eq!(access.name, "x");
             Err(VerifyError::VerifyError("inaccessible member".into()))
         }
@@ -610,7 +617,7 @@ fn handler_integer_stack() {
         1,
         0,
         vec![Nop, Return, Pop, Return],
-        Some(vec![full(2, vec![], vec![T::Integer])]),
+        Some(vec![full(2, vec![], vec![VerificationType::Integer])]),
     );
     if let Attribute::Code {
         exception_table, ..
@@ -639,7 +646,7 @@ fn catch_non_throwable() {
         Some(vec![full(
             2,
             vec![],
-            vec![T::Object {
+            vec![VerificationType::Object {
                 cpool_index: object,
             }],
         )]),
@@ -738,7 +745,7 @@ fn valid_array_stackmap() {
         vec![Aload_0, Iconst_0, Iaload, Ireturn],
         Some(vec![full(
             0,
-            vec![T::Object { cpool_index: array }],
+            vec![VerificationType::Object { cpool_index: array }],
             vec![],
         )]),
     );
@@ -1519,7 +1526,11 @@ fn uninitialized_metadata_uses_byte_offsets() {
             1,
             0,
             vec![Sipush(1), Pop, New(object), Pop, Return],
-            Some(vec![full(7, vec![], vec![T::Uninitialized { offset }])]),
+            Some(vec![full(
+                7,
+                vec![],
+                vec![VerificationType::Uninitialized { offset }],
+            )]),
         );
         class.methods.push(test_method);
         let result = class.verify();

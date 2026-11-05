@@ -7,7 +7,7 @@
 use criterion::{BatchSize, Criterion, Throughput, criterion_group, criterion_main};
 use ristretto_classfile::{ClassFile, ConstantPool, VerifyMode};
 use ristretto_classloader::{Class, Reference, Value};
-use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
+use ristretto_gc::GarbageCollector;
 use ristretto_intrinsics::java::lang::class::{for_name_0, get_class_no_init};
 use ristretto_intrinsics::java::lang::reflect::array::{multi_new_array, new_array};
 use ristretto_types::{JavaObject, Parameters};
@@ -44,7 +44,7 @@ fn benchmarks(criterion: &mut Criterion) {
         .interpreted(true)
         .verify_mode(VerifyMode::None)
         .garbage_collector(GarbageCollector::with_config(
-            GcConfigurationBuilder::new().threads(1).build(),
+            ristretto_gc::ConfigurationBuilder::new().threads(1).build(),
         ))
         .build()
         .expect("configuration");
@@ -251,7 +251,7 @@ fn allocation_benchmarks(criterion: &mut Criterion) {
                         .interpreted(true)
                         .verify_mode(VerifyMode::None)
                         .garbage_collector(GarbageCollector::with_config(
-                            GcConfigurationBuilder::new().threads(1).build(),
+                            ristretto_gc::ConfigurationBuilder::new().threads(1).build(),
                         ))
                         .build()
                         .expect("configuration");

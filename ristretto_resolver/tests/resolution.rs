@@ -22,7 +22,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
-use std::sync::Mutex as StdMutex;
+use std::sync::Mutex;
 use tempfile::TempDir;
 use url::Url;
 
@@ -60,7 +60,7 @@ struct RepositoryAwareTransport;
 
 #[derive(Debug, Clone)]
 struct RecordingTransport {
-    repositories: Arc<StdMutex<Vec<RemoteRepository>>>,
+    repositories: Arc<Mutex<Vec<RemoteRepository>>>,
 }
 
 impl Transport for RecordingTransport {
@@ -805,7 +805,7 @@ async fn routes_mirror_authentication_and_proxy_configuration_to_transport() -> 
         repository: mirror_repository,
         mirror_of: "private".to_string(),
     };
-    let repositories = Arc::new(StdMutex::new(Vec::new()));
+    let repositories = Arc::new(Mutex::new(Vec::new()));
     let transport = RecordingTransport {
         repositories: Arc::clone(&repositories),
     };

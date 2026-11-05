@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::parse::{Parse, ParseStream, Result as SynResult};
+use syn::parse::{self, Parse, ParseStream};
 use syn::{Expr, ItemFn, LitStr};
 
 /// Helper struct for parsing macro attributes
@@ -10,7 +10,7 @@ struct IntrinsicMethodArgs {
 }
 
 impl Parse for IntrinsicMethodArgs {
-    fn parse(input: ParseStream) -> SynResult<Self> {
+    fn parse(input: ParseStream) -> parse::Result<Self> {
         let signature: LitStr = input.parse()?;
         input.parse::<syn::Token![,]>()?;
         let version_spec: Expr = input.parse()?;

@@ -586,7 +586,7 @@ impl Display for VerificationType {
 mod tests {
     use super::*;
     use crate::JavaString;
-    use crate::verifiers::bytecode::handlers::test_utils as handler_test_utils;
+    use crate::verifiers::bytecode::handlers::test_utils;
 
     struct MockContext;
 
@@ -1010,7 +1010,7 @@ mod tests {
         let error_object = VerificationType::Object(JavaString::from("error"));
         let other_object = VerificationType::Object(JavaString::from("other"));
         assert!(error_object.merge(&other_object, &ctx).is_err());
-        let handler_ctx = handler_test_utils::MockContext::PERMISSIVE;
+        let handler_ctx = test_utils::MockContext::PERMISSIVE;
         let handler_error_object = VerificationType::Object(JavaString::from("error"));
         let handler_other_object = VerificationType::Object(JavaString::from("other"));
         assert!(
@@ -1029,7 +1029,7 @@ mod tests {
     #[test]
     fn test_merge_array_cases() {
         let ctx = MockContext;
-        let handler_ctx = handler_test_utils::MockContext::PERMISSIVE;
+        let handler_ctx = test_utils::MockContext::PERMISSIVE;
         let error_object = VerificationType::Object(JavaString::from("error"));
         let other_object = VerificationType::Object(JavaString::from("other"));
         let handler_error_object = VerificationType::Object(JavaString::from("error"));
@@ -1103,7 +1103,7 @@ mod tests {
     #[test]
     fn test_merge_uninitialized_cases() {
         let ctx = MockContext;
-        let handler_ctx = handler_test_utils::MockContext::PERMISSIVE;
+        let handler_ctx = test_utils::MockContext::PERMISSIVE;
 
         assert_eq!(
             VerificationType::Top,

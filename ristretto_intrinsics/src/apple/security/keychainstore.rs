@@ -3,7 +3,7 @@ use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
-use ristretto_types::{Parameters, Result, Thread, VM as _};
+use ristretto_types::{Parameters, Result, Thread, VM};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 

@@ -6,7 +6,7 @@
 
 use libjpeg_turbo_rs::HuffmanTableDef;
 use libjpeg_turbo_rs::common::quant_table::ZIGZAG_ORDER;
-use libjpeg_turbo_rs::encode::{marker_writer, tables as standard};
+use libjpeg_turbo_rs::encode::{marker_writer, tables};
 
 mod decode;
 mod encode;
@@ -105,17 +105,17 @@ impl Bank {
         for (i, bits, values, ac_bits, ac_values) in [
             (
                 0,
-                standard::DC_LUMINANCE_BITS,
-                standard::DC_LUMINANCE_VALUES,
-                standard::AC_LUMINANCE_BITS,
-                standard::AC_LUMINANCE_VALUES,
+                tables::DC_LUMINANCE_BITS,
+                tables::DC_LUMINANCE_VALUES,
+                tables::AC_LUMINANCE_BITS,
+                tables::AC_LUMINANCE_VALUES,
             ),
             (
                 1,
-                standard::DC_CHROMINANCE_BITS,
-                standard::DC_CHROMINANCE_VALUES,
-                standard::AC_CHROMINANCE_BITS,
-                standard::AC_CHROMINANCE_VALUES,
+                tables::DC_CHROMINANCE_BITS,
+                tables::DC_CHROMINANCE_VALUES,
+                tables::AC_CHROMINANCE_BITS,
+                tables::AC_CHROMINANCE_VALUES,
             ),
         ] {
             self.dc[i] = Some(HuffmanTableDef {
