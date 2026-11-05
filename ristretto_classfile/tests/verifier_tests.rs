@@ -512,8 +512,8 @@ fn test_java8_with_stackmap_uses_fast_path() -> Result<()> {
 }
 
 #[test]
-fn test_fallback_to_inference_when_configured() -> Result<()> {
-    let class_file = create_test_class_file(Version::Java8 { minor: 0 })?;
+fn test_java6_fallback_to_inference_when_configured() -> Result<()> {
+    let class_file = create_test_class_file(Version::Java6 { minor: 0 })?;
 
     // Code with branch but no StackMapTable
     let code = vec![
@@ -540,11 +540,11 @@ fn test_fallback_to_inference_when_configured() -> Result<()> {
         attributes: vec![code_attribute],
     };
 
-    // With strict config, this should fail
+    // Version 50.0 consistently falls back when type checking fails.
     let strict_config = VerifierConfig::strict();
     let context = TestContext;
-    let _result = verify_method(&class_file, &method, &context, &strict_config);
-    // May fail or fall back depending on implementation
+    let result = verify_method(&class_file, &method, &context, &strict_config)?;
+    assert_eq!(result.path_used, VerificationPath::Inference);
 
     // With permissive config, should fall back to inference
     let permissive_config = VerifierConfig::permissive();
@@ -586,8 +586,8 @@ fn test_zero_target_loop_rejects_incompatible_local_types() -> Result<()> {
 }
 
 #[test]
-fn test_zero_target_loop_uses_inference_without_stackmaps() -> Result<()> {
-    for version in [Version::Java6 { minor: 0 }, Version::Java8 { minor: 0 }] {
+fn test_legacy_zero_target_loop_uses_inference_without_stackmaps() -> Result<()> {
+    for version in [Version::Java5 { minor: 0 }, Version::Java6 { minor: 0 }] {
         let mut class = create_test_class_file(version)?;
         let descriptor = class.constant_pool.add_utf8("(I)V")?;
         for branch in [Instruction::Goto(-4), Instruction::Goto_w(-4)] {

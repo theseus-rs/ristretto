@@ -37,8 +37,8 @@
 //! 2. **Slow Path (Fallback)**: Type-inference verification
 //!    - Classic iterative dataflow analysis
 //!    - Computes types via merging at control flow points
-//!    - Used for pre-Java 6 classes or when fast path fails
-//!    - Controlled by `FallbackStrategy` configuration
+//!    - Used for pre-Java 6 classes or after failed version 50.0 type checking
+//!    - Never substitutes for mandatory type checking in later class-file versions
 //!
 //! # Usage
 //!
@@ -46,11 +46,11 @@
 //! use ristretto_classfile::verifiers::bytecode::unified::verify_method;
 //! use ristretto_classfile::verifiers::bytecode::config::VerifierConfig;
 //!
-//! // Default configuration (fast path with no fallback)
+//! // Default configuration (type checking, with version 50.0 fallback)
 //! let config = VerifierConfig::default();
 //! let result = verify_method(&class_file, &method, &context, &config)?;
 //!
-//! // Permissive configuration (allows fallback to inference)
+//! // Permissive preference (fallback remains limited to version 50.0)
 //! let config = VerifierConfig::permissive();
 //! let result = verify_method(&class_file, &method, &context, &config)?;
 //! ```
