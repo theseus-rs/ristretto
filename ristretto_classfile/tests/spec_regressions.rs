@@ -1403,14 +1403,16 @@ fn module_tables_require_java_base_and_unique_dependencies() {
     let base_index = class.constant_pool.add_module("java.base").unwrap();
     class.attributes.push(Attribute::Module {
         name_index,
-        module_name_index,
-        flags: ModuleAccessFlags::empty(),
-        version_index: 0,
-        requires: vec![],
-        exports: vec![],
-        opens: vec![],
-        uses: vec![],
-        provides: vec![],
+        module: Box::new(ModuleAttribute {
+            module_name_index,
+            flags: ModuleAccessFlags::empty(),
+            version_index: 0,
+            requires: vec![],
+            exports: vec![],
+            opens: vec![],
+            uses: vec![],
+            provides: vec![],
+        }),
     });
     assert!(class.verify().is_err());
     let base = Requires {
@@ -1418,12 +1420,12 @@ fn module_tables_require_java_base_and_unique_dependencies() {
         flags: RequiresFlags::MANDATED,
         version_index: 0,
     };
-    if let Attribute::Module { requires, .. } = &mut class.attributes[0] {
-        requires.push(base.clone());
+    if let Attribute::Module { module, .. } = &mut class.attributes[0] {
+        module.requires.push(base.clone());
     }
     assert!(class.verify().is_ok());
-    if let Attribute::Module { requires, .. } = &mut class.attributes[0] {
-        requires.push(base);
+    if let Attribute::Module { module, .. } = &mut class.attributes[0] {
+        module.requires.push(base);
     }
     assert!(class.verify().is_err());
 }

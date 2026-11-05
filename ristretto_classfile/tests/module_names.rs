@@ -12,18 +12,20 @@ fn module(name: &str) -> Result<ClassFile<'static>> {
     class.this_class = class.constant_pool.add_class("module-info")?;
     class.attributes.push(Attribute::Module {
         name_index: class.constant_pool.add_utf8("Module")?,
-        module_name_index: class.constant_pool.add_module(name)?,
-        flags: ModuleAccessFlags::empty(),
-        version_index: 0,
-        requires: vec![Requires {
-            index: class.constant_pool.add_module("java.base")?,
-            flags: RequiresFlags::MANDATED,
+        module: Box::new(ristretto_classfile::attributes::ModuleAttribute {
+            module_name_index: class.constant_pool.add_module(name)?,
+            flags: ModuleAccessFlags::empty(),
             version_index: 0,
-        }],
-        exports: vec![],
-        opens: vec![],
-        uses: vec![],
-        provides: vec![],
+            requires: vec![Requires {
+                index: class.constant_pool.add_module("java.base")?,
+                flags: RequiresFlags::MANDATED,
+                version_index: 0,
+            }],
+            exports: vec![],
+            opens: vec![],
+            uses: vec![],
+            provides: vec![],
+        }),
     });
     Ok(class)
 }

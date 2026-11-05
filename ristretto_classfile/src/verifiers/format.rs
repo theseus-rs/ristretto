@@ -445,17 +445,17 @@ fn unique_names<'a>(
 fn verify_module_attribute(class: &ClassFile<'_>, attribute: &Attribute) -> Result<()> {
     use crate::attributes::{ModuleAccessFlags, RequiresFlags};
     let pool = &class.constant_pool;
-    if let Attribute::Module {
-        module_name_index,
-        flags,
-        requires,
-        exports,
-        opens,
-        uses,
-        provides,
-        ..
-    } = attribute
-    {
+    if let Attribute::Module { module, .. } = attribute {
+        let crate::attributes::ModuleAttribute {
+            module_name_index,
+            flags,
+            requires,
+            exports,
+            opens,
+            uses,
+            provides,
+            ..
+        } = module.as_ref();
         let name = pool.try_get_module(*module_name_index)?;
         unique_names(requires.iter().map(|r| r.index), |i| pool.try_get_module(i))?;
         if name == "java.base" {
