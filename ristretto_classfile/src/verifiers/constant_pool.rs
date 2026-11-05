@@ -481,12 +481,12 @@ mod test {
 
         for reference_kind in ReferenceKind::all() {
             let bad_reference = Constant::MethodHandle {
-                reference_kind: reference_kind.clone(),
+                reference_kind,
                 reference_index: u16::MAX,
             };
             test_indexes_index_error(class_file.clone(), bad_reference)?;
             let wrong_reference_type = Constant::MethodHandle {
-                reference_kind: reference_kind.clone(),
+                reference_kind,
                 reference_index: integer_index,
             };
             test_indexes_index_type_error(class_file.clone(), wrong_reference_type)?;
@@ -536,7 +536,7 @@ mod test {
         }
         for reference_kind in [ReferenceKind::InvokeStatic, ReferenceKind::InvokeSpecial] {
             class_file.constant_pool.add(Constant::MethodHandle {
-                reference_kind: reference_kind.clone(),
+                reference_kind,
                 reference_index: method_ref,
             })?;
             class_file.constant_pool.add(Constant::MethodHandle {

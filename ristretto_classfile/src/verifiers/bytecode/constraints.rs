@@ -501,7 +501,7 @@ mod tests {
                     .add_field_ref(owner, "value", descriptor)?;
                 let mut frame = Frame::new(0, 3);
                 frame.push(VerificationType::UninitializedThis)?;
-                let value = VerificationType::from_field_type(&FieldType::Base(ty.clone()));
+                let value = VerificationType::from_field_type(&FieldType::Base(ty));
                 if value.is_category2() {
                     frame.push_category2(value)?;
                 } else {

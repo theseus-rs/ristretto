@@ -43,7 +43,7 @@ use std::fmt;
 /// # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.5>
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ReferenceKind {
     /// Reference kind 1: Read a non-static field.
     /// Used to get the value of an instance field.
@@ -293,17 +293,17 @@ impl TryFrom<u8> for ReferenceKind {
 mod test {
     use super::*;
 
-    fn test_reference_kind(reference_kind: &ReferenceKind, expected_kind: u8) -> Result<()> {
+    fn test_reference_kind(reference_kind: ReferenceKind, expected_kind: u8) -> Result<()> {
         assert_eq!(expected_kind, reference_kind.kind());
 
         let mut bytes = Vec::new();
-        reference_kind.clone().to_bytes(&mut bytes)?;
+        reference_kind.to_bytes(&mut bytes)?;
         let mut bytes = ByteReader::new(&bytes);
         assert_eq!(expected_kind, bytes.read_u8()?);
 
         let binding = expected_kind.to_be_bytes();
         let mut bytes = ByteReader::new(&binding);
-        assert_eq!(*reference_kind, ReferenceKind::from_bytes(&mut bytes)?);
+        assert_eq!(reference_kind, ReferenceKind::from_bytes(&mut bytes)?);
         Ok(())
     }
 
@@ -312,7 +312,7 @@ mod test {
         let reference_kind = ReferenceKind::GetField;
 
         assert_eq!("GetField", reference_kind.to_string());
-        test_reference_kind(&reference_kind, 1)
+        test_reference_kind(reference_kind, 1)
     }
 
     #[test]
@@ -320,7 +320,7 @@ mod test {
         let reference_kind = ReferenceKind::GetStatic;
 
         assert_eq!("GetStatic", reference_kind.to_string());
-        test_reference_kind(&reference_kind, 2)
+        test_reference_kind(reference_kind, 2)
     }
 
     #[test]
@@ -328,7 +328,7 @@ mod test {
         let reference_kind = ReferenceKind::PutField;
 
         assert_eq!("PutField", reference_kind.to_string());
-        test_reference_kind(&reference_kind, 3)
+        test_reference_kind(reference_kind, 3)
     }
 
     #[test]
@@ -336,7 +336,7 @@ mod test {
         let reference_kind = ReferenceKind::PutStatic;
 
         assert_eq!("PutStatic", reference_kind.to_string());
-        test_reference_kind(&reference_kind, 4)
+        test_reference_kind(reference_kind, 4)
     }
 
     #[test]
@@ -344,7 +344,7 @@ mod test {
         let reference_kind = ReferenceKind::InvokeVirtual;
 
         assert_eq!("InvokeVirtual", reference_kind.to_string());
-        test_reference_kind(&reference_kind, 5)
+        test_reference_kind(reference_kind, 5)
     }
 
     #[test]
@@ -352,7 +352,7 @@ mod test {
         let reference_kind = ReferenceKind::InvokeStatic;
 
         assert_eq!("InvokeStatic", reference_kind.to_string());
-        test_reference_kind(&reference_kind, 6)
+        test_reference_kind(reference_kind, 6)
     }
 
     #[test]
@@ -360,7 +360,7 @@ mod test {
         let reference_kind = ReferenceKind::InvokeSpecial;
 
         assert_eq!("InvokeSpecial", reference_kind.to_string());
-        test_reference_kind(&reference_kind, 7)
+        test_reference_kind(reference_kind, 7)
     }
 
     #[test]
@@ -368,7 +368,7 @@ mod test {
         let reference_kind = ReferenceKind::NewInvokeSpecial;
 
         assert_eq!("NewInvokeSpecial", reference_kind.to_string());
-        test_reference_kind(&reference_kind, 8)
+        test_reference_kind(reference_kind, 8)
     }
 
     #[test]
@@ -376,7 +376,7 @@ mod test {
         let reference_kind = ReferenceKind::InvokeInterface;
 
         assert_eq!("InvokeInterface", reference_kind.to_string());
-        test_reference_kind(&reference_kind, 9)
+        test_reference_kind(reference_kind, 9)
     }
 
     #[test]

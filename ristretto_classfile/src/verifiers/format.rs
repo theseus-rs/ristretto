@@ -698,7 +698,7 @@ mod tests {
             let mut class = ClassFile::default();
             let name_index = class.constant_pool.add_utf8("BootstrapMethods")?;
             let reference = class.constant_pool.add(Constant::MethodHandle {
-                reference_kind: kind.clone(),
+                reference_kind: kind,
                 reference_index: 1,
             })?;
             let attribute = Attribute::BootstrapMethods {
