@@ -161,7 +161,7 @@ async fn invoke_var_handle_access_mode<T: Thread + 'static>(
         }
         Some(VarHandleStorage::Array) => dispatch_array(access_mode, remaining_args),
         None => {
-            debug!("VarHandle: unrecognized structure, falling back to toMethodHandle",);
+            debug!("VarHandle: unrecognized structure, using the access method handle",);
             invoke_via_method_handle(thread, all_params, access_mode).await
         }
     }
@@ -773,7 +773,45 @@ fn values_equal(a: &Value, b: &Value) -> bool {
     }
 }
 
-/// Fallback: invoke via `toMethodHandle()` for unrecognized `VarHandle` subclasses.
+/// Read the unbound access handle cached by the JDK. Java 11/17 keep the table
+/// in `TypesAndInvokers`; newer JDKs store it on the `VarHandle` itself.
+fn cached_access_handle(var_handle: &Value, access_mode: AccessMode) -> Result<Option<Value>> {
+    let table = {
+        let handle = var_handle.as_object_ref()?;
+        let form = handle.value("vform")?;
+        if form.as_object_ref()?.value("memberName_table")?.is_null() {
+            // Indirect handles can bind a different receiver through asDirect().
+            // Leave their adapters to the JDK's toMethodHandle implementation.
+            return Ok(None);
+        }
+        if let Ok(table) = handle.value("methodHandleTable") {
+            table
+        } else {
+            let invokers = handle.value("typesAndInvokers")?;
+            if invokers.is_null() {
+                return Ok(None);
+            }
+            invokers.as_object_ref()?.value("methodHandle_table")?
+        }
+    };
+    if table.is_null() {
+        return Ok(None);
+    }
+    let table = table.as_reference()?;
+    let (_, handles) = table.as_class_vec_ref()?;
+    Ok(handles
+        .get(access_mode as usize)
+        .filter(|handle| !handle.is_null())
+        .cloned())
+}
+
+/// Invoke an access handle for storage types implemented by the JDK.
+///
+/// On the first access, retain the ordinary `toMethodHandle` path so the JDK
+/// resolves the mode and reports unsupported operations. Subsequent accesses
+/// reuse its unbound handle and pass the receiver explicitly. This avoids
+/// allocating a bound adapter and interpreting its `LambdaForm` on every access,
+/// while retaining the JDK's casts, bounds, alignment, and memory ordering.
 #[async_method]
 async fn invoke_via_method_handle<T: Thread + 'static>(
     thread: &Arc<T>,
@@ -783,6 +821,12 @@ async fn invoke_via_method_handle<T: Thread + 'static>(
     let (var_handle, remaining_args) = all_params.split_first().ok_or_else(|| {
         InternalError("VarHandle fallback requires at least the VarHandle".to_string())
     })?;
+    if let Some(method_handle) = cached_access_handle(var_handle, access_mode)? {
+        let mut invoke_args = Vec::with_capacity(all_params.len() + 1);
+        invoke_args.push(method_handle);
+        invoke_args.extend_from_slice(&all_params);
+        return super::methodhandle::invoke(thread.clone(), Parameters::new(invoke_args)).await;
+    }
     let var_handle = var_handle.clone();
     let remaining_args = remaining_args.to_vec();
 

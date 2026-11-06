@@ -24,50 +24,39 @@ pub async fn invoke<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // For signature polymorphic methods, parameters are passed individually, not as an array
-    let all_params = parameters.into_vec();
-    let (method_handle, arguments) = all_params
-        .split_first()
-        .ok_or_else(|| InternalError("invoke requires at least the method handle".to_string()))?;
-    let method_handle = method_handle.clone();
-    let arguments = arguments.to_vec();
+    invoke_handle(thread, parameters, "invoke").await
+}
 
-    // Try to get the LambdaForm's vmentry first
+/// Preserve the argument vector through `LambdaForm` dispatch. Its leading `MethodHandle` is
+/// already the receiver expected by the entry point; only the direct-member fallback removes it.
+async fn invoke_handle<T: Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+    operation: &str,
+) -> Result<Option<Value>> {
+    let mut arguments = parameters.into_vec();
     let (form, member) = {
-        let mh_ref = method_handle.as_object_ref()?;
-        let form = mh_ref.value("form").ok();
-        let member = mh_ref.value("member").ok();
-        (form, member)
+        let method_handle = arguments.first().ok_or_else(|| {
+            InternalError(format!("{operation} requires at least the method handle"))
+        })?;
+        let handle = method_handle.as_object_ref()?;
+        (handle.value("form").ok(), handle.value("member").ok())
     };
 
-    // Check if we have a LambdaForm with a vmentry
-    if let Some(ref form_val) = form
-        && !form_val.is_null()
-    {
-        let vmentry = {
-            let form_ref = form_val.as_object_ref()?;
-            form_ref.value("vmentry").ok()
-        };
-
-        if let Some(ref vmentry_val) = vmentry
-            && !vmentry_val.is_null()
-        {
-            let mut lf_args = Vec::with_capacity(arguments.len() + 1);
-            lf_args.push(method_handle.clone());
-            lf_args.extend(arguments);
-
-            return call_method_handle_target(thread, vmentry_val, lf_args)
+    if let Some(form) = form.filter(|value| !value.is_null()) {
+        let entry = form.as_object_ref()?.value("vmentry").ok();
+        if let Some(entry) = entry.filter(|value| !value.is_null()) {
+            return call_method_handle_target(thread, &entry, arguments)
                 .await
                 .map(Some);
         }
     }
 
-    // Fallback: use the member field directly
-    if let Some(ref member_val) = member
-        && !member_val.is_null()
-    {
-        let result = call_method_handle_target(thread, member_val, arguments).await?;
-        return Ok(Some(result));
+    if let Some(member) = member.filter(|value| !value.is_null()) {
+        arguments.remove(0);
+        return call_method_handle_target(thread, &member, arguments)
+            .await
+            .map(Some);
     }
 
     Err(InternalError(
@@ -383,59 +372,7 @@ pub async fn invoke_basic<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // For signature polymorphic methods, parameters are passed individually, not as an array
-    let all_params = parameters.into_vec();
-    let (method_handle, arguments) = all_params.split_first().ok_or_else(|| {
-        InternalError("invokeBasic requires at least the method handle".to_string())
-    })?;
-    let method_handle = method_handle.clone();
-    let arguments = arguments.to_vec();
-
-    // Try to get the LambdaForm's vmentry first
-    // This is the proper way to invoke a MethodHandle via its compiled LambdaForm
-    let (form, member) = {
-        let mh_ref = method_handle.as_object_ref()?;
-        let form = mh_ref.value("form").ok();
-        let member = mh_ref.value("member").ok();
-        (form, member)
-    };
-
-    // Check if we have a LambdaForm with a vmentry
-    if let Some(ref form_val) = form
-        && !form_val.is_null()
-    {
-        let vmentry = {
-            let form_ref = form_val.as_object_ref()?;
-            form_ref.value("vmentry").ok()
-        };
-
-        if let Some(ref vmentry_val) = vmentry
-            && !vmentry_val.is_null()
-        {
-            // The vmentry is a MemberName pointing to the compiled LambdaForm method
-            // The LambdaForm method signature is (MethodHandle, args...) -> result
-            // We need to prepend the MethodHandle to the arguments
-            let mut lf_args = Vec::with_capacity(arguments.len() + 1);
-            lf_args.push(method_handle.clone());
-            lf_args.extend(arguments);
-
-            return call_method_handle_target(thread, vmentry_val, lf_args)
-                .await
-                .map(Some);
-        }
-    }
-
-    // Fallback: use the member field directly (for DirectMethodHandle)
-    if let Some(ref member_val) = member
-        && !member_val.is_null()
-    {
-        let result = call_method_handle_target(thread, member_val, arguments).await?;
-        return Ok(Some(result));
-    }
-
-    Err(InternalError(
-        "MethodHandle has neither vmentry nor member".to_string(),
-    ))
+    invoke_handle(thread, parameters, "invokeBasic").await
 }
 
 #[intrinsic_method(
@@ -446,62 +383,7 @@ pub async fn invoke_exact<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // For signature polymorphic methods like invokeExact, the actual call site signature
-    // determines the parameters. The declared signature ([Ljava/lang/Object;)Ljava/lang/Object;
-    // is a placeholder. The actual arguments are passed as individual values, not as an array.
-    //
-    // When called from invokevirtual with the call site descriptor (String,String)String,
-    // parameters will be: [method_handle, "Hello", " World"]
-    //
-    // We need to extract the method_handle first, then treat remaining parameters as arguments.
-    let all_params = parameters.into_vec();
-    let (method_handle, arguments) = all_params.split_first().ok_or_else(|| {
-        InternalError("invokeExact requires at least the method handle".to_string())
-    })?;
-    let method_handle = method_handle.clone();
-    let arguments = arguments.to_vec();
-
-    // Try to get the LambdaForm's vmentry first
-    let (form, member) = {
-        let mh_ref = method_handle.as_object_ref()?;
-        let form = mh_ref.value("form").ok();
-        let member = mh_ref.value("member").ok();
-        (form, member)
-    };
-
-    // Check if we have a LambdaForm with a vmentry
-    if let Some(ref form_val) = form
-        && !form_val.is_null()
-    {
-        let vmentry = {
-            let form_ref = form_val.as_object_ref()?;
-            form_ref.value("vmentry").ok()
-        };
-
-        if let Some(ref vmentry_val) = vmentry
-            && !vmentry_val.is_null()
-        {
-            let mut lf_args = Vec::with_capacity(arguments.len() + 1);
-            lf_args.push(method_handle.clone());
-            lf_args.extend(arguments);
-
-            return call_method_handle_target(thread, vmentry_val, lf_args)
-                .await
-                .map(Some);
-        }
-    }
-
-    // Fallback: use the member field directly
-    if let Some(ref member_val) = member
-        && !member_val.is_null()
-    {
-        let result = call_method_handle_target(thread, member_val, arguments).await?;
-        return Ok(Some(result));
-    }
-
-    Err(InternalError(
-        "MethodHandle has neither vmentry nor member".to_string(),
-    ))
+    invoke_handle(thread, parameters, "invokeExact").await
 }
 
 /// Finds a method in the class hierarchy, starting with the target class and falling back
@@ -598,6 +480,29 @@ fn find_static_lambda_method<T: Thread + 'static>(
     None
 }
 
+/// `MethodType` is immutable, and the JDK caches its descriptor after the first request.
+/// Reuse that value for every kind of method-handle target, retaining Java's implementation
+/// for an empty cache or a JDK without the cache field. No class-loader or receiver is cached.
+async fn method_type_descriptor<T: Thread + 'static>(
+    thread: &Arc<T>,
+    method_type: &Value,
+) -> Result<String> {
+    let cached = method_type.as_object_ref()?.value("methodDescriptor").ok();
+    if let Some(descriptor) = cached.filter(|value| !value.is_null()) {
+        return Ok(descriptor.as_string()?);
+    }
+    thread
+        .invoke(
+            "java.lang.invoke.MethodType",
+            "toMethodDescriptorString()Ljava/lang/String;",
+            std::slice::from_ref(method_type),
+        )
+        .await?
+        .ok_or_else(|| InternalError("Invalid MethodType".to_string()))?
+        .as_string()
+        .map_err(Into::into)
+}
+
 /// Helper: Actually invokes the target referenced by a `MethodHandle`.
 #[expect(clippy::too_many_lines)]
 #[async_method]
@@ -665,18 +570,7 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
 
         if let Some(class_name) = type_class {
             if class_name == "java/lang/invoke/MethodType" {
-                // It's a method; get the descriptor string
-                let method_descriptor = thread
-                    .invoke(
-                        "java.lang.invoke.MethodType",
-                        "toMethodDescriptorString()Ljava/lang/String;",
-                        std::slice::from_ref(type_val),
-                    )
-                    .await?;
-                match method_descriptor {
-                    Some(descriptor) => descriptor.as_string()?,
-                    _ => return Err(InternalError("Invalid MethodType".to_string())),
-                }
+                method_type_descriptor(&thread, type_val).await?
             } else if class_name == "java/lang/Class" {
                 // It's a field; get the class name and convert to descriptor
                 let type_ref = type_val.as_object_ref()?;
@@ -1221,15 +1115,7 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
                         && get_object_class_name(&type_value).as_deref()
                             == Some("java/lang/invoke/MethodType")
                     {
-                        let descriptor = thread
-                            .invoke(
-                                "java.lang.invoke.MethodType",
-                                "toMethodDescriptorString()Ljava/lang/String;",
-                                &[type_value],
-                            )
-                            .await?
-                            .ok_or_else(|| InternalError("Invalid MethodType".to_string()))?
-                            .as_string()?;
+                        let descriptor = method_type_descriptor(&thread, &type_value).await?;
                         let end = descriptor.rfind(')').unwrap_or(descriptor.len());
                         [&descriptor[..=end], "V"].concat()
                     } else {
