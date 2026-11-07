@@ -13,13 +13,21 @@ use ristretto_classfile::verifiers::bytecode::{
 use ristretto_classfile::verifiers::context::VerificationContext;
 use ristretto_classfile::verifiers::{error, signature};
 use ristretto_classfile::{
-    ClassFile, Constant, JAVA_5, JAVA_8, JavaStr, JavaString, Method, MethodAccessFlags,
+    ClassFile, Constant, JAVA_5, JAVA_6, JAVA_8, JavaStr, JavaString, Method, MethodAccessFlags,
 };
 use std::hint::black_box;
 
 // Fixtures use only Object and Throwable; no application hierarchy is resolved.
 struct Context;
 impl VerificationContext for Context {
+    fn verify_member_access(
+        &self,
+        _access: &ristretto_classfile::verifiers::context::MemberAccess<'_>,
+    ) -> error::Result<()> {
+        // This fixture models accessible members; access-policy failures have dedicated cases.
+        Ok(())
+    }
+
     fn cache_token(&self) -> Option<u64> {
         Some(1)
     }
@@ -147,7 +155,7 @@ fn benchmarks(c: &mut Criterion) {
         });
     }
     let mut fallback = fixture(1, 128, false);
-    fallback.version = ristretto_classfile::JAVA_6;
+    fallback.version = JAVA_6;
     if let Some(Attribute::Code { code, .. }) = fallback
         .methods
         .first_mut()

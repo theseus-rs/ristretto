@@ -453,7 +453,7 @@ mod test {
     use crate::error::Result;
     use crate::field_access_flags::FieldAccessFlags;
     use crate::method_access_flags::MethodAccessFlags;
-    use crate::{BaseType, Constant, FieldType, JAVA_8, JAVA_21};
+    use crate::{BaseType, Constant, FieldType, JAVA_8, JAVA_9, JAVA_21};
     use indoc::indoc;
 
     fn populated_class_file() -> Result<ClassFile<'static>> {
@@ -722,7 +722,7 @@ mod test {
     fn both_parsers_reject_reserved_module_access_bits() {
         for bits in [0x8000, 0x8002] {
             let class = ClassFile {
-                version: crate::JAVA_9,
+                version: JAVA_9,
                 access_flags: ClassAccessFlags::from_bits_retain(bits),
                 ..ClassFile::default()
             };

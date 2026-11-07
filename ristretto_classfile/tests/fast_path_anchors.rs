@@ -10,6 +10,14 @@ use ristretto_classfile::{
 
 struct Context;
 impl VerificationContext for Context {
+    fn verify_member_access(
+        &self,
+        _access: &verifiers::context::MemberAccess<'_>,
+    ) -> verifiers::error::Result<()> {
+        // This fixture models accessible members; access-policy failures have dedicated cases.
+        Ok(())
+    }
+
     fn is_subclass(&self, a: &JavaStr, b: &JavaStr) -> verifiers::Result<bool> {
         Ok(a == b || b == "java/lang/Object")
     }

@@ -24,6 +24,14 @@ impl MockContext {
 }
 
 impl VerificationContext for MockContext {
+    fn verify_member_access(
+        &self,
+        _access: &crate::verifiers::context::MemberAccess<'_>,
+    ) -> Result<()> {
+        // This fixture models accessible members; access-policy failures have dedicated cases.
+        Ok(())
+    }
+
     fn cache_token(&self) -> Option<u64> {
         Some(u64::from(self.checks_pass))
     }

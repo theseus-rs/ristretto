@@ -591,6 +591,14 @@ mod tests {
     struct MockContext;
 
     impl VerificationContext for MockContext {
+        fn verify_member_access(
+            &self,
+            _access: &crate::verifiers::context::MemberAccess<'_>,
+        ) -> Result<()> {
+            // This fixture models accessible members; access-policy failures have dedicated cases.
+            Ok(())
+        }
+
         fn is_subclass(&self, subclass: &JavaStr, superclass: &JavaStr) -> Result<bool> {
             // Simple mock: String is a subclass of Object
             if (subclass == "java/lang/String" && superclass == "java/lang/Object")

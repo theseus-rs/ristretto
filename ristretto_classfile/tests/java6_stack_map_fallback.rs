@@ -7,11 +7,20 @@ use ristretto_classfile::verifiers::bytecode::{
 use ristretto_classfile::verifiers::context::VerificationContext;
 use ristretto_classfile::verifiers::error;
 use ristretto_classfile::{
-    ClassFile, JAVA_6, JAVA_7, JavaStr, JavaString, Method, MethodAccessFlags, Result, Version,
+    ClassFile, JAVA_5, JAVA_6, JAVA_7, JAVA_25, JavaStr, JavaString, Method, MethodAccessFlags,
+    Result, Version,
 };
 
 struct Context;
 impl VerificationContext for Context {
+    fn verify_member_access(
+        &self,
+        _access: &ristretto_classfile::verifiers::context::MemberAccess<'_>,
+    ) -> error::Result<()> {
+        // This fixture models accessible members; access-policy failures have dedicated cases.
+        Ok(())
+    }
+
     fn is_subclass(&self, source: &JavaStr, target: &JavaStr) -> error::Result<bool> {
         self.is_assignable(target, source)
     }
@@ -212,13 +221,7 @@ fn java6_fallback_does_not_relax_other_code_metadata() -> Result<()> {
 #[test]
 fn configuration_cannot_bypass_versioned_type_checking() -> Result<()> {
     use ristretto_classfile::verifiers::bytecode::FallbackStrategy;
-    for version in [
-        ristretto_classfile::JAVA_5,
-        JAVA_6,
-        Version::Java6 { minor: 1 },
-        JAVA_7,
-        ristretto_classfile::JAVA_25,
-    ] {
+    for version in [JAVA_5, JAVA_6, Version::Java6 { minor: 1 }, JAVA_7, JAVA_25] {
         for strategy in [
             FallbackStrategy::Strict,
             FallbackStrategy::FallbackToInference,

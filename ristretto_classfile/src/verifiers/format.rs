@@ -6,8 +6,8 @@ use crate::attributes::StackFrame::{
 use crate::attributes::{Attribute, AttributeKind, TargetType};
 use crate::{
     BaseType, CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, Constant,
-    FieldType, JAVA_7, JAVA_8, JAVA_9, JAVA_10, JavaStr, Method, MethodAccessFlags, ReferenceKind,
-    Version,
+    FieldType, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_10, JavaStr, Method, MethodAccessFlags,
+    ReferenceKind, Version,
 };
 use ahash::AHashSet;
 
@@ -549,7 +549,7 @@ pub(super) fn verify_code_metadata(
     for nested in attributes {
         // Keep Java 6 stack maps for type checking and its inference fallback.
         // All other metadata retains the ordinary structural checks.
-        if class.version.major() == crate::JAVA_6.major()
+        if class.version.major() == JAVA_6.major()
             && matches!(nested, Attribute::StackMapTable { .. })
         {
             continue;

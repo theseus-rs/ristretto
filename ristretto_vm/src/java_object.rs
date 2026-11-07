@@ -764,6 +764,7 @@ impl JavaObject for Arc<Class> {
 mod tests {
     use super::*;
     use ristretto_classfile::JavaString;
+    use ristretto_classloader::JAVA_8_VERSION;
 
     #[tokio::test]
     async fn test_bool_to_object() -> Result<()> {
@@ -971,7 +972,7 @@ mod tests {
     async fn test_java8_class_loader_mirrors() -> Result<()> {
         let gc_config = ristretto_gc::ConfigurationBuilder::new().threads(1).build();
         let configuration = crate::ConfigurationBuilder::new()
-            .java_version(ristretto_classloader::JAVA_8_VERSION)
+            .java_version(JAVA_8_VERSION)
             .garbage_collector(ristretto_gc::GarbageCollector::with_config(gc_config))
             .batch_compilation(false)
             .build()?;

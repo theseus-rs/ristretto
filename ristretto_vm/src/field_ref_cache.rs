@@ -10,7 +10,7 @@ use dashmap::DashMap;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
     BaseType, CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, FieldAccessFlags,
-    FieldType,
+    FieldType, JAVA_9,
 };
 use ristretto_classloader::{Class, Field, Object, Value};
 use std::sync::{Arc, OnceLock, RwLock};
@@ -92,7 +92,7 @@ impl ResolvedFieldRef {
     pub(crate) fn check_write(&self, frame: &Frame) -> Result<()> {
         if self.field.access_flags().contains(FieldAccessFlags::FINAL)
             && (!Arc::ptr_eq(frame.class(), &self.declaring_class)
-                || (self.declaring_class.class_file().version >= ristretto_classfile::JAVA_9
+                || (self.declaring_class.class_file().version >= JAVA_9
                     && frame.method().name()
                         != if self.is_static() {
                             CLASS_INITIALIZER_NAME

@@ -15,6 +15,14 @@ use ristretto_classfile::{
 struct Context;
 
 impl VerificationContext for Context {
+    fn verify_member_access(
+        &self,
+        _access: &ristretto_classfile::verifiers::context::MemberAccess<'_>,
+    ) -> error::Result<()> {
+        // This fixture models accessible members; access-policy failures have dedicated cases.
+        Ok(())
+    }
+
     fn is_subclass(&self, source: &JavaStr, target: &JavaStr) -> error::Result<bool> {
         self.is_assignable(target, source)
     }

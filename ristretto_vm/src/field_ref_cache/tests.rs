@@ -4,7 +4,7 @@ use crate::JavaError::{NoClassDefFoundError, NullPointerException};
 use crate::instruction::{execute_field, try_field};
 use crate::{OperandStack, Thread};
 use ristretto_classfile::attributes::Instruction;
-use ristretto_classfile::{ClassFile, ConstantPool, MethodAccessFlags};
+use ristretto_classfile::{ClassFile, ConstantPool, JAVA_8, MethodAccessFlags};
 use ristretto_classloader::{ClassLoader, ClassPath};
 
 fn definition(
@@ -220,10 +220,10 @@ async fn interface_field_precedes_superclass_field() -> Result<()> {
 async fn final_writes_are_checked_in_each_frame_on_cache_hits() -> Result<()> {
     let (_vm, thread) = crate::test::thread().await?;
     for (version, is_static) in [
-        (ristretto_classfile::JAVA_8, false),
-        (ristretto_classfile::JAVA_8, true),
-        (ristretto_classfile::JAVA_9, false),
-        (ristretto_classfile::JAVA_9, true),
+        (JAVA_8, false),
+        (JAVA_8, true),
+        (JAVA_9, false),
+        (JAVA_9, true),
     ] {
         let mut flags = FieldAccessFlags::PUBLIC | FieldAccessFlags::FINAL;
         if is_static {
@@ -247,7 +247,7 @@ async fn final_writes_are_checked_in_each_frame_on_cache_hits() -> Result<()> {
             &resolved,
             &resolve_field_ref(&caller, index).await?
         ));
-        if caller.class().class_file().version < ristretto_classfile::JAVA_9 {
+        if caller.class().class_file().version < JAVA_9 {
             // Legacy class files may write final fields from other declaring-class methods.
             resolved.check_write(&caller)?;
             continue;

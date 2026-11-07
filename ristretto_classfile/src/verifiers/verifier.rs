@@ -73,6 +73,7 @@ fn verify_super_class(class_file: &ClassFile<'_>) -> Result<()> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::JAVA_8;
     use crate::class_file::ClassFile;
 
     #[test]
@@ -172,7 +173,7 @@ mod test {
     #[test]
     fn test_verify_success() -> Result<()> {
         let mut class_file = ClassFile {
-            version: crate::JAVA_8,
+            version: JAVA_8,
             ..Default::default()
         };
         let constant_pool = &mut class_file.constant_pool;

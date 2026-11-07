@@ -37,7 +37,7 @@ use crate::verifiers::bytecode::stackmap::DecodedStackMapTable;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
-use crate::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldType, JavaStr, JavaString};
+use crate::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldType, JAVA_6, JavaStr, JavaString};
 use ahash::AHashSet;
 
 /// Extracted components from a Code attribute.
@@ -170,7 +170,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             max_locals,
             max_stack,
         )?;
-        if major_version == crate::JAVA_6.major() {
+        if major_version == JAVA_6.major() {
             for attribute in code_attributes {
                 if let Attribute::StackMapTable { frames, .. } = attribute {
                     super::stackmap::validate_format(frames, class_file)?;
@@ -191,7 +191,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 });
         let (stack_map_table, stack_map_error) = match decoded {
             Ok(table) => (table, None),
-            Err(error) if major_version == crate::JAVA_6.major() => {
+            Err(error) if major_version == JAVA_6.major() => {
                 (DecodedStackMapTable::empty(), Some(error.to_string()))
             }
             Err(error) => return Err(error),
@@ -478,7 +478,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
 
     /// Only version 50.0 may recover from failed type checking (JVMS 4.10.1).
     fn allows_inference_fallback(&self) -> bool {
-        self.class_file.version == crate::JAVA_6 && self.config.allows_inference_fallback()
+        self.class_file.version == JAVA_6 && self.config.allows_inference_fallback()
     }
 
     /// Checks if an error is eligible for fallback to inference.
@@ -1417,7 +1417,7 @@ mod tests {
     #[test]
     fn test_fast_path_stackmap_and_control_flow_outcomes() {
         let mut class_file = create_mock_class_file();
-        class_file.version = crate::JAVA_6;
+        class_file.version = JAVA_6;
         let context = MockContext::PERMISSIVE;
         let strict = VerifierConfig::default();
         let permissive = VerifierConfig::permissive();
@@ -2188,7 +2188,7 @@ mod tests {
     #[test]
     fn test_fast_path_successor_and_frame_compatibility_edges() {
         let mut class_file = create_mock_class_file();
-        class_file.version = crate::JAVA_6;
+        class_file.version = JAVA_6;
         let context = MockContext::PERMISSIVE;
         let strict = VerifierConfig::default();
         let permissive = VerifierConfig::permissive();
