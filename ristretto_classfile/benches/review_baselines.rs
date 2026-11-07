@@ -147,7 +147,7 @@ fn benchmarks(c: &mut Criterion) {
         });
     }
     let mut fallback = fixture(1, 128, false);
-    fallback.version = JAVA_8;
+    fallback.version = ristretto_classfile::JAVA_6;
     if let Some(Attribute::Code { code, .. }) = fallback
         .methods
         .first_mut()

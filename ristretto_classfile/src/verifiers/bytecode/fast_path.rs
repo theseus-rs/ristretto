@@ -413,7 +413,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         if self.config.requires_stackmap(self.major_version) && self.stack_map_table.is_empty() {
             // For classes that require StackMapTable but don't have one
             if !self.code.is_empty() && self.has_control_flow() {
-                if self.config.allows_inference_fallback() {
+                if self.allows_inference_fallback() {
                     return FastPathResult::NeedsFallback(
                         "StackMapTable required but not present".to_string(),
                     );
@@ -446,7 +446,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                     .has_frame_at(self.code_info.offset_at(index + 1).unwrap_or(u16::MAX))
             {
                 let message = "Missing frame after control transfer".to_string();
-                if self.config.allows_inference_fallback() {
+                if self.allows_inference_fallback() {
                     return FastPathResult::NeedsFallback(message);
                 }
                 return FastPathResult::Failed(VerifyError::VerifyError(message));
@@ -458,7 +458,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             Ok(()) => FastPathResult::Success,
             Err(error) => {
                 // Check if this is a fallback-eligible error
-                if self.config.allows_inference_fallback() && Self::is_fallback_eligible(&error) {
+                if self.allows_inference_fallback() && Self::is_fallback_eligible(&error) {
                     FastPathResult::NeedsFallback(format!("Fast path failed: {error}"))
                 } else {
                     FastPathResult::Failed(error)
@@ -474,6 +474,11 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     fn has_control_flow(&self) -> bool {
         // Backedges to the initial instruction also need stack maps or inference.
         !self.jump_targets.is_empty() || !self.handler_entries.is_empty()
+    }
+
+    /// Only version 50.0 may recover from failed type checking (JVMS 4.10.1).
+    fn allows_inference_fallback(&self) -> bool {
+        self.class_file.version == crate::JAVA_6 && self.config.allows_inference_fallback()
     }
 
     /// Checks if an error is eligible for fallback to inference.
@@ -739,9 +744,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             *anchor_state = Some(expected);
         } else if self.is_merge_point(succ_offset) {
             // Merge point without StackMapTable frame
-            if self.config.fallback_strategy
-                == crate::verifiers::bytecode::config::FallbackStrategy::Strict
-            {
+            if !self.allows_inference_fallback() {
                 return Err(VerifyError::VerifyError(format!(
                     "Merge point at offset {succ_offset} requires StackMapTable frame"
                 )));
@@ -1413,7 +1416,8 @@ mod tests {
 
     #[test]
     fn test_fast_path_stackmap_and_control_flow_outcomes() {
-        let class_file = create_mock_class_file();
+        let mut class_file = create_mock_class_file();
+        class_file.version = crate::JAVA_6;
         let context = MockContext::PERMISSIVE;
         let strict = VerifierConfig::default();
         let permissive = VerifierConfig::permissive();
@@ -2183,7 +2187,8 @@ mod tests {
 
     #[test]
     fn test_fast_path_successor_and_frame_compatibility_edges() {
-        let class_file = create_mock_class_file();
+        let mut class_file = create_mock_class_file();
+        class_file.version = crate::JAVA_6;
         let context = MockContext::PERMISSIVE;
         let strict = VerifierConfig::default();
         let permissive = VerifierConfig::permissive();
@@ -2509,12 +2514,12 @@ mod tests {
         let permissive = VerifierConfig::permissive();
         assert!(matches!(
             fast_verifier(&class, &method, &context, &permissive).verify(),
-            FastPathResult::NeedsFallback(_)
+            FastPathResult::Failed(_)
         ));
     }
 
     #[test]
-    fn test_missing_post_transfer_frame_honors_fallback() {
+    fn test_missing_post_transfer_frame_rejects_permissive_modern_verification() {
         let class = create_mock_class_file();
         let method = method_with(
             MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
@@ -2537,7 +2542,7 @@ mod tests {
         let permissive = VerifierConfig::permissive();
         assert!(matches!(
             fast_verifier(&class, &method, &context, &permissive).verify(),
-            FastPathResult::NeedsFallback(_)
+            FastPathResult::Failed(_)
         ));
     }
 }

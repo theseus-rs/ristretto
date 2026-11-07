@@ -14,8 +14,9 @@
 //! # When Used
 //!
 //! - Class files with major version < 50 (pre-Java 6)
-//! - When `FallbackStrategy::FallbackToInference` is enabled and fast path fails
-//! - When `FallbackStrategy::AlwaysInference` is configured
+//! - When version 50.0 type checking fails
+//!
+//! Configuration cannot bypass mandatory type checking for later versions.
 //!
 //! # Performance Note
 //!

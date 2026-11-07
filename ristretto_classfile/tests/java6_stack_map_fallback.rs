@@ -208,3 +208,65 @@ fn java6_fallback_does_not_relax_other_code_metadata() -> Result<()> {
     assert!(ClassFile::from_bytes(&bytes).is_err());
     Ok(())
 }
+
+#[test]
+fn configuration_cannot_bypass_versioned_type_checking() -> Result<()> {
+    use ristretto_classfile::verifiers::bytecode::FallbackStrategy;
+    for version in [
+        ristretto_classfile::JAVA_5,
+        JAVA_6,
+        Version::Java6 { minor: 1 },
+        JAVA_7,
+        ristretto_classfile::JAVA_25,
+    ] {
+        for strategy in [
+            FallbackStrategy::Strict,
+            FallbackStrategy::FallbackToInference,
+            FallbackStrategy::AlwaysInference,
+        ] {
+            for threshold in [0, 50, u16::MAX] {
+                let config = VerifierConfig {
+                    fallback_strategy: strategy,
+                    stackmap_required_version: threshold,
+                    ..VerifierConfig::strict()
+                };
+                let mut class = fixture(version, vec![])?;
+                if let Some(method) = class.methods.first_mut()
+                    && let Some(Attribute::Code { code, .. }) = method.attributes.first_mut()
+                {
+                    // The second return requires a stack-map frame after the first transfer.
+                    *code = vec![Instruction::Return, Instruction::Return];
+                }
+                let expected = version <= JAVA_6;
+                let mut bytes = vec![];
+                class.to_bytes(&mut bytes)?;
+                let parsed = ClassFile::from_bytes(&bytes)?;
+                assert_eq!(
+                    verify_class(&parsed, &Context, &config).is_ok(),
+                    expected,
+                    "{version:?} {config:?}"
+                );
+                for method in &parsed.methods {
+                    assert_eq!(
+                        verify_method(&parsed, method, &Context, &config).is_ok(),
+                        expected,
+                        "{version:?} {config:?}"
+                    );
+                }
+                if let Some(method) = class.methods.first_mut()
+                    && let Some(Attribute::Code { code, .. }) = method.attributes.first_mut()
+                {
+                    *code = vec![Instruction::Return];
+                }
+                let results = verify_class(&class, &Context, &config)?;
+                let expected_path = if version < JAVA_6 {
+                    VerificationPath::Inference
+                } else {
+                    VerificationPath::FastPath
+                };
+                assert_eq!(results.first().map(|r| r.path_used), Some(expected_path));
+            }
+        }
+    }
+    Ok(())
+}

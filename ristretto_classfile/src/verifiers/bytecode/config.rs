@@ -83,25 +83,27 @@ impl fmt::Display for VerifyMode {
 
 /// Strategy for handling classes without `StackMapTable`.
 ///
-/// For class files version 50+ (Java 6+), `StackMapTable` is required.
-/// This enum controls behavior when it's missing or invalid.
+/// Type checking is mandatory for class files version 50.0 and above.
+/// Only version 50.0 may fall back to inference after type checking fails.
+/// These preferences never relax the requirements for later versions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FallbackStrategy {
-    /// Fail verification if `StackMapTable` is missing/invalid (strict mode).
+    /// Enforce stack-map type checking, with the permitted version 50.0 fallback.
     ///
     /// This is the recommended mode for production.
     #[default]
     Strict,
 
-    /// Fall back to type inference verifier if `StackMapTable` is missing/invalid.
+    /// Allow the version 50.0 fast path to request inference for incomplete stack maps.
     ///
     /// This provides compatibility with bytecode instrumentation tools
     /// that may not properly update `StackMapTable`.
     FallbackToInference,
 
-    /// Always use type inference, even if `StackMapTable` is present.
+    /// Prefer type inference for legacy classes below version 50.0.
     ///
-    /// This is useful for debugging or comparing verification results.
+    /// Retained for compatibility. Version 50.0 and later always attempt type checking
+    /// first; only version 50.0 may subsequently fall back to inference.
     AlwaysInference,
 }
 
@@ -150,10 +152,10 @@ pub struct VerifierConfig {
     /// Default is 1000.
     pub max_inference_iterations: usize,
 
-    /// Minimum class file version for `StackMapTable` requirement.
+    /// Historical stack-map threshold, retained for source compatibility.
     ///
-    /// Classes with major version >= this value must have `StackMapTable`.
-    /// Default is 50 (Java 6).
+    /// The specification fixes the type-checking threshold at version 50.0.
+    /// Changing this field no longer overrides that requirement.
     pub stackmap_required_version: u16,
 }
 
@@ -179,7 +181,7 @@ impl VerifierConfig {
     /// Creates a strict configuration suitable for untrusted code.
     ///
     /// - Verifies all classes
-    /// - No fallback to inference
+    /// - Inference fallback only for version 50.0
     /// - Strict exception handler checking
     #[must_use]
     pub fn strict() -> Self {
@@ -193,8 +195,8 @@ impl VerifierConfig {
 
     /// Creates a permissive configuration for maximum compatibility.
     ///
-    /// - Falls back to inference if `StackMapTable` is invalid
-    /// - Relaxed exception handler checking
+    /// - Requests inference fallback for incomplete version 50.0 stack maps
+    /// - Enforces exception handler checking
     /// - Allows JSR/RET for old bytecode
     #[must_use]
     pub fn permissive() -> Self {
@@ -276,16 +278,16 @@ impl VerifierConfig {
     /// Checks if `StackMapTable` is required for the given class file version.
     #[must_use]
     pub const fn requires_stackmap(&self, major_version: u16) -> bool {
-        major_version >= self.stackmap_required_version
+        major_version >= 50
     }
 
-    /// Checks if type inference should be used.
+    /// Returns the legacy inference preference; it cannot override version rules.
     #[must_use]
     pub const fn use_inference(&self) -> bool {
         matches!(self.fallback_strategy, FallbackStrategy::AlwaysInference)
     }
 
-    /// Checks if fallback to inference is allowed.
+    /// Returns the fallback preference; the verifier additionally restricts fallback to 50.0.
     #[must_use]
     pub const fn allows_inference_fallback(&self) -> bool {
         matches!(

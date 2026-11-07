@@ -171,7 +171,9 @@ fn verify_method_preverified<C: VerificationContext>(
 
     // Determine verification strategy
     let major_version = class_file.version.major();
-    let use_fast_path = !config.use_inference() && config.requires_stackmap(major_version);
+    // JVMS 4.10.1 mandates type checking from version 50.0 onward.
+    // Configuration preferences cannot bypass this requirement.
+    let use_fast_path = major_version >= JAVA_6.major();
 
     let (fast_path_result, code_info) = if use_fast_path {
         verify_with_fast_path(class_file, method, context, config, code_info)?
@@ -204,11 +206,13 @@ fn verify_with_fast_path<C: VerificationContext>(
             Some(VerificationResult::success(VerificationPath::FastPath)),
             None,
         )),
-        FastPathResult::Failed(_) if class_file.version.major() == JAVA_6.major() => {
+        FastPathResult::Failed(_) | FastPathResult::NeedsFallback(_)
+            if class_file.version == JAVA_6 =>
+        {
             Ok((None, Some(fast_verifier.into_code_info())))
         }
         FastPathResult::Failed(e) => Err(e),
-        FastPathResult::NeedsFallback(_) => Ok((None, Some(fast_verifier.into_code_info()))),
+        FastPathResult::NeedsFallback(reason) => Err(VerifyError::VerifyError(reason)),
     }
 }
 
@@ -469,7 +473,7 @@ mod tests {
         };
         for (config, expected) in [
             (&config, VerificationPath::FastPath),
-            (&inference, VerificationPath::Inference),
+            (&inference, VerificationPath::FastPath),
         ] {
             CODE_INFO_BUILDS.set(0);
             METHOD_FLAG_CHECKS.set(0);
@@ -551,8 +555,8 @@ mod tests {
         let inference_config =
             VerifierConfig::default().with_fallback_strategy(FallbackStrategy::AlwaysInference);
         let inference_result = verify_method(&class_file, &method, &context, &inference_config)
-            .expect("always-inference verifier should verify simple method");
-        assert_eq!(VerificationPath::Inference, inference_result.path_used);
+            .expect("inference preference must preserve mandatory type checking");
+        assert_eq!(VerificationPath::FastPath, inference_result.path_used);
     }
 
     #[test]
@@ -578,7 +582,7 @@ mod tests {
 
     #[test]
     fn cache_revalidates_changed_code_and_configuration() {
-        let class = create_mock_class_file();
+        let mut class = create_mock_class_file();
         let mut method = Method {
             access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
             name_index: 3,
@@ -603,6 +607,7 @@ mod tests {
         if let Attribute::Code { code, .. } = &mut method.attributes[0] {
             *code = vec![Instruction::Return];
         }
+        class.version = crate::JAVA_5;
         let config = VerifierConfig::strict()
             .with_fallback_strategy(FallbackStrategy::AlwaysInference)
             .with_max_inference_iterations(0);
@@ -705,7 +710,8 @@ mod tests {
 
     #[test]
     fn test_unversioned_context_and_inference_fallbacks() {
-        let class_file = create_mock_class_file();
+        let mut class_file = create_mock_class_file();
+        class_file.version = JAVA_6;
         let context = UnversionedContext;
         let fallback_method = Method {
             access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
@@ -728,6 +734,7 @@ mod tests {
         )
         .expect("permissive verifier should fall back to inference");
         assert_eq!(VerificationPath::Inference, result.path_used);
+        class_file.version = crate::JAVA_8;
 
         let mismatched_stackmap_method = Method {
             access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
@@ -1060,7 +1067,8 @@ mod tests {
 
     #[test]
     fn fallback_reuses_boundaries_without_changing_validation() {
-        let class = create_mock_class_file();
+        let mut class = create_mock_class_file();
+        class.version = JAVA_6;
         let config = VerifierConfig::permissive();
         let mut method = Method {
             access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
