@@ -41,7 +41,7 @@ use crate::verifiers::bytecode::handlers::references::ConstantPoolResolver;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
-use crate::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldType, JavaString};
+use crate::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldType, JavaStr, JavaString};
 
 /// Type inference verifier using iterative dataflow analysis.
 ///
@@ -71,9 +71,9 @@ pub struct InferenceVerifier<'a, C: VerificationContext> {
     /// Class file major version.
     major_version: u16,
     /// The current class name.
-    current_class: String,
+    current_class: JavaString,
     /// The method name.
-    method_name: String,
+    method_name: JavaString,
     /// Verification trace (for verbose mode).
     trace: VerificationTrace,
 }
@@ -142,13 +142,13 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
             .constant_pool
             .try_get_class(class_file.this_class)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?
-            .to_string();
+            .to_owned();
 
         let method_name = class_file
             .constant_pool
             .try_get_utf8(method.name_index)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?
-            .to_string();
+            .to_owned();
 
         // Parse method descriptor for return type
         let descriptor = class_file
@@ -467,7 +467,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                 frame.set_local(local_index, VerificationType::UninitializedThis)?;
             } else {
                 let this_type =
-                    VerificationType::Object(JavaString::from(self.current_class.as_str()));
+                    VerificationType::Object(JavaString::from(self.current_class.as_java_str()));
                 frame.set_local(local_index, this_type)?;
             }
             local_index += 1;
@@ -657,20 +657,30 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
         Ok(true)
     }
 
-    fn verify_getfield(&self, frame: &mut Frame, class_name: &str, descriptor: &str) -> Result<()> {
+    fn verify_getfield(
+        &self,
+        frame: &mut Frame,
+        class_name: &JavaStr,
+        descriptor: &JavaStr,
+    ) -> Result<()> {
         handlers::references::handle_getfield(frame, class_name, descriptor, self.context)
     }
 
-    fn verify_putfield(&self, frame: &mut Frame, class_name: &str, descriptor: &str) -> Result<()> {
+    fn verify_putfield(
+        &self,
+        frame: &mut Frame,
+        class_name: &JavaStr,
+        descriptor: &JavaStr,
+    ) -> Result<()> {
         handlers::references::handle_putfield(frame, class_name, descriptor, self.context)
     }
 
     fn verify_invoke(
         &self,
         frame: &mut Frame,
-        class_name: &str,
-        method_name: &str,
-        descriptor: &str,
+        class_name: &JavaStr,
+        method_name: &JavaStr,
+        descriptor: &JavaStr,
         is_static: bool,
     ) -> Result<()> {
         handlers::references::handle_invoke(
@@ -687,9 +697,9 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
     fn verify_invokespecial(
         &self,
         frame: &mut Frame,
-        class_name: &str,
-        method_name: &str,
-        descriptor: &str,
+        class_name: &JavaStr,
+        method_name: &JavaStr,
+        descriptor: &JavaStr,
     ) -> Result<()> {
         handlers::references::handle_invokespecial(
             frame,
@@ -950,11 +960,21 @@ mod tests {
         assert!(format!("{verifier:?}").contains("InferenceVerifier"));
         assert!(verifier.trace().is_enabled());
         assert!(verifier.verify().is_ok());
-        assert!(context.is_subclass("A", "B").unwrap());
-        assert!(context.is_assignable("A", "B").unwrap());
+        assert!(
+            context
+                .is_subclass(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
+        );
+        assert!(
+            context
+                .is_assignable(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
+        );
         assert_eq!(
             "java/lang/Object",
-            context.common_superclass("A", "B").unwrap()
+            context
+                .common_superclass(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
         );
 
         let missing_code = Method {
@@ -1044,8 +1064,8 @@ mod tests {
             code_info: CodeInfo::new(vec![0], 1),
             return_type: None,
             major_version: class_file.version.major(),
-            current_class: "TestClass".to_string(),
-            method_name: "testMethod".to_string(),
+            current_class: "TestClass".into(),
+            method_name: "testMethod".into(),
             trace: VerificationTrace::new(false),
         };
         assert!(
@@ -1084,8 +1104,8 @@ mod tests {
             code_info: CodeInfo::new(vec![0], 1),
             return_type: None,
             major_version: class_file.version.major(),
-            current_class: "TestClass".to_string(),
-            method_name: "testMethod".to_string(),
+            current_class: "TestClass".into(),
+            method_name: "testMethod".into(),
             trace: VerificationTrace::new(false),
         };
         assert!(

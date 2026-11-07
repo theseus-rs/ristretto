@@ -522,8 +522,8 @@ impl Frame {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::JavaString;
     use crate::verifiers::bytecode::handlers::test_utils::MockContext;
+    use crate::{JavaStr, JavaString};
 
     #[test]
     fn test_new_frame() {
@@ -750,17 +750,25 @@ mod tests {
         let context = MockContext::PERMISSIVE;
         assert!(
             context
-                .is_subclass("java/lang/String", "java/lang/String")
+                .is_subclass(
+                    &JavaStr::cow_from_str("java/lang/String"),
+                    &JavaStr::cow_from_str("java/lang/String")
+                )
                 .unwrap()
         );
         assert!(
             context
-                .is_assignable("java/lang/Object", "java/lang/String")
+                .is_assignable(
+                    &JavaStr::cow_from_str("java/lang/Object"),
+                    &JavaStr::cow_from_str("java/lang/String")
+                )
                 .unwrap()
         );
         assert_eq!(
             "java/lang/Object",
-            context.common_superclass("A", "B").unwrap()
+            context
+                .common_superclass(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
         );
     }
 

@@ -5,6 +5,7 @@
 
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
+use crate::{JavaStr, JavaString};
 
 /// A mock verification context for subclass and assignability checks.
 ///
@@ -27,21 +28,21 @@ impl VerificationContext for MockContext {
         Some(u64::from(self.checks_pass))
     }
 
-    fn is_subclass(&self, _: &str, _: &str) -> Result<bool> {
+    fn is_subclass(&self, _: &JavaStr, _: &JavaStr) -> Result<bool> {
         Ok(self.checks_pass)
     }
 
-    fn is_assignable(&self, _: &str, _: &str) -> Result<bool> {
+    fn is_assignable(&self, _: &JavaStr, _: &JavaStr) -> Result<bool> {
         Ok(self.checks_pass)
     }
 
-    fn common_superclass(&self, class1: &str, class2: &str) -> Result<String> {
+    fn common_superclass(&self, class1: &JavaStr, class2: &JavaStr) -> Result<JavaString> {
         if class1 == "error" || class2 == "error" {
             return Err(VerifyError::VerifyError(
                 "common superclass failure".to_string(),
             ));
         }
-        Ok("java/lang/Object".to_string())
+        Ok("java/lang/Object".into())
     }
 }
 
@@ -52,20 +53,30 @@ mod tests {
     #[test]
     fn test_mock_context_is_subclass() {
         let context = MockContext::PERMISSIVE;
-        assert!(context.is_subclass("A", "B").unwrap());
+        assert!(
+            context
+                .is_subclass(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
+        );
     }
 
     #[test]
     fn test_mock_context_is_assignable() {
         let context = MockContext::PERMISSIVE;
-        assert!(context.is_assignable("A", "B").unwrap());
+        assert!(
+            context
+                .is_assignable(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
+        );
     }
 
     #[test]
     fn test_mock_context_common_superclass() {
         let context = MockContext::PERMISSIVE;
         assert_eq!(
-            context.common_superclass("A", "B").unwrap(),
+            context
+                .common_superclass(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap(),
             "java/lang/Object"
         );
     }
@@ -73,20 +84,30 @@ mod tests {
     #[test]
     fn test_strict_mock_context_is_subclass() {
         let context = MockContext::STRICT;
-        assert!(!context.is_subclass("A", "B").unwrap());
+        assert!(
+            !context
+                .is_subclass(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
+        );
     }
 
     #[test]
     fn test_strict_mock_context_is_assignable() {
         let context = MockContext::STRICT;
-        assert!(!context.is_assignable("A", "B").unwrap());
+        assert!(
+            !context
+                .is_assignable(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
+        );
     }
 
     #[test]
     fn test_strict_mock_context_common_superclass() {
         let context = MockContext::STRICT;
         assert_eq!(
-            context.common_superclass("A", "B").unwrap(),
+            context
+                .common_superclass(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap(),
             "java/lang/Object"
         );
     }
@@ -94,6 +115,10 @@ mod tests {
     #[test]
     fn test_mock_context_common_superclass_error() {
         let context = MockContext::PERMISSIVE;
-        assert!(context.common_superclass("error", "B").is_err());
+        assert!(
+            context
+                .common_superclass(&JavaStr::cow_from_str("error"), &JavaStr::cow_from_str("B"))
+                .is_err()
+        );
     }
 }

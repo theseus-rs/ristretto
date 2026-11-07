@@ -19,26 +19,31 @@ use ristretto_classfile::verifiers::bytecode::{
 use ristretto_classfile::verifiers::context::VerificationContext;
 use ristretto_classfile::verifiers::error::{Result, VerifyError};
 use ristretto_classfile::{
-    CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, Constant, ConstantPool, Method,
-    MethodAccessFlags, Version,
+    CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, Constant, ConstantPool, JavaStr, JavaString,
+    Method, MethodAccessFlags, Version,
 };
 
 /// Mock verification context for testing.
 struct TestContext;
 
 impl VerificationContext for TestContext {
-    fn is_subclass(&self, subclass: &str, superclass: &str) -> Result<bool> {
+    fn is_subclass(&self, subclass: &JavaStr, superclass: &JavaStr) -> Result<bool> {
         // Simple hierarchy for testing
         if superclass == "java/lang/Object" {
             return Ok(true);
         }
-        if superclass == "java/lang/Throwable" && subclass.contains("Exception") {
+        if superclass == "java/lang/Throwable"
+            && subclass
+                .as_bytes()
+                .windows(b"Exception".len())
+                .any(|part| part == b"Exception")
+        {
             return Ok(true);
         }
         Ok(subclass == superclass)
     }
 
-    fn is_assignable(&self, target: &str, source: &str) -> Result<bool> {
+    fn is_assignable(&self, target: &JavaStr, source: &JavaStr) -> Result<bool> {
         if target == source {
             return Ok(true);
         }
@@ -48,13 +53,13 @@ impl VerificationContext for TestContext {
         Ok(false)
     }
 
-    fn common_superclass(&self, class1: &str, class2: &str) -> Result<String> {
+    fn common_superclass(&self, class1: &JavaStr, class2: &JavaStr) -> Result<JavaString> {
         if class1 == "error" || class2 == "error" {
             return Err(VerifyError::VerifyError(
                 "common superclass failure".to_string(),
             ));
         }
-        Ok("java/lang/Object".to_string())
+        Ok("java/lang/Object".into())
     }
 }
 

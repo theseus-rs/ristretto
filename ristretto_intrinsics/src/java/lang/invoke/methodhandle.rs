@@ -3,7 +3,7 @@ use crate::java::lang::class::get_class_name;
 use crate::java::lang::invoke::methodhandlenatives::MemberNameFlags;
 use ristretto_classfile::ReferenceKind;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
-use ristretto_classfile::{CONSTRUCTOR_NAME, JAVA_17};
+use ristretto_classfile::{CONSTRUCTOR_NAME, JAVA_17, JavaStr};
 use ristretto_classloader::{Class, Object, ResolvedMethod, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -809,7 +809,7 @@ async fn invoke_special<T: Thread + 'static>(
             let allocation_class = thread
                 .load_referenced_class(
                     &target_class,
-                    &ristretto_classfile::JavaStr::cow_from_str(&allocation_class_name),
+                    &JavaStr::cow_from_str(&allocation_class_name),
                 )
                 .await?;
             let allocation_class = thread.resolve_class(&allocation_class, true).await?;

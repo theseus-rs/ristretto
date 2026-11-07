@@ -13,7 +13,7 @@ use ristretto_classfile::verifiers::bytecode::{
 use ristretto_classfile::verifiers::context::VerificationContext;
 use ristretto_classfile::verifiers::{error, signature};
 use ristretto_classfile::{
-    ClassFile, Constant, JAVA_5, JAVA_8, JavaString, Method, MethodAccessFlags,
+    ClassFile, Constant, JAVA_5, JAVA_8, JavaStr, JavaString, Method, MethodAccessFlags,
 };
 use std::hint::black_box;
 
@@ -24,16 +24,16 @@ impl VerificationContext for Context {
         Some(1)
     }
 
-    fn is_subclass(&self, child: &str, parent: &str) -> error::Result<bool> {
+    fn is_subclass(&self, child: &JavaStr, parent: &JavaStr) -> error::Result<bool> {
         Ok(child == parent || parent == "java/lang/Object" || parent == "java/lang/Throwable")
     }
 
-    fn is_assignable(&self, target: &str, source: &str) -> error::Result<bool> {
+    fn is_assignable(&self, target: &JavaStr, source: &JavaStr) -> error::Result<bool> {
         self.is_subclass(source, target)
     }
 
-    fn common_superclass(&self, _: &str, _: &str) -> error::Result<String> {
-        Ok("java/lang/Object".to_string())
+    fn common_superclass(&self, _: &JavaStr, _: &JavaStr) -> error::Result<JavaString> {
+        Ok("java/lang/Object".into())
     }
 }
 

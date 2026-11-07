@@ -6,17 +6,16 @@ use super::type_system::VerificationType;
 use crate::attributes::{Attribute, Instruction};
 use crate::verifiers::error::{Result, VerifyError};
 use crate::{
-    CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassFile, Constant, FieldType, JAVA_7, Method,
-    MethodAccessFlags,
+    CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassFile, Constant, FieldType, JAVA_7, JavaStr,
+    JavaString, Method, MethodAccessFlags,
 };
 
 fn invalid(message: &str) -> VerifyError {
     VerifyError::VerifyError(message.to_string())
 }
 
-fn receiver<'a>(frame: &'a Frame, descriptor: &str) -> Result<&'a VerificationType> {
-    let descriptor = crate::JavaStr::cow_from_str(descriptor);
-    let (parameters, _) = FieldType::parse_method_descriptor(&descriptor)?;
+fn receiver<'a>(frame: &'a Frame, descriptor: &JavaStr) -> Result<&'a VerificationType> {
+    let (parameters, _) = FieldType::parse_method_descriptor(descriptor)?;
     let slots = parameters
         .iter()
         .map(|p| {
@@ -213,11 +212,11 @@ fn verify_member_access<C: crate::verifiers::context::VerificationContext>(
         _ => None,
     };
     if let Some((owner, name, descriptor)) = member {
-        let current = class.class_name()?.to_str_lossy();
+        let current = class.class_name()?;
         let object = match instruction {
             Instruction::Getfield(_) => Some(frame.peek()?),
             Instruction::Putfield(_) => {
-                let ty = FieldType::parse_java_str(&crate::JavaStr::cow_from_str(&descriptor))?;
+                let ty = FieldType::parse_java_str(&descriptor)?;
                 Some(
                     frame.peek_at(if VerificationType::from_field_type(&ty).is_category2() {
                         2
@@ -233,13 +232,13 @@ fn verify_member_access<C: crate::verifiers::context::VerificationContext>(
         };
         let receiver_type = object.and_then(|ty| {
             if *ty == VerificationType::UninitializedThis {
-                Some(["L", &current, ";"].concat())
+                VerificationType::Object(current.to_owned()).to_descriptor()
             } else {
                 ty.to_descriptor()
             }
         });
         context.verify_member_access(&crate::verifiers::context::MemberAccess {
-            current_class: &current,
+            current_class: current,
             owner: &owner,
             name: &name,
             descriptor: &descriptor,
@@ -280,13 +279,13 @@ pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
                         }
                     }
                     VerificationType::UninitializedThis => {
-                        let current = class.class_name()?.to_str_lossy();
+                        let current = class.class_name()?;
                         let parent = if class.super_class == 0 {
-                            String::new()
+                            JavaString::new()
                         } else {
                             resolver.resolve_class(class.super_class)?
                         };
-                        if owner != current && owner != parent {
+                        if owner.as_java_str() != current && owner != parent {
                             return Err(invalid(
                                 "Constructor must initialize this or its direct superclass",
                             ));
@@ -302,15 +301,14 @@ pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
                         "invokespecial receiver must be assignable to the current class",
                     ));
                 }
-                let current = current.to_str_lossy();
                 let direct_interface = class.interfaces.iter().any(|index| {
                     resolver
                         .resolve_class(*index)
                         .is_ok_and(|name| name == owner)
                 });
-                if owner != current
+                if owner.as_java_str() != current
                     && !direct_interface
-                    && !context.is_subclass(&current, &owner)?
+                    && !context.is_subclass(current, &owner)?
                 {
                     return Err(invalid(
                         "invokespecial owner must be the current class, a superclass, or a direct superinterface",
@@ -320,23 +318,23 @@ pub(super) fn verify_state<C: crate::verifiers::context::VerificationContext>(
         }
         Instruction::Putfield(index) => {
             let (owner, name, descriptor) = resolver.resolve_field_ref(*index)?;
-            let ty = FieldType::parse_java_str(&crate::JavaStr::cow_from_str(&descriptor))?;
+            let ty = FieldType::parse_java_str(&descriptor)?;
             let slots = if VerificationType::from_field_type(&ty).is_category2() {
                 2
             } else {
                 1
             };
             if *frame.peek_at(slots)? == VerificationType::UninitializedThis
-                && (owner != class.class_name()?.to_str_lossy()
+                && (owner.as_java_str() != class.class_name()?
                     || !class.fields.iter().any(|field| {
                         class
                             .constant_pool
                             .try_get_utf8(field.name_index)
-                            .is_ok_and(|n| n == name.as_str())
+                            .is_ok_and(|n| n == name.as_java_str())
                             && class
                                 .constant_pool
                                 .try_get_utf8(field.descriptor_index)
-                                .is_ok_and(|d| d == descriptor.as_str())
+                                .is_ok_and(|d| d == descriptor.as_java_str())
                     }))
             {
                 return Err(invalid(

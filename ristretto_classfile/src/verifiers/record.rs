@@ -3,6 +3,7 @@
 //! This module validates the Record attribute which describes the components
 //! of a record class. Record classes were introduced in Java 16.
 
+use crate::JavaStr;
 use crate::attributes::Attribute;
 use crate::class_file::ClassFile;
 use crate::constant::Constant;
@@ -125,7 +126,7 @@ fn verify_component_attributes(
 
 /// Check if a string is a valid field descriptor according to [JVMS §4.3.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.3.2).
 fn is_valid_field_descriptor(descriptor: &str) -> bool {
-    crate::FieldType::parse_java_str(&crate::JavaStr::cow_from_str(descriptor)).is_ok()
+    crate::FieldType::parse_java_str(&JavaStr::cow_from_str(descriptor)).is_ok()
 }
 
 #[cfg(test)]

@@ -395,7 +395,6 @@ impl ErrorClass {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Version;
     use crate::attributes::{ExceptionTableEntry, Instruction, StackFrame};
     use crate::constant::Constant;
     use crate::constant_pool::ConstantPool;
@@ -403,19 +402,20 @@ mod tests {
     use crate::verifiers::bytecode::control_flow::CODE_INFO_BUILDS;
     use crate::verifiers::bytecode::handlers::test_utils::MockContext;
     use crate::verifiers::method_access_flags::METHOD_FLAG_CHECKS;
+    use crate::{JavaStr, JavaString, Version};
 
     struct UnversionedContext;
 
     impl VerificationContext for UnversionedContext {
-        fn is_subclass(&self, subclass: &str, superclass: &str) -> Result<bool> {
+        fn is_subclass(&self, subclass: &JavaStr, superclass: &JavaStr) -> Result<bool> {
             MockContext::PERMISSIVE.is_subclass(subclass, superclass)
         }
 
-        fn is_assignable(&self, target: &str, source: &str) -> Result<bool> {
+        fn is_assignable(&self, target: &JavaStr, source: &JavaStr) -> Result<bool> {
             MockContext::PERMISSIVE.is_assignable(target, source)
         }
 
-        fn common_superclass(&self, class1: &str, class2: &str) -> Result<String> {
+        fn common_superclass(&self, class1: &JavaStr, class2: &JavaStr) -> Result<JavaString> {
             MockContext::PERMISSIVE.common_superclass(class1, class2)
         }
     }
@@ -674,16 +674,39 @@ mod tests {
     }
 
     #[test]
+    fn test_unversioned_context_relationships() {
+        let context = UnversionedContext;
+        assert!(
+            context
+                .is_subclass(
+                    &JavaStr::cow_from_str("Child"),
+                    &JavaStr::cow_from_str("Parent")
+                )
+                .unwrap()
+        );
+        assert!(
+            context
+                .is_assignable(
+                    &JavaStr::cow_from_str("Target"),
+                    &JavaStr::cow_from_str("Source")
+                )
+                .unwrap()
+        );
+        assert_eq!(
+            "java/lang/Object",
+            context
+                .common_superclass(
+                    &JavaStr::cow_from_str("Left"),
+                    &JavaStr::cow_from_str("Right")
+                )
+                .unwrap()
+        );
+    }
+
+    #[test]
     fn test_unversioned_context_and_inference_fallbacks() {
         let class_file = create_mock_class_file();
         let context = UnversionedContext;
-        assert!(context.is_subclass("Child", "Parent").unwrap());
-        assert!(context.is_assignable("Target", "Source").unwrap());
-        assert_eq!(
-            "java/lang/Object",
-            context.common_superclass("Left", "Right").unwrap()
-        );
-
         let fallback_method = Method {
             access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
             name_index: 3,

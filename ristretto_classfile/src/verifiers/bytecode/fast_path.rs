@@ -21,8 +21,6 @@
 //!
 //! - [JVMS §4.10.1 - Verification by Type Checking](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1)
 
-use crate::JavaStr;
-use crate::JavaString;
 use crate::attributes::{Attribute, ExceptionTableEntry, Instruction};
 use crate::class_file::ClassFile;
 use crate::method::Method;
@@ -39,7 +37,7 @@ use crate::verifiers::bytecode::stackmap::DecodedStackMapTable;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
-use crate::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldType};
+use crate::{CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldType, JavaStr, JavaString};
 use ahash::AHashSet;
 
 /// Extracted components from a Code attribute.
@@ -96,11 +94,11 @@ pub struct FastPathVerifier<'a, C: VerificationContext> {
     /// Class file major version.
     major_version: u16,
     /// The current class name.
-    current_class: String,
+    current_class: JavaString,
     /// The method name.
-    method_name: String,
+    method_name: JavaString,
     /// The method descriptor.
-    method_descriptor: String,
+    method_descriptor: JavaString,
     /// Decoded `StackMapTable`.
     stack_map_table: DecodedStackMapTable,
     /// Recoverable Java 6 stack-map failure, retained for repeat verification.
@@ -160,8 +158,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         };
         let (current_class, method_name, method_descriptor) =
             Self::extract_method_info(class_file, method)?;
-        let method_descriptor_js = JavaStr::cow_from_str(&method_descriptor);
-        let (_, return_type) = FieldType::parse_method_descriptor(&method_descriptor_js)
+        let (_, return_type) = FieldType::parse_method_descriptor(&method_descriptor)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
         let major_version = class_file.version.major();
 
@@ -258,22 +255,22 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     fn extract_method_info(
         class_file: &ClassFile<'_>,
         method: &Method,
-    ) -> Result<(String, String, String)> {
+    ) -> Result<(JavaString, JavaString, JavaString)> {
         let current_class = class_file
             .constant_pool
             .try_get_class(class_file.this_class)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?
-            .to_string();
+            .to_owned();
         let method_name = class_file
             .constant_pool
             .try_get_utf8(method.name_index)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?
-            .to_string();
+            .to_owned();
         let method_descriptor = class_file
             .constant_pool
             .try_get_utf8(method.descriptor_index)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?
-            .to_string();
+            .to_owned();
         Ok((current_class, method_name, method_descriptor))
     }
 
@@ -333,8 +330,8 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     fn create_initial_frame_static(
         method: &Method,
         class_file: &ClassFile<'_>,
-        current_class: &str,
-        method_name: &str,
+        current_class: &JavaStr,
+        method_name: &JavaStr,
         max_locals: u16,
         max_stack: u16,
     ) -> Result<Frame> {
@@ -973,20 +970,30 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         Ok(true)
     }
 
-    fn verify_getfield(&self, frame: &mut Frame, class_name: &str, descriptor: &str) -> Result<()> {
+    fn verify_getfield(
+        &self,
+        frame: &mut Frame,
+        class_name: &JavaStr,
+        descriptor: &JavaStr,
+    ) -> Result<()> {
         handlers::references::handle_getfield(frame, class_name, descriptor, self.context)
     }
 
-    fn verify_putfield(&self, frame: &mut Frame, class_name: &str, descriptor: &str) -> Result<()> {
+    fn verify_putfield(
+        &self,
+        frame: &mut Frame,
+        class_name: &JavaStr,
+        descriptor: &JavaStr,
+    ) -> Result<()> {
         handlers::references::handle_putfield(frame, class_name, descriptor, self.context)
     }
 
     fn verify_invoke(
         &self,
         frame: &mut Frame,
-        class_name: &str,
-        method_name: &str,
-        descriptor: &str,
+        class_name: &JavaStr,
+        method_name: &JavaStr,
+        descriptor: &JavaStr,
         is_static: bool,
     ) -> Result<()> {
         handlers::references::handle_invoke(
@@ -1003,9 +1010,9 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     fn verify_invokespecial(
         &self,
         frame: &mut Frame,
-        class_name: &str,
-        method_name: &str,
-        descriptor: &str,
+        class_name: &JavaStr,
+        method_name: &JavaStr,
+        descriptor: &JavaStr,
     ) -> Result<()> {
         handlers::references::handle_invokespecial(
             frame,
@@ -1096,9 +1103,9 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     #[must_use]
     pub fn create_diagnostic(&self, pc: u16, message: &str) -> VerificationDiagnostic {
         VerificationDiagnostic::new(
-            &self.current_class,
-            &self.method_name,
-            &self.method_descriptor,
+            self.current_class.to_string(),
+            self.method_name.to_string(),
+            self.method_descriptor.to_string(),
             pc,
             message,
         )
@@ -1326,11 +1333,21 @@ mod tests {
         let debug = format!("{verifier:?}");
         assert!(debug.contains("FastPathVerifier"));
         assert!(verifier.trace().is_enabled());
-        assert!(context.is_subclass("A", "B").unwrap());
-        assert!(context.is_assignable("A", "B").unwrap());
+        assert!(
+            context
+                .is_subclass(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
+        );
+        assert!(
+            context
+                .is_assignable(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
+        );
         assert_eq!(
             "java/lang/Object",
-            context.common_superclass("A", "B").unwrap()
+            context
+                .common_superclass(&JavaStr::cow_from_str("A"), &JavaStr::cow_from_str("B"))
+                .unwrap()
         );
         let diagnostic = verifier.create_diagnostic(7, "message");
         assert_eq!(7, diagnostic.pc);
@@ -1361,8 +1378,8 @@ mod tests {
         let frame = TestFastPathVerifier::create_initial_frame_static(
             &constructor,
             &class_file,
-            "TestClass",
-            CONSTRUCTOR_NAME,
+            &JavaStr::cow_from_str("TestClass"),
+            &JavaStr::cow_from_str(CONSTRUCTOR_NAME),
             7,
             1,
         )
@@ -1380,8 +1397,8 @@ mod tests {
         let small = TestFastPathVerifier::create_initial_frame_static(
             &method,
             &class_file,
-            "TestClass",
-            "testMethod",
+            &JavaStr::cow_from_str("TestClass"),
+            &JavaStr::cow_from_str("testMethod"),
             2,
             1,
         );
@@ -1806,8 +1823,8 @@ mod tests {
             TestFastPathVerifier::create_initial_frame_static(
                 &bad_descriptor_index,
                 &class_file,
-                "TestClass",
-                "testMethod",
+                &JavaStr::cow_from_str("TestClass"),
+                &JavaStr::cow_from_str("testMethod"),
                 0,
                 0,
             )
@@ -1827,8 +1844,8 @@ mod tests {
             TestFastPathVerifier::create_initial_frame_static(
                 &bad_descriptor_text,
                 &class_file,
-                "TestClass",
-                "testMethod",
+                &JavaStr::cow_from_str("TestClass"),
+                &JavaStr::cow_from_str("testMethod"),
                 0,
                 0,
             )
@@ -1910,8 +1927,8 @@ mod tests {
         let frame = TestFastPathVerifier::create_initial_frame_static(
             &instance_method,
             &class_file,
-            "TestClass",
-            "testMethod",
+            &JavaStr::cow_from_str("TestClass"),
+            &JavaStr::cow_from_str("testMethod"),
             1,
             0,
         )
@@ -1935,8 +1952,8 @@ mod tests {
             TestFastPathVerifier::create_initial_frame_static(
                 &wide_method,
                 &class_file,
-                "TestClass",
-                "testMethod",
+                &JavaStr::cow_from_str("TestClass"),
+                &JavaStr::cow_from_str("testMethod"),
                 3,
                 0,
             )

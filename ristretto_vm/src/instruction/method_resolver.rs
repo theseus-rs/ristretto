@@ -39,7 +39,7 @@ use crate::Result;
 use crate::frame::Frame;
 use crate::method_ref_cache::{InvokeKind, MethodRefError, MethodRefErrorKind, ResolvedMethodRef};
 use crate::module_system::{ALL_UNNAMED, AccessCheckResult, ModuleSystem};
-use ristretto_classfile::Constant;
+use ristretto_classfile::{Constant, JavaStr};
 use ristretto_classloader::{Class, Method, ResolvedMethod};
 use std::sync::Arc;
 
@@ -417,7 +417,7 @@ fn create_synthetic_intrinsic_method(
     };
 
     // Parse the method descriptor
-    let method_descriptor = ristretto_classfile::JavaStr::cow_from_str(method_descriptor);
+    let method_descriptor = JavaStr::cow_from_str(method_descriptor);
     let (parameters, return_type) =
         ristretto_classfile::FieldType::parse_method_descriptor(&method_descriptor)?;
 
