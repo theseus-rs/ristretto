@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_java` - [0.35.1](https://github.com/theseus-rs/ristretto/compare/v0.35.0...v0.35.1) - 2026-11-07
+
+### Fixed
+- restrict type-checking fallback to class file version 50
+- preserve Java type identity during bytecode verification
+
+### Other
+- Merge pull request #1043 from theseus-rs/fix-verifier-java-type-identity
+- reduce MethodHandle and VarHandle dispatch overhead
+
+## `ristretto_vm` - [0.35.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.35.0...ristretto_vm-v0.35.1) - 2026-11-07
+
+### Fixed
+- preserve Java type identity during bytecode verification
+
+## `ristretto_intrinsics` - [0.35.1](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.35.0...ristretto_intrinsics-v0.35.1) - 2026-11-07
+
+### Fixed
+- preserve Java type identity during bytecode verification
+
+### Other
+- Merge pull request #1043 from theseus-rs/fix-verifier-java-type-identity
+- reduce MethodHandle and VarHandle dispatch overhead
+
+## `ristretto_types` - [0.35.1](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.35.0...ristretto_types-v0.35.1) - 2026-11-07
+
+### Fixed
+- preserve Java type identity during bytecode verification
+
+## `ristretto_macros` - [0.35.1](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.35.0...ristretto_macros-v0.35.1) - 2026-11-07
+
+### Fixed
+- preserve Java type identity during bytecode verification
+
+## `ristretto_classfile` - [0.35.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.35.0...ristretto_classfile-v0.35.1) - 2026-11-07
+
+### Fixed
+- restrict type-checking fallback to class file version 50
+- preserve Java type identity during bytecode verification
+
 ## `ristretto_javac` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.34.0...ristretto_javac-v0.35.0) - 2026-11-05
 
 ### Other
