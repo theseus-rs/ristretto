@@ -9,7 +9,7 @@ use ristretto_classfile::attributes::{
     VerificationType,
 };
 use ristretto_classfile::byte_reader::ByteReader;
-use ristretto_classfile::{ClassFile, Constant, ConstantPool};
+use ristretto_classfile::{ClassFile, Constant, ConstantPool, JAVA_8};
 
 #[test]
 fn byte_reader_arithmetic_is_checked() {
@@ -265,7 +265,7 @@ fn signature_checks_accept_context_and_recursive_bounds() {
 #[test]
 fn unknown_attribute_context_and_version_preserve_payload() {
     let mut class = ClassFile::from_bytes(include_bytes!("../../classes/Minimum.class")).unwrap();
-    class.version = ristretto_classfile::JAVA_8;
+    class.version = JAVA_8;
     let index = class.constant_pool.add_utf8("Code").unwrap();
     class.attributes.push(Attribute::Unknown {
         name_index: index,

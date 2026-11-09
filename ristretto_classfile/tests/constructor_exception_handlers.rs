@@ -5,7 +5,7 @@
 )]
 use ristretto_classfile::attributes::{Attribute, ExceptionTableEntry, Instruction};
 use ristretto_classfile::verifiers::bytecode::{VerifierConfig, verify_class};
-use ristretto_classfile::verifiers::context::VerificationContext;
+use ristretto_classfile::verifiers::context::{MemberAccess, VerificationContext};
 use ristretto_classfile::verifiers::error;
 use ristretto_classfile::{
     CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, JAVA_5, JavaStr, JavaString, Method,
@@ -14,6 +14,11 @@ use ristretto_classfile::{
 
 struct Context;
 impl VerificationContext for Context {
+    fn verify_member_access(&self, _access: &MemberAccess<'_>) -> error::Result<()> {
+        // This fixture models accessible members; access-policy failures have dedicated cases.
+        Ok(())
+    }
+
     fn is_subclass(&self, source: &JavaStr, target: &JavaStr) -> error::Result<bool> {
         self.is_assignable(target, source)
     }

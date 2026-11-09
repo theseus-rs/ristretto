@@ -39,6 +39,7 @@
 
 use crate::Error::FromUtf8Error;
 use crate::Result;
+use std::borrow::Cow;
 
 /// Converts a Rust string to a Java Modified UTF-8 byte array.
 ///
@@ -269,7 +270,7 @@ pub fn to_utf16(input: &[u8]) -> Result<Vec<u16>> {
 /// # Errors
 /// Returns an error if the byte sequence is not valid Modified UTF-8.
 pub fn from_bytes(input: &[u8]) -> Result<String> {
-    from_bytes_cow(input).map(std::borrow::Cow::into_owned)
+    from_bytes_cow(input).map(Cow::into_owned)
 }
 
 /// Zero-copy version of `from_bytes` that returns a `Cow<'a, str>`.
@@ -279,8 +280,7 @@ pub fn from_bytes(input: &[u8]) -> Result<String> {
 ///
 /// # Errors
 /// Returns an error if the input contains invalid MUTF-8 sequences.
-pub fn from_bytes_cow(input: &[u8]) -> Result<std::borrow::Cow<'_, str>> {
-    use std::borrow::Cow;
+pub fn from_bytes_cow(input: &[u8]) -> Result<Cow<'_, str>> {
     if !validate_and_classify(input)? {
         // SAFETY: validation rejected invalid UTF-8 encodings and found no MUTF-8
         // NUL or surrogate sequences, so these bytes are also valid Rust UTF-8.
@@ -546,7 +546,6 @@ fn decode_mutf8(input: &[u8]) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::borrow::Cow;
 
     #[test]
     fn test_nul_expansion_in_ascii_and_mixed_text() -> Result<()> {
