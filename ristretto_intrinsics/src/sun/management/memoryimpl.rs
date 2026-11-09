@@ -46,13 +46,14 @@ pub async fn get_memory_usage_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let heap = parameters.pop_bool()?;
-    let statistics = thread.vm()?.garbage_collector().statistics()?;
-    let observed_bytes = i64::try_from(statistics.bytes_allocated)?;
 
-    // The VM has no memory pools or heap cap. Report observed bytes as used and committed,
-    // leaving `max` undefined; consumers treat `-1` as unset.
+    // The VM has no memory pools or heap cap. Use the collector's live allocation estimate
+    // for used and committed; the scheduling counter resets even when objects survive GC.
+    // Leave `max` undefined; consumers treat `-1` as unset.
     let (init, used, committed, max) = if heap {
-        (0, observed_bytes, observed_bytes, -1)
+        let statistics = thread.vm()?.garbage_collector().statistics()?;
+        let live_bytes = i64::try_from(statistics.bytes_live)?;
+        (0, live_bytes, live_bytes, -1)
     } else {
         (-1, 0, 0, -1)
     };
@@ -83,6 +84,10 @@ pub fn set_verbose_gc<T: Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(not(target_family = "wasm"))]
+    use ristretto_classloader::Reference;
+    #[cfg(not(target_family = "wasm"))]
+    use std::time::Duration;
 
     #[tokio::test]
     async fn test_get_memory_managers_0() {
@@ -121,6 +126,49 @@ mod tests {
         assert!(used >= 0);
         assert!(committed >= used);
         assert_eq!(-1, max);
+        Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[tokio::test]
+    async fn test_get_memory_usage_0_heap_after_collection() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let retained = Value::new_object(
+            vm.garbage_collector(),
+            Reference::ByteArray(vec![42; 1024 * 1024].into_boxed_slice()),
+        );
+        let before = get_memory_usage_0(thread.clone(), Parameters::new(vec![Value::from(true)]))
+            .await?
+            .expect("heap usage");
+        let before_used = before.as_object_ref()?.value("used")?.as_i64()?;
+        assert!(before_used > 0);
+
+        for _ in 0..2 {
+            let completed = vm.garbage_collector().statistics()?.collections_completed;
+            vm.gc();
+            tokio::time::timeout(Duration::from_secs(5), async {
+                while vm.garbage_collector().statistics()?.collections_completed == completed {
+                    tokio::time::sleep(Duration::from_millis(5)).await;
+                }
+                Ok::<_, ristretto_types::Error>(())
+            })
+            .await
+            .expect("collection completed")?;
+
+            let after =
+                get_memory_usage_0(thread.clone(), Parameters::new(vec![Value::from(true)]))
+                    .await?
+                    .expect("heap usage");
+            let usage = after.as_object_ref()?;
+            let used = usage.value("used")?.as_i64()?;
+            let committed = usage.value("committed")?.as_i64()?;
+            assert!(used >= before_used, "live heap usage was lost during GC");
+            assert!(committed >= used);
+            let array = retained.as_reference()?;
+            let bytes = array.as_byte_vec_ref()?;
+            assert_eq!(bytes.len(), 1024 * 1024);
+            assert!(bytes.iter().all(|&byte| byte == 42));
+        }
         Ok(())
     }
 

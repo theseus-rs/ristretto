@@ -141,19 +141,61 @@ impl ConfigurationBuilder {
     }
 }
 
-/// Statistics about garbage collection performance
+/// A snapshot of garbage collection activity and tracked allocation sizes.
+///
+/// Returned by [`GarbageCollector::statistics`](crate::GarbageCollector::statistics).
+/// Collection counts and recorded timing totals accumulate over the collector's lifetime.
+/// Allocation counters are sampled independently of collection metrics, so the fields do
+/// not form an atomic snapshot while allocations or collections are in progress.
+///
+/// Byte counters use the recorded inline size of each GC allocation. They exclude
+/// separately allocated buffers and allocator overhead. Use [`bytes_live`](Self::bytes_live)
+/// for estimated current memory usage; [`bytes_allocated`](Self::bytes_allocated) measures
+/// allocation pressure for collection scheduling.
+///
+/// The default value has zero counts and durations, with no last collection timestamps.
 #[derive(Clone, Debug, Default)]
 pub struct Statistics {
+    /// Total number of collection cycles started, including any cycle still in progress.
     pub collections_started: usize,
+    /// Total number of collection cycles that have finished all marking and sweeping phases.
     pub collections_completed: usize,
+    /// Cumulative number of objects marked across collection cycles.
+    ///
+    /// This metric is not currently recorded and remains zero.
     pub objects_marked: usize,
+    /// Cumulative number of objects reclaimed by sweeping, excluding shutdown cleanup.
     pub objects_swept: usize,
+    /// Bytes allocated since the last sweep reset, used to schedule the next collection.
+    ///
+    /// Reset to zero at the end of each sweep, even when allocations survive the cycle.
     pub bytes_allocated: usize,
+    /// Bytes in GC allocations that have not been freed, including retained allocations
+    /// and unreachable objects that have not yet been swept.
+    ///
+    /// Decreases only when allocations are freed during sweeping or shutdown cleanup.
+    pub bytes_live: usize,
+    /// Cumulative bytes reclaimed by sweeping, excluding shutdown cleanup.
     pub bytes_freed: usize,
+    /// Cumulative time spent in collection pauses, in microseconds.
+    ///
+    /// This metric is not currently recorded and remains zero.
     pub total_pause_time_us: u64,
+    /// Cumulative time spent in concurrent collection phases, in microseconds.
+    ///
+    /// This metric is not currently recorded and remains zero.
     pub concurrent_time_us: u64,
+    /// Start time of the most recently started collection, which may still be running.
+    ///
+    /// `None` until the first collection starts.
     pub last_collection_start: Option<std::time::Instant>,
+    /// Elapsed time across all phases of the most recently completed collection.
+    ///
+    /// `None` until the first collection finishes. During a later collection, this still
+    /// describes the previous cycle, while [`last_collection_start`](Self::last_collection_start)
+    /// refers to the current one.
     pub last_collection_duration: Option<std::time::Duration>,
+    /// Sum of elapsed times across all completed collection cycles, excluding shutdown cleanup.
     pub total_collection_time: std::time::Duration,
 }
 
@@ -179,6 +221,7 @@ mod tests {
         assert_eq!(stats.objects_marked, 0);
         assert_eq!(stats.objects_swept, 0);
         assert_eq!(stats.bytes_allocated, 0);
+        assert_eq!(stats.bytes_live, 0);
         assert_eq!(stats.bytes_freed, 0);
         assert_eq!(stats.total_pause_time_us, 0);
         assert_eq!(stats.concurrent_time_us, 0);

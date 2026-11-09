@@ -10,10 +10,67 @@
     reason = "integration tests use local fixture types, direct fixture indexing, unwrap, and assertions with Result-returning tests"
 )]
 
-use ristretto_gc::{Configuration, GarbageCollector, Gc, Result, Trace};
+use ristretto_gc::{Configuration, GarbageCollector, Gc, Result, Statistics, Trace};
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
+
+fn collect_and_wait(collector: &GarbageCollector) -> Result<Statistics> {
+    let completed = collector.statistics()?.collections_completed;
+    collector.collect();
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    loop {
+        let statistics = collector.statistics()?;
+        if statistics.collections_completed > completed {
+            return Ok(statistics);
+        }
+        assert!(std::time::Instant::now() < deadline, "collection timed out");
+        thread::sleep(Duration::from_millis(5));
+    }
+}
+
+#[test_log::test]
+fn test_live_bytes_track_survivors_reclamation_and_cleanup() -> Result<()> {
+    let collector = GarbageCollector::new();
+    collector.start();
+    assert_eq!(collector.statistics()?.bytes_live, 0);
+
+    let rooted = Gc::new(&collector, 42_u64);
+    let retained = Gc::new(&collector, 7_u64).into_retained();
+    let size = size_of::<u64>();
+    assert_eq!(collector.statistics()?.bytes_live, 2 * size);
+
+    // Collection resets scheduling pressure while both allocations remain live.
+    let statistics = collect_and_wait(&collector)?;
+    assert_eq!(statistics.bytes_live, 2 * size);
+    assert_eq!(statistics.bytes_allocated, 0);
+    assert_eq!(statistics.bytes_freed, 0);
+    assert_eq!(**rooted, 42);
+    assert_eq!(*retained, 7);
+
+    // Free an allocation from a previous cycle without losing the retained one.
+    drop(rooted);
+    let statistics = collect_and_wait(&collector)?;
+    assert_eq!(statistics.bytes_live, size);
+    assert_eq!(statistics.bytes_allocated, 0);
+    assert_eq!(statistics.bytes_freed, size);
+    assert_eq!(*retained, 7);
+
+    let another = Gc::new(&collector, 99_u64);
+    assert_eq!(collector.statistics()?.bytes_live, 2 * size);
+    let statistics = collect_and_wait(&collector)?;
+    assert_eq!(statistics.bytes_live, 2 * size);
+    assert_eq!(statistics.bytes_freed, size);
+    assert_eq!(**another, 99);
+
+    drop(another);
+    drop(retained);
+    collector.stop()?;
+    assert_eq!(collector.statistics()?.bytes_live, 0);
+    collector.stop()?;
+    assert_eq!(collector.statistics()?.bytes_live, 0);
+    Ok(())
+}
 
 #[test_log::test]
 fn test_custom_gc_config() {
