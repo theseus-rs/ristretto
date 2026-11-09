@@ -1,7 +1,8 @@
 use ristretto_classfile::VersionSpecification::Any;
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
+use ristretto_types::JavaObject;
 use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
@@ -11,15 +12,24 @@ use std::sync::Arc;
     "sun/management/MemoryImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;",
     Any
 )]
-pub fn get_memory_managers_0<T: Thread + 'static>(
-    _thread: Arc<T>,
+pub async fn get_memory_managers_0<T: Thread + 'static>(
+    thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun.management.MemoryImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;"
-            .to_string(),
-    )
-    .into())
+    let name = "Ristretto GC".to_object(&thread).await?;
+    let manager = thread
+        .object(
+            "sun.management.GarbageCollectorImpl",
+            "Ljava/lang/String;",
+            &[name],
+        )
+        .await?;
+    let array_class = thread
+        .class("[Ljava/lang/management/MemoryManagerMXBean;")
+        .await?;
+    let reference = Reference::try_from((array_class, vec![manager]))?;
+    let managers = Value::new_object(thread.vm()?.garbage_collector(), reference);
+    Ok(Some(managers))
 }
 
 #[intrinsic_method(
@@ -92,10 +102,28 @@ mod tests {
     #[tokio::test]
     async fn test_get_memory_managers_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_memory_managers_0(thread, Parameters::default());
+        let result = get_memory_managers_0(thread, Parameters::default())
+            .await
+            .expect("get memory managers")
+            .expect("memory managers");
+        let reference = result.as_reference().expect("memory managers reference");
+        let Reference::Array(managers) = &*reference else {
+            panic!("expected an object array");
+        };
         assert_eq!(
-            "sun.management.MemoryImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;",
-            result.unwrap_err().to_string()
+            "[Ljava/lang/management/MemoryManagerMXBean;",
+            managers.class.name()
+        );
+        assert_eq!(1, managers.elements.len());
+        let manager = managers
+            .elements
+            .first()
+            .expect("manager element")
+            .as_object_ref()
+            .expect("manager object");
+        assert_eq!(
+            "sun/management/GarbageCollectorImpl",
+            manager.class().name()
         );
     }
 

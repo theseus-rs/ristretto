@@ -4,29 +4,28 @@ use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
+use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/management/GarbageCollectorImpl.getCollectionCount()J", Any)]
 pub fn get_collection_count<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun.management.GarbageCollectorImpl.getCollectionCount()J".to_string(),
-    )
-    .into())
+    let statistics = thread.vm()?.garbage_collector().statistics()?;
+    let count = i64::try_from(statistics.collections_completed)?;
+    Ok(Some(Value::Long(count)))
 }
 
 #[intrinsic_method("sun/management/GarbageCollectorImpl.getCollectionTime()J", Any)]
 pub fn get_collection_time<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun.management.GarbageCollectorImpl.getCollectionTime()J".to_string(),
-    )
-    .into())
+    let statistics = thread.vm()?.garbage_collector().statistics()?;
+    let time = i64::try_from(statistics.total_collection_time.as_millis())?;
+    Ok(Some(Value::Long(time)))
 }
 
 #[intrinsic_method(
@@ -48,22 +47,30 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_collection_count() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_collection_count(thread, Parameters::default());
-        assert_eq!(
-            "sun.management.GarbageCollectorImpl.getCollectionCount()J",
-            result.unwrap_err().to_string()
-        );
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let collector = vm.garbage_collector();
+        let before = collector.statistics().expect("statistics");
+        let result = get_collection_count(thread, Parameters::default())
+            .expect("result")
+            .expect("count");
+        let after = collector.statistics().expect("statistics");
+        let count = usize::try_from(result.as_i64().expect("long")).expect("count");
+        assert!(before.collections_completed <= count);
+        assert!(count <= after.collections_completed);
     }
 
     #[tokio::test]
     async fn test_get_collection_time() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_collection_time(thread, Parameters::default());
-        assert_eq!(
-            "sun.management.GarbageCollectorImpl.getCollectionTime()J",
-            result.unwrap_err().to_string()
-        );
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let collector = vm.garbage_collector();
+        let before = collector.statistics().expect("statistics");
+        let result = get_collection_time(thread, Parameters::default())
+            .expect("result")
+            .expect("time");
+        let after = collector.statistics().expect("statistics");
+        let time = u128::try_from(result.as_i64().expect("long")).expect("time");
+        assert!(before.total_collection_time.as_millis() <= time);
+        assert!(time <= after.total_collection_time.as_millis());
     }
 
     #[tokio::test]
