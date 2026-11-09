@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_java` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/v0.35.0...v0.36.0) - 2026-11-09
+
+### Fixed
+- require explicit member access verification
+- restrict type-checking fallback to class file version 50
+- preserve Java type identity during bytecode verification
+- preserve live heap usage across garbage collections
+- provide GC collection counters for GarbageCollectorMXBean
+- provide conservative memory usage for MemoryMXBean
+
+### Other
+- Merge pull request #1049 from icefery/fix/gc-collection-counters
+- Merge pull request #1051 from theseus-rs/fix-memory-usage-live-accounting
+- Merge pull request #1045 from theseus-rs/fix-verifier-member-access-checks
+- Merge pull request #1043 from theseus-rs/fix-verifier-java-type-identity
+- reduce MethodHandle and VarHandle dispatch overhead
+
+## `ristretto_vm` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.35.0...ristretto_vm-v0.36.0) - 2026-11-09
+
+### Fixed
+- require explicit member access verification
+- preserve Java type identity during bytecode verification
+
+## `ristretto_intrinsics` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.35.0...ristretto_intrinsics-v0.36.0) - 2026-11-09
+
+### Fixed
+- preserve live heap usage across garbage collections
+- require explicit member access verification
+- provide GC collection counters for GarbageCollectorMXBean
+- provide conservative memory usage for MemoryMXBean
+- preserve Java type identity during bytecode verification
+
+### Other
+- Merge pull request #1049 from icefery/fix/gc-collection-counters
+- Merge pull request #1051 from theseus-rs/fix-memory-usage-live-accounting
+- Merge pull request #1045 from theseus-rs/fix-verifier-member-access-checks
+- Merge pull request #1043 from theseus-rs/fix-verifier-java-type-identity
+- reduce MethodHandle and VarHandle dispatch overhead
+
+## `ristretto_types` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.35.0...ristretto_types-v0.36.0) - 2026-11-09
+
+### Fixed
+- preserve Java type identity during bytecode verification
+
+## `ristretto_macros` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.35.0...ristretto_macros-v0.36.0) - 2026-11-09
+
+### Fixed
+- preserve Java type identity during bytecode verification
+
+## `ristretto_classloader` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.35.0...ristretto_classloader-v0.36.0) - 2026-11-09
+
+### Fixed
+- require explicit member access verification
+
+## `ristretto_gc` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.35.0...ristretto_gc-v0.36.0) - 2026-11-09
+
+### Fixed
+- preserve live heap usage across garbage collections
+
+## `ristretto_classfile` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.35.0...ristretto_classfile-v0.36.0) - 2026-11-09
+
+### Fixed
+- require explicit member access verification
+- restrict type-checking fallback to class file version 50
+- preserve Java type identity during bytecode verification
+
 ## `ristretto_javac` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.34.0...ristretto_javac-v0.35.0) - 2026-11-05
 
 ### Other
