@@ -75,8 +75,10 @@ pub struct GarbageCollector {
     collection_active: Arc<AtomicBool>,
     mark_queue: Arc<Mutex<VecDeque<TracePtr>>>,
 
-    // Allocation tracking
+    // Allocation pressure since the last collection, independent of live memory.
     bytes_allocated: Arc<AtomicUsize>,
+    // Bytes in allocations that have not been freed.
+    bytes_live: AtomicUsize,
 
     // Background thread coordination
     #[cfg(not(target_family = "wasm"))]
@@ -138,6 +140,7 @@ impl GarbageCollector {
             collection_active: Arc::new(AtomicBool::new(false)),
             mark_queue: Arc::new(Mutex::new(VecDeque::new())),
             bytes_allocated: Arc::new(AtomicUsize::new(0)),
+            bytes_live: AtomicUsize::new(0),
             #[cfg(not(target_family = "wasm"))]
             collector_thread: Arc::new(RwLock::new(None)),
             shutdown: Arc::new(AtomicBool::new(false)),
@@ -333,8 +336,7 @@ impl GarbageCollector {
             metadata.run_drop_fn();
         }
         if objects_freed > 0 {
-            self.bytes_allocated
-                .fetch_sub(bytes_freed, Ordering::Relaxed);
+            self.bytes_live.fetch_sub(bytes_freed, Ordering::Relaxed);
             debug!(
                 "cleanup freed {} remaining objects ({} bytes)",
                 objects_freed, bytes_freed
@@ -357,8 +359,9 @@ impl GarbageCollector {
         }
     }
 
-    /// Records an allocation for GC threshold tracking.
+    /// Records an allocation for live memory accounting and GC threshold tracking.
     pub fn record_allocation(&self, size: usize) {
+        self.bytes_live.fetch_add(size, Ordering::Relaxed);
         let old_size = self.bytes_allocated.fetch_add(size, Ordering::Relaxed);
 
         // Trigger collection if threshold exceeded (use saturating arithmetic to prevent overflow)
@@ -379,8 +382,9 @@ impl GarbageCollector {
             .map_err(|error| Error::StatsError(format!("Failed to read stats: {error}")))?
             .clone();
 
-        // Update bytes_allocated with current value
+        // Read allocation counters independently of collection scheduling statistics.
         statistics.bytes_allocated = self.bytes_allocated.load(Ordering::Relaxed);
+        statistics.bytes_live = self.bytes_live.load(Ordering::Relaxed);
 
         Ok(statistics)
     }
@@ -688,7 +692,13 @@ impl GarbageCollector {
         Self::final_mark_phase(collector, phase, roots, mark_queue, objects);
 
         // Phase 4: Concurrent Sweep; free unmarked objects
-        Self::concurrent_sweep_phase(phase, objects, bytes_allocated, stats);
+        Self::concurrent_sweep_phase(
+            phase,
+            objects,
+            bytes_allocated,
+            &collector.bytes_live,
+            stats,
+        );
 
         // Update phase back to idle
         if let Ok(mut phase_guard) = phase.write() {
@@ -922,6 +932,7 @@ impl GarbageCollector {
         phase: &Arc<RwLock<GcPhase>>,
         objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
         bytes_allocated: &Arc<AtomicUsize>,
+        bytes_live: &AtomicUsize,
         stats: &Arc<RwLock<Statistics>>,
     ) {
         if let Ok(mut phase_guard) = phase.write() {
@@ -976,7 +987,7 @@ impl GarbageCollector {
         }
 
         if swept_objects > 0 {
-            bytes_allocated.fetch_sub(swept_bytes, Ordering::Relaxed);
+            bytes_live.fetch_sub(swept_bytes, Ordering::Relaxed);
             debug!("swept {swept_objects} objects ({swept_bytes} bytes)");
         }
 
