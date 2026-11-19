@@ -83,6 +83,23 @@ fn classify_var_handle(var_handle: &Value) -> Option<VarHandleStorage> {
     }
 }
 
+/// Returns the direct `VarHandle` wrapped by a `LazyInitializingVarHandle`, or `None` if
+/// `var_handle` is not such a wrapper.
+///
+/// Since Java 22, a `VarHandle` for a static field created before its declaring class is
+/// initialized (e.g. in that class's own static initializer) is a `LazyInitializingVarHandle`,
+/// which initializes the class on first use and delegates to its `target`. The static field
+/// dispatch initializes the class itself (via `get_class`), so the target can be used directly.
+fn lazy_initializing_target(var_handle: &Value) -> Result<Option<Value>> {
+    let Ok(object) = var_handle.as_object_ref() else {
+        return Ok(None);
+    };
+    if object.class().name() != "java/lang/invoke/LazyInitializingVarHandle" {
+        return Ok(None);
+    }
+    Ok(Some(object.value("target")?))
+}
+
 /// Convert a `Value` to an i64 for numeric operations.
 fn value_to_i64(value: &Value) -> Result<i64> {
     match value {
@@ -132,6 +149,8 @@ async fn invoke_var_handle_access_mode<T: Thread + 'static>(
     let (var_handle, remaining_args) = all_params.split_first().ok_or_else(|| {
         InternalError("VarHandle access mode requires at least the VarHandle".to_string())
     })?;
+    let lazy_target = lazy_initializing_target(var_handle)?;
+    let var_handle = lazy_target.as_ref().unwrap_or(var_handle);
     let storage = classify_var_handle(var_handle);
 
     debug!(
