@@ -26,7 +26,10 @@ legacy context, interpreter fallback or payload pointer is linked into generated
 code. Object/field requests use the same typed Execution helpers as the interpreter.
 Programs containing static storage or any class initializer are rejected before
 code generation, including a fieldless scalar initializer. Later consumer commits
-separately connect cast and static helpers. Reference-array requests use the shared
+connect static initialization. Checked casts use the shared closed-layout target
+and preserve null/identity; 85 native HotSpot rows cover object and array casts and
+fault ordering. Unsupported interfaces, multidimensional targets and instanceof
+remain excluded at admission. Reference-array requests use the shared
 paged layout, bounds/component checks and owning return handoff; hidden pages never
 become Java references. The 34-row native oracle includes full 2,048-element arrays,
 covariance, mixed references, cycles and null/bounds/store fault ordering. Primitive arrays use

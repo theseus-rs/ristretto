@@ -8,7 +8,7 @@ use super::{
 use ristretto_classfile::{BaseType, FieldType};
 use ristretto_jit::{
     Activation, AllocationKind, ArrayAccessKind, CallKind, Compiler, ExecutionStep, FieldAccess,
-    Function, Value as JitValue,
+    Function, TypeCheckKind, Value as JitValue,
 };
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -488,6 +488,30 @@ impl CompiledExecution<'_, '_, '_, '_> {
                         .write_reference_array(&root, index, value.as_ref())
                         .await?;
                     frame.activation.complete_call(0)?;
+                    tokio::task::yield_now().await;
+                }
+                ExecutionStep::TypeCheck(request) => {
+                    let arguments = frame.activation.call_arguments()?;
+                    if request.kind != TypeCheckKind::CheckCast || arguments.len() != 1 {
+                        return Err(Error::Boundary("compiled cast request"));
+                    }
+                    let target = self
+                        .compiled
+                        .program
+                        .cast_target(frame.class, request.index)?;
+                    let value = frame.context.reference(
+                        *arguments
+                            .first()
+                            .ok_or(Error::Boundary("cast reference argument"))?,
+                    )?;
+                    let value = self.execution.cast_reference(value, target)?;
+                    let bits = result_bits(
+                        &frame.context,
+                        Some(&value),
+                        self.execution.limits.request_polls,
+                    )
+                    .await?;
+                    frame.activation.complete_call(bits)?;
                     tokio::task::yield_now().await;
                 }
                 ExecutionStep::Field(request) => {
