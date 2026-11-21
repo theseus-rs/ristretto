@@ -71,6 +71,7 @@ pub(super) struct Layout {
     fields: HashMap<(JavaString, JavaString), Field>,
     pub(super) references: usize,
     pub(super) statics: StaticLayout,
+    pub(super) casts: HashMap<u16, ReferenceType>,
 }
 
 impl Layout {
@@ -127,6 +128,7 @@ impl Layout {
         Ok(Self {
             class,
             fields,
+            casts: HashMap::new(),
             references,
             statics,
         })

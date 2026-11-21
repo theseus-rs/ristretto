@@ -132,3 +132,25 @@ fn unsupported_wide_stack_operations_reject_before_execution()
     }
     Ok(())
 }
+
+#[tokio::test]
+async fn primitive_array_cast_mismatch_reports_class_cast() -> Result<(), Box<dyn std::error::Error>>
+{
+    let class = ClassFile::from_bytes(include_bytes!(
+        "fixtures/canonical_rejected/CanonicalPrimitiveArrayTypeFailure.class"
+    ))?;
+    let program = Program::from_classfiles([class])?;
+    assert!(matches!(
+        program
+            .run(
+                "CanonicalPrimitiveArrayTypeFailure",
+                "run",
+                0,
+                configuration(),
+                Limits::default()
+            )
+            .await,
+        Err(Error::TypeFault("ClassCastException"))
+    ));
+    Ok(())
+}

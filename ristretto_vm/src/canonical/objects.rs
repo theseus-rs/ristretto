@@ -1,6 +1,7 @@
 //! Execution of verified closed object methods on a dedicated incremental heap.
 use super::layout::{Field, ReferenceType, reference_type};
 use super::reference_array::{self, Component};
+mod cast;
 mod reference_array_runtime;
 use super::primitive_array::{Element, Kind, PrimitiveArray};
 use super::statics::States;
@@ -182,17 +183,7 @@ impl Program {
             .get(name)
             .copied()
             .ok_or_else(|| Error::Unsupported(format!("class {name}")))?;
-        let a = &self.layout(owner)?.class;
-        let b = &self.layout(target)?.class;
-        if !b
-            .class_file()
-            .access_flags
-            .contains(ristretto_classfile::ClassAccessFlags::PUBLIC)
-            && a.name().rsplit_once('/').map(|pair| pair.0)
-                != b.name().rsplit_once('/').map(|pair| pair.0)
-        {
-            return Err(Error::Unsupported("inaccessible class".into()));
-        }
+        self.admit_class_access(owner, target)?;
         Ok(target)
     }
     pub(super) fn member(
@@ -330,7 +321,8 @@ impl Program {
                 Instruction::Anewarray(index) => {
                     self.reference_component(class, *index)?;
                 }
-                Instruction::Aaload
+                Instruction::Checkcast(_)
+                | Instruction::Aaload
                 | Instruction::Aastore
                 | Instruction::Newarray(_)
                 | Instruction::Arraylength
@@ -1010,6 +1002,12 @@ impl Execution<'_, '_, '_> {
                 )?)),
                 instruction if scalar::supports(instruction) => {
                     scalar::execute(instruction, &mut locals, &mut stack)?;
+                }
+                Instruction::Checkcast(index) => {
+                    let reference = pop(&mut stack)?;
+                    stack.push(
+                        self.cast_reference(reference, self.program.cast_target(class, *index)?)?,
+                    );
                 }
                 Instruction::Anewarray(index) => {
                     let length = pop(&mut stack)?.int()?;
