@@ -200,20 +200,112 @@ async fn native_java_depth_uses_bounded_heap_frames_instead_of_recursive_host_po
 }
 
 #[test]
-fn compiler_intersection_rejects_heap_operations_before_any_native_entry()
+fn compiler_intersection_rejects_arrays_before_any_native_entry()
 -> Result<(), Box<dyn std::error::Error>> {
     let program = Program::from_classfiles([
         ClassFile::from_bytes(include_bytes!(
-            "fixtures/canonical/CanonicalGraphWorkload.class"
+            "fixtures/canonical/CanonicalPrimitiveArrayWorkload.class"
         ))?,
         ClassFile::from_bytes(include_bytes!(
-            "fixtures/canonical/CanonicalGraphWorkload$Node.class"
+            "fixtures/canonical/CanonicalPrimitiveArrayWorkload$Holder.class"
         ))?,
     ])?;
     assert!(matches!(
         program.compile(),
         Err(Error::Jit(ristretto_jit::Error::UnsupportedMethod(_)))
     ));
+    Ok(())
+}
+
+fn graph_program() -> Result<Program, Box<dyn std::error::Error>> {
+    Ok(Program::from_classfiles([
+        ClassFile::from_bytes(include_bytes!(
+            "fixtures/canonical/CanonicalGraphWorkload.class"
+        ))?,
+        ClassFile::from_bytes(include_bytes!(
+            "fixtures/canonical/CanonicalGraphWorkload$Node.class"
+        ))?,
+    ])?)
+}
+fn graph_configuration() -> Configuration {
+    Configuration {
+        objects: 4,
+        roots: 16,
+        mutators: 1,
+        helpers: 1,
+        edges_per_object: 2,
+    }
+}
+#[tokio::test]
+async fn native_graph_allocations_calls_fields_cycles_and_cleanup_match_interpreter()
+-> Result<(), Box<dyn std::error::Error>> {
+    let program = graph_program()?;
+    let compiled = program.compile()?;
+    for rounds in [0, 1, 8, 64] {
+        let interpreted = program
+            .run(
+                "CanonicalGraphWorkload",
+                "run",
+                rounds,
+                graph_configuration(),
+                Limits::default(),
+            )
+            .await?;
+        let report = compiled
+            .run(
+                "CanonicalGraphWorkload",
+                "run",
+                rounds,
+                graph_configuration(),
+                CompiledLimits::default(),
+            )
+            .await?;
+        assert_eq!(report.result, rounds * rounds);
+        assert_eq!(report.result, interpreted.result);
+        assert_eq!(report.allocations, usize::try_from(rounds)? * 2);
+        assert_eq!(report.allocations, interpreted.allocations);
+        assert_eq!(report.reference_reads, interpreted.reference_reads);
+        assert_eq!(report.reference_writes, interpreted.reference_writes);
+        assert_eq!(report.calls, interpreted.calls);
+        assert_eq!(report.compiled_entries, report.calls);
+        assert_eq!(report.compiled_backedges, u64::try_from(rounds)?);
+        assert_eq!(report.payload_bytes_after_cleanup, 0);
+        assert_eq!(report.catalog_bytes_after_drop, 0);
+    }
+    Ok(())
+}
+#[tokio::test]
+async fn native_root_pressure_errors_release_the_invocation()
+-> Result<(), Box<dyn std::error::Error>> {
+    let program = graph_program()?;
+    let compiled = program.compile()?;
+    let config = Configuration {
+        roots: 2,
+        ..graph_configuration()
+    };
+    let limits = CompiledLimits {
+        request_polls: 2000,
+        ..CompiledLimits::default()
+    };
+    assert!(matches!(
+        compiled
+            .run("CanonicalGraphWorkload", "run", 8, config, limits)
+            .await,
+        Err(Error::Limit("request poll"))
+    ));
+    assert_eq!(
+        compiled
+            .run(
+                "CanonicalGraphWorkload",
+                "run",
+                8,
+                graph_configuration(),
+                CompiledLimits::default()
+            )
+            .await?
+            .result,
+        64
+    );
     Ok(())
 }
 
