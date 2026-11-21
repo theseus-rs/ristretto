@@ -135,6 +135,18 @@ pub struct ArrayStoreRequest {
     pub bci: usize,
 }
 
+/// Checked reference conversion resolved by the owning embedding.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TypeCheckKind {
+    CheckCast,
+}
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TypeCheckRequest {
+    pub kind: TypeCheckKind,
+    pub index: u16,
+    pub bci: usize,
+}
+
 /// A bounded native slice either requests a scheduling boundary or completes.
 #[derive(Debug, PartialEq)]
 pub enum ExecutionStep {
@@ -142,6 +154,7 @@ pub enum ExecutionStep {
     Call(CallRequest),
     Allocation(AllocationRequest),
     Field(FieldRequest),
+    TypeCheck(TypeCheckRequest),
     ArrayAccess(ArrayAccessRequest),
     ArrayStore(ArrayStoreRequest),
     Returned(Option<Value>),
@@ -285,6 +298,13 @@ impl Activation {
         let [kind, bci, index] = metadata else {
             return Err(InternalError("invalid call metadata".to_owned()));
         };
+        if *kind == 14 {
+            return Ok(ExecutionStep::TypeCheck(TypeCheckRequest {
+                kind: TypeCheckKind::CheckCast,
+                index: u16::try_from(*index)?,
+                bci: usize::try_from(*bci)?,
+            }));
+        }
         if *kind == 16 {
             return Ok(ExecutionStep::ArrayStore(ArrayStoreRequest {
                 bci: usize::try_from(*bci)?,

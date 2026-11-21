@@ -97,3 +97,8 @@ Array and value identities are owning-context tokens. Store requests preserve al
 cells until the host validates null/bounds/component assignability and publishes the edge.
 A successful load result must be independently owned before the parent resumes. The native
 code never inspects payload pointers or performs a synchronous array access.
+
+`checkcast` emits a typed request with the unchanged object/null token and target class
+index. The embedding resolves the target and checks assignability before returning that
+same identity, or cancels the activation with a type fault. The compiler imports no
+synchronous cast helper. `instanceof` and multidimensional cast targets remain excluded.
