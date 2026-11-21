@@ -31,7 +31,7 @@ cargo test --locked -p ristretto_gc --features experimental-canonical-runtime --
 ```
 
 This slice makes no global pause, throughput, callback-latency or default-backend
-claim. Graph operations are a separate dependent slice.
+claim. The public API is available as `ristretto_gc::canonical`.
 
 
 Helpers advance one protocol request or scan at most eight consecutive empty
@@ -58,3 +58,28 @@ Replacing the edge between root preparation and activation forces a fresh
 observation. Null results reserve no root. A full root quota remains pending;
 a later null replacement can still complete that read. Dropped reads cancel the
 request and release any private child root without driving an implicit loop.
+
+
+The public surface preserves the preview's `Configuration`, `Budget`, `Runtime`,
+`Mutator`, `Helper`, `Root`, `View`, allocation/read/write requests and error types.
+`allocate_with_edges` retains each payload's usable edge count. `same_object`
+compares exact catalog-scoped identities, including independently acquired roots.
+`primary_cycles` returns conservative numeric bounds from one idle-participant
+observation; these are completed primary full epochs, not reclaimed-object or
+callback counts. The observation does not help and may fail under contention.
+
+Two nodes can retain each other solely through catalog edges. Once their last
+external roots disappear, helper polls reclaim both payloads and permit reuse at
+finite capacity. Payload bytes are observable through `managed_bytes()`; ordinary
+collector scheduling statistics keep their upstream meaning. Catalog budget
+credit remains charged while any runtime, participant or escaped root retains it.
+
+```sh
+cargo test --locked -p ristretto_gc --features experimental-canonical-runtime --test canonical_api --test canonical_observation
+```
+
+The same tests execute on `wasm32-wasip2` with the documented Wasmtime runner.
+No Java VM backend is changed by these Rust API slices. Conditional references,
+arbitrary traced payload graphs and conversion of ordinary finalizer descriptors
+remain unsupported. General Rust destructors and host allocation are outside
+bounded protocol-work claims.

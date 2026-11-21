@@ -183,6 +183,17 @@ pub(in crate::canonical_adapter) struct GraphMutator<'gc> {
     next_root: usize,
 }
 impl<'gc> GraphMutator<'gc> {
+    #[cfg(feature = "experimental-canonical-runtime")]
+    pub(in crate::canonical_adapter) fn primary_cycles(
+        &mut self,
+    ) -> Result<(u64, u64), GraphError> {
+        primary_cycles(
+            self.worker
+                .possible_phase_outcomes()
+                .map_err(GraphError::Catalog)?,
+        )
+    }
+
     fn validate<T>(&self, root: &GraphRoot<T>, index: usize) -> Result<(), GraphError> {
         if !root.root.belongs_to(&self.catalog) {
             return Err(GraphError::Foreign);
@@ -369,3 +380,23 @@ impl<T> Drop for GraphAllocation<'_, '_, T> {
 #[cfg(test)]
 #[path = "canonical_graph_tests.rs"]
 mod tests;
+
+#[cfg(feature = "experimental-canonical-runtime")]
+fn primary_cycles(outcomes: [gc_catalog::Phase; 2]) -> Result<(u64, u64), GraphError> {
+    let completed = |phase: gc_catalog::Phase| {
+        let domain = phase.domains[0];
+        if domain.epoch == 0 {
+            return Err(GraphError::Protocol);
+        }
+        // The sealed graph has edges and only permits Full starts. A generic
+        // bounded catalog can contain Young history, so mapping belongs here.
+        match domain.mode {
+            gc_catalog::DomainMode::Full => domain.epoch.checked_sub(1).ok_or(GraphError::Protocol),
+            gc_catalog::DomainMode::Inactive => Ok(domain.epoch),
+            _ => Err(GraphError::Protocol),
+        }
+    };
+    let a = completed(outcomes[0])?;
+    let b = completed(outcomes[1])?;
+    Ok((a.min(b), a.max(b)))
+}
