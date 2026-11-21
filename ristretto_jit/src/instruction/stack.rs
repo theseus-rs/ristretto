@@ -8,9 +8,13 @@ use cranelift::prelude::types;
 ///
 /// # References
 /// - [JVMS §2.11.1-320](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11.1-320)
-fn is_category_1(function_builder: &mut FunctionBuilder, value: Value) -> bool {
+fn is_category_1(
+    function_builder: &mut FunctionBuilder,
+    stack: &OperandStack,
+    value: Value,
+) -> bool {
     let value_type = function_builder.func.dfg.value_type(value);
-    value_type != types::I64 && value_type != types::F64
+    stack.is_reference(value) || (value_type != types::I64 && value_type != types::F64)
 }
 
 /// # References
@@ -24,7 +28,7 @@ pub(crate) fn pop(stack: &mut OperandStack) -> Result<()> {
 /// - [JVMS §6.5.pop2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop2)
 pub(crate) fn pop2(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop()?;
-    if is_category_1(function_builder, value) {
+    if is_category_1(function_builder, stack, value) {
         let _ = stack.pop()?;
     }
     Ok(())
@@ -58,7 +62,7 @@ pub(crate) fn dup_x2(
 ) -> Result<()> {
     let value1 = stack.pop()?;
     let value2 = stack.pop()?;
-    if is_category_1(function_builder, value2) {
+    if is_category_1(function_builder, stack, value2) {
         let value3 = stack.pop()?;
         stack.push(value1)?;
         stack.push(value3)?;
@@ -76,7 +80,7 @@ pub(crate) fn dup_x2(
 /// - [JVMS §6.5.dup2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2)
 pub(crate) fn dup2(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value1 = stack.pop()?;
-    if is_category_1(function_builder, value1) {
+    if is_category_1(function_builder, stack, value1) {
         let value2 = stack.pop()?;
         stack.push(value2)?;
         stack.push(value1)?;
@@ -97,7 +101,7 @@ pub(crate) fn dup2_x1(
 ) -> Result<()> {
     let value1 = stack.pop()?;
     let value2 = stack.pop()?;
-    if is_category_1(function_builder, value1) {
+    if is_category_1(function_builder, stack, value1) {
         let value3 = stack.pop()?;
         stack.push(value2)?;
         stack.push(value1)?;
@@ -120,21 +124,22 @@ pub(crate) fn dup2_x2(
 ) -> Result<()> {
     let value1 = stack.pop()?;
     let value2 = stack.pop()?;
-    if is_category_1(function_builder, value1) {
+    if is_category_1(function_builder, stack, value1) {
         let value3 = stack.pop()?;
-        if is_category_1(function_builder, value3) {
+        if is_category_1(function_builder, stack, value3) {
             let value4 = stack.pop()?;
             stack.push(value2)?;
             stack.push(value1)?;
             stack.push(value4)?;
         } else {
+            stack.push(value2)?;
             stack.push(value1)?;
         }
         stack.push(value3)?;
         stack.push(value2)?;
         stack.push(value1)?;
     } else {
-        if is_category_1(function_builder, value2) {
+        if is_category_1(function_builder, stack, value2) {
             let value3 = stack.pop()?;
             stack.push(value1)?;
             stack.push(value3)?;
