@@ -24,29 +24,35 @@ fn numeric_program() -> Result<Program, Box<dyn std::error::Error>> {
         ))?,
     ])?)
 }
-fn cases() -> Result<[(Program, &'static str, &'static str, usize); 3], Box<dyn std::error::Error>>
-{
+struct OracleCase {
+    program: Program,
+    class: &'static str,
+    oracle: &'static str,
+    expected_count: usize,
+}
+
+fn cases() -> Result<[OracleCase; 3], Box<dyn std::error::Error>> {
     Ok([
-        (
-            program()?,
-            "CanonicalPrimitiveArrayWorkload",
-            include_str!("fixtures/canonical/primitive-array-oracle.tsv"),
-            147,
-        ),
-        (
-            Program::from_classfiles([ClassFile::from_bytes(include_bytes!(
+        OracleCase {
+            program: program()?,
+            class: "CanonicalPrimitiveArrayWorkload",
+            oracle: include_str!("fixtures/canonical/primitive-array-oracle.tsv"),
+            expected_count: 147,
+        },
+        OracleCase {
+            program: Program::from_classfiles([ClassFile::from_bytes(include_bytes!(
                 "fixtures/canonical_bytecode/CanonicalNarrowReturnWorkload.class"
             ))?])?,
-            "CanonicalNarrowReturnWorkload",
-            include_str!("fixtures/canonical_bytecode/narrow-return-oracle.tsv"),
-            40,
-        ),
-        (
-            numeric_program()?,
-            "CanonicalNumericEdgeWorkload",
-            include_str!("fixtures/canonical/numeric-edge-oracle.tsv"),
-            114,
-        ),
+            class: "CanonicalNarrowReturnWorkload",
+            oracle: include_str!("fixtures/canonical_bytecode/narrow-return-oracle.tsv"),
+            expected_count: 40,
+        },
+        OracleCase {
+            program: numeric_program()?,
+            class: "CanonicalNumericEdgeWorkload",
+            oracle: include_str!("fixtures/canonical/numeric-edge-oracle.tsv"),
+            expected_count: 114,
+        },
     ])
 }
 fn configuration() -> Configuration {
@@ -76,7 +82,13 @@ fn check(result: Result<Report, Error>, expected: &str) -> Result<(), Box<dyn st
 #[tokio::test]
 async fn interpreted_primitive_arrays_match_hotspot_oracle()
 -> Result<(), Box<dyn std::error::Error>> {
-    for (program, class, oracle, expected_count) in cases()? {
+    for OracleCase {
+        program,
+        class,
+        oracle,
+        expected_count,
+    } in cases()?
+    {
         let mut count = 0;
         for line in oracle.lines().filter(|line| !line.starts_with('#')) {
             let mut columns = line.split('\t');
@@ -153,4 +165,81 @@ async fn primitive_array_cast_mismatch_reports_class_cast() -> Result<(), Box<dy
         Err(Error::TypeFault("ClassCastException"))
     ));
     Ok(())
+}
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_primitive_arrays_and_numeric_edges_match_all_hotspot_rows()
+-> Result<(), Box<dyn std::error::Error>> {
+    use ristretto_vm::canonical::CompiledLimits;
+    for OracleCase {
+        program,
+        class,
+        oracle,
+        expected_count,
+    } in cases()?
+    {
+        let compiled = program.compile()?;
+        let mut count = 0;
+        for line in oracle.lines().filter(|line| !line.starts_with('#')) {
+            let mut columns = line.split('\t');
+            let method = columns.next().ok_or("method")?;
+            let argument = columns.next().ok_or("argument")?.parse()?;
+            let expected = columns.next().ok_or("result")?;
+            let result = compiled
+                .run(
+                    class,
+                    method,
+                    argument,
+                    configuration(),
+                    CompiledLimits::default(),
+                )
+                .await;
+            if let Ok(report) = &result {
+                assert!(report.compiled_entries > 0);
+                assert_eq!(report.compiled_entries, report.calls);
+                assert!(!report.instruction_count_available);
+            }
+            check(result, expected)?;
+            count += 1;
+        }
+        assert_eq!(count, expected_count);
+    }
+    Ok(())
+}
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_array_limit_failure_preserves_prepared_program_reuse()
+-> Result<(), Box<dyn std::error::Error>> {
+    use ristretto_vm::canonical::CompiledLimits;
+    let program = program()?;
+    let compiled = program.compile()?;
+    assert!(matches!(
+        compiled
+            .run(
+                "CanonicalPrimitiveArrayWorkload",
+                "ints",
+                3,
+                configuration(),
+                CompiledLimits {
+                    array_bytes: 0,
+                    ..CompiledLimits::default()
+                }
+            )
+            .await,
+        Err(Error::Limit(_))
+    ));
+    check(
+        compiled
+            .run(
+                "CanonicalPrimitiveArrayWorkload",
+                "ints",
+                3,
+                configuration(),
+                CompiledLimits::default(),
+            )
+            .await,
+        "12",
+    )
 }
