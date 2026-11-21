@@ -1,5 +1,7 @@
 //! Execution of verified closed object methods on a dedicated incremental heap.
-use super::layout::{Field, ReferenceType};
+use super::layout::{Field, ReferenceType, reference_type};
+use super::reference_array::{self, Component, Layout as ReferenceArrayLayout};
+mod reference_array_runtime;
 use super::primitive_array::{Element, Kind, PrimitiveArray};
 use super::statics::States;
 use super::value::PrimitiveFrameValue;
@@ -78,6 +80,7 @@ pub struct Report {
     pub class_initializer_calls: usize,
     pub class_initialization_waits: usize,
     pub entry_initialization: InitializationWork,
+    pub reference_array_allocations: usize,
     pub reference_reads: usize,
     pub reference_writes: usize,
     pub calls: usize,
@@ -230,14 +233,25 @@ impl Program {
         Ok((class, slot))
     }
 
+    fn reference_component(&self, owner: usize, index: u16) -> Result<Component> {
+        if self
+            .layout(owner)?
+            .class
+            .constant_pool()
+            .try_get_class(index)?
+            == "java/lang/Object"
+        {
+            Ok(Component::Object)
+        } else {
+            self.class_constant(owner, index).map(Component::Class)
+        }
+    }
     fn admit_type(&self, field: &FieldType) -> Result<()> {
         match field {
             FieldType::Base(_) => Ok(()),
-            FieldType::Object(name) => self.class_index(name.to_str_lossy().as_ref()).map(|_| ()),
-            FieldType::Array(component) => array_kind(component).map(|_| ()),
+            _ => reference_type(field, &self.names).map(|_| ()),
         }
     }
-
     #[expect(
         clippy::too_many_lines,
         reason = "single explicit opcode admission table"
@@ -316,7 +330,12 @@ impl Program {
                 instruction
                     if scalar::supports(instruction)
                         || array_instruction(instruction).is_some() => {}
-                I::Newarray(_)
+                I::Anewarray(index) => {
+                    self.reference_component(class, *index)?;
+                }
+                I::Aaload
+                | I::Aastore
+                | I::Newarray(_)
                 | I::Arraylength
                 | I::Lreturn
                 | I::Freturn
@@ -459,6 +478,13 @@ pub(super) enum Payload {
         class: usize,
         integers: [AtomicI32; 8],
     },
+    ReferenceArray {
+        component: Component,
+        layout: ReferenceArrayLayout,
+    },
+    ReferencePage {
+        height: u8,
+    },
 }
 
 impl Payload {
@@ -507,7 +533,10 @@ impl Trace for Payload {
     }
     fn external_size(&self) -> usize {
         match self {
-            Self::Object { .. } | Self::Statics { .. } => 0,
+            Self::Object { .. }
+            | Self::Statics { .. }
+            | Self::ReferenceArray { .. }
+            | Self::ReferencePage { .. } => 0,
             Self::Array(array) => array.backing_bytes(),
         }
     }
@@ -654,7 +683,13 @@ impl Execution<'_, '_, '_> {
 
     fn array_length(&mut self, root: &Root<Payload>) -> Result<Value> {
         let view = self.runtime.borrow(root)?;
-        let length = view.array()?.len();
+        let length = match &*view {
+            Payload::Array(array) => array.len(),
+            Payload::ReferenceArray { layout, .. } => {
+                i32::try_from(layout.length).map_err(|_| Error::Boundary("array length"))?
+            }
+            _ => return Err(Error::ArrayFault("array type mismatch")),
+        };
         self.report.array_reads += 1;
         Ok(Value::Int(length))
     }
@@ -841,13 +876,10 @@ impl Execution<'_, '_, '_> {
             | (Value::Float(_), FieldType::Base(BaseType::Float))
             | (Value::Double(_), FieldType::Base(BaseType::Double))
             | (Value::Reference(None), FieldType::Object(_) | FieldType::Array(_)) => Ok(()),
-            (Value::Reference(Some(root)), FieldType::Object(name)) => {
-                let class = self.program.class_index(name.to_str_lossy().as_ref())?;
-                self.check_class(root, class)
-            }
-            (Value::Reference(Some(root)), FieldType::Array(component)) => {
-                self.check_reference(root, ReferenceType::Array(array_kind(component)?))
-            }
+            (
+                Value::Reference(Some(root)),
+                field @ (FieldType::Object(_) | FieldType::Array(_)),
+            ) => self.check_reference(root, reference_type(field, &self.program.names)?),
             _ => Err(Error::Invalid("method argument/return type".to_owned())),
         }
     }
@@ -856,20 +888,26 @@ impl Execution<'_, '_, '_> {
         self.check_reference(root, ReferenceType::Object(class))
     }
 
-    pub(super) fn check_reference(
-        &self,
-        root: &Root<Payload>,
-        expected: ReferenceType,
-    ) -> Result<()> {
-        let view = self.runtime.borrow(root)?;
-        let actual = match &*view {
+    fn reference_kind(&self, root: &Root<Payload>) -> Result<ReferenceType> {
+        Ok(match &*self.runtime.borrow(root)? {
             Payload::Object { class, .. } => ReferenceType::Object(*class),
             Payload::Statics { .. } => {
                 return Err(Error::Boundary("static storage as Java reference"));
             }
             Payload::Array(array) => ReferenceType::Array(array.kind()),
-        };
-        if actual == expected {
+            Payload::ReferenceArray { component, .. } => ReferenceType::ReferenceArray(*component),
+            Payload::ReferencePage { .. } => {
+                return Err(Error::Boundary("internal page as Java reference"));
+            }
+        })
+    }
+
+    pub(super) fn check_reference(
+        &self,
+        root: &Root<Payload>,
+        expected: ReferenceType,
+    ) -> Result<()> {
+        if expected.accepts(self.reference_kind(root)?) {
             Ok(())
         } else {
             Err(Error::Invalid("receiver/field class mismatch".to_owned()))
@@ -976,6 +1014,27 @@ impl Execution<'_, '_, '_> {
                 )?)),
                 instruction if scalar::supports(instruction) => {
                     scalar::execute(instruction, &mut locals, &mut stack)?;
+                }
+                I::Anewarray(index) => {
+                    let length = pop(&mut stack)?.int()?;
+                    let component = self.program.reference_component(class, *index)?;
+                    stack.push(Value::Reference(Some(
+                        self.allocate_reference_array(component, length).await?,
+                    )));
+                }
+                I::Aaload => {
+                    let index = pop(&mut stack)?.int()?;
+                    let root = pop(&mut stack)?.object()?;
+                    stack.push(Value::Reference(
+                        self.read_reference_array(&root, index).await?,
+                    ));
+                }
+                I::Aastore => {
+                    let value = pop(&mut stack)?.reference()?;
+                    let index = pop(&mut stack)?.int()?;
+                    let root = pop(&mut stack)?.object()?;
+                    self.write_reference_array(&root, index, value.as_ref())
+                        .await?;
                 }
                 I::Newarray(kind) => {
                     let length = pop(&mut stack)?.int()?;

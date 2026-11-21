@@ -1,5 +1,6 @@
 use super::objects::array_kind;
 use super::primitive_array::Kind;
+use super::reference_array::Component;
 use super::statics::StaticLayout;
 use super::{Error, Result};
 use ristretto_classfile::{BaseType, ClassFile, FieldAccessFlags, FieldType, JavaString};
@@ -11,21 +12,48 @@ pub(super) const MAX_INTEGER_FIELDS: usize = 8;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum ReferenceType {
+    AnyObject,
     Object(usize),
     Array(Kind),
+    ReferenceArray(Component),
 }
-
+impl ReferenceType {
+    pub(super) fn accepts(self, actual: Self) -> bool {
+        self == Self::AnyObject
+            || self == actual
+            || matches!(
+                (self, actual),
+                (
+                    Self::ReferenceArray(Component::Object),
+                    Self::ReferenceArray(_)
+                )
+            )
+    }
+}
 pub(super) fn reference_type(
-    ty: &FieldType,
+    field: &FieldType,
     names: &HashMap<JavaString, usize>,
 ) -> Result<ReferenceType> {
-    match ty {
+    match field {
+        FieldType::Object(name) if name == "java/lang/Object" => Ok(ReferenceType::AnyObject),
         FieldType::Object(name) => names
             .get(name)
             .copied()
             .map(ReferenceType::Object)
-            .ok_or_else(|| Error::Unsupported(format!("field class {name}"))),
-        FieldType::Array(element) => array_kind(element).map(ReferenceType::Array),
+            .ok_or_else(|| Error::Unsupported(format!("class {name}"))),
+        FieldType::Array(component) => match component.as_ref() {
+            FieldType::Base(_) => array_kind(component).map(ReferenceType::Array),
+            FieldType::Object(_) => match reference_type(component, names)? {
+                ReferenceType::AnyObject => Ok(ReferenceType::ReferenceArray(Component::Object)),
+                ReferenceType::Object(class) => {
+                    Ok(ReferenceType::ReferenceArray(Component::Class(class)))
+                }
+                _ => Err(Error::Boundary("reference component")),
+            },
+            FieldType::Array(_) => Err(Error::Unsupported(
+                "multidimensional array descriptor".to_owned(),
+            )),
+        },
         FieldType::Base(_) => Err(Error::Boundary("primitive reference type")),
     }
 }
@@ -75,22 +103,10 @@ impl Layout {
                     integers += 1;
                     field
                 }
-                FieldType::Object(target) if references < 8 => {
-                    let class = names
-                        .get(&target)
-                        .copied()
-                        .ok_or_else(|| Error::Unsupported(format!("field class {target}")))?;
+                reference @ (FieldType::Object(_) | FieldType::Array(_)) if references < 8 => {
                     let field = Field::Reference {
                         edge: references,
-                        target: ReferenceType::Object(class),
-                    };
-                    references += 1;
-                    field
-                }
-                FieldType::Array(component) if references < 8 => {
-                    let field = Field::Reference {
-                        edge: references,
-                        target: ReferenceType::Array(array_kind(&component)?),
+                        target: reference_type(&reference, names)?,
                     };
                     references += 1;
                     field
