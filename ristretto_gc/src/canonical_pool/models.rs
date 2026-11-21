@@ -177,3 +177,40 @@ fn competing_claims_cannot_cross_a_configured_final_generation() {
         );
     });
 }
+
+#[expect(
+    clippy::duplicate_mod,
+    reason = "model the production CAS with Loom atomics"
+)]
+#[path = "link_state.rs"]
+mod link_state;
+
+#[test]
+fn competing_link_proposals_have_one_winner() {
+    loom::model(|| {
+        let token = Arc::new(AtomicU64::new(0));
+        let contender = token.clone();
+        let worker = thread::spawn(move || link_state::replace(&contender, 0, 11));
+        let right = link_state::replace(&token, 0, 22);
+        let left = worker.join().unwrap();
+        assert_ne!(left, right);
+        assert_eq!(token.load(Ordering::Acquire), if left { 11 } else { 22 });
+        assert!(!link_state::replace(&token, 0, 33));
+    });
+}
+
+#[test]
+fn a_stale_link_proposal_cannot_restore_a_replaced_generation() {
+    loom::model(|| {
+        let token = Arc::new(AtomicU64::new(11));
+        let stale = token.clone();
+        let worker = thread::spawn(move || link_state::replace(&stale, 11, 22));
+        let changed = link_state::replace(&token, 11, 33);
+        let stale_changed = worker.join().unwrap();
+        assert_ne!(changed, stale_changed);
+        let expected = if changed { 33 } else { 22 };
+        assert!(link_state::replace(&token, expected, 44));
+        assert!(!link_state::replace(&token, 11, 55));
+        assert_eq!(token.load(Ordering::Acquire), 44);
+    });
+}
