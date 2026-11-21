@@ -26,6 +26,8 @@ jobs:
         tier: [native-interpreted, native-compiled, wasi-interpreted]
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - run: rustup toolchain install --no-self-update
       - if: matrix.tier == 'wasi-interpreted'
         run: rustup target add wasm32-wasip2
@@ -53,11 +55,12 @@ jobs:
         run: |
           export CARGO_TARGET_DIR="$RUNNER_TEMP/preview-target-$TIER"
           python3 "$RUNNER_TEMP"/preview/ristretto-gc-preview-*/benchmarks/gc/release/verify_preview.py "$TIER" --receipt "$RUNNER_TEMP/preview-$TIER.json"
-      - name: Retain the source checksum and functional receipt
+      - name: Retain the source archive, checksum and functional receipt
         uses: actions/upload-artifact@v7
         with:
           name: gc-preview-${{ matrix.tier }}
           path: |
+            ${{ runner.temp }}/preview/ristretto-gc-preview-*.tar.gz
             ${{ runner.temp }}/preview/SHA256SUMS
             ${{ runner.temp }}/preview-${{ matrix.tier }}.json
           if-no-files-found: error
