@@ -17,10 +17,13 @@ use super::{
 };
 use crate::canonical_pool as pool;
 use pool::AllocationError;
+#[path = "edges.rs"]
+mod edges;
 #[path = "phase_ops.rs"]
 mod phase_ops;
 #[path = "roots.rs"]
 mod roots;
+use edges::EdgeRegistry;
 pub(crate) use roots::root_barrier_plan;
 pub use roots::{Root, RootCreation, RootPrepareError, RootStatus, RootToken};
 use roots::{RootEffect, RootRegistry};
@@ -505,6 +508,7 @@ pub struct Catalog<R: Record = ()> {
     next_identity: AtomicU64,
     released_slot: AtomicUsize,
     roots: Option<RootRegistry<R>>,
+    edges: Option<EdgeRegistry>,
 }
 impl<R: Record> Catalog<R> {
     /// Requested heap backing; the inline Catalog value belongs to its caller.
@@ -566,13 +570,17 @@ impl<R: Record> Catalog<R> {
             next_identity: AtomicU64::new(1),
             released_slot: AtomicUsize::new(usize::MAX),
             roots: None,
+            edges: None,
         }
     }
     pub fn capacity(&self) -> usize {
         self.slots.len()
     }
     pub fn generation_exhaustion_observed(&self) -> bool {
-        self.controls.generation_exhaustion_observed()
+        self.edges.as_ref().is_some_and(|edges| {
+            edges.slots_pool.generation_exhaustion_observed()
+                || edges.states.generation_exhaustion_observed()
+        }) || self.controls.generation_exhaustion_observed()
             || self.memberships.generation_exhaustion_observed()
             || self.cells.generation_exhaustion_observed()
             || self
