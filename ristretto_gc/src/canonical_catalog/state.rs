@@ -17,6 +17,9 @@ use super::{
 };
 use crate::canonical_pool as pool;
 use pool::AllocationError;
+#[path = "roots.rs"]
+mod roots;
+use roots::{RootEffect, RootRegistry};
 const UNDECIDED: u8 = 0;
 const COMMIT: u8 = 1;
 const CANCEL: u8 = 2;
@@ -126,6 +129,7 @@ struct Effect<R: Record = ()> {
 }
 struct Operation<R: Record = ()> {
     effect: Option<Effect<R>>,
+    root: Option<RootEffect<R>>,
 
     successor: Pooled<Control<R>>,
     decision: AtomicU8,
@@ -196,6 +200,7 @@ pub struct Preparation<R: Record = ()> {
     committed_phase: Phase,
     cancelled_phase: Phase,
     effect: Option<Effect<R>>,
+    root: Option<RootEffect<R>>,
 
     successor: Option<Pooled<Control<R>>>,
     operation: Option<Operation<R>>,
@@ -234,7 +239,7 @@ impl<R: Record> Preparation<R> {
                 }
                 Err(_) => return Ok(None),
             };
-            if self.effect.is_none() {
+            if self.effect.is_none() && self.root.is_none() {
                 return Ok(Some(Attempt {
                     owner: self.owner.clone(),
                     expected: self.expected.take().expect("unconsumed phase preparation"),
@@ -246,6 +251,7 @@ impl<R: Record> Preparation<R> {
         }
         let operation = self.operation.take().unwrap_or_else(|| Operation {
             effect: self.effect.take(),
+            root: self.root.take(),
 
             successor: self.successor.take().expect("prepared phase outcomes"),
             decision: AtomicU8::new(UNDECIDED),
@@ -494,6 +500,7 @@ pub struct Catalog<R: Record = ()> {
     cells: Arc<Pool<Cell<R>>>,
     next_identity: AtomicU64,
     released_slot: AtomicUsize,
+    roots: Option<RootRegistry<R>>,
 }
 impl<R: Record> Catalog<R> {
     /// Requested heap backing; the inline Catalog value belongs to its caller.
@@ -554,6 +561,7 @@ impl<R: Record> Catalog<R> {
             cells,
             next_identity: AtomicU64::new(1),
             released_slot: AtomicUsize::new(usize::MAX),
+            roots: None,
         }
     }
     pub fn capacity(&self) -> usize {
@@ -563,6 +571,10 @@ impl<R: Record> Catalog<R> {
         self.controls.generation_exhaustion_observed()
             || self.memberships.generation_exhaustion_observed()
             || self.cells.generation_exhaustion_observed()
+            || self
+                .roots
+                .as_ref()
+                .is_some_and(|roots| roots.pool.generation_exhaustion_observed())
     }
     pub fn discover(&self, slot: usize) -> Result<Option<Pooled<Cell<R>>>, Contended> {
         self.slots.get(slot).map_or(Ok(None), OptionalLink::load)
@@ -672,7 +684,7 @@ impl<R: Record> Catalog<R> {
             committed_phase: phase,
             cancelled_phase: cancelled,
             effect,
-
+            root: None,
             successor: None,
             operation: None,
         })
