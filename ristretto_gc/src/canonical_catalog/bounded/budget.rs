@@ -6,6 +6,7 @@ use super::{
 pub struct Footprint {
     backing: usize,
     participants: usize,
+    root_tokens: usize,
     total: usize,
 }
 impl Footprint {
@@ -13,12 +14,20 @@ impl Footprint {
         Self::for_records::<()>(capacities)
     }
     pub fn for_records<R: super::Payload>(capacities: Capacities) -> Result<Self, ConfigError> {
+        if capacities.reference_slots != 0 {
+            return Err(ConfigError::UnsupportedReferences);
+        }
+        if capacities.edge_slots != 0 {
+            return Err(ConfigError::InvalidEdgeLayout);
+        }
         let overflow = ConfigError::CapacityOverflow;
-        let backing = Catalog::<R>::record_backing_bytes(
+        let backing = Catalog::<R>::record_root_backing_bytes(
             capacities.registry,
             capacities.controls,
             capacities.memberships,
             capacities.cells,
+            capacities.root_slots,
+            capacities.root_cells,
         )
         .ok_or(overflow)?
         .checked_add(super::pool::arc_requested_bytes::<BoundedCatalog<R>>().ok_or(overflow)?)
@@ -29,10 +38,18 @@ impl Footprint {
                 size_of::<Participant<R>>().max(size_of::<Participant<R, super::GuardedCommand>>()),
             )
             .ok_or(overflow)?;
+        let root_tokens = capacities
+            .root_slots
+            .checked_mul(size_of::<super::RootHandle<R>>())
+            .ok_or(overflow)?;
         Ok(Self {
             backing,
             participants,
-            total: backing.checked_add(participants).ok_or(overflow)?,
+            root_tokens,
+            total: backing
+                .checked_add(participants)
+                .and_then(|bytes| bytes.checked_add(root_tokens))
+                .ok_or(overflow)?,
         })
     }
     pub fn backing(self) -> usize {
@@ -40,6 +57,9 @@ impl Footprint {
     }
     pub fn participants(self) -> usize {
         self.participants
+    }
+    pub fn root_tokens(self) -> usize {
+        self.root_tokens
     }
     pub fn total(self) -> usize {
         self.total
