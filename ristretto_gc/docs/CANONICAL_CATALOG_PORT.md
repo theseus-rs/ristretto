@@ -267,3 +267,15 @@ exact budget admission and geometry rejection. Native/WASI catalog totals are
 102/93; strict Clippy passes. This intermediate facade cannot publish edges and
 explicitly rejects numeric acknowledgement for edge-enabled catalogs until the
 next slice connects traversal, preventing an intermediate bypass.
+
+## C10/C11 prerequisite: bounded strong-edge requests and stable reads
+
+The final edge facade connects frozen publication/replacement/child-root requests,
+source handoff, requested/orphan cleanup and copied observations. Every enabled
+edge catalog routes acknowledgement through complete source traversal and admits
+only Full collection starts. Stable source reads validate their original owning
+snapshot, including null results; a superseded failure retries as contention.
+All 11 frozen bounded edge regressions (10 portable) are retained, with the
+capacity-order test explicitly using Q=0 because conditional references remain
+unsupported. Native/WASI catalog totals are 113/103; strict Clippy passes. This
+completes the catalog API used by the preview's C10a/C10b/C11 adapters.
