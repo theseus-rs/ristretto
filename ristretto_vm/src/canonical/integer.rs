@@ -109,12 +109,21 @@ pub(super) fn run(
     argument: i32,
     limit: usize,
 ) -> Result<Value> {
+    run_counted(method, pool, argument, limit).map(|(value, _)| value)
+}
+
+pub(super) fn run_counted(
+    method: &Method,
+    pool: &ConstantPool<'_>,
+    argument: i32,
+    limit: usize,
+) -> Result<(Value, usize)> {
     let mut locals = vec![None; method.max_locals()];
     let mut stack = Vec::with_capacity(method.max_stack());
     let mut pc = 0;
     let invalid = || Error::Invalid(method.signature());
     *locals.first_mut().ok_or_else(invalid)? = Some(Value::Int(argument));
-    for _ in 0..limit {
+    for count in 0..limit {
         let op = method.code().get(pc).ok_or_else(invalid)?;
         let mut jump = false;
         match Operation::decode(op) {
@@ -148,9 +157,12 @@ pub(super) fn run(
             }
             Some(Operation::Jump) => jump = true,
             Some(Operation::Return) => {
-                return Ok(scalar::normalize_return(
-                    pop(&mut stack)?,
-                    method.return_type().ok_or_else(invalid)?,
+                return Ok((
+                    scalar::normalize_return(
+                        pop(&mut stack)?,
+                        method.return_type().ok_or_else(invalid)?,
+                    ),
+                    count + 1,
                 ));
             }
             None => match op {

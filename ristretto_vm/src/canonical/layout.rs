@@ -37,7 +37,6 @@ impl Layout {
         })
     }
 
-    #[cfg(test)]
     pub(super) fn slot(&self, name: &ristretto_classfile::JavaStr) -> Option<usize> {
         self.integer_slots.get(name).copied()
     }

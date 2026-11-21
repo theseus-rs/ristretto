@@ -2,7 +2,9 @@
 
 mod integer;
 mod layout;
+mod objects;
 use layout::Layout;
+pub use objects::{Limits, Report};
 mod scalar;
 mod value;
 pub use value::ScalarValue;
@@ -13,7 +15,9 @@ use ristretto_classfile::attributes::Instruction;
 use ristretto_classfile::verifiers::bytecode::{VerifierConfig, verify_class};
 use ristretto_classfile::verifiers::context::{MemberAccess, VerificationContext};
 use ristretto_classfile::verifiers::error::{Result as VerificationResult, VerifyError};
-use ristretto_classfile::{ClassAccessFlags, ClassFile, JavaStr, JavaString, MethodAccessFlags};
+use ristretto_classfile::{
+    ClassAccessFlags, ClassFile, FieldAccessFlags, JavaStr, JavaString, MethodAccessFlags,
+};
 use ristretto_classloader::{Class, Method};
 use std::collections::HashMap;
 
@@ -26,6 +30,8 @@ pub enum Error {
     Invalid(String),
     #[error("canonical Java {0} limit reached")]
     Limit(&'static str),
+    #[error(transparent)]
+    Collector(#[from] ristretto_gc::canonical::Error),
     #[error(transparent)]
     Classfile(#[from] ristretto_classfile::Error),
     #[error(transparent)]
@@ -72,10 +78,10 @@ impl Program {
             return Err(Error::Invalid("empty program".into()));
         }
         let program = Self { classes, names };
-        for layout in &program.classes {
+        for (index, layout) in program.classes.iter().enumerate() {
             let class = &layout.class;
             for method in class.methods() {
-                Self::admit_method(class, &method)?;
+                program.admit_method(index, class, &method)?;
             }
             verify_class(class.class_file(), &program, &VerifierConfig::strict())
                 .map_err(|error| Error::Invalid(error.to_string()))?;
@@ -83,7 +89,7 @@ impl Program {
         Ok(program)
     }
 
-    fn admit_method(class: &Class, method: &Method) -> Result<()> {
+    fn admit_method(&self, owner: usize, class: &Class, method: &Method) -> Result<()> {
         use Instruction as I;
         if !method.exception_table().is_empty()
             || method.access_flags().intersects(
@@ -122,7 +128,7 @@ impl Program {
         {
             return Ok(());
         }
-        Err(Error::Unsupported(method.signature()))
+        self.admit_object_method(owner, method)
     }
 
     /// Execute a public scalar entry with its single Java int argument.
@@ -183,20 +189,95 @@ impl Program {
     }
 }
 
+fn exact_symbol(name: &JavaStr) -> VerificationResult<std::borrow::Cow<'_, str>> {
+    let decoded = name.to_str_lossy();
+    if JavaStr::cow_from_str(&decoded).as_ref() == name {
+        Ok(decoded)
+    } else {
+        Err(VerifyError::VerifyError(
+            "unsupported unpaired surrogate in symbol".into(),
+        ))
+    }
+}
+
 impl VerificationContext for Program {
     fn verify_member_access(&self, access: &MemberAccess<'_>) -> VerificationResult<()> {
-        self.known(access.current_class)?;
-        if matches!(access.instruction, Instruction::Invokespecial(_))
-            && access.owner == "java/lang/Object"
-            && access.name == "<init>"
-            && access.descriptor == "()V"
+        let member_name = exact_symbol(access.name)?;
+        let descriptor = exact_symbol(access.descriptor)?;
+        if access.owner == "java/lang/Object" {
+            // The capability pass has already restricted this to its empty constructor.
+            return Ok(());
+        }
+        let current = self
+            .names
+            .get(access.current_class)
+            .and_then(|index| self.classes.get(*index));
+        let owner = self
+            .names
+            .get(access.owner)
+            .and_then(|index| self.classes.get(*index));
+        let (Some(current), Some(owner)) = (current, owner) else {
+            return Err(VerifyError::VerifyError(
+                "unresolved canonical member owner".to_owned(),
+            ));
+        };
+        let same_class = access.current_class == access.owner;
+        let package = |name: &str| {
+            name.rsplit_once('/')
+                .map_or("", |(package, _)| package)
+                .to_owned()
+        };
+        let same_package = package(current.class.name()) == package(owner.class.name());
+        if !same_package
+            && !owner
+                .class
+                .class_file()
+                .access_flags
+                .contains(ClassAccessFlags::PUBLIC)
         {
+            return Err(VerifyError::VerifyError(
+                "inaccessible canonical class".to_owned(),
+            ));
+        }
+        let (public, private) = if matches!(
+            access.instruction,
+            Instruction::Getfield(_)
+                | Instruction::Putfield(_)
+                | Instruction::Getstatic(_)
+                | Instruction::Putstatic(_)
+        ) {
+            let field = owner
+                .class
+                .declared_fields()
+                .into_iter()
+                .find(|field| {
+                    field.name() == member_name.as_ref()
+                        && field.field_type().descriptor() == descriptor.as_ref()
+                })
+                .ok_or_else(|| VerifyError::VerifyError("unresolved canonical field".to_owned()))?;
+            (
+                field.access_flags().contains(FieldAccessFlags::PUBLIC),
+                field.access_flags().contains(FieldAccessFlags::PRIVATE),
+            )
+        } else {
+            let method = owner
+                .class
+                .method(member_name.as_ref(), descriptor.as_ref())
+                .ok_or_else(|| {
+                    VerifyError::VerifyError("unresolved canonical method".to_owned())
+                })?;
+            (
+                method.access_flags().contains(MethodAccessFlags::PUBLIC),
+                method.access_flags().contains(MethodAccessFlags::PRIVATE),
+            )
+        };
+        if public || same_class || (same_package && !private) {
             Ok(())
         } else {
-            Err(VerifyError::VerifyError(format!(
-                "unsupported member {}",
-                access.name
-            )))
+            // Private nestmate access and protected cross-package inheritance are not admitted.
+            Err(VerifyError::VerifyError(
+                "unsupported/inaccessible canonical member".to_owned(),
+            ))
         }
     }
 
