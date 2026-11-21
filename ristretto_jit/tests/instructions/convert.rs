@@ -220,7 +220,7 @@ fn d2f() -> Result<()> {
 #[test]
 fn i2b() -> Result<()> {
     let instructions = vec![Instruction::Iload_0, Instruction::I2b, Instruction::Ireturn];
-    let function = create_function("(I)Z", &instructions)?;
+    let function = create_function("(I)B", &instructions)?;
     let value = function
         .execute(&[Value::I32(42)], std::ptr::null())?
         .expect("value");
