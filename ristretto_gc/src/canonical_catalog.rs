@@ -137,3 +137,7 @@ fn allocate<T>(pool: &Arc<Pool<T>>, mut value: T) -> Option<Pooled<T>> {
 
 #[cfg(test)]
 mod link_tests;
+
+#[cfg(test)]
+#[path = "canonical_catalog/record_fixture.rs"]
+mod record_fixture;

@@ -170,3 +170,14 @@ retained catalog charges and rejection of currently unsupported backing. Numeric
 capacity formulas retain the frozen API; nonzero reference or edge capacity is
 rejected until the corresponding supported storage is wired. Native/WASI catalog
 totals are 42/37; strict Clippy passes.
+
+## C08 prerequisite: rooted allocation transaction
+
+The guarded participant retains the complete record-to-root transaction, including
+private record storage, root quota, resumable publication and one result token.
+Cancellation preserves durable abandonment/removal requests; helper-completed
+publication is recovered only after guarded admission and stable validation.
+Automatic placement keeps the frozen bounded rotating-slot preference. Six
+portable frozen regressions cover every private stage, helped results, failed
+observations and simultaneous object/root collisions. Native/WASI catalog totals
+are 48/43; strict Clippy passes. Root removal/scanning follows separately.
