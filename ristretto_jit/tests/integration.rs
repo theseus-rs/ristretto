@@ -23,6 +23,8 @@ mod functions {
 }
 
 mod instructions {
+    #[path = "../instructions/arguments.rs"]
+    mod arguments;
     #[path = "../instructions/array.rs"]
     mod array;
     #[path = "../instructions/branch.rs"]
@@ -62,3 +64,11 @@ mod instructions {
     #[path = "../instructions/stack.rs"]
     mod stack;
 }
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/continuation.rs"]
+mod continuation;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/frame_roots.rs"]
+mod frame_roots;

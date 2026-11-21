@@ -80,6 +80,7 @@ fn test_custom_gc_config() {
         max_pause_time_us: 50,
         incremental_step_size: 2000,
         parallel_threshold: 10_000_000,
+        ..Configuration::default()
     };
 
     let collector = GarbageCollector::with_config(config.clone());

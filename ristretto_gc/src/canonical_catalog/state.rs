@@ -17,6 +17,20 @@ use super::{
 };
 use crate::canonical_pool as pool;
 use pool::AllocationError;
+#[path = "edge_traversal.rs"]
+mod edge_traversal;
+pub use edge_traversal::*;
+#[path = "edges.rs"]
+mod edges;
+#[path = "phase_ops.rs"]
+mod phase_ops;
+#[path = "roots.rs"]
+mod roots;
+pub use edges::*;
+use edges::{EdgeEffect, EdgeRegistry};
+pub(crate) use roots::root_barrier_plan;
+pub use roots::{Root, RootCreation, RootPrepareError, RootStatus, RootToken};
+use roots::{RootEffect, RootRegistry};
 const UNDECIDED: u8 = 0;
 const COMMIT: u8 = 1;
 const CANCEL: u8 = 2;
@@ -126,6 +140,9 @@ struct Effect<R: Record = ()> {
 }
 struct Operation<R: Record = ()> {
     effect: Option<Effect<R>>,
+    secondary_effect: Option<Effect<R>>,
+    edge: Option<EdgeEffect>,
+    root: Option<RootEffect<R>>,
 
     successor: Pooled<Control<R>>,
     decision: AtomicU8,
@@ -196,6 +213,9 @@ pub struct Preparation<R: Record = ()> {
     committed_phase: Phase,
     cancelled_phase: Phase,
     effect: Option<Effect<R>>,
+    secondary_effect: Option<Effect<R>>,
+    edge: Option<EdgeEffect>,
+    root: Option<RootEffect<R>>,
 
     successor: Option<Pooled<Control<R>>>,
     operation: Option<Operation<R>>,
@@ -234,7 +254,11 @@ impl<R: Record> Preparation<R> {
                 }
                 Err(_) => return Ok(None),
             };
-            if self.effect.is_none() {
+            if self.effect.is_none()
+                && self.secondary_effect.is_none()
+                && self.edge.is_none()
+                && self.root.is_none()
+            {
                 return Ok(Some(Attempt {
                     owner: self.owner.clone(),
                     expected: self.expected.take().expect("unconsumed phase preparation"),
@@ -246,6 +270,9 @@ impl<R: Record> Preparation<R> {
         }
         let operation = self.operation.take().unwrap_or_else(|| Operation {
             effect: self.effect.take(),
+            secondary_effect: self.secondary_effect.take(),
+            edge: self.edge.take(),
+            root: self.root.take(),
 
             successor: self.successor.take().expect("prepared phase outcomes"),
             decision: AtomicU8::new(UNDECIDED),
@@ -301,12 +328,7 @@ impl<R: Record> Attempt<R> {
     /// The immutable decision is shared by all helpers. Cancellation does not
     /// release an already installed controller; a subsequent helper does that.
     pub fn cancel(&self) -> bool {
-        match self.decision().compare_exchange(
-            UNDECIDED,
-            CANCEL,
-            Ordering::AcqRel,
-            Ordering::Acquire,
-        ) {
+        match decision::choose(self.decision(), CANCEL) {
             Ok(_) => true,
             Err(value) => value == CANCEL,
         }
@@ -499,6 +521,8 @@ pub struct Catalog<R: Record = ()> {
     cells: Arc<Pool<Cell<R>>>,
     next_identity: AtomicU64,
     released_slot: AtomicUsize,
+    roots: Option<RootRegistry<R>>,
+    edges: Option<EdgeRegistry>,
 }
 impl<R: Record> Catalog<R> {
     /// Requested heap backing; the inline Catalog value belongs to its caller.
@@ -559,15 +583,24 @@ impl<R: Record> Catalog<R> {
             cells,
             next_identity: AtomicU64::new(1),
             released_slot: AtomicUsize::new(usize::MAX),
+            roots: None,
+            edges: None,
         }
     }
     pub fn capacity(&self) -> usize {
         self.slots.len()
     }
     pub fn generation_exhaustion_observed(&self) -> bool {
-        self.controls.generation_exhaustion_observed()
+        self.edges.as_ref().is_some_and(|edges| {
+            edges.slots_pool.generation_exhaustion_observed()
+                || edges.states.generation_exhaustion_observed()
+        }) || self.controls.generation_exhaustion_observed()
             || self.memberships.generation_exhaustion_observed()
             || self.cells.generation_exhaustion_observed()
+            || self
+                .roots
+                .as_ref()
+                .is_some_and(|roots| roots.pool.generation_exhaustion_observed())
     }
     pub fn discover(&self, slot: usize) -> Result<Option<Pooled<Cell<R>>>, Contended> {
         self.slots.get(slot).map_or(Ok(None), OptionalLink::load)
@@ -677,7 +710,9 @@ impl<R: Record> Catalog<R> {
             committed_phase: phase,
             cancelled_phase: cancelled,
             effect,
-
+            secondary_effect: None,
+            edge: None,
+            root: None,
             successor: None,
             operation: None,
         })
@@ -726,3 +761,323 @@ impl<R: Record> Catalog<R> {
 #[cfg(test)]
 #[path = "preparation_tests.rs"]
 mod preparation_tests;
+
+impl<R: Record> Catalog<R> {
+    pub(crate) fn possible_phase_outcomes(&self) -> Option<[Phase; 2]> {
+        let head = self.head.load()?;
+        match &*head {
+            Control::Stable(phase) => Some([*phase; 2]),
+            Control::Phase(operation) => match operation.decision.load(Ordering::Acquire) {
+                COMMIT => Some([operation.committed; 2]),
+                CANCEL => Some([operation.cancelled; 2]),
+                UNDECIDED => Some([operation.cancelled, operation.committed]),
+                _ => None,
+            },
+            Control::Busy(operation) => {
+                // Until effects are certified either immutable outcome is
+                // a conservative observation, including after a decision.
+                let outcome = operation.outcome();
+                Some([outcome.cancelled, outcome.committed])
+            }
+        }
+    }
+    fn stable_head_in(&self, context: &R::Context) -> Option<Pooled<Control<R>>> {
+        let head = self.head.load()?;
+        if head.is_stable() {
+            Some(head)
+        } else {
+            self.finish(&head, context);
+            None
+        }
+    }
+    pub fn snapshot_in(&self, context: &R::Context) -> Option<Snapshot<R>> {
+        Some(Snapshot {
+            head: self.stable_head_in(context)?,
+            owner: self.owner.clone(),
+        })
+    }
+    pub(crate) fn phase_in(&self, context: &R::Context) -> Option<Phase> {
+        Some(self.stable_head_in(context)?.phase())
+    }
+    fn validates_head_in(&self, head: &Pooled<Control<R>>, context: &R::Context) -> bool {
+        self.head.points_to(head)
+            || self
+                .phase_in(context)
+                .is_some_and(|current| current.revision == head.phase().revision)
+    }
+    pub(crate) fn validates_snapshot_in(
+        &self,
+        snapshot: &Snapshot<R>,
+        context: &R::Context,
+    ) -> bool {
+        Arc::ptr_eq(&snapshot.owner, &self.owner) && self.validates_head_in(&snapshot.head, context)
+    }
+    fn finish(&self, busy: &Pooled<Control<R>>, context: &R::Context) {
+        self.finish_at(busy, context, || {}, || {}, || {}, || {});
+    }
+    #[expect(
+        clippy::too_many_lines,
+        reason = "keep all fallible acquisitions before the shared commit/effect certificate sequence"
+    )]
+    fn finish_at(
+        &self,
+        busy: &Pooled<Control<R>>,
+        context: &R::Context,
+        before_effect: impl FnOnce(),
+        after_effect: impl FnOnce(),
+        after_certificate: impl FnOnce(),
+        after_release: impl FnOnce(),
+    ) {
+        if let Control::Phase(operation) = &**busy {
+            // Called only for a successfully installed or observed head. This
+            // single decision certifies all immutable phase data; no record,
+            // root, reference or edge effect can be attached to this variant.
+            let _ = decision::choose(&operation.decision, COMMIT);
+            after_effect();
+            after_certificate();
+            after_release();
+            return;
+        }
+        let Control::Busy(operation) = &**busy else {
+            return;
+        };
+        let completed = &operation.outcome().decision;
+        // Prepare every fallible effect acquisition before deciding COMMIT.
+        // A caller supplying a private-graph guard may release it on this early
+        // return: no irreversible commit decision has been made by this helper.
+        let proposed = if completed.load(Ordering::Acquire) == UNDECIDED
+            && operation.decision.load(Ordering::Acquire) != CANCEL
+        {
+            if let Some(effect) = &operation.effect {
+                let Some(proposed) = share(&effect.proposed) else {
+                    return;
+                };
+                Some(proposed)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let secondary_proposed = if let Some(effect) = &operation.secondary_effect
+            && completed.load(Ordering::Acquire) == UNDECIDED
+            && operation.decision.load(Ordering::Acquire) != CANCEL
+        {
+            let Some(proposed) = share(&effect.proposed) else {
+                return;
+            };
+            Some(proposed)
+        } else {
+            None
+        };
+        let edge_proposed = if let Some(effect) = &operation.edge
+            && completed.load(Ordering::Acquire) == UNDECIDED
+            && operation.decision.load(Ordering::Acquire) != CANCEL
+        {
+            let Some(proposed) = share(&effect.proposed) else {
+                return;
+            };
+            Some(proposed)
+        } else {
+            None
+        };
+        // Real-record publication must retain its private graph before the
+        // irreversible decision. Already certified work only needs head release.
+        let mut entered = None;
+        if let Some(effect) = &operation.effect
+            && *effect.expected == Membership::Prepared
+            && matches!(*effect.proposed, Membership::Tracing(_))
+            && completed.load(Ordering::Acquire) == UNDECIDED
+            && operation.decision.load(Ordering::Acquire) != CANCEL
+        {
+            match effect.cell.record.enter(context) {
+                Ok(guard) => entered = Some(guard),
+                Err(RecordError::Contended) => return,
+                Err(RecordError::Closed | RecordError::Foreign) => {
+                    match decision::choose(&operation.decision, CANCEL) {
+                        Ok(_) | Err(CANCEL) => {}
+                        Err(COMMIT) => {
+                            // A prior committer owns its own graph guard until
+                            // certification. A terminally closed record therefore
+                            // cannot authorize any new uncertified effect here.
+                            if completed.load(Ordering::Acquire) == UNDECIDED {
+                                return;
+                            }
+                        }
+                        Err(_) => unreachable!("invalid immutable decision"),
+                    }
+                }
+            }
+        }
+        let decision = match decision::choose(&operation.decision, COMMIT) {
+            Ok(_) => COMMIT,
+            Err(decision) => decision,
+        };
+        if completed.load(Ordering::Acquire) == UNDECIDED
+            && decision == COMMIT
+            && let Some(effect) = &operation.effect
+        {
+            before_effect();
+            let proposed = proposed.expect("effect prepared before commit decision");
+            // This exact membership version is changed only by this installed
+            // controller and is never reinstalled. A strong CAS failure therefore
+            // proves this effect already happened, possibly followed by later
+            // certified controllers. No owning reread is required to certify it.
+            // There is no fallible acquisition between COMMIT and its certificate.
+            effect.cell.state.compare(&effect.expected, proposed);
+        }
+        after_effect();
+        // Only already-tracing owner barriers use the second effect. It never
+        // publishes a Prepared record and therefore needs no private-graph guard.
+        if let Some(effect) = &operation.secondary_effect
+            && decision == COMMIT
+            && completed.load(Ordering::Acquire) == UNDECIDED
+        {
+            effect.cell.state.compare(
+                &effect.expected,
+                secondary_proposed.expect("secondary effect prepared before commit decision"),
+            );
+        }
+        if let Some(root) = &operation.root
+            && decision == COMMIT
+            && completed.load(Ordering::Acquire) == UNDECIDED
+        {
+            root.apply();
+        }
+        if let Some(edge) = &operation.edge
+            && decision == COMMIT
+            && completed.load(Ordering::Acquire) == UNDECIDED
+        {
+            edge.apply(edge_proposed.expect("edge effect prepared before commit decision"));
+        }
+        if decision == COMMIT
+            && let Some(guard) = &entered
+        {
+            // This is a concrete atomic store, not a user callback. A completed
+            // certificate observes cleanup ownership before any guard can end.
+            guard.certified();
+        }
+        decision::certify(completed, decision);
+        after_certificate();
+        let Some(after) = share(&operation.successor) else {
+            return;
+        };
+        self.head.compare(busy, after);
+        after_release();
+    }
+    pub fn commit_in(&self, attempt: &Attempt<R>, context: &R::Context) -> Outcome {
+        assert!(
+            Arc::ptr_eq(&attempt.owner, &self.owner),
+            "foreign operation"
+        );
+        let mut superseded = false;
+        if let Some(proposed) = share(&attempt.busy) {
+            if self.head.compare(&attempt.expected, proposed) {
+                self.finish(&attempt.busy, context);
+            } else if let Some(current) = self.head.load() {
+                // Exact owning controller versions are never reinstalled. An
+                // observed different controller excludes a future install of
+                // this request; completed certificates still take priority below.
+                superseded = !Pooled::ptr_eq(&current, &attempt.busy)
+                    && !Pooled::ptr_eq(&current, &attempt.expected);
+                self.finish(&current, context);
+            }
+        }
+        match attempt.completed() {
+            COMMIT => Outcome::Committed,
+            CANCEL => Outcome::Cancelled,
+            _ if attempt.decision().load(Ordering::Acquire) == CANCEL => Outcome::Cancelled,
+            _ if superseded => Outcome::Retry,
+            _ => Outcome::Pending,
+        }
+    }
+    #[cfg(test)]
+    pub fn install_and_stop(&self, attempt: &Attempt<R>) -> bool {
+        self.head.compare(
+            &attempt.expected,
+            share(&attempt.busy).expect("quiescent fixture clone"),
+        )
+    }
+    #[cfg(test)]
+    pub fn effect_and_stop(&self, attempt: &Attempt<R>) {
+        assert!(self.install_and_stop(attempt));
+        if matches!(*attempt.busy, Control::Phase(_)) {
+            assert_eq!(
+                attempt.decision().compare_exchange(
+                    UNDECIDED,
+                    COMMIT,
+                    Ordering::AcqRel,
+                    Ordering::Acquire,
+                ),
+                Ok(UNDECIDED)
+            );
+            return;
+        }
+        let operation = attempt.operation();
+        assert_eq!(decision::choose(&operation.decision, COMMIT), Ok(UNDECIDED));
+        if let Some(effect) = &operation.effect {
+            assert!(effect.cell.state.compare(
+                &effect.expected,
+                share(&effect.proposed).expect("quiescent fixture clone")
+            ));
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "commit_tests.rs"]
+mod commit_tests;
+
+#[path = "decision.rs"]
+mod decision;
+#[cfg(all(test, not(target_family = "wasm")))]
+#[path = "decision_models.rs"]
+mod decision_models;
+
+impl<R: Record> Catalog<R> {
+    pub fn begin_abandon(
+        &self,
+        snapshot: Snapshot<R>,
+        cell: Pooled<Cell<R>>,
+    ) -> Option<Preparation<R>> {
+        let expected = cell.state.load()?;
+        if *expected != Membership::Prepared {
+            return None;
+        }
+        let phase = snapshot.phase();
+        let effect = self.effect(cell, expected, Membership::Retired)?;
+        self.begin_prepare(snapshot, phase, Some(effect))
+    }
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "an exact same-catalog cell owns its validated immutable discovery slot"
+    )]
+    pub fn release_retired(&self, cell: &Pooled<Cell<R>>) -> bool {
+        if !Arc::ptr_eq(&cell.owner, &self.owner) || cell.membership() != Some(Membership::Retired)
+        {
+            return false;
+        }
+        let slot = cell.slot();
+        let released = self.slots[slot].compare(Some(cell), None);
+        if released {
+            self.owner.vacancy.offer(slot);
+            self.released_slot.store(slot, Ordering::Relaxed);
+        }
+        released
+    }
+}
+
+impl<R: Record> Catalog<R> {
+    #[cfg(test)]
+    pub fn help_record_at(&self, context: &R::Context, point: usize, stop: impl FnOnce()) {
+        let busy = self.head.load().expect("quiescent record fixture");
+        assert!(matches!(*busy, Control::Busy(_) | Control::Phase(_)));
+        match point {
+            0 => self.finish_at(&busy, context, stop, || {}, || {}, || {}),
+            1 => self.finish_at(&busy, context, || {}, stop, || {}, || {}),
+            2 => self.finish_at(&busy, context, || {}, || {}, stop, || {}),
+            3 => self.finish_at(&busy, context, || {}, || {}, || {}, stop),
+            _ => panic!("invalid record stop point"),
+        }
+    }
+}

@@ -175,6 +175,7 @@ pub(crate) fn emit_pending_exception_check(
         )?;
     }
 
+    stack.inherit_block_references(function_builder, continue_block)?;
     function_builder.switch_to_block(continue_block);
     stack.reset(function_builder)?;
     Ok(())
@@ -226,6 +227,7 @@ pub(crate) fn emit_null_check(
         )?;
     }
 
+    stack.inherit_block_references(function_builder, continue_block)?;
     function_builder.switch_to_block(continue_block);
     stack.reset(function_builder)?;
     Ok(())

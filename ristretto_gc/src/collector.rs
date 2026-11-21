@@ -1,9 +1,11 @@
 use crate::Finalize;
+use crate::allocation_budget::{AllocationBudget, Reservation};
 use crate::config::{Configuration, Statistics};
 use crate::error::{Error, Result};
 use crate::gc::Gc;
 use crate::metadata::ObjectMetadata;
 use crate::pointers::{SafePtr, TracePtr};
+use crate::private_allocation::Allocation;
 use crate::root_guard::GcRootGuard;
 use dashmap::DashMap;
 #[cfg(not(target_family = "wasm"))]
@@ -19,11 +21,51 @@ use std::thread;
 use sysinfo::System;
 use tracing::{debug, error, info, trace, warn};
 
+/// Host state that owns managed roots outside an ordinary traced graph.
+/// The canonical payload adapter rejects values reporting such an owner.
+pub trait HeapOwner: Send + Sync {
+    /// Releases owner-held roots during the embedding's shutdown procedure.
+    fn release_heap_roots(&self);
+}
+
 /// Trait for objects that can be traced by the garbage collector.
 ///
 /// Objects that contain `Gc<T>` pointers must implement this trait to enable the garbage
 /// collector to traverse object references during the marking phase.
 pub trait Trace {
+    /// Conservative hint; this alone never authorizes canonical payload admission.
+    #[must_use]
+    fn may_contain_gc_references() -> bool
+    where
+        Self: Sized,
+    {
+        true
+    }
+
+    /// The explicit audited certificate for exactly this payload type.
+    #[must_use]
+    fn canonical_payload() -> Option<crate::CanonicalPayload<Self>>
+    where
+        Self: Sized,
+    {
+        None
+    }
+
+    /// Whether writes can require managed-edge maintenance. Default is conservative.
+    fn needs_write_barrier(&self) -> bool {
+        true
+    }
+
+    /// Owned external backing included by canonical payload allocation accounting.
+    fn external_size(&self) -> usize {
+        0
+    }
+
+    /// Optional VM owner; canonical payloads reject this independent root authority.
+    fn heap_owner(&self) -> Option<Arc<dyn HeapOwner>> {
+        None
+    }
+
     /// Trace all `Gc<T>` references contained within this object.
     ///
     /// This method should call `trace()` on all `Gc<T>` fields contained within the object.
@@ -78,7 +120,8 @@ pub struct GarbageCollector {
     // Allocation pressure since the last collection, independent of live memory.
     bytes_allocated: Arc<AtomicUsize>,
     // Bytes in allocations that have not been freed.
-    bytes_live: AtomicUsize,
+    bytes_live: Arc<AtomicUsize>,
+    payload_budget: Arc<AllocationBudget>,
 
     // Background thread coordination
     #[cfg(not(target_family = "wasm"))]
@@ -88,6 +131,10 @@ pub struct GarbageCollector {
 }
 
 impl GarbageCollector {
+    pub(crate) fn weak(&self) -> Weak<Self> {
+        self.this.clone()
+    }
+
     /// Creates a new low-pause, parallel, concurrent garbage collector.
     #[must_use]
     pub fn new() -> Arc<Self> {
@@ -129,6 +176,7 @@ impl GarbageCollector {
 
         Arc::new_cyclic(|this| Self {
             this: this.clone(),
+            payload_budget: Arc::new(AllocationBudget::new(configuration.max_heap_bytes)),
             configuration,
             #[cfg(not(target_family = "wasm"))]
             thread_pool,
@@ -140,7 +188,7 @@ impl GarbageCollector {
             collection_active: Arc::new(AtomicBool::new(false)),
             mark_queue: Arc::new(Mutex::new(VecDeque::new())),
             bytes_allocated: Arc::new(AtomicUsize::new(0)),
-            bytes_live: AtomicUsize::new(0),
+            bytes_live: Arc::new(AtomicUsize::new(0)),
             #[cfg(not(target_family = "wasm"))]
             collector_thread: Arc::new(RwLock::new(None)),
             shutdown: Arc::new(AtomicBool::new(false)),
@@ -148,34 +196,27 @@ impl GarbageCollector {
         })
     }
 
-    /// Registers a new object with the garbage collector for reachability analysis.
-    pub(crate) fn register_object<T: Send + Sync>(&self, ptr: *const T, size: usize) {
-        // Store the raw pointer without casting to ensure type information is preserved
-        let safe_ptr = SafePtr::from_ptr(ptr);
-
-        // Create type-safe metadata that knows how to properly drop the T data
-        let metadata = ObjectMetadata::new_for_gc::<T>(safe_ptr, size);
-
-        trace!("registering object at {:#x} with size {size}", safe_ptr.0);
-        self.objects.insert(safe_ptr, metadata);
+    /// Transfers the unique private payload owner to the ordinary registry.
+    pub(crate) fn register_object(&self, mut allocation: Allocation) {
+        allocation.attach_live_counter(&self.bytes_live);
+        let size = allocation.size();
+        let metadata = ObjectMetadata::new_for_gc(allocation);
+        self.objects.insert(*metadata.ptr(), metadata);
+        self.record_allocation_debt(size);
     }
 
-    /// Registers a new object with finalizer support for reachability analysis. This is used when
-    /// `T` implements the `Finalize` trait.
-    pub(crate) fn register_object_with_finalizer<T>(&self, ptr: *const T, size: usize)
-    where
-        T: Send + Sync + Finalize,
-    {
-        let safe_ptr = SafePtr::from_ptr(ptr);
-
-        // Create metadata with finalizer support
-        let metadata = ObjectMetadata::new_for_gc_with_finalizer::<T>(safe_ptr, size);
-
-        trace!(
-            "registering object with finalizer at {:#x} with size {size}",
-            safe_ptr.0
-        );
-        self.objects.insert(safe_ptr, metadata);
+    /// # Safety
+    /// The allocation must contain the T used by the typed caller.
+    pub(crate) unsafe fn register_object_with_finalizer<T: Send + Sync + Finalize>(
+        &self,
+        mut allocation: Allocation,
+    ) {
+        allocation.attach_live_counter(&self.bytes_live);
+        let size = allocation.size();
+        // SAFETY: Gc's typed constructor pairs this allocation with the same T.
+        let metadata = unsafe { ObjectMetadata::new_for_gc_with_finalizer::<T>(allocation) };
+        self.objects.insert(*metadata.ptr(), metadata);
+        self.record_allocation_debt(size);
     }
 
     /// Starts the background collector thread.
@@ -336,7 +377,6 @@ impl GarbageCollector {
             metadata.run_drop_fn();
         }
         if objects_freed > 0 {
-            self.bytes_live.fetch_sub(bytes_freed, Ordering::Relaxed);
             debug!(
                 "cleanup freed {} remaining objects ({} bytes)",
                 objects_freed, bytes_freed
@@ -359,9 +399,25 @@ impl GarbageCollector {
         }
     }
 
+    pub(crate) fn reserve_exact_bytes(&self, size: usize) -> Result<Reservation> {
+        self.payload_budget.reserve(size)
+    }
+
+    /// Bytes reserved for managed payloads, including private unpublished allocations.
+    /// Credit is returned only after the payload destructor and deallocation finish.
+    /// This excludes collector metadata and allocator overhead.
+    #[must_use]
+    pub fn managed_bytes(&self) -> usize {
+        self.payload_budget.used()
+    }
+
     /// Records an allocation for live memory accounting and GC threshold tracking.
     pub fn record_allocation(&self, size: usize) {
         self.bytes_live.fetch_add(size, Ordering::Relaxed);
+        self.record_allocation_debt(size);
+    }
+
+    fn record_allocation_debt(&self, size: usize) {
         let old_size = self.bytes_allocated.fetch_add(size, Ordering::Relaxed);
 
         // Trigger collection if threshold exceeded (use saturating arithmetic to prevent overflow)
@@ -692,13 +748,7 @@ impl GarbageCollector {
         Self::final_mark_phase(collector, phase, roots, mark_queue, objects);
 
         // Phase 4: Concurrent Sweep; free unmarked objects
-        Self::concurrent_sweep_phase(
-            phase,
-            objects,
-            bytes_allocated,
-            &collector.bytes_live,
-            stats,
-        );
+        Self::concurrent_sweep_phase(phase, objects, bytes_allocated, stats);
 
         // Update phase back to idle
         if let Ok(mut phase_guard) = phase.write() {
@@ -932,7 +982,6 @@ impl GarbageCollector {
         phase: &Arc<RwLock<GcPhase>>,
         objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
         bytes_allocated: &Arc<AtomicUsize>,
-        bytes_live: &AtomicUsize,
         stats: &Arc<RwLock<Statistics>>,
     ) {
         if let Ok(mut phase_guard) = phase.write() {
@@ -987,7 +1036,6 @@ impl GarbageCollector {
         }
 
         if swept_objects > 0 {
-            bytes_live.fetch_sub(swept_bytes, Ordering::Relaxed);
             debug!("swept {swept_objects} objects ({swept_bytes} bytes)");
         }
 
@@ -1072,6 +1120,12 @@ macro_rules! impl_trace_primitive {
     ($($t:ty),*) => {
         $(
             impl Trace for $t {
+                fn may_contain_gc_references() -> bool { false }
+                fn canonical_payload() -> Option<crate::CanonicalPayload<Self>> {
+                    // SAFETY: primitive scalars have no graph, owner, backing or callbacks.
+                    Some(unsafe { crate::CanonicalPayload::new() })
+                }
+                fn needs_write_barrier(&self) -> bool { false }
                 fn trace(&self, _collector: &GarbageCollector) {}
             }
         )*
@@ -1123,3 +1177,7 @@ where
         self.read().trace(collector);
     }
 }
+
+#[cfg(test)]
+#[path = "private_allocation_tests.rs"]
+mod private_allocation_tests;

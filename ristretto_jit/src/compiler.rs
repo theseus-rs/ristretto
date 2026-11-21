@@ -1,6 +1,16 @@
+#[path = "frame_roots.rs"]
+mod frame_roots;
+#[path = "reference_liveness.rs"]
+mod reference_liveness;
+
+#[path = "continuation.rs"]
+mod continuation;
+
+#[path = "native_frame.rs"]
+mod native_frame;
+
 use crate::Error::{
-    InternalError, InvalidBlockAddress, InvalidLocalVariableIndex, UnsupportedInstruction,
-    UnsupportedTargetISA, UnsupportedType,
+    InternalError, InvalidBlockAddress, UnsupportedInstruction, UnsupportedTargetISA,
 };
 use crate::control_flow_graph::InstructionControlFlow;
 use crate::function::Function;
@@ -27,7 +37,7 @@ use crate::instruction::{
     multianewarray, new_object, newarray, nop, pop, pop2, putfield, putstatic, ret, ret_w,
     r#return, saload, sastore, sipush, swap, tableswitch, wide,
 };
-use crate::local_type::LocalType;
+use crate::local_type::{LocalType, StackType};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
@@ -96,6 +106,7 @@ impl Compiler {
         for &(name, ptr) in symbols {
             jit_builder.symbol(name, ptr);
         }
+        jit_builder.symbol(native_frame::PROBE_SYMBOL, native_frame::probe as *const u8);
         JITModule::new(jit_builder)
     }
 
@@ -158,12 +169,118 @@ impl Compiler {
     /// # Errors
     ///
     /// if the Java byte code cannot be compiled to native code
-    #[expect(clippy::too_many_lines)]
     pub fn compile(
         &self,
         class_file: &ClassFile,
         method: &Method,
         symbols: &[(&str, *const u8)],
+    ) -> Result<Function> {
+        self.compile_mode(class_file, method, symbols, false)
+    }
+
+    /// Restriction for explicit scalar/reference continuation capabilities. Heap access,
+    /// calls, exception handlers, synchronization and trapping integer division
+    /// remain excluded until their owning request protocols are implemented.
+    #[cfg(feature = "experimental-reference-dispatch")]
+    #[must_use]
+    pub fn request_rejection_reason(class: &ClassFile, method: &Method) -> Option<&'static str> {
+        if !method.access_flags.contains(MethodAccessFlags::STATIC)
+            || method
+                .access_flags
+                .contains(MethodAccessFlags::SYNCHRONIZED)
+        {
+            return Some("experimental_method_kind");
+        }
+        let Ok(descriptor) = class.constant_pool.try_get_utf8(method.descriptor_index) else {
+            return Some("experimental_descriptor");
+        };
+        if FieldType::parse_method_descriptor(descriptor).is_err() {
+            return Some("experimental_descriptor");
+        }
+        let Some((code, handlers)) = method.attributes.iter().find_map(|attribute| {
+            if let Attribute::Code {
+                code,
+                exception_table,
+                ..
+            } = attribute
+            {
+                Some((code, exception_table))
+            } else {
+                None
+            }
+        }) else {
+            return Some("missing_code");
+        };
+        if !handlers.is_empty() {
+            return Some("experimental_exception_handlers");
+        }
+        if code.iter().any(|instruction| {
+            !(Self::is_production_safe_instruction(instruction)
+                || matches!(
+                    instruction,
+                    Instruction::Ifeq(_)
+                        | Instruction::Ifne(_)
+                        | Instruction::Iflt(_)
+                        | Instruction::Ifge(_)
+                        | Instruction::Ifgt(_)
+                        | Instruction::Ifle(_)
+                        | Instruction::If_icmpeq(_)
+                        | Instruction::If_icmpne(_)
+                        | Instruction::If_icmplt(_)
+                        | Instruction::If_icmpge(_)
+                        | Instruction::If_icmpgt(_)
+                        | Instruction::If_icmple(_)
+                        | Instruction::Goto(_)
+                        | Instruction::Goto_w(_)
+                        | Instruction::Aconst_null
+                        | Instruction::Aload(_)
+                        | Instruction::Aload_w(_)
+                        | Instruction::Aload_0
+                        | Instruction::Aload_1
+                        | Instruction::Aload_2
+                        | Instruction::Aload_3
+                        | Instruction::Astore(_)
+                        | Instruction::Astore_w(_)
+                        | Instruction::Astore_0
+                        | Instruction::Astore_1
+                        | Instruction::Astore_2
+                        | Instruction::Astore_3
+                        | Instruction::Areturn
+                        | Instruction::Ifnull(_)
+                        | Instruction::Ifnonnull(_)
+                        | Instruction::If_acmpeq(_)
+                        | Instruction::If_acmpne(_)
+                ))
+        }) {
+            return Some("experimental_unqualified_instruction");
+        }
+        None
+    }
+
+    /// Compile an explicit resumable scalar activation. Ordinary eligibility and
+    /// synchronous compilation are unchanged; the result requires activation dispatch.
+    /// # Errors
+    /// Rejects unsupported capabilities, malformed bytecode and excessive continuation state.
+    #[cfg(feature = "experimental-reference-dispatch")]
+    pub fn compile_requests(
+        &self,
+        class: &ClassFile,
+        method: &Method,
+        symbols: &[(&str, *const u8)],
+    ) -> Result<Function> {
+        if let Some(reason) = Self::request_rejection_reason(class, method) {
+            return Err(crate::Error::UnsupportedMethod(reason.to_owned()));
+        }
+        self.compile_mode(class, method, symbols, true)
+    }
+
+    #[expect(clippy::too_many_lines)]
+    fn compile_mode(
+        &self,
+        class_file: &ClassFile,
+        method: &Method,
+        symbols: &[(&str, *const u8)],
+        requests_only: bool,
     ) -> Result<Function> {
         let Some((max_stack, instructions, exception_table)) =
             method.attributes.iter().find_map(|attribute| {
@@ -189,6 +306,13 @@ impl Compiler {
 
         let constant_pool = &class_file.constant_pool;
         let method_descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
+        let (parameter_types, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
+        let argument_types: Vec<i8> = std::iter::once(crate::jit_value::PTR)
+            .take(usize::from(
+                !method.access_flags.contains(MethodAccessFlags::STATIC),
+            ))
+            .chain(parameter_types.iter().map(Self::argument_tag))
+            .collect();
         let is_static = method.access_flags.contains(MethodAccessFlags::STATIC);
         let mut jit_module = self.jit_module(symbols);
         let class_name = class_file.class_name()?;
@@ -210,16 +334,19 @@ impl Compiler {
 
         let helpers = RuntimeHelpers::declare(&mut jit_module, &mut function_builder)?;
 
-        let (entry_block, blocks) = control_flow_graph::get_blocks(
+        let (entry_block, mut blocks, reference_parameters) = control_flow_graph::get_blocks(
             &mut function_builder,
             constant_pool,
             instructions,
             exception_table,
         )?;
+        if blocks.get(&0) == Some(&entry_block) {
+            blocks.insert(0, function_builder.create_block());
+        }
         // Use the entry block for function setup (entry_block cannot be jumped to)
         function_builder.switch_to_block(entry_block);
         function_builder.append_block_params_for_function_params(entry_block);
-        let (arguments_pointer, _arguments_length_pointer, return_pointer, context_pointer) =
+        let (arguments_pointer, arguments_length, return_pointer, context_pointer) =
             Self::function_pointers(&mut function_builder, entry_block)?;
 
         let mut locals = Self::locals(
@@ -238,14 +365,70 @@ impl Compiler {
         // and returns.
         let exception_block = function_builder.create_block();
 
-        // If entry_block and block_zero are different, we need to jump from entry to block_zero
-        // This happens when there are backward jumps to address 0
-        if entry_block != block_zero {
-            function_builder.ins().jump(block_zero, &[]);
-            function_builder.switch_to_block(block_zero);
+        let requires_context = requests_only
+            && (argument_types.contains(&crate::jit_value::PTR)
+                || !locals.reference_indices().is_empty()
+                || instructions.iter().any(|instruction| {
+                    matches!(instruction, Instruction::Aconst_null | Instruction::Areturn)
+                }));
+        let continuation_pointer = context_pointer;
+        let context_pointer = if requests_only {
+            function_builder.ins().load(
+                types::I64,
+                MemFlagsData::trusted(),
+                continuation_pointer,
+                16,
+            )
+        } else {
+            context_pointer
+        };
+        let mut frame_roots = if requires_context {
+            Some(frame_roots::FrameRoots::new(
+                &mut function_builder,
+                &locals,
+                max_stack,
+                instructions,
+                exception_table,
+                exception_block,
+            )?)
+        } else {
+            None
+        };
+        let continuation = if requests_only {
+            Some(continuation::Continuation::new(
+                &mut function_builder,
+                &blocks,
+                instructions,
+                &locals,
+                max_stack,
+                &reference_parameters,
+                requires_context,
+            )?)
+        } else {
+            None
+        };
+        let dispatch = if continuation.is_some() {
+            function_builder.create_block()
+        } else {
+            block_zero
+        };
+        let frame_probe = native_frame::SizeProbe::new(&mut function_builder);
+        frame_probe.emit_cold_path(
+            &mut jit_module,
+            &mut function_builder,
+            arguments_length,
+            dispatch,
+            exception_block,
+        )?;
+        if let Some(continuation) = &continuation {
+            function_builder.switch_to_block(dispatch);
+            continuation.entry(&mut function_builder, continuation_pointer, block_zero)?;
         }
+        function_builder.switch_to_block(block_zero);
 
         let mut stack = OperandStack::with_capacity(max_stack);
+        stack.mark_references(reference_parameters);
+        let mut continued_blocks = continuation.as_ref().map(|_| blocks.clone());
         let mut block_is_terminated = false;
         for (program_counter, instruction) in Instruction::with_offsets(instructions) {
             if let Some(block) = blocks.get(&program_counter) {
@@ -268,14 +451,32 @@ impl Compiler {
                 continue;
             }
 
+            if let Some(frame_roots) = &mut frame_roots {
+                frame_roots.publish(
+                    &mut function_builder,
+                    &locals,
+                    stack
+                        .as_slice()
+                        .iter()
+                        .copied()
+                        .filter(|value| stack.is_reference(*value)),
+                    &helpers,
+                    context_pointer,
+                    program_counter,
+                )?;
+            }
+            if let (Some(continuation), Some(targets)) = (&continuation, &mut continued_blocks) {
+                continuation.redirect(targets, program_counter, instruction)?;
+            }
             Self::process_instruction(
                 constant_pool,
                 &mut function_builder,
-                &blocks,
+                continued_blocks.as_ref().unwrap_or(&blocks),
                 &mut locals,
                 &mut stack,
                 program_counter,
                 return_pointer,
+                return_type.as_ref(),
                 context_pointer,
                 &helpers,
                 exception_block,
@@ -283,10 +484,30 @@ impl Compiler {
                 instruction,
             )?;
 
+            if let Some(targets) = &mut continued_blocks {
+                continuation::Continuation::restore_targets(
+                    targets,
+                    &blocks,
+                    program_counter,
+                    instruction,
+                )?;
+            }
+
             // Check if this instruction terminates the block
             if instruction.changes_control_flow() {
                 block_is_terminated = true;
             }
+        }
+
+        if let Some(continuation) = &continuation {
+            continuation.finish(
+                &mut function_builder,
+                continuation_pointer,
+                &locals,
+                frame_roots.as_mut(),
+                &helpers,
+                context_pointer,
+            )?;
         }
 
         // Emit the shared exception return block body: write NONE to the return pointer
@@ -298,6 +519,14 @@ impl Compiler {
         function_builder.finalize(jit_module.target_config());
 
         jit_module.define_function(function, &mut module_context)?;
+        let native_stack_bytes = match native_frame::stack_bytes(&module_context) {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                // SAFETY: no executable entry or owning Function has escaped.
+                unsafe { jit_module.free_memory() };
+                return Err(error);
+            }
+        };
         jit_module.clear_context(&mut module_context);
         jit_module.finalize_definitions()?;
 
@@ -305,7 +534,8 @@ impl Compiler {
         let function = unsafe {
             let function: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8) =
                 mem::transmute(code);
-            Function::with_module(function, jit_module)
+            Function::with_module(function, jit_module, native_stack_bytes, argument_types)
+                .with_continuation(continuation.map(|continuation| continuation.layout))
         };
         Ok(function)
     }
@@ -379,125 +609,58 @@ impl Compiler {
         arguments_pointer: Value,
         is_static: bool,
     ) -> Result<LocalVariables> {
-        let size_of = i64::try_from(size_of::<JitValue>())
-            .map_err(|error| InternalError(format!("{error:?}")))?;
+        let size_of = i64::try_from(size_of::<JitValue>())?;
         let struct_size = function_builder.ins().iconst(types::I64, size_of);
-        let mut local_types = Vec::new();
-
-        // For non-static methods, local variable 0 is `this` (an object reference).
-        // It is passed as the first JIT argument but is NOT part of the method descriptor.
-        let arg_offset = usize::from(!is_static);
-        if !is_static {
-            let index = function_builder.ins().iconst(types::I64, 0);
+        let mut locals = LocalVariables::new();
+        let (parameter_types, _) = FieldType::parse_method_descriptor(descriptor)?;
+        let parameters = std::iter::once(StackType::Reference)
+            .take(usize::from(!is_static))
+            .chain(parameter_types.iter().map(Self::local_kind));
+        let mut local_index = 0;
+        for (argument_index, kind) in parameters.enumerate() {
+            let index = function_builder
+                .ins()
+                .iconst(types::I64, i64::try_from(argument_index)?);
             let offset = function_builder.ins().imul(index, struct_size);
             let address = function_builder.ins().iadd(arguments_pointer, offset);
-            let native_type = Self::native_object_type();
-            let variable = function_builder.declare_var(native_type);
-            local_types.push(native_type);
-            let value =
-                function_builder
-                    .ins()
-                    .load(native_type, MemFlagsData::trusted(), address, 8);
+            let variable = locals.declare(function_builder, local_index, kind);
+            // Function::execute validates count and discriminants from this same
+            // parameter sequence before entering these untagged loads.
+            let value = function_builder.ins().load(
+                kind.machine_type(),
+                MemFlagsData::trusted(),
+                address,
+                8,
+            );
             function_builder.def_var(variable, value);
+            // A wide argument consumes two JVM slots but has one SSA value. Its
+            // second slot may later be reused by a different typed local.
+            local_index += if kind.is_category_two() { 2 } else { 1 };
         }
-
-        let (parameter_types, _return_type) = FieldType::parse_method_descriptor(descriptor)?;
-        for (index, parameter_type) in parameter_types.iter().enumerate() {
-            let arg_index = i64::try_from(index + arg_offset)
-                .map_err(|error| InternalError(format!("{error:?}")))?;
-            let index = function_builder.ins().iconst(types::I64, arg_index);
-            let offset = function_builder.ins().imul(index, struct_size);
-            let address = function_builder.ins().iadd(arguments_pointer, offset);
-
-            // Ignore the discriminant
-            let native_type = Self::native_type(parameter_type);
-            let variable = function_builder.declare_var(native_type);
-            local_types.push(native_type);
-            let value =
-                function_builder
-                    .ins()
-                    .load(native_type, MemFlagsData::trusted(), address, 8);
-            function_builder.def_var(variable, value);
-
-            // The JVM specification requires that Long and Double take two places in the
-            // locals list when passed to a method. This method adjusts the variables index
-            // to account for this.
-            //
-            // See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.1>
-            //
-            // NOTE: if the jit compiler is ever updated to re-write the original instructions, this
-            //       logic should probably be removed and the instructions should be rewritten to
-            //       use sequential variable indices instead.
-            match parameter_type {
-                FieldType::Base(BaseType::Double) => {
-                    local_types.push(native_type);
-                    let variable = function_builder.declare_var(native_type);
-                    let value = function_builder.ins().f64const(0.0);
-                    function_builder.def_var(variable, value);
-                }
-                FieldType::Base(BaseType::Long) => {
-                    local_types.push(native_type);
-                    let variable = function_builder.declare_var(native_type);
-                    let value = function_builder.ins().iconst(types::I64, 0);
-                    function_builder.def_var(variable, value);
-                }
-                _ => {}
-            }
-        }
-
-        let non_method_argument_locals_start_index = local_types.len();
-
-        // Add the locals for the method body
         for instruction in instructions {
-            let Some((index, field_type)) = instruction.local_type()? else {
-                continue;
-            };
-            let native_type = Self::native_type(&field_type);
-            // If the index is greater than the current length of the types, we need to
-            // extend the vector with default values until we reach the index.
-            while index >= local_types.len() {
-                // Default to I8 to indicate an uninitialized local; this is a placeholder type and
-                // should be replaced with the correct type later.
-                local_types.push(types::I8);
-            }
-
-            let existing_type = *local_types
-                .get(index)
-                .ok_or(InvalidLocalVariableIndex(index))?;
-            if existing_type == types::I8 {
-                let local_type = local_types
-                    .get_mut(index)
-                    .ok_or(InvalidLocalVariableIndex(index))?;
-                *local_type = native_type;
-            } else if existing_type != native_type {
-                // TODO: the jit compiler should handle this case gracefully and rewrite the
-                //       instructions to use unique local variables with types that do not conflict.
-                return Err(UnsupportedType(format!(
-                    "Incompatible local variable type at index {index}: expected {native_type}, found {existing_type}"
-                )));
+            if let Some((index, field_type)) = instruction.local_type()? {
+                locals.declare(function_builder, index, Self::local_kind(&field_type));
             }
         }
+        Ok(locals)
+    }
 
-        for mut native_type in local_types
-            .into_iter()
-            .skip(non_method_argument_locals_start_index)
-        {
-            if native_type == types::I8 {
-                // Default to I32 for uninitialized locals
-                native_type = types::I32;
-            }
-
-            // Create a variable for the local
-            let variable = function_builder.declare_var(native_type);
-            let value = match native_type {
-                types::F32 => function_builder.ins().f32const(0.0),
-                types::F64 => function_builder.ins().f64const(0.0),
-                _ => function_builder.ins().iconst(native_type, 0),
-            };
-            function_builder.def_var(variable, value);
+    fn local_kind(field_type: &FieldType) -> StackType {
+        match field_type {
+            FieldType::Object(_) | FieldType::Array(_) => StackType::Reference,
+            FieldType::Base(_) => StackType::Primitive(Self::native_type(field_type)),
         }
+    }
 
-        Ok(LocalVariables::new())
+    /// The native ABI uses one tagged cell per argument, including wide JVM values.
+    fn argument_tag(field_type: &FieldType) -> i8 {
+        match field_type {
+            FieldType::Object(_) | FieldType::Array(_) => crate::jit_value::PTR,
+            FieldType::Base(BaseType::Long) => crate::jit_value::I64,
+            FieldType::Base(BaseType::Float) => crate::jit_value::F32,
+            FieldType::Base(BaseType::Double) => crate::jit_value::F64,
+            FieldType::Base(_) => crate::jit_value::I32,
+        }
     }
 
     /// Creates a new native type from the given field type.
@@ -709,6 +872,7 @@ impl Compiler {
         stack: &mut OperandStack,
         program_counter: usize,
         return_pointer: Value,
+        return_type: Option<&FieldType>,
         context_pointer: Value,
         helpers: &RuntimeHelpers,
         exception_block: Block,
@@ -1041,7 +1205,7 @@ impl Compiler {
                 program_counter,
                 lookup_switch,
             )?,
-            Instruction::Ireturn => ireturn(function_builder, stack, return_pointer)?,
+            Instruction::Ireturn => ireturn(function_builder, stack, return_pointer, return_type)?,
             Instruction::Lreturn => lreturn(function_builder, stack, return_pointer)?,
             Instruction::Freturn => freturn(function_builder, stack, return_pointer)?,
             Instruction::Dreturn => dreturn(function_builder, stack, return_pointer)?,

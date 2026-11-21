@@ -1,0 +1,13 @@
+read 0 7
+write 11 29
+read 0 29
+write -3 1
+clear 0 -3
+read 0 7
+returned 0 0
+write 42 91
+returned 0 42
+read 0 49
+clear 0 0
+read 0 7
+churn 16 120

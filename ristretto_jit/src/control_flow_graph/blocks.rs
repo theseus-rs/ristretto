@@ -1,277 +1,172 @@
-use crate::Error::InternalError;
+use crate::Error::{InternalError, InvalidBlockAddress, UnsupportedInstruction};
 use crate::Result;
 use crate::control_flow_graph::instruction;
 use crate::control_flow_graph::type_stack::TypeStack;
+use crate::local_type::StackType;
 use ahash::AHashMap;
-use cranelift::prelude::{Block, FunctionBuilder, Type};
+use cranelift::prelude::{Block, FunctionBuilder, Type, Value};
 use ristretto_classfile::ConstantPool;
 use ristretto_classfile::attributes::{ExceptionTableEntry, Instruction};
 
-/// Returns true if any instruction jumps backward to address 0.
+/// Analyzes reachable operand stacks before creating blocks. Each incoming edge,
+/// including fallthrough, must agree on Java kinds rather than machine widths.
+/// The worklist discovers successors even when a block is first reached backward.
+/// Exception handlers start with exactly one reference, independent of the
+/// throwing instruction's operand stack.
 ///
-/// This is needed because Cranelift's entry block cannot be jumped to,
-/// so we need to detect this case and create a separate loop header block.
-fn has_backward_jump_to_zero(instructions: &[Instruction]) -> bool {
-    Instruction::with_offsets(instructions).any(|(pc, instruction)| {
-        instruction
-            .branch_offsets()
-            .any(|relative| i64::try_from(pc).is_ok_and(|pc| pc + i64::from(relative) == 0))
-    })
-}
-
-/// Creates a control flow graph of blocks for a function by analyzing the instructions.
-///
-/// This function analyzes Java bytecode instructions to create a Cranelift IR control flow graph
-/// representation. It maps each instruction address that can be a target of control flow (branch
-/// targets, exception handlers, etc.) to a Cranelift Block. The function also calculates the
-/// operand stack state at each point and ensures consistent stack states across different paths to
-/// the same instruction.
-///
-/// Returns a tuple of (`entry_block`, `blocks_map`) where:
-/// - `entry_block` is the function entry point (cannot be jumped to)
-/// - `blocks_map` maps instruction addresses to their corresponding blocks for jump targets
-#[expect(clippy::too_many_lines)]
+/// Returns the entry block, byte-offset block map and reference block parameters.
 pub(crate) fn get_blocks(
     function_builder: &mut FunctionBuilder,
     constant_pool: &ConstantPool,
     instructions: &[Instruction],
     exception_table: &[ExceptionTableEntry],
-) -> Result<(Block, AHashMap<usize, Block>)> {
-    let mut blocks = AHashMap::default();
-    let mut stack_states: AHashMap<usize, TypeStack> = AHashMap::default();
-    let exception_handler_addresses = exception_table
-        .iter()
-        .map(|entry| usize::from(entry.handler_pc))
-        .collect::<Vec<_>>();
-    let mut stack = TypeStack::new();
-    let mut in_dead_code = false;
-
-    // Create the function entry block (cannot be jumped to in Cranelift)
+) -> Result<(Block, AHashMap<usize, Block>, Vec<Value>)> {
+    let states = analyze_stacks(constant_pool, instructions, exception_table)?;
     let entry_block = function_builder.create_block();
-
-    // Check if there are backward jumps to address 0
-    let has_loop_to_zero = has_backward_jump_to_zero(instructions);
-
-    // If there are backward jumps to address 0, we need a separate loop body block
-    // Otherwise, address 0 uses the entry block
-    if has_loop_to_zero {
-        // Create a separate block for address 0 that can be jumped to
-        blocks.insert(0, function_builder.create_block());
-    } else {
-        // No backward jumps, so address 0 can use the entry block
-        blocks.insert(0, entry_block);
+    let mut blocks = AHashMap::default();
+    // Keep ABI setup separate from Java bytecode 0. The setup can branch to a
+    // cold metadata path; Java backedges must never repeat ABI initialization.
+    let mut addresses = states.keys().copied().collect::<Vec<_>>();
+    addresses.sort_unstable();
+    for address in addresses {
+        create_block_with_parameters(function_builder, &states, address, &mut blocks);
     }
-    stack_states.insert(0, stack.clone());
-
-    for (program_counter, instruction) in Instruction::with_offsets(instructions) {
-        if exception_handler_addresses.contains(&program_counter) {
-            // Exception handlers are always reachable
-            in_dead_code = false;
-            // Push an object onto the stack for the exception object
-            stack.push_object()?;
-            insert_stack(&mut stack_states, program_counter, &stack)?;
-            create_block_with_parameters(
-                function_builder,
-                &stack_states,
-                program_counter,
-                &mut blocks,
-            );
+    let mut reference_parameters = Vec::new();
+    for (address, block) in &blocks {
+        let stack = states.get(address).ok_or(InvalidBlockAddress(*address))?;
+        let parameters = function_builder.func.dfg.block_params(*block);
+        if stack.len() != parameters.len() {
+            return Err(InternalError("block stack arity mismatch".to_owned()));
         }
-
-        // Check if this address has a recorded stack state (it's a jump target)
-        if let Some(new_stack) = stack_states.get(&program_counter) {
-            stack = new_stack.clone();
-            in_dead_code = false;
-        } else if in_dead_code {
-            // Skip simulating this instruction; we don't have a valid stack state
-            continue;
-        }
-
-        // Simulate the instruction to determine the stack state
-        instruction::simulate(&mut stack, constant_pool, instruction)?;
-
-        match instruction {
-            Instruction::Ifeq(address)
-            | Instruction::Ifne(address)
-            | Instruction::Iflt(address)
-            | Instruction::Ifge(address)
-            | Instruction::Ifgt(address)
-            | Instruction::Ifle(address)
-            | Instruction::If_icmpeq(address)
-            | Instruction::If_icmpne(address)
-            | Instruction::If_icmplt(address)
-            | Instruction::If_icmpge(address)
-            | Instruction::If_icmpgt(address)
-            | Instruction::If_icmple(address)
-            | Instruction::If_acmpeq(address)
-            | Instruction::If_acmpne(address)
-            | Instruction::Ifnull(address)
-            | Instruction::Ifnonnull(address) => {
-                let then_address =
-                    usize::try_from(i64::try_from(program_counter)? + i64::from(*address))?;
-                insert_stack(&mut stack_states, then_address, &stack)?;
-                create_block_with_parameters(
-                    function_builder,
-                    &stack_states,
-                    then_address,
-                    &mut blocks,
-                );
-
-                let Some(else_address) =
-                    program_counter.checked_add(instruction.byte_len(program_counter))
-                else {
-                    return Err(InternalError(format!(
-                        "Address overflow: {program_counter} + 1"
-                    )));
-                };
-                insert_stack(&mut stack_states, else_address, &stack)?;
-                create_block_with_parameters(
-                    function_builder,
-                    &stack_states,
-                    else_address,
-                    &mut blocks,
-                );
+        for (kind, value) in stack.as_slice().iter().zip(parameters) {
+            if *kind == StackType::Reference {
+                reference_parameters.push(*value);
             }
-            Instruction::Goto(address) => {
-                let address =
-                    usize::try_from(i64::try_from(program_counter)? + i64::from(*address))?;
-                insert_stack(&mut stack_states, address, &stack)?;
-                create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
-            }
-            Instruction::Goto_w(address) => {
-                let address =
-                    usize::try_from(i64::try_from(program_counter)? + i64::from(*address))?;
-                insert_stack(&mut stack_states, address, &stack)?;
-                create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
-            }
-            Instruction::Jsr(address) => {
-                let Some(next_address) =
-                    program_counter.checked_add(instruction.byte_len(program_counter))
-                else {
-                    return Err(InternalError(format!(
-                        "Address overflow: {program_counter} + 1"
-                    )));
-                };
-                insert_stack(&mut stack_states, next_address, &stack)?;
-                create_block_with_parameters(
-                    function_builder,
-                    &stack_states,
-                    next_address,
-                    &mut blocks,
-                );
-
-                let address =
-                    usize::try_from(i64::try_from(program_counter)? + i64::from(*address))?;
-                insert_stack(&mut stack_states, address, &stack)?;
-                create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
-            }
-            Instruction::Jsr_w(address) => {
-                let Some(next_address) =
-                    program_counter.checked_add(instruction.byte_len(program_counter))
-                else {
-                    return Err(InternalError(format!(
-                        "Address overflow: {program_counter} + 1"
-                    )));
-                };
-                insert_stack(&mut stack_states, next_address, &stack)?;
-                create_block_with_parameters(
-                    function_builder,
-                    &stack_states,
-                    next_address,
-                    &mut blocks,
-                );
-
-                let address =
-                    usize::try_from(i64::try_from(program_counter)? + i64::from(*address))?;
-                insert_stack(&mut stack_states, address, &stack)?;
-                create_block_with_parameters(function_builder, &stack_states, address, &mut blocks);
-            }
-            Instruction::Tableswitch(table_switch) => {
-                let default = usize::try_from(
-                    i32::try_from(program_counter)?.wrapping_add(table_switch.default),
-                )?;
-                insert_stack(&mut stack_states, default, &stack)?;
-                create_block_with_parameters(function_builder, &stack_states, default, &mut blocks);
-
-                for offset in &table_switch.offsets {
-                    let address =
-                        usize::try_from(i32::try_from(program_counter)?.wrapping_add(*offset))?;
-                    insert_stack(&mut stack_states, address, &stack)?;
-                    create_block_with_parameters(
-                        function_builder,
-                        &stack_states,
-                        address,
-                        &mut blocks,
-                    );
-                }
-            }
-            Instruction::Lookupswitch(lookup_switch) => {
-                let default = usize::try_from(
-                    i32::try_from(program_counter)?.wrapping_add(lookup_switch.default),
-                )?;
-                insert_stack(&mut stack_states, default, &stack)?;
-                create_block_with_parameters(function_builder, &stack_states, default, &mut blocks);
-
-                for (_key, offset) in &lookup_switch.pairs {
-                    let address =
-                        usize::try_from(i32::try_from(program_counter)?.wrapping_add(*offset))?;
-                    insert_stack(&mut stack_states, address, &stack)?;
-                    create_block_with_parameters(
-                        function_builder,
-                        &stack_states,
-                        address,
-                        &mut blocks,
-                    );
-                }
-            }
-            _ => {}
-        }
-
-        // Mark dead code after control flow terminating instructions
-        // (instructions that don't fall through to the next instruction)
-        if matches!(
-            instruction,
-            Instruction::Goto(..)
-                | Instruction::Goto_w(..)
-                | Instruction::Tableswitch { .. }
-                | Instruction::Lookupswitch { .. }
-                | Instruction::Ret(..)
-                | Instruction::Ret_w(..)
-                | Instruction::Return
-                | Instruction::Ireturn
-                | Instruction::Lreturn
-                | Instruction::Freturn
-                | Instruction::Dreturn
-                | Instruction::Areturn
-                | Instruction::Athrow
-        ) {
-            in_dead_code = true;
         }
     }
-
-    Ok((entry_block, blocks))
+    Ok((entry_block, blocks, reference_parameters))
 }
 
-/// Inserts a stack state for a specific address, ensuring consistency with any existing state.
-///
-/// This function is used to track the operand stack state at different points in the program. If a
-/// state already exists for the address, it validates that the new state matches the existing one
-/// to ensure that all paths to this instruction have compatible stack states.
-pub(crate) fn insert_stack(
-    stack_states: &mut AHashMap<usize, TypeStack>,
+/// Retain states only at block boundaries. A long straight-line sequence must
+/// not copy and retain its entire operand stack at every instruction.
+fn analyze_stacks(
+    constant_pool: &ConstantPool,
+    instructions: &[Instruction],
+    exception_table: &[ExceptionTableEntry],
+) -> Result<AHashMap<usize, TypeStack>> {
+    let by_address: AHashMap<_, _> = Instruction::with_offsets(instructions).collect();
+    let mut leaders = std::collections::BTreeSet::from([0]);
+    for (address, instruction) in Instruction::with_offsets(instructions) {
+        if matches!(
+            instruction,
+            Instruction::Jsr(..)
+                | Instruction::Jsr_w(..)
+                | Instruction::Ret(..)
+                | Instruction::Ret_w(..)
+        ) {
+            // No returnAddress dataflow: legacy subroutines remain interpreted.
+            return Err(UnsupportedInstruction(instruction.clone()));
+        }
+        let mut branches = false;
+        for offset in instruction.branch_offsets() {
+            branches = true;
+            let target = usize::try_from(i64::try_from(address)? + i64::from(offset))?;
+            if !by_address.contains_key(&target) {
+                return Err(InvalidBlockAddress(target));
+            }
+            leaders.insert(target);
+        }
+        if branches && falls_through(instruction) {
+            leaders.insert(address + instruction.byte_len(address));
+        }
+    }
+    let mut states = AHashMap::default();
+    let mut pending = std::collections::VecDeque::new();
+    enqueue_stack(&by_address, &mut states, &mut pending, 0, &TypeStack::new())?;
+    let mut handler_stack = TypeStack::new();
+    handler_stack.push_object()?;
+    for entry in exception_table {
+        let address = usize::from(entry.handler_pc);
+        leaders.insert(address);
+        enqueue_stack(
+            &by_address,
+            &mut states,
+            &mut pending,
+            address,
+            &handler_stack,
+        )?;
+    }
+    while let Some(mut address) = pending.pop_front() {
+        let mut stack = states
+            .get(&address)
+            .ok_or(InvalidBlockAddress(address))?
+            .clone();
+        loop {
+            let instruction = by_address
+                .get(&address)
+                .ok_or(InvalidBlockAddress(address))?;
+            instruction::simulate(&mut stack, constant_pool, instruction)?;
+            for offset in instruction.branch_offsets() {
+                let target = usize::try_from(i64::try_from(address)? + i64::from(offset))?;
+                enqueue_stack(&by_address, &mut states, &mut pending, target, &stack)?;
+            }
+            if !falls_through(instruction) {
+                break;
+            }
+            address = address
+                .checked_add(instruction.byte_len(address))
+                .ok_or_else(|| InternalError("instruction address overflow".to_owned()))?;
+            if leaders.contains(&address) {
+                enqueue_stack(&by_address, &mut states, &mut pending, address, &stack)?;
+                break;
+            }
+        }
+    }
+    Ok(states)
+}
+
+pub(crate) fn falls_through(instruction: &Instruction) -> bool {
+    !matches!(
+        instruction,
+        Instruction::Goto(..)
+            | Instruction::Goto_w(..)
+            | Instruction::Tableswitch(..)
+            | Instruction::Lookupswitch(..)
+            | Instruction::Return
+            | Instruction::Ireturn
+            | Instruction::Lreturn
+            | Instruction::Freturn
+            | Instruction::Dreturn
+            | Instruction::Areturn
+            | Instruction::Athrow
+    )
+}
+
+/// Check every incoming edge, and simulate each reachable block once. Java
+/// reference subtypes have the same root kind here; class verification remains
+/// responsible for assignability, initialization and local-variable validity.
+fn enqueue_stack(
+    instructions: &AHashMap<usize, &Instruction>,
+    states: &mut AHashMap<usize, TypeStack>,
+    pending: &mut std::collections::VecDeque<usize>,
     address: usize,
     stack: &TypeStack,
 ) -> Result<()> {
-    match stack_states.get(&address) {
-        Some(entry_stack) => {
-            if entry_stack != stack {
+    if !instructions.contains_key(&address) {
+        return Err(InvalidBlockAddress(address));
+    }
+    match states.entry(address) {
+        std::collections::hash_map::Entry::Occupied(entry) => {
+            if entry.get() != stack {
                 return Err(InternalError(format!(
-                    "Invalid stack state for address {address}, entry_stack={entry_stack:?} and stack={stack:?}"
+                    "Invalid stack state for address {address}, entry_stack={:?} and stack={stack:?}",
+                    entry.get()
                 )));
             }
         }
-        None => {
-            stack_states.insert(address, stack.clone());
+        std::collections::hash_map::Entry::Vacant(entry) => {
+            entry.insert(stack.clone());
+            pending.push_back(address);
         }
     }
     Ok(())
@@ -298,7 +193,12 @@ pub(crate) fn create_block_with_parameters(
         let block = function_builder.create_block();
 
         if let Some(stack_types) = stack_states.get(&address) {
-            append_block_params(function_builder, block, stack_types.as_slice());
+            let types: Vec<_> = stack_types
+                .as_slice()
+                .iter()
+                .map(|kind| kind.machine_type())
+                .collect();
+            append_block_params(function_builder, block, &types);
         }
 
         block
@@ -344,7 +244,7 @@ mod tests {
         let exception_table = Vec::new();
 
         // Create the control_flow_graph
-        let (_entry_block, blocks) = get_blocks(
+        let (_entry_block, blocks, _) = get_blocks(
             &mut function_builder,
             &constant_pool,
             &instructions,

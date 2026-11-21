@@ -76,6 +76,8 @@ tls-rustls-aws-lc-rs = [
 tls-rustls-ring = [
     "ristretto_classloader/tls-rustls-ring",
 ]
+experimental-canonical-runtime = ["ristretto_gc/experimental-canonical-runtime"]
+experimental-canonical-jit = ["experimental-canonical-runtime", "ristretto_jit/experimental-reference-dispatch"]
 startup-trace = []
 url = [
     "ristretto_classloader/url",
@@ -106,3 +108,7 @@ name = "class_resolution"
 [[bench]]
 harness = false
 name = "strings"
+
+[[example]]
+name = "canonical_java"
+required-features = ["experimental-canonical-runtime"]

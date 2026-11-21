@@ -68,7 +68,8 @@ pub(crate) fn l2d(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
 /// - [JVMS §6.5.f2i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2i)
 pub(crate) fn f2i(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_float(function_builder)?;
-    let value = function_builder.ins().fcvt_to_sint(types::I32, value);
+    // JVM conversions saturate at integer bounds and map NaN to zero.
+    let value = function_builder.ins().fcvt_to_sint_sat(types::I32, value);
     stack.push_int(function_builder, value)?;
     Ok(())
 }
@@ -78,7 +79,7 @@ pub(crate) fn f2i(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
 /// - [JVMS §6.5.f2l](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2l)
 pub(crate) fn f2l(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_float(function_builder)?;
-    let value = function_builder.ins().fcvt_to_sint(types::I64, value);
+    let value = function_builder.ins().fcvt_to_sint_sat(types::I64, value);
     stack.push_long(function_builder, value)?;
     Ok(())
 }
@@ -98,7 +99,7 @@ pub(crate) fn f2d(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
 /// - [JVMS §6.5.d2i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2i)
 pub(crate) fn d2i(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_double(function_builder)?;
-    let value = function_builder.ins().fcvt_to_sint(types::I32, value);
+    let value = function_builder.ins().fcvt_to_sint_sat(types::I32, value);
     stack.push_int(function_builder, value)?;
     Ok(())
 }
@@ -108,7 +109,7 @@ pub(crate) fn d2i(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
 /// - [JVMS §6.5.d2l](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2l)
 pub(crate) fn d2l(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_double(function_builder)?;
-    let value = function_builder.ins().fcvt_to_sint(types::I64, value);
+    let value = function_builder.ins().fcvt_to_sint_sat(types::I64, value);
     stack.push_long(function_builder, value)?;
     Ok(())
 }
