@@ -301,12 +301,7 @@ impl<R: Record> Attempt<R> {
     /// The immutable decision is shared by all helpers. Cancellation does not
     /// release an already installed controller; a subsequent helper does that.
     pub fn cancel(&self) -> bool {
-        match self.decision().compare_exchange(
-            UNDECIDED,
-            CANCEL,
-            Ordering::AcqRel,
-            Ordering::Acquire,
-        ) {
+        match decision::choose(self.decision(), CANCEL) {
             Ok(_) => true,
             Err(value) => value == CANCEL,
         }
@@ -726,3 +721,226 @@ impl<R: Record> Catalog<R> {
 #[cfg(test)]
 #[path = "preparation_tests.rs"]
 mod preparation_tests;
+
+impl<R: Record> Catalog<R> {
+    pub(crate) fn possible_phase_outcomes(&self) -> Option<[Phase; 2]> {
+        let head = self.head.load()?;
+        match &*head {
+            Control::Stable(phase) => Some([*phase; 2]),
+            Control::Phase(operation) => match operation.decision.load(Ordering::Acquire) {
+                COMMIT => Some([operation.committed; 2]),
+                CANCEL => Some([operation.cancelled; 2]),
+                UNDECIDED => Some([operation.cancelled, operation.committed]),
+                _ => None,
+            },
+            Control::Busy(operation) => {
+                // Until effects are certified either immutable outcome is
+                // a conservative observation, including after a decision.
+                let outcome = operation.outcome();
+                Some([outcome.cancelled, outcome.committed])
+            }
+        }
+    }
+    fn stable_head_in(&self, context: &R::Context) -> Option<Pooled<Control<R>>> {
+        let head = self.head.load()?;
+        if head.is_stable() {
+            Some(head)
+        } else {
+            self.finish(&head, context);
+            None
+        }
+    }
+    pub fn snapshot_in(&self, context: &R::Context) -> Option<Snapshot<R>> {
+        Some(Snapshot {
+            head: self.stable_head_in(context)?,
+            owner: self.owner.clone(),
+        })
+    }
+    pub(crate) fn phase_in(&self, context: &R::Context) -> Option<Phase> {
+        Some(self.stable_head_in(context)?.phase())
+    }
+    fn validates_head_in(&self, head: &Pooled<Control<R>>, context: &R::Context) -> bool {
+        self.head.points_to(head)
+            || self
+                .phase_in(context)
+                .is_some_and(|current| current.revision == head.phase().revision)
+    }
+    pub(crate) fn validates_snapshot_in(
+        &self,
+        snapshot: &Snapshot<R>,
+        context: &R::Context,
+    ) -> bool {
+        Arc::ptr_eq(&snapshot.owner, &self.owner) && self.validates_head_in(&snapshot.head, context)
+    }
+    fn finish(&self, busy: &Pooled<Control<R>>, context: &R::Context) {
+        self.finish_at(busy, context, || {}, || {}, || {}, || {});
+    }
+    fn finish_at(
+        &self,
+        busy: &Pooled<Control<R>>,
+        context: &R::Context,
+        before_effect: impl FnOnce(),
+        after_effect: impl FnOnce(),
+        after_certificate: impl FnOnce(),
+        after_release: impl FnOnce(),
+    ) {
+        if let Control::Phase(operation) = &**busy {
+            // Called only for a successfully installed or observed head. This
+            // single decision certifies all immutable phase data; no record,
+            // root, reference or edge effect can be attached to this variant.
+            let _ = decision::choose(&operation.decision, COMMIT);
+            after_effect();
+            after_certificate();
+            after_release();
+            return;
+        }
+        let Control::Busy(operation) = &**busy else {
+            return;
+        };
+        let completed = &operation.outcome().decision;
+        // Prepare every fallible effect acquisition before deciding COMMIT.
+        // A caller supplying a private-graph guard may release it on this early
+        // return: no irreversible commit decision has been made by this helper.
+        let proposed = if completed.load(Ordering::Acquire) == UNDECIDED
+            && operation.decision.load(Ordering::Acquire) != CANCEL
+        {
+            if let Some(effect) = &operation.effect {
+                let Some(proposed) = share(&effect.proposed) else {
+                    return;
+                };
+                Some(proposed)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        // Real-record publication must retain its private graph before the
+        // irreversible decision. Already certified work only needs head release.
+        let mut entered = None;
+        if let Some(effect) = &operation.effect
+            && *effect.expected == Membership::Prepared
+            && matches!(*effect.proposed, Membership::Tracing(_))
+            && completed.load(Ordering::Acquire) == UNDECIDED
+            && operation.decision.load(Ordering::Acquire) != CANCEL
+        {
+            match effect.cell.record.enter(context) {
+                Ok(guard) => entered = Some(guard),
+                Err(RecordError::Contended) => return,
+                Err(RecordError::Closed | RecordError::Foreign) => {
+                    match decision::choose(&operation.decision, CANCEL) {
+                        Ok(_) | Err(CANCEL) => {}
+                        Err(COMMIT) => {
+                            // A prior committer owns its own graph guard until
+                            // certification. A terminally closed record therefore
+                            // cannot authorize any new uncertified effect here.
+                            if completed.load(Ordering::Acquire) == UNDECIDED {
+                                return;
+                            }
+                        }
+                        Err(_) => unreachable!("invalid immutable decision"),
+                    }
+                }
+            }
+        }
+        let decision = match decision::choose(&operation.decision, COMMIT) {
+            Ok(_) => COMMIT,
+            Err(decision) => decision,
+        };
+        if completed.load(Ordering::Acquire) == UNDECIDED
+            && decision == COMMIT
+            && let Some(effect) = &operation.effect
+        {
+            before_effect();
+            let proposed = proposed.expect("effect prepared before commit decision");
+            // This exact membership version is changed only by this installed
+            // controller and is never reinstalled. A strong CAS failure therefore
+            // proves this effect already happened, possibly followed by later
+            // certified controllers. No owning reread is required to certify it.
+            // There is no fallible acquisition between COMMIT and its certificate.
+            effect.cell.state.compare(&effect.expected, proposed);
+        }
+        after_effect();
+        if decision == COMMIT
+            && let Some(guard) = &entered
+        {
+            // This is a concrete atomic store, not a user callback. A completed
+            // certificate observes cleanup ownership before any guard can end.
+            guard.certified();
+        }
+        decision::certify(completed, decision);
+        after_certificate();
+        let Some(after) = share(&operation.successor) else {
+            return;
+        };
+        self.head.compare(busy, after);
+        after_release();
+    }
+    pub fn commit_in(&self, attempt: &Attempt<R>, context: &R::Context) -> Outcome {
+        assert!(
+            Arc::ptr_eq(&attempt.owner, &self.owner),
+            "foreign operation"
+        );
+        let mut superseded = false;
+        if let Some(proposed) = share(&attempt.busy) {
+            if self.head.compare(&attempt.expected, proposed) {
+                self.finish(&attempt.busy, context);
+            } else if let Some(current) = self.head.load() {
+                // Exact owning controller versions are never reinstalled. An
+                // observed different controller excludes a future install of
+                // this request; completed certificates still take priority below.
+                superseded = !Pooled::ptr_eq(&current, &attempt.busy)
+                    && !Pooled::ptr_eq(&current, &attempt.expected);
+                self.finish(&current, context);
+            }
+        }
+        match attempt.completed() {
+            COMMIT => Outcome::Committed,
+            CANCEL => Outcome::Cancelled,
+            _ if attempt.decision().load(Ordering::Acquire) == CANCEL => Outcome::Cancelled,
+            _ if superseded => Outcome::Retry,
+            _ => Outcome::Pending,
+        }
+    }
+    #[cfg(test)]
+    pub fn install_and_stop(&self, attempt: &Attempt<R>) -> bool {
+        self.head.compare(
+            &attempt.expected,
+            share(&attempt.busy).expect("quiescent fixture clone"),
+        )
+    }
+    #[cfg(test)]
+    pub fn effect_and_stop(&self, attempt: &Attempt<R>) {
+        assert!(self.install_and_stop(attempt));
+        if matches!(*attempt.busy, Control::Phase(_)) {
+            assert_eq!(
+                attempt.decision().compare_exchange(
+                    UNDECIDED,
+                    COMMIT,
+                    Ordering::AcqRel,
+                    Ordering::Acquire,
+                ),
+                Ok(UNDECIDED)
+            );
+            return;
+        }
+        let operation = attempt.operation();
+        assert_eq!(decision::choose(&operation.decision, COMMIT), Ok(UNDECIDED));
+        if let Some(effect) = &operation.effect {
+            assert!(effect.cell.state.compare(
+                &effect.expected,
+                share(&effect.proposed).expect("quiescent fixture clone")
+            ));
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "commit_tests.rs"]
+mod commit_tests;
+
+#[path = "decision.rs"]
+mod decision;
+#[cfg(all(test, not(target_family = "wasm")))]
+#[path = "decision_models.rs"]
+mod decision_models;

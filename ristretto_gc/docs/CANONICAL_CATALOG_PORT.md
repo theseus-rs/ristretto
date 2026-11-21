@@ -108,3 +108,17 @@ attempt. It cannot refresh its expected revision after a miss. Two portable
 regressions check retained allocations, foreign-catalog rejection and complete
 refund after cancellation/drop, without applying membership effects. Native/WASI
 catalog totals are 20/19. Controller installation remains separate.
+
+## C07a: helpable object publication
+
+A selected controller retains its exact cell effect and immutable successor.
+Helpers acquire fallible effect ownership and the record admission guard before
+choosing commit, apply the exact version CAS, publish the completion certificate,
+then release the controller. An old successful attempt reports its original
+completion without applying the effect twice. Failed acquisition remains Pending.
+
+Four actual catalog tests cover a stopped installer, stopped effect, acquisition
+failure and two concurrent helpers. Two Loom models compile the exact selection
+CAS and certificate store to check commit/cancel exclusion and effect visibility.
+They do not model pointer protection or the record guard; those remain actual
+pool/catalog tests. Native/WASI catalog totals are 26/22; strict Clippy passes.
