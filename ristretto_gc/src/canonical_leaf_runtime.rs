@@ -1,6 +1,7 @@
 //! Heap-bound internal leaf API and a prepaid census of runtime wrapper storage.
 //! Catalog/payload work remains subject to the leaf protocol's callback limits.
 use super::allocation::{AllocationError, LeafAllocation, LeafRoot};
+use super::maintenance::{LeafMaintenance, MaintenanceError};
 use super::root_owner::backing_bytes;
 use super::{LeafAccessError, LeafRecord, LeafView};
 use crate::canonical_catalog as gc_catalog;
@@ -45,7 +46,9 @@ impl RuntimeFootprint {
             .checked_sub(size_of::<Worker>())
             .and_then(|n| n.checked_add(size_of::<LeafAllocation<'_, ()>>()))
             .ok_or(overflow)?;
-        let helper = 0;
+        let helper = size_of::<LeafMaintenance<'_>>()
+            .checked_sub(size_of::<Worker>())
+            .ok_or(overflow)?;
         let backing = backing_bytes().ok_or(overflow)?;
         let root = size_of::<LeafRoot<()>>()
             .checked_add(backing)
@@ -99,6 +102,11 @@ impl<'gc> LeafRuntime<'gc> {
             worker: self.catalog.register_record_mutator()?,
             collector: self.collector,
         })
+    }
+    pub(in crate::canonical_adapter) fn maintenance(
+        &self,
+    ) -> Result<LeafMaintenance<'gc>, MaintenanceError> {
+        LeafMaintenance::new(&self.catalog, self.collector)
     }
     pub(in crate::canonical_adapter) fn borrow<'a, T: 'static>(
         &'a self,
