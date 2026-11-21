@@ -44,6 +44,8 @@ pub enum Error {
     Limit(&'static str),
     #[error("canonical Java array fault: {0}")]
     ArrayFault(&'static str),
+    #[error("canonical Java type fault: {0}")]
+    TypeFault(&'static str),
     #[error("canonical ownership boundary: {0}")]
     Boundary(&'static str),
     #[error(transparent)]
@@ -99,7 +101,7 @@ impl Program {
             .into_iter()
             .map(|file| Layout::new(file, &names))
             .collect::<Result<Vec<_>>>()?;
-        let program = Self { classes, names };
+        let mut program = Self { classes, names };
         for (index, layout) in program.classes.iter().enumerate() {
             let class = &layout.class;
             for method in class.methods() {
@@ -109,6 +111,7 @@ impl Program {
                 .map_err(|error| Error::Invalid(error.to_string()))?;
         }
         program.admit_called_targets()?;
+        program.link_cast_targets()?;
         Ok(program)
     }
 
