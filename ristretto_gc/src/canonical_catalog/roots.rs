@@ -1,6 +1,7 @@
 //! Canonical root identity/visibility; this owns no runtime payload-access right.
+use super::super::{DomainMode, Phase, RETIREMENT_FLOOR, TraceRetention};
 use super::{
-    AllocationError, Arc, AtomicU8, AtomicUsize, Catalog, Cell, Contended, CreationError,
+    AllocationError, Arc, AtomicU8, AtomicUsize, Catalog, Cell, Contended, CreationError, Effect,
     Membership, OptionalLink, Ordering, Owner, Pool, Pooled, Preparation, Record, Snapshot,
     following_slot, share,
 };
@@ -431,3 +432,207 @@ impl<R: Record> Catalog<R> {
 #[cfg(test)]
 #[path = "root_publication_tests.rs"]
 mod root_publication_tests;
+
+impl<R: Record> Catalog<R> {
+    pub(super) fn root_barrier(
+        &self,
+        target: Pooled<Cell<R>>,
+        phase: Phase,
+        deleting: bool,
+    ) -> Option<(Option<Effect<R>>, Phase)> {
+        let expected = target.state.load()?;
+        let (proposed, phase) = root_barrier_plan(*expected, phase, deleting).ok()?;
+        let effect = if proposed == *expected {
+            None
+        } else {
+            Some(self.effect(target, expected, proposed)?)
+        };
+        Some((effect, phase))
+    }
+
+    /// A separately prepared root can activate only for an already tracing,
+    /// non-retired target. Both domains' required work shares its visibility CAS.
+    pub fn begin_activate_root(
+        &self,
+        snapshot: Snapshot<R>,
+        root: Pooled<Root<R>>,
+    ) -> Option<Preparation<R>> {
+        if !Arc::ptr_eq(&root.owner, &self.owner) || root.state() != RootState::Prepared {
+            return None;
+        }
+        let (effect, phase) = self.root_barrier(share(&root.target)?, snapshot.phase(), false)?;
+        let preparation = self.begin_prepare(snapshot, phase, effect)?;
+        self.attach_root_effect(preparation, root, RootState::Prepared, RootState::Live)
+    }
+
+    /// Root removal preserves its deletion edge before exposing a later phase.
+    /// Revoked/stale roots can be removed after target retirement without revival.
+    pub fn begin_remove_root(
+        &self,
+        snapshot: Snapshot<R>,
+        root: Pooled<Root<R>>,
+    ) -> Option<Preparation<R>> {
+        if !Arc::ptr_eq(&root.owner, &self.owner) || root.state() != RootState::Live {
+            return None;
+        }
+        let (effect, phase) = self.root_barrier(share(&root.target)?, snapshot.phase(), true)?;
+        let preparation = self.begin_prepare(snapshot, phase, effect)?;
+        self.attach_root_effect(preparation, root, RootState::Live, RootState::Retired)
+    }
+
+    /// One bounded root-slot observation. Failed owning acquisition cannot move
+    /// the cursor; the existing single-slot API preserves its exact semantics.
+    pub fn begin_scan_root(&self, snapshot: Snapshot<R>, domain: usize) -> Option<Preparation<R>> {
+        self.begin_scan_roots(snapshot, domain, 1)
+    }
+
+    /// Inspect at most eight consecutive slots, stopping at the first effect.
+    /// Cursor and at most one root/target effect share the ordinary controller
+    /// decision. Any failed observation abandons the entire private preparation.
+    pub fn begin_scan_root_batch(
+        &self,
+        snapshot: Snapshot<R>,
+        domain: usize,
+    ) -> Option<Preparation<R>> {
+        self.begin_scan_roots(snapshot, domain, 8)
+    }
+
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "the domain is checked by get before fixed phase-array access"
+    )]
+    fn begin_scan_roots(
+        &self,
+        snapshot: Snapshot<R>,
+        domain: usize,
+        limit: usize,
+    ) -> Option<Preparation<R>> {
+        let mut phase = snapshot.phase();
+        let entry = phase.domains.get(domain)?;
+        if entry.mode == DomainMode::Inactive || entry.floor != 0 {
+            return None;
+        }
+        let slot = phase.root_cursors[domain];
+        if slot >= self.root_capacity() {
+            return None;
+        }
+        let mut cursor = slot;
+        let mut root_effect = None;
+        let mut effect = None;
+        for _ in 0..limit {
+            let root = self.discover_root(cursor).ok()?;
+            effect = if let Some(root) = root {
+                match (root.state(), root.removal_requested()) {
+                    (RootState::Live, true) => {
+                        let (effect, next) =
+                            self.root_barrier(share(&root.target)?, phase, true)?;
+                        phase = next;
+                        root_effect = Some(RootEffect {
+                            root,
+                            expected: RootState::Live,
+                            proposed: RootState::Retired,
+                        });
+                        effect
+                    }
+                    (state @ RootState::Prepared, true) => {
+                        root_effect = Some(RootEffect {
+                            root,
+                            expected: state,
+                            proposed: RootState::Retired,
+                        });
+                        None
+                    }
+                    (RootState::Live, false) => {
+                        let (effect, next) =
+                            self.root_barrier(share(&root.target)?, phase, false)?;
+                        phase = next;
+                        effect
+                    }
+                    _ => None,
+                }
+            } else {
+                None
+            };
+            cursor = cursor.checked_add(1)?;
+            // Retain at most the existing single root/membership effect. Empty,
+            // retired and already-covered slots need no independent commit.
+            if effect.is_some() || root_effect.is_some() || cursor == self.root_capacity() {
+                break;
+            }
+        }
+        phase.root_cursors[domain] = cursor;
+        let mut preparation = self.begin_prepare(snapshot, phase, effect)?;
+        preparation.root = root_effect;
+        Some(preparation)
+    }
+
+    /// Complete a durable drop request without requiring an active collection.
+    /// Callers still need a fair bounded scan/help policy and exact slot release.
+    pub fn begin_requested_root_removal(
+        &self,
+        snapshot: Snapshot<R>,
+        root: Pooled<Root<R>>,
+    ) -> Option<Preparation<R>> {
+        if !root.removal_requested() {
+            return None;
+        }
+        match root.state() {
+            RootState::Prepared => self.begin_cancel_root(snapshot, root),
+            RootState::Live => self.begin_remove_root(snapshot, root),
+            RootState::Retired => None,
+        }
+    }
+}
+// Shared pure validation for owning preparation and copied facade diagnostics.
+#[expect(
+    clippy::indexing_slicing,
+    reason = "the loop is bounded by the fixed two-domain arrays"
+)]
+pub(crate) fn root_barrier_plan(
+    membership: Membership,
+    mut phase: Phase,
+    deleting: bool,
+) -> Result<(Membership, Phase), super::super::TraceError> {
+    use super::super::{Generation, TraceError};
+    let Membership::Tracing(original) = membership else {
+        return if deleting && membership == Membership::Retired {
+            Ok((membership, phase))
+        } else {
+            Err(TraceError::Conflict)
+        };
+    };
+    if original.logically_retired(phase) {
+        return if deleting {
+            Ok((membership, phase))
+        } else {
+            Err(TraceError::Conflict)
+        };
+    }
+    let mut marks = original;
+    for index in 0..2 {
+        let domain = phase.domains[index];
+        if domain.mode == DomainMode::Inactive
+            || domain.floor >= RETIREMENT_FLOOR
+            || (domain.mode == DomainMode::Young && marks.generation == Generation::Old)
+            || (domain.mode == DomainMode::Old
+                && marks.generation == Generation::Young
+                && marks[index].epoch == domain.epoch
+                && marks[index].born)
+        {
+            continue;
+        }
+        match marks.shade(phase, index, TraceRetention::Strong) {
+            Ok((next, changed)) => {
+                marks = next;
+                phase = changed;
+            }
+            Err(TraceError::AlreadyMarked) => {}
+            Err(error) => return Err(error),
+        }
+    }
+    Ok((Membership::Tracing(marks), phase))
+}
+
+#[cfg(test)]
+#[path = "root_maintenance_tests.rs"]
+mod root_maintenance_tests;

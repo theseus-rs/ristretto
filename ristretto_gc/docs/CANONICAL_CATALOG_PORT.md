@@ -195,3 +195,12 @@ advancement and finish reject unscanned roots and pending work; `FinishEpoch`
 retains the sweep's original epoch. Q=0 requires no conditional-reference scan.
 Four portable tests cover stale epochs, outstanding obligations, stale tickets,
 and invalid phase input. Native/WASI catalog totals are 52/47; strict Clippy passes.
+
+## C09 prerequisite: root barriers and bounded scanning
+
+Root activation/removal couples the retained target's tracing obligations with
+visibility. A scan inspects at most eight slots and commits at most one target or
+root effect; any failed owning observation leaves the cursor unchanged. Four
+portable regressions cover scan bounds, removal intent, failed observations and
+foreign/prepared activation rejection. Native/WASI catalog totals are 56/51;
+strict Clippy passes. No callback or scheduler-fairness bound is claimed.
