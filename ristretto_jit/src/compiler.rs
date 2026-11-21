@@ -1,6 +1,5 @@
 use crate::Error::{
-    InternalError, InvalidBlockAddress, InvalidLocalVariableIndex, UnsupportedInstruction,
-    UnsupportedTargetISA, UnsupportedType,
+    InternalError, InvalidBlockAddress, UnsupportedInstruction, UnsupportedTargetISA,
 };
 use crate::control_flow_graph::InstructionControlFlow;
 use crate::function::Function;
@@ -27,7 +26,7 @@ use crate::instruction::{
     multianewarray, new_object, newarray, nop, pop, pop2, putfield, putstatic, ret, ret_w,
     r#return, saload, sastore, sipush, swap, tableswitch, wide,
 };
-use crate::local_type::LocalType;
+use crate::local_type::{LocalType, StackType};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
@@ -387,125 +386,47 @@ impl Compiler {
         arguments_pointer: Value,
         is_static: bool,
     ) -> Result<LocalVariables> {
-        let size_of = i64::try_from(size_of::<JitValue>())
-            .map_err(|error| InternalError(format!("{error:?}")))?;
+        let size_of = i64::try_from(size_of::<JitValue>())?;
         let struct_size = function_builder.ins().iconst(types::I64, size_of);
-        let mut local_types = Vec::new();
-
-        // For non-static methods, local variable 0 is `this` (an object reference).
-        // It is passed as the first JIT argument but is NOT part of the method descriptor.
-        let arg_offset = usize::from(!is_static);
-        if !is_static {
-            let index = function_builder.ins().iconst(types::I64, 0);
+        let mut locals = LocalVariables::new();
+        let (parameter_types, _) = FieldType::parse_method_descriptor(descriptor)?;
+        let parameters = std::iter::once(StackType::Reference)
+            .take(usize::from(!is_static))
+            .chain(parameter_types.iter().map(Self::local_kind));
+        let mut local_index = 0;
+        for (argument_index, kind) in parameters.enumerate() {
+            let index = function_builder
+                .ins()
+                .iconst(types::I64, i64::try_from(argument_index)?);
             let offset = function_builder.ins().imul(index, struct_size);
             let address = function_builder.ins().iadd(arguments_pointer, offset);
-            let native_type = Self::native_object_type();
-            let variable = function_builder.declare_var(native_type);
-            local_types.push(native_type);
-            let value =
-                function_builder
-                    .ins()
-                    .load(native_type, MemFlagsData::trusted(), address, 8);
+            let variable = locals.declare(function_builder, local_index, kind);
+            // Function::execute validates count and discriminants from this same
+            // parameter sequence before entering these untagged loads.
+            let value = function_builder.ins().load(
+                kind.machine_type(),
+                MemFlagsData::trusted(),
+                address,
+                8,
+            );
             function_builder.def_var(variable, value);
+            // A wide argument consumes two JVM slots but has one SSA value. Its
+            // second slot may later be reused by a different typed local.
+            local_index += if kind.is_category_two() { 2 } else { 1 };
         }
-
-        let (parameter_types, _return_type) = FieldType::parse_method_descriptor(descriptor)?;
-        for (index, parameter_type) in parameter_types.iter().enumerate() {
-            let arg_index = i64::try_from(index + arg_offset)
-                .map_err(|error| InternalError(format!("{error:?}")))?;
-            let index = function_builder.ins().iconst(types::I64, arg_index);
-            let offset = function_builder.ins().imul(index, struct_size);
-            let address = function_builder.ins().iadd(arguments_pointer, offset);
-
-            // Ignore the discriminant
-            let native_type = Self::native_type(parameter_type);
-            let variable = function_builder.declare_var(native_type);
-            local_types.push(native_type);
-            let value =
-                function_builder
-                    .ins()
-                    .load(native_type, MemFlagsData::trusted(), address, 8);
-            function_builder.def_var(variable, value);
-
-            // The JVM specification requires that Long and Double take two places in the
-            // locals list when passed to a method. This method adjusts the variables index
-            // to account for this.
-            //
-            // See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.1>
-            //
-            // NOTE: if the jit compiler is ever updated to re-write the original instructions, this
-            //       logic should probably be removed and the instructions should be rewritten to
-            //       use sequential variable indices instead.
-            match parameter_type {
-                FieldType::Base(BaseType::Double) => {
-                    local_types.push(native_type);
-                    let variable = function_builder.declare_var(native_type);
-                    let value = function_builder.ins().f64const(0.0);
-                    function_builder.def_var(variable, value);
-                }
-                FieldType::Base(BaseType::Long) => {
-                    local_types.push(native_type);
-                    let variable = function_builder.declare_var(native_type);
-                    let value = function_builder.ins().iconst(types::I64, 0);
-                    function_builder.def_var(variable, value);
-                }
-                _ => {}
-            }
-        }
-
-        let non_method_argument_locals_start_index = local_types.len();
-
-        // Add the locals for the method body
         for instruction in instructions {
-            let Some((index, field_type)) = instruction.local_type()? else {
-                continue;
-            };
-            let native_type = Self::native_type(&field_type);
-            // If the index is greater than the current length of the types, we need to
-            // extend the vector with default values until we reach the index.
-            while index >= local_types.len() {
-                // Default to I8 to indicate an uninitialized local; this is a placeholder type and
-                // should be replaced with the correct type later.
-                local_types.push(types::I8);
-            }
-
-            let existing_type = *local_types
-                .get(index)
-                .ok_or(InvalidLocalVariableIndex(index))?;
-            if existing_type == types::I8 {
-                let local_type = local_types
-                    .get_mut(index)
-                    .ok_or(InvalidLocalVariableIndex(index))?;
-                *local_type = native_type;
-            } else if existing_type != native_type {
-                // TODO: the jit compiler should handle this case gracefully and rewrite the
-                //       instructions to use unique local variables with types that do not conflict.
-                return Err(UnsupportedType(format!(
-                    "Incompatible local variable type at index {index}: expected {native_type}, found {existing_type}"
-                )));
+            if let Some((index, field_type)) = instruction.local_type()? {
+                locals.declare(function_builder, index, Self::local_kind(&field_type));
             }
         }
+        Ok(locals)
+    }
 
-        for mut native_type in local_types
-            .into_iter()
-            .skip(non_method_argument_locals_start_index)
-        {
-            if native_type == types::I8 {
-                // Default to I32 for uninitialized locals
-                native_type = types::I32;
-            }
-
-            // Create a variable for the local
-            let variable = function_builder.declare_var(native_type);
-            let value = match native_type {
-                types::F32 => function_builder.ins().f32const(0.0),
-                types::F64 => function_builder.ins().f64const(0.0),
-                _ => function_builder.ins().iconst(native_type, 0),
-            };
-            function_builder.def_var(variable, value);
+    fn local_kind(field_type: &FieldType) -> StackType {
+        match field_type {
+            FieldType::Object(_) | FieldType::Array(_) => StackType::Reference,
+            FieldType::Base(_) => StackType::Primitive(Self::native_type(field_type)),
         }
-
-        Ok(LocalVariables::new())
     }
 
     /// The native ABI uses one tagged cell per argument, including wide JVM values.

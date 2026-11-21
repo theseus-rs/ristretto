@@ -155,3 +155,41 @@ fn instance_receiver_precedes_wide_parameters() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn java_local_slot_can_be_reused_with_a_different_type() -> Result<()> {
+    let function = create_function(
+        "(I)F",
+        &[
+            Instruction::Fconst_2,
+            Instruction::Fstore_0,
+            Instruction::Fload_0,
+            Instruction::Freturn,
+        ],
+    )?;
+    assert_eq!(
+        function.execute(&[Value::I32(42)], std::ptr::null())?,
+        Some(Value::F32(2.0))
+    );
+    Ok(())
+}
+
+#[test]
+fn wide_second_slot_can_be_reused_after_the_wide_value_is_dead() -> Result<()> {
+    for (descriptor, argument) in [("(J)I", Value::I64(42)), ("(D)I", Value::F64(42.0))] {
+        let function = create_function(
+            descriptor,
+            &[
+                Instruction::Bipush(7),
+                Instruction::Istore_1,
+                Instruction::Iload_1,
+                Instruction::Ireturn,
+            ],
+        )?;
+        assert_eq!(
+            function.execute(&[argument], std::ptr::null())?,
+            Some(Value::I32(7))
+        );
+    }
+    Ok(())
+}
