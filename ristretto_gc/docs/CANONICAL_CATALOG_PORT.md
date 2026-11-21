@@ -139,3 +139,13 @@ outcomes without helping and makes no collection-count claim. Native/WASI catalo
 totals are 33/29; strict Clippy passes. The inline state size is included in the
 footprint for both numeric and guarded participants. Root/edge operations remain
 subsequent prerequisites for the public preview adapters.
+
+## C08 prerequisite: unique root backing
+
+A root token retains its exact target and root-pool owner. Drop posts durable
+removal intent; it does not change canonical visibility or authorize slot reuse.
+Private creation can be cancelled without publishing a root. The Q=0 extraction
+omits conditional-reference root roles and their reserved locations; ordinary
+root generations, ownership, announcement CAS and removal-intent ordering remain
+unchanged. Two portable tests cover token retention, cancellation and foreign
+rejection. Native/WASI catalog totals are 35/31, with strict Clippy passing.
