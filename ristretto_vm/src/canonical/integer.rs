@@ -1,6 +1,7 @@
 //! Integer execution for verified scalar entries.
 
-use super::{Error, Result};
+use super::{Error, Result, Value, load, pop, scalar, store};
+use ristretto_classfile::ConstantPool;
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::Method;
 
@@ -87,55 +88,79 @@ impl Operation {
             I::If_icmpgt(_) => Self::BranchPair(Comparison::Greater),
             I::If_icmpge(_) => Self::BranchPair(Comparison::GreaterEqual),
             I::Goto(_) | I::Goto_w(_) => Self::Jump,
-            I::Ireturn => Self::Return,
+            I::Ireturn | I::Lreturn | I::Freturn | I::Dreturn => Self::Return,
             _ => return None,
         })
     }
 }
 
-pub(super) fn run(method: &Method, argument: i32, limit: usize) -> Result<i32> {
-    let mut locals = vec![0_i32; method.max_locals()];
+pub(super) fn admitted(op: &Instruction, pool: &ConstantPool<'_>) -> bool {
+    match op {
+        Instruction::Ldc(index) => scalar::constant(pool, u16::from(*index), false).is_ok(),
+        Instruction::Ldc_w(index) => scalar::constant(pool, *index, false).is_ok(),
+        Instruction::Ldc2_w(index) => scalar::constant(pool, *index, true).is_ok(),
+        _ => Operation::decode(op).is_some() || scalar::supports(op),
+    }
+}
+
+pub(super) fn run(
+    method: &Method,
+    pool: &ConstantPool<'_>,
+    argument: i32,
+    limit: usize,
+) -> Result<Value> {
+    let mut locals = vec![None; method.max_locals()];
     let mut stack = Vec::with_capacity(method.max_stack());
     let mut pc = 0;
     let invalid = || Error::Invalid(method.signature());
-    *locals.first_mut().ok_or_else(invalid)? = argument;
+    *locals.first_mut().ok_or_else(invalid)? = Some(Value::Int(argument));
     for _ in 0..limit {
-        let instruction = method
-            .code()
-            .get(pc)
-            .and_then(Operation::decode)
-            .ok_or_else(invalid)?;
+        let op = method.code().get(pc).ok_or_else(invalid)?;
         let mut jump = false;
-        match instruction {
-            Operation::Constant(value) => stack.push(value),
-            Operation::Load(index) => stack.push(*locals.get(index).ok_or_else(invalid)?),
-            Operation::Store(index) => {
-                *locals.get_mut(index).ok_or_else(invalid)? = stack.pop().ok_or_else(invalid)?;
+        match Operation::decode(op) {
+            Some(Operation::Constant(value)) => stack.push(Value::Int(value)),
+            Some(Operation::Load(index)) => load(&locals, &mut stack, index)?,
+            Some(Operation::Store(index)) => store(&mut locals, &mut stack, index)?,
+            Some(Operation::Increment(index, delta)) => {
+                let slot = locals
+                    .get_mut(index)
+                    .and_then(Option::as_mut)
+                    .ok_or_else(invalid)?;
+                *slot = Value::Int(slot.int()?.wrapping_add(delta));
             }
-            Operation::Increment(index, delta) => {
-                let slot = locals.get_mut(index).ok_or_else(invalid)?;
-                *slot = slot.wrapping_add(delta);
+            Some(Operation::Negate) => {
+                let value = pop(&mut stack)?.int()?.wrapping_neg();
+                stack.push(Value::Int(value));
             }
-            Operation::Negate => {
-                let value = stack.last_mut().ok_or_else(invalid)?;
-                *value = value.wrapping_neg();
-            }
-            Operation::Add | Operation::Subtract | Operation::Multiply => {
-                let right = stack.pop().ok_or_else(invalid)?;
-                let left = stack.last_mut().ok_or_else(invalid)?;
-                *left = match instruction {
+            Some(operation @ (Operation::Add | Operation::Subtract | Operation::Multiply)) => {
+                let right = pop(&mut stack)?.int()?;
+                let left = pop(&mut stack)?.int()?;
+                stack.push(Value::Int(match operation {
                     Operation::Add => left.wrapping_add(right),
                     Operation::Subtract => left.wrapping_sub(right),
                     _ => left.wrapping_mul(right),
-                };
+                }));
             }
-            Operation::BranchZero(test) => jump = test.test(stack.pop().ok_or_else(invalid)?, 0),
-            Operation::BranchPair(test) => {
-                let right = stack.pop().ok_or_else(invalid)?;
-                jump = test.test(stack.pop().ok_or_else(invalid)?, right);
+            Some(Operation::BranchZero(test)) => jump = test.test(pop(&mut stack)?.int()?, 0),
+            Some(Operation::BranchPair(test)) => {
+                let right = pop(&mut stack)?.int()?;
+                jump = test.test(pop(&mut stack)?.int()?, right);
             }
-            Operation::Jump => jump = true,
-            Operation::Return => return stack.pop().ok_or_else(invalid),
+            Some(Operation::Jump) => jump = true,
+            Some(Operation::Return) => {
+                return Ok(scalar::normalize_return(
+                    pop(&mut stack)?,
+                    method.return_type().ok_or_else(invalid)?,
+                ));
+            }
+            None => match op {
+                Instruction::Ldc(index) => {
+                    stack.push(scalar::constant(pool, u16::from(*index), false)?);
+                }
+                Instruction::Ldc_w(index) => stack.push(scalar::constant(pool, *index, false)?),
+                Instruction::Ldc2_w(index) => stack.push(scalar::constant(pool, *index, true)?),
+                _ => scalar::execute(op, &mut locals, &mut stack)?,
+            },
         }
         pc = if jump {
             method.branch_target_index(pc).ok_or_else(invalid)?
