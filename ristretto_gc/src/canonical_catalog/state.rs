@@ -19,6 +19,7 @@ use crate::canonical_pool as pool;
 use pool::AllocationError;
 #[path = "roots.rs"]
 mod roots;
+pub use roots::{Root, RootCreation, RootPrepareError, RootStatus, RootToken};
 use roots::{RootEffect, RootRegistry};
 const UNDECIDED: u8 = 0;
 const COMMIT: u8 = 1;
