@@ -1,4 +1,5 @@
 use crate::Finalize;
+use crate::allocation_budget::{AllocationBudget, Reservation};
 use crate::config::{Configuration, Statistics};
 use crate::error::{Error, Result};
 use crate::gc::Gc;
@@ -79,6 +80,7 @@ pub struct GarbageCollector {
     bytes_allocated: Arc<AtomicUsize>,
     // Bytes in allocations that have not been freed.
     bytes_live: AtomicUsize,
+    payload_budget: Arc<AllocationBudget>,
 
     // Background thread coordination
     #[cfg(not(target_family = "wasm"))]
@@ -129,6 +131,7 @@ impl GarbageCollector {
 
         Arc::new_cyclic(|this| Self {
             this: this.clone(),
+            payload_budget: Arc::new(AllocationBudget::new(configuration.max_heap_bytes)),
             configuration,
             #[cfg(not(target_family = "wasm"))]
             thread_pool,
@@ -149,12 +152,17 @@ impl GarbageCollector {
     }
 
     /// Registers a new object with the garbage collector for reachability analysis.
-    pub(crate) fn register_object<T: Send + Sync>(&self, ptr: *const T, size: usize) {
+    pub(crate) fn register_object<T: Send + Sync>(
+        &self,
+        ptr: *const T,
+        size: usize,
+        reservation: Reservation,
+    ) {
         // Store the raw pointer without casting to ensure type information is preserved
         let safe_ptr = SafePtr::from_ptr(ptr);
 
         // Create type-safe metadata that knows how to properly drop the T data
-        let metadata = ObjectMetadata::new_for_gc::<T>(safe_ptr, size);
+        let metadata = ObjectMetadata::new_for_gc::<T>(safe_ptr, size, reservation);
 
         trace!("registering object at {:#x} with size {size}", safe_ptr.0);
         self.objects.insert(safe_ptr, metadata);
@@ -162,14 +170,18 @@ impl GarbageCollector {
 
     /// Registers a new object with finalizer support for reachability analysis. This is used when
     /// `T` implements the `Finalize` trait.
-    pub(crate) fn register_object_with_finalizer<T>(&self, ptr: *const T, size: usize)
-    where
+    pub(crate) fn register_object_with_finalizer<T>(
+        &self,
+        ptr: *const T,
+        size: usize,
+        reservation: Reservation,
+    ) where
         T: Send + Sync + Finalize,
     {
         let safe_ptr = SafePtr::from_ptr(ptr);
 
         // Create metadata with finalizer support
-        let metadata = ObjectMetadata::new_for_gc_with_finalizer::<T>(safe_ptr, size);
+        let metadata = ObjectMetadata::new_for_gc_with_finalizer::<T>(safe_ptr, size, reservation);
 
         trace!(
             "registering object with finalizer at {:#x} with size {size}",
@@ -357,6 +369,18 @@ impl GarbageCollector {
                 error!("Failed to acquire collection trigger lock: {error}");
             }
         }
+    }
+
+    pub(crate) fn reserve_exact_bytes(&self, size: usize) -> Result<Reservation> {
+        self.payload_budget.reserve(size)
+    }
+
+    /// Bytes reserved for managed payloads, including private unpublished allocations.
+    /// Credit is returned only after the payload destructor and deallocation finish.
+    /// This excludes collector metadata and allocator overhead.
+    #[must_use]
+    pub fn managed_bytes(&self) -> usize {
+        self.payload_budget.used()
     }
 
     /// Records an allocation for live memory accounting and GC threshold tracking.

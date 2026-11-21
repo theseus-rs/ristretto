@@ -17,6 +17,9 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 /// garbage collection operations, thread synchronization, and memory management.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// The managed payload budget or addressable allocation size was exhausted.
+    #[error("Managed heap allocation failed")]
+    OutOfMemory,
     /// Collection phase error
     #[error("Garbage collection phase error: {0}")]
     CollectionPhaseError(String),

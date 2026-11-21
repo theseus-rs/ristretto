@@ -18,6 +18,7 @@
     )
 )]
 
+mod allocation_budget;
 mod collector;
 mod config;
 mod error;
