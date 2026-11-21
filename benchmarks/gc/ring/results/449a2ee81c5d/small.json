@@ -1,0 +1,1509 @@
+{
+  "schema": 2,
+  "source": "449a2ee81c5dfe06b674f6165bc9372994b510bb",
+  "workload": "small",
+  "steps": 17,
+  "expected": 652228386,
+  "warmup": 8,
+  "samples": 12,
+  "forks": 3,
+  "arrival": "one call begins after the previous call returns",
+  "jdk": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+  "wasmtime": "wasmtime 50.0.1 (c307ec81d 2026-10-29)",
+  "artifact_sha256": {
+    "native": "28fb5685b0dbcfa4a1a9164bd74682e14396e5b80d2fc67dd6245692ef319ade",
+    "wasi": "45d0366650acc54e32667ed121530ebbcd07062fe25c8bb915178791ad2ac9aa",
+    "wasmtime": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8",
+    "compiled": "28fb5685b0dbcfa4a1a9164bd74682e14396e5b80d2fc67dd6245692ef319ade"
+  },
+  "class_sha256": {
+    "CanonicalRingWorkload.class": "5c90bf6123523c2dbc90b90738bf77824bb0c7966da549e6ca4f10c6c66eb5ed",
+    "CanonicalRingWorkload$Node.class": "0491e29f63841d6844a5c02678ea35659563fbb989c1d6ad21b0085a071898ec"
+  },
+  "resource_limits": {
+    "cgroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/run-p2135375-i18956306.scope",
+    "memory_max_bytes": 1073741824,
+    "cpu_quota": 2.0,
+    "affinity": [
+      8,
+      10
+    ]
+  },
+  "host": {
+    "system": "Linux",
+    "kernel": "7.0.0-38-generic",
+    "architecture": "x86_64",
+    "cpu_model": "13th Gen Intel(R) Core(TM) i7-13700T",
+    "topology": [
+      {
+        "cpu": 8,
+        "package": 0,
+        "core": 16
+      },
+      {
+        "cpu": 10,
+        "package": 0,
+        "core": 20
+      }
+    ]
+  },
+  "started_utc": "2026-11-21T18:26:36.958040+00:00",
+  "finished_utc": "2026-11-21T18:26:40.240748+00:00",
+  "processes": [
+    {
+      "fork": 0,
+      "collector": "G1",
+      "beans": [
+        "G1 Young Generation",
+        "G1 Concurrent GC",
+        "G1 Old Generation"
+      ],
+      "flags": [
+        "-Xms64m",
+        "-Xmx64m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+UseG1GC"
+      ],
+      "process_ns": 39045071,
+      "batch_ns": 66278,
+      "collection_changes": {
+        "G1 Young Generation": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "G1 Concurrent GC": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "G1 Old Generation": {
+          "collections": 0,
+          "collection_time_ms": 0
+        }
+      },
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3785
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4284
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 19433
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4403
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4261
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3354
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4450
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4475
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4127
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3323
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4534
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4903
+        }
+      ],
+      "tier": "G1"
+    },
+    {
+      "fork": 0,
+      "collector": "ZGC",
+      "beans": [
+        "ZGC Minor Cycles",
+        "ZGC Minor Pauses",
+        "ZGC Major Cycles",
+        "ZGC Major Pauses"
+      ],
+      "flags": [
+        "-Xms64m",
+        "-Xmx64m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+UseZGC"
+      ],
+      "process_ns": 67431174,
+      "batch_ns": 60512,
+      "collection_changes": {
+        "ZGC Minor Cycles": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "ZGC Minor Pauses": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "ZGC Major Cycles": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "ZGC Major Pauses": {
+          "collections": 0,
+          "collection_time_ms": 0
+        }
+      },
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4724
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4222
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3810
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4160
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4200
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4203
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4199
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 9371
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3369
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 8693
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4404
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4242
+        }
+      ],
+      "tier": "ZGC"
+    },
+    {
+      "process_ns": 87635417,
+      "batch_ns": 52987804,
+      "command": [
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring/release/examples/canonical_ring_samples",
+        "interpreted"
+      ],
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5353236,
+          "allocations": 50,
+          "helper_polls": 16496,
+          "released_objects": 53
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4479653,
+          "allocations": 50,
+          "helper_polls": 13814,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4761695,
+          "allocations": 50,
+          "helper_polls": 14757,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4889134,
+          "allocations": 50,
+          "helper_polls": 15075,
+          "released_objects": 52
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4770933,
+          "allocations": 50,
+          "helper_polls": 14782,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3871790,
+          "allocations": 50,
+          "helper_polls": 12058,
+          "released_objects": 45
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4667440,
+          "allocations": 50,
+          "helper_polls": 14362,
+          "released_objects": 56
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4204626,
+          "allocations": 50,
+          "helper_polls": 13116,
+          "released_objects": 50
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3882458,
+          "allocations": 50,
+          "helper_polls": 12093,
+          "released_objects": 46
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4052565,
+          "allocations": 50,
+          "helper_polls": 12531,
+          "released_objects": 51
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4035250,
+          "allocations": 50,
+          "helper_polls": 12524,
+          "released_objects": 51
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4018673,
+          "allocations": 50,
+          "helper_polls": 12460,
+          "released_objects": 51
+        }
+      ],
+      "objects": 40,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 1741,
+      "final_drain_polls": 1062,
+      "released_in_final_drain": 20,
+      "cleanup_verified": true,
+      "fork": 0,
+      "tier": "native-interpreted"
+    },
+    {
+      "process_ns": 819684679,
+      "batch_ns": 79044647,
+      "command": [
+        "/tmp/ristretto-gc-tools/wasmtime-v50.0.1-x86_64-linux/wasmtime",
+        "run",
+        "-W",
+        "max-wasm-stack=8388608",
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring-wasi/wasm32-wasip2/release/examples/canonical_ring_samples.wasm",
+        "interpreted"
+      ],
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 7917394,
+          "allocations": 50,
+          "helper_polls": 16496,
+          "released_objects": 53
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6538748,
+          "allocations": 50,
+          "helper_polls": 13814,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6980318,
+          "allocations": 50,
+          "helper_polls": 14757,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 7140465,
+          "allocations": 50,
+          "helper_polls": 15075,
+          "released_objects": 52
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6979801,
+          "allocations": 50,
+          "helper_polls": 14782,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5657677,
+          "allocations": 50,
+          "helper_polls": 12058,
+          "released_objects": 45
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6821518,
+          "allocations": 50,
+          "helper_polls": 14362,
+          "released_objects": 56
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6142820,
+          "allocations": 50,
+          "helper_polls": 13116,
+          "released_objects": 50
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6480911,
+          "allocations": 50,
+          "helper_polls": 12093,
+          "released_objects": 46
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6208693,
+          "allocations": 50,
+          "helper_polls": 12531,
+          "released_objects": 51
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6041723,
+          "allocations": 50,
+          "helper_polls": 12524,
+          "released_objects": 51
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6132223,
+          "allocations": 50,
+          "helper_polls": 12460,
+          "released_objects": 51
+        }
+      ],
+      "objects": 40,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 1581,
+      "final_drain_polls": 1062,
+      "released_in_final_drain": 20,
+      "cleanup_verified": true,
+      "fork": 0,
+      "tier": "wasi-interpreted"
+    },
+    {
+      "process_ns": 94026885,
+      "batch_ns": 50974085,
+      "command": [
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring/release/examples/canonical_ring_samples",
+        "compiled"
+      ],
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4292276,
+          "allocations": 50,
+          "helper_polls": 11891,
+          "released_objects": 56
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4255256,
+          "allocations": 50,
+          "helper_polls": 11777,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4119543,
+          "allocations": 50,
+          "helper_polls": 11339,
+          "released_objects": 48
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4710490,
+          "allocations": 50,
+          "helper_polls": 13333,
+          "released_objects": 48
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4202230,
+          "allocations": 50,
+          "helper_polls": 11561,
+          "released_objects": 50
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4157673,
+          "allocations": 50,
+          "helper_polls": 11495,
+          "released_objects": 45
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4330476,
+          "allocations": 50,
+          "helper_polls": 12056,
+          "released_objects": 55
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4113105,
+          "allocations": 50,
+          "helper_polls": 11299,
+          "released_objects": 48
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4384074,
+          "allocations": 50,
+          "helper_polls": 12138,
+          "released_objects": 58
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4323071,
+          "allocations": 50,
+          "helper_polls": 12039,
+          "released_objects": 48
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4005505,
+          "allocations": 50,
+          "helper_polls": 10994,
+          "released_objects": 46
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4080020,
+          "allocations": 50,
+          "helper_polls": 10969,
+          "released_objects": 48
+        }
+      ],
+      "objects": 40,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 2272,
+      "final_drain_polls": 1531,
+      "released_in_final_drain": 26,
+      "cleanup_verified": true,
+      "fork": 0,
+      "tier": "native-compiled"
+    },
+    {
+      "process_ns": 79156648,
+      "batch_ns": 48112031,
+      "command": [
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring/release/examples/canonical_ring_samples",
+        "interpreted"
+      ],
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4862517,
+          "allocations": 50,
+          "helper_polls": 16496,
+          "released_objects": 53
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4041650,
+          "allocations": 50,
+          "helper_polls": 13814,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4327348,
+          "allocations": 50,
+          "helper_polls": 14757,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4443122,
+          "allocations": 50,
+          "helper_polls": 15075,
+          "released_objects": 52
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4348778,
+          "allocations": 50,
+          "helper_polls": 14782,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3507820,
+          "allocations": 50,
+          "helper_polls": 12058,
+          "released_objects": 45
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4244948,
+          "allocations": 50,
+          "helper_polls": 14362,
+          "released_objects": 56
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3815843,
+          "allocations": 50,
+          "helper_polls": 13116,
+          "released_objects": 50
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3521638,
+          "allocations": 50,
+          "helper_polls": 12093,
+          "released_objects": 46
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3682251,
+          "allocations": 50,
+          "helper_polls": 12531,
+          "released_objects": 51
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3664040,
+          "allocations": 50,
+          "helper_polls": 12524,
+          "released_objects": 51
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3651631,
+          "allocations": 50,
+          "helper_polls": 12460,
+          "released_objects": 51
+        }
+      ],
+      "objects": 40,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 1741,
+      "final_drain_polls": 1062,
+      "released_in_final_drain": 20,
+      "cleanup_verified": true,
+      "fork": 1,
+      "tier": "native-interpreted"
+    },
+    {
+      "process_ns": 125165814,
+      "batch_ns": 71969280,
+      "command": [
+        "/tmp/ristretto-gc-tools/wasmtime-v50.0.1-x86_64-linux/wasmtime",
+        "run",
+        "-W",
+        "max-wasm-stack=8388608",
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring-wasi/wasm32-wasip2/release/examples/canonical_ring_samples.wasm",
+        "interpreted"
+      ],
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 7263168,
+          "allocations": 50,
+          "helper_polls": 16496,
+          "released_objects": 53
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6011145,
+          "allocations": 50,
+          "helper_polls": 13814,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6414720,
+          "allocations": 50,
+          "helper_polls": 14757,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6600699,
+          "allocations": 50,
+          "helper_polls": 15075,
+          "released_objects": 52
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6440797,
+          "allocations": 50,
+          "helper_polls": 14782,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5183534,
+          "allocations": 50,
+          "helper_polls": 12058,
+          "released_objects": 45
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6275536,
+          "allocations": 50,
+          "helper_polls": 14362,
+          "released_objects": 56
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5654911,
+          "allocations": 50,
+          "helper_polls": 13116,
+          "released_objects": 50
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5763580,
+          "allocations": 50,
+          "helper_polls": 12093,
+          "released_objects": 46
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5417302,
+          "allocations": 50,
+          "helper_polls": 12531,
+          "released_objects": 51
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5392023,
+          "allocations": 50,
+          "helper_polls": 12524,
+          "released_objects": 51
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5550254,
+          "allocations": 50,
+          "helper_polls": 12460,
+          "released_objects": 51
+        }
+      ],
+      "objects": 40,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 1581,
+      "final_drain_polls": 1062,
+      "released_in_final_drain": 20,
+      "cleanup_verified": true,
+      "fork": 1,
+      "tier": "wasi-interpreted"
+    },
+    {
+      "process_ns": 90646716,
+      "batch_ns": 49614840,
+      "command": [
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring/release/examples/canonical_ring_samples",
+        "compiled"
+      ],
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4126427,
+          "allocations": 50,
+          "helper_polls": 11891,
+          "released_objects": 56
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4061501,
+          "allocations": 50,
+          "helper_polls": 11777,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3961962,
+          "allocations": 50,
+          "helper_polls": 11339,
+          "released_objects": 48
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4547520,
+          "allocations": 50,
+          "helper_polls": 13333,
+          "released_objects": 48
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4041387,
+          "allocations": 50,
+          "helper_polls": 11561,
+          "released_objects": 50
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4022277,
+          "allocations": 50,
+          "helper_polls": 11495,
+          "released_objects": 45
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4649684,
+          "allocations": 50,
+          "helper_polls": 12056,
+          "released_objects": 55
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4011151,
+          "allocations": 50,
+          "helper_polls": 11299,
+          "released_objects": 48
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4234247,
+          "allocations": 50,
+          "helper_polls": 12138,
+          "released_objects": 58
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4214821,
+          "allocations": 50,
+          "helper_polls": 12039,
+          "released_objects": 48
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3888368,
+          "allocations": 50,
+          "helper_polls": 10994,
+          "released_objects": 46
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3854817,
+          "allocations": 50,
+          "helper_polls": 10969,
+          "released_objects": 48
+        }
+      ],
+      "objects": 40,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 2272,
+      "final_drain_polls": 1531,
+      "released_in_final_drain": 26,
+      "cleanup_verified": true,
+      "fork": 1,
+      "tier": "native-compiled"
+    },
+    {
+      "fork": 1,
+      "collector": "ZGC",
+      "beans": [
+        "ZGC Minor Cycles",
+        "ZGC Minor Pauses",
+        "ZGC Major Cycles",
+        "ZGC Major Pauses"
+      ],
+      "flags": [
+        "-Xms64m",
+        "-Xmx64m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+UseZGC"
+      ],
+      "process_ns": 50519027,
+      "batch_ns": 48829,
+      "collection_changes": {
+        "ZGC Minor Cycles": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "ZGC Minor Pauses": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "ZGC Major Cycles": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "ZGC Major Pauses": {
+          "collections": 0,
+          "collection_time_ms": 0
+        }
+      },
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4501
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4027
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4569
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3918
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3913
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3944
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3981
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4211
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3053
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4031
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3884
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3841
+        }
+      ],
+      "tier": "ZGC"
+    },
+    {
+      "fork": 1,
+      "collector": "G1",
+      "beans": [
+        "G1 Young Generation",
+        "G1 Concurrent GC",
+        "G1 Old Generation"
+      ],
+      "flags": [
+        "-Xms64m",
+        "-Xmx64m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+UseG1GC"
+      ],
+      "process_ns": 32433888,
+      "batch_ns": 54424,
+      "collection_changes": {
+        "G1 Young Generation": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "G1 Concurrent GC": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "G1 Old Generation": {
+          "collections": 0,
+          "collection_time_ms": 0
+        }
+      },
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3364
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3868
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 12764
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4071
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3823
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3142
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3875
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3876
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3670
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 2913
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4498
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3703
+        }
+      ],
+      "tier": "G1"
+    },
+    {
+      "process_ns": 131334734,
+      "batch_ns": 76016063,
+      "command": [
+        "/tmp/ristretto-gc-tools/wasmtime-v50.0.1-x86_64-linux/wasmtime",
+        "run",
+        "-W",
+        "max-wasm-stack=8388608",
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring-wasi/wasm32-wasip2/release/examples/canonical_ring_samples.wasm",
+        "interpreted"
+      ],
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 7576686,
+          "allocations": 50,
+          "helper_polls": 16496,
+          "released_objects": 53
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6289239,
+          "allocations": 50,
+          "helper_polls": 13814,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6730100,
+          "allocations": 50,
+          "helper_polls": 14757,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6893654,
+          "allocations": 50,
+          "helper_polls": 15075,
+          "released_objects": 52
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6863836,
+          "allocations": 50,
+          "helper_polls": 14782,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5538945,
+          "allocations": 50,
+          "helper_polls": 12058,
+          "released_objects": 45
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6697094,
+          "allocations": 50,
+          "helper_polls": 14362,
+          "released_objects": 56
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 6065130,
+          "allocations": 50,
+          "helper_polls": 13116,
+          "released_objects": 50
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5995688,
+          "allocations": 50,
+          "helper_polls": 12093,
+          "released_objects": 46
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5808656,
+          "allocations": 50,
+          "helper_polls": 12531,
+          "released_objects": 51
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5764443,
+          "allocations": 50,
+          "helper_polls": 12524,
+          "released_objects": 51
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5790105,
+          "allocations": 50,
+          "helper_polls": 12460,
+          "released_objects": 51
+        }
+      ],
+      "objects": 40,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 1581,
+      "final_drain_polls": 1062,
+      "released_in_final_drain": 20,
+      "cleanup_verified": true,
+      "fork": 2,
+      "tier": "wasi-interpreted"
+    },
+    {
+      "process_ns": 102850475,
+      "batch_ns": 55568198,
+      "command": [
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring/release/examples/canonical_ring_samples",
+        "compiled"
+      ],
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4534203,
+          "allocations": 50,
+          "helper_polls": 11891,
+          "released_objects": 56
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4486465,
+          "allocations": 50,
+          "helper_polls": 11777,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4356789,
+          "allocations": 50,
+          "helper_polls": 11339,
+          "released_objects": 48
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5006122,
+          "allocations": 50,
+          "helper_polls": 13333,
+          "released_objects": 48
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4439762,
+          "allocations": 50,
+          "helper_polls": 11561,
+          "released_objects": 50
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4402056,
+          "allocations": 50,
+          "helper_polls": 11495,
+          "released_objects": 45
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4607411,
+          "allocations": 50,
+          "helper_polls": 12056,
+          "released_objects": 55
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4600832,
+          "allocations": 50,
+          "helper_polls": 11299,
+          "released_objects": 48
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4691213,
+          "allocations": 50,
+          "helper_polls": 12138,
+          "released_objects": 58
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4906765,
+          "allocations": 50,
+          "helper_polls": 12039,
+          "released_objects": 48
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4827195,
+          "allocations": 50,
+          "helper_polls": 10994,
+          "released_objects": 46
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4708890,
+          "allocations": 50,
+          "helper_polls": 10969,
+          "released_objects": 48
+        }
+      ],
+      "objects": 40,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 2272,
+      "final_drain_polls": 1531,
+      "released_in_final_drain": 26,
+      "cleanup_verified": true,
+      "fork": 2,
+      "tier": "native-compiled"
+    },
+    {
+      "fork": 2,
+      "collector": "G1",
+      "beans": [
+        "G1 Young Generation",
+        "G1 Concurrent GC",
+        "G1 Old Generation"
+      ],
+      "flags": [
+        "-Xms64m",
+        "-Xmx64m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+UseG1GC"
+      ],
+      "process_ns": 31980812,
+      "batch_ns": 63394,
+      "collection_changes": {
+        "G1 Young Generation": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "G1 Concurrent GC": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "G1 Old Generation": {
+          "collections": 0,
+          "collection_time_ms": 0
+        }
+      },
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3694
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4109
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 18704
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4378
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4126
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3342
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4278
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4216
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3866
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3118
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4568
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4054
+        }
+      ],
+      "tier": "G1"
+    },
+    {
+      "fork": 2,
+      "collector": "ZGC",
+      "beans": [
+        "ZGC Minor Cycles",
+        "ZGC Minor Pauses",
+        "ZGC Major Cycles",
+        "ZGC Major Pauses"
+      ],
+      "flags": [
+        "-Xms64m",
+        "-Xmx64m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+UseZGC"
+      ],
+      "process_ns": 54783036,
+      "batch_ns": 56844,
+      "collection_changes": {
+        "ZGC Minor Cycles": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "ZGC Minor Pauses": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "ZGC Major Cycles": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "ZGC Major Pauses": {
+          "collections": 0,
+          "collection_time_ms": 0
+        }
+      },
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4560
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3996
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5998
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3980
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3975
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4008
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3979
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 9525
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3365
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4401
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3996
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4005
+        }
+      ],
+      "tier": "ZGC"
+    },
+    {
+      "process_ns": 83501594,
+      "batch_ns": 50284689,
+      "command": [
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring/release/examples/canonical_ring_samples",
+        "interpreted"
+      ],
+      "samples": [
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 5130752,
+          "allocations": 50,
+          "helper_polls": 16496,
+          "released_objects": 53
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4251706,
+          "allocations": 50,
+          "helper_polls": 13814,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4505321,
+          "allocations": 50,
+          "helper_polls": 14757,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4622162,
+          "allocations": 50,
+          "helper_polls": 15075,
+          "released_objects": 52
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4550307,
+          "allocations": 50,
+          "helper_polls": 14782,
+          "released_objects": 49
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3656749,
+          "allocations": 50,
+          "helper_polls": 12058,
+          "released_objects": 45
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 4413697,
+          "allocations": 50,
+          "helper_polls": 14362,
+          "released_objects": 56
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3991278,
+          "allocations": 50,
+          "helper_polls": 13116,
+          "released_objects": 50
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3674931,
+          "allocations": 50,
+          "helper_polls": 12093,
+          "released_objects": 46
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3833144,
+          "allocations": 50,
+          "helper_polls": 12531,
+          "released_objects": 51
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3855495,
+          "allocations": 50,
+          "helper_polls": 12524,
+          "released_objects": 51
+        },
+        {
+          "checksum": 652228386,
+          "elapsed_ns": 3798732,
+          "allocations": 50,
+          "helper_polls": 12460,
+          "released_objects": 51
+        }
+      ],
+      "objects": 40,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 1741,
+      "final_drain_polls": 1062,
+      "released_in_final_drain": 20,
+      "cleanup_verified": true,
+      "fork": 2,
+      "tier": "native-interpreted"
+    }
+  ]
+}
