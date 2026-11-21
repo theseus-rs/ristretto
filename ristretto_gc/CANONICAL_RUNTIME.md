@@ -50,3 +50,11 @@ capacity arithmetic is checked before preparation. Edge replacement retains sour
 couples deletion/insertion barriers with the membership change. Foreign roots
 and out-of-shape positions reject before submission; stale edge identities
 cannot mutate reused slots.
+
+
+A child read allocates an independent logical root, then revalidates and activates
+it against the exact edge before checking the payload type and returning it.
+Replacing the edge between root preparation and activation forces a fresh
+observation. Null results reserve no root. A full root quota remains pending;
+a later null replacement can still complete that read. Dropped reads cancel the
+request and release any private child root without driving an implicit loop.
