@@ -296,3 +296,40 @@ fn invalid_stack_type_rejects_during_verification() -> Result {
     ));
     Ok(())
 }
+
+#[tokio::test]
+async fn recursive_java_calls_obey_the_frame_limit_on_the_executor_stack() -> Result {
+    let program = Program::from_classfiles([ClassFile::from_bytes(include_bytes!(
+        "fixtures/canonical/CanonicalCompiledCalls.class"
+    ))?])?;
+    for depth in [0, 1, 63, 64, 1_024] {
+        let limits = Limits {
+            frames: 1_025,
+            ..Limits::default()
+        };
+        let report = program
+            .run(
+                "CanonicalCompiledCalls",
+                "depth",
+                depth,
+                configuration(),
+                limits,
+            )
+            .await?;
+        assert_eq!(report.result, depth);
+        assert_eq!(report.calls, usize::try_from(depth)? + 1);
+    }
+    assert!(matches!(
+        program
+            .run(
+                "CanonicalCompiledCalls",
+                "depth",
+                64,
+                configuration(),
+                Limits::default()
+            )
+            .await,
+        Err(Error::Limit("frame"))
+    ));
+    Ok(())
+}
