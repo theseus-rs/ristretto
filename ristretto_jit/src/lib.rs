@@ -149,7 +149,11 @@ mod wasm_compiler;
 ))]
 pub use compiler::Compiler;
 pub use error::{Error, Result};
-pub use function::{Activation, ExecutionStep, Function};
+pub use function::{
+    Activation, AllocationKind, AllocationRequest, ArrayAccessKind, ArrayAccessRequest,
+    ArrayStoreRequest, CallKind, CallRequest, ExecutionStep, FieldAccess, FieldRequest, Function,
+    TypeCheckKind, TypeCheckRequest,
+};
 pub(crate) use jit_value::JitValue;
 pub use value::Value;
 #[cfg(any(

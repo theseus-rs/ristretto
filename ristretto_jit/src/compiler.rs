@@ -178,16 +178,15 @@ impl Compiler {
         self.compile_mode(class_file, method, symbols, false)
     }
 
-    /// Restriction for explicit scalar/reference continuation capabilities. Heap access,
-    /// calls, exception handlers, synchronization and trapping integer division
+    /// Restriction for explicit scalar/reference/call and primitive-heap requests.
+    /// Multidimensional arrays, handlers, synchronization and integer division
     /// remain excluded until their owning request protocols are implemented.
     #[cfg(feature = "experimental-reference-dispatch")]
     #[must_use]
     pub fn request_rejection_reason(class: &ClassFile, method: &Method) -> Option<&'static str> {
-        if !method.access_flags.contains(MethodAccessFlags::STATIC)
-            || method
-                .access_flags
-                .contains(MethodAccessFlags::SYNCHRONIZED)
+        if method
+            .access_flags
+            .contains(MethodAccessFlags::SYNCHRONIZED)
         {
             return Some("experimental_method_kind");
         }
@@ -216,6 +215,20 @@ impl Compiler {
         }
         if code.iter().any(|instruction| {
             !(Self::is_production_safe_instruction(instruction)
+                || match instruction {
+                    Instruction::Ldc(index) => matches!(
+                        class.constant_pool.try_get(u16::from(*index)),
+                        Ok(ristretto_classfile::Constant::Integer(_)
+                            | ristretto_classfile::Constant::Float(_))
+                    ),
+                    Instruction::Ldc_w(index) => matches!(
+                        class.constant_pool.try_get(*index),
+                        Ok(ristretto_classfile::Constant::Integer(_)
+                            | ristretto_classfile::Constant::Float(_))
+                    ),
+                    _ => false,
+                }
+                || continuation::ArrayRequest::from_instruction(instruction).is_some()
                 || matches!(
                     instruction,
                     Instruction::Ifeq(_)
@@ -250,6 +263,16 @@ impl Compiler {
                         | Instruction::Ifnonnull(_)
                         | Instruction::If_acmpeq(_)
                         | Instruction::If_acmpne(_)
+                        | Instruction::Invokestatic(_)
+                        | Instruction::Invokespecial(_)
+                        | Instruction::Invokevirtual(_)
+                        | Instruction::Invokeinterface(..)
+                        | Instruction::New(_)
+                        | Instruction::Getfield(_)
+                        | Instruction::Putfield(_)
+                        | Instruction::Getstatic(_)
+                        | Instruction::Putstatic(_)
+                        | Instruction::Checkcast(_)
                 ))
         }) {
             return Some("experimental_unqualified_instruction");
@@ -257,7 +280,7 @@ impl Compiler {
         None
     }
 
-    /// Compile an explicit resumable scalar activation. Ordinary eligibility and
+    /// Compile an explicit resumable activation. Ordinary eligibility and
     /// synchronous compilation are unchanged; the result requires activation dispatch.
     /// # Errors
     /// Rejects unsupported capabilities, malformed bytecode and excessive continuation state.
@@ -300,7 +323,11 @@ impl Compiler {
             return Err(InternalError("No Code attribute found".to_string()));
         };
 
-        if let Some(instruction) = Self::first_unsupported_instruction(instructions) {
+        if let Some(instruction) = instructions.iter().find(|instruction| {
+            Self::first_unsupported_instruction(std::slice::from_ref(*instruction)).is_some()
+                && !(requests_only
+                    && continuation::CallTarget::from_instruction(instruction).is_some())
+        }) {
             return Err(UnsupportedInstruction(instruction.clone()));
         }
 
@@ -370,6 +397,9 @@ impl Compiler {
                 || !locals.reference_indices().is_empty()
                 || instructions.iter().any(|instruction| {
                     matches!(instruction, Instruction::Aconst_null | Instruction::Areturn)
+                        || continuation::CallTarget::from_instruction(instruction).is_some()
+                        || continuation::HeapRequest::from_instruction(instruction).is_some()
+                        || continuation::ArrayRequest::from_instruction(instruction).is_some()
                 }));
         let continuation_pointer = context_pointer;
         let context_pointer = if requests_only {
@@ -403,6 +433,7 @@ impl Compiler {
                 max_stack,
                 &reference_parameters,
                 requires_context,
+                constant_pool,
             )?)
         } else {
             None
@@ -468,21 +499,66 @@ impl Compiler {
             if let (Some(continuation), Some(targets)) = (&continuation, &mut continued_blocks) {
                 continuation.redirect(targets, program_counter, instruction)?;
             }
-            Self::process_instruction(
-                constant_pool,
-                &mut function_builder,
-                continued_blocks.as_ref().unwrap_or(&blocks),
-                &mut locals,
-                &mut stack,
-                program_counter,
-                return_pointer,
-                return_type.as_ref(),
-                context_pointer,
-                &helpers,
-                exception_block,
-                exception_table,
-                instruction,
-            )?;
+            if let (Some(continuation), Some(target)) = (
+                continuation.as_ref(),
+                continuation::CallTarget::from_instruction(instruction),
+            ) {
+                continuation::CallContinuation {
+                    continuation,
+                    state: continuation_pointer,
+                }
+                .invoke(
+                    constant_pool,
+                    &mut function_builder,
+                    &mut stack,
+                    target,
+                    program_counter,
+                )?;
+            } else if let (Some(continuation), Some(request)) = (
+                continuation.as_ref(),
+                continuation::HeapRequest::from_instruction(instruction),
+            ) {
+                request.emit(
+                    &continuation::CallContinuation {
+                        continuation,
+                        state: continuation_pointer,
+                    },
+                    constant_pool,
+                    &mut function_builder,
+                    &mut stack,
+                    program_counter,
+                )?;
+            } else if let (Some(continuation), Some(request)) = (
+                continuation.as_ref(),
+                continuation::ArrayRequest::from_instruction(instruction),
+            ) {
+                request.emit(
+                    &continuation::CallContinuation {
+                        continuation,
+                        state: continuation_pointer,
+                    },
+                    constant_pool,
+                    &mut function_builder,
+                    &mut stack,
+                    program_counter,
+                )?;
+            } else {
+                Self::process_instruction(
+                    constant_pool,
+                    &mut function_builder,
+                    continued_blocks.as_ref().unwrap_or(&blocks),
+                    &mut locals,
+                    &mut stack,
+                    program_counter,
+                    return_pointer,
+                    return_type.as_ref(),
+                    context_pointer,
+                    &helpers,
+                    exception_block,
+                    exception_table,
+                    instruction,
+                )?;
+            }
 
             if let Some(targets) = &mut continued_blocks {
                 continuation::Continuation::restore_targets(

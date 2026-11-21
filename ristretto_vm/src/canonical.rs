@@ -11,6 +11,8 @@ pub use heap::{HeapCompletion, Invocation, JavaHeap, JavaThread};
 mod primitive_array;
 mod reference_array;
 use layout::Layout;
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+pub use objects::{CompiledLimits, CompiledProgram, CompiledThread};
 pub use objects::{InitializationWork, Limits, Report};
 mod scalar;
 mod value;

@@ -1,11 +1,11 @@
 # Experimental native activations
 
 The `experimental-reference-dispatch` feature exposes `Compiler::compile_requests`.
-The capability includes static scalar methods and opaque reference identities,
-with conditional branches and backedges. This slice does not admit Java calls,
-allocation, fields, array operations, handlers, synchronization, or integer
-division/remainder. The embedding must
-verify bytecode before compilation. Unsupported descriptors/opcodes fail closed.
+The capability includes scalar/reference control flow, instance entry, Java calls,
+object allocation, instance fields and one-dimensional array operations. Calls and heap work
+return explicit requests to the embedding. Handlers,
+synchronization and integer division/remainder remain excluded. The embedding must verify
+bytecode before compilation. Unsupported descriptors/opcodes fail closed.
 
 `Compiler::compile` and production `can_compile` keep their existing policy.
 A request-only `Function` rejects synchronous `execute`. Begin it with
@@ -13,6 +13,8 @@ A request-only `Function` rejects synchronous `execute`. Begin it with
 
 - `ExecutionStep::Yielded` requests an embedding scheduling boundary. Every taken
   branch to the same or an earlier byte offset consumes one budget unit.
+- `ExecutionStep::Call`, `Allocation`, `Field` and `ArrayAccess` park a runtime request.
+  The host owns resolution, heap checks, completion and cancellation.
 - `ExecutionStep::Returned(value)` completes the invocation. Resuming it again
   fails.
 
@@ -60,3 +62,51 @@ state limits and unsupported capability rejection. The scalar cases register no 
 helper symbols. `frame_roots::` protocol tests register only the publication
 callback; they exercise live locals/operands, dead-local release, reference return
 handoff, failed publication, missing contexts and the spill-capacity limit.
+
+Request-only static, special, virtual and interface invocations now return a `CallRequest`
+with the exact bytecode offset and owner-local constant-pool index. The embedding resolves
+access/dispatch/initialization and invokes the callee with no generated caller on the stack.
+`call_arguments()` exposes one eight-byte cell per logical parameter, including a receiver;
+wide Java parameters still occupy two local slots. Reference cells remain opaque tokens
+owned by the published caller frame. No synchronous invocation helper is linked.
+
+Complete a successful request once with `complete_call(bits)`, after the context owns any
+reference result. On a Java/embedding error or cancellation, drop the activation; handlers
+and exception propagation through native catch blocks are not admitted in this slice.
+A pending request cannot resume before completion. `remaining_budget()` carries fuel across
+immediately completed requests; a zero remainder requires a host scheduling boundary.
+Instance entry is explicit through this request-only API. Ordinary eligibility is unchanged.
+
+Object allocation and instance field reads/writes also use resumable requests. `New`
+returns the exact class constant-pool index; field requests retain receiver/value cells
+and the exact field index/BCI. Allocation and field helpers are not linked. The embedding
+checks class admission, access, initialization, null/type rules and quota before successful
+completion, retaining every result owner before exposing its token. A fault drops the
+parked activation. Native exception handlers remain excluded.
+
+Primitive `newarray`, length, loads and stores use the same request cells for all eight
+primitive kinds. Signed indices and lengths are sign-extended; float/double cells preserve
+raw bits. The host applies null, bounds, negative-length and component-kind checks, Java
+byte/short/char/boolean semantics and allocation policy. Tests of these compiler cells do
+not claim to validate heap behavior. No synchronous array helper is linked. Reference
+array allocation with array-valued components and multidimensional allocation remain excluded.
+
+Reference `anewarray`, `aaload` and `aastore` also return explicit requests. The class
+constant-pool index identifies the component; array-valued components remain excluded.
+Array and value identities are owning-context tokens. Store requests preserve all three
+cells until the host validates null/bounds/component assignability and publishes the edge.
+A successful load result must be independently owned before the parent resumes. The native
+code never inspects payload pointers or performs a synchronous array access.
+
+`checkcast` emits a typed request with the unchanged object/null token and target class
+index. The embedding resolves the target and checks assignability before returning that
+same identity, or cancels the activation with a type fault. The compiler imports no
+synchronous cast helper. `instanceof` and multidimensional cast targets remain excluded.
+
+Static reads/writes return `FieldAccess::GetStatic` (zero cells) or `PutStatic` (one
+value cell). Before completion, the embedding resolves the declaring class, enforces
+access/final/type rules and finishes class initialization. The parent stays parked while
+initializer activations execute through the same request-only protocol; the host owns
+initializer state, recursion/wait identity, errors and cancellation. Reference values
+remain published throughout that handoff. The compiler embeds no static-storage pointer
+and does not call any interpreter or synchronous static helper.

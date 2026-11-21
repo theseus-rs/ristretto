@@ -9,7 +9,18 @@ use crate::runtime_helpers::RuntimeHelpers;
 use ahash::AHashMap;
 use cranelift::codegen::ir::MemFlagsData;
 use cranelift::prelude::*;
+use ristretto_classfile::ConstantPool;
 use ristretto_classfile::attributes::Instruction;
+
+#[path = "call_continuation.rs"]
+mod call;
+pub(crate) use call::{CallContinuation, CallTarget};
+#[path = "heap_continuation.rs"]
+mod heap;
+pub(crate) use heap::HeapRequest;
+#[path = "array_continuation.rs"]
+mod array;
+pub(crate) use array::ArrayRequest;
 use std::collections::{BTreeMap, BTreeSet};
 
 struct Point {
@@ -22,12 +33,17 @@ struct Point {
 
 pub(crate) struct Continuation {
     points: BTreeMap<usize, Point>,
+    calls: BTreeMap<usize, Block>,
     locals: Vec<(Variable, Type)>,
     remaining: Variable,
     pub layout: ContinuationLayout,
 }
 
 impl Continuation {
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "bounded continuation layout metadata"
+    )]
     pub fn new(
         builder: &mut FunctionBuilder,
         blocks: &AHashMap<usize, Block>,
@@ -36,9 +52,23 @@ impl Continuation {
         max_stack: u16,
         references: &[Value],
         requires_context: bool,
+        pool: &ConstantPool,
     ) -> Result<Self> {
         let mut addresses = BTreeSet::new();
+        let mut calls = BTreeMap::new();
+        let mut call_capacity = 0;
         for (pc, instruction) in Instruction::with_offsets(instructions) {
+            if let Some(target) = CallTarget::from_instruction(instruction) {
+                let (parameters, _) = target.signature(pool)?;
+                call_capacity = call_capacity.max(parameters.len() + target.receiver());
+                calls.insert(pc, builder.create_block());
+            } else if let Some(request) = HeapRequest::from_instruction(instruction) {
+                call_capacity = call_capacity.max(request.capacity(pool)?);
+                calls.insert(pc, builder.create_block());
+            } else if let Some(request) = ArrayRequest::from_instruction(instruction) {
+                call_capacity = call_capacity.max(request.capacity());
+                calls.insert(pc, builder.create_block());
+            }
             for offset in instruction.branch_offsets().filter(|offset| *offset <= 0) {
                 addresses.insert(usize::try_from(i64::try_from(pc)? + i64::from(offset))?);
             }
@@ -49,6 +79,7 @@ impl Continuation {
             slots > 64 * 1024
                 || addresses
                     .len()
+                    .saturating_add(calls.len())
                     .checked_mul(slots)
                     .is_none_or(|total| total > 64 * 1024)
         }) {
@@ -90,20 +121,37 @@ impl Continuation {
             .values()
             .map(|point| point.operands.len())
             .max()
-            .unwrap_or(0);
+            .unwrap_or(0)
+            .max(if calls.is_empty() {
+                0
+            } else {
+                usize::from(max_stack)
+            });
         let words = ContinuationLayout::HEADER_WORDS
             .checked_add(locals.len())
             .and_then(|words| words.checked_add(max_operands))
             .ok_or_else(|| InternalError("continuation size overflow".to_owned()))?;
+        let call_offset = (!calls.is_empty()).then_some(words);
+        let words = if calls.is_empty() {
+            words
+        } else {
+            words
+                .checked_add(ContinuationLayout::CALL_HEADER_WORDS)
+                .and_then(|words| words.checked_add(call_capacity))
+                .ok_or_else(|| InternalError("call continuation size overflow".to_owned()))?
+        };
         let _ = Self::offset(words)?;
         Ok(Self {
             points,
+            calls,
             locals,
             remaining: builder.declare_var(types::I64),
             layout: ContinuationLayout {
                 words,
                 instructions: instructions.len(),
                 requires_context,
+                call_offset,
+                call_capacity,
             },
         })
     }
@@ -133,6 +181,12 @@ impl Continuation {
         dispatch.set_entry(0, initial);
         for (&address, point) in &self.points {
             dispatch.set_entry(u128::try_from(address)? + 1, point.restore);
+        }
+        for (&address, block) in &self.calls {
+            dispatch.set_entry(
+                u128::from(ContinuationLayout::CALL_TOKEN_BASE) + u128::try_from(address)?,
+                *block,
+            );
         }
         dispatch.emit(builder, token, invalid);
         builder.switch_to_block(invalid);
@@ -269,6 +323,18 @@ impl Continuation {
                 .ins()
                 .store(MemFlagsData::trusted(), token, state, 0);
             builder.ins().return_(&[]);
+        }
+        // A syntactically present call can be unreachable. Keep its private dispatch
+        // target fail-closed instead of leaving an unterminated native block.
+        for block in self.calls.values() {
+            if builder.func.layout.block_insts(*block).next().is_none() {
+                builder.switch_to_block(*block);
+                builder.ins().trap(
+                    TrapCode::user(1).ok_or_else(|| {
+                        InternalError("invalid continuation trap code".to_owned())
+                    })?,
+                );
+            }
         }
         Ok(())
     }
