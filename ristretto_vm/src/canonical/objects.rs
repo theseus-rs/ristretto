@@ -9,7 +9,7 @@ mod compiled_frame;
 #[path = "frame_table.rs"]
 mod frame_table;
 #[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
-pub use compiled::{CompiledLimits, CompiledProgram};
+pub use compiled::{CompiledLimits, CompiledProgram, CompiledThread};
 
 use super::layout::{Field, ReferenceType, reference_type};
 use super::reference_array::{self, Component, Layout as ReferenceArrayLayout};

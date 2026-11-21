@@ -1,10 +1,16 @@
 //! Native activations restricted to the admitted canonical Java program.
 use super::compiled_frame::{Context, publish_roots};
 use super::frame_table::Table;
+#[path = "compiled_heap.rs"]
+mod heap;
+#[path = "compiled_initialization.rs"]
+mod initialization;
 use super::{
     Budget, CallTarget, Configuration, Error, Execution, GarbageCollector, Limits, Method,
     MethodAccessFlags, Program, Report, Result, Runtime, Value, exact_symbol, help,
 };
+pub use heap::CompiledThread;
+use initialization::{Action, Completion};
 use ristretto_classfile::{BaseType, FieldType};
 use ristretto_jit::{
     Activation, AllocationKind, ArrayAccessKind, CallKind, Compiler, ExecutionStep, FieldAccess,
@@ -67,11 +73,6 @@ impl Program {
     /// # Errors
     /// Rejects unsupported codegen, invalid metadata or excessive frame storage.
     pub fn compile(&self) -> Result<CompiledProgram<'_>> {
-        if self.classes.iter().any(|layout| layout.statics.needed()) {
-            return Err(Error::Unsupported(
-                "native class initialization is not connected".to_owned(),
-            ));
-        }
         let compiler = Compiler::new()?;
         let mut functions = Vec::with_capacity(self.classes.len());
         let mut roots_per_frame = 1;
@@ -157,16 +158,16 @@ impl CompiledProgram<'_> {
         }
         if configuration.mutators != 1
             || configuration.helpers != 1
-            || self
-                .program
-                .classes
-                .iter()
-                .any(|layout| layout.references > configuration.edges_per_object)
+            || self.program.classes.iter().any(|layout| {
+                layout.references > configuration.edges_per_object
+                    || layout.statics.references > configuration.edges_per_object
+            })
         {
             return Err(Error::Unsupported(
                 "single caller/helper or insufficient edge positions".to_owned(),
             ));
         }
+        self.program.static_capacity(configuration)?;
         let budget = Budget::new(configuration.charged_bytes()?);
         let collector = GarbageCollector::new();
         let runtime = Runtime::new(&collector, configuration, &budget)?;
@@ -193,6 +194,7 @@ impl CompiledProgram<'_> {
         let result = execution
             .call(class, method, vec![Value::Int(argument)], 0)
             .await;
+        execution.execution.statics.close();
         execution.execution.cleanup(&collector).await?;
         let mut report = execution.execution.report.clone();
         drop(execution);
@@ -220,6 +222,7 @@ struct Frame {
     context: Box<Context>,
     activation: Activation,
     started: bool,
+    completion: Completion,
 }
 
 impl CompiledExecution<'_, '_, '_, '_> {
@@ -267,19 +270,24 @@ impl CompiledExecution<'_, '_, '_, '_> {
         let activation = function.activation(&exported)?;
         drop(arguments);
         self.execution.report.calls += 1;
+        if method.name() == "<clinit>" {
+            self.execution.report.class_initializer_calls = self
+                .execution
+                .report
+                .class_initializer_calls
+                .checked_add(1)
+                .ok_or(Error::Limit("class initializer counter"))?;
+        }
         Ok(Frame {
             class,
             method,
             context,
             activation,
             started: false,
+            completion: Completion::Call,
         })
     }
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "explicit bounded typed activation stack"
-    )]
     async fn call(
         &mut self,
         class: usize,
@@ -294,8 +302,46 @@ impl CompiledExecution<'_, '_, '_, '_> {
         frames
             .try_reserve_exact(self.execution.limits.frames)
             .map_err(|_| Error::Limit("compiled frames allocation"))?;
-        frames.push(self.frame(class, method, arguments, 0).await?);
+        let result = self
+            .drive(
+                &mut frames,
+                Action::Call {
+                    class,
+                    method,
+                    arguments,
+                },
+            )
+            .await;
+        match result {
+            Ok(value) => Ok(value),
+            Err(mut error) => {
+                while let Some(frame) = frames.pop() {
+                    if let Completion::Initialization { prepared, .. } = frame.completion {
+                        error = self
+                            .execution
+                            .finish_initialization(prepared, Err(error))
+                            .err()
+                            .ok_or(Error::Boundary(
+                                "initializer failure unexpectedly succeeded",
+                            ))?;
+                    }
+                }
+                Err(error)
+            }
+        }
+    }
+
+    #[expect(
+        clippy::too_many_lines,
+        reason = "explicit bounded typed activation stack"
+    )]
+    async fn drive(&mut self, frames: &mut Vec<Frame>, first: Action) -> Result<Option<Value>> {
+        let mut pending = Some(first);
         loop {
+            if let Some(action) = pending.take() {
+                self.action(frames, action).await?;
+                continue;
+            }
             if self.execution.report.native_slices >= self.slice_limit {
                 return Err(Error::Limit("native slice"));
             }
@@ -338,7 +384,16 @@ impl CompiledExecution<'_, '_, '_, '_> {
                         (value, _) => value,
                     };
                     // Resolve the returned token before retiring the callee snapshot.
-                    frames.pop();
+                    let completion = frames
+                        .pop()
+                        .ok_or(Error::Boundary("missing completed frame"))?
+                        .completion;
+                    if let Completion::Initialization { prepared, action } = completion {
+                        self.execution.finish_initialization(prepared, Ok(value))?;
+                        pending = Some(action);
+                        tokio::task::yield_now().await;
+                        continue;
+                    }
                     let Some(parent) = frames.last_mut() else {
                         return Ok(value);
                     };
@@ -360,7 +415,9 @@ impl CompiledExecution<'_, '_, '_, '_> {
                     let root = match request.kind {
                         AllocationKind::Object(index) if arguments.is_empty() => {
                             let class = self.compiled.program.class_constant(frame.class, index)?;
-                            self.execution.allocate_object(class).await?
+                            pending = Some(Action::New { class });
+                            tokio::task::yield_now().await;
+                            continue;
                         }
                         AllocationKind::PrimitiveArray(kind) if arguments.len() == 1 => {
                             let length = int_bits(
@@ -516,6 +573,44 @@ impl CompiledExecution<'_, '_, '_, '_> {
                 }
                 ExecutionStep::Field(request) => {
                     let arguments = frame.activation.call_arguments()?;
+                    if matches!(
+                        request.kind,
+                        FieldAccess::GetStatic | FieldAccess::PutStatic
+                    ) {
+                        let expected = usize::from(request.kind == FieldAccess::PutStatic);
+                        if arguments.len() != expected {
+                            return Err(Error::Boundary("compiled static field arity"));
+                        }
+                        let (owner, field) = self
+                            .compiled
+                            .program
+                            .static_field(frame.class, request.index)?;
+                        pending = Some(if request.kind == FieldAccess::GetStatic {
+                            Action::GetStatic {
+                                class: owner,
+                                field,
+                            }
+                        } else {
+                            Program::admit_static_write(frame.class, &frame.method, owner, &field)?;
+                            let bits = *arguments
+                                .first()
+                                .ok_or(Error::Boundary("static store value"))?;
+                            let value = match field.field {
+                                super::Field::Int(_) => Value::Int(int_bits(bits)),
+                                super::Field::Reference { .. } => frame.context.reference(bits)?,
+                            };
+                            // This action owns the value while another logical owner initializes.
+                            Action::PutStatic {
+                                caller: frame.class,
+                                method: frame.method.clone(),
+                                class: owner,
+                                field,
+                                value,
+                            }
+                        });
+                        tokio::task::yield_now().await;
+                        continue;
+                    }
                     let expected = if request.kind == FieldAccess::GetField {
                         1
                     } else {
@@ -552,6 +647,9 @@ impl CompiledExecution<'_, '_, '_, '_> {
                                 .write_field(frame.class, request.index, &root, value)
                                 .await?;
                             None
+                        }
+                        FieldAccess::GetStatic | FieldAccess::PutStatic => {
+                            return Err(Error::Boundary("static request dispatch"));
                         }
                     };
                     let bits = result_bits(
@@ -607,8 +705,11 @@ impl CompiledExecution<'_, '_, '_, '_> {
                             {
                                 values.push(decode(&frame.context, *bits, field)?);
                             }
-                            let child = self.frame(owner, target, values, frames.len()).await?;
-                            frames.push(child);
+                            pending = Some(Action::Call {
+                                class: owner,
+                                method: target,
+                                arguments: values,
+                            });
                         }
                     }
                     // A request consumes the single-unit slice. Scheduling and
