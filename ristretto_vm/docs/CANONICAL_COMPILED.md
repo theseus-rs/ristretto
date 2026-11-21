@@ -26,7 +26,10 @@ legacy context, interpreter fallback or payload pointer is linked into generated
 code. Object/field requests use the same typed Execution helpers as the interpreter.
 Programs containing static storage or any class initializer are rejected before
 code generation, including a fieldless scalar initializer. Later consumer commits
-separately connect reference-array, cast and static helpers. Primitive arrays use
+separately connect cast and static helpers. Reference-array requests use the shared
+paged layout, bounds/component checks and owning return handoff; hidden pages never
+become Java references. The 34-row native oracle includes full 2,048-element arrays,
+covariance, mixed references, cycles and null/bounds/store fault ordering. Primitive arrays use
 the shared typed allocation, length, load and store helpers. The native oracle suite
 covers all eight kinds, wide arguments, array returns, saturation, narrowing and
 null/bounds/negative-length faults (301 HotSpot rows).
