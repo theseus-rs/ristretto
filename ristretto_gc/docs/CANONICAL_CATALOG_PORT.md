@@ -68,3 +68,12 @@ no slot ownership or publication authority. Three direct regressions accompany
 this extraction, passing on native and WASI alongside the five numeric tests.
 The private-link assertions reject an internal foreign-pool programming error;
 public proposal rejection remains the pool API's fallible result.
+
+## C06 prerequisite: typed catalog backing
+
+The typed backing slice introduces the frozen record/guard contract, cell and
+controller storage layouts, and pool setup. It exposes no request installation
+or payload access. Controller variants are reserved here so footprint accounting
+uses the actual object-controller layout before its operations are enabled.
+Two tests verify empty discovery slots, checked backing sizes and release of all
+pool owners. Native/WASI catalog selectors now each pass ten tests.
