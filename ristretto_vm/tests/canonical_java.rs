@@ -31,6 +31,36 @@ fn configuration() -> Configuration {
 }
 
 #[tokio::test]
+async fn reference_return_remains_rooted_after_unlink() -> Result {
+    let program = Program::from_classfiles([
+        ClassFile::from_bytes(include_bytes!(
+            "fixtures/canonical/CanonicalReturnWorkload.class"
+        ))?,
+        ClassFile::from_bytes(include_bytes!(
+            "fixtures/canonical/CanonicalReturnWorkload$Node.class"
+        ))?,
+    ])?;
+    for value in [7, -13] {
+        let report = program
+            .run(
+                "CanonicalReturnWorkload",
+                "run",
+                value,
+                configuration(),
+                Limits::default(),
+            )
+            .await?;
+        assert_eq!(report.result, value);
+        assert!(report.instructions > 0);
+        assert_eq!(report.allocations, 1);
+        assert_eq!(report.released_objects, 1);
+        assert_eq!(report.payload_bytes_after_cleanup, 0);
+        assert_eq!(report.catalog_bytes_after_drop, 0);
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn javac_cycles_calls_identity_and_complete_cleanup() -> Result {
     let program = Program::from_classfiles(classes()?)?;
     for rounds in [0, 1, 3, 8] {
