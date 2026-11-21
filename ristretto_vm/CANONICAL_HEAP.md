@@ -23,6 +23,8 @@ cycle count. `primary_cycles` reports the collector's conservative completed
 primary-epoch bounds only.
 
 This slice preserves `Program::run`, `run_scalar`, and `run_primitive`. It does not
-admit additional Java bytecodes, layouts, static storage, inheritance, handlers,
+admit inheritance, handlers,
 or ordinary-VM interoperability. It changes no default backend and makes no
 latency, throughput, endurance, or pause qualification claim.
+
+Static fields and their heap-owned roots are documented in [CANONICAL_STATICS.md](CANONICAL_STATICS.md).

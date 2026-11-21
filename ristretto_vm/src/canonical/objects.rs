@@ -1,5 +1,6 @@
 //! Execution of verified closed object methods on a dedicated incremental heap.
 use super::layout::Field;
+use super::statics::States;
 use super::{Error, Layout, Program, exact_symbol};
 use ristretto_classfile::{
     BaseType, FieldType, JavaStr, MethodAccessFlags, attributes::Instruction,
@@ -30,12 +31,43 @@ impl Default for Limits {
     }
 }
 
+/// Work performed before the entry body, included in the full Report counters.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct InitializationWork {
+    pub instructions: usize,
+    pub allocations: usize,
+    pub helper_polls: usize,
+    pub reference_reads: usize,
+    pub reference_writes: usize,
+    pub calls: usize,
+    pub class_initialization_waits: usize,
+}
+impl InitializationWork {
+    pub(super) fn from_report(report: &Report) -> Self {
+        Self {
+            instructions: report.instructions,
+            allocations: report.allocations,
+            helper_polls: report.helper_polls,
+            reference_reads: report.reference_reads,
+            reference_writes: report.reference_writes,
+            calls: report.calls,
+            class_initialization_waits: report.class_initialization_waits,
+        }
+    }
+}
+
 /// Actual execution counters. This report contains no timing or pause claim.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Report {
     pub result: i32,
     pub instructions: usize,
     pub allocations: usize,
+    pub internal_allocations: usize,
+    pub static_storage_allocations: usize,
+    pub initialized_classes: usize,
+    pub class_initializer_calls: usize,
+    pub class_initialization_waits: usize,
+    pub entry_initialization: InitializationWork,
     pub reference_reads: usize,
     pub reference_writes: usize,
     pub calls: usize,
@@ -81,7 +113,7 @@ impl Program {
         }
         Ok(target)
     }
-    fn member(
+    pub(super) fn member(
         &self,
         owner: usize,
         index: u16,
@@ -152,6 +184,13 @@ impl Program {
             match instruction {
                 Instruction::New(index) => {
                     self.class_constant(class, *index)?;
+                }
+                Instruction::Getstatic(index) => {
+                    self.static_field(class, *index)?;
+                }
+                Instruction::Putstatic(index) => {
+                    let (owner, field) = self.static_field(class, *index)?;
+                    Self::admit_static_write(class, method, owner, &field)?;
                 }
                 Instruction::Getfield(index) | Instruction::Putfield(index) => {
                     self.field(class, *index)?;
@@ -274,15 +313,16 @@ impl Program {
         let (class, method) = self.entry_method(class, method)?;
         if configuration.mutators != 1
             || configuration.helpers != 1
-            || self
-                .classes
-                .iter()
-                .any(|layout| layout.references > configuration.edges_per_object)
+            || self.classes.iter().any(|layout| {
+                layout.references > configuration.edges_per_object
+                    || layout.statics.references > configuration.edges_per_object
+            })
         {
             return Err(Error::Unsupported(
                 "single caller/helper or insufficient edge positions".to_owned(),
             ));
         }
+        self.static_capacity(configuration)?;
         let charge = configuration.charged_bytes()?;
         let budget = Budget::new(charge);
         let collector = GarbageCollector::new();
@@ -294,9 +334,11 @@ impl Program {
             runtime: &runtime,
             limits,
             report: Report::default(),
+            statics: States::default(),
         };
         let result = execution.entry(class, method, argument).await;
-        // Even execution errors release all frame roots before cleanup.
+        // Release static storage and all frame roots before dedicated cleanup.
+        execution.statics.close();
         execution.cleanup(&collector).await?;
         let mut report = execution.report.clone();
         drop(execution);
@@ -317,8 +359,9 @@ impl Program {
 /// Class metadata lives exclusively in the external immutable Program.
 #[derive(Debug)]
 pub(super) struct Payload {
-    class: usize,
-    integers: [AtomicI32; 8],
+    pub(super) class: usize,
+    pub(super) static_storage: bool,
+    pub(super) integers: [AtomicI32; 8],
 }
 
 // SAFETY: Payload contains only a numeric class ID and eight primitive atomics.
@@ -354,7 +397,7 @@ impl Value {
             Err(Error::Invalid("expected int".to_owned()))
         }
     }
-    fn reference(self) -> Result<Option<Root<Payload>>, Error> {
+    pub(super) fn reference(self) -> Result<Option<Root<Payload>>, Error> {
         if let Self::Reference(value) = self {
             Ok(value)
         } else {
@@ -374,9 +417,10 @@ pub(super) struct Execution<'p, 'r, 'gc> {
     pub(super) helper: Helper<'gc>,
     pub(super) limits: Limits,
     pub(super) report: Report,
+    pub(super) statics: States,
 }
 
-async fn complete<T>(
+pub(super) async fn complete<T>(
     helper: &mut Helper<'_>,
     report: &mut Report,
     limit: usize,
@@ -392,7 +436,7 @@ async fn complete<T>(
     Err(Error::Limit("request poll"))
 }
 
-fn help(helper: &mut Helper<'_>, report: &mut Report) -> Result<(), Error> {
+pub(super) fn help(helper: &mut Helper<'_>, report: &mut Report) -> Result<(), Error> {
     let work = helper.poll()?;
     report.helper_polls += 1;
     if work == Work::ReleasedObjectSlot {
@@ -408,16 +452,19 @@ impl Execution<'_, '_, '_> {
         method: Arc<Method>,
         argument: i32,
     ) -> Result<Option<Value>, Error> {
+        let initialized = self.initialize_class(class, 0).await;
+        self.report.entry_initialization = InitializationWork::from_report(&self.report);
+        initialized?;
         let pool = self.program.layout(class)?.class.constant_pool();
         if method
             .code()
             .iter()
             .all(|op| super::integer::admitted(op, pool))
         {
-            self.report.calls = 1;
+            self.report.calls += 1;
             let (value, count) =
                 super::integer::run_counted(&method, pool, argument, self.limits.instructions)?;
-            self.report.instructions = count;
+            self.report.instructions += count;
             Ok(Some(Value::Int(value.int()?)))
         } else {
             self.call(class, method, vec![Value::Int(argument)], 0)
@@ -452,8 +499,9 @@ impl Execution<'_, '_, '_> {
         }
     }
 
-    fn check_class(&self, root: &Root<Payload>, class: usize) -> Result<(), Error> {
-        if self.runtime.borrow(root)?.class == class {
+    pub(super) fn check_class(&self, root: &Root<Payload>, class: usize) -> Result<(), Error> {
+        let view = self.runtime.borrow(root)?;
+        if !view.static_storage && view.class == class {
             Ok(())
         } else {
             Err(Error::Invalid("receiver/field class mismatch".to_owned()))
@@ -465,7 +513,7 @@ impl Execution<'_, '_, '_> {
         reason = "single explicit restricted bytecode dispatch table"
     )]
     #[async_recursion::async_recursion(?Send)]
-    async fn call(
+    pub(super) async fn call(
         &mut self,
         class: usize,
         method: Arc<Method>,
@@ -476,6 +524,9 @@ impl Execution<'_, '_, '_> {
             return Err(Error::Limit("frame"));
         }
         let is_static = method.access_flags().contains(MethodAccessFlags::STATIC);
+        if is_static && method.name() != "<clinit>" {
+            self.initialize_class(class, depth).await?;
+        }
         let receiver_count = usize::from(!is_static);
         if arguments.len() != method.parameters().len() + receiver_count {
             return Err(Error::Invalid("argument count".to_owned()));
@@ -605,8 +656,10 @@ impl Execution<'_, '_, '_> {
                 }
                 Instruction::New(index) => {
                     let class = self.program.class_constant(class, *index)?;
+                    self.initialize_class(class, depth + 1).await?;
                     let payload = Payload {
                         class,
+                        static_storage: false,
                         integers: std::array::from_fn(|_| AtomicI32::new(0)),
                     };
                     let mut request = self.mutator.allocate(payload)?;
@@ -619,6 +672,16 @@ impl Execution<'_, '_, '_> {
                     .await?;
                     self.report.allocations += 1;
                     stack.push(Value::Reference(Some(root)));
+                }
+                Instruction::Getstatic(index) => {
+                    let (owner, field) = self.program.static_field(class, *index)?;
+                    stack.push(self.read_static(owner, &field, depth + 1).await?);
+                }
+                Instruction::Putstatic(index) => {
+                    let (owner, field) = self.program.static_field(class, *index)?;
+                    let value = pop(&mut stack)?;
+                    self.write_static(class, &method, owner, &field, value, depth + 1)
+                        .await?;
                 }
                 Instruction::Getfield(index) => {
                     let (owner, field) = self.program.field(class, *index)?;

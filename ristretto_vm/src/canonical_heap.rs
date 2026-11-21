@@ -1,5 +1,6 @@
 //! Multiple entries and independent local Java tasks on one canonical catalog.
 use super::objects::{Execution, Value};
+use super::statics::States;
 use super::{Error, Limits, Program, Report};
 use ristretto_classfile::MethodAccessFlags;
 use ristretto_classloader::Method;
@@ -14,6 +15,12 @@ pub struct Invocation {
     pub allocations: usize,
     pub helper_polls: usize,
     pub released_objects: usize,
+    pub internal_allocations: usize,
+    pub static_storage_allocations: usize,
+    pub initialized_classes: usize,
+    pub class_initializer_calls: usize,
+    pub class_initialization_waits: usize,
+    pub entry_initialization: super::InitializationWork,
 }
 
 impl Invocation {
@@ -25,6 +32,12 @@ impl Invocation {
             allocations: report.allocations,
             helper_polls: report.helper_polls,
             released_objects: report.released_objects,
+            internal_allocations: report.internal_allocations,
+            static_storage_allocations: report.static_storage_allocations,
+            initialized_classes: report.initialized_classes,
+            class_initializer_calls: report.class_initializer_calls,
+            class_initialization_waits: report.class_initialization_waits,
+            entry_initialization: report.entry_initialization,
         })
     }
 }
@@ -41,6 +54,8 @@ pub struct HeapCompletion<T> {
 #[derive(Debug)]
 pub struct JavaHeap<'p, 'gc> {
     pub(super) program: &'p Program,
+    // Static roots drop before the catalog during outer-future cancellation.
+    statics: States,
     runtime: Runtime<'gc>,
     collector: &'gc GarbageCollector,
 }
@@ -85,20 +100,21 @@ impl Program {
         cleanup_limit: usize,
         run: impl AsyncFnOnce(&JavaHeap<'p, '_>) -> Result<T, Error>,
     ) -> Result<HeapCompletion<T>, Error> {
-        if self
-            .classes
-            .iter()
-            .any(|layout| layout.references > configuration.edges_per_object)
-        {
+        if self.classes.iter().any(|layout| {
+            layout.references > configuration.edges_per_object
+                || layout.statics.references > configuration.edges_per_object
+        }) {
             return Err(Error::Unsupported("insufficient edge positions".into()));
         }
+        self.static_capacity(configuration)?;
         let budget = Budget::new(configuration.charged_bytes()?);
         let collector = GarbageCollector::with_config(ristretto_gc::Configuration {
             max_heap_bytes: max_payload_bytes,
             ..Default::default()
         });
-        let heap = JavaHeap {
+        let mut heap = JavaHeap {
             program: self,
+            statics: States::heap(self)?,
             runtime: Runtime::new(&collector, configuration, &budget)?,
             collector: &collector,
         };
@@ -108,6 +124,7 @@ impl Program {
                 "heap still has registered participants".into(),
             ));
         }
+        heap.statics.close();
         let (cleanup_polls, released_during_cleanup) = heap.drain(cleanup_limit).await?;
         drop(heap);
         if budget.used() != 0 {
@@ -148,6 +165,7 @@ impl<'p, 'gc> JavaHeap<'p, 'gc> {
             helper: self.runtime.helper()?,
             limits,
             report: Report::default(),
+            statics: self.statics.attach()?,
         })
     }
 
@@ -229,6 +247,7 @@ mod tests {
             let mut future = Box::pin(async {
                 let heap = JavaHeap {
                     program: &program,
+                    statics: States::heap(&program)?,
                     runtime: Runtime::new(&collector, config, &budget)?,
                     collector: &collector,
                 };
