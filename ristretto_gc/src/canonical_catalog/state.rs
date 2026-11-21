@@ -873,6 +873,12 @@ impl<R: Record> Catalog<R> {
             effect.cell.state.compare(&effect.expected, proposed);
         }
         after_effect();
+        if let Some(root) = &operation.root
+            && decision == COMMIT
+            && completed.load(Ordering::Acquire) == UNDECIDED
+        {
+            root.apply();
+        }
         if decision == COMMIT
             && let Some(guard) = &entered
         {

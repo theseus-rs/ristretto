@@ -1,7 +1,8 @@
 //! Canonical root identity/visibility; this owns no runtime payload-access right.
 use super::{
     AllocationError, Arc, AtomicU8, AtomicUsize, Catalog, Cell, Contended, CreationError,
-    Membership, OptionalLink, Ordering, Owner, Pool, Pooled, Record, following_slot, share,
+    Membership, OptionalLink, Ordering, Owner, Pool, Pooled, Preparation, Record, Snapshot,
+    following_slot, share,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -369,3 +370,64 @@ impl<R: Record> Catalog<R> {
 #[cfg(test)]
 #[path = "root_backing_tests.rs"]
 mod root_backing_tests;
+
+impl<R: Record> Catalog<R> {
+    pub(super) fn attach_root_effect(
+        &self,
+        mut preparation: Preparation<R>,
+        root: Pooled<Root<R>>,
+        expected: RootState,
+        proposed: RootState,
+    ) -> Option<Preparation<R>> {
+        if !Arc::ptr_eq(&root.owner, &self.owner) || root.state() != expected {
+            return None;
+        }
+        preparation.root = Some(RootEffect {
+            root,
+            expected,
+            proposed,
+        });
+        Some(preparation)
+    }
+    pub fn root_is_stably_live_in(
+        &self,
+        root: &RootToken<R>,
+        context: &R::Context,
+    ) -> Option<bool> {
+        if !Arc::ptr_eq(&root.owner, &self.owner) {
+            return None;
+        }
+        let head = self.stable_head_in(context)?;
+        let live = root.status() == RootStatus::Live;
+        self.validates_head_in(&head, context).then_some(live)
+    }
+    pub fn begin_publish_root(
+        &self,
+        snapshot: Snapshot<R>,
+        root: Pooled<Root<R>>,
+    ) -> Option<Preparation<R>> {
+        if !Arc::ptr_eq(&root.owner, &self.owner) || root.state() != RootState::Prepared {
+            return None;
+        }
+        let preparation = self.begin_publish(snapshot, share(&root.target)?)?;
+        self.attach_root_effect(preparation, root, RootState::Prepared, RootState::Live)
+    }
+    pub fn begin_cancel_root(
+        &self,
+        snapshot: Snapshot<R>,
+        root: Pooled<Root<R>>,
+    ) -> Option<Preparation<R>> {
+        let expected = root.state();
+        let proposed = match expected {
+            RootState::Prepared => RootState::Retired,
+            _ => return None,
+        };
+        let phase = snapshot.phase();
+        let preparation = self.begin_prepare(snapshot, phase, None)?;
+        self.attach_root_effect(preparation, root, expected, proposed)
+    }
+}
+
+#[cfg(test)]
+#[path = "root_publication_tests.rs"]
+mod root_publication_tests;
