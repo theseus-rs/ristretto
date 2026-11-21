@@ -1,3 +1,8 @@
+#[path = "frame_roots.rs"]
+mod frame_roots;
+#[path = "reference_liveness.rs"]
+mod reference_liveness;
+
 #[path = "continuation.rs"]
 mod continuation;
 
@@ -173,7 +178,7 @@ impl Compiler {
         self.compile_mode(class_file, method, symbols, false)
     }
 
-    /// Restriction for the explicit scalar continuation capability. References,
+    /// Restriction for explicit scalar/reference continuation capabilities. Heap access,
     /// calls, exception handlers, synchronization and trapping integer division
     /// remain excluded until their owning request protocols are implemented.
     #[cfg(feature = "experimental-reference-dispatch")]
@@ -189,15 +194,8 @@ impl Compiler {
         let Ok(descriptor) = class.constant_pool.try_get_utf8(method.descriptor_index) else {
             return Some("experimental_descriptor");
         };
-        let Ok((parameters, result)) = FieldType::parse_method_descriptor(descriptor) else {
+        if FieldType::parse_method_descriptor(descriptor).is_err() {
             return Some("experimental_descriptor");
-        };
-        if parameters
-            .iter()
-            .chain(result.iter())
-            .any(|kind| !matches!(kind, FieldType::Base(_)))
-        {
-            return Some("experimental_reference_descriptor");
         }
         let Some((code, handlers)) = method.attributes.iter().find_map(|attribute| {
             if let Attribute::Code {
@@ -234,6 +232,24 @@ impl Compiler {
                         | Instruction::If_icmple(_)
                         | Instruction::Goto(_)
                         | Instruction::Goto_w(_)
+                        | Instruction::Aconst_null
+                        | Instruction::Aload(_)
+                        | Instruction::Aload_w(_)
+                        | Instruction::Aload_0
+                        | Instruction::Aload_1
+                        | Instruction::Aload_2
+                        | Instruction::Aload_3
+                        | Instruction::Astore(_)
+                        | Instruction::Astore_w(_)
+                        | Instruction::Astore_0
+                        | Instruction::Astore_1
+                        | Instruction::Astore_2
+                        | Instruction::Astore_3
+                        | Instruction::Areturn
+                        | Instruction::Ifnull(_)
+                        | Instruction::Ifnonnull(_)
+                        | Instruction::If_acmpeq(_)
+                        | Instruction::If_acmpne(_)
                 ))
         }) {
             return Some("experimental_unqualified_instruction");
@@ -291,7 +307,7 @@ impl Compiler {
         let constant_pool = &class_file.constant_pool;
         let method_descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
         let (parameter_types, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
-        let argument_types = std::iter::once(crate::jit_value::PTR)
+        let argument_types: Vec<i8> = std::iter::once(crate::jit_value::PTR)
             .take(usize::from(
                 !method.access_flags.contains(MethodAccessFlags::STATIC),
             ))
@@ -349,6 +365,35 @@ impl Compiler {
         // and returns.
         let exception_block = function_builder.create_block();
 
+        let requires_context = requests_only
+            && (argument_types.contains(&crate::jit_value::PTR)
+                || !locals.reference_indices().is_empty()
+                || instructions.iter().any(|instruction| {
+                    matches!(instruction, Instruction::Aconst_null | Instruction::Areturn)
+                }));
+        let continuation_pointer = context_pointer;
+        let context_pointer = if requests_only {
+            function_builder.ins().load(
+                types::I64,
+                MemFlagsData::trusted(),
+                continuation_pointer,
+                16,
+            )
+        } else {
+            context_pointer
+        };
+        let mut frame_roots = if requires_context {
+            Some(frame_roots::FrameRoots::new(
+                &mut function_builder,
+                &locals,
+                max_stack,
+                instructions,
+                exception_table,
+                exception_block,
+            )?)
+        } else {
+            None
+        };
         let continuation = if requests_only {
             Some(continuation::Continuation::new(
                 &mut function_builder,
@@ -356,6 +401,8 @@ impl Compiler {
                 instructions,
                 &locals,
                 max_stack,
+                &reference_parameters,
+                requires_context,
             )?)
         } else {
             None
@@ -375,7 +422,7 @@ impl Compiler {
         )?;
         if let Some(continuation) = &continuation {
             function_builder.switch_to_block(dispatch);
-            continuation.entry(&mut function_builder, context_pointer, block_zero)?;
+            continuation.entry(&mut function_builder, continuation_pointer, block_zero)?;
         }
         function_builder.switch_to_block(block_zero);
 
@@ -404,6 +451,20 @@ impl Compiler {
                 continue;
             }
 
+            if let Some(frame_roots) = &mut frame_roots {
+                frame_roots.publish(
+                    &mut function_builder,
+                    &locals,
+                    stack
+                        .as_slice()
+                        .iter()
+                        .copied()
+                        .filter(|value| stack.is_reference(*value)),
+                    &helpers,
+                    context_pointer,
+                    program_counter,
+                )?;
+            }
             if let (Some(continuation), Some(targets)) = (&continuation, &mut continued_blocks) {
                 continuation.redirect(targets, program_counter, instruction)?;
             }
@@ -439,7 +500,14 @@ impl Compiler {
         }
 
         if let Some(continuation) = &continuation {
-            continuation.finish(&mut function_builder, context_pointer)?;
+            continuation.finish(
+                &mut function_builder,
+                continuation_pointer,
+                &locals,
+                frame_roots.as_mut(),
+                &helpers,
+                context_pointer,
+            )?;
         }
 
         // Emit the shared exception return block body: write NONE to the return pointer

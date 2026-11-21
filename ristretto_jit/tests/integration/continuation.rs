@@ -4,7 +4,7 @@ use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, Method, Met
 use ristretto_jit::{Compiler, Error, ExecutionStep, Function, Result, Value};
 use std::num::NonZeroU32;
 
-fn fixture(descriptor: &str, code: &[Instruction]) -> Result<ClassFile<'static>> {
+pub(super) fn fixture(descriptor: &str, code: &[Instruction]) -> Result<ClassFile<'static>> {
     let mut pool = ConstantPool::new();
     let this_class = pool.add_class("ScalarContinuation")?;
     let super_class = pool.add_class("java/lang/Object")?;
@@ -219,7 +219,7 @@ fn ordinary_dispatch_and_unsupported_capabilities_stay_separate() -> Result<()> 
     )?;
     assert_eq!(
         Compiler::request_rejection_reason(&reference, &reference.methods[0]),
-        Some("experimental_reference_descriptor")
+        None
     );
     Ok(())
 }

@@ -90,7 +90,7 @@ mod type_stack;
 
 /// Exports functions for appending parameters to blocks and retrieving the block structure
 #[cfg(not(target_family = "wasm"))]
-pub(crate) use blocks::{append_block_params, get_blocks};
+pub(crate) use blocks::{append_block_params, falls_through, get_blocks};
 
 /// Exports traits for analyzing control flow of instructions
 #[cfg(not(target_family = "wasm"))]
