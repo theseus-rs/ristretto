@@ -5,6 +5,64 @@ use ristretto_classfile::attributes::{Instruction, LookupSwitch, TableSwitch};
 use ristretto_jit::{Result, Value};
 
 #[test]
+fn backwards_reached_block_discovers_its_successors() -> Result<()> {
+    let instructions = vec![
+        Instruction::Goto(10),   // 0 -> 10
+        Instruction::Dup,        // 3: only reachable from the later goto
+        Instruction::Ifnull(10), // 4 -> 14
+        Instruction::Pop,        // 7
+        Instruction::Iconst_1,   // 8
+        Instruction::Ireturn,    // 9
+        Instruction::Aload_0,    // 10
+        Instruction::Goto(-8),   // 11 -> 3
+        Instruction::Pop,        // 14
+        Instruction::Iconst_2,   // 15
+        Instruction::Ireturn,    // 16
+    ];
+    let function = create_function("(Ljava/lang/Object;)I", &instructions)?;
+    for (reference, expected) in [(0, 2), (17, 1)] {
+        assert_eq!(
+            function.execute(&[Value::Ptr(reference)], std::ptr::null())?,
+            Some(Value::I32(expected))
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn branches_must_target_an_instruction_byte_boundary() {
+    let instructions = [
+        Instruction::Iload_0,
+        Instruction::Goto(1),
+        Instruction::Ireturn,
+    ];
+    assert!(matches!(
+        create_internal_function("(I)I", &instructions, 1),
+        Err(ristretto_jit::Error::InvalidBlockAddress(2))
+    ));
+}
+
+#[test]
+fn fallthrough_cannot_merge_a_reference_with_a_long() {
+    // Deliberately invalid bytecode: both values lower to I64, but their Java
+    // kinds must disagree at BCI 9. Bypass the class-file stack analyzer.
+    let instructions = vec![
+        Instruction::Iload_0,     // 0
+        Instruction::Ifeq(7),     // 1 -> 8
+        Instruction::Lconst_0,    // 4
+        Instruction::Goto(4),     // 5 -> 9
+        Instruction::Aconst_null, // 8
+        Instruction::Pop,         // 9
+        Instruction::Return,      // 10
+    ];
+    assert!(matches!(
+        create_internal_function("(I)V", &instructions, 2),
+        Err(ristretto_jit::Error::InternalError(message))
+            if message.contains("Invalid stack state for address 9")
+    ));
+}
+
+#[test]
 fn ifeq() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
@@ -369,7 +427,7 @@ fn goto_w() -> Result<()> {
 }
 
 #[test]
-fn jsr_and_ret() -> Result<()> {
+fn legacy_subroutines_are_rejected_without_return_address_analysis() {
     // Internal lowering stores the return address as an integer.
     let instructions = vec![
         Instruction::Jsr(4),
@@ -378,14 +436,14 @@ fn jsr_and_ret() -> Result<()> {
         Instruction::Iconst_2,
         Instruction::Ret(0),
     ];
-    let function = create_internal_function("()I", &instructions, 1)?;
-    let value = function.execute(&[], std::ptr::null())?.expect("value");
-    assert_eq!(value, Value::I32(2));
-    Ok(())
+    assert!(matches!(
+        create_internal_function("()I", &instructions, 1),
+        Err(ristretto_jit::Error::UnsupportedInstruction(_))
+    ));
 }
 
 #[test]
-fn jsr_w_and_ret_w() -> Result<()> {
+fn wide_legacy_subroutines_are_rejected_without_return_address_analysis() {
     // Internal lowering stores the return address as an integer.
     let instructions = vec![
         Instruction::Jsr_w(6),
@@ -394,10 +452,10 @@ fn jsr_w_and_ret_w() -> Result<()> {
         Instruction::Iconst_2,
         Instruction::Ret_w(0),
     ];
-    let function = create_internal_function("()I", &instructions, 1)?;
-    let value = function.execute(&[], std::ptr::null())?.expect("value");
-    assert_eq!(value, Value::I32(2));
-    Ok(())
+    assert!(matches!(
+        create_internal_function("()I", &instructions, 1),
+        Err(ristretto_jit::Error::UnsupportedInstruction(_))
+    ));
 }
 
 #[test]

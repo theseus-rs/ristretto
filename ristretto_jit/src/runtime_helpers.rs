@@ -11,6 +11,7 @@ use cranelift::prelude::*;
 /// as symbols with the JIT module. They allow JIT-compiled code to interact with
 /// the GC-managed heap for array allocation and element access.
 pub(crate) struct RuntimeHelpers {
+    pub publish_frame_roots: FuncRef,
     // Array allocation: (gc_ptr: ptr, count: i32) -> i64
     pub new_bool_array: FuncRef,
     pub new_byte_array: FuncRef,
@@ -315,6 +316,11 @@ impl RuntimeHelpers {
             &[types::I32],
         )?;
         let athrow = declare("jit_athrow", &[ptr_type, types::I32, types::I64], &[])?;
+        let publish_frame_roots = declare(
+            "jit_publish_frame_roots",
+            &[ptr_type, ptr_type, types::I32],
+            &[types::I32],
+        )?;
         let pending_exception = declare("jit_pending_exception", &[ptr_type], &[types::I64])?;
         let take_pending_exception =
             declare("jit_take_pending_exception", &[ptr_type], &[types::I64])?;
@@ -326,6 +332,7 @@ impl RuntimeHelpers {
         let throw_npe = declare("jit_throw_npe", &[ptr_type, types::I32], &[])?;
 
         Ok(Self {
+            publish_frame_roots,
             new_bool_array,
             new_byte_array,
             new_char_array,

@@ -6,6 +6,7 @@ use crate::runtime_helpers::RuntimeHelpers;
 use crate::{Result, jit_value};
 use cranelift::codegen::ir::{MemFlagsData, Value};
 use cranelift::prelude::{FunctionBuilder, InstBuilder, types};
+use ristretto_classfile::{BaseType, FieldType};
 
 /// # References
 /// - [JVMS §6.5.iconst_i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i)
@@ -459,8 +460,27 @@ pub(crate) fn ireturn(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
     return_pointer: Value,
+    return_type: Option<&FieldType>,
 ) -> Result<()> {
     let value = stack.pop_int(function_builder)?;
+    // A valid ireturn stack value is always an int. The method descriptor
+    // determines the implicit narrowing before the caller receives that value.
+    let value = match return_type {
+        Some(FieldType::Base(BaseType::Boolean)) => function_builder.ins().band_imm_u(value, 1),
+        Some(FieldType::Base(BaseType::Byte)) => {
+            let value = function_builder.ins().ireduce(types::I8, value);
+            function_builder.ins().sextend(types::I32, value)
+        }
+        Some(FieldType::Base(BaseType::Char)) => {
+            let value = function_builder.ins().ireduce(types::I16, value);
+            function_builder.ins().uextend(types::I32, value)
+        }
+        Some(FieldType::Base(BaseType::Short)) => {
+            let value = function_builder.ins().ireduce(types::I16, value);
+            function_builder.ins().sextend(types::I32, value)
+        }
+        _ => value,
+    };
     let value = function_builder.ins().sextend(types::I64, value);
     let discriminate = i64::from(jit_value::I32);
     let discriminate = function_builder.ins().iconst(types::I8, discriminate);
