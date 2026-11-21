@@ -10,6 +10,7 @@ import tempfile
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", help="Rust target triple for the external consumer build")
     parser.add_argument("features", nargs="+", metavar="PACKAGE/FEATURE")
     args = parser.parse_args()
     metadata = json.loads(subprocess.check_output([
@@ -57,8 +58,13 @@ def main():
         # Keep the overall workspace's pinned versions wherever their constraints allow them.
         (root / "Cargo.lock").write_bytes((Path(metadata["workspace_root"]) / "Cargo.lock").read_bytes())
         subprocess.run(["cargo", "update", "--workspace", "--manifest-path", root / "Cargo.toml", "--offline"], check=True)
-        subprocess.run(["cargo", "build", "--manifest-path", root / "Cargo.toml", "--locked",
-                        "--target-dir", Path(metadata["target_directory"]) / "packaged-features"], check=True)
+        # Keep native and cross-target external consumers in separate absolute targets.
+        suffix = "packaged-features" if args.target is None else "packaged-features-" + args.target
+        build = ["cargo", "build", "--manifest-path", root / "Cargo.toml", "--locked",
+                 "--target-dir", (Path(metadata["target_directory"]) / suffix).resolve()]
+        if args.target is not None:
+            build.extend(["--target", args.target])
+        subprocess.run(build, check=True)
 
 
 if __name__ == "__main__":
