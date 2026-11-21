@@ -79,6 +79,28 @@ pub(super) struct EdgeRegistry {
     slots: Box<[OptionalLink<EdgeSlot>]>,
     source_degree: Option<std::num::NonZeroUsize>,
 }
+pub(super) struct EdgeEffect {
+    slot: Pooled<EdgeSlot>,
+    expected: Pooled<EdgeMembership>,
+    pub(super) proposed: Pooled<EdgeMembership>,
+}
+impl EdgeEffect {
+    pub(super) fn apply(&self, proposed: Pooled<EdgeMembership>) {
+        #[cfg(test)]
+        {
+            let hook = self
+                .slot
+                .before_effect
+                .lock()
+                .expect("unpoisoned test hook")
+                .take();
+            if let Some(hook) = hook {
+                hook();
+            }
+        }
+        self.slot.state.compare(&self.expected, proposed);
+    }
+}
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EdgePrepareError {
     InvalidSlot,
@@ -290,3 +312,7 @@ impl<R: Record> Catalog<R> {
 #[cfg(test)]
 #[path = "edge_backing_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "edge_control_tests.rs"]
+mod control_tests;

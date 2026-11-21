@@ -23,7 +23,7 @@ mod edges;
 mod phase_ops;
 #[path = "roots.rs"]
 mod roots;
-use edges::EdgeRegistry;
+use edges::{EdgeEffect, EdgeRegistry};
 pub(crate) use roots::root_barrier_plan;
 pub use roots::{Root, RootCreation, RootPrepareError, RootStatus, RootToken};
 use roots::{RootEffect, RootRegistry};
@@ -136,6 +136,8 @@ struct Effect<R: Record = ()> {
 }
 struct Operation<R: Record = ()> {
     effect: Option<Effect<R>>,
+    secondary_effect: Option<Effect<R>>,
+    edge: Option<EdgeEffect>,
     root: Option<RootEffect<R>>,
 
     successor: Pooled<Control<R>>,
@@ -207,6 +209,8 @@ pub struct Preparation<R: Record = ()> {
     committed_phase: Phase,
     cancelled_phase: Phase,
     effect: Option<Effect<R>>,
+    secondary_effect: Option<Effect<R>>,
+    edge: Option<EdgeEffect>,
     root: Option<RootEffect<R>>,
 
     successor: Option<Pooled<Control<R>>>,
@@ -246,7 +250,11 @@ impl<R: Record> Preparation<R> {
                 }
                 Err(_) => return Ok(None),
             };
-            if self.effect.is_none() && self.root.is_none() {
+            if self.effect.is_none()
+                && self.secondary_effect.is_none()
+                && self.edge.is_none()
+                && self.root.is_none()
+            {
                 return Ok(Some(Attempt {
                     owner: self.owner.clone(),
                     expected: self.expected.take().expect("unconsumed phase preparation"),
@@ -258,6 +266,8 @@ impl<R: Record> Preparation<R> {
         }
         let operation = self.operation.take().unwrap_or_else(|| Operation {
             effect: self.effect.take(),
+            secondary_effect: self.secondary_effect.take(),
+            edge: self.edge.take(),
             root: self.root.take(),
 
             successor: self.successor.take().expect("prepared phase outcomes"),
@@ -696,6 +706,8 @@ impl<R: Record> Catalog<R> {
             committed_phase: phase,
             cancelled_phase: cancelled,
             effect,
+            secondary_effect: None,
+            edge: None,
             root: None,
             successor: None,
             operation: None,
@@ -799,6 +811,10 @@ impl<R: Record> Catalog<R> {
     fn finish(&self, busy: &Pooled<Control<R>>, context: &R::Context) {
         self.finish_at(busy, context, || {}, || {}, || {}, || {});
     }
+    #[expect(
+        clippy::too_many_lines,
+        reason = "keep all fallible acquisitions before the shared commit/effect certificate sequence"
+    )]
     fn finish_at(
         &self,
         busy: &Pooled<Control<R>>,
@@ -836,6 +852,28 @@ impl<R: Record> Catalog<R> {
             } else {
                 None
             }
+        } else {
+            None
+        };
+        let secondary_proposed = if let Some(effect) = &operation.secondary_effect
+            && completed.load(Ordering::Acquire) == UNDECIDED
+            && operation.decision.load(Ordering::Acquire) != CANCEL
+        {
+            let Some(proposed) = share(&effect.proposed) else {
+                return;
+            };
+            Some(proposed)
+        } else {
+            None
+        };
+        let edge_proposed = if let Some(effect) = &operation.edge
+            && completed.load(Ordering::Acquire) == UNDECIDED
+            && operation.decision.load(Ordering::Acquire) != CANCEL
+        {
+            let Some(proposed) = share(&effect.proposed) else {
+                return;
+            };
+            Some(proposed)
         } else {
             None
         };
@@ -885,11 +923,28 @@ impl<R: Record> Catalog<R> {
             effect.cell.state.compare(&effect.expected, proposed);
         }
         after_effect();
+        // Only already-tracing owner barriers use the second effect. It never
+        // publishes a Prepared record and therefore needs no private-graph guard.
+        if let Some(effect) = &operation.secondary_effect
+            && decision == COMMIT
+            && completed.load(Ordering::Acquire) == UNDECIDED
+        {
+            effect.cell.state.compare(
+                &effect.expected,
+                secondary_proposed.expect("secondary effect prepared before commit decision"),
+            );
+        }
         if let Some(root) = &operation.root
             && decision == COMMIT
             && completed.load(Ordering::Acquire) == UNDECIDED
         {
             root.apply();
+        }
+        if let Some(edge) = &operation.edge
+            && decision == COMMIT
+            && completed.load(Ordering::Acquire) == UNDECIDED
+        {
+            edge.apply(edge_proposed.expect("edge effect prepared before commit decision"));
         }
         if decision == COMMIT
             && let Some(guard) = &entered
