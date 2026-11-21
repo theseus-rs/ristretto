@@ -314,7 +314,7 @@ async fn native_root_pressure_errors_release_the_invocation()
 }
 
 #[tokio::test]
-async fn preparation_rejects_fieldless_scalar_class_initialization()
+async fn native_entry_drives_fieldless_scalar_class_initialization()
 -> Result<(), Box<dyn std::error::Error>> {
     let file = ClassFile::from_bytes(include_bytes!(
         "fixtures/canonical/CanonicalCompiledInitialization.class"
@@ -339,7 +339,82 @@ async fn preparation_rejects_fieldless_scalar_class_initialization()
             .result,
         17
     );
-    assert!(matches!(program.compile(), Err(Error::Unsupported(message))
-        if message == "native class initialization is not connected"));
+    let report = program
+        .compile()?
+        .run(
+            "CanonicalCompiledInitialization",
+            "run",
+            17,
+            configuration(),
+            CompiledLimits::default(),
+        )
+        .await?;
+    assert_eq!(report.result, 17);
+    assert_eq!(report.class_initializer_calls, 1);
+    assert_eq!(report.compiled_entries, 2);
+    assert_eq!(report.entry_initialization.calls, 1);
+    assert_eq!(report.static_storage_allocations, 0);
+    assert_eq!(report.payload_bytes_after_cleanup, 0);
+    assert_eq!(report.catalog_bytes_after_drop, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn shared_native_context_rejects_foreign_program_and_survives_limit_and_cancel()
+-> Result<(), Box<dyn std::error::Error>> {
+    use std::future::Future;
+    use std::task::{Context, Waker};
+    let program = program()?;
+    let foreign = Program::from_classfiles([ClassFile::from_bytes(include_bytes!(
+        "fixtures/canonical/CanonicalCompiledCalls.class"
+    ))?])?;
+    let compiled = program.compile()?;
+    let foreign_compiled = foreign.compile()?;
+    program
+        .with_heap(configuration(), 1024 * 1024, 100_000, async |heap| {
+            assert!(matches!(
+                foreign_compiled.attach(heap, CompiledLimits::default()),
+                Err(Error::Boundary(
+                    "compiled program belongs to a different heap program"
+                ))
+            ));
+            let mut limited = compiled.attach(
+                heap,
+                CompiledLimits {
+                    native_slices: 1,
+                    ..CompiledLimits::default()
+                },
+            )?;
+            assert!(matches!(
+                limited.invoke("CanonicalCompiledCalls", "run", 9).await,
+                Err(Error::Limit("native slice"))
+            ));
+            assert_eq!(
+                limited
+                    .invoke("CanonicalCompiledCalls", "depth", 0)
+                    .await?
+                    .result,
+                0
+            );
+            drop(limited);
+            let mut thread = compiled.attach(heap, CompiledLimits::default())?;
+            let mut invocation = Box::pin(thread.invoke("CanonicalCompiledCalls", "run", 64));
+            assert!(
+                invocation
+                    .as_mut()
+                    .poll(&mut Context::from_waker(Waker::noop()))
+                    .is_pending()
+            );
+            drop(invocation);
+            assert_eq!(
+                thread
+                    .invoke("CanonicalCompiledCalls", "run", 9)
+                    .await?
+                    .result,
+                82
+            );
+            Ok(())
+        })
+        .await?;
     Ok(())
 }

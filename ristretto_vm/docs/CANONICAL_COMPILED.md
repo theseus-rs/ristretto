@@ -24,9 +24,13 @@ The compiler protocol can be broader than this consumer. The effective capabilit
 is the intersection of verifier, canonical admission and compiler support. No
 legacy context, interpreter fallback or payload pointer is linked into generated
 code. Object/field requests use the same typed Execution helpers as the interpreter.
-Programs containing static storage or any class initializer are rejected before
-code generation, including a fieldless scalar initializer. Later consumer commits
-connect static initialization. Checked casts use the shared closed-layout target
+Static access and initialization use the same registry-bound prepare/finish and
+prepared field helpers as interpreted execution. Initializer activations live on
+the explicit bounded frame stack. Each owns its initialization lease and the
+suspended action; static-store values remain owned across preparation and waits.
+Errors unwind leases from the inner initializer outward, and cancellation poisons
+only unfinished leases owned by that logical Java context. No interpreter execution
+is called by native initialization. Checked casts use the shared closed-layout target
 and preserve null/identity; 85 native HotSpot rows cover object and array casts and
 fault ordering. Unsupported interfaces, multidimensional targets and instanceof
 remain excluded at admission. Reference-array requests use the shared
@@ -49,3 +53,22 @@ oracle uses `-Xverify:all` and emits ten rows in `compiled-calls-oracle.tsv`; it
 main/string/output helpers are excluded from the admitted classes. The tests check
 HotSpot and interpreter parity, real native entry/backedges, frame/slice errors,
 cancellation and 1,025 live Java frames on the ordinary executor stack.
+
+`compiled.attach(&heap, limits)` creates a reusable `CompiledThread` for exactly
+the same admitted Program. `invoke(class, method, argument).await` resets call-local
+limits and counters; static roots persist until the heap closes. Separate local
+contexts can await the same initializer while an unrelated context allocates and
+collects. A foreign Program is rejected before participant registration. These
+native contexts retain their local `Rc` frame tables and are not `Send`.
+
+Dedicated `run` closes its static registry before cleanup. A fieldless initializer
+still executes natively. Initialization work is included in the native entry/slice
+counters; the instruction count (including its initialization subset) is unavailable
+when `Report::instruction_count_available` is false. Shared `Invocation` retains its
+existing result/allocation/helper contract. The shared initializer outcome authority
+preserves Java failure state across repeated entries.
+
+The native static tests replay the persistent Java oracle, nested initialization,
+first/subsequent failure, same-owner cycles, waiting writes during unrelated GC,
+owner/waiter cancellation, final-write admission, typed arrays and complete heap
+teardown. Separate tests cover foreign-heap attachment, limits and context reuse.
