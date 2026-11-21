@@ -92,3 +92,7 @@ mod array_requests;
 #[cfg(feature = "experimental-reference-dispatch")]
 #[path = "integration/reference_array_requests.rs"]
 mod reference_array_requests;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/cast_requests.rs"]
+mod cast_requests;

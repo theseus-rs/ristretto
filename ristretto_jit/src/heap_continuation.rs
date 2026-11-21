@@ -12,6 +12,7 @@ pub(crate) enum HeapRequest {
     New(u16),
     Get(u16),
     Put(u16),
+    CheckCast(u16),
 }
 impl HeapRequest {
     pub fn from_instruction(instruction: &Instruction) -> Option<Self> {
@@ -19,6 +20,7 @@ impl HeapRequest {
             Instruction::New(i) => Self::New(i),
             Instruction::Getfield(i) => Self::Get(i),
             Instruction::Putfield(i) => Self::Put(i),
+            Instruction::Checkcast(i) => Self::CheckCast(i),
             _ => return None,
         })
     }
@@ -37,6 +39,18 @@ impl HeapRequest {
                     ));
                 }
                 Ok(0)
+            }
+            Self::CheckCast(index) => {
+                let target = pool.try_get_class(index)?;
+                if target.as_bytes().starts_with(b"[[") {
+                    return Err(crate::Error::UnsupportedMethod(
+                        "multidimensional cast target is not admitted".to_owned(),
+                    ));
+                }
+                if target.as_bytes().starts_with(b"[") {
+                    FieldType::parse_java_str(target)?;
+                }
+                Ok(1)
             }
             Self::Get(index) => {
                 Self::field(pool, index)?;
@@ -64,6 +78,11 @@ impl HeapRequest {
         ));
         let (tag, index, result) = match self {
             Self::New(index) => (6, index, None),
+            Self::CheckCast(index) => {
+                let root = stack.pop_object(builder)?;
+                builder.ins().stack_store(types::I64, root, arguments, 0);
+                (14, index, None)
+            }
             Self::Get(index) => {
                 let root = stack.pop_object(builder)?;
                 builder.ins().stack_store(types::I64, root, arguments, 0);
@@ -80,7 +99,7 @@ impl HeapRequest {
         let bits = continuation.emit(builder, stack, arguments, count, bci, (tag, index))?;
         if let Some(kind) = result {
             push_result(builder, stack, &kind, bits)?;
-        } else if matches!(self, Self::New(_)) {
+        } else if matches!(self, Self::New(_) | Self::CheckCast(_)) {
             stack.push_object(builder, bits)?;
         }
         Ok(())
