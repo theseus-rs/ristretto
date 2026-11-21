@@ -3,7 +3,7 @@
 The `experimental-reference-dispatch` feature exposes `Compiler::compile_requests`.
 The capability includes scalar/reference control flow, instance entry, Java calls,
 object allocation, instance fields and one-dimensional array operations. Calls and heap work
-return explicit requests to the embedding. Static fields, handlers,
+return explicit requests to the embedding. Handlers,
 synchronization and integer division/remainder remain excluded. The embedding must verify
 bytecode before compilation. Unsupported descriptors/opcodes fail closed.
 
@@ -82,7 +82,7 @@ returns the exact class constant-pool index; field requests retain receiver/valu
 and the exact field index/BCI. Allocation and field helpers are not linked. The embedding
 checks class admission, access, initialization, null/type rules and quota before successful
 completion, retaining every result owner before exposing its token. A fault drops the
-parked activation. Static fields and native exception handlers remain excluded.
+parked activation. Native exception handlers remain excluded.
 
 Primitive `newarray`, length, loads and stores use the same request cells for all eight
 primitive kinds. Signed indices and lengths are sign-extended; float/double cells preserve
@@ -102,3 +102,11 @@ code never inspects payload pointers or performs a synchronous array access.
 index. The embedding resolves the target and checks assignability before returning that
 same identity, or cancels the activation with a type fault. The compiler imports no
 synchronous cast helper. `instanceof` and multidimensional cast targets remain excluded.
+
+Static reads/writes return `FieldAccess::GetStatic` (zero cells) or `PutStatic` (one
+value cell). Before completion, the embedding resolves the declaring class, enforces
+access/final/type rules and finishes class initialization. The parent stays parked while
+initializer activations execute through the same request-only protocol; the host owns
+initializer state, recursion/wait identity, errors and cancellation. Reference values
+remain published throughout that handoff. The compiler embeds no static-storage pointer
+and does not call any interpreter or synchronous static helper.
