@@ -122,28 +122,29 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_generate_class() -> Result<()> {
-        let bytes = generate_class()?;
-        let class_file = ClassFile::from_bytes(&bytes)?;
+    fn test_generate_class() {
+        let bytes = generate_class().unwrap();
+        let class_file = ClassFile::from_bytes(&bytes).unwrap();
 
-        class_file.verify()?;
+        class_file.verify().unwrap();
         assert_eq!(JAVA_21, class_file.version);
-        assert_eq!("HelloWorld", class_file.class_name()?);
+        assert_eq!("HelloWorld", class_file.class_name().unwrap());
         assert!(class_file.to_string().contains("Hello, World!"));
         let method_names = class_file
             .methods
             .iter()
             .map(|method| class_file.constant_pool.try_get_utf8(method.name_index))
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
         assert_eq!(vec![CONSTRUCTOR_NAME, "main"], method_names);
         let main = class_file.methods.last().expect("main method");
-        let Attribute::Code {
+        let Some(Attribute::Code {
             code, attributes, ..
-        } = &main.attributes[0]
+        }) = main.attributes.first()
         else {
             panic!("main must have code");
         };
-        let Attribute::LineNumberTable { line_numbers, .. } = &attributes[0] else {
+        let Some(Attribute::LineNumberTable { line_numbers, .. }) = attributes.first() else {
             panic!("main must have line numbers");
         };
         let source_lines = Instruction::with_offsets(code)
@@ -157,6 +158,5 @@ mod test {
             })
             .collect::<Vec<_>>();
         assert_eq!(vec![(0, 3), (3, 3), (5, 3), (8, 4)], source_lines);
-        Ok(())
     }
 }

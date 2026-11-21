@@ -15,7 +15,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 #[cfg(not(target_family = "wasm"))]
-use filetime::{FileTime, set_file_mtime};
+use filetime::FileTime;
+#[cfg(not(target_family = "wasm"))]
+use std::fs::{FileTimes, set_times};
 #[cfg(not(target_family = "wasm"))]
 use sysinfo::Disks;
 
@@ -536,7 +538,7 @@ pub fn set_last_modified_time<T: Thread + 'static>(
     #[cfg(not(target_family = "wasm"))]
     let modified = {
         let mtime = FileTime::from_unix_time(seconds, nanoseconds);
-        set_file_mtime(&path, mtime).is_ok()
+        set_times(&path, FileTimes::new().set_modified(mtime.into())).is_ok()
     };
     #[cfg(target_family = "wasm")]
     let modified = {

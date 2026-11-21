@@ -25,11 +25,10 @@ mod test {
     use super::*;
 
     #[tokio::test(flavor = "current_thread")]
-    async fn test_load_class() -> Result<()> {
-        let class = load_class().await?;
+    async fn test_load_class() {
+        let class = load_class().await.unwrap();
 
         assert_eq!("HelloWorld", class.name());
         assert!(class.main_method().is_some());
-        Ok(())
     }
 }

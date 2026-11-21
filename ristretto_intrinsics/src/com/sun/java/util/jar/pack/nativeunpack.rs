@@ -174,7 +174,7 @@ fn modification_time(date_time: Option<zip::DateTime>) -> i32 {
         return 0;
     };
     date_time
-        .to_zoned(jiff::tz::TimeZone::system())
+        .to_zoned_datetime(jiff::tz::TimeZone::system())
         .ok()
         .and_then(|date_time| i32::try_from(date_time.timestamp().as_second()).ok())
         .unwrap_or_default()

@@ -131,7 +131,7 @@ pub fn get_process_pids_0<T: Thread + 'static>(
                 let pid = pid.as_u32();
                 let pid = i64::from(pid);
                 *pid_slot = pid;
-                let parent = process.parent().map(Pid::as_u32).unwrap_or_default();
+                let parent = process.parent().map_or_default(Pid::as_u32);
                 let parent = i64::from(parent);
                 *ppid_slot = parent;
                 let start_time = i64::try_from(process.start_time()).unwrap_or_default() * 1000;
@@ -147,7 +147,7 @@ pub fn get_process_pids_0<T: Thread + 'static>(
                     let pid = pid.as_u32();
                     let pid = i64::from(pid);
                     *bounds::index_mut(pids, 0, "ProcessHandleImpl pids")? = pid;
-                    let parent = process.parent().map(Pid::as_u32).unwrap_or_default();
+                    let parent = process.parent().map_or_default(Pid::as_u32);
                     let parent = i64::from(parent);
                     *bounds::index_mut(ppids, 0, "ProcessHandleImpl ppids")? = parent;
                     let start_time = i64::try_from(process.start_time()).unwrap_or_default() * 1000;

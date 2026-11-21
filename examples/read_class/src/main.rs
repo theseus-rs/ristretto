@@ -14,10 +14,10 @@ fn main() -> Result<()> {
 }
 
 fn read_class(args: &[String]) -> Result<ClassFile<'static>> {
-    if args.len() != 2 {
-        bail!("Usage: {} <file_name>", args[0]);
-    }
-    let file_name = &args[1];
+    let [_, file_name] = args else {
+        let program = args.first().map_or("read_class", String::as_str);
+        bail!("Usage: {program} <file_name>");
+    };
     let bytes = fs::read(file_name)?;
     let class_file = ClassFile::from_bytes(&bytes)?;
     class_file.verify()?;
@@ -30,21 +30,21 @@ mod test {
     use ristretto_classfile::CONSTRUCTOR_NAME;
 
     #[test]
-    fn test_read_class() -> Result<()> {
+    fn test_read_class() {
         let args = vec![
             "read_class".to_string(),
             "classes/HelloWorld.class".to_string(),
         ];
-        let class_file = read_class(&args)?;
+        let class_file = read_class(&args).unwrap();
 
-        assert_eq!("HelloWorld", class_file.class_name()?);
+        assert_eq!("HelloWorld", class_file.class_name().unwrap());
         let method_names = class_file
             .methods
             .iter()
             .map(|method| class_file.constant_pool.try_get_utf8(method.name_index))
-            .collect::<ristretto_classfile::Result<Vec<_>>>()?;
+            .collect::<ristretto_classfile::Result<Vec<_>>>()
+            .unwrap();
         assert_eq!(vec![CONSTRUCTOR_NAME, "main"], method_names);
-        Ok(())
     }
 
     #[test]

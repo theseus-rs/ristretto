@@ -60,14 +60,12 @@ fn method(
     let name_index = c.constant_pool.add_utf8(name).unwrap();
     let descriptor_index = c.constant_pool.add_utf8(desc).unwrap();
     let code_name = c.constant_pool.add_utf8("Code").unwrap();
-    let attributes = frames
-        .map(|frames| {
-            vec![Attribute::StackMapTable {
-                name_index: c.constant_pool.add_utf8("StackMapTable").unwrap(),
-                frames,
-            }]
-        })
-        .unwrap_or_default();
+    let attributes = frames.map_or_default(|frames| {
+        vec![Attribute::StackMapTable {
+            name_index: c.constant_pool.add_utf8("StackMapTable").unwrap(),
+            frames,
+        }]
+    });
     Method {
         access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
         name_index,
