@@ -683,3 +683,440 @@ fn logical_edge_count_survives_root_transfer_and_slot_reuse() {
     drop((helper, worker, runtime));
     assert_eq!(budget.used(), 0);
 }
+
+#[test]
+fn graph_cycle_destroys_payloads_and_reuses_inventory_before_runtime_drop() {
+    let gc = GarbageCollector::new();
+    let (runtime, budget, drops) = setup(&gc);
+    let mut worker = runtime.mutator().unwrap();
+    let mut helper = runtime.maintenance().unwrap();
+    for round in 0..6 {
+        let a = alloc(&mut worker, &mut helper, &drops, 2 * round);
+        let b = alloc(&mut worker, &mut helper, &drops, 2 * round + 1);
+        write(&mut worker, &mut helper, &a, Some(&b));
+        write(&mut worker, &mut helper, &b, Some(&a));
+        drop(a);
+        drop(b);
+        collect(
+            &mut helper,
+            &drops,
+            2 * (usize::try_from(round).unwrap() + 1),
+        );
+    }
+    for _ in 0..5000 {
+        helper.poll().unwrap();
+    }
+    for slot in 0..8 {
+        assert!(
+            worker.worker.discover_edge(slot).unwrap().is_none(),
+            "orphan inventory retained"
+        );
+    }
+    drop(worker);
+    drop(helper);
+    drop(runtime);
+    assert_eq!(budget.used(), 0);
+    assert_eq!(gc.managed_bytes(), 0);
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn graph_concurrent_replacement_reads_and_collection_keep_exact_payloads() {
+    struct Done<'a>(&'a AtomicUsize);
+    impl Drop for Done<'_> {
+        fn drop(&mut self) {
+            self.0.fetch_add(1, Ordering::Release);
+        }
+    }
+    let gc = GarbageCollector::new();
+    let (runtime, budget, drops) = setup(&gc);
+    let mut initial = runtime.mutator().unwrap();
+    let mut helper = runtime.maintenance().unwrap();
+    let source = alloc(&mut initial, &mut helper, &drops, 0);
+    let left = alloc(&mut initial, &mut helper, &drops, 1);
+    let right = alloc(&mut initial, &mut helper, &drops, 2);
+    write(&mut initial, &mut helper, &source, Some(&left));
+    let mut writer = runtime.mutator().unwrap();
+    let mut reader = runtime.mutator().unwrap();
+    let completed = AtomicUsize::new(0);
+    let rounds = if cfg!(miri) { 4 } else { 64 };
+    let mut helper = std::thread::scope(|scope| {
+        let completed = &completed;
+        let runtime = &runtime;
+        let source = &source;
+        let left = &left;
+        let right = &right;
+        let helping = scope.spawn(move || {
+            for n in 0..1_000_000 {
+                if completed.load(Ordering::Acquire) == 2 {
+                    return helper;
+                }
+                helper.poll().unwrap();
+                if n % 32 == 0 {
+                    std::thread::yield_now();
+                }
+            }
+            panic!("graph worker watchdog");
+        });
+        let writing = scope.spawn(move || {
+            let _done = Done(completed);
+            for n in 0..rounds {
+                let mut request = writer
+                    .write(source, 0, Some(if n % 2 == 0 { right } else { left }))
+                    .unwrap();
+                let mut finished = false;
+                for poll in 0..100_000 {
+                    if request.poll().unwrap() {
+                        finished = true;
+                        break;
+                    }
+                    if poll % 32 == 0 {
+                        std::thread::yield_now();
+                    }
+                }
+                assert!(finished, "concurrent graph write did not settle");
+            }
+        });
+        let reading = scope.spawn(move || {
+            let _done = Done(completed);
+            for _ in 0..rounds {
+                let mut request = reader.child::<Value, Value>(source, 0).unwrap();
+                let mut finished = false;
+                for poll in 0..100_000 {
+                    if let Some(value) = request.poll().unwrap() {
+                        let GraphReadValue::Root(root) = value else {
+                            panic!("nonnull edge read as null");
+                        };
+                        assert!([1, 2].contains(&runtime.borrow(&root).unwrap().identity));
+                        finished = true;
+                        break;
+                    }
+                    if poll % 32 == 0 {
+                        std::thread::yield_now();
+                    }
+                }
+                assert!(finished, "concurrent graph read did not settle");
+            }
+        });
+        writing.join().unwrap();
+        reading.join().unwrap();
+        helping.join().unwrap()
+    });
+    assert_eq!(completed.load(Ordering::Acquire), 2);
+    assert_eq!(drops.load(Ordering::Relaxed), 0);
+    drop(source);
+    drop(left);
+    drop(right);
+    collect(&mut helper, &drops, 3);
+    drop(initial);
+    drop(helper);
+    drop(runtime);
+    assert_eq!(budget.used(), 0);
+    assert_eq!(gc.managed_bytes(), 0);
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn graph_stopped_allocation_prefix_does_not_hold_unrelated_cycles() {
+    for prefix in [0, 5, 12, 20, 30] {
+        let gc = GarbageCollector::new();
+        let (runtime, budget, drops) = setup(&gc);
+        let stopped_drops = Arc::new(AtomicUsize::new(0));
+        let mut stopped = runtime.mutator().unwrap();
+        let mut active = runtime.mutator().unwrap();
+        let mut helper = runtime.maintenance().unwrap();
+        std::thread::scope(|scope| {
+            let (ready_send, ready_receive) = std::sync::mpsc::sync_channel(0);
+            let (release_send, release_receive) = std::sync::mpsc::sync_channel(0);
+            let stopped_drops = stopped_drops.clone();
+            let waiting = scope.spawn(move || {
+                let mut request = stopped
+                    .allocate(Value {
+                        identity: 99,
+                        drops: stopped_drops,
+                    })
+                    .unwrap();
+                let mut result = None;
+                for _ in 0..prefix {
+                    result = request.poll().unwrap();
+                    if result.is_some() {
+                        break;
+                    }
+                }
+                ready_send.send(()).unwrap();
+                // Disconnect also releases this thread if the active assertion fails.
+                let _ = release_receive.recv();
+                drop(request);
+                drop(result);
+            });
+            ready_receive.recv().unwrap();
+            let a = alloc(&mut active, &mut helper, &drops, 1);
+            let b = alloc(&mut active, &mut helper, &drops, 2);
+            write(&mut active, &mut helper, &a, Some(&b));
+            write(&mut active, &mut helper, &b, Some(&a));
+            drop(a);
+            drop(b);
+            collect(&mut helper, &drops, 2);
+            release_send.send(()).unwrap();
+            waiting.join().unwrap();
+        });
+        collect(&mut helper, &stopped_drops, 1);
+        drop(active);
+        drop(helper);
+        drop(runtime);
+        assert_eq!(budget.used(), 0);
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+}
+
+#[test]
+fn graph_indexed_degree_boundaries_preserve_the_last_child_and_reclaim_inventory() {
+    for degree in [1, 8] {
+        let gc = GarbageCollector::new();
+        let capacities = Capacities::derive(2, 1, 1)
+            .unwrap()
+            .with_roots(4)
+            .unwrap()
+            .with_edges(2 * degree)
+            .unwrap();
+        let budget = Budget::new(GraphFootprint::new(capacities, degree).unwrap().total());
+        let runtime = GraphRuntime::new(&gc, capacities, degree, &budget).unwrap();
+        let mut worker = runtime.mutator().unwrap();
+        let mut helper = runtime.maintenance().unwrap();
+        let drops = Arc::new(AtomicUsize::new(0));
+        let target = alloc(&mut worker, &mut helper, &drops, 11);
+        let source = alloc(&mut worker, &mut helper, &drops, 22);
+        {
+            let mut write = worker.write(&source, degree - 1, Some(&target)).unwrap();
+            assert!((0..10_000).any(|_| {
+                let complete = write.poll().unwrap();
+                helper.poll().unwrap();
+                complete
+            }));
+        }
+        drop(target);
+        for _ in 0..2000 {
+            helper.poll().unwrap();
+        }
+        assert_eq!(drops.load(Ordering::Relaxed), 0);
+        let child = {
+            let mut read = worker.child::<Value, Value>(&source, degree - 1).unwrap();
+            (0..10_000)
+                .find_map(|_| {
+                    let result = read.poll().unwrap();
+                    helper.poll().unwrap();
+                    result
+                })
+                .expect("last indexed graph child did not settle")
+        };
+        let GraphReadValue::Root(child) = child else {
+            panic!("last indexed graph child became null");
+        };
+        assert_eq!(runtime.borrow(&child).unwrap().identity, 11);
+        drop(source);
+        drop(child);
+        collect(&mut helper, &drops, 2);
+        for _ in 0..2000 {
+            helper.poll().unwrap();
+        }
+        for slot in 0..2 * degree {
+            assert!(
+                worker.worker.discover_edge(slot).unwrap().is_none(),
+                "indexed graph left orphan inventory"
+            );
+        }
+        drop(worker);
+        drop(helper);
+        drop(runtime);
+        assert_eq!(budget.used(), 0);
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+}
+
+#[test]
+fn graph_aliases_preserve_cycles_and_independent_child_roots_without_more_tokens() {
+    let gc = GarbageCollector::new();
+    let (runtime, budget, drops) = setup(&gc);
+    let mut worker = runtime.mutator().unwrap();
+    let mut helper = runtime.maintenance().unwrap();
+    let a = alloc(&mut worker, &mut helper, &drops, 101);
+    let b = alloc(&mut worker, &mut helper, &drops, 202);
+    write(&mut worker, &mut helper, &a, Some(&b));
+    write(&mut worker, &mut helper, &b, Some(&a));
+    let child = child(&mut worker, &mut helper, &a);
+    let a_alias = a.clone();
+    let child_alias = child.clone();
+    assert_eq!(a.root.key(), a_alias.root.key());
+    assert_eq!(child.root.key(), child_alias.root.key());
+    assert_ne!(b.root.key(), child_alias.root.key());
+    assert_eq!(runtime.catalog.reserved_root_tokens(), 3);
+    drop(a);
+    drop(b);
+    drop(child);
+    assert_eq!(runtime.catalog.reserved_root_tokens(), 2);
+    drop(alloc(&mut worker, &mut helper, &drops, 303));
+    collect(&mut helper, &drops, 1);
+    assert_eq!(runtime.borrow(&a_alias).unwrap().identity, 101);
+    assert_eq!(runtime.borrow(&child_alias).unwrap().identity, 202);
+    drop(a_alias);
+    drop(alloc(&mut worker, &mut helper, &drops, 404));
+    collect(&mut helper, &drops, 2);
+    assert_eq!(runtime.borrow(&child_alias).unwrap().identity, 202);
+    drop(child_alias);
+    collect(&mut helper, &drops, 4);
+    assert_eq!(runtime.catalog.reserved_root_tokens(), 0);
+    drop(worker);
+    drop(helper);
+    drop(runtime);
+    assert_eq!(budget.used(), 0);
+    assert_eq!(gc.managed_bytes(), 0);
+}
+
+#[test]
+fn graph_aliases_work_at_full_root_quota_while_child_reads_remain_independent() {
+    let gc = GarbageCollector::new();
+    let caps = Capacities::derive(2, 1, 1)
+        .unwrap()
+        .with_roots(2)
+        .unwrap()
+        .with_edges(2)
+        .unwrap();
+    let budget = Budget::new(GraphFootprint::new(caps, 1).unwrap().total());
+    let runtime = GraphRuntime::new(&gc, caps, 1, &budget).unwrap();
+    let mut worker = runtime.mutator().unwrap();
+    let mut helper = runtime.maintenance().unwrap();
+    let drops = Arc::new(AtomicUsize::new(0));
+    let a = alloc(&mut worker, &mut helper, &drops, 501);
+    let b = alloc(&mut worker, &mut helper, &drops, 502);
+    write(&mut worker, &mut helper, &a, Some(&b));
+    let aliases = [a.clone(), b.clone()];
+    drop(a);
+    drop(b);
+    assert_eq!(runtime.catalog.reserved_root_tokens(), 2);
+    {
+        let mut read = worker.child::<Value, Value>(&aliases[0], 0).unwrap();
+        for _ in 0..32 {
+            assert!(
+                read.poll().unwrap().is_none(),
+                "child read bypassed its independent-root quota"
+            );
+            helper.poll().unwrap();
+        }
+    }
+    assert_eq!(runtime.borrow(&aliases[0]).unwrap().identity, 501);
+    assert_eq!(runtime.borrow(&aliases[1]).unwrap().identity, 502);
+    write(&mut worker, &mut helper, &aliases[0], None);
+    {
+        let mut read = worker.child::<Value, Value>(&aliases[0], 0).unwrap();
+        assert!(matches!(read.poll().unwrap(), Some(GraphReadValue::Null)));
+    }
+    assert_eq!(runtime.catalog.reserved_root_tokens(), 2);
+    drop(aliases);
+    collect(&mut helper, &drops, 2);
+    drop(worker);
+    drop(helper);
+    drop(runtime);
+    assert_eq!(budget.used(), 0);
+    assert_eq!(gc.managed_bytes(), 0);
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn graph_aliases_clone_read_and_drop_concurrently_with_unrelated_reclamation() {
+    let gc = GarbageCollector::new();
+    let (runtime, budget, drops) = setup(&gc);
+    let mut worker = runtime.mutator().unwrap();
+    let mut helper = runtime.maintenance().unwrap();
+    let root = alloc(&mut worker, &mut helper, &drops, 601);
+    drop(alloc(&mut worker, &mut helper, &drops, 602));
+    let barrier = std::sync::Barrier::new(4);
+    std::thread::scope(|scope| {
+        let mut threads = Vec::new();
+        for _ in 0..3 {
+            let owned = root.clone();
+            let barrier = &barrier;
+            let runtime = &runtime;
+            threads.push(scope.spawn(move || {
+                barrier.wait();
+                for _ in 0..16 {
+                    let alias = owned.clone();
+                    assert_eq!(runtime.borrow(&alias).unwrap().identity, 601);
+                }
+            }));
+        }
+        drop(root);
+        barrier.wait();
+        for _ in 0..64 {
+            helper.poll().unwrap();
+        }
+        for thread in threads {
+            thread.join().unwrap();
+        }
+    });
+    collect(&mut helper, &drops, 2);
+    assert_eq!(runtime.catalog.reserved_root_tokens(), 0);
+    drop(worker);
+    drop(helper);
+    drop(runtime);
+    assert_eq!(budget.used(), 0);
+    assert_eq!(gc.managed_bytes(), 0);
+}
+
+#[cfg(feature = "experimental-canonical-runtime")]
+#[test]
+fn passive_observation_primary_mapping_is_full_only_checked_and_conservative() {
+    use gc_catalog::{Domain, DomainMode, Phase};
+    let phase = |mode, epoch| Phase {
+        root_cursors: [0; 2],
+        reference_cursors: [0; 2],
+        revision: 1,
+        domains: [Domain {
+            mode,
+            epoch,
+            floor: 0,
+            pending: 0,
+        }; 2],
+    };
+    for (mode, epoch, count) in [
+        (DomainMode::Full, 1, 0),
+        (DomainMode::Inactive, 1, 1),
+        (DomainMode::Full, 2, 1),
+        (DomainMode::Full, u64::MAX, u64::MAX - 1),
+        (DomainMode::Inactive, u64::MAX, u64::MAX),
+    ] {
+        assert_eq!(
+            primary_cycles([phase(mode, epoch); 2]).unwrap(),
+            (count, count)
+        );
+    }
+    assert_eq!(
+        primary_cycles([phase(DomainMode::Inactive, 4), phase(DomainMode::Full, 4)]).unwrap(),
+        (3, 4)
+    );
+    assert_eq!(
+        primary_cycles([phase(DomainMode::Full, 5), phase(DomainMode::Inactive, 4)]).unwrap(),
+        (4, 4)
+    );
+    for mode in [
+        DomainMode::Full,
+        DomainMode::Inactive,
+        DomainMode::Young,
+        DomainMode::Old,
+    ] {
+        assert!(matches!(
+            primary_cycles([phase(mode, 0); 2]),
+            Err(GraphError::Protocol)
+        ));
+    }
+    for mode in [DomainMode::Young, DomainMode::Old] {
+        for outcomes in [
+            [phase(mode, 1), phase(DomainMode::Full, 1)],
+            [phase(DomainMode::Full, 1), phase(mode, 1)],
+        ] {
+            assert!(matches!(
+                primary_cycles(outcomes),
+                Err(GraphError::Protocol)
+            ));
+        }
+    }
+}

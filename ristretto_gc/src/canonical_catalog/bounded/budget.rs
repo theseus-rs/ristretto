@@ -84,11 +84,13 @@ impl Footprint {
 
 /// Externally supplied budget owner. Its own allocation is outside the catalog's
 /// footprint; cloning its `Arc` does not allocate. Reservation makes one CAS attempt.
+#[derive(Debug)]
 pub struct Budget {
     limit: usize,
     used: AtomicUsize,
 }
 impl Budget {
+    #[must_use]
     pub fn new(limit: usize) -> Arc<Self> {
         Arc::new(Self {
             limit,

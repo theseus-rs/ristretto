@@ -9,6 +9,8 @@ use std::sync::atomic::{AtomicU8, Ordering};
 
 #[path = "canonical_leaf_allocation.rs"]
 mod allocation;
+#[path = "canonical_api.rs"]
+pub mod api;
 #[path = "canonical_graph.rs"]
 mod graph;
 #[path = "canonical_leaf_maintenance.rs"]
