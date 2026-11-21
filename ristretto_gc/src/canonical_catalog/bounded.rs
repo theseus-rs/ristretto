@@ -16,6 +16,8 @@ use super::{
 use crate::canonical_pool as pool;
 use std::ops::Deref;
 mod allocations;
+mod guarded;
+pub use guarded::GuardedCommand;
 mod roots;
 use roots::RootLease;
 pub use roots::*;
@@ -480,22 +482,44 @@ pub struct Record {
 pub enum Command {
     Publish(RecordKey),
     Abandon(RecordKey),
+    Promote(RecordKey),
+    Advance {
+        domain: usize,
+    },
+    Start {
+        domain: usize,
+        mode: super::DomainMode,
+    },
+    Finish {
+        domain: usize,
+    },
+    Shade {
+        key: RecordKey,
+        domain: usize,
+        retention: super::TraceRetention,
+    },
+    TraceAcknowledge {
+        key: RecordKey,
+        domain: usize,
+        ticket: u64,
+    },
+    TraceRetire {
+        key: RecordKey,
+        domain: usize,
+    },
 }
 impl Command {
-    #[expect(
-        clippy::unnecessary_wraps,
-        reason = "retain the frozen object/phase command lookup interface"
-    )]
     fn key(self) -> Option<RecordKey> {
         match self {
-            Self::Publish(key) | Self::Abandon(key) => Some(key),
+            Self::Publish(key)
+            | Self::Abandon(key)
+            | Self::Promote(key)
+            | Self::Shade { key, .. }
+            | Self::TraceAcknowledge { key, .. }
+            | Self::TraceRetire { key, .. } => Some(key),
+            Self::Advance { .. } | Self::Start { .. } | Self::Finish { .. } => None,
         }
     }
-}
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum GuardedCommand {
-    Publish(RecordKey),
-    Abandon(RecordKey),
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RequestError {
@@ -1002,21 +1026,145 @@ fn start<R: Payload, C: Copy>(
     if phase.revision == u64::MAX {
         return Err(RequestError::Exhausted);
     }
-    let cell = lookup(catalog, command.key().expect("object command"))?;
+    let cell = command
+        .key()
+        .map(|record| lookup(catalog, record))
+        .transpose()?;
     let preparation = match command {
-        Command::Publish(_) => catalog.raw.begin_publish(snapshot, cell),
-        Command::Abandon(_) => catalog.raw.begin_abandon(snapshot, cell),
+        Command::Publish(_) => catalog
+            .raw
+            .begin_publish(snapshot, cell.expect("object command")),
+        Command::Abandon(_) => catalog
+            .raw
+            .begin_abandon(snapshot, cell.expect("object command")),
+        Command::Promote(_) => catalog
+            .raw
+            .begin_promote(snapshot, cell.expect("object command")),
+        Command::Advance { domain } => catalog.raw.begin_advance(snapshot, domain),
+        Command::Start { domain, mode } => catalog.raw.begin_start(snapshot, domain, mode),
+        Command::Finish { domain } => catalog.raw.begin_finish(snapshot, domain),
+        Command::Shade {
+            domain, retention, ..
+        } => catalog
+            .raw
+            .begin_shade(snapshot, cell.expect("object command"), domain, retention),
+        Command::TraceAcknowledge { domain, ticket, .. } => catalog.raw.begin_trace_acknowledge(
+            snapshot,
+            cell.expect("object command"),
+            domain,
+            ticket,
+        ),
+        Command::TraceRetire { domain, .. } => {
+            catalog
+                .raw
+                .begin_trace_retire(snapshot, cell.expect("object command"), domain)
+        }
     };
     if let Some(preparation) = preparation {
         return Ok(RequestState::Preparing(original, preparation));
     }
-    let cell = lookup(catalog, command.key().expect("object command"))?;
-    let membership = cell.membership().ok_or(RequestError::Contended)?;
-    if membership != Membership::Prepared {
-        return Err(RequestError::Conflict);
-    }
-    if matches!(command, Command::Publish(_)) {
-        super::TraceState::publication(phase).map_err(trace_error)?;
+    diagnose_failure(catalog, command, phase)
+}
+#[expect(
+    clippy::indexing_slicing,
+    reason = "domain indexes are checked before fixed-array access"
+)]
+fn diagnose_failure<R: Payload, C: Copy>(
+    catalog: &BoundedCatalog<R>,
+    command: Command,
+    phase: Phase,
+) -> Result<RequestState<R, C>, RequestError> {
+    let cell = command
+        .key()
+        .map(|record| lookup(catalog, record))
+        .transpose()?;
+    let membership = cell
+        .as_ref()
+        .map(|cell| cell.membership().ok_or(RequestError::Contended))
+        .transpose()?;
+    match command {
+        Command::Advance { domain } => {
+            let entry = phase
+                .domains
+                .get(domain)
+                .ok_or(RequestError::InvalidDomain)?;
+            if entry.mode == crate::canonical_catalog::DomainMode::Inactive
+                || entry.pending != 0
+                || entry.floor >= crate::canonical_catalog::RETIREMENT_FLOOR
+                || phase.root_cursors[domain] != catalog.raw.root_capacity()
+            {
+                return Err(RequestError::Conflict);
+            }
+        }
+        Command::Abandon(_) => {
+            if membership != Some(Membership::Prepared) {
+                return Err(RequestError::Conflict);
+            }
+        }
+        Command::Start { domain, mode } => {
+            let entry = phase
+                .domains
+                .get(domain)
+                .ok_or(RequestError::InvalidDomain)?;
+            if mode == crate::canonical_catalog::DomainMode::Inactive
+                || (mode == crate::canonical_catalog::DomainMode::Old && domain != 1)
+                || (mode == crate::canonical_catalog::DomainMode::Young && domain != 0)
+                || entry.mode != crate::canonical_catalog::DomainMode::Inactive
+                || entry.pending != 0
+            {
+                return Err(RequestError::Conflict);
+            }
+            if entry.epoch == u64::MAX {
+                return Err(RequestError::Exhausted);
+            }
+        }
+        Command::Finish { domain } => {
+            let entry = phase
+                .domains
+                .get(domain)
+                .ok_or(RequestError::InvalidDomain)?;
+            if entry.mode == crate::canonical_catalog::DomainMode::Inactive
+                || entry.pending != 0
+                || entry.floor != crate::canonical_catalog::RETIREMENT_FLOOR
+                || phase.root_cursors[domain] != catalog.raw.root_capacity()
+            {
+                return Err(RequestError::Conflict);
+            }
+        }
+        Command::Publish(_) => {
+            if membership != Some(Membership::Prepared) {
+                return Err(RequestError::Conflict);
+            }
+            crate::canonical_catalog::TraceState::publication(phase).map_err(trace_error)?;
+        }
+        Command::Shade {
+            domain, retention, ..
+        } => {
+            let Some(Membership::Tracing(marks)) = membership else {
+                return Err(RequestError::Conflict);
+            };
+            marks.shade(phase, domain, retention).map_err(trace_error)?;
+        }
+        Command::TraceAcknowledge { domain, ticket, .. } => {
+            let Some(Membership::Tracing(marks)) = membership else {
+                return Err(RequestError::Conflict);
+            };
+            marks
+                .acknowledge(phase, domain, ticket)
+                .map_err(trace_error)?;
+        }
+        Command::TraceRetire { domain, .. } => {
+            let Some(Membership::Tracing(marks)) = membership else {
+                return Err(RequestError::Conflict);
+            };
+            marks.can_retire(phase, domain).map_err(trace_error)?;
+        }
+        Command::Promote(_) => {
+            let Some(Membership::Tracing(marks)) = membership else {
+                return Err(RequestError::Conflict);
+            };
+            marks.promote(phase).map_err(trace_error)?;
+        }
     }
     if catalog.raw.generation_exhaustion_observed() {
         Err(RequestError::GenerationExhausted)
@@ -1024,27 +1172,13 @@ fn start<R: Payload, C: Copy>(
         Err(RequestError::Contended)
     }
 }
+
 impl Commands<()> for Command {
     fn numeric(self) -> Command {
         self
     }
     fn start(self, catalog: &BoundedCatalog, (): &()) -> Result<RequestState, RequestError> {
         start(catalog, self, self, &())
-    }
-}
-impl<R: Payload> Commands<R> for GuardedCommand {
-    fn numeric(self) -> Command {
-        match self {
-            Self::Publish(key) => Command::Publish(key),
-            Self::Abandon(key) => Command::Abandon(key),
-        }
-    }
-    fn start(
-        self,
-        catalog: &BoundedCatalog<R>,
-        context: &R::Context,
-    ) -> Result<RequestState<R, Self>, RequestError> {
-        start(catalog, <Self as Commands<R>>::numeric(self), self, context)
     }
 }
 /// Rejection before request ownership transfers retains the caller's record.
@@ -1081,3 +1215,7 @@ fn trace_error(error: super::TraceError) -> RequestError {
 #[cfg(test)]
 #[path = "bounded/request_tests.rs"]
 mod request_tests;
+
+#[cfg(test)]
+#[path = "bounded/guarded_tests.rs"]
+mod guarded_tests;
