@@ -142,6 +142,19 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         Ok(())
     }
     pub fn take_root(&mut self) -> Option<RootHandle<R>> {
+        if let RequestState::Allocation(request) = &mut self.state {
+            let root = request.take_root()?;
+            self.next_object_slot = super::super::following_slot(
+                root.token.target_slot(),
+                self.lease.owner.capacities.registry,
+            );
+            self.next_root_slot = super::super::following_slot(
+                root.token.slot(),
+                self.lease.owner.capacities.root_slots,
+            );
+            self.state = RequestState::Idle;
+            return Some(root);
+        }
         if !matches!(self.state, RequestState::RootReady(_)) {
             return None;
         }
