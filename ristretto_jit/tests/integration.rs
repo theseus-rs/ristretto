@@ -76,3 +76,11 @@ mod frame_roots;
 #[cfg(feature = "experimental-reference-dispatch")]
 #[path = "integration/call_requests.rs"]
 mod call_requests;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/heap_requests.rs"]
+mod heap_requests;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/numeric_constants.rs"]
+mod numeric_constants;

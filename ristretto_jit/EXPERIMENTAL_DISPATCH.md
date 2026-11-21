@@ -74,3 +74,10 @@ and exception propagation through native catch blocks are not admitted in this s
 A pending request cannot resume before completion. `remaining_budget()` carries fuel across
 immediately completed requests; a zero remainder requires a host scheduling boundary.
 Instance entry is explicit through this request-only API. Ordinary eligibility is unchanged.
+
+Object allocation and instance field reads/writes also use resumable requests. `New`
+returns the exact class constant-pool index; field requests retain receiver/value cells
+and the exact field index/BCI. Allocation and field helpers are not linked. The embedding
+checks class admission, access, initialization, null/type rules and quota before successful
+completion, retaining every result owner before exposing its token. A fault drops the
+parked activation. Static fields, arrays and native exception handlers remain excluded.

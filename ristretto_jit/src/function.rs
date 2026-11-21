@@ -1,7 +1,10 @@
 #[path = "activation.rs"]
 mod activation;
 pub(crate) use activation::ContinuationLayout;
-pub use activation::{Activation, CallKind, CallRequest, ExecutionStep};
+pub use activation::{
+    Activation, AllocationKind, AllocationRequest, CallKind, CallRequest, ExecutionStep,
+    FieldAccess, FieldRequest,
+};
 
 use crate::Error::InternalError;
 use crate::{JitValue, Result, Value};

@@ -13,7 +13,7 @@ pub(crate) struct CallContinuation<'a> {
 
 impl CallContinuation<'_> {
     #[expect(clippy::too_many_lines)]
-    fn emit(
+    pub(super) fn emit(
         &self,
         builder: &mut FunctionBuilder,
         stack: &mut OperandStack,
@@ -283,7 +283,7 @@ impl CallContinuation<'_> {
         Ok(())
     }
 }
-fn argument_bits(
+pub(super) fn argument_bits(
     builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
     kind: &FieldType,
@@ -311,7 +311,7 @@ fn argument_bits(
     })
 }
 
-fn push_result(
+pub(super) fn push_result(
     builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
     kind: &FieldType,
