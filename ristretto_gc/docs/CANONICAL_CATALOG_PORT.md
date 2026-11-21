@@ -95,3 +95,13 @@ Three portable regressions check quota exhaustion/reuse, budget rejection,
 last-participant refund and overflow. One Loom model compiles the production
 quota CAS and release expressions and checks competing registration. Catalog
 totals are 14 native / 13 WASI tests, with strict Clippy passing.
+
+## C07 prerequisite: resumable record creation
+
+Private creation retains the exact record through one selected backing attempt
+per poll, then announces it through the owning slot CAS. The frozen rotating-slot
+and expiring-preference policy is preserved. A failed/foreign observation does
+not certify an empty slot or consume a request. Four portable tests exercise
+private-stage cancellation, competing announcements, exact drop counts and
+retry after failed owning acquisition. Native/WASI catalog totals are 18/17.
+Publication into tracing membership remains a later controller operation.
