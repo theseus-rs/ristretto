@@ -53,7 +53,7 @@ impl Program {
     /// # Errors
     /// Reports format, verification, linking and capability errors.
     pub fn from_classfiles(files: impl IntoIterator<Item = ClassFile<'static>>) -> Result<Self> {
-        let mut classes = Vec::new();
+        let mut admitted = Vec::new();
         let mut names = HashMap::new();
         for file in files {
             file.verify()?;
@@ -69,14 +69,18 @@ impl Program {
             {
                 return Err(Error::Unsupported(format!("class layout {name}")));
             }
-            if names.insert(name, classes.len()).is_some() {
+            if names.insert(name, admitted.len()).is_some() {
                 return Err(Error::Invalid("duplicate class".into()));
             }
-            classes.push(Layout::new(file)?);
+            admitted.push(file);
         }
-        if classes.is_empty() {
+        if admitted.is_empty() {
             return Err(Error::Invalid("empty program".into()));
         }
+        let classes = admitted
+            .into_iter()
+            .map(|file| Layout::new(file, &names))
+            .collect::<Result<Vec<_>>>()?;
         let program = Self { classes, names };
         for (index, layout) in program.classes.iter().enumerate() {
             let class = &layout.class;
