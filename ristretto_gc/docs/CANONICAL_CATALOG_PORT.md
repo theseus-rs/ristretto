@@ -105,3 +105,12 @@ not certify an empty slot or consume a request. Four portable tests exercise
 private-stage cancellation, competing announcements, exact drop counts and
 retry after failed owning acquisition. Native/WASI catalog totals are 18/17.
 Publication into tracing membership remains a later controller operation.
+
+## C07 prerequisite: retained publication preparation
+
+Private preparation captures one expected controller and both possible phase
+outcomes. Each poll retains prior successes and makes one selected-slot backing
+attempt. It cannot refresh its expected revision after a miss. Two portable
+regressions check retained allocations, foreign-catalog rejection and complete
+refund after cancellation/drop, without applying membership effects. Native/WASI
+catalog totals are 20/19. Controller installation remains separate.
