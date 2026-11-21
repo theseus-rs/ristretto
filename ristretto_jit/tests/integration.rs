@@ -23,6 +23,8 @@ mod functions {
 }
 
 mod instructions {
+    #[path = "../instructions/arguments.rs"]
+    mod arguments;
     #[path = "../instructions/array.rs"]
     mod array;
     #[path = "../instructions/branch.rs"]

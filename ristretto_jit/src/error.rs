@@ -36,6 +36,16 @@ pub enum Error {
     /// Internal error
     #[error("Internal error: {0}")]
     InternalError(String),
+    /// Compiled entry requires the descriptor's value count, including an instance receiver.
+    #[error("Invalid argument count; expected {expected}, found {actual}")]
+    InvalidArgumentCount { expected: usize, actual: usize },
+    /// A marshalled value does not match the descriptor's ABI representation.
+    #[error("Invalid argument {index}; expected value tag {expected}, found {actual}")]
+    InvalidArgumentType {
+        index: usize,
+        expected: i8,
+        actual: i8,
+    },
     /// Invalid block address
     #[error("Invalid block address: {0}")]
     InvalidBlockAddress(usize),
