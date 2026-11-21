@@ -12,6 +12,7 @@ use crate::{JitValue, Result, Value};
 ))]
 use cranelift::jit::JITModule;
 use std::fmt::{Debug, Formatter};
+use std::sync::Arc;
 #[cfg(all(
     not(target_family = "wasm"),
     target_endian = "little",
@@ -22,12 +23,13 @@ use std::fmt::{Debug, Formatter};
         target_os = "solaris"
     ))
 ))]
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 /// A structure representing a native function from the JIT compiler
 #[derive(Clone)]
 pub struct Function {
-    function: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8),
+    argument_types: Arc<[i8]>,
+    entry_point: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8),
     #[cfg(all(
         not(target_family = "wasm"),
         target_endian = "little",
@@ -101,7 +103,7 @@ impl Debug for Function {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("Function")
-            .field("function", &(self.function as *const ()))
+            .field("function", &(self.entry_point as *const ()))
             .finish_non_exhaustive()
     }
 }
@@ -111,9 +113,11 @@ impl Function {
     #[cfg(test)]
     pub(crate) fn new(
         function: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8),
+        argument_types: &[i8],
     ) -> Self {
         Self {
-            function,
+            argument_types: Arc::from(argument_types),
+            entry_point: function,
             #[cfg(all(
                 not(target_family = "wasm"),
                 target_endian = "little",
@@ -142,9 +146,11 @@ impl Function {
     pub(crate) fn with_module(
         function: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8),
         module: JITModule,
+        argument_types: Vec<i8>,
     ) -> Self {
         Self {
-            function,
+            argument_types: Arc::from(argument_types),
+            entry_point: function,
             module: Arc::new(JitModuleOwner::new(Some(module))),
         }
     }
@@ -166,20 +172,27 @@ impl Function {
         reason = "the JIT crate owns the validated generated-code ABI boundary"
     )]
     pub fn execute(&self, arguments: &[Value], context: *const u8) -> Result<Option<Value>> {
+        if arguments.len() != self.argument_types.len() {
+            return Err(crate::Error::InvalidArgumentCount {
+                expected: self.argument_types.len(),
+                actual: arguments.len(),
+            });
+        }
         // Use a stack-allocated buffer for small argument lists (most JVM methods have 0-5 args)
         let mut stack_buf = [JitValue::new(); 8];
         let mut result = JitValue::new();
         if arguments.len() <= stack_buf.len() {
-            for (i, arg) in arguments.iter().enumerate() {
+            for (i, (arg, expected)) in arguments.iter().zip(self.argument_types.iter()).enumerate()
+            {
                 let slot = stack_buf
                     .get_mut(i)
                     .ok_or_else(|| InternalError(format!("Invalid stack argument index {i}")))?;
-                *slot = JitValue::from(arg.clone());
+                *slot = JitValue::argument(arg, *expected, i)?;
             }
             // Safety: the arguments and result use the ABI emitted by the owning JIT module,
             // and all pointers remain valid for the duration of the call.
             unsafe {
-                (self.function)(
+                (self.entry_point)(
                     stack_buf.as_ptr(),
                     arguments.len(),
                     &raw mut result,
@@ -187,11 +200,16 @@ impl Function {
                 );
             }
         } else {
-            let heap_args: Vec<JitValue> = arguments.iter().cloned().map(JitValue::from).collect();
+            let heap_args: Vec<JitValue> = arguments
+                .iter()
+                .zip(self.argument_types.iter())
+                .enumerate()
+                .map(|(index, (arg, expected))| JitValue::argument(arg, *expected, index))
+                .collect::<Result<_>>()?;
             // Safety: the arguments and result use the ABI emitted by the owning JIT module,
             // and all pointers remain valid for the duration of the call.
             unsafe {
-                (self.function)(
+                (self.entry_point)(
                     heap_args.as_ptr(),
                     heap_args.len(),
                     &raw mut result,
@@ -223,7 +241,7 @@ mod tests {
     #[test]
     fn test_function() -> Result<()> {
         let cloned_function = {
-            let function = Function::new(return_42);
+            let function = Function::new(return_42, &[]);
             assert!(format!("{function:?}").contains("Function"));
             function.clone()
         };
@@ -236,7 +254,7 @@ mod tests {
 
     #[test]
     fn test_function_with_heap_arguments() -> Result<()> {
-        let function = Function::new(return_42);
+        let function = Function::new(return_42, &[crate::jit_value::I32; 9]);
         let arguments = vec![Value::I32(1); 9];
         let value = function
             .execute(&arguments, std::ptr::null())?
