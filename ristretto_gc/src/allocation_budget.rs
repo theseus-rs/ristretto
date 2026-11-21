@@ -40,6 +40,12 @@ pub(crate) struct Reservation {
     bytes: usize,
 }
 
+impl Reservation {
+    pub(crate) fn bytes(&self) -> usize {
+        self.bytes
+    }
+}
+
 impl Drop for Reservation {
     fn drop(&mut self) {
         self.budget.used.fetch_sub(self.bytes, Ordering::AcqRel);
