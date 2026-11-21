@@ -21,11 +21,51 @@ use std::thread;
 use sysinfo::System;
 use tracing::{debug, error, info, trace, warn};
 
+/// Host state that owns managed roots outside an ordinary traced graph.
+/// The canonical payload adapter rejects values reporting such an owner.
+pub trait HeapOwner: Send + Sync {
+    /// Releases owner-held roots during the embedding's shutdown procedure.
+    fn release_heap_roots(&self);
+}
+
 /// Trait for objects that can be traced by the garbage collector.
 ///
 /// Objects that contain `Gc<T>` pointers must implement this trait to enable the garbage
 /// collector to traverse object references during the marking phase.
 pub trait Trace {
+    /// Conservative hint; this alone never authorizes canonical payload admission.
+    #[must_use]
+    fn may_contain_gc_references() -> bool
+    where
+        Self: Sized,
+    {
+        true
+    }
+
+    /// The explicit audited certificate for exactly this payload type.
+    #[must_use]
+    fn canonical_payload() -> Option<crate::CanonicalPayload<Self>>
+    where
+        Self: Sized,
+    {
+        None
+    }
+
+    /// Whether writes can require managed-edge maintenance. Default is conservative.
+    fn needs_write_barrier(&self) -> bool {
+        true
+    }
+
+    /// Owned external backing included by canonical payload allocation accounting.
+    fn external_size(&self) -> usize {
+        0
+    }
+
+    /// Optional VM owner; canonical payloads reject this independent root authority.
+    fn heap_owner(&self) -> Option<Arc<dyn HeapOwner>> {
+        None
+    }
+
     /// Trace all `Gc<T>` references contained within this object.
     ///
     /// This method should call `trace()` on all `Gc<T>` fields contained within the object.
@@ -91,6 +131,10 @@ pub struct GarbageCollector {
 }
 
 impl GarbageCollector {
+    pub(crate) fn weak(&self) -> Weak<Self> {
+        self.this.clone()
+    }
+
     /// Creates a new low-pause, parallel, concurrent garbage collector.
     #[must_use]
     pub fn new() -> Arc<Self> {
@@ -1076,6 +1120,12 @@ macro_rules! impl_trace_primitive {
     ($($t:ty),*) => {
         $(
             impl Trace for $t {
+                fn may_contain_gc_references() -> bool { false }
+                fn canonical_payload() -> Option<crate::CanonicalPayload<Self>> {
+                    // SAFETY: primitive scalars have no graph, owner, backing or callbacks.
+                    Some(unsafe { crate::CanonicalPayload::new() })
+                }
+                fn needs_write_barrier(&self) -> bool { false }
                 fn trace(&self, _collector: &GarbageCollector) {}
             }
         )*
