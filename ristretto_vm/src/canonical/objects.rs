@@ -2,6 +2,9 @@
 use super::layout::{Field, ReferenceType, reference_type};
 use super::reference_array::{self, Component};
 mod cast;
+mod linkage;
+use linkage::CallTarget;
+pub(super) use linkage::LinkedMembers;
 mod reference_array_runtime;
 use super::primitive_array::{Element, Kind, PrimitiveArray};
 use super::statics::States;
@@ -172,7 +175,7 @@ impl Program {
             .copied()
             .ok_or_else(|| Error::Unsupported(format!("class {name}")))
     }
-    fn class_constant(&self, owner: usize, index: u16) -> Result<usize, Error> {
+    fn resolve_class_constant(&self, owner: usize, index: u16) -> Result<usize, Error> {
         let name = self
             .layout(owner)?
             .class
@@ -212,7 +215,7 @@ impl Program {
         ))
     }
 
-    fn field(&self, owner: usize, index: u16) -> Result<(usize, Field), Error> {
+    fn resolve_field(&self, owner: usize, index: u16) -> Result<(usize, Field), Error> {
         let (name, field, descriptor) = self.member(owner, index, true)?;
         let class = self.class_index(&name)?;
         let slot = self
@@ -222,7 +225,7 @@ impl Program {
         Ok((class, slot))
     }
 
-    fn reference_component(&self, owner: usize, index: u16) -> Result<Component, Error> {
+    fn resolve_reference_component(&self, owner: usize, index: u16) -> Result<Component, Error> {
         if self
             .layout(owner)?
             .class
@@ -232,7 +235,8 @@ impl Program {
         {
             Ok(Component::Object)
         } else {
-            self.class_constant(owner, index).map(Component::Class)
+            self.resolve_class_constant(owner, index)
+                .map(Component::Class)
         }
     }
     fn admit_type(&self, field: &FieldType) -> Result<(), Error> {
@@ -266,17 +270,17 @@ impl Program {
         for instruction in method.code() {
             match instruction {
                 Instruction::New(index) => {
-                    self.class_constant(class, *index)?;
+                    self.resolve_class_constant(class, *index)?;
                 }
                 Instruction::Getstatic(index) => {
-                    self.static_field(class, *index)?;
+                    self.resolve_static_field(class, *index)?;
                 }
                 Instruction::Putstatic(index) => {
-                    let (owner, field) = self.static_field(class, *index)?;
+                    let (owner, field) = self.resolve_static_field(class, *index)?;
                     Self::admit_static_write(class, method, owner, &field)?;
                 }
                 Instruction::Getfield(index) | Instruction::Putfield(index) => {
-                    self.field(class, *index)?;
+                    self.resolve_field(class, *index)?;
                 }
                 Instruction::Invokestatic(index) | Instruction::Invokespecial(index) => {
                     let (owner, name, descriptor) = self.member(class, *index, false)?;
@@ -319,7 +323,7 @@ impl Program {
                     if scalar::supports(instruction)
                         || array_instruction(instruction).is_some() => {}
                 Instruction::Anewarray(index) => {
-                    self.reference_component(class, *index)?;
+                    self.resolve_reference_component(class, *index)?;
                 }
                 Instruction::Checkcast(_)
                 | Instruction::Aaload
@@ -1137,26 +1141,27 @@ impl Execution<'_, '_, '_> {
                     self.write_field(class, *index, &root, value).await?;
                 }
                 Instruction::Invokespecial(index) | Instruction::Invokestatic(index) => {
-                    let (owner, name, descriptor) = self.program.member(class, *index, false)?;
-                    if owner == "java/lang/Object" {
-                        // Admission permits only Object.<init>()V, whose body is empty.
-                        pop(&mut stack)?.object()?;
-                    } else {
-                        let owner = self.program.class_index(&owner)?;
-                        let target = self
-                            .program
-                            .layout(owner)?
-                            .class
-                            .try_get_method(&name, &descriptor)?;
-                        let count = target.parameters().len()
-                            + usize::from(matches!(instruction, Instruction::Invokespecial(_)));
-                        let start = stack
-                            .len()
-                            .checked_sub(count)
-                            .ok_or_else(|| Error::Invalid("call stack underflow".to_owned()))?;
-                        let arguments = stack.split_off(start);
-                        if let Some(value) = self.call(owner, target, arguments, depth + 1).await? {
-                            stack.push(value);
+                    match self.program.call_target(class, *index)? {
+                        CallTarget::ObjectConstructor => {
+                            // Admission permits only Object.<init>()V, whose body is empty.
+                            pop(&mut stack)?.object()?;
+                        }
+                        CallTarget::Method {
+                            class: owner,
+                            method: target,
+                        } => {
+                            let count = target.parameters().len()
+                                + usize::from(matches!(instruction, Instruction::Invokespecial(_)));
+                            let start = stack
+                                .len()
+                                .checked_sub(count)
+                                .ok_or_else(|| Error::Invalid("call stack underflow".to_owned()))?;
+                            let arguments = stack.split_off(start);
+                            if let Some(value) =
+                                self.call(owner, target, arguments, depth + 1).await?
+                            {
+                                stack.push(value);
+                            }
                         }
                     }
                 }
