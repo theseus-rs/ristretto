@@ -189,6 +189,7 @@ impl Compiler {
 
         let constant_pool = &class_file.constant_pool;
         let method_descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
+        let (_, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
         let is_static = method.access_flags.contains(MethodAccessFlags::STATIC);
         let mut jit_module = self.jit_module(symbols);
         let class_name = class_file.class_name()?;
@@ -276,6 +277,7 @@ impl Compiler {
                 &mut stack,
                 program_counter,
                 return_pointer,
+                return_type.as_ref(),
                 context_pointer,
                 &helpers,
                 exception_block,
@@ -709,6 +711,7 @@ impl Compiler {
         stack: &mut OperandStack,
         program_counter: usize,
         return_pointer: Value,
+        return_type: Option<&FieldType>,
         context_pointer: Value,
         helpers: &RuntimeHelpers,
         exception_block: Block,
@@ -1041,7 +1044,7 @@ impl Compiler {
                 program_counter,
                 lookup_switch,
             )?,
-            Instruction::Ireturn => ireturn(function_builder, stack, return_pointer)?,
+            Instruction::Ireturn => ireturn(function_builder, stack, return_pointer, return_type)?,
             Instruction::Lreturn => lreturn(function_builder, stack, return_pointer)?,
             Instruction::Freturn => freturn(function_builder, stack, return_pointer)?,
             Instruction::Dreturn => dreturn(function_builder, stack, return_pointer)?,

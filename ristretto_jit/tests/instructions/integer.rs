@@ -2,6 +2,34 @@ use crate::util::create_function;
 use ristretto_classfile::attributes::{ArrayType, Instruction};
 use ristretto_jit::{Result, Value};
 
+#[path = "../data/narrow_return_cases.rs"]
+mod narrow_cases;
+
+#[test]
+fn ireturn_narrows_results_by_descriptor() -> Result<()> {
+    let integer = create_function("(I)I", &[Instruction::Iload_0, Instruction::Ireturn])?;
+    for ((name, cases), descriptor) in narrow_cases::cases()
+        .into_iter()
+        .zip(["(I)B", "(I)C", "(I)S", "(I)Z"])
+    {
+        // The JVM operand is int even for these four descriptor return kinds.
+        // No explicit i2b/i2c/i2s instruction performs the narrowing for us.
+        let function = create_function(descriptor, &[Instruction::Iload_0, Instruction::Ireturn])?;
+        for (input, expected) in cases {
+            assert_eq!(
+                function.execute(&[Value::I32(input)], std::ptr::null())?,
+                Some(Value::I32(expected)),
+                "{name}({input})"
+            );
+            assert_eq!(
+                integer.execute(&[Value::I32(input)], std::ptr::null())?,
+                Some(Value::I32(input))
+            );
+        }
+    }
+    Ok(())
+}
+
 #[test]
 fn iconst_m1() -> Result<()> {
     let instructions = vec![Instruction::Iconst_m1, Instruction::Ireturn];
