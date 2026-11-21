@@ -72,3 +72,7 @@ mod continuation;
 #[cfg(feature = "experimental-reference-dispatch")]
 #[path = "integration/frame_roots.rs"]
 mod frame_roots;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/call_requests.rs"]
+mod call_requests;

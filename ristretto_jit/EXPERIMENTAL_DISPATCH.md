@@ -60,3 +60,17 @@ state limits and unsupported capability rejection. The scalar cases register no 
 helper symbols. `frame_roots::` protocol tests register only the publication
 callback; they exercise live locals/operands, dead-local release, reference return
 handoff, failed publication, missing contexts and the spill-capacity limit.
+
+Request-only static, special, virtual and interface invocations now return a `CallRequest`
+with the exact bytecode offset and owner-local constant-pool index. The embedding resolves
+access/dispatch/initialization and invokes the callee with no generated caller on the stack.
+`call_arguments()` exposes one eight-byte cell per logical parameter, including a receiver;
+wide Java parameters still occupy two local slots. Reference cells remain opaque tokens
+owned by the published caller frame. No synchronous invocation helper is linked.
+
+Complete a successful request once with `complete_call(bits)`, after the context owns any
+reference result. On a Java/embedding error or cancellation, drop the activation; handlers
+and exception propagation through native catch blocks are not admitted in this slice.
+A pending request cannot resume before completion. `remaining_budget()` carries fuel across
+immediately completed requests; a zero remainder requires a host scheduling boundary.
+Instance entry is explicit through this request-only API. Ordinary eligibility is unchanged.
