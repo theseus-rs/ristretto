@@ -212,3 +212,33 @@ fn compiler_intersection_rejects_heap_operations_before_any_native_entry() -> Re
     ));
     Ok(())
 }
+
+#[tokio::test]
+async fn preparation_rejects_fieldless_scalar_class_initialization() -> Result {
+    let file = ClassFile::from_bytes(include_bytes!(
+        "fixtures/canonical/CanonicalCompiledInitialization.class"
+    ))?;
+    assert_eq!(file.fields, [] as [ristretto_classfile::Field; 0]);
+    assert!(file.methods.iter().any(|method| {
+        file.constant_pool
+            .try_get_utf8(method.name_index)
+            .is_ok_and(|name| name == "<clinit>")
+    }));
+    let program = Program::from_classfiles([file])?;
+    assert_eq!(
+        program
+            .run(
+                "CanonicalCompiledInitialization",
+                "run",
+                17,
+                configuration(),
+                Limits::default()
+            )
+            .await?
+            .result,
+        17
+    );
+    assert!(matches!(program.compile(), Err(Error::Unsupported(message))
+        if message == "native class initialization is not connected"));
+    Ok(())
+}
