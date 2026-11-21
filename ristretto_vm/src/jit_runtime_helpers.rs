@@ -623,8 +623,7 @@ fn jit_baload_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32) ->
         Reference::ByteArray(a) | Reference::BooleanArray(a) => {
             array_element_or_pending(ctx, a, index)
                 .copied()
-                .map(i32::from)
-                .unwrap_or_default()
+                .map_or_default(i32::from)
         }
         other => {
             store_pending_error(
@@ -694,8 +693,7 @@ fn jit_caload_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32) ->
     match &*reference {
         Reference::CharArray(a) => array_element_or_pending(ctx, a, index)
             .copied()
-            .map(i32::from)
-            .unwrap_or_default(),
+            .map_or_default(i32::from),
         other => {
             store_pending_error(
                 ctx,
@@ -764,8 +762,7 @@ fn jit_saload_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32) ->
     match &*reference {
         Reference::ShortArray(a) => array_element_or_pending(ctx, a, index)
             .copied()
-            .map(i32::from)
-            .unwrap_or_default(),
+            .map_or_default(i32::from),
         other => {
             store_pending_error(
                 ctx,

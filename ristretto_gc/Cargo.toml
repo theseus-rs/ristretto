@@ -15,12 +15,12 @@ workspace = true
 
 [dependencies]
 dashmap = { workspace = true }
-parking_lot = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 dashmap = { workspace = true, features = ["rayon"] }
+parking_lot = { workspace = true }
 rayon = { workspace = true }
 sysinfo = { workspace = true }
 

@@ -3,7 +3,7 @@ authors.workspace = true
 categories.workspace = true
 description = "Intrinsic methods for the Ristretto JVM"
 edition.workspace = true
-keywords = ["java", "jvm"]
+keywords.workspace = true
 license.workspace = true
 name = "ristretto_intrinsics"
 repository.workspace = true
@@ -33,7 +33,6 @@ ristretto_classloader = { path = "../ristretto_classloader", version = "0.35.0",
 ristretto_gc = { path = "../ristretto_gc", version = "0.35.0" }
 ristretto_macros = { path = "../ristretto_macros", version = "0.35.0" }
 ristretto_types = { path = "../ristretto_types", version = "0.35.0" }
-sys-locale = { workspace = true }
 tracing = { workspace = true }
 zerocopy = { workspace = true }
 zip = { workspace = true, features = ["deflate"] }
@@ -55,6 +54,9 @@ whoami = { workspace = true }
 
 [target.'cfg(any(target_family = "windows", target_os = "android", target_os = "freebsd", target_os = "ios", target_os = "linux", target_os = "macos", target_os = "netbsd", target_os = "openbsd", target_os = "vxworks"))'.dependencies]
 thread-priority = { workspace = true }
+
+[target.'cfg(not(any(target_os = "macos", target_family = "windows")))'.dependencies]
+sys-locale = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation-sys = { workspace = true }

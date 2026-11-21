@@ -1,3 +1,4 @@
+use super::socketdispatcher::socket_wait_interrupted;
 use crate::java::io::socketfiledescriptor::{get_fd, set_fd};
 use crate::java::net::socket_ops;
 use crate::net_helpers::{
@@ -670,20 +671,22 @@ fn multicast_unsupported(error: &std::io::Error) -> bool {
     if error.kind() == std::io::ErrorKind::Unsupported {
         return true;
     }
-    let Some(code) = error.raw_os_error() else {
-        return false;
-    };
     #[cfg(unix)]
-    if code == libc::ENOPROTOOPT || code == libc::EOPNOTSUPP {
-        return true;
+    {
+        matches!(
+            error.raw_os_error(),
+            Some(libc::ENOPROTOOPT | libc::EOPNOTSUPP)
+        )
     }
     #[cfg(windows)]
-    if code == windows_sys::Win32::Networking::WinSock::WSAENOPROTOOPT
-        || code == windows_sys::Win32::Networking::WinSock::WSAEOPNOTSUPP
     {
-        return true;
+        use windows_sys::Win32::Networking::WinSock::{WSAENOPROTOOPT, WSAEOPNOTSUPP};
+        matches!(error.raw_os_error(), Some(WSAENOPROTOOPT | WSAEOPNOTSUPP))
     }
-    false
+    #[cfg(not(any(unix, windows)))]
+    {
+        false
+    }
 }
 
 fn multicast_status(result: std::io::Result<()>, unavailable_is_status: bool) -> Result<i32> {
@@ -737,21 +740,6 @@ async fn inet_address_value<T: Thread + 'static>(
             .await?
     };
     result.ok_or_else(|| InternalError("InetAddress.getByAddress returned null".to_string()))
-}
-
-async fn socket_operation_interrupted<T: Thread + 'static>(
-    thread: &Arc<T>,
-    fd: i32,
-) -> Result<bool> {
-    let vm = thread.vm()?;
-    if vm.socket_handles().get(&fd).await.is_none() {
-        return Ok(true);
-    }
-    #[cfg(target_family = "unix")]
-    if super::nativethread::take_signal(&**thread)? {
-        return Ok(true);
-    }
-    Ok(false)
 }
 
 #[intrinsic_method(
@@ -832,7 +820,7 @@ pub async fn accept<T: Thread + 'static>(
                     Ok(Err(error)) if error.kind() == std::io::ErrorKind::ConnectionAborted => {}
                     Ok(result) => break result,
                     Err(_) => {
-                        if socket_operation_interrupted(&thread, fd).await? {
+                        if socket_wait_interrupted(&thread, fd).await? {
                             return Ok(Some(Value::Int(super::IOS_INTERRUPTED)));
                         }
                     }
@@ -1671,7 +1659,7 @@ pub async fn poll<T: Thread + 'static>(
             }
         }
         if deadline.is_some_and(|deadline| Instant::now() >= deadline)
-            || socket_operation_interrupted(&thread, fd).await?
+            || socket_wait_interrupted(&thread, fd).await?
         {
             return Ok(Some(Value::Int(0)));
         }
@@ -1745,7 +1733,7 @@ pub async fn poll_connect<T: Thread + 'static>(
             }
         }
         if deadline.is_some_and(|deadline| Instant::now() >= deadline)
-            || socket_operation_interrupted(&thread, fd).await?
+            || socket_wait_interrupted(&thread, fd).await?
         {
             return Ok(Some(Value::from(false)));
         }

@@ -282,7 +282,7 @@ impl VerificationCache {
     /// Gets cache statistics.
     #[must_use]
     pub fn stats(&self) -> CacheStats {
-        self.stats.read().map(|s| s.clone()).unwrap_or_default()
+        self.stats.read().map_or_default(|stats| stats.clone())
     }
 
     /// Clears all cached data.

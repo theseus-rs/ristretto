@@ -13,22 +13,22 @@ and an unreviewed Rust upgrade fail the build instead of silently omitting notic
 ## Provenance and coverage
 
 - Rust's `COPYRIGHT`, `LICENSE-MIT`, and `LICENSE-APACHE` come from
-  [Rust 1.99.1, commit 58cf8f9c](https://github.com/rust-lang/rust/tree/58cf8f9c35b355199727627d07ae34a4e2846d67).
+  [Rust 1.100.0, commit 0ef1bc38](https://github.com/rust-lang/rust/tree/0ef1bc386059596dada8fb65b50425aab2ea637a).
 - That release's
-  [WASI target build configuration](https://github.com/rust-lang/rust/blob/58cf8f9c35b355199727627d07ae34a4e2846d67/src/ci/docker/host-x86_64/dist-various-2/Dockerfile)
-  selects wasi-sdk 33. The SDK's
-  [wasi-libc submodule](https://github.com/WebAssembly/wasi-sdk/tree/wasi-sdk-33/src/wasi-libc)
-  points to `161b3195fc2558d2b1ba3eb9ffae3b2b47407623`, and its
-  [LLVM submodule](https://github.com/WebAssembly/wasi-sdk/tree/wasi-sdk-33/src/llvm-project)
-  points to `4434dabb69916856b824f68a64b029c67175e532`.
+  [WASI target build configuration](https://github.com/rust-lang/rust/blob/0ef1bc386059596dada8fb65b50425aab2ea637a/src/ci/docker/host-x86_64/dist-various-2/Dockerfile)
+  selects wasi-sdk 34. The SDK's
+  [wasi-libc submodule](https://github.com/WebAssembly/wasi-sdk/tree/wasi-sdk-34/src/wasi-libc)
+  points to `2e6fb9d8ee0cdf9e431fbcabe8af3115de000a13`, and its
+  [LLVM submodule](https://github.com/WebAssembly/wasi-sdk/tree/wasi-sdk-34/src/llvm-project)
+  points to `895aa2c896ada719451be2e3673c83da8ddf1141`.
 - wasi-libc's top-level licenses and its cloudlibc, musl, and musl-fts notices are
   copied verbatim. `wasi-libc/dlmalloc/NOTICE` contains the opening public-domain
   dedication from `dlmalloc/src/malloc.c`, through the line before `* Version`,
   with a closing comment delimiter added.
 - wasi-libc's
-  [default allocator is dlmalloc](https://github.com/WebAssembly/wasi-libc/blob/161b3195fc2558d2b1ba3eb9ffae3b2b47407623/CMakeLists.txt),
+  [default allocator is dlmalloc](https://github.com/WebAssembly/wasi-libc/blob/2e6fb9d8ee0cdf9e431fbcabe8af3115de000a13/CMakeLists.txt),
   and the SDK's
-  [sysroot build](https://github.com/WebAssembly/wasi-sdk/blob/wasi-sdk-33/cmake/wasi-sdk-sysroot.cmake)
+  [sysroot build](https://github.com/WebAssembly/wasi-sdk/blob/wasi-sdk-34/cmake/wasi-sdk-sysroot.cmake)
   does not override it. The alternative emmalloc allocator is not covered here.
 - The complete LLVM compiler-rt and libunwind license files are included
   conservatively, as is musl-fts. Inclusion does not assert that every component
