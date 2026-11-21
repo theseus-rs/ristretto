@@ -252,3 +252,13 @@ one ticket, and stale source/target keys cannot attach to reused slots. All 16
 native frozen raw-edge regressions (13 portable) are retained. Native/WASI catalog
 totals are 85/76; strict Clippy passes. Test helpers use the packaged guarded entry
 methods directly; no external catalog dependency is introduced.
+
+## C10 prerequisite: resumable source traversal
+
+Frozen Full-domain traversal retains its exact source generation, epoch, ticket
+and strength. It visits the complete admitted source range before acknowledging;
+a stronger or superseding ticket requires another complete scan. Stopped private
+scanners do not own shared completion. All 13 frozen traversal regressions pass
+on both native and WASI, including transitive retention, insertion behind a
+cursor, unreachable-cycle reclamation and independent helper completion. Catalog
+totals are 98/89; strict Clippy passes. Runtime edge admission remains separate.
