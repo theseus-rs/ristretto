@@ -1,6 +1,8 @@
 //! Explicit admission and execution of a closed set of restricted Java classes.
 
 mod integer;
+mod layout;
+use layout::Layout;
 mod scalar;
 mod value;
 pub use value::ScalarValue;
@@ -14,7 +16,6 @@ use ristretto_classfile::verifiers::error::{Result as VerificationResult, Verify
 use ristretto_classfile::{ClassAccessFlags, ClassFile, JavaStr, JavaString, MethodAccessFlags};
 use ristretto_classloader::{Class, Method};
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /// A format, verifier or capability failure.
 #[derive(Debug, thiserror::Error)]
@@ -36,7 +37,8 @@ type Result<T> = std::result::Result<T, Error>;
 /// Closed set of admitted classfiles. Each class directly extends Object.
 #[derive(Debug)]
 pub struct Program {
-    classes: HashMap<JavaString, Arc<Class>>,
+    classes: Vec<Layout>,
+    names: HashMap<JavaString, usize>,
 }
 
 impl Program {
@@ -45,13 +47,13 @@ impl Program {
     /// # Errors
     /// Reports format, verification, linking and capability errors.
     pub fn from_classfiles(files: impl IntoIterator<Item = ClassFile<'static>>) -> Result<Self> {
-        let mut classes = HashMap::new();
+        let mut classes = Vec::new();
+        let mut names = HashMap::new();
         for file in files {
             file.verify()?;
             let name = file.class_name()?.to_owned();
             if file.constant_pool.try_get_class(file.super_class)? != "java/lang/Object"
                 || name.as_bytes().starts_with(b"java/")
-                || !file.fields.is_empty()
                 || !file.interfaces.is_empty()
                 || file.access_flags.intersects(
                     ClassAccessFlags::INTERFACE
@@ -61,15 +63,17 @@ impl Program {
             {
                 return Err(Error::Unsupported(format!("class layout {name}")));
             }
-            if classes.insert(name, Class::from(None, file)?).is_some() {
+            if names.insert(name, classes.len()).is_some() {
                 return Err(Error::Invalid("duplicate class".into()));
             }
+            classes.push(Layout::new(file)?);
         }
         if classes.is_empty() {
             return Err(Error::Invalid("empty program".into()));
         }
-        let program = Self { classes };
-        for class in program.classes.values() {
+        let program = Self { classes, names };
+        for layout in &program.classes {
+            let class = &layout.class;
             for method in class.methods() {
                 Self::admit_method(class, &method)?;
             }
@@ -158,8 +162,10 @@ impl Program {
     ) -> Result<ScalarValue> {
         let name = JavaString::from(class);
         let owner = self
-            .classes
+            .names
             .get(&name)
+            .and_then(|index| self.classes.get(*index))
+            .map(|layout| &layout.class)
             .ok_or_else(|| Error::Unsupported(class.into()))?;
         let entry = owner.try_get_method(method, descriptor)?;
         if !entry.is_static() || !entry.access_flags().contains(MethodAccessFlags::PUBLIC) {
@@ -169,7 +175,7 @@ impl Program {
     }
 
     fn known(&self, name: &JavaStr) -> VerificationResult<()> {
-        if name == "java/lang/Object" || self.classes.contains_key(name) {
+        if name == "java/lang/Object" || self.names.contains_key(name) {
             Ok(())
         } else {
             Err(VerifyError::VerifyError(format!("unresolved class {name}")))
