@@ -19,6 +19,7 @@ use crate::canonical_pool as pool;
 use pool::AllocationError;
 #[path = "edge_traversal.rs"]
 mod edge_traversal;
+pub use edge_traversal::*;
 #[path = "edges.rs"]
 mod edges;
 #[path = "phase_ops.rs"]
