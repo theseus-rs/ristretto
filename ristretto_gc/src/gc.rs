@@ -1,8 +1,8 @@
 use crate::Finalize;
-use crate::allocation_budget::Reservation;
 use crate::collector::{GarbageCollector, Trace};
 use crate::error::{Error, Result};
 use crate::pointers::SafePtr;
+use crate::private_allocation::Allocation;
 use crate::root_guard::GcRootGuard;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
@@ -28,30 +28,29 @@ impl<T> Gc<T> {
     /// Heap-allocates `data`, records the allocation with the collector, and returns
     /// a `Gc<T>` wrapping the raw pointer along with the pointer and size needed
     /// for subsequent registration.
-    fn allocate(
-        collector: &GarbageCollector,
-        data: T,
-    ) -> Result<(Self, *mut T, usize, Reservation)> {
+    fn allocate(collector: &GarbageCollector, data: T) -> Result<(Self, Allocation)>
+    where
+        T: Send + Sync,
+    {
         let size = size_of::<T>();
         let reservation = collector.reserve_exact_bytes(size)?;
-        let ptr = NonNull::from(Box::leak(Box::new(data)));
-        collector.record_allocation(size);
+        let (allocation, ptr) = Allocation::new(data, reservation)?;
 
         let gc = Self {
             ptr,
             phantom: PhantomData,
         };
-        Ok((gc, ptr.as_ptr(), size, reservation))
+        Ok((gc, allocation))
     }
 
     #[expect(
         clippy::expect_used,
         reason = "the existing infallible API panics on budget exhaustion"
     )]
-    fn allocate_infallible(
-        collector: &GarbageCollector,
-        data: T,
-    ) -> (Self, *mut T, usize, Reservation) {
+    fn allocate_infallible(collector: &GarbageCollector, data: T) -> (Self, Allocation)
+    where
+        T: Send + Sync,
+    {
         Self::allocate(collector, data).expect("managed payload budget exhausted")
     }
 
@@ -75,9 +74,9 @@ impl<T> Gc<T> {
     where
         T: Send + Sync + Trace,
     {
-        let (gc, ptr, size, reservation) = Self::allocate(collector, data)?;
+        let (gc, allocation) = Self::allocate(collector, data)?;
         let root = collector.create_root_guard(gc);
-        collector.register_object::<T>(ptr, size, reservation);
+        collector.register_object(allocation);
         Ok(root)
     }
 
@@ -114,14 +113,14 @@ impl<T> Gc<T> {
     where
         T: Send + Sync + Trace,
     {
-        let (gc, ptr, size, reservation) = Self::allocate_infallible(collector, data);
+        let (gc, allocation) = Self::allocate_infallible(collector, data);
 
         // Register root BEFORE registering object to prevent race with GC cycle.
         // If the root exists first, any GC cycle will find the root during marking.
         // The object isn't in the tracking map yet, so it can't be swept.
         let root_guard = collector.create_root_guard(gc);
 
-        collector.register_object::<T>(ptr, size, reservation);
+        collector.register_object(allocation);
         root_guard
     }
 
@@ -138,8 +137,8 @@ impl<T> Gc<T> {
     where
         T: Send + Sync,
     {
-        let (gc, ptr, size, reservation) = Self::allocate_infallible(collector, data);
-        collector.register_object::<T>(ptr, size, reservation);
+        let (gc, allocation) = Self::allocate_infallible(collector, data);
+        collector.register_object(allocation);
         gc
     }
 
@@ -156,12 +155,13 @@ impl<T> Gc<T> {
     where
         T: Send + Sync + Finalize + Trace,
     {
-        let (gc, ptr, size, reservation) = Self::allocate_infallible(collector, data);
+        let (gc, allocation) = Self::allocate_infallible(collector, data);
 
         // Register root BEFORE registering object (same rationale as with_collector)
         let root_guard = collector.create_root_guard(gc);
 
-        collector.register_object_with_finalizer::<T>(ptr, size, reservation);
+        // SAFETY: allocate created this exact allocation from T.
+        unsafe { collector.register_object_with_finalizer::<T>(allocation) };
         root_guard
     }
 
@@ -182,8 +182,9 @@ impl<T> Gc<T> {
     where
         T: Send + Sync + Finalize,
     {
-        let (gc, ptr, size, reservation) = Self::allocate_infallible(collector, data);
-        collector.register_object_with_finalizer::<T>(ptr, size, reservation);
+        let (gc, allocation) = Self::allocate_infallible(collector, data);
+        // SAFETY: allocate created this exact allocation from T.
+        unsafe { collector.register_object_with_finalizer::<T>(allocation) };
         gc
     }
 

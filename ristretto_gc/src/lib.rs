@@ -31,6 +31,7 @@ mod finalizer;
 mod gc;
 mod metadata;
 mod pointers;
+mod private_allocation;
 mod root_guard;
 pub mod sync;
 
