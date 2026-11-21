@@ -394,8 +394,9 @@ impl Execution<'_, '_, '_> {
         let Some(prepared) = self.prepare_initialization(class).await? else {
             return Ok(());
         };
-        let outcome = if let Some(initializer) = prepared.initializer.clone() {
-            self.call(class, initializer, Vec::new(), depth).await
+        let outcome = if let Some(initializer) = prepared.initializer() {
+            self.call(prepared.class(), initializer, Vec::new(), depth)
+                .await
         } else {
             Ok(None)
         };

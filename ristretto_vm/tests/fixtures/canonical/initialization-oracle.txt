@@ -1,0 +1,13 @@
+slow 4 2096149
+slow -13 2096132
+storeSlow 31 31
+returned 0 31
+returned 0 0
+nested 0 2096146
+cycleA 0 3
+cycleB 0 2
+bad 0 ExceptionInInitializerError
+bad 0 NoClassDefFoundError
+nestedBad 0 NoClassDefFoundError
+nestedBad 0 NoClassDefFoundError
+entry 4 23
