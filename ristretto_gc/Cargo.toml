@@ -26,3 +26,9 @@ sysinfo = { workspace = true }
 
 [dev-dependencies]
 test-log = { workspace = true, features = ["trace"] }
+
+[features]
+experimental-canonical-runtime = []
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+loom = "=0.7.2"
