@@ -1,8 +1,11 @@
 //! Explicit admission and execution of a closed set of restricted Java classes.
 
+#[path = "canonical_heap.rs"]
+mod heap;
 mod integer;
 mod layout;
 mod objects;
+pub use heap::{HeapCompletion, Invocation, JavaHeap, JavaThread};
 use layout::Layout;
 pub use objects::{Limits, Report};
 mod scalar;
