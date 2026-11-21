@@ -1,5 +1,6 @@
 //! Primitive JVM values used by the closed canonical execution tier.
-use super::{Error, ScalarValue, load, pop, store};
+use super::value::PrimitiveFrameValue;
+use super::{Error, ScalarValue};
 use ristretto_classfile::{BaseType, Constant, ConstantPool, FieldType, attributes::Instruction};
 
 /// JVMS ireturn narrows before handing the result to the caller, even when the
@@ -126,10 +127,10 @@ pub(super) fn supports(instruction: &Instruction) -> bool {
     clippy::cast_sign_loss,
     reason = "explicit JVM numeric opcode and narrowing semantics"
 )]
-pub(super) fn execute(
+pub(super) fn execute<V: PrimitiveFrameValue>(
     instruction: &Instruction,
-    locals: &mut [Option<ScalarValue>],
-    stack: &mut Vec<ScalarValue>,
+    locals: &mut [V::Slot],
+    stack: &mut Vec<V>,
 ) -> Result<(), Error> {
     let value = match instruction {
         Instruction::Lconst_0 => ScalarValue::Long(0),
@@ -140,46 +141,46 @@ pub(super) fn execute(
         Instruction::Dconst_0 => ScalarValue::Double(0.0),
         Instruction::Dconst_1 => ScalarValue::Double(1.0),
         Instruction::Lload(index) | Instruction::Fload(index) | Instruction::Dload(index) => {
-            return load(locals, stack, usize::from(*index));
+            return V::load(locals, stack, usize::from(*index));
         }
         Instruction::Lload_w(index) | Instruction::Fload_w(index) | Instruction::Dload_w(index) => {
-            return load(locals, stack, usize::from(*index));
+            return V::load(locals, stack, usize::from(*index));
         }
         Instruction::Lload_0 | Instruction::Fload_0 | Instruction::Dload_0 => {
-            return load(locals, stack, 0);
+            return V::load(locals, stack, 0);
         }
         Instruction::Lload_1 | Instruction::Fload_1 | Instruction::Dload_1 => {
-            return load(locals, stack, 1);
+            return V::load(locals, stack, 1);
         }
         Instruction::Lload_2 | Instruction::Fload_2 | Instruction::Dload_2 => {
-            return load(locals, stack, 2);
+            return V::load(locals, stack, 2);
         }
         Instruction::Lload_3 | Instruction::Fload_3 | Instruction::Dload_3 => {
-            return load(locals, stack, 3);
+            return V::load(locals, stack, 3);
         }
         Instruction::Lstore(index) | Instruction::Fstore(index) | Instruction::Dstore(index) => {
-            return store(locals, stack, usize::from(*index));
+            return V::store(locals, stack, usize::from(*index));
         }
         Instruction::Lstore_w(index)
         | Instruction::Fstore_w(index)
         | Instruction::Dstore_w(index) => {
-            return store(locals, stack, usize::from(*index));
+            return V::store(locals, stack, usize::from(*index));
         }
         Instruction::Lstore_0 | Instruction::Fstore_0 | Instruction::Dstore_0 => {
-            return store(locals, stack, 0);
+            return V::store(locals, stack, 0);
         }
         Instruction::Lstore_1 | Instruction::Fstore_1 | Instruction::Dstore_1 => {
-            return store(locals, stack, 1);
+            return V::store(locals, stack, 1);
         }
         Instruction::Lstore_2 | Instruction::Fstore_2 | Instruction::Dstore_2 => {
-            return store(locals, stack, 2);
+            return V::store(locals, stack, 2);
         }
         Instruction::Lstore_3 | Instruction::Fstore_3 | Instruction::Dstore_3 => {
-            return store(locals, stack, 3);
+            return V::store(locals, stack, 3);
         }
         Instruction::Ladd | Instruction::Lsub | Instruction::Lmul => {
-            let right = pop(stack)?.long()?;
-            let left = pop(stack)?.long()?;
+            let right = V::pop_scalar(stack)?.long()?;
+            let left = V::pop_scalar(stack)?.long()?;
             ScalarValue::Long(match instruction {
                 Instruction::Ladd => left.wrapping_add(right),
                 Instruction::Lsub => left.wrapping_sub(right),
@@ -187,8 +188,8 @@ pub(super) fn execute(
             })
         }
         Instruction::Fadd | Instruction::Fsub | Instruction::Fmul => {
-            let right = pop(stack)?.float()?;
-            let left = pop(stack)?.float()?;
+            let right = V::pop_scalar(stack)?.float()?;
+            let left = V::pop_scalar(stack)?.float()?;
             ScalarValue::Float(match instruction {
                 Instruction::Fadd => left + right,
                 Instruction::Fsub => left - right,
@@ -196,25 +197,25 @@ pub(super) fn execute(
             })
         }
         Instruction::Dadd | Instruction::Dsub | Instruction::Dmul => {
-            let right = pop(stack)?.double()?;
-            let left = pop(stack)?.double()?;
+            let right = V::pop_scalar(stack)?.double()?;
+            let left = V::pop_scalar(stack)?.double()?;
             ScalarValue::Double(match instruction {
                 Instruction::Dadd => left + right,
                 Instruction::Dsub => left - right,
                 _ => left * right,
             })
         }
-        Instruction::Lneg => ScalarValue::Long(pop(stack)?.long()?.wrapping_neg()),
-        Instruction::Fneg => ScalarValue::Float(-pop(stack)?.float()?),
-        Instruction::Dneg => ScalarValue::Double(-pop(stack)?.double()?),
+        Instruction::Lneg => ScalarValue::Long(V::pop_scalar(stack)?.long()?.wrapping_neg()),
+        Instruction::Fneg => ScalarValue::Float(-V::pop_scalar(stack)?.float()?),
+        Instruction::Dneg => ScalarValue::Double(-V::pop_scalar(stack)?.double()?),
         Instruction::Lcmp => {
-            let right = pop(stack)?.long()?;
-            let left = pop(stack)?.long()?;
+            let right = V::pop_scalar(stack)?.long()?;
+            let left = V::pop_scalar(stack)?.long()?;
             ScalarValue::Int(ordering(left.cmp(&right)))
         }
         Instruction::Fcmpl | Instruction::Fcmpg => {
-            let right = pop(stack)?.float()?;
-            let left = pop(stack)?.float()?;
+            let right = V::pop_scalar(stack)?.float()?;
+            let left = V::pop_scalar(stack)?.float()?;
             ScalarValue::Int(left.partial_cmp(&right).map_or(
                 if matches!(instruction, Instruction::Fcmpl) {
                     -1
@@ -225,8 +226,8 @@ pub(super) fn execute(
             ))
         }
         Instruction::Dcmpl | Instruction::Dcmpg => {
-            let right = pop(stack)?.double()?;
-            let left = pop(stack)?.double()?;
+            let right = V::pop_scalar(stack)?.double()?;
+            let left = V::pop_scalar(stack)?.double()?;
             ScalarValue::Int(left.partial_cmp(&right).map_or(
                 if matches!(instruction, Instruction::Dcmpl) {
                     -1
@@ -236,24 +237,24 @@ pub(super) fn execute(
                 ordering,
             ))
         }
-        Instruction::I2b => ScalarValue::Int(i32::from(pop(stack)?.int()? as i8)),
-        Instruction::I2c => ScalarValue::Int(i32::from(pop(stack)?.int()? as u16)),
-        Instruction::I2s => ScalarValue::Int(i32::from(pop(stack)?.int()? as i16)),
-        Instruction::I2l => ScalarValue::Long(i64::from(pop(stack)?.int()?)),
-        Instruction::I2f => ScalarValue::Float(pop(stack)?.int()? as f32),
-        Instruction::I2d => ScalarValue::Double(f64::from(pop(stack)?.int()?)),
-        Instruction::L2i => ScalarValue::Int(pop(stack)?.long()? as i32),
-        Instruction::L2f => ScalarValue::Float(pop(stack)?.long()? as f32),
-        Instruction::L2d => ScalarValue::Double(pop(stack)?.long()? as f64),
-        Instruction::F2i => ScalarValue::Int(pop(stack)?.float()? as i32),
-        Instruction::F2l => ScalarValue::Long(pop(stack)?.float()? as i64),
-        Instruction::F2d => ScalarValue::Double(f64::from(pop(stack)?.float()?)),
-        Instruction::D2i => ScalarValue::Int(pop(stack)?.double()? as i32),
-        Instruction::D2l => ScalarValue::Long(pop(stack)?.double()? as i64),
-        Instruction::D2f => ScalarValue::Float(pop(stack)?.double()? as f32),
+        Instruction::I2b => ScalarValue::Int(i32::from(V::pop_scalar(stack)?.int()? as i8)),
+        Instruction::I2c => ScalarValue::Int(i32::from(V::pop_scalar(stack)?.int()? as u16)),
+        Instruction::I2s => ScalarValue::Int(i32::from(V::pop_scalar(stack)?.int()? as i16)),
+        Instruction::I2l => ScalarValue::Long(i64::from(V::pop_scalar(stack)?.int()?)),
+        Instruction::I2f => ScalarValue::Float(V::pop_scalar(stack)?.int()? as f32),
+        Instruction::I2d => ScalarValue::Double(f64::from(V::pop_scalar(stack)?.int()?)),
+        Instruction::L2i => ScalarValue::Int(V::pop_scalar(stack)?.long()? as i32),
+        Instruction::L2f => ScalarValue::Float(V::pop_scalar(stack)?.long()? as f32),
+        Instruction::L2d => ScalarValue::Double(V::pop_scalar(stack)?.long()? as f64),
+        Instruction::F2i => ScalarValue::Int(V::pop_scalar(stack)?.float()? as i32),
+        Instruction::F2l => ScalarValue::Long(V::pop_scalar(stack)?.float()? as i64),
+        Instruction::F2d => ScalarValue::Double(f64::from(V::pop_scalar(stack)?.float()?)),
+        Instruction::D2i => ScalarValue::Int(V::pop_scalar(stack)?.double()? as i32),
+        Instruction::D2l => ScalarValue::Long(V::pop_scalar(stack)?.double()? as i64),
+        Instruction::D2f => ScalarValue::Float(V::pop_scalar(stack)?.double()? as f32),
         _ => return Err(Error::Invalid("unsupported scalar opcode".into())),
     };
-    stack.push(value);
+    stack.push(value.into());
     Ok(())
 }
 fn ordering(value: std::cmp::Ordering) -> i32 {

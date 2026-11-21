@@ -1,4 +1,6 @@
 use super::Error;
+use super::objects::array_kind;
+use super::primitive_array::Kind;
 use super::statics::StaticLayout;
 use ristretto_classfile::{BaseType, ClassFile, FieldAccessFlags, FieldType, JavaString};
 use ristretto_classloader::Class;
@@ -8,9 +10,30 @@ use std::sync::Arc;
 pub(super) const MAX_INTEGER_FIELDS: usize = 8;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum ReferenceType {
+    Object(usize),
+    Array(Kind),
+}
+
+pub(super) fn reference_type(
+    ty: &FieldType,
+    names: &HashMap<JavaString, usize>,
+) -> Result<ReferenceType, Error> {
+    match ty {
+        FieldType::Object(name) => names
+            .get(name)
+            .copied()
+            .map(ReferenceType::Object)
+            .ok_or_else(|| Error::Unsupported(format!("field class {name}"))),
+        FieldType::Array(element) => array_kind(element).map(ReferenceType::Array),
+        FieldType::Base(_) => Err(Error::Boundary("primitive reference type")),
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum Field {
     Int(usize),
-    Reference { edge: usize, class: usize },
+    Reference { edge: usize, target: ReferenceType },
 }
 
 /// Fixed slots for fields of a verified non-inheriting Java instance.
@@ -59,7 +82,15 @@ impl Layout {
                         .ok_or_else(|| Error::Unsupported(format!("field class {target}")))?;
                     let field = Field::Reference {
                         edge: references,
-                        class,
+                        target: ReferenceType::Object(class),
+                    };
+                    references += 1;
+                    field
+                }
+                FieldType::Array(component) if references < 8 => {
+                    let field = Field::Reference {
+                        edge: references,
+                        target: ReferenceType::Array(array_kind(&component)?),
                     };
                     references += 1;
                     field

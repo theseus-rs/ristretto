@@ -217,12 +217,12 @@ fn ninth_reference_field_rejects() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-fn array_payload_rejects() -> Result<(), Box<dyn std::error::Error>> {
+fn reference_array_payload_rejects() -> Result<(), Box<dyn std::error::Error>> {
     let mut files = classes()?;
     add_field(
         files.last_mut().ok_or("missing node")?,
         "array",
-        "[I",
+        "[[I",
         FieldAccessFlags::empty(),
     )?;
     assert!(matches!(
@@ -280,7 +280,7 @@ fn replace_first_run_instruction(
 #[test]
 fn unsupported_opcode_rejects_before_execution() -> Result<(), Box<dyn std::error::Error>> {
     let mut files = classes()?;
-    replace_first_run_instruction(&mut files, Instruction::Fconst_0)?;
+    replace_first_run_instruction(&mut files, Instruction::Idiv)?;
     assert!(matches!(
         Program::from_classfiles(files),
         Err(Error::Unsupported(_))

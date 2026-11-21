@@ -85,3 +85,30 @@ pub(super) fn store(
     *locals.get_mut(index).ok_or_else(invalid)? = Some(value);
     Ok(())
 }
+
+/// Scalar bytecodes operate on the primitive part of either kind of Java frame.
+pub(super) trait PrimitiveFrameValue: From<ScalarValue> {
+    type Slot;
+    fn primitive(self) -> Result<ScalarValue, Error>;
+    fn pop_scalar(stack: &mut Vec<Self>) -> Result<ScalarValue, Error> {
+        stack
+            .pop()
+            .ok_or_else(|| Error::Invalid("stack underflow".into()))?
+            .primitive()
+    }
+    fn load(locals: &[Self::Slot], stack: &mut Vec<Self>, index: usize) -> Result<(), Error>;
+    fn store(locals: &mut [Self::Slot], stack: &mut Vec<Self>, index: usize) -> Result<(), Error>;
+}
+
+impl PrimitiveFrameValue for ScalarValue {
+    type Slot = Option<Self>;
+    fn primitive(self) -> Result<ScalarValue, Error> {
+        Ok(self)
+    }
+    fn load(locals: &[Self::Slot], stack: &mut Vec<Self>, index: usize) -> Result<(), Error> {
+        load(locals, stack, index)
+    }
+    fn store(locals: &mut [Self::Slot], stack: &mut Vec<Self>, index: usize) -> Result<(), Error> {
+        store(locals, stack, index)
+    }
+}
