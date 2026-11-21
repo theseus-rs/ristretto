@@ -1,4 +1,8 @@
 //! Execution of verified closed object methods on a dedicated incremental heap.
+#[cfg(feature = "experimental-canonical-jit")]
+#[path = "frame_table.rs"]
+mod frame_table;
+
 use super::layout::{Field, ReferenceType, reference_type};
 use super::reference_array::{self, Component};
 mod cast;
