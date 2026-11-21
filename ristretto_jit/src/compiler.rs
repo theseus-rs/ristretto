@@ -1,3 +1,6 @@
+#[path = "native_frame.rs"]
+mod native_frame;
+
 use crate::Error::{
     InternalError, InvalidBlockAddress, UnsupportedInstruction, UnsupportedTargetISA,
 };
@@ -95,6 +98,7 @@ impl Compiler {
         for &(name, ptr) in symbols {
             jit_builder.symbol(name, ptr);
         }
+        jit_builder.symbol(native_frame::PROBE_SYMBOL, native_frame::probe as *const u8);
         JITModule::new(jit_builder)
     }
 
@@ -216,16 +220,19 @@ impl Compiler {
 
         let helpers = RuntimeHelpers::declare(&mut jit_module, &mut function_builder)?;
 
-        let (entry_block, blocks) = control_flow_graph::get_blocks(
+        let (entry_block, mut blocks) = control_flow_graph::get_blocks(
             &mut function_builder,
             constant_pool,
             instructions,
             exception_table,
         )?;
+        if blocks.get(&0) == Some(&entry_block) {
+            blocks.insert(0, function_builder.create_block());
+        }
         // Use the entry block for function setup (entry_block cannot be jumped to)
         function_builder.switch_to_block(entry_block);
         function_builder.append_block_params_for_function_params(entry_block);
-        let (arguments_pointer, _arguments_length_pointer, return_pointer, context_pointer) =
+        let (arguments_pointer, arguments_length, return_pointer, context_pointer) =
             Self::function_pointers(&mut function_builder, entry_block)?;
 
         let mut locals = Self::locals(
@@ -244,12 +251,15 @@ impl Compiler {
         // and returns.
         let exception_block = function_builder.create_block();
 
-        // If entry_block and block_zero are different, we need to jump from entry to block_zero
-        // This happens when there are backward jumps to address 0
-        if entry_block != block_zero {
-            function_builder.ins().jump(block_zero, &[]);
-            function_builder.switch_to_block(block_zero);
-        }
+        let frame_probe = native_frame::SizeProbe::new(&mut function_builder);
+        frame_probe.emit_cold_path(
+            &mut jit_module,
+            &mut function_builder,
+            arguments_length,
+            block_zero,
+            exception_block,
+        )?;
+        function_builder.switch_to_block(block_zero);
 
         let mut stack = OperandStack::with_capacity(max_stack);
         let mut block_is_terminated = false;
@@ -305,6 +315,14 @@ impl Compiler {
         function_builder.finalize(jit_module.target_config());
 
         jit_module.define_function(function, &mut module_context)?;
+        let native_stack_bytes = match native_frame::stack_bytes(&module_context) {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                // SAFETY: no executable entry or owning Function has escaped.
+                unsafe { jit_module.free_memory() };
+                return Err(error);
+            }
+        };
         jit_module.clear_context(&mut module_context);
         jit_module.finalize_definitions()?;
 
@@ -312,7 +330,7 @@ impl Compiler {
         let function = unsafe {
             let function: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8) =
                 mem::transmute(code);
-            Function::with_module(function, jit_module, argument_types)
+            Function::with_module(function, jit_module, native_stack_bytes, argument_types)
         };
         Ok(function)
     }

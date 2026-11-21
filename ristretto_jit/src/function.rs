@@ -29,6 +29,7 @@ use std::sync::Mutex;
 #[derive(Clone)]
 pub struct Function {
     argument_types: Arc<[i8]>,
+    native_stack_bytes: usize,
     entry_point: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8),
     #[cfg(all(
         not(target_family = "wasm"),
@@ -109,6 +110,15 @@ impl Debug for Function {
 }
 
 impl Function {
+    /// Native space reserved beyond the generated frame for runtime transitions.
+    pub const STACK_RESERVE_BYTES: usize = 256 * 1024;
+
+    /// Backend frame span plus ABI setup, including spills and outgoing arguments.
+    #[must_use]
+    pub fn native_stack_bytes(&self) -> usize {
+        self.native_stack_bytes
+    }
+
     /// Creates a new function instance
     #[cfg(test)]
     pub(crate) fn new(
@@ -117,6 +127,7 @@ impl Function {
     ) -> Self {
         Self {
             argument_types: Arc::from(argument_types),
+            native_stack_bytes: 0,
             entry_point: function,
             #[cfg(all(
                 not(target_family = "wasm"),
@@ -146,10 +157,12 @@ impl Function {
     pub(crate) fn with_module(
         function: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8),
         module: JITModule,
+        native_stack_bytes: usize,
         argument_types: Vec<i8>,
     ) -> Self {
         Self {
             argument_types: Arc::from(argument_types),
+            native_stack_bytes,
             entry_point: function,
             module: Arc::new(JitModuleOwner::new(Some(module))),
         }
@@ -189,6 +202,7 @@ impl Function {
                     .ok_or_else(|| InternalError(format!("Invalid stack argument index {i}")))?;
                 *slot = JitValue::argument(arg, *expected, i)?;
             }
+            self.check_native_stack()?;
             // Safety: the arguments and result use the ABI emitted by the owning JIT module,
             // and all pointers remain valid for the duration of the call.
             unsafe {
@@ -206,6 +220,7 @@ impl Function {
                 .enumerate()
                 .map(|(index, (arg, expected))| JitValue::argument(arg, *expected, index))
                 .collect::<Result<_>>()?;
+            self.check_native_stack()?;
             // Safety: the arguments and result use the ABI emitted by the owning JIT module,
             // and all pointers remain valid for the duration of the call.
             unsafe {
@@ -218,6 +233,48 @@ impl Function {
             }
         }
         result.try_into()
+    }
+    #[cfg_attr(
+        any(
+            target_family = "wasm",
+            target_endian = "big",
+            target_arch = "mips",
+            target_arch = "mips64",
+            target_os = "dragonfly",
+            target_os = "solaris"
+        ),
+        expect(
+            clippy::unused_self,
+            clippy::unnecessary_wraps,
+            reason = "these targets cannot construct native compiled functions; fixed Rust ABI test stubs still execute"
+        )
+    )]
+    fn check_native_stack(&self) -> Result<()> {
+        #[cfg(all(
+            not(target_family = "wasm"),
+            target_endian = "little",
+            not(any(
+                target_arch = "mips",
+                target_arch = "mips64",
+                target_os = "dragonfly",
+                target_os = "solaris"
+            ))
+        ))]
+        {
+            let available =
+                stacker::remaining_stack().ok_or(crate::Error::NativeStackUnavailable)?;
+            let required = self
+                .native_stack_bytes
+                .checked_add(Self::STACK_RESERVE_BYTES)
+                .ok_or_else(|| InternalError("native stack requirement overflow".to_owned()))?;
+            if available < required {
+                return Err(crate::Error::NativeStackOverflow {
+                    required,
+                    available,
+                });
+            }
+        }
+        Ok(())
     }
 }
 
