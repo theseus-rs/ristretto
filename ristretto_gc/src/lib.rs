@@ -21,6 +21,7 @@
 #[cfg(feature = "experimental-canonical-runtime")]
 pub(crate) mod canonical_pool;
 
+mod allocation_budget;
 mod collector;
 mod config;
 mod error;

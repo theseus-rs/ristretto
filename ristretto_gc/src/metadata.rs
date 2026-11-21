@@ -1,6 +1,7 @@
 //! Object metadata and pointer management for garbage collection.
 
 use crate::Finalize;
+use crate::allocation_budget::Reservation;
 use crate::finalizer::FinalizerFn;
 use crate::pointers::SafePtr;
 use std::sync::Mutex;
@@ -36,12 +37,18 @@ pub(crate) struct ObjectMetadata {
 
 impl ObjectMetadata {
     /// Creates a new `ObjectMetadata` instance for a `Gc<T>`.
-    pub(crate) fn new_for_gc<T: Send + Sync>(ptr: SafePtr, size: usize) -> Self {
+    pub(crate) fn new_for_gc<T: Send + Sync>(
+        ptr: SafePtr,
+        size: usize,
+        reservation: Reservation,
+    ) -> Self {
         // Create a type safe drop function that properly deallocates the T data.
         // The pointer was created via Box::into_raw(Box::new(data: T)), so we reconstruct
         // Box<T> to run T::drop and deallocate.
         let ptr_addr = ptr.0;
         let drop_fn: DropFn = Some(Box::new(move || {
+            // Retain the owning charge through payload destruction, including unwind.
+            let _reservation = reservation;
             // Safety: This is safe because:
             // 1. The pointer was originally created from Box::into_raw on a Box<T>
             // 2. We're only calling this once during sweep phase
@@ -72,10 +79,13 @@ impl ObjectMetadata {
     pub(crate) fn new_for_gc_with_finalizer<T: Send + Sync + Finalize>(
         ptr: SafePtr,
         size: usize,
+        reservation: Reservation,
     ) -> Self {
         // Create a type-safe drop function that properly deallocates the T data.
         let ptr_addr = ptr.0;
         let drop_fn: DropFn = Some(Box::new(move || {
+            // Retain the owning charge through payload destruction, including unwind.
+            let _reservation = reservation;
             // Safety: Same as new_for_gc;  pointer from Box::into_raw(Box::new(data: T))
             unsafe {
                 if ptr_addr != 0 {
