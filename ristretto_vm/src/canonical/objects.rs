@@ -1,10 +1,15 @@
 //! Execution of verified closed object methods on a dedicated incremental heap.
 #[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[path = "compiled.rs"]
+mod compiled;
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
 #[path = "compiled_frame.rs"]
 mod compiled_frame;
 #[cfg(feature = "experimental-canonical-jit")]
 #[path = "frame_table.rs"]
 mod frame_table;
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+pub use compiled::{CompiledLimits, CompiledProgram};
 
 use super::layout::{Field, ReferenceType, reference_type};
 use super::reference_array::{self, Component, Layout as ReferenceArrayLayout};
