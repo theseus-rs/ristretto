@@ -45,6 +45,8 @@ view keeps its payload alive while unrelated payloads can be reclaimed.
 Graph construction admits a fixed maximum degree of 1–8, with an immutable
 per-payload usable count from zero through that maximum. Each successful result
 owns its complete source-edge inventory; cancellation at an intermediate stage
-releases the root and orphan pages through the same helper policy. Index and
-capacity arithmetic is checked before preparation. This inventory slice does
-not yet expose edge mutation to callers.
+releases the root and orphan edge slots through the same helper policy. Index and
+capacity arithmetic is checked before preparation. Edge replacement retains source and target roots through completion and
+couples deletion/insertion barriers with the membership change. Foreign roots
+and out-of-shape positions reject before submission; stale edge identities
+cannot mutate reused slots.
