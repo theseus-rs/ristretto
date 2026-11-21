@@ -2,8 +2,9 @@
 //! complete source traversal or a runtime payload/child-access API.
 use super::super::reference::ObjectKey;
 use super::{
-    AllocationError, Arc, AtomicU8, Catalog, Contended, CreationError, OptionalLink, Ordering,
-    Owner, Pool, Pooled, PooledLink, Record, share,
+    AllocationError, Arc, AtomicU8, Catalog, Cell, Contended, CreationError, Membership,
+    OptionalLink, Ordering, Owner, Phase, Pool, Pooled, PooledLink, Preparation, Record, Root,
+    RootStatus, Snapshot, allocate, share,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -316,3 +317,261 @@ mod tests;
 #[cfg(test)]
 #[path = "edge_control_tests.rs"]
 mod control_tests;
+
+impl<R: Record> Catalog<R> {
+    fn edge_effect(
+        &self,
+        mut preparation: Preparation<R>,
+        slot: Pooled<EdgeSlot>,
+        expected: Pooled<EdgeMembership>,
+        proposed: EdgeMembership,
+    ) -> Option<Preparation<R>> {
+        if !Arc::ptr_eq(&slot.owner, &self.owner) {
+            return None;
+        }
+        preparation.edge = Some(EdgeEffect {
+            slot,
+            expected,
+            proposed: allocate(&self.edges.as_ref()?.states, proposed)?,
+        });
+        Some(preparation)
+    }
+    fn edge_source(&self, root: &Root<R>, phase: Phase) -> Option<ObjectKey> {
+        if !Arc::ptr_eq(&root.owner, &self.owner)
+            || root.status() != RootStatus::Live
+            || root.is_internal()
+        {
+            return None;
+        }
+        let Membership::Tracing(marks) = root.target_membership()? else {
+            return None;
+        };
+        if marks.logically_retired(phase) {
+            return None;
+        }
+        Some(ObjectKey {
+            identity: root.target_identity(),
+            slot: root.target_slot(),
+        })
+    }
+    // Outer None is failed observation, inner None is absent or a different identity.
+    #[expect(
+        clippy::option_option,
+        reason = "outer absence is contention; inner absence is a missing or replaced identity"
+    )]
+    fn edge_target(&self, key: ObjectKey) -> Option<Option<Pooled<Cell<R>>>> {
+        Some(
+            self.discover(key.slot)
+                .ok()?
+                .filter(|cell| cell.identity == key.identity),
+        )
+    }
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "preserve the frozen owning-preparation API and exact owner destruction boundary"
+    )]
+    pub fn begin_publish_edge(
+        &self,
+        snapshot: Snapshot<R>,
+        edge: Pooled<EdgeSlot>,
+        source: Pooled<Root<R>>,
+        target: Option<Pooled<Root<R>>>,
+    ) -> Option<Preparation<R>> {
+        if !Arc::ptr_eq(&edge.owner, &self.owner) {
+            return None;
+        }
+        let expected = edge.state.load()?;
+        if *expected != EdgeMembership::Prepared {
+            return None;
+        }
+        let source = self.edge_source(&source, snapshot.phase())?;
+        if !self.edge_slot_matches_source(edge.slot, source.slot) {
+            return None;
+        }
+        let target = target
+            .as_ref()
+            .map(|root| self.edge_source(root, snapshot.phase()))
+            .transpose_option()?;
+        let (effect, phase) = if let Some(key) = target {
+            self.root_barrier(self.edge_target(key)??, snapshot.phase(), false)?
+        } else {
+            (None, snapshot.phase())
+        };
+        let preparation = self.begin_prepare(snapshot, phase, effect)?;
+        self.edge_effect(
+            preparation,
+            edge,
+            expected,
+            EdgeMembership::Live(EdgeState { source, target }),
+        )
+    }
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "preserve the frozen owning-preparation API and exact owner destruction boundary"
+    )]
+    pub fn begin_replace_edge(
+        &self,
+        snapshot: Snapshot<R>,
+        edge: Pooled<EdgeSlot>,
+        source: Pooled<Root<R>>,
+        target: Option<Pooled<Root<R>>>,
+    ) -> Option<Preparation<R>> {
+        if !Arc::ptr_eq(&edge.owner, &self.owner) {
+            return None;
+        }
+        let expected = edge.state.load()?;
+        let EdgeMembership::Live(mut state) = *expected else {
+            return None;
+        };
+        if self.edge_source(&source, snapshot.phase())? != state.source {
+            return None;
+        }
+        let target = target
+            .as_ref()
+            .map(|root| self.edge_source(root, snapshot.phase()))
+            .transpose_option()?;
+        let mut phase = snapshot.phase();
+        let mut effect = None;
+        // A same-target write needs one insertion barrier, never two proposals
+        // from the same expected membership with duplicate counted work.
+        if state.target != target
+            && let Some(key) = state.target
+            && let Some(cell) = self.edge_target(key)?
+        {
+            (effect, phase) = self.root_barrier(cell, phase, true)?;
+        }
+        let mut secondary = None;
+        if let Some(key) = target {
+            (secondary, phase) = self.root_barrier(self.edge_target(key)??, phase, false)?;
+        }
+        if effect.is_none() {
+            effect = secondary.take();
+        }
+        let mut preparation = self.begin_prepare(snapshot, phase, effect)?;
+        preparation.secondary_effect = secondary;
+        state.target = target;
+        self.edge_effect(preparation, edge, expected, EdgeMembership::Live(state))
+    }
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "preserve the frozen owning-preparation API and exact owner destruction boundary"
+    )]
+    pub fn begin_root_edge_target(
+        &self,
+        snapshot: Snapshot<R>,
+        edge: Pooled<EdgeSlot>,
+        source: Pooled<Root<R>>,
+        child: Pooled<Root<R>>,
+    ) -> Option<Preparation<R>> {
+        if !Arc::ptr_eq(&edge.owner, &self.owner) {
+            return None;
+        }
+        let expected = edge.state.load()?;
+        let EdgeMembership::Live(state) = *expected else {
+            return None;
+        };
+        if self.edge_source(&source, snapshot.phase())? != state.source
+            || state.target
+                != Some(ObjectKey {
+                    identity: child.target_identity(),
+                    slot: child.target_slot(),
+                })
+        {
+            return None;
+        }
+        // Every edge change also changes this exact controller snapshot. No edge
+        // mutation or discovery replacement can slip between validation and CAS.
+        self.begin_activate_root(snapshot, child)
+    }
+    pub fn begin_requested_edge_removal(
+        &self,
+        snapshot: Snapshot<R>,
+        edge: Pooled<EdgeSlot>,
+    ) -> Option<Preparation<R>> {
+        if !Arc::ptr_eq(&edge.owner, &self.owner) || !edge.removal_requested() {
+            return None;
+        }
+        let expected = edge.state.load()?;
+        self.prepare_edge_removal(snapshot, edge, expected)
+    }
+
+    /// A published source owns its inventory logically, never through a strong
+    /// reference cycle. Reclaim it only after the exact source is physically
+    /// retired or its discovery identity has been removed/reused. A failed load
+    /// cannot be interpreted as an absent source.
+    pub fn begin_orphan_edge_removal(
+        &self,
+        snapshot: Snapshot<R>,
+        edge: Pooled<EdgeSlot>,
+    ) -> Option<Preparation<R>> {
+        if !Arc::ptr_eq(&edge.owner, &self.owner) {
+            return None;
+        }
+        let expected = edge.state.load()?;
+        let EdgeMembership::Live(state) = *expected else {
+            return None;
+        };
+        if let Some(source) = self.edge_target(state.source)?
+            && source.membership()? != Membership::Retired
+        {
+            return None;
+        }
+        self.prepare_edge_removal(snapshot, edge, expected)
+    }
+
+    fn prepare_edge_removal(
+        &self,
+        snapshot: Snapshot<R>,
+        edge: Pooled<EdgeSlot>,
+        expected: Pooled<EdgeMembership>,
+    ) -> Option<Preparation<R>> {
+        let mut phase = snapshot.phase();
+        let mut effect = None;
+        match *expected {
+            EdgeMembership::Retired => return None,
+            EdgeMembership::Prepared => {}
+            EdgeMembership::Live(state) => {
+                if let Some(key) = state.target
+                    && let Some(cell) = self.edge_target(key)?
+                {
+                    (effect, phase) = self.root_barrier(cell, phase, true)?;
+                }
+            }
+        }
+        let preparation = self.begin_prepare(snapshot, phase, effect)?;
+        self.edge_effect(preparation, edge, expected, EdgeMembership::Retired)
+    }
+    pub fn release_retired_edge(&self, edge: &Pooled<EdgeSlot>) -> bool {
+        if !Arc::ptr_eq(&edge.owner, &self.owner)
+            || edge.membership() != Some(EdgeMembership::Retired)
+        {
+            return false;
+        }
+        self.edges
+            .as_ref()
+            .and_then(|edges| edges.slots.get(edge.slot))
+            .is_some_and(|entry| entry.compare(Some(edge), None))
+    }
+}
+
+// Preserve the distinction between a null target and failed root validation.
+#[expect(
+    clippy::option_option,
+    reason = "preserve null target versus failed source/target validation"
+)]
+trait TransposeOption<T> {
+    fn transpose_option(self) -> Option<Option<T>>;
+}
+impl<T> TransposeOption<T> for Option<Option<T>> {
+    fn transpose_option(self) -> Option<Option<T>> {
+        match self {
+            None => Some(None),
+            Some(Some(value)) => Some(Some(value)),
+            Some(None) => None,
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "edge_transaction_tests.rs"]
+pub(crate) mod transaction_tests;

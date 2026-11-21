@@ -242,3 +242,13 @@ Three portable tests force late acquisition failure, cancellation and help after
 the owner stops at its first effect. Native/WASI catalog totals are 69/63; strict
 Clippy passes. The existing decision/order models remain scoped to their actual
 atomic helpers; these additional cases execute the real multi-effect controller.
+
+## C10/C11 prerequisite: strong-edge transactions
+
+Frozen publication, replacement, child-root activation and requested/orphan edge
+removal validate exact source/target generations under one controller snapshot.
+Deletion and insertion barriers share its decision; same-target writes contribute
+one ticket, and stale source/target keys cannot attach to reused slots. All 16
+native frozen raw-edge regressions (13 portable) are retained. Native/WASI catalog
+totals are 85/76; strict Clippy passes. Test helpers use the packaged guarded entry
+methods directly; no external catalog dependency is introduced.
