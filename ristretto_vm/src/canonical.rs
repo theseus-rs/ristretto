@@ -6,7 +6,6 @@ use layout::Layout;
 mod scalar;
 mod value;
 pub use value::ScalarValue;
-use value::ScalarValue as Value;
 use value::{load, pop, store};
 
 use ristretto_classfile::attributes::Instruction;

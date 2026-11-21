@@ -1,7 +1,7 @@
 //! Quota-bound creation owners and source-owned, non-owning edge identities.
 use super::{
     Attempt, BoundedCatalog, CatalogHandle, Commands, CreationError, Membership, Ordering, Outcome,
-    Participant, Payload, Phase, Pooled, Preparation, PreparationError, Progress, RecordKey,
+    Owned, Participant, Payload, Phase, Preparation, PreparationError, Progress, RecordKey,
     RequestError, RequestState, RootHandle, RootKey, roots, trace_error,
 };
 use crate::canonical_catalog::reference::ObjectKey;
@@ -438,7 +438,7 @@ fn observation<R: Payload>(
 fn lookup<R: Payload>(
     owner: &BoundedCatalog<R>,
     key: EdgeKey,
-) -> Result<Pooled<EdgeSlot>, RequestError> {
+) -> Result<Owned<EdgeSlot>, RequestError> {
     if key.catalog != owner.identity {
         return Err(RequestError::Foreign);
     }
@@ -462,7 +462,7 @@ fn live_root<R: Payload>(
     owner: &BoundedCatalog<R>,
     key: RootKey,
     phase: Phase,
-) -> Result<Pooled<Root<R>>, RequestError> {
+) -> Result<Owned<Root<R>>, RequestError> {
     let root = roots::lookup(owner, key)?;
     validate_live_root(&root, phase)?;
     Ok(root)
@@ -504,7 +504,7 @@ fn deletion<R: Payload>(
     .map_err(trace_error)
 }
 fn insertion<R: Payload>(
-    target: Option<&Pooled<Root<R>>>,
+    target: Option<&Owned<Root<R>>>,
     phase: Phase,
 ) -> Result<(), RequestError> {
     if let Some(root) = target {

@@ -3,7 +3,7 @@
 use super::super::{TraceError, TraceRetention, reference::ObjectKey};
 use super::edges::EdgeMembership;
 use super::{
-    Arc, Attempt, Catalog, Cell, DomainMode, Membership, Outcome, Owner, Pooled, Preparation,
+    Arc, Attempt, Catalog, Cell, DomainMode, Membership, Outcome, Owned, Owner, Preparation,
     PreparationError, Record, Snapshot, share,
 };
 
@@ -31,7 +31,7 @@ struct Request<R: Record> {
 /// complete scan of this same ticket. No shared progress depends on this owner.
 pub struct EdgeTraversal<R: Record = ()> {
     owner: Arc<Owner>,
-    source: Pooled<Cell<R>>,
+    source: Owned<Cell<R>>,
     domain: usize,
     epoch: u64,
     ticket: u64,
@@ -56,7 +56,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_edge_traversal(
         &self,
         snapshot: Snapshot<R>,
-        source: Pooled<Cell<R>>,
+        source: Owned<Cell<R>>,
         domain: usize,
         ticket: u64,
     ) -> Option<EdgeTraversal<R>> {

@@ -1,6 +1,6 @@
 use super::*;
 
-fn fixture() -> (Catalog<()>, Pooled<Cell<()>>, Attempt<()>) {
+fn fixture() -> (Catalog<()>, Owned<Cell<()>>, Attempt<()>) {
     let catalog = Catalog::with_record_capacities_and_limit(2, 32, 32, 32, 32);
     let mut creation = catalog.begin_create_with(0, 8, ()).unwrap();
     for _ in 0..2 {

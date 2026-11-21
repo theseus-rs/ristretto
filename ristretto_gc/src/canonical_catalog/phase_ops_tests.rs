@@ -13,7 +13,7 @@ fn commit(catalog: &Catalog, mut preparation: Preparation) {
 fn snapshot(catalog: &Catalog) -> Snapshot {
     catalog.snapshot_in(&()).unwrap()
 }
-fn create(catalog: &Catalog) -> Pooled<Cell> {
+fn create(catalog: &Catalog) -> Owned<Cell> {
     let mut creation = catalog.begin_create_with(0, 8, ()).unwrap();
     for _ in 0..4 {
         if let Some(cell) = creation.poll(catalog).unwrap() {

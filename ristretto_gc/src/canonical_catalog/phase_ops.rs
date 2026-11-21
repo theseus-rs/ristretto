@@ -4,14 +4,12 @@
     reason = "each domain index is checked by get before fixed phase-array access"
 )]
 use super::super::{RETIREMENT_FLOOR, TraceRetention};
-use super::{
-    Attempt, Catalog, Cell, DomainMode, Membership, Pooled, Preparation, Record, Snapshot,
-};
+use super::{Attempt, Catalog, Cell, DomainMode, Membership, Owned, Preparation, Record, Snapshot};
 impl<R: Record> Catalog<R> {
     pub fn begin_shade(
         &self,
         snapshot: Snapshot<R>,
-        cell: Pooled<Cell<R>>,
+        cell: Owned<Cell<R>>,
         domain: usize,
         requested: TraceRetention,
     ) -> Option<Preparation<R>> {
@@ -27,7 +25,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_trace_acknowledge(
         &self,
         snapshot: Snapshot<R>,
-        cell: Pooled<Cell<R>>,
+        cell: Owned<Cell<R>>,
         domain: usize,
         ticket: u64,
     ) -> Option<Preparation<R>> {
@@ -43,7 +41,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_trace_retire(
         &self,
         snapshot: Snapshot<R>,
-        cell: Pooled<Cell<R>>,
+        cell: Owned<Cell<R>>,
         domain: usize,
     ) -> Option<Preparation<R>> {
         let expected = cell.state.load()?;
@@ -59,7 +57,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_promote(
         &self,
         snapshot: Snapshot<R>,
-        cell: Pooled<Cell<R>>,
+        cell: Owned<Cell<R>>,
     ) -> Option<Preparation<R>> {
         let expected = cell.state.load()?;
         let Membership::Tracing(marks) = *expected else {

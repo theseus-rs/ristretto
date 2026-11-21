@@ -10,7 +10,7 @@
 )]
 use super::{
     Arc, AtomicU64, AtomicUsize, Attempt, Catalog, Cell, Creation, CreationError, Membership,
-    Ordering, Outcome, Phase, Pooled, Preparation, PreparationError, PrepareError,
+    Ordering, Outcome, Owned, Phase, Preparation, PreparationError, PrepareError,
     Record as Payload,
 };
 use crate::canonical_pool as pool;
@@ -1063,7 +1063,7 @@ fn record_info<R: Payload>(
 fn lookup<R: Payload>(
     catalog: &BoundedCatalog<R>,
     record: RecordKey,
-) -> Result<Pooled<Cell<R>>, RequestError> {
+) -> Result<Owned<Cell<R>>, RequestError> {
     if record.catalog != catalog.identity {
         return Err(RequestError::Foreign);
     }

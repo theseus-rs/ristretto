@@ -13,7 +13,7 @@
 )]
 use super::{
     Arc, AtomicU8, AtomicU64, AtomicUsize, Contended, Domain, DomainMode, OptionalLink, Ordering,
-    Phase, Pool, Pooled, PooledLink, TraceState, allocate, share,
+    Owned, Phase, Pool, PooledLink, TraceState, allocate, share,
 };
 use crate::canonical_pool as pool;
 use pool::AllocationError;
@@ -134,9 +134,9 @@ impl<R: Record> Cell<R> {
 }
 
 struct Effect<R: Record = ()> {
-    cell: Pooled<Cell<R>>,
-    expected: Pooled<Membership>,
-    proposed: Pooled<Membership>,
+    cell: Owned<Cell<R>>,
+    expected: Owned<Membership>,
+    proposed: Owned<Membership>,
 }
 struct Operation<R: Record = ()> {
     effect: Option<Effect<R>>,
@@ -144,7 +144,7 @@ struct Operation<R: Record = ()> {
     edge: Option<EdgeEffect>,
     root: Option<RootEffect<R>>,
 
-    successor: Pooled<Control<R>>,
+    successor: Owned<Control<R>>,
     decision: AtomicU8,
 }
 impl<R: Record> Operation<R> {
@@ -192,7 +192,7 @@ impl<R: Record> Control<R> {
 
 pub struct Snapshot<R: Record = ()> {
     owner: Arc<Owner>,
-    head: Pooled<Control<R>>,
+    head: Owned<Control<R>>,
 }
 impl<R: Record> Snapshot<R> {
     pub fn phase(&self) -> Phase {
@@ -201,15 +201,15 @@ impl<R: Record> Snapshot<R> {
 }
 pub struct Attempt<R: Record = ()> {
     owner: Arc<Owner>,
-    expected: Pooled<Control<R>>,
-    busy: Pooled<Control<R>>,
+    expected: Owned<Control<R>>,
+    busy: Owned<Control<R>>,
 }
 
 /// Private, resumable backing preparation. Dropping this value cancels only the
 /// private proposal; no controller or membership effect has been installed.
 pub struct Preparation<R: Record = ()> {
     owner: Arc<Owner>,
-    expected: Option<Pooled<Control<R>>>,
+    expected: Option<Owned<Control<R>>>,
     committed_phase: Phase,
     cancelled_phase: Phase,
     effect: Option<Effect<R>>,
@@ -217,7 +217,7 @@ pub struct Preparation<R: Record = ()> {
     edge: Option<EdgeEffect>,
     root: Option<RootEffect<R>>,
 
-    successor: Option<Pooled<Control<R>>>,
+    successor: Option<Owned<Control<R>>>,
     operation: Option<Operation<R>>,
 }
 
@@ -381,9 +381,9 @@ pub struct Creation<R: Record = ()> {
     nominated: bool,
     address: usize,
     identity: u64,
-    membership: Option<Pooled<Membership>>,
+    membership: Option<Owned<Membership>>,
     private_cell: Option<Cell<R>>,
-    cell: Option<Pooled<Cell<R>>>,
+    cell: Option<Owned<Cell<R>>>,
     finished: bool,
 }
 
@@ -401,7 +401,7 @@ pub(crate) fn following_slot(slot: usize, capacity: usize) -> usize {
 }
 
 impl<R: Record> Creation<R> {
-    pub fn poll(&mut self, catalog: &Catalog<R>) -> Result<Option<Pooled<Cell<R>>>, CreationError> {
+    pub fn poll(&mut self, catalog: &Catalog<R>) -> Result<Option<Owned<Cell<R>>>, CreationError> {
         self.poll_at(catalog, false)
     }
     /// Retain this exact private record after a lost announcement and select the
@@ -410,7 +410,7 @@ impl<R: Record> Creation<R> {
     pub fn poll_rotating(
         &mut self,
         catalog: &Catalog<R>,
-    ) -> Result<Option<Pooled<Cell<R>>>, CreationError> {
+    ) -> Result<Option<Owned<Cell<R>>>, CreationError> {
         self.poll_at(catalog, true)
     }
     #[expect(
@@ -421,7 +421,7 @@ impl<R: Record> Creation<R> {
         &mut self,
         catalog: &Catalog<R>,
         rotate: bool,
-    ) -> Result<Option<Pooled<Cell<R>>>, CreationError> {
+    ) -> Result<Option<Owned<Cell<R>>>, CreationError> {
         if !Arc::ptr_eq(&self.owner, &catalog.owner) {
             return Err(CreationError::Foreign);
         }
@@ -602,7 +602,7 @@ impl<R: Record> Catalog<R> {
                 .as_ref()
                 .is_some_and(|roots| roots.pool.generation_exhaustion_observed())
     }
-    pub fn discover(&self, slot: usize) -> Result<Option<Pooled<Cell<R>>>, Contended> {
+    pub fn discover(&self, slot: usize) -> Result<Option<Owned<Cell<R>>>, Contended> {
         self.slots.get(slot).map_or(Ok(None), OptionalLink::load)
     }
 }
@@ -730,8 +730,8 @@ impl<R: Record> Catalog<R> {
     }
     fn effect(
         &self,
-        cell: Pooled<Cell<R>>,
-        expected: Pooled<Membership>,
+        cell: Owned<Cell<R>>,
+        expected: Owned<Membership>,
         proposed: Membership,
     ) -> Option<Effect<R>> {
         if !Arc::ptr_eq(&cell.owner, &self.owner) {
@@ -746,7 +746,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_publish(
         &self,
         snapshot: Snapshot<R>,
-        cell: Pooled<Cell<R>>,
+        cell: Owned<Cell<R>>,
     ) -> Option<Preparation<R>> {
         let expected = cell.state.load()?;
         if *expected != Membership::Prepared {
@@ -781,7 +781,7 @@ impl<R: Record> Catalog<R> {
             }
         }
     }
-    fn stable_head_in(&self, context: &R::Context) -> Option<Pooled<Control<R>>> {
+    fn stable_head_in(&self, context: &R::Context) -> Option<Owned<Control<R>>> {
         let head = self.head.load()?;
         if head.is_stable() {
             Some(head)
@@ -799,7 +799,7 @@ impl<R: Record> Catalog<R> {
     pub(crate) fn phase_in(&self, context: &R::Context) -> Option<Phase> {
         Some(self.stable_head_in(context)?.phase())
     }
-    fn validates_head_in(&self, head: &Pooled<Control<R>>, context: &R::Context) -> bool {
+    fn validates_head_in(&self, head: &Owned<Control<R>>, context: &R::Context) -> bool {
         self.head.points_to(head)
             || self
                 .phase_in(context)
@@ -812,7 +812,7 @@ impl<R: Record> Catalog<R> {
     ) -> bool {
         Arc::ptr_eq(&snapshot.owner, &self.owner) && self.validates_head_in(&snapshot.head, context)
     }
-    fn finish(&self, busy: &Pooled<Control<R>>, context: &R::Context) {
+    fn finish(&self, busy: &Owned<Control<R>>, context: &R::Context) {
         self.finish_at(busy, context, || {}, || {}, || {}, || {});
     }
     #[expect(
@@ -821,7 +821,7 @@ impl<R: Record> Catalog<R> {
     )]
     fn finish_at(
         &self,
-        busy: &Pooled<Control<R>>,
+        busy: &Owned<Control<R>>,
         context: &R::Context,
         before_effect: impl FnOnce(),
         after_effect: impl FnOnce(),
@@ -978,8 +978,8 @@ impl<R: Record> Catalog<R> {
                 // Exact owning controller versions are never reinstalled. An
                 // observed different controller excludes a future install of
                 // this request; completed certificates still take priority below.
-                superseded = !Pooled::ptr_eq(&current, &attempt.busy)
-                    && !Pooled::ptr_eq(&current, &attempt.expected);
+                superseded = !Owned::ptr_eq(&current, &attempt.busy)
+                    && !Owned::ptr_eq(&current, &attempt.expected);
                 self.finish(&current, context);
             }
         }
@@ -1038,7 +1038,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_abandon(
         &self,
         snapshot: Snapshot<R>,
-        cell: Pooled<Cell<R>>,
+        cell: Owned<Cell<R>>,
     ) -> Option<Preparation<R>> {
         let expected = cell.state.load()?;
         if *expected != Membership::Prepared {
@@ -1052,7 +1052,7 @@ impl<R: Record> Catalog<R> {
         clippy::indexing_slicing,
         reason = "an exact same-catalog cell owns its validated immutable discovery slot"
     )]
-    pub fn release_retired(&self, cell: &Pooled<Cell<R>>) -> bool {
+    pub fn release_retired(&self, cell: &Owned<Cell<R>>) -> bool {
         if !Arc::ptr_eq(&cell.owner, &self.owner) || cell.membership() != Some(Membership::Retired)
         {
             return false;

@@ -1,6 +1,6 @@
 //! Integer execution for verified scalar entries.
 
-use super::{Error, Result, Value, load, pop, scalar, store};
+use super::{Error, Result, ScalarValue, load, pop, scalar, store};
 use ristretto_classfile::ConstantPool;
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::Method;
@@ -110,17 +110,17 @@ pub(super) fn run(
     pool: &ConstantPool<'_>,
     argument: i32,
     limit: usize,
-) -> Result<Value> {
+) -> Result<ScalarValue> {
     let mut locals = vec![None; method.max_locals()];
     let mut stack = Vec::with_capacity(method.max_stack());
     let mut pc = 0;
     let invalid = || Error::Invalid(method.signature());
-    *locals.first_mut().ok_or_else(invalid)? = Some(Value::Int(argument));
+    *locals.first_mut().ok_or_else(invalid)? = Some(ScalarValue::Int(argument));
     for _ in 0..limit {
         let op = method.code().get(pc).ok_or_else(invalid)?;
         let mut jump = false;
         match Operation::decode(op) {
-            Some(Operation::Constant(value)) => stack.push(Value::Int(value)),
+            Some(Operation::Constant(value)) => stack.push(ScalarValue::Int(value)),
             Some(Operation::Load(index)) => load(&locals, &mut stack, index)?,
             Some(Operation::Store(index)) => store(&mut locals, &mut stack, index)?,
             Some(Operation::Increment(index, delta)) => {
@@ -128,16 +128,16 @@ pub(super) fn run(
                     .get_mut(index)
                     .and_then(Option::as_mut)
                     .ok_or_else(invalid)?;
-                *slot = Value::Int(slot.int()?.wrapping_add(delta));
+                *slot = ScalarValue::Int(slot.int()?.wrapping_add(delta));
             }
             Some(Operation::Negate) => {
                 let value = pop(&mut stack)?.int()?.wrapping_neg();
-                stack.push(Value::Int(value));
+                stack.push(ScalarValue::Int(value));
             }
             Some(operation @ (Operation::Add | Operation::Subtract | Operation::Multiply)) => {
                 let right = pop(&mut stack)?.int()?;
                 let left = pop(&mut stack)?.int()?;
-                stack.push(Value::Int(match operation {
+                stack.push(ScalarValue::Int(match operation {
                     Operation::Add => left.wrapping_add(right),
                     Operation::Subtract => left.wrapping_sub(right),
                     _ => left.wrapping_mul(right),

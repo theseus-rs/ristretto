@@ -2,7 +2,7 @@
 use super::super::{DomainMode, Phase, RETIREMENT_FLOOR, TraceRetention};
 use super::{
     AllocationError, Arc, AtomicU8, AtomicUsize, Catalog, Cell, Contended, CreationError, Effect,
-    Membership, OptionalLink, Ordering, Owner, Pool, Pooled, Preparation, Record, Snapshot,
+    Membership, OptionalLink, Ordering, Owned, Owner, Pool, Preparation, Record, Snapshot,
     following_slot, share,
 };
 
@@ -28,7 +28,7 @@ pub struct Root<R: Record = ()> {
     pub(super) owner: Arc<Owner>,
     pub identity: u64,
     slot: AtomicUsize,
-    target: Pooled<Cell<R>>,
+    target: Owned<Cell<R>>,
     status: AtomicU8,
     removal_requested: AtomicU8,
     #[cfg(test)]
@@ -95,7 +95,7 @@ impl<R: Record> Root<R> {
 /// including after explicit revocation. This raw token carries no payload access.
 /// The bounded facade must additionally retain catalog charge ownership.
 pub struct RootToken<R: Record = ()> {
-    root: Pooled<Root<R>>,
+    root: Owned<Root<R>>,
     #[cfg(test)]
     after_request: Option<Box<dyn FnOnce() + Send + Sync>>,
 }
@@ -111,7 +111,7 @@ impl<R: Record> RootToken<R> {
         self.after_request = Some(Box::new(hook));
     }
     /// Raw experiment only; bounded handles do not expose owning root shares.
-    pub fn try_share(&self) -> Option<Pooled<Root<R>>> {
+    pub fn try_share(&self) -> Option<Owned<Root<R>>> {
         share(&self.root)
     }
 }
@@ -130,7 +130,7 @@ pub(super) struct RootRegistry<R: Record> {
     slots: Box<[OptionalLink<Root<R>>]>,
 }
 pub(super) struct RootEffect<R: Record> {
-    root: Pooled<Root<R>>,
+    root: Owned<Root<R>>,
     expected: RootState,
     proposed: RootState,
 }
@@ -181,7 +181,7 @@ pub struct RootCreation<R: Record = ()> {
     owner: Arc<Owner>,
     location: RootLocation,
     private: Option<Root<R>>,
-    root: Option<Pooled<Root<R>>>,
+    root: Option<Owned<Root<R>>>,
     finished: bool,
 }
 impl<R: Record> RootCreation<R> {
@@ -306,7 +306,7 @@ impl<R: Record> Catalog<R> {
         (slot < self.external_root_capacity()).then_some(RootLocation::External(slot))
     }
 
-    pub fn discover_root(&self, slot: usize) -> Result<Option<Pooled<Root<R>>>, Contended> {
+    pub fn discover_root(&self, slot: usize) -> Result<Option<Owned<Root<R>>>, Contended> {
         match self.root_location(slot) {
             Some(location) => location.link(self).load(),
             None => Ok(None),
@@ -315,7 +315,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_create_root(
         &self,
         slot: usize,
-        target: Pooled<Cell<R>>,
+        target: Owned<Cell<R>>,
     ) -> Result<RootCreation<R>, RootPrepareError> {
         if !Arc::ptr_eq(&target.owner, &self.owner) {
             return Err(RootPrepareError::Foreign);
@@ -356,7 +356,7 @@ impl<R: Record> Catalog<R> {
             }),
         })
     }
-    pub fn release_retired_root(&self, root: &Pooled<Root<R>>) -> bool {
+    pub fn release_retired_root(&self, root: &Owned<Root<R>>) -> bool {
         if !Arc::ptr_eq(&root.owner, &self.owner)
             || root.status() != RootStatus::Retired
             || !root.removal_requested()
@@ -376,7 +376,7 @@ impl<R: Record> Catalog<R> {
     pub(super) fn attach_root_effect(
         &self,
         mut preparation: Preparation<R>,
-        root: Pooled<Root<R>>,
+        root: Owned<Root<R>>,
         expected: RootState,
         proposed: RootState,
     ) -> Option<Preparation<R>> {
@@ -405,7 +405,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_publish_root(
         &self,
         snapshot: Snapshot<R>,
-        root: Pooled<Root<R>>,
+        root: Owned<Root<R>>,
     ) -> Option<Preparation<R>> {
         if !Arc::ptr_eq(&root.owner, &self.owner) || root.state() != RootState::Prepared {
             return None;
@@ -416,7 +416,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_cancel_root(
         &self,
         snapshot: Snapshot<R>,
-        root: Pooled<Root<R>>,
+        root: Owned<Root<R>>,
     ) -> Option<Preparation<R>> {
         let expected = root.state();
         let proposed = match expected {
@@ -436,7 +436,7 @@ mod root_publication_tests;
 impl<R: Record> Catalog<R> {
     pub(super) fn root_barrier(
         &self,
-        target: Pooled<Cell<R>>,
+        target: Owned<Cell<R>>,
         phase: Phase,
         deleting: bool,
     ) -> Option<(Option<Effect<R>>, Phase)> {
@@ -455,7 +455,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_activate_root(
         &self,
         snapshot: Snapshot<R>,
-        root: Pooled<Root<R>>,
+        root: Owned<Root<R>>,
     ) -> Option<Preparation<R>> {
         if !Arc::ptr_eq(&root.owner, &self.owner) || root.state() != RootState::Prepared {
             return None;
@@ -470,7 +470,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_remove_root(
         &self,
         snapshot: Snapshot<R>,
-        root: Pooled<Root<R>>,
+        root: Owned<Root<R>>,
     ) -> Option<Preparation<R>> {
         if !Arc::ptr_eq(&root.owner, &self.owner) || root.state() != RootState::Live {
             return None;
@@ -571,7 +571,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_requested_root_removal(
         &self,
         snapshot: Snapshot<R>,
-        root: Pooled<Root<R>>,
+        root: Owned<Root<R>>,
     ) -> Option<Preparation<R>> {
         if !root.removal_requested() {
             return None;

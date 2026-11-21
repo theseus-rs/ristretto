@@ -84,3 +84,7 @@ mod heap_requests;
 #[cfg(feature = "experimental-reference-dispatch")]
 #[path = "integration/numeric_constants.rs"]
 mod numeric_constants;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/array_requests.rs"]
+mod array_requests;

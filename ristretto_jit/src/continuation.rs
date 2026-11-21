@@ -18,6 +18,9 @@ pub(crate) use call::{CallContinuation, CallTarget};
 #[path = "heap_continuation.rs"]
 mod heap;
 pub(crate) use heap::HeapRequest;
+#[path = "array_continuation.rs"]
+mod array;
+pub(crate) use array::ArrayRequest;
 use std::collections::{BTreeMap, BTreeSet};
 
 struct Point {
@@ -61,6 +64,9 @@ impl Continuation {
                 calls.insert(pc, builder.create_block());
             } else if let Some(request) = HeapRequest::from_instruction(instruction) {
                 call_capacity = call_capacity.max(request.capacity(pool)?);
+                calls.insert(pc, builder.create_block());
+            } else if let Some(request) = ArrayRequest::from_instruction(instruction) {
+                call_capacity = call_capacity.max(request.capacity());
                 calls.insert(pc, builder.create_block());
             }
             for offset in instruction.branch_offsets().filter(|offset| *offset <= 0) {
