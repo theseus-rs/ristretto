@@ -104,3 +104,39 @@ fn cancelling_root_creation_at_each_boundary_returns_token_quota() {
         assert_eq!(budget.used(), 0);
     }
 }
+
+#[test]
+fn bounded_root_scan_preserves_batch_limit_and_cancellation() {
+    let capacities = Capacities::derive(1, 1, 1).unwrap().with_roots(10).unwrap();
+    let catalog = BoundedCatalog::new_in(capacities, &Budget::new(usize::MAX)).unwrap();
+    let mut worker = catalog.register_mutator().unwrap();
+    worker
+        .submit_root(RootCommand::ScanBatch { domain: 0 })
+        .unwrap();
+    assert_eq!(worker.poll(), Progress::Pending);
+    assert!(worker.cancel());
+    assert_eq!(worker.phase().unwrap().root_cursors[0], 0);
+    worker
+        .submit_root(RootCommand::ScanBatch { domain: 0 })
+        .unwrap();
+    assert_eq!(
+        (0..16)
+            .map(|_| worker.poll())
+            .find(|p| *p != Progress::Pending),
+        Some(Progress::Committed)
+    );
+    assert_eq!(worker.phase().unwrap().root_cursors[0], 8);
+    worker.submit_root(RootCommand::Scan { domain: 0 }).unwrap();
+    assert_eq!(
+        (0..16)
+            .map(|_| worker.poll())
+            .find(|p| *p != Progress::Pending),
+        Some(Progress::Committed)
+    );
+    assert_eq!(worker.phase().unwrap().root_cursors[0], 9);
+    worker.submit_root(RootCommand::Scan { domain: 2 }).unwrap();
+    assert_eq!(
+        worker.poll(),
+        Progress::Rejected(RequestError::InvalidDomain)
+    );
+}

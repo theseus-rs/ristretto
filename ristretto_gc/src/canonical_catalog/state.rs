@@ -21,6 +21,7 @@ use pool::AllocationError;
 mod phase_ops;
 #[path = "roots.rs"]
 mod roots;
+pub(crate) use roots::root_barrier_plan;
 pub use roots::{Root, RootCreation, RootPrepareError, RootStatus, RootToken};
 use roots::{RootEffect, RootRegistry};
 const UNDECIDED: u8 = 0;
