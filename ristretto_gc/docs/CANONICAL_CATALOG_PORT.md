@@ -43,3 +43,12 @@ expression with Loom atomics and test competing proposals and stale replacement.
 Those models cover numeric selection only; the real pool tests cover the ownership
 transfer and foreign-pool checks. The combined pool selector runs 20 native tests
 (including eight models) and seven portable WASI tests.
+
+## C06 prerequisite: numeric phase and trace state
+
+The phase/trace slice carries the frozen checked epoch, ticket, work-count and
+reachability computations independently of owning publication. Five frozen
+numeric regression tests pass on native and WASI, including exhausted counters,
+birth versus reachability, and cross-domain retirement. This slice makes no
+ownership, publication or collection-progress claim. Run the same commands above
+with the `canonical_catalog` selector for its tests.
