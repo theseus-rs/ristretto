@@ -16,6 +16,8 @@ use super::{
 use crate::canonical_pool as pool;
 use std::ops::Deref;
 mod allocations;
+mod edges;
+pub use edges::*;
 mod guarded;
 pub use guarded::GuardedCommand;
 mod roots;
@@ -277,6 +279,7 @@ pub struct BoundedCatalog<R: Payload = ()> {
     mutators: AtomicUsize,
     helpers: AtomicUsize,
     root_tokens: AtomicUsize,
+    edge_tokens: AtomicUsize,
     // Last: catalog backing is destroyed before its charge is refunded.
     charge: Charge,
 }
@@ -307,6 +310,25 @@ impl<R: Payload> BoundedCatalog<R> {
         budget: &Arc<Budget>,
         inline_storage: usize,
     ) -> Result<CatalogHandle<R>, ConfigError> {
+        Self::with_record_layout_in(capacities, budget, inline_storage, None)
+    }
+    pub fn with_indexed_records_and_storage_in(
+        capacities: Capacities,
+        budget: &Arc<Budget>,
+        inline_storage: usize,
+        degree: usize,
+    ) -> Result<CatalogHandle<R>, ConfigError> {
+        if degree == 0 || capacities.registry.checked_mul(degree) != Some(capacities.edge_slots) {
+            return Err(ConfigError::InvalidEdgeLayout);
+        }
+        Self::with_record_layout_in(capacities, budget, inline_storage, Some(degree))
+    }
+    fn with_record_layout_in(
+        capacities: Capacities,
+        budget: &Arc<Budget>,
+        inline_storage: usize,
+        degree: Option<usize>,
+    ) -> Result<CatalogHandle<R>, ConfigError> {
         let footprint = Footprint::for_records::<R>(capacities)?;
         let total = footprint
             .total()
@@ -326,7 +348,17 @@ impl<R: Payload> BoundedCatalog<R> {
             capacities.root_slots,
             capacities.root_cells,
             capacities.generation_limit,
+        )
+        .with_edge_capacities(
+            capacities.edge_slots,
+            capacities.edge_cells,
+            capacities.edge_states,
+            capacities.generation_limit,
         );
+        let raw = match degree {
+            Some(degree) => raw.with_source_edge_degree(degree),
+            None => raw,
+        };
         Ok(CatalogHandle {
             inner: Some(Arc::new(Self {
                 raw,
@@ -335,6 +367,7 @@ impl<R: Payload> BoundedCatalog<R> {
                 mutators: AtomicUsize::new(0),
                 helpers: AtomicUsize::new(0),
                 root_tokens: AtomicUsize::new(0),
+                edge_tokens: AtomicUsize::new(0),
                 charge,
             })),
         })
@@ -350,6 +383,9 @@ impl<R: Payload> BoundedCatalog<R> {
     }
     pub fn capacities(&self) -> Capacities {
         self.capacities
+    }
+    pub fn reserved_edge_tokens(&self) -> usize {
+        self.edge_tokens.load(Ordering::Acquire)
     }
     pub fn reserved_root_tokens(&self) -> usize {
         self.root_tokens.load(Ordering::Acquire)
@@ -550,6 +586,7 @@ pub enum Progress {
     Committed,
     Created(RecordKey),
     RootCreated(RootKey),
+    EdgeCreated(EdgeKey),
     Cancelled,
     Rejected(RequestError),
 }
@@ -592,6 +629,7 @@ impl<R: Payload> PhaseYield<R> {
 enum RequestState<R: Payload = (), C: Copy = Command> {
     Idle,
     Allocation(allocations::Request<R>),
+    Edge(Request<R>),
     Starting(C),
     StartingRecord {
         slot: usize,
@@ -653,6 +691,13 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         {
             return Err(RequestError::Foreign);
         }
+        // Edge-bearing catalogs must use traversal before acknowledging work.
+        // The next facade slice wires that resumable request; never bypass it.
+        if self.lease.owner.capacities.edge_slots != 0
+            && matches!(command.numeric(), Command::TraceAcknowledge { .. })
+        {
+            return Err(RequestError::Conflict);
+        }
         self.state = RequestState::Starting(command);
         Ok(())
     }
@@ -680,6 +725,14 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         let catalog = &self.lease.owner;
         match &mut self.state {
             RequestState::Idle => Progress::Idle,
+            RequestState::Edge(request) => match request.poll(catalog, context) {
+                Step::Pending => Progress::Pending,
+                Step::Ready(key) => Progress::EdgeCreated(key),
+                Step::Complete(progress) => {
+                    self.state = RequestState::Idle;
+                    progress
+                }
+            },
             RequestState::Allocation(request) => match request.poll(catalog, context) {
                 allocations::Step::Pending => Progress::Pending,
                 allocations::Step::Ready(key) => Progress::RootCreated(key),
@@ -881,6 +934,11 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
     }
     /// False means commit already won; retain the request to observe its result.
     pub fn cancel(&mut self) -> bool {
+        if let RequestState::Edge(request) = &self.state
+            && !request.cancel()
+        {
+            return false;
+        }
         if let RequestState::Allocation(request) = &self.state
             && !request.cancel()
         {
@@ -952,6 +1010,9 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
 }
 impl<R: Payload, C: Copy> Drop for Participant<R, C> {
     fn drop(&mut self) {
+        if let RequestState::Edge(request) = &self.state {
+            request.cancel();
+        }
         if let RequestState::Allocation(request) = &self.state {
             request.cancel();
         }

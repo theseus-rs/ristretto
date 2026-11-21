@@ -256,3 +256,14 @@ scanners do not own shared completion. All 13 frozen traversal regressions pass
 on both native and WASI, including transitive retention, insertion behind a
 cursor, unreachable-cycle reclamation and independent helper completion. Catalog
 totals are 98/89; strict Clippy passes. Runtime edge admission remains separate.
+
+## C10 prerequisite: bounded edge admission and charges
+
+Edge creation owners have a separate finite quota. Actual inventory backing,
+inline participant storage and external edge tokens are charged before setup;
+indexed geometry is rejected before reserving credit if inconsistent. Four
+portable tests cover every creation cancellation boundary, retained quota/charge,
+exact budget admission and geometry rejection. Native/WASI catalog totals are
+102/93; strict Clippy passes. This intermediate facade cannot publish edges and
+explicitly rejects numeric acknowledgement for edge-enabled catalogs until the
+next slice connects traversal, preventing an intermediate bypass.
