@@ -646,4 +646,130 @@ mod tests {
         drop((keeper, second));
         assert_eq!(catalog.reserved_root_tokens(), 0);
     }
+    #[test]
+    #[cfg(not(target_family = "wasm"))]
+    fn allocation_retries_partial_helper_publication_after_its_snapshot() {
+        let (catalog, mut worker) = setup();
+        let record = Fixture::new();
+        worker
+            .submit_rooted_record(0, 0, 8, record.clone())
+            .unwrap();
+        while stage(&worker) != "start-publish" {
+            assert_eq!(worker.poll_in(&7), Progress::Pending);
+        }
+        let mut helper = catalog.register_record_helper().unwrap();
+        let key = helper.discover_root(0).unwrap().unwrap().key;
+        let root = catalog.raw.discover_root(0).unwrap().unwrap();
+        let (begin, started) = std::sync::mpsc::channel();
+        let (paused, at_effect) = std::sync::mpsc::channel();
+        let (resume, released) = std::sync::mpsc::channel();
+        root.pause_next_effect(move || {
+            paused.send(()).unwrap();
+            released.recv().unwrap();
+        });
+        let publisher = std::thread::spawn(move || {
+            started.recv().unwrap();
+            helper.submit_root(RootCommand::Publish(key)).unwrap();
+            (0..128)
+                .map(|_| helper.poll_in(&7))
+                .find(|p| *p != Progress::Pending)
+        });
+        roots::BEFORE_PUBLICATION_PREPARATION.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(move || {
+                begin.send(()).unwrap();
+                at_effect.recv().unwrap();
+            }));
+        });
+        // The owner has an older stable snapshot; the helper has changed the
+        // target but is stopped before changing this same root or certifying it.
+        let progress = worker.poll_in(&7);
+        let prepared = root.status() == crate::canonical_catalog::RootStatus::Prepared;
+        let tracing = matches!(root.target_membership(), Some(Membership::Tracing(_)));
+        let unpublished = record.0.published.load(Ordering::Acquire) == 0;
+        let absent = worker.take_root().is_none();
+        resume.send(()).unwrap();
+        assert_eq!(publisher.join().unwrap(), Some(Progress::Committed));
+        assert!(prepared && tracing && unpublished && absent);
+        assert_eq!(
+            progress,
+            Progress::Pending,
+            "partial helper publication rejected its owner"
+        );
+        let recovered = finish(&mut worker);
+        assert_eq!(recovered.key(), key);
+        assert!(worker.take_root().is_none());
+        drop(recovered);
+        record.release_origin();
+    }
+
+    #[test]
+    fn a_revoked_helper_publication_cannot_escape_as_an_allocation_result() {
+        let (catalog, mut worker, record) = published_by_helper("start-publish");
+        let mut helper = catalog.register_record_helper().unwrap();
+        let key = helper.discover_root(0).unwrap().unwrap().key;
+        helper.submit_root(RootCommand::Remove(key)).unwrap();
+        assert_eq!(
+            (0..128)
+                .map(|_| helper.poll_in(&7))
+                .find(|p| *p != Progress::Pending),
+            Some(Progress::Committed)
+        );
+        assert_eq!(
+            worker.poll_in(&7),
+            Progress::Rejected(RequestError::Conflict),
+            "revoked publication returned a result"
+        );
+        assert!(worker.take_root().is_none());
+        record.release_origin();
+    }
+
+    #[test]
+    fn discard_after_commit_wins_keeps_publication_and_posts_root_removal() {
+        let (catalog, mut worker) = setup();
+        let record = Fixture::new();
+        worker
+            .submit_rooted_record(0, 0, 8, record.clone())
+            .unwrap();
+        while stage(&worker) != "attempt" {
+            assert_eq!(worker.poll_in(&7), Progress::Pending);
+        }
+        let RequestState::Allocation(request) = &worker.state else {
+            panic!("allocation")
+        };
+        let Stage::Attempt(attempt) = &request.stage else {
+            panic!("attempt")
+        };
+        assert_eq!(catalog.raw.commit_in(attempt, &7), Outcome::Committed);
+        assert_eq!(record.0.published.load(Ordering::Acquire), 1);
+        assert!(
+            !worker.cancel(),
+            "a committed publication cannot be cancelled"
+        );
+        assert!(
+            worker.discard_allocation(),
+            "ownership may still be discarded"
+        );
+        assert!(!worker.discard_allocation());
+        assert_eq!(worker.poll_in(&7), Progress::Idle);
+        let cell = worker.discover(0).unwrap().unwrap();
+        assert!(matches!(cell.membership, Membership::Tracing(_)));
+        assert!(
+            cell.abandon_requested,
+            "intent is harmless after publication"
+        );
+        let root = worker.discover_root(0).unwrap().unwrap();
+        assert_eq!(root.status, crate::canonical_catalog::RootStatus::Live);
+        assert!(root.removal_requested);
+        worker
+            .submit_root(RootCommand::RemoveRequested(root.key))
+            .unwrap();
+        let result = (0..128)
+            .map(|_| worker.poll_in(&7))
+            .find(|r| *r != Progress::Pending)
+            .unwrap();
+        assert_eq!(result, Progress::Committed);
+        assert!(worker.release_retired_root(root.key).unwrap());
+        assert_eq!(catalog.reserved_root_tokens(), 0);
+        record.release_origin();
+    }
 }

@@ -207,3 +207,13 @@ still-valid requests retry. A queued `FinishEpoch` never rebases onto a newly
 started collection. Three portable tests cover that real supersession, private
 phase cancellation, and invalid/foreign rejection. Native/WASI catalog totals
 are 59/54; strict Clippy passes.
+
+## C09 prerequisite: bounded root maintenance commands
+
+The participant now supports frozen root activation, requested removal and
+single/batched scan commands. Three restored allocation regressions cover a
+helper stopped between target/root effects, revoked helper results, and discard
+after commit has already won. An additional portable facade test checks scan
+batch bounds, cancellation and invalid domains. Native/WASI catalog totals are
+63/57; strict Clippy passes. This completes the root/phase API needed by the leaf
+maintenance adapter; strong-edge storage is still rejected at setup.

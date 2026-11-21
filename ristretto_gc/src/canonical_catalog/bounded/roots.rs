@@ -1,9 +1,16 @@
 //! Separately quota-bound root ownership. Keys and observations carry no access.
 use super::super::{Root, RootPrepareError, RootStatus, RootToken};
 use super::{
-    BoundedCatalog, CatalogHandle, Commands, Membership, Ordering, Participant, Payload, Pooled,
-    Preparation, RecordKey, RequestError, RequestState, trace_error,
+    BoundedCatalog, CatalogHandle, Commands, Membership, Ordering, Participant, Payload, Phase,
+    Pooled, Preparation, RecordKey, RequestError, RequestState, trace_error,
 };
+
+#[cfg(test)]
+thread_local! {
+    pub(super) static BEFORE_PUBLICATION_PREPARATION: std::cell::RefCell<Option<Box<dyn FnOnce()>>> = const {
+        std::cell::RefCell::new(None)
+    };
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RootKey {
@@ -102,13 +109,29 @@ impl<R: Payload> Drop for RootLease<R> {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RootCommand {
+    /// Coupled initial target publication and root activation.
     Publish(RootKey),
+    Activate(RootKey),
     Cancel(RootKey),
+    Remove(RootKey),
+    RemoveRequested(RootKey),
+    Scan {
+        domain: usize,
+    },
+    /// At most eight observations, stopping at the first root/target effect.
+    ScanBatch {
+        domain: usize,
+    },
 }
 impl RootCommand {
-    fn key(self) -> RootKey {
+    fn key(self) -> Option<RootKey> {
         match self {
-            Self::Publish(key) | Self::Cancel(key) => key,
+            Self::Publish(key)
+            | Self::Activate(key)
+            | Self::Cancel(key)
+            | Self::Remove(key)
+            | Self::RemoveRequested(key) => Some(key),
+            Self::Scan { .. } | Self::ScanBatch { .. } => None,
         }
     }
 }
@@ -166,7 +189,10 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
     }
     pub fn submit_root(&mut self, command: RootCommand) -> Result<(), RequestError> {
         self.idle()?;
-        if command.key().catalog != self.lease.owner.identity {
+        if command
+            .key()
+            .is_some_and(|key| key.catalog != self.lease.owner.identity)
+        {
             return Err(RequestError::Foreign);
         }
         self.state = RequestState::StartingRoot(command);
@@ -237,6 +263,14 @@ pub(super) fn lookup<R: Payload>(
     Ok(root)
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "preserve the exhaustive frozen root command diagnosis"
+)]
+#[expect(
+    clippy::indexing_slicing,
+    reason = "the domain is checked by get before fixed-array access"
+)]
 pub(super) fn start<R: Payload>(
     catalog: &BoundedCatalog<R>,
     context: &R::Context,
@@ -250,29 +284,135 @@ pub(super) fn start<R: Payload>(
     if phase.revision == u64::MAX {
         return Err(RequestError::Exhausted);
     }
-    let root = lookup(catalog, command.key())?;
+    let root = command.key().map(|key| lookup(catalog, key)).transpose()?;
+    #[cfg(test)]
+    if matches!(command, RootCommand::Publish(_)) {
+        let hook = BEFORE_PUBLICATION_PREPARATION.with(|hook| hook.borrow_mut().take());
+        if let Some(hook) = hook {
+            hook();
+        }
+    }
     let preparation = match command {
-        RootCommand::Publish(_) => catalog.raw.begin_publish_root(snapshot, root),
-        RootCommand::Cancel(_) => catalog.raw.begin_cancel_root(snapshot, root),
+        RootCommand::Publish(_) => catalog.raw.begin_publish_root(
+            snapshot,
+            root.expect("root command retains its required root"),
+        ),
+        RootCommand::Activate(_) => catalog.raw.begin_activate_root(
+            snapshot,
+            root.expect("root command retains its required root"),
+        ),
+        RootCommand::Cancel(_) => catalog.raw.begin_cancel_root(
+            snapshot,
+            root.expect("root command retains its required root"),
+        ),
+        RootCommand::Remove(_) => catalog.raw.begin_remove_root(
+            snapshot,
+            root.expect("root command retains its required root"),
+        ),
+        RootCommand::RemoveRequested(_) => catalog.raw.begin_requested_root_removal(
+            snapshot,
+            root.expect("root command retains its required root"),
+        ),
+        RootCommand::Scan { domain } => catalog.raw.begin_scan_root(snapshot, domain),
+        RootCommand::ScanBatch { domain } => catalog.raw.begin_scan_root_batch(snapshot, domain),
     };
     if let Some(preparation) = preparation {
         return Ok(preparation);
     }
-    let root = lookup(catalog, command.key())?;
-    if root.status() != RootStatus::Prepared || root.is_internal() {
-        return Err(RequestError::Conflict);
-    }
-    if matches!(command, RootCommand::Publish(_)) {
-        if root.target_membership().ok_or(RequestError::Contended)? != Membership::Prepared {
-            return Err(RequestError::Conflict);
+    // Diagnose copied preconditions only. Valid observations retry; they never
+    // stand in for the exact owning state used by a successful preparation.
+    let root = command.key().map(|key| lookup(catalog, key)).transpose()?;
+    match command {
+        RootCommand::Publish(_) => {
+            let root = root.expect("root command retains its required root");
+            require_status(&root, RootStatus::Prepared)?;
+            if root.target_membership().ok_or(RequestError::Contended)? != Membership::Prepared {
+                return Err(RequestError::Conflict);
+            }
+            crate::canonical_catalog::TraceState::publication(phase).map_err(trace_error)?;
         }
-        super::super::TraceState::publication(phase).map_err(trace_error)?;
+        RootCommand::Activate(_) => {
+            let root = root.expect("root command retains its required root");
+            require_status(&root, RootStatus::Prepared)?;
+            barrier_valid(&root, phase, false)?;
+        }
+        RootCommand::Cancel(_) => {
+            if root
+                .expect("root command retains its required root")
+                .status()
+                != RootStatus::Prepared
+            {
+                return Err(RequestError::Conflict);
+            }
+        }
+        RootCommand::Remove(_) => {
+            let root = root.expect("root command retains its required root");
+            require_status(&root, RootStatus::Live)?;
+            barrier_valid(&root, phase, true)?;
+        }
+        RootCommand::RemoveRequested(_) => {
+            let root = root.expect("root command retains its required root");
+            if !root.removal_requested()
+                || (root.is_internal() && root.status() != RootStatus::Prepared)
+            {
+                return Err(RequestError::Conflict);
+            }
+            match root.status() {
+                RootStatus::Prepared => {}
+                RootStatus::Live => barrier_valid(&root, phase, true)?,
+                RootStatus::Retired => return Err(RequestError::Conflict),
+            }
+        }
+        RootCommand::Scan { domain } | RootCommand::ScanBatch { domain } => {
+            let entry = phase
+                .domains
+                .get(domain)
+                .ok_or(RequestError::InvalidDomain)?;
+            if entry.mode == crate::canonical_catalog::DomainMode::Inactive
+                || entry.floor != 0
+                || phase.root_cursors[domain] >= catalog.raw.root_capacity()
+            {
+                return Err(RequestError::Conflict);
+            }
+            if let Some(root) = catalog
+                .raw
+                .discover_root(phase.root_cursors[domain])
+                .map_err(|_| RequestError::Contended)?
+                && root.status() == RootStatus::Live
+            {
+                barrier_valid(
+                    &root,
+                    phase,
+                    root.removal_requested() && !root.is_internal(),
+                )?;
+            }
+        }
     }
     if catalog.raw.generation_exhaustion_observed() {
         Err(RequestError::GenerationExhausted)
     } else {
         Err(RequestError::Contended)
     }
+}
+fn require_status<R: Payload>(root: &Root<R>, expected: RootStatus) -> Result<(), RequestError> {
+    if !root.is_internal() && root.status() == expected {
+        Ok(())
+    } else {
+        Err(RequestError::Conflict)
+    }
+}
+pub(super) fn barrier_valid<R: Payload>(
+    root: &Root<R>,
+    phase: Phase,
+    deleting: bool,
+) -> Result<(), RequestError> {
+    crate::canonical_catalog::state::root_barrier_plan(
+        root.target_membership().ok_or(RequestError::Contended)?,
+        phase,
+        deleting,
+    )
+    .map(|_| ())
+    .map_err(trace_error)
 }
 pub(super) fn prepare_error(error: RootPrepareError) -> RequestError {
     match error {
