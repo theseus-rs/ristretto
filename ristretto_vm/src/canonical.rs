@@ -9,6 +9,7 @@ mod objects;
 mod statics;
 pub use heap::{HeapCompletion, Invocation, JavaHeap, JavaThread};
 mod primitive_array;
+mod reference_array;
 use layout::Layout;
 pub use objects::{InitializationWork, Limits, Report};
 mod scalar;
