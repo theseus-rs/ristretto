@@ -657,6 +657,15 @@ pub(super) fn help(helper: &mut Helper<'_>, report: &mut Report) -> Result<(), E
     Ok(())
 }
 
+/// A suspended invocation owns its locals and operands until it returns or is cancelled.
+struct InterpreterFrame {
+    class: usize,
+    method: Arc<Method>,
+    locals: Vec<Value>,
+    stack: Vec<Value>,
+    pc: usize,
+}
+
 impl Execution<'_, '_, '_> {
     async fn allocate_array(&mut self, kind: Kind, length: i32) -> Result<Root<Payload>, Error> {
         let array =
@@ -907,19 +916,13 @@ impl Execution<'_, '_, '_> {
         }
     }
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "single explicit restricted bytecode dispatch table"
-    )]
-    #[async_recursion::async_recursion(?Send)]
-    pub(super) async fn call(
+    async fn open_frame(
         &mut self,
         class: usize,
         method: Arc<Method>,
         arguments: Vec<Value>,
         depth: usize,
-    ) -> Result<Option<Value>, Error> {
-        self.report.instruction_count_available = true;
+    ) -> Result<InterpreterFrame, Error> {
         if depth >= self.limits.frames {
             return Err(Error::Limit("frame"));
         }
@@ -958,12 +961,41 @@ impl Execution<'_, '_, '_> {
                 return Err(Error::Invalid("wide argument local".to_owned()));
             }
         }
-        let mut stack = Vec::with_capacity(method.max_stack());
-        let mut pc = 0;
+        let stack = Vec::with_capacity(method.max_stack());
         self.report.calls += 1;
         if method.name() == "<clinit>" {
             self.report.class_initializer_calls += 1;
         }
+        Ok(InterpreterFrame {
+            class,
+            method,
+            locals,
+            stack,
+            pc: 0,
+        })
+    }
+
+    #[expect(
+        clippy::too_many_lines,
+        reason = "single explicit restricted bytecode dispatch table"
+    )]
+    #[async_recursion::async_recursion(?Send)]
+    pub(super) async fn call(
+        &mut self,
+        class: usize,
+        method: Arc<Method>,
+        arguments: Vec<Value>,
+        depth: usize,
+    ) -> Result<Option<Value>, Error> {
+        self.report.instruction_count_available = true;
+        let mut suspended = Vec::new();
+        let InterpreterFrame {
+            mut class,
+            mut method,
+            mut locals,
+            mut stack,
+            mut pc,
+        } = self.open_frame(class, method, arguments, depth).await?;
         loop {
             if self.report.instructions >= self.limits.instructions {
                 return Err(Error::Limit("instruction"));
@@ -1116,19 +1148,30 @@ impl Execution<'_, '_, '_> {
                 }
                 Instruction::New(index) => {
                     let class = self.program.class_constant(class, *index)?;
-                    self.initialize_class(class, depth + 1).await?;
+                    self.initialize_class(class, depth + suspended.len() + 1)
+                        .await?;
                     let root = self.allocate_object(class).await?;
                     stack.push(Value::Reference(Some(root)));
                 }
                 Instruction::Getstatic(index) => {
                     let (owner, field) = self.program.static_field(class, *index)?;
-                    stack.push(self.read_static(owner, &field, depth + 1).await?);
+                    stack.push(
+                        self.read_static(owner, &field, depth + suspended.len() + 1)
+                            .await?,
+                    );
                 }
                 Instruction::Putstatic(index) => {
                     let (owner, field) = self.program.static_field(class, *index)?;
                     let value = pop(&mut stack)?;
-                    self.write_static(class, &method, owner, &field, value, depth + 1)
-                        .await?;
+                    self.write_static(
+                        class,
+                        &method,
+                        owner,
+                        &field,
+                        value,
+                        depth + suspended.len() + 1,
+                    )
+                    .await?;
                 }
                 Instruction::Getfield(index) => {
                     let root = pop(&mut stack)?.object()?;
@@ -1157,11 +1200,24 @@ impl Execution<'_, '_, '_> {
                                 .checked_sub(count)
                                 .ok_or_else(|| Error::Invalid("call stack underflow".to_owned()))?;
                             let arguments = stack.split_off(start);
-                            if let Some(value) =
-                                self.call(owner, target, arguments, depth + 1).await?
-                            {
-                                stack.push(value);
-                            }
+                            let next = self
+                                .open_frame(owner, target, arguments, depth + suspended.len() + 1)
+                                .await?;
+                            suspended.push(InterpreterFrame {
+                                class,
+                                method,
+                                locals,
+                                stack,
+                                pc,
+                            });
+                            InterpreterFrame {
+                                class,
+                                method,
+                                locals,
+                                stack,
+                                pc,
+                            } = next;
+                            continue;
                         }
                     }
                 }
@@ -1189,7 +1245,19 @@ impl Execution<'_, '_, '_> {
                             other => other,
                         });
                     }
-                    return Ok(value);
+                    let Some(caller) = suspended.pop() else {
+                        return Ok(value);
+                    };
+                    InterpreterFrame {
+                        class,
+                        method,
+                        locals,
+                        stack,
+                        pc,
+                    } = caller;
+                    if let Some(value) = value {
+                        stack.push(value);
+                    }
                 }
                 instruction => {
                     if branch(instruction, &mut stack)? {
