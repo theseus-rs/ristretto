@@ -15,3 +15,14 @@ heap. The driver checks each result against an independent integer model.
 The JSON records raw workload-call times and wall time for each process,
 including startup. The JVM controls when it collects. These finite samples do
 not measure sustainable throughput or GC pause percentiles.
+
+Generate a per-process table and an SVG from a saved capture using Python with
+Matplotlib installed:
+
+```sh
+python3 benchmarks/gc/ring/report.py baseline.json forks.csv forks.svg
+```
+
+Each point is the median workload-call time in one fresh JVM. The CSV uses the
+zero-based fork index stored in the capture. The plot labels forks starting at
+one. See `processes[].samples` in the input JSON for the individual observations.
