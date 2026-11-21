@@ -2,8 +2,8 @@
 
 The `experimental-reference-dispatch` feature exposes `Compiler::compile_requests`.
 The capability includes scalar/reference control flow, instance entry, Java calls,
-object allocation, instance fields and primitive array operations. Calls and heap work
-return explicit requests to the embedding. Static fields, reference arrays, handlers,
+object allocation, instance fields and one-dimensional array operations. Calls and heap work
+return explicit requests to the embedding. Static fields, handlers,
 synchronization and integer division/remainder remain excluded. The embedding must verify
 bytecode before compilation. Unsupported descriptors/opcodes fail closed.
 
@@ -89,4 +89,11 @@ primitive kinds. Signed indices and lengths are sign-extended; float/double cell
 raw bits. The host applies null, bounds, negative-length and component-kind checks, Java
 byte/short/char/boolean semantics and allocation policy. Tests of these compiler cells do
 not claim to validate heap behavior. No synchronous array helper is linked. Reference
-arrays and multidimensional allocation remain excluded from this slice.
+array allocation with array-valued components and multidimensional allocation remain excluded.
+
+Reference `anewarray`, `aaload` and `aastore` also return explicit requests. The class
+constant-pool index identifies the component; array-valued components remain excluded.
+Array and value identities are owning-context tokens. Store requests preserve all three
+cells until the host validates null/bounds/component assignability and publishes the edge.
+A successful load result must be independently owned before the parent resumes. The native
+code never inspects payload pointers or performs a synchronous array access.

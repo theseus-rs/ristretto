@@ -4,11 +4,13 @@ use super::call::{argument_bits, push_result};
 use crate::operand_stack::OperandStack;
 use crate::{ArrayAccessKind, Result};
 use cranelift::prelude::*;
-use ristretto_classfile::{BaseType, FieldType, attributes::Instruction};
+use ristretto_classfile::{BaseType, ConstantPool, FieldType, attributes::Instruction};
 
 #[derive(Clone, Copy)]
 pub(crate) enum ArrayRequest {
     New(u8),
+    ReferenceNew(u16),
+    ReferenceStore,
     Access(ArrayAccessKind, u16),
 }
 impl ArrayRequest {
@@ -16,6 +18,9 @@ impl ArrayRequest {
         use ArrayAccessKind as A;
         Some(match instruction {
             Instruction::Newarray(kind) => Self::New(kind.code()),
+            Instruction::Anewarray(index) => Self::ReferenceNew(*index),
+            Instruction::Aastore => Self::ReferenceStore,
+            Instruction::Aaload => Self::Access(A::ReferenceLoad, 50),
             Instruction::Iaload => Self::Access(A::IntLoad, 46),
             Instruction::Laload => Self::Access(A::LongLoad, 47),
             Instruction::Faload => Self::Access(A::FloatLoad, 48),
@@ -36,13 +41,15 @@ impl ArrayRequest {
     }
     pub fn capacity(self) -> usize {
         match self {
-            Self::New(_) => 1,
+            Self::New(_) | Self::ReferenceNew(_) => 1,
+            Self::ReferenceStore => 3,
             Self::Access(kind, _) => kind.argument_count(),
         }
     }
     pub fn emit(
         self,
         continuation: &CallContinuation<'_>,
+        pool: &ConstantPool,
         builder: &mut FunctionBuilder,
         stack: &mut OperandStack,
         bci: usize,
@@ -55,6 +62,27 @@ impl ArrayRequest {
             3,
         ));
         let (tag, index, result) = match self {
+            Self::ReferenceStore => {
+                let value = stack.pop_object(builder)?;
+                let index = stack.pop_int(builder)?;
+                let index = builder.ins().sextend(types::I64, index);
+                let array = stack.pop_object(builder)?;
+                builder.ins().stack_store(types::I64, array, arguments, 0);
+                builder.ins().stack_store(types::I64, index, arguments, 8);
+                builder.ins().stack_store(types::I64, value, arguments, 16);
+                (16, 0, None)
+            }
+            Self::ReferenceNew(index) => {
+                if pool.try_get_class(index)?.as_bytes().starts_with(b"[") {
+                    return Err(crate::Error::UnsupportedMethod(
+                        "reference array component must not be an array".to_owned(),
+                    ));
+                }
+                let length = stack.pop_int(builder)?;
+                let bits = builder.ins().sextend(types::I64, length);
+                builder.ins().stack_store(types::I64, bits, arguments, 0);
+                (8, index, None)
+            }
             Self::New(kind) => {
                 let length = stack.pop_int(builder)?;
                 let bits = builder.ins().sextend(types::I64, length);
@@ -62,12 +90,16 @@ impl ArrayRequest {
                 (7, u16::from(kind), None)
             }
             Self::Access(kind, code) => {
-                let field = FieldType::Base(match kind {
-                    A::LongLoad | A::LongStore => BaseType::Long,
-                    A::FloatLoad | A::FloatStore => BaseType::Float,
-                    A::DoubleLoad | A::DoubleStore => BaseType::Double,
-                    _ => BaseType::Int,
-                });
+                let field = if kind == A::ReferenceLoad {
+                    FieldType::Object("java/lang/Object".into())
+                } else {
+                    FieldType::Base(match kind {
+                        A::LongLoad | A::LongStore => BaseType::Long,
+                        A::FloatLoad | A::FloatStore => BaseType::Float,
+                        A::DoubleLoad | A::DoubleStore => BaseType::Double,
+                        _ => BaseType::Int,
+                    })
+                };
                 if count == 3 {
                     let value = argument_bits(builder, stack, &field)?;
                     builder.ins().stack_store(types::I64, value, arguments, 16);
@@ -85,7 +117,7 @@ impl ArrayRequest {
         let bits = continuation.emit(builder, stack, arguments, count, bci, (tag, index))?;
         if let Some(field) = result {
             push_result(builder, stack, &field, bits)?;
-        } else if matches!(self, Self::New(_)) {
+        } else if matches!(self, Self::New(_) | Self::ReferenceNew(_)) {
             stack.push_object(builder, bits)?;
         }
         Ok(())

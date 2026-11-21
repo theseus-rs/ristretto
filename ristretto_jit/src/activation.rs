@@ -41,6 +41,7 @@ pub struct CallRequest {
 pub enum AllocationKind {
     Object(u16),
     PrimitiveArray(ristretto_classfile::attributes::ArrayType),
+    ReferenceArray(u16),
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AllocationRequest {
@@ -67,6 +68,7 @@ pub enum ArrayAccessKind {
     LongLoad,
     FloatLoad,
     DoubleLoad,
+    ReferenceLoad,
     ByteLoad,
     CharLoad,
     ShortLoad,
@@ -87,6 +89,7 @@ impl ArrayAccessKind {
             47 => Self::LongLoad,
             48 => Self::FloatLoad,
             49 => Self::DoubleLoad,
+            50 => Self::ReferenceLoad,
             51 => Self::ByteLoad,
             52 => Self::CharLoad,
             53 => Self::ShortLoad,
@@ -126,6 +129,12 @@ pub struct ArrayAccessRequest {
     pub bci: usize,
 }
 
+/// Reference-array store; cells are array token, signed index and value token.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ArrayStoreRequest {
+    pub bci: usize,
+}
+
 /// A bounded native slice either requests a scheduling boundary or completes.
 #[derive(Debug, PartialEq)]
 pub enum ExecutionStep {
@@ -134,6 +143,7 @@ pub enum ExecutionStep {
     Allocation(AllocationRequest),
     Field(FieldRequest),
     ArrayAccess(ArrayAccessRequest),
+    ArrayStore(ArrayStoreRequest),
     Returned(Option<Value>),
 }
 
@@ -275,6 +285,17 @@ impl Activation {
         let [kind, bci, index] = metadata else {
             return Err(InternalError("invalid call metadata".to_owned()));
         };
+        if *kind == 16 {
+            return Ok(ExecutionStep::ArrayStore(ArrayStoreRequest {
+                bci: usize::try_from(*bci)?,
+            }));
+        }
+        if *kind == 8 {
+            return Ok(ExecutionStep::Allocation(AllocationRequest {
+                kind: AllocationKind::ReferenceArray(u16::try_from(*index)?),
+                bci: usize::try_from(*bci)?,
+            }));
+        }
         if *kind == 17 {
             return Ok(ExecutionStep::ArrayAccess(ArrayAccessRequest {
                 kind: ArrayAccessKind::from_code(u16::try_from(*index)?)?,

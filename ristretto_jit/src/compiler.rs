@@ -179,7 +179,7 @@ impl Compiler {
     }
 
     /// Restriction for explicit scalar/reference/call and primitive-heap requests.
-    /// Static fields, reference arrays, handlers, synchronization and integer division
+    /// Static fields, multidimensional arrays, handlers, synchronization and integer division
     /// remain excluded until their owning request protocols are implemented.
     #[cfg(feature = "experimental-reference-dispatch")]
     #[must_use]
@@ -521,6 +521,7 @@ impl Compiler {
                         continuation,
                         state: continuation_pointer,
                     },
+                    constant_pool,
                     &mut function_builder,
                     &mut stack,
                     program_counter,
