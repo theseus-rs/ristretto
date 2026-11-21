@@ -178,8 +178,8 @@ impl Compiler {
         self.compile_mode(class_file, method, symbols, false)
     }
 
-    /// Restriction for explicit scalar/reference/call continuation capabilities. Heap access,
-    /// exception handlers, synchronization and trapping integer division
+    /// Restriction for explicit scalar/reference/call and primitive-heap requests.
+    /// Static fields, reference arrays, handlers, synchronization and integer division
     /// remain excluded until their owning request protocols are implemented.
     #[cfg(feature = "experimental-reference-dispatch")]
     #[must_use]
@@ -215,6 +215,7 @@ impl Compiler {
         }
         if code.iter().any(|instruction| {
             !(Self::is_production_safe_instruction(instruction)
+                || continuation::ArrayRequest::from_instruction(instruction).is_some()
                 || matches!(
                     instruction,
                     Instruction::Ifeq(_)
@@ -382,6 +383,7 @@ impl Compiler {
                     matches!(instruction, Instruction::Aconst_null | Instruction::Areturn)
                         || continuation::CallTarget::from_instruction(instruction).is_some()
                         || continuation::HeapRequest::from_instruction(instruction).is_some()
+                        || continuation::ArrayRequest::from_instruction(instruction).is_some()
                 }));
         let continuation_pointer = context_pointer;
         let context_pointer = if requests_only {
@@ -506,6 +508,19 @@ impl Compiler {
                         state: continuation_pointer,
                     },
                     constant_pool,
+                    &mut function_builder,
+                    &mut stack,
+                    program_counter,
+                )?;
+            } else if let (Some(continuation), Some(request)) = (
+                continuation.as_ref(),
+                continuation::ArrayRequest::from_instruction(instruction),
+            ) {
+                request.emit(
+                    &continuation::CallContinuation {
+                        continuation,
+                        state: continuation_pointer,
+                    },
                     &mut function_builder,
                     &mut stack,
                     program_counter,

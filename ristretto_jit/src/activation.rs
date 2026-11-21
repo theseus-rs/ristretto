@@ -40,6 +40,7 @@ pub struct CallRequest {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AllocationKind {
     Object(u16),
+    PrimitiveArray(ristretto_classfile::attributes::ArrayType),
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AllocationRequest {
@@ -59,6 +60,72 @@ pub struct FieldRequest {
     pub bci: usize,
 }
 
+/// Array operation completed after returning the generated frame.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ArrayAccessKind {
+    IntLoad,
+    LongLoad,
+    FloatLoad,
+    DoubleLoad,
+    ByteLoad,
+    CharLoad,
+    ShortLoad,
+    IntStore,
+    LongStore,
+    FloatStore,
+    DoubleStore,
+    ByteStore,
+    CharStore,
+    ShortStore,
+    Length,
+}
+
+impl ArrayAccessKind {
+    pub(crate) fn from_code(code: u16) -> Result<Self> {
+        Ok(match code {
+            46 => Self::IntLoad,
+            47 => Self::LongLoad,
+            48 => Self::FloatLoad,
+            49 => Self::DoubleLoad,
+            51 => Self::ByteLoad,
+            52 => Self::CharLoad,
+            53 => Self::ShortLoad,
+            79 => Self::IntStore,
+            80 => Self::LongStore,
+            81 => Self::FloatStore,
+            82 => Self::DoubleStore,
+            84 => Self::ByteStore,
+            85 => Self::CharStore,
+            86 => Self::ShortStore,
+            190 => Self::Length,
+            _ => return Err(InternalError("invalid array access kind".to_owned())),
+        })
+    }
+
+    /// Number of logical eight-byte cells: array, optional index and optional value.
+    #[must_use]
+    pub const fn argument_count(self) -> usize {
+        match self {
+            Self::Length => 1,
+            Self::IntStore
+            | Self::LongStore
+            | Self::FloatStore
+            | Self::DoubleStore
+            | Self::ByteStore
+            | Self::CharStore
+            | Self::ShortStore => 3,
+            _ => 2,
+        }
+    }
+}
+
+/// Array identity, signed index and raw value bits remain in owning argument cells.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ArrayAccessRequest {
+    pub kind: ArrayAccessKind,
+    pub bci: usize,
+}
+
 /// A bounded native slice either requests a scheduling boundary or completes.
 #[derive(Debug, PartialEq)]
 pub enum ExecutionStep {
@@ -66,6 +133,7 @@ pub enum ExecutionStep {
     Call(CallRequest),
     Allocation(AllocationRequest),
     Field(FieldRequest),
+    ArrayAccess(ArrayAccessRequest),
     Returned(Option<Value>),
 }
 
@@ -207,6 +275,21 @@ impl Activation {
         let [kind, bci, index] = metadata else {
             return Err(InternalError("invalid call metadata".to_owned()));
         };
+        if *kind == 17 {
+            return Ok(ExecutionStep::ArrayAccess(ArrayAccessRequest {
+                kind: ArrayAccessKind::from_code(u16::try_from(*index)?)?,
+                bci: usize::try_from(*bci)?,
+            }));
+        }
+        if *kind == 7 {
+            let kind = ristretto_classfile::attributes::ArrayType::from_bytes(
+                &mut ristretto_classfile::byte_reader::ByteReader::new(&[u8::try_from(*index)?]),
+            )?;
+            return Ok(ExecutionStep::Allocation(AllocationRequest {
+                kind: AllocationKind::PrimitiveArray(kind),
+                bci: usize::try_from(*bci)?,
+            }));
+        }
         if *kind == 6 {
             return Ok(ExecutionStep::Allocation(AllocationRequest {
                 kind: AllocationKind::Object(u16::try_from(*index)?),

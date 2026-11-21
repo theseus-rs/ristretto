@@ -1,11 +1,11 @@
 # Experimental native activations
 
 The `experimental-reference-dispatch` feature exposes `Compiler::compile_requests`.
-The capability includes static scalar methods and opaque reference identities,
-with conditional branches and backedges. This slice does not admit Java calls,
-allocation, fields, array operations, handlers, synchronization, or integer
-division/remainder. The embedding must
-verify bytecode before compilation. Unsupported descriptors/opcodes fail closed.
+The capability includes scalar/reference control flow, instance entry, Java calls,
+object allocation, instance fields and primitive array operations. Calls and heap work
+return explicit requests to the embedding. Static fields, reference arrays, handlers,
+synchronization and integer division/remainder remain excluded. The embedding must verify
+bytecode before compilation. Unsupported descriptors/opcodes fail closed.
 
 `Compiler::compile` and production `can_compile` keep their existing policy.
 A request-only `Function` rejects synchronous `execute`. Begin it with
@@ -13,6 +13,8 @@ A request-only `Function` rejects synchronous `execute`. Begin it with
 
 - `ExecutionStep::Yielded` requests an embedding scheduling boundary. Every taken
   branch to the same or an earlier byte offset consumes one budget unit.
+- `ExecutionStep::Call`, `Allocation`, `Field` and `ArrayAccess` park a runtime request.
+  The host owns resolution, heap checks, completion and cancellation.
 - `ExecutionStep::Returned(value)` completes the invocation. Resuming it again
   fails.
 
@@ -80,4 +82,11 @@ returns the exact class constant-pool index; field requests retain receiver/valu
 and the exact field index/BCI. Allocation and field helpers are not linked. The embedding
 checks class admission, access, initialization, null/type rules and quota before successful
 completion, retaining every result owner before exposing its token. A fault drops the
-parked activation. Static fields, arrays and native exception handlers remain excluded.
+parked activation. Static fields and native exception handlers remain excluded.
+
+Primitive `newarray`, length, loads and stores use the same request cells for all eight
+primitive kinds. Signed indices and lengths are sign-extended; float/double cells preserve
+raw bits. The host applies null, bounds, negative-length and component-kind checks, Java
+byte/short/char/boolean semantics and allocation policy. Tests of these compiler cells do
+not claim to validate heap behavior. No synchronous array helper is linked. Reference
+arrays and multidimensional allocation remain excluded from this slice.
