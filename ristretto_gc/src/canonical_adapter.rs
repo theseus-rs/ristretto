@@ -9,6 +9,8 @@ use std::sync::atomic::{AtomicU8, Ordering};
 
 #[path = "canonical_leaf_allocation.rs"]
 mod allocation;
+#[path = "canonical_graph.rs"]
+mod graph;
 #[path = "canonical_leaf_maintenance.rs"]
 mod maintenance;
 #[path = "canonical_root_owner.rs"]
@@ -19,6 +21,7 @@ mod runtime;
 struct LeafRecord {
     payload: PreparedPayload,
     published: AtomicU8,
+    graph_edges: u8,
 }
 
 struct LeafGuard<'a> {
@@ -53,6 +56,7 @@ impl LeafRecord {
         Self {
             payload,
             published: AtomicU8::new(UNPUBLISHED),
+            graph_edges: 0,
         }
     }
 

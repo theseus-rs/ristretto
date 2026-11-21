@@ -40,3 +40,11 @@ object discovery invalidates the local complete-sweep certificate. Epoch finish
 requests carry the exact epoch; they cannot finish a later unswept epoch.
 Dropping a root permits incremental retirement and slot reuse. A retained typed
 view keeps its payload alive while unrelated payloads can be reclaimed.
+
+
+Graph construction admits a fixed maximum degree of 1–8, with an immutable
+per-payload usable count from zero through that maximum. Each successful result
+owns its complete source-edge inventory; cancellation at an intermediate stage
+releases the root and orphan pages through the same helper policy. Index and
+capacity arithmetic is checked before preparation. This inventory slice does
+not yet expose edge mutation to callers.
