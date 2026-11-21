@@ -77,3 +77,21 @@ or payload access. Controller variants are reserved here so footprint accounting
 uses the actual object-controller layout before its operations are enabled.
 Two tests verify empty discovery slots, checked backing sizes and release of all
 pool owners. Native/WASI catalog selectors now each pass ten tests.
+
+## C06: bounded participant registration and budget ownership
+
+Catalog setup reserves its declared backing, participant wrappers and optional
+caller storage before constructing pools. Mutators and helpers have independent
+single-CAS admission quotas. A unique lease retains the catalog and releases its
+role quota on drop. The final opaque handle releases its outer Arc allocation,
+then catalog backing, then its budget charge, matching the frozen ownership order.
+
+At this tip participants have no request storage. Footprint accounting uses the
+actual participant type and expands with later request states. There are no
+root, conditional-reference or edge token capacities yet. The preview's Q=0
+restriction permits the conditional-reference protocol to remain out of scope.
+
+Three portable regressions check quota exhaustion/reuse, budget rejection,
+last-participant refund and overflow. One Loom model compiles the production
+quota CAS and release expressions and checks competing registration. Catalog
+totals are 14 native / 13 WASI tests, with strict Clippy passing.
