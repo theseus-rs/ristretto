@@ -107,3 +107,7 @@ name = "class_resolution"
 [[bench]]
 harness = false
 name = "strings"
+
+[[example]]
+name = "canonical_java"
+required-features = ["experimental-canonical-runtime"]
