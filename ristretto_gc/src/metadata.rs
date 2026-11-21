@@ -3,6 +3,7 @@
 use crate::Finalize;
 use crate::finalizer::FinalizerFn;
 use crate::pointers::SafePtr;
+use crate::private_allocation::Allocation;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::warn;
@@ -35,84 +36,34 @@ pub(crate) struct ObjectMetadata {
 }
 
 impl ObjectMetadata {
-    /// Creates a new `ObjectMetadata` instance for a `Gc<T>`.
-    pub(crate) fn new_for_gc<T: Send + Sync>(ptr: SafePtr, size: usize) -> Self {
-        // Create a type safe drop function that properly deallocates the T data.
-        // The pointer was created via Box::into_raw(Box::new(data: T)), so we reconstruct
-        // Box<T> to run T::drop and deallocate.
-        let ptr_addr = ptr.0;
-        let drop_fn: DropFn = Some(Box::new(move || {
-            // Safety: This is safe because:
-            // 1. The pointer was originally created from Box::into_raw on a Box<T>
-            // 2. We're only calling this once during sweep phase
-            // 3. The object is unreachable so no other references exist
-            // 4. This closure can only be called once due to Option::take()
-            unsafe {
-                if ptr_addr != 0 {
-                    let raw_ptr = ptr_addr as *mut T;
-                    if !raw_ptr.is_null() {
-                        let _boxed = Box::from_raw(raw_ptr);
-                    }
-                }
-            }
-        }));
-
+    /// Owns the initialized allocation before any ordinary index can discover it.
+    pub(crate) fn new_for_gc(allocation: Allocation) -> Self {
+        let ptr = SafePtr::from_ptr(allocation.pointer().get());
+        let size = allocation.size();
         Self {
             ptr,
             size,
             marked: AtomicBool::new(INITIAL_MARK_STATE),
             was_ever_marked: AtomicBool::new(false),
             retained: AtomicBool::new(false),
-            drop_fn: Mutex::new(drop_fn),
-            finalizer: Mutex::new(None), // No finalizer by default
+            drop_fn: Mutex::new(Some(Box::new(move || drop(allocation)))),
+            finalizer: Mutex::new(None),
         }
     }
 
-    /// Creates a new `ObjectMetadata` instance for a `Gc<T>` with finalizer support.
-    pub(crate) fn new_for_gc_with_finalizer<T: Send + Sync + Finalize>(
-        ptr: SafePtr,
-        size: usize,
+    /// # Safety
+    /// The allocation must contain the same initialized T used at construction.
+    pub(crate) unsafe fn new_for_gc_with_finalizer<T: Send + Sync + Finalize>(
+        allocation: Allocation,
     ) -> Self {
-        // Create a type-safe drop function that properly deallocates the T data.
-        let ptr_addr = ptr.0;
-        let drop_fn: DropFn = Some(Box::new(move || {
-            // Safety: Same as new_for_gc;  pointer from Box::into_raw(Box::new(data: T))
-            unsafe {
-                if ptr_addr != 0 {
-                    let raw_ptr = ptr_addr as *mut T;
-                    if !raw_ptr.is_null() {
-                        let _boxed = Box::from_raw(raw_ptr);
-                    }
-                }
-            }
-        }));
-
-        // Create finalizer for objects that implement Finalize.
-        // The pointer points directly to T data, so we can call T::finalize() on it.
-        let finalizer: Option<FinalizerFn> = if ptr_addr != 0 {
-            Some(Box::new(move || {
-                // Safety: The pointer was valid when the finalizer was created and we're in
-                // the finalization phase before object deallocation.
-                unsafe {
-                    let data_ptr = ptr_addr as *const T;
-                    if !data_ptr.is_null() {
-                        (*data_ptr).finalize();
-                    }
-                }
-            }))
-        } else {
-            None
-        };
-
-        Self {
-            ptr,
-            size,
-            marked: AtomicBool::new(INITIAL_MARK_STATE),
-            was_ever_marked: AtomicBool::new(false),
-            retained: AtomicBool::new(false),
-            drop_fn: Mutex::new(drop_fn),
-            finalizer: Mutex::new(finalizer),
-        }
+        let pointer = allocation.pointer();
+        let mut metadata = Self::new_for_gc(allocation);
+        metadata.finalizer = Mutex::new(Some(Box::new(move || {
+            // SAFETY: the matching unique allocation remains in metadata until
+            // after finalizers finish; this wrapper preserves pointer provenance.
+            unsafe { (&*pointer.get().cast::<T>()).finalize() };
+        })));
+        metadata
     }
 
     /// Returns the pointer to the object.
@@ -199,20 +150,16 @@ impl ObjectMetadata {
     ///
     /// Uses `try_lock` to avoid deadlocking on a poisoned mutex from a prior panic.
     pub(crate) fn run_drop_fn(&self) {
-        match self.drop_fn.try_lock() {
-            Ok(mut guard) => {
-                if let Some(drop_fn) = guard.take() {
-                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        drop_fn();
-                    }))
-                    .unwrap_or_else(|_| {
-                        warn!("Drop function panicked during object cleanup");
-                    });
-                }
-            }
-            Err(_) => {
+        let drop_fn = {
+            let Ok(mut guard) = self.drop_fn.try_lock() else {
                 warn!("Failed to acquire drop_fn lock during object cleanup; drop skipped");
-            }
+                return;
+            };
+            guard.take()
+        };
+        if let Some(drop_fn) = drop_fn {
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(drop_fn))
+                .unwrap_or_else(|_| warn!("Drop function panicked during object cleanup"));
         }
     }
 

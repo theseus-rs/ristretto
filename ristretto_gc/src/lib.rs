@@ -18,6 +18,15 @@
     )
 )]
 
+mod allocation_budget;
+#[cfg(feature = "experimental-canonical-runtime")]
+mod canonical_adapter;
+#[cfg(feature = "experimental-canonical-runtime")]
+pub(crate) mod canonical_catalog;
+mod canonical_payload;
+#[cfg(feature = "experimental-canonical-runtime")]
+pub(crate) mod canonical_pool;
+
 mod collector;
 mod config;
 mod error;
@@ -25,10 +34,14 @@ mod finalizer;
 mod gc;
 mod metadata;
 mod pointers;
+mod private_allocation;
 mod root_guard;
 pub mod sync;
 
-pub use collector::{GarbageCollector, Trace};
+#[cfg(feature = "experimental-canonical-runtime")]
+pub use canonical_adapter::api as canonical;
+pub use canonical_payload::CanonicalPayload;
+pub use collector::{GarbageCollector, HeapOwner, Trace};
 pub use config::{Configuration, ConfigurationBuilder, Statistics};
 pub use error::{Error, Result};
 pub use finalizer::Finalize;

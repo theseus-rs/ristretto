@@ -2,6 +2,7 @@ use crate::Finalize;
 use crate::collector::{GarbageCollector, Trace};
 use crate::error::{Error, Result};
 use crate::pointers::SafePtr;
+use crate::private_allocation::Allocation;
 use crate::root_guard::GcRootGuard;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
@@ -24,19 +25,47 @@ pub struct Gc<T> {
 }
 
 impl<T> Gc<T> {
+    /// Inline payload bytes plus explicitly reported owned external backing.
+    /// Canonical allocation reserves this amount; legacy constructors retain
+    /// their existing inline-only accounting.
+    /// # Errors
+    /// Returns [`Error::OutOfMemory`] if the reported total overflows.
+    pub fn allocation_size(data: &T) -> Result<usize>
+    where
+        T: Trace,
+    {
+        size_of::<T>()
+            .checked_add(data.external_size())
+            .ok_or(Error::OutOfMemory)
+    }
+
     /// Heap-allocates `data`, records the allocation with the collector, and returns
     /// a `Gc<T>` wrapping the raw pointer along with the pointer and size needed
     /// for subsequent registration.
-    fn allocate(collector: &GarbageCollector, data: T) -> (Self, *mut T, usize) {
-        let ptr = NonNull::from(Box::leak(Box::new(data)));
+    fn allocate(collector: &GarbageCollector, data: T) -> Result<(Self, Allocation)>
+    where
+        T: Send + Sync,
+    {
         let size = size_of::<T>();
-        collector.record_allocation(size);
+        let reservation = collector.reserve_exact_bytes(size)?;
+        let (allocation, ptr) = Allocation::new(data, reservation)?;
 
         let gc = Self {
             ptr,
             phantom: PhantomData,
         };
-        (gc, ptr.as_ptr(), size)
+        Ok((gc, allocation))
+    }
+
+    #[expect(
+        clippy::expect_used,
+        reason = "the existing infallible API panics on budget exhaustion"
+    )]
+    fn allocate_infallible(collector: &GarbageCollector, data: T) -> (Self, Allocation)
+    where
+        T: Send + Sync,
+    {
+        Self::allocate(collector, data).expect("managed payload budget exhausted")
     }
 
     /// Constructs a new `Gc<T>` and registers it as a root.
@@ -49,6 +78,20 @@ impl<T> Gc<T> {
         T: Send + Sync + Trace,
     {
         Self::with_collector(collector, data)
+    }
+
+    /// Allocates and roots a value after reserving its managed payload bytes.
+    ///
+    /// # Errors
+    /// Returns [`Error::OutOfMemory`] without allocating when the byte limit is exceeded.
+    pub fn try_new(collector: &Arc<GarbageCollector>, data: T) -> Result<GcRootGuard<T>>
+    where
+        T: Send + Sync + Trace,
+    {
+        let (gc, allocation) = Self::allocate(collector, data)?;
+        let root = collector.create_root_guard(gc);
+        collector.register_object(allocation);
+        Ok(root)
     }
 
     /// Constructs a new `Gc<T>` without rooting it.
@@ -84,14 +127,14 @@ impl<T> Gc<T> {
     where
         T: Send + Sync + Trace,
     {
-        let (gc, ptr, size) = Self::allocate(collector, data);
+        let (gc, allocation) = Self::allocate_infallible(collector, data);
 
         // Register root BEFORE registering object to prevent race with GC cycle.
         // If the root exists first, any GC cycle will find the root during marking.
         // The object isn't in the tracking map yet, so it can't be swept.
         let root_guard = collector.create_root_guard(gc);
 
-        collector.register_object::<T>(ptr, size);
+        collector.register_object(allocation);
         root_guard
     }
 
@@ -108,8 +151,8 @@ impl<T> Gc<T> {
     where
         T: Send + Sync,
     {
-        let (gc, ptr, size) = Self::allocate(collector, data);
-        collector.register_object::<T>(ptr, size);
+        let (gc, allocation) = Self::allocate_infallible(collector, data);
+        collector.register_object(allocation);
         gc
     }
 
@@ -126,12 +169,13 @@ impl<T> Gc<T> {
     where
         T: Send + Sync + Finalize + Trace,
     {
-        let (gc, ptr, size) = Self::allocate(collector, data);
+        let (gc, allocation) = Self::allocate_infallible(collector, data);
 
         // Register root BEFORE registering object (same rationale as with_collector)
         let root_guard = collector.create_root_guard(gc);
 
-        collector.register_object_with_finalizer::<T>(ptr, size);
+        // SAFETY: allocate created this exact allocation from T.
+        unsafe { collector.register_object_with_finalizer::<T>(allocation) };
         root_guard
     }
 
@@ -152,8 +196,9 @@ impl<T> Gc<T> {
     where
         T: Send + Sync + Finalize,
     {
-        let (gc, ptr, size) = Self::allocate(collector, data);
-        collector.register_object_with_finalizer::<T>(ptr, size);
+        let (gc, allocation) = Self::allocate_infallible(collector, data);
+        // SAFETY: allocate created this exact allocation from T.
+        unsafe { collector.register_object_with_finalizer::<T>(allocation) };
         gc
     }
 
