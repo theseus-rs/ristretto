@@ -1,3 +1,8 @@
+#[path = "activation.rs"]
+mod activation;
+pub(crate) use activation::ContinuationLayout;
+pub use activation::{Activation, ExecutionStep};
+
 use crate::Error::InternalError;
 use crate::{JitValue, Result, Value};
 #[cfg(all(
@@ -30,6 +35,7 @@ use std::sync::Mutex;
 pub struct Function {
     argument_types: Arc<[i8]>,
     native_stack_bytes: usize,
+    continuation: Option<ContinuationLayout>,
     entry_point: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8),
     #[cfg(all(
         not(target_family = "wasm"),
@@ -128,6 +134,7 @@ impl Function {
         Self {
             argument_types: Arc::from(argument_types),
             native_stack_bytes: 0,
+            continuation: None,
             entry_point: function,
             #[cfg(all(
                 not(target_family = "wasm"),
@@ -163,9 +170,44 @@ impl Function {
         Self {
             argument_types: Arc::from(argument_types),
             native_stack_bytes,
+            continuation: None,
             entry_point: function,
             module: Arc::new(JitModuleOwner::new(Some(module))),
         }
+    }
+
+    pub(crate) fn with_continuation(mut self, layout: Option<ContinuationLayout>) -> Self {
+        self.continuation = layout;
+        self
+    }
+
+    /// Whether this generated function uses the explicit suspension ABI.
+    #[must_use]
+    pub fn supports_cooperation(&self) -> bool {
+        self.continuation.is_some()
+    }
+
+    /// Whether synchronous execution is prohibited for this generated function.
+    #[must_use]
+    pub fn requests_only(&self) -> bool {
+        self.continuation.is_some()
+    }
+
+    /// Conservative backedge budget based on the method's instruction count.
+    #[must_use]
+    pub fn cooperation_budget(&self) -> std::num::NonZeroU32 {
+        let instructions = self
+            .continuation
+            .map_or(1, |layout| layout.instructions.max(1));
+        let budget = u32::try_from((4096 / instructions).max(1)).unwrap_or(1);
+        std::num::NonZeroU32::new(budget).unwrap_or(std::num::NonZeroU32::MIN)
+    }
+
+    /// Begin an owning invocation without entering generated code.
+    /// # Errors
+    /// Rejects ordinary functions and arguments that do not match the descriptor.
+    pub fn activation(&self, arguments: &[Value]) -> Result<Activation> {
+        Activation::new(self, arguments)
     }
 
     /// Calls the function with the given arguments and a runtime context pointer.
@@ -185,6 +227,11 @@ impl Function {
         reason = "the JIT crate owns the validated generated-code ABI boundary"
     )]
     pub fn execute(&self, arguments: &[Value], context: *const u8) -> Result<Option<Value>> {
+        if self.requests_only() {
+            return Err(InternalError(
+                "request-only code requires activation dispatch".to_owned(),
+            ));
+        }
         if arguments.len() != self.argument_types.len() {
             return Err(crate::Error::InvalidArgumentCount {
                 expected: self.argument_types.len(),

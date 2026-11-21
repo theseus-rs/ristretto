@@ -64,3 +64,7 @@ mod instructions {
     #[path = "../instructions/stack.rs"]
     mod stack;
 }
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/continuation.rs"]
+mod continuation;

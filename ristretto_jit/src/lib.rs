@@ -149,7 +149,7 @@ mod wasm_compiler;
 ))]
 pub use compiler::Compiler;
 pub use error::{Error, Result};
-pub use function::Function;
+pub use function::{Activation, ExecutionStep, Function};
 pub(crate) use jit_value::JitValue;
 pub use value::Value;
 #[cfg(any(
