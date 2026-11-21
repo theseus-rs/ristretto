@@ -61,6 +61,12 @@ pub enum Error {
     /// Invalid constant
     #[error("Invalid value; expected {expected}, found {actual}")]
     InvalidValue { expected: i8, actual: i8 },
+    /// The generated frame and runtime reserve do not fit the current native stack.
+    #[error("Native stack exhausted: need {required} bytes, have {available}")]
+    NativeStackOverflow { required: usize, available: usize },
+    /// Executing generated code requires known native stack bounds.
+    #[error("Native stack bounds are unavailable")]
+    NativeStackUnavailable,
     /// A module error occurred
     #[cfg(all(
         not(target_family = "wasm"),

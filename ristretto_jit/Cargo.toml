@@ -21,6 +21,7 @@ zerocopy = { workspace = true }
 
 [target.'cfg(all(not(target_family = "wasm"), target_endian = "little", not(any(target_arch = "mips", target_arch = "mips64", target_os = "dragonfly", target_os = "solaris"))))'.dependencies]
 cranelift = { workspace = true, features = ["jit", "module", "native"] }
+stacker = { workspace = true }
 
 [dev-dependencies]
 indexmap = { workspace = true }
