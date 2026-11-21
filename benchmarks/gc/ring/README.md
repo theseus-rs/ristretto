@@ -26,3 +26,9 @@ python3 benchmarks/gc/ring/report.py baseline.json forks.csv forks.svg
 Each point is the median workload-call time in one fresh JVM. The CSV uses the
 zero-based fork index stored in the capture. The plot labels forks starting at
 one. See `processes[].samples` in the input JSON for the individual observations.
+
+The driver records the elapsed interval of the timed batch in `batch_ns`. It
+reads the JVM’s collection count and collection time before and after that
+batch, then writes the deltas by collector bean in `collection_changes`.
+An unavailable counter is JSON null. ZGC cycle and pause beans can describe
+the same collection. Keep the bean names when reporting their values.
