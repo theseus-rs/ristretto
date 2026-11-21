@@ -14,6 +14,17 @@ pub struct LocalVariables {
 }
 
 impl LocalVariables {
+    /// Stable cell order for saving/restoring typed SSA locals between native slices.
+    pub(crate) fn continuation_variables(&self) -> Vec<(Variable, cranelift::prelude::Type)> {
+        let mut variables: Vec<_> = self
+            .variables
+            .iter()
+            .map(|((_, kind), variable)| (*variable, kind.machine_type()))
+            .collect();
+        variables.sort_unstable_by_key(|(variable, _)| variable.as_u32());
+        variables
+    }
+
     /// Create a new local variables
     pub fn new() -> Self {
         LocalVariables {
