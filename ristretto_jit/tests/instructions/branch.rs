@@ -43,6 +43,26 @@ fn branches_must_target_an_instruction_byte_boundary() {
 }
 
 #[test]
+fn fallthrough_cannot_merge_a_reference_with_a_long() {
+    // Deliberately invalid bytecode: both values lower to I64, but their Java
+    // kinds must disagree at BCI 9. Bypass the class-file stack analyzer.
+    let instructions = vec![
+        Instruction::Iload_0,     // 0
+        Instruction::Ifeq(7),     // 1 -> 8
+        Instruction::Lconst_0,    // 4
+        Instruction::Goto(4),     // 5 -> 9
+        Instruction::Aconst_null, // 8
+        Instruction::Pop,         // 9
+        Instruction::Return,      // 10
+    ];
+    assert!(matches!(
+        create_internal_function("(I)V", &instructions, 2),
+        Err(ristretto_jit::Error::InternalError(message))
+            if message.contains("Invalid stack state for address 9")
+    ));
+}
+
+#[test]
 fn ifeq() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,

@@ -4,14 +4,25 @@ use cranelift::prelude::{Type, types};
 
 const POINTER_SIZE: i32 = 8;
 
+use crate::local_type::StackType;
+
+// Primitive fixture assertions retain their machine-type spelling; references
+// deliberately do not compare equal to I64.
+#[cfg(test)]
+impl PartialEq<Type> for StackType {
+    fn eq(&self, other: &Type) -> bool {
+        *self == Self::Primitive(*other)
+    }
+}
+
 /// Type stack for determining block parameters when simulating stack operations.
 ///
-/// This struct maintains a stack of Cranelift types to track the types of values during
+/// This struct maintains Java reference kinds alongside machine types during
 /// compilation. It helps with type checking and ensures proper stack manipulation in the control
 /// flow graph.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TypeStack {
-    stack: Vec<Type>,
+    stack: Vec<StackType>,
 }
 
 impl TypeStack {
@@ -22,8 +33,8 @@ impl TypeStack {
 
     /// Pushes a value onto the stack.
     #[expect(clippy::unnecessary_wraps)]
-    pub fn push(&mut self, value_type: Type) -> Result<()> {
-        self.stack.push(value_type);
+    pub fn push(&mut self, value_type: impl Into<StackType>) -> Result<()> {
+        self.stack.push(value_type.into());
         Ok(())
     }
 
@@ -49,11 +60,11 @@ impl TypeStack {
 
     /// Pushes an object reference type (represented as I64) onto the stack.
     pub fn push_object(&mut self) -> Result<()> {
-        self.push(types::I64)
+        self.push(StackType::Reference)
     }
 
     /// Pops a type from the stack.
-    pub fn pop(&mut self) -> Result<Type> {
+    pub fn pop(&mut self) -> Result<StackType> {
         let Some(value) = self.stack.pop() else {
             return Err(InternalError("TypeStack underflow".to_string()));
         };
@@ -61,14 +72,15 @@ impl TypeStack {
     }
 
     /// Pop a type from the stack and verify it matches the expected type.
-    fn pop_type(&mut self, expected_type: Type) -> Result<Type> {
+    fn pop_type(&mut self, expected_type: impl Into<StackType>) -> Result<Type> {
+        let expected_type = expected_type.into();
         let value_type = self.pop()?;
         if value_type != expected_type {
             return Err(InternalError(format!(
                 "Expected {expected_type:?}, found {value_type:?}",
             )));
         }
-        Ok(value_type)
+        Ok(value_type.machine_type())
     }
 
     /// Pop an int from the stack, verifying the type.
@@ -93,7 +105,7 @@ impl TypeStack {
 
     /// Pops an object reference from the stack, verifying the type.
     pub fn pop_object(&mut self) -> Result<Type> {
-        self.pop_type(types::I64)
+        self.pop_type(StackType::Reference)
     }
 
     /// Returns the number of elements in the stack.
@@ -107,22 +119,22 @@ impl TypeStack {
     }
 
     /// Returns a reference to the inner Vec
-    pub fn as_vec(&self) -> &Vec<Type> {
+    pub fn as_vec(&self) -> &Vec<StackType> {
         &self.stack
     }
 
     /// Returns a slice reference
-    pub fn as_slice(&self) -> &[Type] {
+    pub fn as_slice(&self) -> &[StackType] {
         &self.stack
     }
 
     /// Returns a cloned Vec
-    pub fn to_vec(&self) -> Vec<Type> {
+    pub fn to_vec(&self) -> Vec<StackType> {
         self.stack.clone()
     }
 
     /// Consumes self and returns the Vec
-    pub fn into_vec(self) -> Vec<Type> {
+    pub fn into_vec(self) -> Vec<StackType> {
         self.stack
     }
 }
@@ -134,6 +146,24 @@ impl TypeStack {
 )]
 mod tests {
     use super::*;
+
+    #[test]
+    fn references_and_longs_cannot_share_a_stack_state() -> Result<()> {
+        let mut reference = TypeStack::new();
+        reference.push_object()?;
+        let mut long = TypeStack::new();
+        long.push_long()?;
+        assert_ne!(reference, long);
+        assert_eq!(
+            reference.clone().pop()?.machine_type(),
+            long.clone().pop()?.machine_type()
+        );
+        assert!(!reference.clone().pop()?.is_category_two());
+        assert!(long.clone().pop()?.is_category_two());
+        assert!(reference.pop_long().is_err());
+        assert!(long.pop_object().is_err());
+        Ok(())
+    }
 
     #[test]
     fn test_type_stack_all_types() -> Result<()> {

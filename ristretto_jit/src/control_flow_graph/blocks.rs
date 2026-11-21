@@ -2,24 +2,25 @@ use crate::Error::{InternalError, InvalidBlockAddress, UnsupportedInstruction};
 use crate::Result;
 use crate::control_flow_graph::instruction;
 use crate::control_flow_graph::type_stack::TypeStack;
+use crate::local_type::StackType;
 use ahash::AHashMap;
-use cranelift::prelude::{Block, FunctionBuilder, Type};
+use cranelift::prelude::{Block, FunctionBuilder, Type, Value};
 use ristretto_classfile::ConstantPool;
 use ristretto_classfile::attributes::{ExceptionTableEntry, Instruction};
 
 /// Analyzes reachable operand stacks before creating blocks. Each incoming edge,
-/// including fallthrough, must agree on the operand stack.
+/// including fallthrough, must agree on Java kinds rather than machine widths.
 /// The worklist discovers successors even when a block is first reached backward.
 /// Exception handlers start with exactly one reference, independent of the
 /// throwing instruction's operand stack.
 ///
-/// Returns the separate ABI entry block and byte-offset Java block map.
+/// Returns the entry block, byte-offset block map and reference block parameters.
 pub(crate) fn get_blocks(
     function_builder: &mut FunctionBuilder,
     constant_pool: &ConstantPool,
     instructions: &[Instruction],
     exception_table: &[ExceptionTableEntry],
-) -> Result<(Block, AHashMap<usize, Block>)> {
+) -> Result<(Block, AHashMap<usize, Block>, Vec<Value>)> {
     let states = analyze_stacks(constant_pool, instructions, exception_table)?;
     let entry_block = function_builder.create_block();
     let mut blocks = AHashMap::default();
@@ -30,7 +31,20 @@ pub(crate) fn get_blocks(
     for address in addresses {
         create_block_with_parameters(function_builder, &states, address, &mut blocks);
     }
-    Ok((entry_block, blocks))
+    let mut reference_parameters = Vec::new();
+    for (address, block) in &blocks {
+        let stack = states.get(address).ok_or(InvalidBlockAddress(*address))?;
+        let parameters = function_builder.func.dfg.block_params(*block);
+        if stack.len() != parameters.len() {
+            return Err(InternalError("block stack arity mismatch".to_owned()));
+        }
+        for (kind, value) in stack.as_slice().iter().zip(parameters) {
+            if *kind == StackType::Reference {
+                reference_parameters.push(*value);
+            }
+        }
+    }
+    Ok((entry_block, blocks, reference_parameters))
 }
 
 /// Retain states only at block boundaries. A long straight-line sequence must
@@ -128,9 +142,9 @@ pub(crate) fn falls_through(instruction: &Instruction) -> bool {
     )
 }
 
-/// Check every incoming edge, and simulate each reachable block once. Class
-/// verification remains responsible for assignability, initialization and
-/// local-variable validity.
+/// Check every incoming edge, and simulate each reachable block once. Java
+/// reference subtypes have the same root kind here; class verification remains
+/// responsible for assignability, initialization and local-variable validity.
 fn enqueue_stack(
     instructions: &AHashMap<usize, &Instruction>,
     states: &mut AHashMap<usize, TypeStack>,
@@ -179,7 +193,12 @@ pub(crate) fn create_block_with_parameters(
         let block = function_builder.create_block();
 
         if let Some(stack_types) = stack_states.get(&address) {
-            append_block_params(function_builder, block, stack_types.as_slice());
+            let types: Vec<_> = stack_types
+                .as_slice()
+                .iter()
+                .map(|kind| kind.machine_type())
+                .collect();
+            append_block_params(function_builder, block, &types);
         }
 
         block
@@ -225,7 +244,7 @@ mod tests {
         let exception_table = Vec::new();
 
         // Create the control_flow_graph
-        let (_entry_block, blocks) = get_blocks(
+        let (_entry_block, blocks, _) = get_blocks(
             &mut function_builder,
             &constant_pool,
             &instructions,

@@ -318,7 +318,7 @@ impl Compiler {
 
         let helpers = RuntimeHelpers::declare(&mut jit_module, &mut function_builder)?;
 
-        let (entry_block, mut blocks) = control_flow_graph::get_blocks(
+        let (entry_block, mut blocks, reference_parameters) = control_flow_graph::get_blocks(
             &mut function_builder,
             constant_pool,
             instructions,
@@ -380,6 +380,7 @@ impl Compiler {
         function_builder.switch_to_block(block_zero);
 
         let mut stack = OperandStack::with_capacity(max_stack);
+        stack.mark_references(reference_parameters);
         let mut continued_blocks = continuation.as_ref().map(|_| blocks.clone());
         let mut block_is_terminated = false;
         for (program_counter, instruction) in Instruction::with_offsets(instructions) {
