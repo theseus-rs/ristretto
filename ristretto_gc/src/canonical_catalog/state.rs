@@ -25,6 +25,7 @@ mod edges;
 mod phase_ops;
 #[path = "roots.rs"]
 mod roots;
+pub use edges::*;
 use edges::{EdgeEffect, EdgeRegistry};
 pub(crate) use roots::root_barrier_plan;
 pub use roots::{Root, RootCreation, RootPrepareError, RootStatus, RootToken};
