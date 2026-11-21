@@ -3,32 +3,9 @@ use super::{
     Component, Error, Execution, FieldType, Program, ReferenceType, Result, Value, reference_type,
 };
 
-use ristretto_classfile::{ClassAccessFlags, attributes::Instruction};
-use std::collections::HashMap;
+use ristretto_classfile::ClassAccessFlags;
 
 impl Program {
-    pub(in crate::canonical) fn link_cast_targets(&mut self) -> Result<()> {
-        let mut linked = Vec::with_capacity(self.classes.len());
-        for owner in 0..self.classes.len() {
-            let mut casts = HashMap::new();
-            for method in self.layout(owner)?.class.methods() {
-                for op in method.code() {
-                    if let Instruction::Checkcast(index) = op
-                        && let std::collections::hash_map::Entry::Vacant(entry) =
-                            casts.entry(*index)
-                    {
-                        entry.insert(self.resolve_cast_target(owner, *index)?);
-                    }
-                }
-            }
-            linked.push(casts);
-        }
-        for (layout, casts) in self.classes.iter_mut().zip(linked) {
-            layout.casts = casts;
-        }
-        Ok(())
-    }
-
     pub(super) fn resolve_cast_target(&self, owner: usize, index: u16) -> Result<ReferenceType> {
         let name = self
             .layout(owner)?
@@ -71,6 +48,7 @@ impl Program {
 
     pub(super) fn cast_target(&self, owner: usize, index: u16) -> Result<ReferenceType> {
         self.layout(owner)?
+            .linked
             .casts
             .get(&index)
             .copied()

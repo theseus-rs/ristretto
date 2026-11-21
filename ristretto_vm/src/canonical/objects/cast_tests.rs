@@ -47,7 +47,7 @@ fn cast_targets_are_closed_and_linked_per_owner() -> Result<()> {
     let mut targets = Vec::new();
     let other = program.class_index("CanonicalCastWorkload$Other")?;
     for (owner, layout) in program.classes.iter().enumerate() {
-        for (index, target) in &layout.casts {
+        for (index, target) in &layout.linked.casts {
             assert_eq!(program.cast_target(owner, *index)?, *target);
             assert_eq!(program.resolve_cast_target(owner, *index)?, *target);
             assert!(program.cast_target(other, *index).is_err());

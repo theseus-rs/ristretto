@@ -135,7 +135,12 @@ impl Program {
         Ok((class, field))
     }
     pub(super) fn static_field(&self, owner: usize, index: u16) -> Result<(usize, StaticField)> {
-        self.resolve_static_field(owner, index)
+        self.layout(owner)?
+            .linked
+            .statics
+            .get(&index)
+            .cloned()
+            .ok_or(Error::Boundary("unlinked static field"))
     }
     pub(super) fn admit_static_write(
         caller: usize,

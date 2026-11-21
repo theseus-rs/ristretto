@@ -111,7 +111,7 @@ impl Program {
                 .map_err(|error| Error::Invalid(error.to_string()))?;
         }
         program.admit_called_targets()?;
-        program.link_cast_targets()?;
+        program.link_members()?;
         Ok(program)
     }
 
