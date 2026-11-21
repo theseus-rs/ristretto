@@ -155,3 +155,13 @@ omits conditional-reference root roles and their reserved locations; ordinary
 root generations, ownership, announcement CAS and removal-intent ordering remain
 unchanged. Two portable tests cover token retention, cancellation and foreign
 rejection. Native/WASI catalog totals are 35/31, with strict Clippy passing.
+
+## C08 prerequisite: phase-coupled root publication
+
+Root activation shares the object's publication decision and precedes its
+completion certificate. A bare Live root status is insufficient: the retained
+root observer helps and verifies a stable controller before reporting live
+publication. Prepared-root cancellation and exact late slot release preserve
+unique token custody. Two portable regressions and one native competing-helper
+case cover these boundaries. Native/WASI catalog totals are 38/33; strict Clippy
+passes. Bounded root-token admission follows separately.
