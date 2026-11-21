@@ -122,3 +122,20 @@ failure and two concurrent helpers. Two Loom models compile the exact selection
 CAS and certificate store to check commit/cancel exclusion and effect visibility.
 They do not model pointer protection or the record guard; those remain actual
 pool/catalog tests. Native/WASI catalog totals are 26/22; strict Clippy passes.
+
+## C07b: participant request custody and cancellation
+
+A participant owns one inline creation/publication request. Its state is dropped
+before its lease; no raw owning snapshot escapes the facade. `cancel` distinguishes
+an unselected proposal from a commit decision that already won. Dropping an
+already selected request leaves the winning operation discoverable and helpable.
+Abandoning a Prepared record retires that exact identity, allowing slot reuse.
+
+Seven new portable tests cover private boundaries, installed undecided requests,
+every commit/effect/certificate/release boundary, exact payload drop counts, busy
+submission returning the same record, quota reuse and refund ordering. The
+snapshot API retains the frozen name `possible_phase_outcomes`; it copies possible
+outcomes without helping and makes no collection-count claim. Native/WASI catalog
+totals are 33/29; strict Clippy passes. The inline state size is included in the
+footprint for both numeric and guarded participants. Root/edge operations remain
+subsequent prerequisites for the public preview adapters.
