@@ -257,6 +257,7 @@ impl Compiler {
                         | Instruction::New(_)
                         | Instruction::Getfield(_)
                         | Instruction::Putfield(_)
+                        | Instruction::Checkcast(_)
                 ))
         }) {
             return Some("experimental_unqualified_instruction");

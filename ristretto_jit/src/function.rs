@@ -4,6 +4,7 @@ pub(crate) use activation::ContinuationLayout;
 pub use activation::{
     Activation, AllocationKind, AllocationRequest, ArrayAccessKind, ArrayAccessRequest,
     ArrayStoreRequest, CallKind, CallRequest, ExecutionStep, FieldAccess, FieldRequest,
+    TypeCheckKind, TypeCheckRequest,
 };
 
 use crate::Error::InternalError;
