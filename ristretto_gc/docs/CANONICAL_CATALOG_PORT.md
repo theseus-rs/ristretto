@@ -187,3 +187,39 @@ Automatic placement keeps the frozen bounded rotating-slot preference. Six
 portable frozen regressions cover every private stage, helped results, failed
 observations and simultaneous object/root collisions. Native/WASI catalog totals
 are 48/43; strict Clippy passes. Root removal/scanning follows separately.
+
+## C09 prerequisite: guarded phase transitions
+
+Frozen tracing transitions couple membership tickets and pending counts. Phase
+advancement and finish reject unscanned roots and pending work; `FinishEpoch`
+retains the sweep's original epoch. Q=0 requires no conditional-reference scan.
+Four portable tests cover stale epochs, outstanding obligations, stale tickets,
+and invalid phase input. Native/WASI catalog totals are 52/47; strict Clippy passes.
+
+## C09 prerequisite: root barriers and bounded scanning
+
+Root activation/removal couples the retained target's tracing obligations with
+visibility. A scan inspects at most eight slots and commits at most one target or
+root effect; any failed owning observation leaves the cursor unchanged. Four
+portable regressions cover scan bounds, removal intent, failed observations and
+foreign/prepared activation rejection. Native/WASI catalog totals are 56/51;
+strict Clippy passes. No callback or scheduler-fairness bound is claimed.
+
+## C09 prerequisite: bounded guarded phase commands
+
+The participant exposes the frozen guarded tracing/phase command set. A failed
+private preparation diagnoses copied preconditions without granting access;
+still-valid requests retry. A queued `FinishEpoch` never rebases onto a newly
+started collection. Three portable tests cover that real supersession, private
+phase cancellation, and invalid/foreign rejection. Native/WASI catalog totals
+are 59/54; strict Clippy passes.
+
+## C09 prerequisite: bounded root maintenance commands
+
+The participant now supports frozen root activation, requested removal and
+single/batched scan commands. Three restored allocation regressions cover a
+helper stopped between target/root effects, revoked helper results, and discard
+after commit has already won. An additional portable facade test checks scan
+batch bounds, cancellation and invalid domains. Native/WASI catalog totals are
+63/57; strict Clippy passes. This completes the root/phase API needed by the leaf
+maintenance adapter; strong-edge storage is still rejected at setup.
