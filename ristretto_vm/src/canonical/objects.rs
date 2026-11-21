@@ -1,4 +1,5 @@
 //! Execution of verified closed object methods on a dedicated incremental heap.
+use super::layout::Field;
 use super::{Error, Layout, Program, exact_symbol};
 use ristretto_classfile::{
     BaseType, FieldType, JavaStr, MethodAccessFlags, attributes::Instruction,
@@ -106,13 +107,12 @@ impl Program {
         ))
     }
 
-    fn field(&self, owner: usize, index: u16) -> Result<(usize, usize), Error> {
+    fn field(&self, owner: usize, index: u16) -> Result<(usize, Field), Error> {
         let (name, field, descriptor) = self.member(owner, index, true)?;
         let class = self.class_index(&name)?;
         let slot = self
             .layout(class)?
-            .slot(JavaStr::cow_from_str(&field).as_ref())
-            .filter(|_| descriptor == "I")
+            .field(&field, &descriptor)
             .ok_or_else(|| Error::Unsupported(format!("field {name}.{field} {descriptor}")))?;
         Ok((class, slot))
     }
@@ -202,7 +202,13 @@ impl Program {
         if !method.access_flags().contains(MethodAccessFlags::STATIC) {
             return Err(Error::Unsupported("entry must be static (I)I".to_owned()));
         }
-        if configuration.mutators != 1 || configuration.helpers != 1 {
+        if configuration.mutators != 1
+            || configuration.helpers != 1
+            || self
+                .classes
+                .iter()
+                .any(|layout| layout.references > configuration.edges_per_object)
+        {
             return Err(Error::Unsupported(
                 "single caller/helper or insufficient edge positions".to_owned(),
             ));
@@ -488,14 +494,29 @@ impl Execution<'_, '_, '_> {
                     let (owner, field) = self.program.field(class, *index)?;
                     let root = pop(&mut stack)?.object()?;
                     self.check_class(&root, owner)?;
-                    let value = Value::Int(
-                        self.runtime
-                            .borrow(&root)?
-                            .integers
-                            .get(field)
-                            .ok_or_else(|| Error::Invalid("integer field index".into()))?
-                            .load(Ordering::Relaxed),
-                    );
+                    let value = match field {
+                        Field::Int(index) => Value::Int(
+                            self.runtime
+                                .borrow(&root)?
+                                .integers
+                                .get(index)
+                                .ok_or_else(|| Error::Invalid("integer field index".to_owned()))?
+                                .load(Ordering::Relaxed),
+                        ),
+                        Field::Reference { edge, .. } => {
+                            let mut request =
+                                self.mutator.child::<Payload, Payload>(&root, edge)?;
+                            let child = complete(
+                                &mut self.helper,
+                                &mut self.report,
+                                self.limits.request_polls,
+                                || request.poll(),
+                            )
+                            .await?;
+                            self.report.reference_reads += 1;
+                            Value::Reference(child)
+                        }
+                    };
                     stack.push(value);
                 }
                 Instruction::Putfield(index) => {
@@ -503,12 +524,30 @@ impl Execution<'_, '_, '_> {
                     let value = pop(&mut stack)?;
                     let root = pop(&mut stack)?.object()?;
                     self.check_class(&root, owner)?;
-                    self.runtime
-                        .borrow(&root)?
-                        .integers
-                        .get(field)
-                        .ok_or_else(|| Error::Invalid("integer field index".into()))?
-                        .store(value.int()?, Ordering::Relaxed);
+                    match field {
+                        Field::Int(index) => self
+                            .runtime
+                            .borrow(&root)?
+                            .integers
+                            .get(index)
+                            .ok_or_else(|| Error::Invalid("integer field index".to_owned()))?
+                            .store(value.int()?, Ordering::Relaxed),
+                        Field::Reference { edge, class } => {
+                            let target = value.reference()?;
+                            if let Some(target) = &target {
+                                self.check_class(target, class)?;
+                            }
+                            let mut request = self.mutator.write(&root, edge, target.as_ref())?;
+                            complete(
+                                &mut self.helper,
+                                &mut self.report,
+                                self.limits.request_polls,
+                                || request.poll(),
+                            )
+                            .await?;
+                            self.report.reference_writes += 1;
+                        }
+                    }
                 }
                 Instruction::Invokespecial(index) => {
                     let (owner, name, descriptor) = self.program.member(class, *index, false)?;
