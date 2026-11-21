@@ -193,6 +193,13 @@ impl Function {
         self.continuation.is_some()
     }
 
+    /// Whether this activation requires an owning frame-publication context.
+    #[must_use]
+    pub fn cooperation_requires_context(&self) -> bool {
+        self.continuation
+            .is_some_and(|layout| layout.requires_context)
+    }
+
     /// Conservative backedge budget based on the method's instruction count.
     #[must_use]
     pub fn cooperation_budget(&self) -> std::num::NonZeroU32 {

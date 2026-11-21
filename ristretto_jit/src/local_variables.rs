@@ -32,6 +32,16 @@ impl LocalVariables {
         }
     }
 
+    pub(crate) fn reference_indices(&self) -> Vec<usize> {
+        let mut indices = self
+            .variables
+            .keys()
+            .filter_map(|(index, kind)| (*kind == StackType::Reference).then_some(*index))
+            .collect::<Vec<_>>();
+        indices.sort_unstable();
+        indices
+    }
+
     /// Declare one typed use of a Java local slot. Zero initialization gives
     /// Cranelift complete SSA definitions; bytecode verification determines which
     /// local reads are legal. This is not a Java initialization/liveness analysis.
