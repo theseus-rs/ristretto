@@ -7,14 +7,16 @@ use super::{
 };
 use ristretto_classfile::{BaseType, FieldType};
 use ristretto_jit::{
-    Activation, AllocationKind, CallKind, Compiler, ExecutionStep, FieldAccess, Function,
-    Value as JitValue,
+    Activation, AllocationKind, ArrayAccessKind, CallKind, Compiler, ExecutionStep, FieldAccess,
+    Function, Value as JitValue,
 };
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::rc::Rc;
 use std::sync::Arc;
+
+use super::{Kind, allocation_kind};
 
 type ClassFunctions = HashMap<String, HashMap<String, Function>>;
 
@@ -354,16 +356,79 @@ impl CompiledExecution<'_, '_, '_, '_> {
                     tokio::task::yield_now().await;
                 }
                 ExecutionStep::Allocation(request) => {
-                    if !frame.activation.call_arguments()?.is_empty() {
-                        return Err(Error::Boundary("compiled allocation arity"));
-                    }
-                    let AllocationKind::Object(index) = request.kind;
-                    let class = self.compiled.program.class_constant(frame.class, index)?;
-                    let value =
-                        Value::Reference(Some(self.execution.allocate_object(class).await?));
+                    let arguments = frame.activation.call_arguments()?;
+                    let root = match request.kind {
+                        AllocationKind::Object(index) if arguments.is_empty() => {
+                            let class = self.compiled.program.class_constant(frame.class, index)?;
+                            self.execution.allocate_object(class).await?
+                        }
+                        AllocationKind::PrimitiveArray(kind) if arguments.len() == 1 => {
+                            let length = int_bits(
+                                *arguments
+                                    .first()
+                                    .ok_or(Error::Boundary("array length argument"))?,
+                            );
+                            self.execution
+                                .allocate_array(allocation_kind(&kind), length)
+                                .await?
+                        }
+                        _ => return Err(Error::Boundary("compiled allocation arity")),
+                    };
+                    let value = Value::Reference(Some(root));
                     let bits = result_bits(
                         &frame.context,
                         Some(&value),
+                        self.execution.limits.request_polls,
+                    )
+                    .await?;
+                    frame.activation.complete_call(bits)?;
+                    tokio::task::yield_now().await;
+                }
+                ExecutionStep::ArrayAccess(request) => {
+                    let arguments = frame.activation.call_arguments()?;
+                    if arguments.len() != request.kind.argument_count() {
+                        return Err(Error::Boundary("compiled array arity"));
+                    }
+                    let root = frame
+                        .context
+                        .reference(
+                            *arguments
+                                .first()
+                                .ok_or(Error::Boundary("array receiver argument"))?,
+                        )?
+                        .object()?;
+                    let value = if request.kind == ArrayAccessKind::Length {
+                        Some(self.execution.array_length(&root)?)
+                    } else {
+                        let kind = array_kind(request.kind)?;
+                        let index = int_bits(
+                            *arguments
+                                .get(1)
+                                .ok_or(Error::Boundary("array index argument"))?,
+                        );
+                        if arguments.len() == 3 {
+                            let bits = *arguments
+                                .get(2)
+                                .ok_or(Error::Boundary("array store argument"))?;
+                            let value = match kind {
+                                Kind::Long => Value::Long(bits),
+                                Kind::Float => Value::Float(f32::from_bits(u32::from_ne_bytes(
+                                    int_bits(bits).to_ne_bytes(),
+                                ))),
+                                Kind::Double => Value::Double(f64::from_bits(u64::from_ne_bytes(
+                                    bits.to_ne_bytes(),
+                                ))),
+                                _ => Value::Int(int_bits(bits)),
+                            };
+                            self.execution.write_array(&root, index, kind, &value)?;
+                            None
+                        } else {
+                            Some(self.execution.read_array(&root, index, kind)?)
+                        }
+                    };
+                    let bits = result_bits(
+                        &frame.context,
+                        value.as_ref(),
                         self.execution.limits.request_polls,
                     )
                     .await?;
@@ -474,6 +539,20 @@ impl CompiledExecution<'_, '_, '_, '_> {
             }
         }
     }
+}
+
+fn array_kind(kind: ArrayAccessKind) -> Result<Kind> {
+    use ArrayAccessKind as A;
+    Ok(match kind {
+        A::IntLoad | A::IntStore => Kind::Int,
+        A::LongLoad | A::LongStore => Kind::Long,
+        A::FloatLoad | A::FloatStore => Kind::Float,
+        A::DoubleLoad | A::DoubleStore => Kind::Double,
+        A::ByteLoad | A::ByteStore => Kind::Byte,
+        A::CharLoad | A::CharStore => Kind::Char,
+        A::ShortLoad | A::ShortStore => Kind::Short,
+        A::Length => return Err(Error::Boundary("unsupported array request kind")),
+    })
 }
 
 fn int_bits(bits: i64) -> i32 {

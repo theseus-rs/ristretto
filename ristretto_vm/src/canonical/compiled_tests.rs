@@ -15,6 +15,23 @@ async fn cancelling_live_native_graph_releases_frames_tokens_and_payload_under_t
             "../../tests/fixtures/canonical/CanonicalGraphWorkload$Node.class"
         ))?,
     ])?;
+    cancel_live(&program, "CanonicalGraphWorkload", "run", 64).await
+}
+
+#[tokio::test]
+async fn cancelling_native_array_return_releases_the_owning_frame() -> Result<()> {
+    let program = Program::from_classfiles([
+        ClassFile::from_bytes(include_bytes!(
+            "../../tests/fixtures/canonical/CanonicalPrimitiveArrayWorkload.class"
+        ))?,
+        ClassFile::from_bytes(include_bytes!(
+            "../../tests/fixtures/canonical/CanonicalPrimitiveArrayWorkload$Holder.class"
+        ))?,
+    ])?;
+    cancel_live(&program, "CanonicalPrimitiveArrayWorkload", "returned", 7).await
+}
+
+async fn cancel_live(program: &Program, class: &str, method: &str, argument: i32) -> Result<()> {
     let compiled = program.compile()?;
     let configuration = Configuration {
         objects: 4,
@@ -34,7 +51,7 @@ async fn cancelling_live_native_graph_releases_frames_tokens_and_payload_under_t
     let mut execution = CompiledExecution {
         compiled: &compiled,
         execution: Execution {
-            program: &program,
+            program,
             mutator: runtime.mutator()?,
             helper: runtime.helper()?,
             runtime: &runtime,
@@ -45,9 +62,12 @@ async fn cancelling_live_native_graph_releases_frames_tokens_and_payload_under_t
         table: table.clone(),
         slice_limit: 100_000,
     };
-    let class = program.class_index("CanonicalGraphWorkload")?;
-    let method = program.layout(class)?.class.try_get_method("run", "(I)I")?;
-    let mut future = Box::pin(execution.call(class, method, vec![Value::Int(64)], 0));
+    let class = program.class_index(class)?;
+    let method = program
+        .layout(class)?
+        .class
+        .try_get_method(method, "(I)I")?;
+    let mut future = Box::pin(execution.call(class, method, vec![Value::Int(argument)], 0));
     let mut context = TaskContext::from_waker(Waker::noop());
     let mut found = false;
     for _ in 0..2000 {

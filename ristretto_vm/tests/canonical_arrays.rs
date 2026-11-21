@@ -151,3 +151,72 @@ async fn primitive_array_cast_mismatch_reports_class_cast() -> Result {
     ));
     Ok(())
 }
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_primitive_arrays_and_numeric_edges_match_all_hotspot_rows() -> Result {
+    use ristretto_vm::canonical::CompiledLimits;
+    for (program, class, oracle, expected_count) in cases()? {
+        let compiled = program.compile()?;
+        let mut count = 0;
+        for line in oracle.lines().filter(|line| !line.starts_with('#')) {
+            let mut columns = line.split('\t');
+            let method = columns.next().ok_or("method")?;
+            let argument = columns.next().ok_or("argument")?.parse()?;
+            let expected = columns.next().ok_or("result")?;
+            let result = compiled
+                .run(
+                    class,
+                    method,
+                    argument,
+                    configuration(),
+                    CompiledLimits::default(),
+                )
+                .await;
+            if let Ok(report) = &result {
+                assert!(report.compiled_entries > 0);
+                assert_eq!(report.compiled_entries, report.calls);
+                assert!(!report.instruction_count_available);
+            }
+            check(result, expected)?;
+            count += 1;
+        }
+        assert_eq!(count, expected_count);
+    }
+    Ok(())
+}
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_array_limit_failure_preserves_prepared_program_reuse() -> Result {
+    use ristretto_vm::canonical::CompiledLimits;
+    let program = program()?;
+    let compiled = program.compile()?;
+    assert!(matches!(
+        compiled
+            .run(
+                "CanonicalPrimitiveArrayWorkload",
+                "ints",
+                3,
+                configuration(),
+                CompiledLimits {
+                    array_bytes: 0,
+                    ..CompiledLimits::default()
+                }
+            )
+            .await,
+        Err(Error::Limit(_))
+    ));
+    check(
+        compiled
+            .run(
+                "CanonicalPrimitiveArrayWorkload",
+                "ints",
+                3,
+                configuration(),
+                CompiledLimits::default(),
+            )
+            .await,
+        "12",
+    )
+}

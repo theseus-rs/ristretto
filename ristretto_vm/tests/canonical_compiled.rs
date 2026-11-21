@@ -197,15 +197,10 @@ async fn native_java_depth_uses_bounded_heap_frames_instead_of_recursive_host_po
 }
 
 #[test]
-fn compiler_intersection_rejects_arrays_before_any_native_entry() -> Result {
-    let program = Program::from_classfiles([
-        ClassFile::from_bytes(include_bytes!(
-            "fixtures/canonical/CanonicalPrimitiveArrayWorkload.class"
-        ))?,
-        ClassFile::from_bytes(include_bytes!(
-            "fixtures/canonical/CanonicalPrimitiveArrayWorkload$Holder.class"
-        ))?,
-    ])?;
+fn compiler_intersection_rejects_casts_before_any_native_entry() -> Result {
+    let program = Program::from_classfiles([ClassFile::from_bytes(include_bytes!(
+        "fixtures/canonical_rejected/CanonicalPrimitiveArrayTypeFailure.class"
+    ))?])?;
     assert!(matches!(
         program.compile(),
         Err(Error::Jit(ristretto_jit::Error::UnsupportedMethod(_)))
