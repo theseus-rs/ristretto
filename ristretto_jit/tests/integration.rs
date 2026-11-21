@@ -96,3 +96,7 @@ mod cast_requests;
 #[cfg(feature = "experimental-reference-dispatch")]
 #[path = "integration/static_requests.rs"]
 mod static_requests;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/numeric_constants.rs"]
+mod numeric_constants;

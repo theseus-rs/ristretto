@@ -215,6 +215,19 @@ impl Compiler {
         }
         if code.iter().any(|instruction| {
             !(Self::is_production_safe_instruction(instruction)
+                || match instruction {
+                    Instruction::Ldc(index) => matches!(
+                        class.constant_pool.try_get(u16::from(*index)),
+                        Ok(ristretto_classfile::Constant::Integer(_)
+                            | ristretto_classfile::Constant::Float(_))
+                    ),
+                    Instruction::Ldc_w(index) => matches!(
+                        class.constant_pool.try_get(*index),
+                        Ok(ristretto_classfile::Constant::Integer(_)
+                            | ristretto_classfile::Constant::Float(_))
+                    ),
+                    _ => false,
+                }
                 || continuation::ArrayRequest::from_instruction(instruction).is_some()
                 || matches!(
                     instruction,
