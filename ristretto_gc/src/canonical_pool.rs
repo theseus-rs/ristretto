@@ -287,3 +287,93 @@ impl<T> Drop for Owned<T> {
 mod models;
 #[cfg(test)]
 mod tests;
+
+mod link_state;
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Contended;
+
+pub enum Compare<T> {
+    Changed,
+    Unchanged(Option<Owned<T>>),
+    Foreign(Option<Owned<T>>),
+}
+
+pub struct Link<T> {
+    pool: Arc<Pool<T>>,
+    token: AtomicU64,
+}
+impl<T> Link<T> {
+    pub fn empty(pool: Arc<Pool<T>>) -> Self {
+        Self {
+            pool,
+            token: AtomicU64::new(0),
+        }
+    }
+
+    /// Observe a vacant link without acquiring its occupant. The observation
+    /// can immediately become stale. Only a successful compare installs a value.
+    pub fn is_empty(&self) -> bool {
+        self.token.load(Ordering::Acquire) == 0
+    }
+
+    /// Compare against an owner that already pins its slot and generation.
+    /// The link can change after this observation. No new reference is acquired.
+    pub fn points_to(&self, value: &Owned<T>) -> bool {
+        value.belongs_to(&self.pool) && self.token.load(Ordering::Acquire) == value.token.0
+    }
+
+    /// At most one head load and one exact-generation acquisition attempt.
+    pub fn try_load(&self) -> Result<Option<Owned<T>>, Contended> {
+        let token = Token(self.token.load(Ordering::Acquire));
+        if token.0 == 0 {
+            return Ok(None);
+        }
+        self.pool.try_acquire(token).map(Some).ok_or(Contended)
+    }
+
+    /// Failed proposals return their owner, avoiding arbitrary last-owner drop
+    /// inside this attempt. Success releases the old link count while expected
+    /// still owns that value, so this release cannot run its destructor.
+    pub fn compare(&self, expected: Option<&Owned<T>>, proposed: Option<Owned<T>>) -> Compare<T> {
+        if expected.is_some_and(|v| !v.belongs_to(&self.pool))
+            || proposed.as_ref().is_some_and(|v| !v.belongs_to(&self.pool))
+        {
+            return Compare::Foreign(proposed);
+        }
+        let old = expected.map_or(0, |v| v.token.0);
+        let new = proposed.as_ref().map_or(0, |v| v.token.0);
+        if !link_state::replace(&self.token, old, new) {
+            return Compare::Unchanged(proposed);
+        }
+        // Transfer the proposal's count into the link; no raw pointer is forged.
+        std::mem::forget(proposed);
+        if let Some(expected) = expected {
+            // The successful CAS transfers the link's old count to this local.
+            drop(Owned {
+                slot: expected.slot,
+                token: expected.token,
+            });
+        }
+        Compare::Changed
+    }
+}
+impl<T> Drop for Link<T> {
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "only an exact owner from this pool can install this private token"
+    )]
+    fn drop(&mut self) {
+        let token = Token(*self.token.get_mut());
+        if token.0 != 0 {
+            // This unique link still owns exactly one count for its token.
+            drop(Owned {
+                slot: NonNull::from(&self.pool.slots[token.index()]),
+                token,
+            });
+        }
+    }
+}
+
+#[cfg(test)]
+mod link_tests;

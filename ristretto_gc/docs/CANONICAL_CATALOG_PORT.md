@@ -29,3 +29,17 @@ The five portable regressions also run on `wasm32-wasip2` with Wasmtime. The Loo
 models compile the production state source with Loom atomics; they cover state
 ordering, not raw-pointer provenance or aggregate pool ownership. `loom` is a
 native-only development dependency, absent from the production dependency graph.
+
+## C05: conditional owning links
+
+A link retains one exact-generation pool owner. A failed or foreign proposal
+returns its owner; successful replacement releases the old link count while the
+expected owner still pins its value. The existing native stopped-reader and
+concurrent replacement tests exercise pointer ownership and balanced destruction.
+
+The CAS expression is factored without changing its orderings into
+`canonical_pool/link_state.rs`. Two additional Loom models compile that exact
+expression with Loom atomics and test competing proposals and stale replacement.
+Those models cover numeric selection only; the real pool tests cover the ownership
+transfer and foreign-pool checks. The combined pool selector runs 20 native tests
+(including eight models) and seven portable WASI tests.
