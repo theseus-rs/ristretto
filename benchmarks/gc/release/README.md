@@ -13,4 +13,32 @@ diff -qr /tmp/gc-preview-a /tmp/gc-preview-b
 
 Extract into an empty directory. Run
 `ristretto_vm/tests/fixtures/canonical/check_graph_fixture.sh` with a Java 17
-JDK on PATH to compile the Java fixtures and execute the cycle oracle.
+JDK on PATH to regenerate the checked classfiles and execute the cycle oracle.
+
+
+## Check coordinated packaged features
+
+The external consumer checker packages the workspace and extracts the actual
+`.crate` files for each selected crate and its workspace dependencies. It patches
+those normalized archives together at their package versions, then builds a
+separate consumer with default features disabled and the requested features
+explicitly enabled. This checks a coordinated workspace release; it does not use
+unpublished registry versions or the original workspace source paths.
+
+```sh
+export CARGO_BUILD_JOBS=1
+export CARGO_TARGET_DIR="$PWD/../preview-package-target"
+python3 .github/scripts/check-packaged-features.py \
+  ristretto_gc/experimental-canonical-runtime \
+  ristretto_vm/experimental-canonical-jit \
+  ristretto_jit/experimental-reference-dispatch
+rustup target add wasm32-wasip2
+python3 .github/scripts/check-packaged-features.py --target wasm32-wasip2 \
+  ristretto_gc/experimental-canonical-runtime \
+  ristretto_vm/experimental-canonical-runtime
+```
+
+The native consumer includes the opt-in compiled tier. The WASI consumer builds
+the interpreted runtime only. These are feature compilation checks; execution,
+Java semantics, and cleanup are checked separately by the source-archive suites.
+Native and WASI consumer artifacts use separate absolute target directories.
