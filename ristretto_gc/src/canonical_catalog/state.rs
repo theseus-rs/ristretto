@@ -17,10 +17,17 @@ use super::{
 };
 use crate::canonical_pool as pool;
 use pool::AllocationError;
+#[path = "edge_traversal.rs"]
+mod edge_traversal;
+pub use edge_traversal::*;
+#[path = "edges.rs"]
+mod edges;
 #[path = "phase_ops.rs"]
 mod phase_ops;
 #[path = "roots.rs"]
 mod roots;
+pub use edges::*;
+use edges::{EdgeEffect, EdgeRegistry};
 pub(crate) use roots::root_barrier_plan;
 pub use roots::{Root, RootCreation, RootPrepareError, RootStatus, RootToken};
 use roots::{RootEffect, RootRegistry};
@@ -133,6 +140,8 @@ struct Effect<R: Record = ()> {
 }
 struct Operation<R: Record = ()> {
     effect: Option<Effect<R>>,
+    secondary_effect: Option<Effect<R>>,
+    edge: Option<EdgeEffect>,
     root: Option<RootEffect<R>>,
 
     successor: Pooled<Control<R>>,
@@ -204,6 +213,8 @@ pub struct Preparation<R: Record = ()> {
     committed_phase: Phase,
     cancelled_phase: Phase,
     effect: Option<Effect<R>>,
+    secondary_effect: Option<Effect<R>>,
+    edge: Option<EdgeEffect>,
     root: Option<RootEffect<R>>,
 
     successor: Option<Pooled<Control<R>>>,
@@ -243,7 +254,11 @@ impl<R: Record> Preparation<R> {
                 }
                 Err(_) => return Ok(None),
             };
-            if self.effect.is_none() && self.root.is_none() {
+            if self.effect.is_none()
+                && self.secondary_effect.is_none()
+                && self.edge.is_none()
+                && self.root.is_none()
+            {
                 return Ok(Some(Attempt {
                     owner: self.owner.clone(),
                     expected: self.expected.take().expect("unconsumed phase preparation"),
@@ -255,6 +270,8 @@ impl<R: Record> Preparation<R> {
         }
         let operation = self.operation.take().unwrap_or_else(|| Operation {
             effect: self.effect.take(),
+            secondary_effect: self.secondary_effect.take(),
+            edge: self.edge.take(),
             root: self.root.take(),
 
             successor: self.successor.take().expect("prepared phase outcomes"),
@@ -505,6 +522,7 @@ pub struct Catalog<R: Record = ()> {
     next_identity: AtomicU64,
     released_slot: AtomicUsize,
     roots: Option<RootRegistry<R>>,
+    edges: Option<EdgeRegistry>,
 }
 impl<R: Record> Catalog<R> {
     /// Requested heap backing; the inline Catalog value belongs to its caller.
@@ -566,13 +584,17 @@ impl<R: Record> Catalog<R> {
             next_identity: AtomicU64::new(1),
             released_slot: AtomicUsize::new(usize::MAX),
             roots: None,
+            edges: None,
         }
     }
     pub fn capacity(&self) -> usize {
         self.slots.len()
     }
     pub fn generation_exhaustion_observed(&self) -> bool {
-        self.controls.generation_exhaustion_observed()
+        self.edges.as_ref().is_some_and(|edges| {
+            edges.slots_pool.generation_exhaustion_observed()
+                || edges.states.generation_exhaustion_observed()
+        }) || self.controls.generation_exhaustion_observed()
             || self.memberships.generation_exhaustion_observed()
             || self.cells.generation_exhaustion_observed()
             || self
@@ -688,6 +710,8 @@ impl<R: Record> Catalog<R> {
             committed_phase: phase,
             cancelled_phase: cancelled,
             effect,
+            secondary_effect: None,
+            edge: None,
             root: None,
             successor: None,
             operation: None,
@@ -791,6 +815,10 @@ impl<R: Record> Catalog<R> {
     fn finish(&self, busy: &Pooled<Control<R>>, context: &R::Context) {
         self.finish_at(busy, context, || {}, || {}, || {}, || {});
     }
+    #[expect(
+        clippy::too_many_lines,
+        reason = "keep all fallible acquisitions before the shared commit/effect certificate sequence"
+    )]
     fn finish_at(
         &self,
         busy: &Pooled<Control<R>>,
@@ -828,6 +856,28 @@ impl<R: Record> Catalog<R> {
             } else {
                 None
             }
+        } else {
+            None
+        };
+        let secondary_proposed = if let Some(effect) = &operation.secondary_effect
+            && completed.load(Ordering::Acquire) == UNDECIDED
+            && operation.decision.load(Ordering::Acquire) != CANCEL
+        {
+            let Some(proposed) = share(&effect.proposed) else {
+                return;
+            };
+            Some(proposed)
+        } else {
+            None
+        };
+        let edge_proposed = if let Some(effect) = &operation.edge
+            && completed.load(Ordering::Acquire) == UNDECIDED
+            && operation.decision.load(Ordering::Acquire) != CANCEL
+        {
+            let Some(proposed) = share(&effect.proposed) else {
+                return;
+            };
+            Some(proposed)
         } else {
             None
         };
@@ -877,11 +927,28 @@ impl<R: Record> Catalog<R> {
             effect.cell.state.compare(&effect.expected, proposed);
         }
         after_effect();
+        // Only already-tracing owner barriers use the second effect. It never
+        // publishes a Prepared record and therefore needs no private-graph guard.
+        if let Some(effect) = &operation.secondary_effect
+            && decision == COMMIT
+            && completed.load(Ordering::Acquire) == UNDECIDED
+        {
+            effect.cell.state.compare(
+                &effect.expected,
+                secondary_proposed.expect("secondary effect prepared before commit decision"),
+            );
+        }
         if let Some(root) = &operation.root
             && decision == COMMIT
             && completed.load(Ordering::Acquire) == UNDECIDED
         {
             root.apply();
+        }
+        if let Some(edge) = &operation.edge
+            && decision == COMMIT
+            && completed.load(Ordering::Acquire) == UNDECIDED
+        {
+            edge.apply(edge_proposed.expect("edge effect prepared before commit decision"));
         }
         if decision == COMMIT
             && let Some(guard) = &entered

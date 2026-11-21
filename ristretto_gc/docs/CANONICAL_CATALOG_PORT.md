@@ -223,3 +223,65 @@ after commit has already won. An additional portable facade test checks scan
 batch bounds, cancellation and invalid domains. Native/WASI catalog totals are
 63/57; strict Clippy passes. This completes the root/phase API needed by the leaf
 maintenance adapter; strong-edge storage is still rejected at setup.
+
+## C10 prerequisite: exact edge backing and geometry
+
+Edge tokens own bounded preparation storage and post removal intent on drop.
+Live identities contain source/target keys rather than owning payload links. The
+fixed source-degree layout is checked at setup; failed discovery is distinct from
+an empty slot. Three portable tests cover private cancellation, competing creators,
+foreign rejection, geometry and intent-only drop. Native/WASI catalog totals are
+66/60; strict Clippy passes. Bounded edge-capacity admission remains disabled.
+
+## C10 prerequisite: paired membership and edge effects
+
+A frozen edge operation can retain two tracing effects plus one edge replacement
+under the same immutable decision. Every fallible proposed-owner acquisition
+precedes COMMIT; both memberships and the edge precede the completion certificate.
+Three portable tests force late acquisition failure, cancellation and help after
+the owner stops at its first effect. Native/WASI catalog totals are 69/63; strict
+Clippy passes. The existing decision/order models remain scoped to their actual
+atomic helpers; these additional cases execute the real multi-effect controller.
+
+## C10/C11 prerequisite: strong-edge transactions
+
+Frozen publication, replacement, child-root activation and requested/orphan edge
+removal validate exact source/target generations under one controller snapshot.
+Deletion and insertion barriers share its decision; same-target writes contribute
+one ticket, and stale source/target keys cannot attach to reused slots. All 16
+native frozen raw-edge regressions (13 portable) are retained. Native/WASI catalog
+totals are 85/76; strict Clippy passes. Test helpers use the packaged guarded entry
+methods directly; no external catalog dependency is introduced.
+
+## C10 prerequisite: resumable source traversal
+
+Frozen Full-domain traversal retains its exact source generation, epoch, ticket
+and strength. It visits the complete admitted source range before acknowledging;
+a stronger or superseding ticket requires another complete scan. Stopped private
+scanners do not own shared completion. All 13 frozen traversal regressions pass
+on both native and WASI, including transitive retention, insertion behind a
+cursor, unreachable-cycle reclamation and independent helper completion. Catalog
+totals are 98/89; strict Clippy passes. Runtime edge admission remains separate.
+
+## C10 prerequisite: bounded edge admission and charges
+
+Edge creation owners have a separate finite quota. Actual inventory backing,
+inline participant storage and external edge tokens are charged before setup;
+indexed geometry is rejected before reserving credit if inconsistent. Four
+portable tests cover every creation cancellation boundary, retained quota/charge,
+exact budget admission and geometry rejection. Native/WASI catalog totals are
+102/93; strict Clippy passes. This intermediate facade cannot publish edges and
+explicitly rejects numeric acknowledgement for edge-enabled catalogs until the
+next slice connects traversal, preventing an intermediate bypass.
+
+## C10/C11 prerequisite: bounded strong-edge requests and stable reads
+
+The final edge facade connects frozen publication/replacement/child-root requests,
+source handoff, requested/orphan cleanup and copied observations. Every enabled
+edge catalog routes acknowledgement through complete source traversal and admits
+only Full collection starts. Stable source reads validate their original owning
+snapshot, including null results; a superseded failure retries as contention.
+All 11 frozen bounded edge regressions (10 portable) are retained, with the
+capacity-order test explicitly using Q=0 because conditional references remain
+unsupported. Native/WASI catalog totals are 113/103; strict Clippy passes. This
+completes the catalog API used by the preview's C10a/C10b/C11 adapters.
