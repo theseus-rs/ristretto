@@ -1,5 +1,5 @@
 //! Heap-owned canonical static roots and logical-owner class initialization.
-use super::layout::Field;
+use super::layout::{Field, reference_type};
 use super::objects::{Execution, Payload, Value, complete, help};
 use super::{Error, Program, Result};
 use ristretto_classfile::attributes::Attribute;
@@ -46,14 +46,12 @@ impl StaticLayout {
                 self.integers += 1;
                 Field::Int(index)
             }
-            FieldType::Object(target) if self.references < 8 => {
+            ty @ (FieldType::Object(_) | FieldType::Array(_)) if self.references < 8 => {
                 let edge = self.references;
                 self.references += 1;
                 Field::Reference {
                     edge,
-                    class: names.get(target).copied().ok_or_else(|| {
-                        Error::Unsupported(format!("static field class {target}"))
-                    })?,
+                    target: reference_type(ty, names)?,
                 }
             }
             _ => {
@@ -522,9 +520,8 @@ impl Execution<'_, '_, '_> {
     async fn allocate_static_storage(&mut self, class: usize) -> Result<Root<Payload>> {
         let edges = self.program.layout(class)?.statics.references;
         let mut request = self.mutator.allocate_with_edges(
-            Payload {
+            Payload::Statics {
                 class,
-                static_storage: true,
                 integers: std::array::from_fn(|_| AtomicI32::new(0)),
             },
             edges,
@@ -578,7 +575,7 @@ impl Execution<'_, '_, '_> {
                 static_integer(&*self.runtime.borrow(&root)?, owner, index)?
                     .load(Ordering::Relaxed),
             )),
-            Field::Reference { edge, class } => {
+            Field::Reference { edge, target } => {
                 self.check_static_storage(&root, owner)?;
                 let value = {
                     let mut request = self.mutator.child::<Payload, Payload>(&root, edge)?;
@@ -593,7 +590,7 @@ impl Execution<'_, '_, '_> {
                     child
                 };
                 if let Some(value) = &value {
-                    self.check_class(value, class)?;
+                    self.check_reference(value, target)?;
                 }
                 Ok(Value::Reference(value))
             }
@@ -632,11 +629,11 @@ impl Execution<'_, '_, '_> {
         match field.field {
             Field::Int(index) => static_integer(&*self.runtime.borrow(&root)?, owner, index)?
                 .store(value.int()?, Ordering::Relaxed),
-            Field::Reference { edge, class } => {
+            Field::Reference { edge, target } => {
                 self.check_static_storage(&root, owner)?;
                 let value = value.reference()?;
                 if let Some(value) = &value {
-                    self.check_class(value, class)?;
+                    self.check_reference(value, target)?;
                 }
                 let mut request = self.mutator.write(&root, edge, value.as_ref())?;
                 complete(
@@ -652,8 +649,8 @@ impl Execution<'_, '_, '_> {
         Ok(())
     }
     fn check_static_storage(&self, root: &Root<Payload>, class: usize) -> Result<()> {
-        let view = self.runtime.borrow(root)?;
-        if view.static_storage && view.class == class {
+        if matches!(&*self.runtime.borrow(root)?, Payload::Statics { class: actual, .. } if *actual == class)
+        {
             Ok(())
         } else {
             Err(Error::Boundary("static storage class/kind"))
@@ -661,8 +658,12 @@ impl Execution<'_, '_, '_> {
     }
 }
 fn static_integer(payload: &Payload, class: usize, index: usize) -> Result<&AtomicI32> {
-    if payload.static_storage && payload.class == class {
-        let integers = &payload.integers;
+    if let Payload::Statics {
+        class: actual,
+        integers,
+    } = payload
+        && *actual == class
+    {
         integers
             .get(index)
             .ok_or(Error::Boundary("static integer index"))

@@ -1,6 +1,11 @@
 //! Execution of verified closed object methods on a dedicated incremental heap.
-use super::layout::Field;
+use super::layout::{Field, ReferenceType};
+use super::primitive_array::{Element, Kind, PrimitiveArray};
 use super::statics::States;
+use super::value::PrimitiveFrameValue;
+use super::{ScalarValue, primitive_array, scalar};
+use ristretto_classfile::attributes::ArrayType;
+
 use super::{Error, Layout, Program, Result, exact_symbol};
 use ristretto_classfile::{
     BaseType, FieldType, JavaStr, MethodAccessFlags, attributes::Instruction,
@@ -18,6 +23,8 @@ pub struct Limits {
     pub request_polls: usize,
     pub cleanup_polls: usize,
     pub frames: usize,
+    /// Maximum requested backing bytes of one primitive array, before preparation.
+    pub array_bytes: usize,
 }
 
 impl Default for Limits {
@@ -27,6 +34,7 @@ impl Default for Limits {
             request_polls: 100_000,
             cleanup_polls: 1_000_000,
             frames: 64,
+            array_bytes: 8 * 1024 * 1024,
         }
     }
 }
@@ -60,7 +68,9 @@ impl InitializationWork {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Report {
     pub result: i32,
+    /// Exact interpreted visits; unavailable in native execution (reported as zero).
     pub instructions: usize,
+    pub instruction_count_available: bool,
     pub allocations: usize,
     pub internal_allocations: usize,
     pub static_storage_allocations: usize,
@@ -75,6 +85,77 @@ pub struct Report {
     pub released_objects: usize,
     pub payload_bytes_after_cleanup: usize,
     pub catalog_bytes_after_drop: usize,
+    pub compiled_entries: usize,
+    pub compiled_resumes: usize,
+    pub compiled_backedges: u64,
+    pub native_slices: usize,
+    pub array_allocations: usize,
+    pub array_reads: usize,
+    pub array_writes: usize,
+}
+
+pub(super) fn array_kind(component: &FieldType) -> Result<Kind> {
+    Ok(match component {
+        FieldType::Base(BaseType::Boolean) => Kind::Boolean,
+        FieldType::Base(BaseType::Byte) => Kind::Byte,
+        FieldType::Base(BaseType::Char) => Kind::Char,
+        FieldType::Base(BaseType::Short) => Kind::Short,
+        FieldType::Base(BaseType::Int) => Kind::Int,
+        FieldType::Base(BaseType::Long) => Kind::Long,
+        FieldType::Base(BaseType::Float) => Kind::Float,
+        FieldType::Base(BaseType::Double) => Kind::Double,
+        _ => {
+            return Err(Error::Unsupported(
+                "reference or multidimensional arrays".to_owned(),
+            ));
+        }
+    })
+}
+
+fn allocation_kind(kind: &ArrayType) -> Kind {
+    match kind {
+        ArrayType::Boolean => Kind::Boolean,
+        ArrayType::Byte => Kind::Byte,
+        ArrayType::Char => Kind::Char,
+        ArrayType::Short => Kind::Short,
+        ArrayType::Int => Kind::Int,
+        ArrayType::Long => Kind::Long,
+        ArrayType::Float => Kind::Float,
+        ArrayType::Double => Kind::Double,
+    }
+}
+
+fn array_instruction(instruction: &Instruction) -> Option<(Kind, bool)> {
+    use Instruction as I;
+    Some(match instruction {
+        I::Iaload => (Kind::Int, false),
+        I::Iastore => (Kind::Int, true),
+        I::Laload => (Kind::Long, false),
+        I::Lastore => (Kind::Long, true),
+        I::Faload => (Kind::Float, false),
+        I::Fastore => (Kind::Float, true),
+        I::Daload => (Kind::Double, false),
+        I::Dastore => (Kind::Double, true),
+        I::Baload => (Kind::Byte, false),
+        I::Bastore => (Kind::Byte, true),
+        I::Caload => (Kind::Char, false),
+        I::Castore => (Kind::Char, true),
+        I::Saload => (Kind::Short, false),
+        I::Sastore => (Kind::Short, true),
+        _ => return None,
+    })
+}
+
+fn array_error(error: primitive_array::Error) -> Error {
+    use primitive_array::Error as E;
+    match error {
+        E::NegativeLength => Error::ArrayFault("NegativeArraySizeException"),
+        E::Index => Error::ArrayFault("ArrayIndexOutOfBoundsException"),
+        E::Type => Error::ArrayFault("primitive array type mismatch"),
+        E::ByteLimit => Error::Limit("array backing bytes"),
+        E::SizeOverflow => Error::Limit("array size"),
+        E::Allocation => Error::Heap(ristretto_gc::Error::OutOfMemory),
+    }
 }
 
 impl Program {
@@ -151,13 +232,9 @@ impl Program {
 
     fn admit_type(&self, field: &FieldType) -> Result<()> {
         match field {
-            FieldType::Base(BaseType::Int) => Ok(()),
-            FieldType::Object(name) => self
-                .names
-                .get(name)
-                .map(|_| ())
-                .ok_or_else(|| Error::Unsupported(format!("class {name}"))),
-            _ => Err(Error::Unsupported(format!("descriptor {field}"))),
+            FieldType::Base(_) => Ok(()),
+            FieldType::Object(name) => self.class_index(name.to_str_lossy().as_ref()).map(|_| ()),
+            FieldType::Array(component) => array_kind(component).map(|_| ()),
         }
     }
 
@@ -224,18 +301,27 @@ impl Program {
                     }
                 }
                 I::Ldc(index) => {
-                    self.layout(class)?
-                        .class
-                        .constant_pool()
-                        .try_get_integer(u16::from(*index))?;
+                    scalar::constant(
+                        self.layout(class)?.class.constant_pool(),
+                        u16::from(*index),
+                        false,
+                    )?;
                 }
                 I::Ldc_w(index) => {
-                    self.layout(class)?
-                        .class
-                        .constant_pool()
-                        .try_get_integer(*index)?;
+                    scalar::constant(self.layout(class)?.class.constant_pool(), *index, false)?;
                 }
-                I::Nop
+                I::Ldc2_w(index) => {
+                    scalar::constant(self.layout(class)?.class.constant_pool(), *index, true)?;
+                }
+                instruction
+                    if scalar::supports(instruction)
+                        || array_instruction(instruction).is_some() => {}
+                I::Newarray(_)
+                | I::Arraylength
+                | I::Lreturn
+                | I::Freturn
+                | I::Dreturn
+                | I::Nop
                 | I::Aconst_null
                 | I::Iconst_m1
                 | I::Iconst_0
@@ -362,16 +448,45 @@ impl Program {
         Ok(report)
     }
 }
-/// No managed references, callbacks, dynamic backing or custom destruction.
-/// Class metadata lives exclusively in the external immutable Program.
 #[derive(Debug)]
-pub(super) struct Payload {
-    pub(super) class: usize,
-    pub(super) static_storage: bool,
-    pub(super) integers: [AtomicI32; 8],
+pub(super) enum Payload {
+    Object {
+        class: usize,
+        integers: [AtomicI32; 8],
+    },
+    Array(PrimitiveArray),
+    Statics {
+        class: usize,
+        integers: [AtomicI32; 8],
+    },
 }
 
-// SAFETY: Payload contains only numeric class/kind tags and eight primitive atomics.
+impl Payload {
+    fn object(class: usize) -> Self {
+        Self::Object {
+            class,
+            integers: std::array::from_fn(|_| AtomicI32::new(0)),
+        }
+    }
+    fn integer(&self, index: usize) -> Result<&AtomicI32> {
+        if let Self::Object { integers, .. } = self {
+            integers
+                .get(index)
+                .ok_or(Error::Boundary("integer field index"))
+        } else {
+            Err(Error::Boundary("object field on primitive array"))
+        }
+    }
+    fn array(&self) -> Result<&PrimitiveArray> {
+        if let Self::Array(array) = self {
+            Ok(array)
+        } else {
+            Err(Error::ArrayFault("primitive array type mismatch"))
+        }
+    }
+}
+
+// SAFETY: Payload contains only numeric metadata and primitive atomic storage.
 // Every managed field is owned exclusively by the catalog, never by this payload.
 #[expect(
     unsafe_code,
@@ -387,16 +502,56 @@ impl Trace for Payload {
         false
     }
     fn trace(&self, _: &GarbageCollector) {}
+    fn needs_write_barrier(&self) -> bool {
+        false
+    }
+    fn external_size(&self) -> usize {
+        match self {
+            Self::Object { .. } | Self::Statics { .. } => 0,
+            Self::Array(array) => array.backing_bytes(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
 pub(super) enum Value {
     Int(i32),
+    Long(i64),
+    Float(f32),
+    Double(f64),
     Reference(Option<Root<Payload>>),
     Unused,
 }
 
 impl Value {
+    fn width(&self) -> usize {
+        if matches!(self, Self::Long(_) | Self::Double(_)) {
+            2
+        } else {
+            1
+        }
+    }
+    fn long(self) -> Result<i64> {
+        if let Self::Long(value) = self {
+            Ok(value)
+        } else {
+            Err(Error::Boundary("expected long"))
+        }
+    }
+    fn float(self) -> Result<f32> {
+        if let Self::Float(value) = self {
+            Ok(value)
+        } else {
+            Err(Error::Boundary("expected float"))
+        }
+    }
+    fn double(self) -> Result<f64> {
+        if let Self::Double(value) = self {
+            Ok(value)
+        } else {
+            Err(Error::Boundary("expected double"))
+        }
+    }
     pub(super) fn int(self) -> Result<i32> {
         if let Self::Int(value) = self {
             Ok(value)
@@ -417,6 +572,34 @@ impl Value {
     }
 }
 
+impl From<ScalarValue> for Value {
+    fn from(v: ScalarValue) -> Self {
+        match v {
+            ScalarValue::Int(n) => Self::Int(n),
+            ScalarValue::Long(n) => Self::Long(n),
+            ScalarValue::Float(n) => Self::Float(n),
+            ScalarValue::Double(n) => Self::Double(n),
+        }
+    }
+}
+impl PrimitiveFrameValue for Value {
+    type Slot = Self;
+    fn primitive(self) -> Result<ScalarValue> {
+        match self {
+            Self::Int(n) => Ok(ScalarValue::Int(n)),
+            Self::Long(n) => Ok(ScalarValue::Long(n)),
+            Self::Float(n) => Ok(ScalarValue::Float(n)),
+            Self::Double(n) => Ok(ScalarValue::Double(n)),
+            _ => Err(Error::Invalid("expected primitive value".into())),
+        }
+    }
+    fn load(locals: &[Self], stack: &mut Vec<Self>, index: usize) -> Result<()> {
+        load(locals, stack, index)
+    }
+    fn store(locals: &mut [Self], stack: &mut Vec<Self>, index: usize) -> Result<()> {
+        store(locals, stack, index)
+    }
+}
 pub(super) struct Execution<'p, 'r, 'gc> {
     pub(super) program: &'p Program,
     pub(super) runtime: &'r Runtime<'gc>,
@@ -453,6 +636,150 @@ pub(super) fn help(helper: &mut Helper<'_>, report: &mut Report) -> Result<()> {
 }
 
 impl Execution<'_, '_, '_> {
+    async fn allocate_array(&mut self, kind: Kind, length: i32) -> Result<Root<Payload>> {
+        let array =
+            PrimitiveArray::new(kind, length, self.limits.array_bytes).map_err(array_error)?;
+        let mut request = self.mutator.allocate(Payload::Array(array))?;
+        let root = complete(
+            &mut self.helper,
+            &mut self.report,
+            self.limits.request_polls,
+            || request.poll(),
+        )
+        .await?;
+        self.report.allocations += 1;
+        self.report.array_allocations += 1;
+        Ok(root)
+    }
+
+    fn array_length(&mut self, root: &Root<Payload>) -> Result<Value> {
+        let view = self.runtime.borrow(root)?;
+        let length = view.array()?.len();
+        self.report.array_reads += 1;
+        Ok(Value::Int(length))
+    }
+
+    fn read_array(&mut self, root: &Root<Payload>, index: i32, kind: Kind) -> Result<Value> {
+        let view = self.runtime.borrow(root)?;
+        let array = view.array()?;
+        if array.kind() != kind && !(kind == Kind::Byte && array.kind() == Kind::Boolean) {
+            return Err(Error::ArrayFault("primitive array type mismatch"));
+        }
+        let value = match array.load(index).map_err(array_error)? {
+            Element::Int(value) => Value::Int(value),
+            Element::Long(value) => Value::Long(value),
+            Element::Float(bits) => Value::Float(f32::from_bits(bits)),
+            Element::Double(bits) => Value::Double(f64::from_bits(bits)),
+        };
+        self.report.array_reads += 1;
+        Ok(value)
+    }
+
+    fn write_array(
+        &mut self,
+        root: &Root<Payload>,
+        index: i32,
+        kind: Kind,
+        value: &Value,
+    ) -> Result<()> {
+        let view = self.runtime.borrow(root)?;
+        let array = view.array()?;
+        if array.kind() != kind && !(kind == Kind::Byte && array.kind() == Kind::Boolean) {
+            return Err(Error::ArrayFault("primitive array type mismatch"));
+        }
+        let value = match value {
+            Value::Int(value) => Element::Int(*value),
+            Value::Long(value) => Element::Long(*value),
+            Value::Float(value) => Element::Float(value.to_bits()),
+            Value::Double(value) => Element::Double(value.to_bits()),
+            _ => return Err(Error::ArrayFault("primitive array value type mismatch")),
+        };
+        array.store(index, value).map_err(array_error)?;
+        self.report.array_writes += 1;
+        Ok(())
+    }
+
+    async fn allocate_object(&mut self, class: usize) -> Result<Root<Payload>> {
+        let payload = Payload::object(class);
+        let mut request = self.mutator.allocate(payload)?;
+        let root = complete(
+            &mut self.helper,
+            &mut self.report,
+            self.limits.request_polls,
+            || request.poll(),
+        )
+        .await?;
+        self.report.allocations += 1;
+        Ok(root)
+    }
+
+    async fn read_field(
+        &mut self,
+        class: usize,
+        index: u16,
+        root: &Root<Payload>,
+    ) -> Result<Value> {
+        let (owner, field) = self.program.field(class, index)?;
+        self.check_class(root, owner)?;
+        Ok(match field {
+            Field::Int(index) => Value::Int(
+                self.runtime
+                    .borrow(root)?
+                    .integer(index)?
+                    .load(Ordering::Relaxed),
+            ),
+            Field::Reference { edge, .. } => {
+                let mut request = self.mutator.child::<Payload, Payload>(root, edge)?;
+                let child = complete(
+                    &mut self.helper,
+                    &mut self.report,
+                    self.limits.request_polls,
+                    || request.poll(),
+                )
+                .await?;
+                self.report.reference_reads += 1;
+                Value::Reference(child)
+            }
+        })
+    }
+
+    async fn write_field(
+        &mut self,
+        class: usize,
+        index: u16,
+        root: &Root<Payload>,
+        value: Value,
+    ) -> Result<()> {
+        let (owner, field) = self.program.field(class, index)?;
+        self.check_class(root, owner)?;
+        match field {
+            Field::Int(index) => self
+                .runtime
+                .borrow(root)?
+                .integer(index)?
+                .store(value.int()?, Ordering::Relaxed),
+            Field::Reference {
+                edge,
+                target: expected,
+            } => {
+                let target = value.reference()?;
+                if let Some(target) = &target {
+                    self.check_reference(target, expected)?;
+                }
+                let mut request = self.mutator.write(root, edge, target.as_ref())?;
+                complete(
+                    &mut self.helper,
+                    &mut self.report,
+                    self.limits.request_polls,
+                    || request.poll(),
+                )
+                .await?;
+                self.report.reference_writes += 1;
+            }
+        }
+        Ok(())
+    }
+
     pub(super) async fn entry(
         &mut self,
         class: usize,
@@ -500,19 +827,49 @@ impl Execution<'_, '_, '_> {
 
     fn check_type(&self, value: &Value, field: &FieldType) -> Result<()> {
         match (value, field) {
-            (Value::Int(_), FieldType::Base(BaseType::Int))
-            | (Value::Reference(None), FieldType::Object(_)) => Ok(()),
+            (
+                Value::Int(_),
+                FieldType::Base(
+                    BaseType::Int
+                    | BaseType::Byte
+                    | BaseType::Char
+                    | BaseType::Short
+                    | BaseType::Boolean,
+                ),
+            )
+            | (Value::Long(_), FieldType::Base(BaseType::Long))
+            | (Value::Float(_), FieldType::Base(BaseType::Float))
+            | (Value::Double(_), FieldType::Base(BaseType::Double))
+            | (Value::Reference(None), FieldType::Object(_) | FieldType::Array(_)) => Ok(()),
             (Value::Reference(Some(root)), FieldType::Object(name)) => {
                 let class = self.program.class_index(name.to_str_lossy().as_ref())?;
                 self.check_class(root, class)
+            }
+            (Value::Reference(Some(root)), FieldType::Array(component)) => {
+                self.check_reference(root, ReferenceType::Array(array_kind(component)?))
             }
             _ => Err(Error::Invalid("method argument/return type".to_owned())),
         }
     }
 
     pub(super) fn check_class(&self, root: &Root<Payload>, class: usize) -> Result<()> {
+        self.check_reference(root, ReferenceType::Object(class))
+    }
+
+    pub(super) fn check_reference(
+        &self,
+        root: &Root<Payload>,
+        expected: ReferenceType,
+    ) -> Result<()> {
         let view = self.runtime.borrow(root)?;
-        if !view.static_storage && view.class == class {
+        let actual = match &*view {
+            Payload::Object { class, .. } => ReferenceType::Object(*class),
+            Payload::Statics { .. } => {
+                return Err(Error::Boundary("static storage as Java reference"));
+            }
+            Payload::Array(array) => ReferenceType::Array(array.kind()),
+        };
+        if actual == expected {
             Ok(())
         } else {
             Err(Error::Invalid("receiver/field class mismatch".to_owned()))
@@ -532,6 +889,7 @@ impl Execution<'_, '_, '_> {
         depth: usize,
     ) -> Result<Option<Value>> {
         use Instruction as I;
+        self.report.instruction_count_available = true;
         if depth >= self.limits.frames {
             return Err(Error::Limit("frame"));
         }
@@ -559,10 +917,16 @@ impl Execution<'_, '_, '_> {
             self.check_type(argument, field)?;
         }
         let mut locals = vec![Value::Unused; method.max_locals()];
-        for (index, argument) in arguments.into_iter().enumerate() {
+        let mut index = 0;
+        for argument in arguments {
+            let width = argument.width();
             *locals
                 .get_mut(index)
                 .ok_or_else(|| Error::Invalid("argument local".to_owned()))? = argument;
+            index += width;
+            if index > locals.len() {
+                return Err(Error::Invalid("wide argument local".to_owned()));
+            }
         }
         let mut stack = Vec::with_capacity(method.max_stack());
         let mut pc = 0;
@@ -595,22 +959,46 @@ impl Execution<'_, '_, '_> {
                 I::Iconst_5 => stack.push(Value::Int(5)),
                 I::Bipush(value) => stack.push(Value::Int(i32::from(*value))),
                 I::Sipush(value) => stack.push(Value::Int(i32::from(*value))),
-                I::Ldc(index) => stack.push(Value::Int(
-                    *self
-                        .program
-                        .layout(class)?
-                        .class
-                        .constant_pool()
-                        .try_get_integer(u16::from(*index))?,
-                )),
-                I::Ldc_w(index) => stack.push(Value::Int(
-                    *self
-                        .program
-                        .layout(class)?
-                        .class
-                        .constant_pool()
-                        .try_get_integer(*index)?,
-                )),
+                I::Ldc(index) => stack.push(Value::from(scalar::constant(
+                    self.program.layout(class)?.class.constant_pool(),
+                    u16::from(*index),
+                    false,
+                )?)),
+                I::Ldc_w(index) => stack.push(Value::from(scalar::constant(
+                    self.program.layout(class)?.class.constant_pool(),
+                    *index,
+                    false,
+                )?)),
+                I::Ldc2_w(index) => stack.push(Value::from(scalar::constant(
+                    self.program.layout(class)?.class.constant_pool(),
+                    *index,
+                    true,
+                )?)),
+                instruction if scalar::supports(instruction) => {
+                    scalar::execute(instruction, &mut locals, &mut stack)?;
+                }
+                I::Newarray(kind) => {
+                    let length = pop(&mut stack)?.int()?;
+                    stack.push(Value::Reference(Some(
+                        self.allocate_array(allocation_kind(kind), length).await?,
+                    )));
+                }
+                I::Arraylength => {
+                    let root = pop(&mut stack)?.object()?;
+                    stack.push(self.array_length(&root)?);
+                }
+                instruction if array_instruction(instruction).is_some() => {
+                    let (kind, store) =
+                        array_instruction(instruction).ok_or(Error::Boundary("array opcode"))?;
+                    let value = if store { Some(pop(&mut stack)?) } else { None };
+                    let index = pop(&mut stack)?.int()?;
+                    let root = pop(&mut stack)?.object()?;
+                    if let Some(value) = value {
+                        self.write_array(&root, index, kind, &value)?;
+                    } else {
+                        stack.push(self.read_array(&root, index, kind)?);
+                    }
+                }
                 I::Iload(index) | I::Aload(index) => {
                     load(&locals, &mut stack, usize::from(*index))?;
                 }
@@ -667,20 +1055,7 @@ impl Execution<'_, '_, '_> {
                 I::New(index) => {
                     let class = self.program.class_constant(class, *index)?;
                     self.initialize_class(class, depth + 1).await?;
-                    let payload = Payload {
-                        class,
-                        static_storage: false,
-                        integers: std::array::from_fn(|_| AtomicI32::new(0)),
-                    };
-                    let mut request = self.mutator.allocate(payload)?;
-                    let root = complete(
-                        &mut self.helper,
-                        &mut self.report,
-                        self.limits.request_polls,
-                        || request.poll(),
-                    )
-                    .await?;
-                    self.report.allocations += 1;
+                    let root = self.allocate_object(class).await?;
                     stack.push(Value::Reference(Some(root)));
                 }
                 I::Getstatic(index) => {
@@ -694,63 +1069,14 @@ impl Execution<'_, '_, '_> {
                         .await?;
                 }
                 I::Getfield(index) => {
-                    let (owner, field) = self.program.field(class, *index)?;
                     let root = pop(&mut stack)?.object()?;
-                    self.check_class(&root, owner)?;
-                    let value = match field {
-                        Field::Int(index) => Value::Int(
-                            self.runtime
-                                .borrow(&root)?
-                                .integers
-                                .get(index)
-                                .ok_or_else(|| Error::Invalid("integer field index".to_owned()))?
-                                .load(Ordering::Relaxed),
-                        ),
-                        Field::Reference { edge, .. } => {
-                            let mut request =
-                                self.mutator.child::<Payload, Payload>(&root, edge)?;
-                            let child = complete(
-                                &mut self.helper,
-                                &mut self.report,
-                                self.limits.request_polls,
-                                || request.poll(),
-                            )
-                            .await?;
-                            self.report.reference_reads += 1;
-                            Value::Reference(child)
-                        }
-                    };
+                    let value = self.read_field(class, *index, &root).await?;
                     stack.push(value);
                 }
                 I::Putfield(index) => {
-                    let (owner, field) = self.program.field(class, *index)?;
                     let value = pop(&mut stack)?;
                     let root = pop(&mut stack)?.object()?;
-                    self.check_class(&root, owner)?;
-                    match field {
-                        Field::Int(index) => self
-                            .runtime
-                            .borrow(&root)?
-                            .integers
-                            .get(index)
-                            .ok_or_else(|| Error::Invalid("integer field index".to_owned()))?
-                            .store(value.int()?, Ordering::Relaxed),
-                        Field::Reference { edge, class } => {
-                            let target = value.reference()?;
-                            if let Some(target) = &target {
-                                self.check_class(target, class)?;
-                            }
-                            let mut request = self.mutator.write(&root, edge, target.as_ref())?;
-                            complete(
-                                &mut self.helper,
-                                &mut self.report,
-                                self.limits.request_polls,
-                                || request.poll(),
-                            )
-                            .await?;
-                            self.report.reference_writes += 1;
-                        }
-                    }
+                    self.write_field(class, *index, &root, value).await?;
                 }
                 I::Invokespecial(index) | I::Invokestatic(index) => {
                     let (owner, name, descriptor) = self.program.member(class, *index, false)?;
@@ -776,8 +1102,8 @@ impl Execution<'_, '_, '_> {
                         }
                     }
                 }
-                I::Return | I::Ireturn | I::Areturn => {
-                    let value = if matches!(instruction, I::Return) {
+                I::Return | I::Ireturn | I::Areturn | I::Lreturn | I::Freturn | I::Dreturn => {
+                    let mut value = if matches!(instruction, I::Return) {
                         None
                     } else {
                         Some(pop(&mut stack)?)
@@ -786,6 +1112,14 @@ impl Execution<'_, '_, '_> {
                         (None, None) => {}
                         (Some(value), Some(field)) => self.check_type(value, field)?,
                         _ => return Err(Error::Invalid("return type".to_owned())),
+                    }
+                    if let (Some(result), Some(field)) = (value.take(), method.return_type()) {
+                        value = Some(match result {
+                            Value::Int(v) => {
+                                Value::from(scalar::normalize_return(ScalarValue::Int(v), field))
+                            }
+                            other => other,
+                        });
                     }
                     return Ok(value);
                 }
@@ -798,7 +1132,7 @@ impl Execution<'_, '_, '_> {
                     }
                 }
             }
-            if stack.len() > method.max_stack() {
+            if stack.iter().map(Value::width).sum::<usize>() > method.max_stack() {
                 return Err(Error::Invalid("operand stack overflow".to_owned()));
             }
             pc += 1;
@@ -823,12 +1157,26 @@ fn load(locals: &[Value], stack: &mut Vec<Value>, index: usize) -> Result<()> {
     Ok(())
 }
 fn store(locals: &mut [Value], stack: &mut Vec<Value>, index: usize) -> Result<()> {
+    let value = pop(stack)?;
+    if value.width() == 2 {
+        *locals
+            .get_mut(index + 1)
+            .ok_or(Error::Boundary("wide local index"))? = Value::Unused;
+    }
+    if index > 0
+        && locals
+            .get(index - 1)
+            .is_some_and(|value| value.width() == 2)
+    {
+        *locals
+            .get_mut(index - 1)
+            .ok_or(Error::Boundary("local index"))? = Value::Unused;
+    }
     *locals
         .get_mut(index)
-        .ok_or_else(|| Error::Invalid("local index".to_owned()))? = pop(stack)?;
+        .ok_or_else(|| Error::Invalid("local index".to_owned()))? = value;
     Ok(())
 }
-
 fn branch(instruction: &Instruction, stack: &mut Vec<Value>) -> Result<bool> {
     use Instruction as I;
     Ok(match instruction {
