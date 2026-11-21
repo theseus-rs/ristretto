@@ -5,9 +5,11 @@ mod heap;
 mod integer;
 mod layout;
 mod objects;
+#[path = "canonical_statics.rs"]
+mod statics;
 pub use heap::{HeapCompletion, Invocation, JavaHeap, JavaThread};
 use layout::Layout;
-pub use objects::{Limits, Report};
+pub use objects::{InitializationWork, Limits, Report};
 mod scalar;
 mod value;
 pub use value::ScalarValue;
@@ -31,6 +33,13 @@ pub enum Error {
     Unsupported(String),
     #[error("invalid canonical Java execution: {0}")]
     Invalid(String),
+    #[error("canonical Java boundary: {0}")]
+    Boundary(&'static str),
+    #[error("canonical Java initialization {kind}: {cause:?}")]
+    Initialization {
+        kind: &'static str,
+        cause: Option<Box<Error>>,
+    },
     #[error("canonical Java {0} limit reached")]
     Limit(&'static str),
     #[error(transparent)]

@@ -231,13 +231,13 @@ fn array_payload_rejects() -> Result {
 }
 
 #[test]
-fn static_storage_rejects() -> Result {
+fn volatile_static_storage_rejects() -> Result {
     let mut files = classes()?;
     add_field(
         files.last_mut().ok_or("missing node")?,
         "global",
         "I",
-        FieldAccessFlags::STATIC,
+        FieldAccessFlags::STATIC | FieldAccessFlags::VOLATILE,
     )?;
     assert!(matches!(
         Program::from_classfiles(files),

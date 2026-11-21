@@ -1,3 +1,4 @@
+use super::statics::StaticLayout;
 use super::{Error, Result};
 use ristretto_classfile::{BaseType, ClassFile, FieldAccessFlags, FieldType, JavaString};
 use ristretto_classloader::Class;
@@ -18,6 +19,7 @@ pub(super) struct Layout {
     pub(super) class: Arc<Class>,
     fields: HashMap<(JavaString, JavaString), Field>,
     pub(super) references: usize,
+    pub(super) statics: StaticLayout,
 }
 
 impl Layout {
@@ -26,14 +28,20 @@ impl Layout {
         names: &HashMap<JavaString, usize>,
     ) -> Result<Self> {
         let mut fields = HashMap::new();
+        let mut statics = StaticLayout::default();
         let mut integers = 0;
         let mut references = 0;
         for field in &file.fields {
             let name = file.constant_pool.try_get_utf8(field.name_index)?;
             let descriptor = file.constant_pool.try_get_utf8(field.descriptor_index)?;
-            if field.access_flags.intersects(
-                FieldAccessFlags::STATIC | FieldAccessFlags::FINAL | FieldAccessFlags::VOLATILE,
-            ) {
+            if field.access_flags.contains(FieldAccessFlags::STATIC) {
+                statics.admit(field, &file.constant_pool, names)?;
+                continue;
+            }
+            if field
+                .access_flags
+                .intersects(FieldAccessFlags::FINAL | FieldAccessFlags::VOLATILE)
+            {
                 return Err(Error::Unsupported(format!(
                     "instance field {name} {descriptor}"
                 )));
@@ -68,6 +76,7 @@ impl Layout {
             class: Class::from(None, file)?,
             fields,
             references,
+            statics,
         })
     }
 
