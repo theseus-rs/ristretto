@@ -117,54 +117,80 @@ impl Program {
         Ok((class, slot))
     }
 
-    pub(super) fn admit_object_method(&self, owner: usize, method: &Method) -> Result<(), Error> {
-        let constructor = method.name() == "<init>"
-            && !method.is_static()
-            && matches!(method.descriptor(), "()V" | "(I)V");
-        if !(constructor || (method.is_static() && method.descriptor() == "(I)I"))
+    fn admit_type(&self, field: &FieldType) -> Result<(), Error> {
+        match field {
+            FieldType::Base(BaseType::Int) => Ok(()),
+            FieldType::Object(name) => self
+                .names
+                .get(name)
+                .map(|_| ())
+                .ok_or_else(|| Error::Unsupported(format!("class {name}"))),
+            _ => Err(Error::Unsupported(format!("descriptor {field}"))),
+        }
+    }
+
+    #[expect(
+        clippy::too_many_lines,
+        reason = "single explicit opcode admission table"
+    )]
+    pub(super) fn admit_object_method(&self, class: usize, method: &Method) -> Result<(), Error> {
+        if matches!(method.name(), "<clinit>" | "finalize")
+            || method.access_flags().intersects(
+                MethodAccessFlags::NATIVE
+                    | MethodAccessFlags::ABSTRACT
+                    | MethodAccessFlags::SYNCHRONIZED,
+            )
+            || !method.exception_table().is_empty()
             || method.code().is_empty()
         {
-            return Err(Error::Unsupported(method.signature()));
+            return Err(Error::Unsupported(format!("method {}", method.signature())));
         }
-        for op in method.code() {
-            match op {
+        for field in method.parameters().iter().chain(method.return_type()) {
+            self.admit_type(field)?;
+        }
+        for instruction in method.code() {
+            match instruction {
                 Instruction::New(index) => {
-                    self.class_constant(owner, *index)?;
+                    self.class_constant(class, *index)?;
                 }
                 Instruction::Getfield(index) | Instruction::Putfield(index) => {
-                    self.field(owner, *index)?;
+                    self.field(class, *index)?;
                 }
-                Instruction::Invokespecial(index) => {
-                    let (class, name, desc) = self.member(owner, *index, false)?;
-                    if name != "<init>" || !matches!(desc.as_str(), "()V" | "(I)V") {
-                        return Err(Error::Unsupported("special call".into()));
-                    }
-                    if class == "java/lang/Object" && desc == "()V" {
+                Instruction::Invokestatic(index) | Instruction::Invokespecial(index) => {
+                    let (owner, name, descriptor) = self.member(class, *index, false)?;
+                    if owner == "java/lang/Object"
+                        && name == "<init>"
+                        && descriptor == "()V"
+                        && matches!(instruction, Instruction::Invokespecial(_))
+                    {
                         continue;
                     }
+                    let target = self.class_index(&owner)?;
                     let target = self
-                        .layout(self.class_index(&class)?)?
+                        .layout(target)?
                         .class
-                        .try_get_method(&name, &desc)?;
-                    if target.is_static() {
-                        return Err(Error::Unsupported("static constructor".into()));
+                        .try_get_method(&name, &descriptor)?;
+                    let is_static = target.access_flags().contains(MethodAccessFlags::STATIC);
+                    if is_static != matches!(instruction, Instruction::Invokestatic(_))
+                        || (!is_static && name != "<init>")
+                    {
+                        return Err(Error::Unsupported("call dispatch".to_owned()));
                     }
                 }
-                Instruction::Aload_0
-                | Instruction::Aload_1
-                | Instruction::Aload_2
-                | Instruction::Aload_3
-                | Instruction::Aload(_)
-                | Instruction::Iload_0
-                | Instruction::Iload_1
-                | Instruction::Iload_2
-                | Instruction::Iload_3
-                | Instruction::Iload(_)
-                | Instruction::Astore_0
-                | Instruction::Astore_1
-                | Instruction::Astore_2
-                | Instruction::Astore_3
-                | Instruction::Astore(_)
+                Instruction::Ldc(index) => {
+                    self.layout(class)?
+                        .class
+                        .constant_pool()
+                        .try_get_integer(u16::from(*index))?;
+                }
+                Instruction::Ldc_w(index) => {
+                    self.layout(class)?
+                        .class
+                        .constant_pool()
+                        .try_get_integer(*index)?;
+                }
+                Instruction::Nop
+                | Instruction::Aconst_null
                 | Instruction::Iconst_m1
                 | Instruction::Iconst_0
                 | Instruction::Iconst_1
@@ -174,15 +200,63 @@ impl Program {
                 | Instruction::Iconst_5
                 | Instruction::Bipush(_)
                 | Instruction::Sipush(_)
-                | Instruction::Aconst_null
+                | Instruction::Iload(_)
+                | Instruction::Iload_0
+                | Instruction::Iload_1
+                | Instruction::Iload_2
+                | Instruction::Iload_3
+                | Instruction::Aload(_)
+                | Instruction::Aload_0
+                | Instruction::Aload_1
+                | Instruction::Aload_2
+                | Instruction::Aload_3
+                | Instruction::Istore(_)
+                | Instruction::Istore_0
+                | Instruction::Istore_1
+                | Instruction::Istore_2
+                | Instruction::Istore_3
+                | Instruction::Astore(_)
+                | Instruction::Astore_0
+                | Instruction::Astore_1
+                | Instruction::Astore_2
+                | Instruction::Astore_3
+                | Instruction::Iinc(_, _)
+                | Instruction::Iadd
+                | Instruction::Isub
+                | Instruction::Imul
+                | Instruction::Ineg
+                | Instruction::Iand
+                | Instruction::Ior
+                | Instruction::Ixor
                 | Instruction::Dup
-                | Instruction::Return
-                | Instruction::Ireturn => {}
-                _ => return Err(Error::Unsupported(format!("object instruction {op}"))),
+                | Instruction::Pop
+                | Instruction::Swap
+                | Instruction::Goto(_)
+                | Instruction::Ifeq(_)
+                | Instruction::Ifne(_)
+                | Instruction::Iflt(_)
+                | Instruction::Ifge(_)
+                | Instruction::Ifgt(_)
+                | Instruction::Ifle(_)
+                | Instruction::If_icmpeq(_)
+                | Instruction::If_icmpne(_)
+                | Instruction::If_icmplt(_)
+                | Instruction::If_icmpge(_)
+                | Instruction::If_icmpgt(_)
+                | Instruction::If_icmple(_)
+                | Instruction::If_acmpeq(_)
+                | Instruction::If_acmpne(_)
+                | Instruction::Ifnull(_)
+                | Instruction::Ifnonnull(_)
+                | Instruction::Ireturn
+                | Instruction::Areturn
+                | Instruction::Return => {}
+                _ => return Err(Error::Unsupported(format!("bytecode {instruction:?}"))),
             }
         }
         Ok(())
     }
+
     /// Run an admitted static `(I)I` entry on a dedicated canonical heap, then reclaim
     /// every object before returning. Polls and bytecode batches yield to the host.
     ///
@@ -442,6 +516,7 @@ impl Execution<'_, '_, '_> {
                 tokio::task::yield_now().await;
             }
             match instruction {
+                Instruction::Nop => {}
                 Instruction::Aconst_null => stack.push(Value::Reference(None)),
                 Instruction::Iconst_m1 => stack.push(Value::Int(-1)),
                 Instruction::Iconst_0 => stack.push(Value::Int(0)),
@@ -452,6 +527,22 @@ impl Execution<'_, '_, '_> {
                 Instruction::Iconst_5 => stack.push(Value::Int(5)),
                 Instruction::Bipush(value) => stack.push(Value::Int(i32::from(*value))),
                 Instruction::Sipush(value) => stack.push(Value::Int(i32::from(*value))),
+                Instruction::Ldc(index) => stack.push(Value::Int(
+                    *self
+                        .program
+                        .layout(class)?
+                        .class
+                        .constant_pool()
+                        .try_get_integer(u16::from(*index))?,
+                )),
+                Instruction::Ldc_w(index) => stack.push(Value::Int(
+                    *self
+                        .program
+                        .layout(class)?
+                        .class
+                        .constant_pool()
+                        .try_get_integer(*index)?,
+                )),
                 Instruction::Iload(index) | Instruction::Aload(index) => {
                     load(&locals, &mut stack, usize::from(*index))?;
                 }
@@ -466,12 +557,49 @@ impl Execution<'_, '_, '_> {
                 Instruction::Istore_1 | Instruction::Astore_1 => store(&mut locals, &mut stack, 1)?,
                 Instruction::Istore_2 | Instruction::Astore_2 => store(&mut locals, &mut stack, 2)?,
                 Instruction::Istore_3 | Instruction::Astore_3 => store(&mut locals, &mut stack, 3)?,
+                Instruction::Iinc(index, amount) => {
+                    let value = locals
+                        .get_mut(usize::from(*index))
+                        .ok_or_else(|| Error::Invalid("local index".to_owned()))?;
+                    *value = Value::Int(value.clone().int()?.wrapping_add(i32::from(*amount)));
+                }
+                Instruction::Iadd
+                | Instruction::Isub
+                | Instruction::Imul
+                | Instruction::Iand
+                | Instruction::Ior
+                | Instruction::Ixor => {
+                    let right = pop(&mut stack)?.int()?;
+                    let left = pop(&mut stack)?.int()?;
+                    let value = match instruction {
+                        Instruction::Iadd => left.wrapping_add(right),
+                        Instruction::Isub => left.wrapping_sub(right),
+                        Instruction::Imul => left.wrapping_mul(right),
+                        Instruction::Iand => left & right,
+                        Instruction::Ior => left | right,
+                        _ => left ^ right,
+                    };
+                    stack.push(Value::Int(value));
+                }
+                Instruction::Ineg => {
+                    let value = pop(&mut stack)?.int()?;
+                    stack.push(Value::Int(value.wrapping_neg()));
+                }
                 Instruction::Dup => {
                     let value = stack
                         .last()
                         .cloned()
                         .ok_or_else(|| Error::Invalid("stack underflow".to_owned()))?;
                     stack.push(value);
+                }
+                Instruction::Pop => {
+                    pop(&mut stack)?;
+                }
+                Instruction::Swap => {
+                    let a = pop(&mut stack)?;
+                    let b = pop(&mut stack)?;
+                    stack.push(a);
+                    stack.push(b);
                 }
                 Instruction::New(index) => {
                     let class = self.program.class_constant(class, *index)?;
@@ -549,7 +677,7 @@ impl Execution<'_, '_, '_> {
                         }
                     }
                 }
-                Instruction::Invokespecial(index) => {
+                Instruction::Invokespecial(index) | Instruction::Invokestatic(index) => {
                     let (owner, name, descriptor) = self.program.member(class, *index, false)?;
                     if owner == "java/lang/Object" {
                         // Admission permits only Object.<init>()V, whose body is empty.
@@ -573,7 +701,7 @@ impl Execution<'_, '_, '_> {
                         }
                     }
                 }
-                Instruction::Return | Instruction::Ireturn => {
+                Instruction::Return | Instruction::Ireturn | Instruction::Areturn => {
                     let value = if matches!(instruction, Instruction::Return) {
                         None
                     } else {
@@ -586,7 +714,14 @@ impl Execution<'_, '_, '_> {
                     }
                     return Ok(value);
                 }
-                other => return Err(Error::Unsupported(format!("object instruction {other}"))),
+                instruction => {
+                    if branch(instruction, &mut stack)? {
+                        pc = method
+                            .branch_target_index(pc)
+                            .ok_or_else(|| Error::Invalid("branch target".to_owned()))?;
+                        continue;
+                    }
+                }
             }
             if stack.len() > method.max_stack() {
                 return Err(Error::Invalid("operand stack overflow".to_owned()));
@@ -617,4 +752,50 @@ fn store(locals: &mut [Value], stack: &mut Vec<Value>, index: usize) -> Result<(
         .get_mut(index)
         .ok_or_else(|| Error::Invalid("local index".to_owned()))? = pop(stack)?;
     Ok(())
+}
+
+fn branch(instruction: &Instruction, stack: &mut Vec<Value>) -> Result<bool, Error> {
+    Ok(match instruction {
+        Instruction::Goto(_) => true,
+        Instruction::Ifeq(_) => pop(stack)?.int()? == 0,
+        Instruction::Ifne(_) => pop(stack)?.int()? != 0,
+        Instruction::Iflt(_) => pop(stack)?.int()? < 0,
+        Instruction::Ifge(_) => pop(stack)?.int()? >= 0,
+        Instruction::Ifgt(_) => pop(stack)?.int()? > 0,
+        Instruction::Ifle(_) => pop(stack)?.int()? <= 0,
+        Instruction::Ifnull(_) => pop(stack)?.reference()?.is_none(),
+        Instruction::Ifnonnull(_) => pop(stack)?.reference()?.is_some(),
+        Instruction::If_icmpeq(_)
+        | Instruction::If_icmpne(_)
+        | Instruction::If_icmplt(_)
+        | Instruction::If_icmpge(_)
+        | Instruction::If_icmpgt(_)
+        | Instruction::If_icmple(_) => {
+            let right = pop(stack)?.int()?;
+            let left = pop(stack)?.int()?;
+            match instruction {
+                Instruction::If_icmpeq(_) => left == right,
+                Instruction::If_icmpne(_) => left != right,
+                Instruction::If_icmplt(_) => left < right,
+                Instruction::If_icmpge(_) => left >= right,
+                Instruction::If_icmpgt(_) => left > right,
+                _ => left <= right,
+            }
+        }
+        Instruction::If_acmpeq(_) | Instruction::If_acmpne(_) => {
+            let right = pop(stack)?.reference()?;
+            let left = pop(stack)?.reference()?;
+            let same = match (&left, &right) {
+                (None, None) => true,
+                (Some(a), Some(b)) => a.same_object(b),
+                _ => false,
+            };
+            if matches!(instruction, Instruction::If_acmpeq(_)) {
+                same
+            } else {
+                !same
+            }
+        }
+        _ => return Err(Error::Unsupported(format!("bytecode {instruction:?}"))),
+    })
 }
