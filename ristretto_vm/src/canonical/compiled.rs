@@ -60,6 +60,11 @@ impl Program {
     /// # Errors
     /// Rejects unsupported codegen, invalid metadata or excessive frame storage.
     pub fn compile(&self) -> Result<CompiledProgram<'_>, Error> {
+        if self.classes.iter().any(|layout| layout.statics.needed()) {
+            return Err(Error::Unsupported(
+                "native class initialization is not connected".to_owned(),
+            ));
+        }
         let compiler = Compiler::new()?;
         let mut functions = Vec::with_capacity(self.classes.len());
         let mut roots_per_frame = 1;

@@ -23,7 +23,9 @@ returning a successful report or runtime error.
 The compiler protocol can be broader than this consumer. The effective capability
 is the intersection of verifier, canonical admission and compiler support. No
 legacy context, interpreter fallback or payload pointer is linked into generated
-code. Later consumer commits separately connect object, array and static helpers.
+code. Programs containing static storage or any class initializer are rejected before
+code generation, including a fieldless scalar initializer. Later consumer commits
+separately connect object, array and static helpers.
 
 Runnable proof:
 
