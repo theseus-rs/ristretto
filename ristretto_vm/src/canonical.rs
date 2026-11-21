@@ -56,6 +56,9 @@ pub enum Error {
     Classfile(#[from] ristretto_classfile::Error),
     #[error(transparent)]
     Classloader(#[from] ristretto_classloader::Error),
+    #[cfg(feature = "experimental-canonical-jit")]
+    #[error(transparent)]
+    Jit(#[from] ristretto_jit::Error),
 }
 
 type Result<T> = std::result::Result<T, Error>;
