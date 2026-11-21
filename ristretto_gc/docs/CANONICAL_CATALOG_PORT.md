@@ -198,3 +198,12 @@ root effect; any failed owning observation leaves the cursor unchanged. Four
 portable regressions cover scan bounds, removal intent, failed observations and
 foreign/prepared activation rejection. Native/WASI catalog totals are 56/51;
 strict Clippy passes. No callback or scheduler-fairness bound is claimed.
+
+## C09 prerequisite: bounded guarded phase commands
+
+The participant exposes the frozen guarded tracing/phase command set. A failed
+private preparation diagnoses copied preconditions without granting access;
+still-valid requests retry. A queued `FinishEpoch` never rebases onto a newly
+started collection. Three portable tests cover that real supersession, private
+phase cancellation, and invalid/foreign rejection. Native/WASI catalog totals
+are 59/54; strict Clippy passes.
