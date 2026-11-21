@@ -370,6 +370,20 @@ impl CompiledExecution<'_, '_, '_, '_> {
                                 .allocate_array(allocation_kind(&kind), length)
                                 .await?
                         }
+                        AllocationKind::ReferenceArray(index) if arguments.len() == 1 => {
+                            let component = self
+                                .compiled
+                                .program
+                                .reference_component(frame.class, index)?;
+                            let length = int_bits(
+                                *arguments
+                                    .first()
+                                    .ok_or(Error::Boundary("reference array length argument"))?,
+                            );
+                            self.execution
+                                .allocate_reference_array(component, length)
+                                .await?
+                        }
                         _ => return Err(Error::Boundary("compiled allocation arity")),
                     };
                     let value = Value::Reference(Some(root));
@@ -397,6 +411,15 @@ impl CompiledExecution<'_, '_, '_, '_> {
                         .object()?;
                     let value = if request.kind == ArrayAccessKind::Length {
                         Some(self.execution.array_length(&root)?)
+                    } else if request.kind == ArrayAccessKind::ReferenceLoad {
+                        let index = int_bits(
+                            *arguments
+                                .get(1)
+                                .ok_or(Error::Boundary("reference array index argument"))?,
+                        );
+                        Some(Value::Reference(
+                            self.execution.read_reference_array(&root, index).await?,
+                        ))
                     } else {
                         let kind = array_kind(request.kind)?;
                         let index = int_bits(
@@ -431,6 +454,38 @@ impl CompiledExecution<'_, '_, '_, '_> {
                     )
                     .await?;
                     frame.activation.complete_call(bits)?;
+                    tokio::task::yield_now().await;
+                }
+                ExecutionStep::ArrayStore(_) => {
+                    let arguments = frame.activation.call_arguments()?;
+                    if arguments.len() != 3 {
+                        return Err(Error::Boundary("reference array store arity"));
+                    }
+                    let root = frame
+                        .context
+                        .reference(
+                            *arguments
+                                .first()
+                                .ok_or(Error::Boundary("reference array receiver argument"))?,
+                        )?
+                        .object()?;
+                    let index = int_bits(
+                        *arguments
+                            .get(1)
+                            .ok_or(Error::Boundary("reference array index argument"))?,
+                    );
+                    let Value::Reference(value) = frame.context.reference(
+                        *arguments
+                            .get(2)
+                            .ok_or(Error::Boundary("reference array value argument"))?,
+                    )?
+                    else {
+                        return Err(Error::Boundary("reference array store value"));
+                    };
+                    self.execution
+                        .write_reference_array(&root, index, value.as_ref())
+                        .await?;
+                    frame.activation.complete_call(0)?;
                     tokio::task::yield_now().await;
                 }
                 ExecutionStep::Field(request) => {
@@ -548,7 +603,9 @@ fn array_kind(kind: ArrayAccessKind) -> Result<Kind, Error> {
         ArrayAccessKind::ByteLoad | ArrayAccessKind::ByteStore => Kind::Byte,
         ArrayAccessKind::CharLoad | ArrayAccessKind::CharStore => Kind::Char,
         ArrayAccessKind::ShortLoad | ArrayAccessKind::ShortStore => Kind::Short,
-        ArrayAccessKind::Length => return Err(Error::Boundary("unsupported array request kind")),
+        ArrayAccessKind::Length | ArrayAccessKind::ReferenceLoad => {
+            return Err(Error::Boundary("unsupported array request kind"));
+        }
     })
 }
 
