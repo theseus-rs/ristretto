@@ -36,11 +36,36 @@ pub struct CallRequest {
     pub index: u16,
 }
 
+/// Allocation resolved by the embedding with no native frame on the stack.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum AllocationKind {
+    Object(u16),
+}
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AllocationRequest {
+    pub kind: AllocationKind,
+    pub bci: usize,
+}
+/// Instance field access; static storage is not admitted by this slice.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FieldAccess {
+    GetField,
+    PutField,
+}
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct FieldRequest {
+    pub kind: FieldAccess,
+    pub index: u16,
+    pub bci: usize,
+}
+
 /// A bounded native slice either requests a scheduling boundary or completes.
 #[derive(Debug, PartialEq)]
 pub enum ExecutionStep {
     Yielded,
     Call(CallRequest),
+    Allocation(AllocationRequest),
+    Field(FieldRequest),
     Returned(Option<Value>),
 }
 
@@ -182,6 +207,23 @@ impl Activation {
         let [kind, bci, index] = metadata else {
             return Err(InternalError("invalid call metadata".to_owned()));
         };
+        if *kind == 6 {
+            return Ok(ExecutionStep::Allocation(AllocationRequest {
+                kind: AllocationKind::Object(u16::try_from(*index)?),
+                bci: usize::try_from(*bci)?,
+            }));
+        }
+        if matches!(kind, 12 | 13) {
+            return Ok(ExecutionStep::Field(FieldRequest {
+                kind: if *kind == 12 {
+                    FieldAccess::GetField
+                } else {
+                    FieldAccess::PutField
+                },
+                index: u16::try_from(*index)?,
+                bci: usize::try_from(*bci)?,
+            }));
+        }
         let kind = match kind {
             0 => CallKind::Static,
             1 => CallKind::Special,

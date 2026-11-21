@@ -199,7 +199,7 @@ fn ordinary_dispatch_and_unsupported_capabilities_stay_separate() -> Result<()> 
     );
     let mut rejected = class;
     for instruction in [
-        Instruction::New(1),
+        Instruction::Newarray(ristretto_classfile::attributes::ArrayType::Int),
         Instruction::Invokedynamic(1),
         Instruction::Getstatic(1),
         Instruction::Monitorenter,

@@ -15,6 +15,9 @@ use ristretto_classfile::attributes::Instruction;
 #[path = "call_continuation.rs"]
 mod call;
 pub(crate) use call::{CallContinuation, CallTarget};
+#[path = "heap_continuation.rs"]
+mod heap;
+pub(crate) use heap::HeapRequest;
 use std::collections::{BTreeMap, BTreeSet};
 
 struct Point {
@@ -55,6 +58,9 @@ impl Continuation {
             if let Some(target) = CallTarget::from_instruction(instruction) {
                 let (parameters, _) = target.signature(pool)?;
                 call_capacity = call_capacity.max(parameters.len() + target.receiver());
+                calls.insert(pc, builder.create_block());
+            } else if let Some(request) = HeapRequest::from_instruction(instruction) {
+                call_capacity = call_capacity.max(request.capacity(pool)?);
                 calls.insert(pc, builder.create_block());
             }
             for offset in instruction.branch_offsets().filter(|offset| *offset <= 0) {
