@@ -24,6 +24,7 @@ pub(crate) mod canonical_catalog;
 pub(crate) mod canonical_pool;
 
 mod allocation_budget;
+mod canonical_payload;
 mod collector;
 mod config;
 mod error;
@@ -35,7 +36,8 @@ mod private_allocation;
 mod root_guard;
 pub mod sync;
 
-pub use collector::{GarbageCollector, Trace};
+pub use canonical_payload::CanonicalPayload;
+pub use collector::{GarbageCollector, HeapOwner, Trace};
 pub use config::{Configuration, ConfigurationBuilder, Statistics};
 pub use error::{Error, Result};
 pub use finalizer::Finalize;
