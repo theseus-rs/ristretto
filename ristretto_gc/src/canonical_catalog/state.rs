@@ -944,3 +944,51 @@ mod decision;
 #[cfg(all(test, not(target_family = "wasm")))]
 #[path = "decision_models.rs"]
 mod decision_models;
+
+impl<R: Record> Catalog<R> {
+    pub fn begin_abandon(
+        &self,
+        snapshot: Snapshot<R>,
+        cell: Pooled<Cell<R>>,
+    ) -> Option<Preparation<R>> {
+        let expected = cell.state.load()?;
+        if *expected != Membership::Prepared {
+            return None;
+        }
+        let phase = snapshot.phase();
+        let effect = self.effect(cell, expected, Membership::Retired)?;
+        self.begin_prepare(snapshot, phase, Some(effect))
+    }
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "an exact same-catalog cell owns its validated immutable discovery slot"
+    )]
+    pub fn release_retired(&self, cell: &Pooled<Cell<R>>) -> bool {
+        if !Arc::ptr_eq(&cell.owner, &self.owner) || cell.membership() != Some(Membership::Retired)
+        {
+            return false;
+        }
+        let slot = cell.slot();
+        let released = self.slots[slot].compare(Some(cell), None);
+        if released {
+            self.owner.vacancy.offer(slot);
+            self.released_slot.store(slot, Ordering::Relaxed);
+        }
+        released
+    }
+}
+
+impl<R: Record> Catalog<R> {
+    #[cfg(test)]
+    pub fn help_record_at(&self, context: &R::Context, point: usize, stop: impl FnOnce()) {
+        let busy = self.head.load().expect("quiescent record fixture");
+        assert!(matches!(*busy, Control::Busy(_) | Control::Phase(_)));
+        match point {
+            0 => self.finish_at(&busy, context, stop, || {}, || {}, || {}),
+            1 => self.finish_at(&busy, context, || {}, stop, || {}, || {}),
+            2 => self.finish_at(&busy, context, || {}, || {}, stop, || {}),
+            3 => self.finish_at(&busy, context, || {}, || {}, || {}, stop),
+            _ => panic!("invalid record stop point"),
+        }
+    }
+}

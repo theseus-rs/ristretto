@@ -25,7 +25,9 @@ impl Footprint {
         .ok_or(overflow)?;
         let participants = capacities
             .participants()
-            .checked_mul(size_of::<Participant<R>>())
+            .checked_mul(
+                size_of::<Participant<R>>().max(size_of::<Participant<R, super::GuardedCommand>>()),
+            )
             .ok_or(overflow)?;
         Ok(Self {
             backing,
