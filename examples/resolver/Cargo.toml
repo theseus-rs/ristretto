@@ -9,7 +9,7 @@ version.workspace = true
 workspace = true
 
 [dependencies]
-ristretto_resolver = { path = "../../ristretto_resolver" }
+ristretto_resolver = { path = "../../ristretto_resolver", version = "0.35.0" }
 url = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]

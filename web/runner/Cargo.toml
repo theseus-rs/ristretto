@@ -13,8 +13,8 @@ crate-type = ["cdylib", "rlib"]
 workspace = true
 
 [dependencies]
-ristretto_classfile = { path = "../../ristretto_classfile" }
-ristretto_vm = { path = "../../ristretto_vm", default-features = false }
+ristretto_classfile = { path = "../../ristretto_classfile", version = "0.35.0" }
+ristretto_vm = { path = "../../ristretto_vm", version = "0.35.0", default-features = false }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true }
@@ -23,5 +23,5 @@ tokio = { workspace = true }
 wit-bindgen = { version = "0.57.1", default-features = false, features = ["macros", "realloc"] }
 
 [dev-dependencies]
-ristretto_classloader = { path = "../../ristretto_classloader" }
+ristretto_classloader = { path = "../../ristretto_classloader", version = "0.35.0" }
 tempfile = { workspace = true }

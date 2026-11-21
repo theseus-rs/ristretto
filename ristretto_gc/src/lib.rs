@@ -18,6 +18,11 @@
     )
 )]
 
+#[cfg(feature = "experimental-canonical-runtime")]
+pub(crate) mod canonical_catalog;
+#[cfg(feature = "experimental-canonical-runtime")]
+pub(crate) mod canonical_pool;
+
 mod collector;
 mod config;
 mod error;
