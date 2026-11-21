@@ -6,7 +6,10 @@ use super::{
     MethodAccessFlags, Program, Report, Result, Runtime, Value, exact_symbol, help,
 };
 use ristretto_classfile::{BaseType, FieldType};
-use ristretto_jit::{Activation, CallKind, Compiler, ExecutionStep, Function, Value as JitValue};
+use ristretto_jit::{
+    Activation, AllocationKind, CallKind, Compiler, ExecutionStep, FieldAccess, Function,
+    Value as JitValue,
+};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::num::NonZeroU32;
@@ -350,6 +353,72 @@ impl CompiledExecution<'_, '_, '_, '_> {
                     self.execution.report.compiled_backedges += 1;
                     tokio::task::yield_now().await;
                 }
+                ExecutionStep::Allocation(request) => {
+                    if !frame.activation.call_arguments()?.is_empty() {
+                        return Err(Error::Boundary("compiled allocation arity"));
+                    }
+                    let AllocationKind::Object(index) = request.kind;
+                    let class = self.compiled.program.class_constant(frame.class, index)?;
+                    let value =
+                        Value::Reference(Some(self.execution.allocate_object(class).await?));
+                    let bits = result_bits(
+                        &frame.context,
+                        Some(&value),
+                        self.execution.limits.request_polls,
+                    )
+                    .await?;
+                    frame.activation.complete_call(bits)?;
+                    tokio::task::yield_now().await;
+                }
+                ExecutionStep::Field(request) => {
+                    let arguments = frame.activation.call_arguments()?;
+                    let expected = if request.kind == FieldAccess::GetField {
+                        1
+                    } else {
+                        2
+                    };
+                    if arguments.len() != expected {
+                        return Err(Error::Boundary("compiled field arity"));
+                    }
+                    let root = frame
+                        .context
+                        .reference(
+                            *arguments
+                                .first()
+                                .ok_or(Error::Boundary("compiled field receiver"))?,
+                        )?
+                        .object()?;
+                    let value = match request.kind {
+                        FieldAccess::GetField => Some(
+                            self.execution
+                                .read_field(frame.class, request.index, &root)
+                                .await?,
+                        ),
+                        FieldAccess::PutField => {
+                            let (_, field) =
+                                self.compiled.program.field(frame.class, request.index)?;
+                            let bits = *arguments
+                                .get(1)
+                                .ok_or(Error::Boundary("compiled field value"))?;
+                            let value = match field {
+                                super::Field::Int(_) => Value::Int(int_bits(bits)),
+                                super::Field::Reference { .. } => frame.context.reference(bits)?,
+                            };
+                            self.execution
+                                .write_field(frame.class, request.index, &root, value)
+                                .await?;
+                            None
+                        }
+                    };
+                    let bits = result_bits(
+                        &frame.context,
+                        value.as_ref(),
+                        self.execution.limits.request_polls,
+                    )
+                    .await?;
+                    frame.activation.complete_call(bits)?;
+                    tokio::task::yield_now().await;
+                }
                 ExecutionStep::Call(request) => {
                     let bits = frame.activation.call_arguments()?;
                     match self
@@ -435,3 +504,7 @@ async fn result_bits(context: &Context, value: Option<&Value>, attempts: usize) 
         },
     })
 }
+
+#[cfg(test)]
+#[path = "compiled_tests.rs"]
+mod tests;
