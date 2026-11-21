@@ -72,8 +72,13 @@ impl Layout {
             };
             fields.insert((name.to_owned(), descriptor.to_owned()), storage);
         }
+        let class = Class::from(None, file)?;
+        statics.initializer = class
+            .methods()
+            .into_iter()
+            .find(|method| method.name() == "<clinit>");
         Ok(Self {
-            class: Class::from(None, file)?,
+            class,
             fields,
             references,
             statics,

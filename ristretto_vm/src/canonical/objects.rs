@@ -167,7 +167,7 @@ impl Program {
     )]
     pub(super) fn admit_object_method(&self, class: usize, method: &Method) -> Result<()> {
         use Instruction as I;
-        if matches!(method.name(), "<clinit>" | "finalize")
+        if method.name() == "finalize"
             || method.access_flags().intersects(
                 MethodAccessFlags::NATIVE
                     | MethodAccessFlags::ABSTRACT
@@ -177,6 +177,9 @@ impl Program {
             || method.code().is_empty()
         {
             return Err(Error::Unsupported(format!("method {}", method.signature())));
+        }
+        if method.name() == "<clinit>" && (!method.is_static() || method.descriptor() != "()V") {
+            return Err(Error::Unsupported("initializer signature".into()));
         }
         for field in method.parameters().iter().chain(method.return_type()) {
             self.admit_type(field)?;
@@ -204,6 +207,9 @@ impl Program {
                         && matches!(instruction, I::Invokespecial(_))
                     {
                         continue;
+                    }
+                    if name == "<clinit>" {
+                        return Err(Error::Unsupported("explicit initializer call".into()));
                     }
                     let target = self.class_index(&owner)?;
                     let target = self
@@ -365,7 +371,7 @@ pub(super) struct Payload {
     pub(super) integers: [AtomicI32; 8],
 }
 
-// SAFETY: Payload contains only a numeric class ID and eight primitive atomics.
+// SAFETY: Payload contains only numeric class/kind tags and eight primitive atomics.
 // Every managed field is owned exclusively by the catalog, never by this payload.
 #[expect(
     unsafe_code,
@@ -463,8 +469,12 @@ impl Execution<'_, '_, '_> {
             .all(|op| super::integer::admitted(op, pool))
         {
             self.report.calls += 1;
-            let (value, count) =
-                super::integer::run_counted(&method, pool, argument, self.limits.instructions)?;
+            let remaining = self
+                .limits
+                .instructions
+                .checked_sub(self.report.instructions)
+                .ok_or(Error::Limit("instruction"))?;
+            let (value, count) = super::integer::run_counted(&method, pool, argument, remaining)?;
             self.report.instructions += count;
             Ok(Some(Value::Int(value.int()?)))
         } else {
@@ -557,6 +567,9 @@ impl Execution<'_, '_, '_> {
         let mut stack = Vec::with_capacity(method.max_stack());
         let mut pc = 0;
         self.report.calls += 1;
+        if method.name() == "<clinit>" {
+            self.report.class_initializer_calls += 1;
+        }
         loop {
             if self.report.instructions >= self.limits.instructions {
                 return Err(Error::Limit("instruction"));

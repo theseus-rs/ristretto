@@ -182,6 +182,11 @@ impl Program {
         argument: i32,
         limit: usize,
     ) -> Result<ScalarValue> {
+        if self.layout(self.class_index(class)?)?.statics.needed() {
+            return Err(Error::Unsupported(
+                "class initialization requires a heap entry".into(),
+            ));
+        }
         let name = JavaString::from(class);
         let owner = self
             .names
