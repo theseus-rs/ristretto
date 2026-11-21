@@ -11,6 +11,8 @@ use ristretto_classfile::{ConstantPool, FieldType};
 pub(crate) enum HeapRequest {
     New(u16),
     Get(u16),
+    GetStatic(u16),
+    PutStatic(u16),
     Put(u16),
     CheckCast(u16),
 }
@@ -19,6 +21,8 @@ impl HeapRequest {
         Some(match *instruction {
             Instruction::New(i) => Self::New(i),
             Instruction::Getfield(i) => Self::Get(i),
+            Instruction::Getstatic(i) => Self::GetStatic(i),
+            Instruction::Putstatic(i) => Self::PutStatic(i),
             Instruction::Putfield(i) => Self::Put(i),
             Instruction::Checkcast(i) => Self::CheckCast(i),
             _ => return None,
@@ -40,6 +44,14 @@ impl HeapRequest {
                 }
                 Ok(0)
             }
+            Self::GetStatic(index) => {
+                Self::field(pool, index)?;
+                Ok(0)
+            }
+            Self::PutStatic(index) | Self::Get(index) => {
+                Self::field(pool, index)?;
+                Ok(1)
+            }
             Self::CheckCast(index) => {
                 let target = pool.try_get_class(index)?;
                 if target.as_bytes().starts_with(b"[[") {
@@ -52,10 +64,7 @@ impl HeapRequest {
                 }
                 Ok(1)
             }
-            Self::Get(index) => {
-                Self::field(pool, index)?;
-                Ok(1)
-            }
+
             Self::Put(index) => {
                 Self::field(pool, index)?;
                 Ok(2)
@@ -78,6 +87,12 @@ impl HeapRequest {
         ));
         let (tag, index, result) = match self {
             Self::New(index) => (6, index, None),
+            Self::GetStatic(index) => (10, index, Some(Self::field(pool, index)?)),
+            Self::PutStatic(index) => {
+                let bits = argument_bits(builder, stack, &Self::field(pool, index)?)?;
+                builder.ins().stack_store(types::I64, bits, arguments, 0);
+                (11, index, None)
+            }
             Self::CheckCast(index) => {
                 let root = stack.pop_object(builder)?;
                 builder.ins().stack_store(types::I64, root, arguments, 0);
