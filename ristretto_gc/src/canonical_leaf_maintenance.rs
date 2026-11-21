@@ -1,15 +1,15 @@
 //! Incremental policy for the internal conditional-reference-free catalog. One
-//! helper owns one request; root/object/phase lanes rotate without retaining pooled
+//! helper owns one request; root/edge/object/phase lanes rotate without retaining pooled
 //! observations. A call can still execute arbitrary payload Drop or host allocator
 //! work. There is no wall-time bound or public collector selection here.
 use super::LeafRecord;
 use crate::GarbageCollector;
 use crate::canonical_catalog as gc_catalog;
 use gc_catalog::bounded::{
-    CatalogHandle, GuardedCommand, Participant, Progress, RecordKey, RegisterError, RequestError,
-    RootCommand, RootKey,
+    CatalogHandle, EdgeCommand, EdgeKey, GuardedCommand, Participant, Progress, RecordKey,
+    RegisterError, RequestError, RootCommand, RootKey,
 };
-use gc_catalog::{DomainMode, Membership, Phase, RETIREMENT_FLOOR, RootStatus};
+use gc_catalog::{DomainMode, EdgeMembership, Membership, Phase, RETIREMENT_FLOOR, RootStatus};
 
 type Worker = Participant<LeafRecord, GuardedCommand>;
 
@@ -38,7 +38,6 @@ fn scan_slots<T>(
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::canonical_adapter) enum MaintenanceError {
     ConditionalReferences,
-    Edges,
     Register(RegisterError),
     Catalog(RequestError),
     Protocol,
@@ -51,10 +50,12 @@ pub(in crate::canonical_adapter) enum MaintenanceStep {
     Committed,
     ReleasedObjectSlot,
     ReleasedRootSlot,
+    ReleasedEdgeSlot,
 }
 #[derive(Clone, Copy)]
 enum Lane {
     Root,
+    Edge,
     Object,
     Phase,
 }
@@ -64,6 +65,7 @@ enum Pending {
     Command,
     ReleaseRoot(RootKey),
     ReleaseObject(RecordKey),
+    ReleaseEdge(EdgeKey),
 }
 
 pub(in crate::canonical_adapter) struct LeafMaintenance<'gc> {
@@ -72,7 +74,9 @@ pub(in crate::canonical_adapter) struct LeafMaintenance<'gc> {
     collector: &'gc GarbageCollector,
     registry: usize,
     roots: usize,
+    edges: usize,
     root_cursor: usize,
+    edge_cursor: usize,
     object_cursor: usize,
     domain_cursor: usize,
     trace_cursor: usize,
@@ -91,9 +95,6 @@ impl<'gc> LeafMaintenance<'gc> {
         if capacities.reference_slots() != 0 {
             return Err(MaintenanceError::ConditionalReferences);
         }
-        if capacities.edge_slots() != 0 {
-            return Err(MaintenanceError::Edges);
-        }
         let worker = catalog
             .register_record_helper()
             .map_err(MaintenanceError::Register)?;
@@ -102,7 +103,9 @@ impl<'gc> LeafMaintenance<'gc> {
             collector,
             registry: capacities.registry(),
             roots: capacities.root_slots(),
+            edges: capacities.edge_slots(),
             root_cursor: 0,
+            edge_cursor: 0,
             object_cursor: 0,
             domain_cursor: 0,
             trace_cursor: 0,
@@ -121,6 +124,14 @@ impl<'gc> LeafMaintenance<'gc> {
                 if self.roots != 0 {
                     self.root_cursor = (self.root_cursor + 1) % self.roots;
                 }
+                if self.edges == 0 {
+                    Lane::Object
+                } else {
+                    Lane::Edge
+                }
+            }
+            Lane::Edge => {
+                self.edge_cursor = (self.edge_cursor + 1) % self.edges;
                 Lane::Object
             }
             Lane::Object => {
@@ -183,7 +194,7 @@ impl<'gc> LeafMaintenance<'gc> {
     }
 
     /// One request step or a scan of up to eight slots, stopping at the first
-    /// occupied or contended slot.
+    /// occupied or contended slot. A live edge also checks its source.
     /// Pending preserves preparation;
     /// Drop never loops to finish a cycle. Host callbacks remain unbounded.
     pub(in crate::canonical_adapter) fn poll(
@@ -222,13 +233,63 @@ impl<'gc> LeafMaintenance<'gc> {
                 self.finish_lane(true);
                 return release_result(result, MaintenanceStep::ReleasedObjectSlot);
             }
+            Pending::ReleaseEdge(key) => {
+                let result = self.worker.release_retired_edge(key);
+                self.finish_lane(true);
+                return release_result(result, MaintenanceStep::ReleasedEdgeSlot);
+            }
             Pending::None => {}
         }
         match self.lane {
             Lane::Root => self.root(),
+            Lane::Edge => self.edge(),
             Lane::Object => self.object(),
             Lane::Phase => self.phase(),
         }
+    }
+    fn edge(&mut self) -> Result<MaintenanceStep, MaintenanceError> {
+        let (_, observation) = scan_slots(&mut self.edge_cursor, self.edges, |slot| {
+            self.worker.discover_edge(slot)
+        });
+        let edge = match observation {
+            Ok(Some(edge)) => edge,
+            Ok(None) | Err(RequestError::Contended) => {
+                self.finish_lane(true);
+                return Ok(MaintenanceStep::Visited);
+            }
+            Err(error) => {
+                self.finish_lane(false);
+                return Err(MaintenanceError::Catalog(error));
+            }
+        };
+        if edge.state == EdgeMembership::Retired {
+            self.pending = Pending::ReleaseEdge(edge.key);
+            return Ok(MaintenanceStep::Pending);
+        }
+        let command = if edge.removal_requested {
+            EdgeCommand::RemoveRequested(edge.key)
+        } else if let EdgeMembership::Live(state) = edge.state {
+            // A live source rules out useful cleanup at this observation. If
+            // it retires immediately afterwards, the next sweep sees it. An
+            // uncertain or stale observation still goes through RemoveOrphan,
+            // which revalidates the exact edge and source before any change.
+            if let Ok(Some(source)) = self.worker.discover(state.source.slot)
+                && source.key.identity() == state.source.identity
+                && source.membership != Membership::Retired
+            {
+                self.finish_lane(true);
+                return Ok(MaintenanceStep::Visited);
+            }
+            EdgeCommand::RemoveOrphan(edge.key)
+        } else {
+            self.finish_lane(true);
+            return Ok(MaintenanceStep::Visited);
+        };
+        self.worker
+            .submit_edge(command)
+            .map_err(MaintenanceError::Catalog)?;
+        self.pending = Pending::Command;
+        Ok(MaintenanceStep::Pending)
     }
     fn root(&mut self) -> Result<MaintenanceStep, MaintenanceError> {
         if self.roots == 0 {
