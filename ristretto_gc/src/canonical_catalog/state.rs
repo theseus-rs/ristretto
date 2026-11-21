@@ -9,13 +9,14 @@
 )]
 #![expect(
     clippy::expect_used,
-    reason = "fresh validated control backing has a free initial slot"
+    reason = "validated backing and private creation stages retain each required owner"
 )]
 use super::{
     Arc, AtomicU8, AtomicU64, AtomicUsize, Contended, Domain, DomainMode, OptionalLink, Ordering,
-    Phase, Pool, Pooled, PooledLink, TraceState, allocate,
+    Phase, Pool, Pooled, PooledLink, TraceState, allocate, share,
 };
 use crate::canonical_pool as pool;
+use pool::AllocationError;
 const UNDECIDED: u8 = 0;
 const COMMIT: u8 = 1;
 const CANCEL: u8 = 2;
@@ -172,6 +173,172 @@ impl<R: Record> Control<R> {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PrepareError {
+    InvalidSlot,
+    InvalidAddress,
+    Occupied,
+    Contended,
+    IdentityExhausted,
+    BackingUnavailable,
+}
+
+/// Rejected creation retains the exact caller-owned record for retry or cancellation.
+pub struct RecordFailure<R> {
+    pub error: PrepareError,
+    pub record: R,
+}
+impl<R> std::fmt::Debug for RecordFailure<R> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("RecordFailure")
+            .field("error", &self.error)
+            .finish_non_exhaustive()
+    }
+}
+
+/// Private cell creation. One selected backing slot is tried per poll. A cell
+/// becomes discoverable only after both backing allocations have succeeded.
+pub struct Creation<R: Record = ()> {
+    record: Option<R>,
+    owner: Arc<Owner>,
+    slot: usize,
+    scan_slot: usize,
+    misses: usize,
+    nominated: bool,
+    address: usize,
+    identity: u64,
+    membership: Option<Pooled<Membership>>,
+    private_cell: Option<Cell<R>>,
+    cell: Option<Pooled<Cell<R>>>,
+    finished: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CreationError {
+    Foreign,
+    Finished,
+    Occupied,
+    GenerationExhausted,
+    FixedLocation,
+}
+
+pub(crate) fn following_slot(slot: usize, capacity: usize) -> usize {
+    if slot + 1 == capacity { 0 } else { slot + 1 }
+}
+
+impl<R: Record> Creation<R> {
+    pub fn poll(&mut self, catalog: &Catalog<R>) -> Result<Option<Pooled<Cell<R>>>, CreationError> {
+        self.poll_at(catalog, false)
+    }
+    /// Retain this exact private record after a lost announcement and select the
+    /// next discovery slot. Full arrays remain pending; no scan or collection is
+    /// performed. A successful announcement permanently seals the location.
+    pub fn poll_rotating(
+        &mut self,
+        catalog: &Catalog<R>,
+    ) -> Result<Option<Pooled<Cell<R>>>, CreationError> {
+        self.poll_at(catalog, true)
+    }
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "preflight validates the slot and rotation remains inside catalog capacity"
+    )]
+    fn poll_at(
+        &mut self,
+        catalog: &Catalog<R>,
+        rotate: bool,
+    ) -> Result<Option<Pooled<Cell<R>>>, CreationError> {
+        if !Arc::ptr_eq(&self.owner, &catalog.owner) {
+            return Err(CreationError::Foreign);
+        }
+        if self.finished {
+            return Err(CreationError::Finished);
+        }
+        if self.cell.is_none() && self.private_cell.is_none() && self.membership.is_none() {
+            match catalog
+                .memberships
+                .try_allocate_status(Membership::Prepared)
+            {
+                Ok(value) => self.membership = Some(value),
+                Err(failure) if failure.error == AllocationError::GenerationExhausted => {
+                    return Err(CreationError::GenerationExhausted);
+                }
+                Err(_) => {}
+            }
+            return Ok(None);
+        }
+        if self.cell.is_none() {
+            let cell = self.private_cell.take().unwrap_or_else(|| Cell {
+                record: self.record.take().expect("private prepared record"),
+                owner: self.owner.clone(),
+                identity: self.identity,
+                address: self.address,
+                slot: AtomicUsize::new(self.slot),
+                abandon_requested: AtomicU8::new(0),
+                state: PooledLink::new(
+                    catalog.memberships.clone(),
+                    self.membership.take().expect("prepared membership"),
+                ),
+            });
+            match catalog.cells.try_allocate_status(cell) {
+                Ok(cell) => self.cell = Some(cell),
+                // Retain the exact private owning link after a selected-slot
+                // miss; rebuilding membership here can repeat fragmented misses.
+                Err(failure) => {
+                    self.private_cell = Some(failure.value);
+                    if failure.error == AllocationError::GenerationExhausted {
+                        return Err(CreationError::GenerationExhausted);
+                    }
+                }
+            }
+            return Ok(None);
+        }
+        let cell = self.cell.as_ref().expect("prepared cell");
+        let Some(proposed) = share(cell) else {
+            return Ok(None);
+        };
+        if (!rotate || !catalog.owner.vacancy.defer(self.slot, self.identity))
+            && catalog.slots[self.slot].compare(None, Some(proposed))
+        {
+            if self.nominated {
+                catalog.owner.vacancy.finish(self.identity);
+                self.nominated = false;
+            }
+            self.finished = true;
+            Ok(self.cell.take())
+        } else if rotate {
+            // Failed CAS never exposed this value. The temporary proposal owner
+            // has been dropped and only this private Creation retains the cell.
+            if self.nominated {
+                self.owner.vacancy.missed(self.identity, self.slot);
+            }
+            self.misses = self.misses.wrapping_add(1);
+            if self.misses.is_multiple_of(super::vacancy::PROBE_INTERVAL)
+                && catalog.owner.vacancy.nominate(self.identity)
+            {
+                self.nominated = true;
+            }
+            self.slot =
+                catalog.next_slot_after_conflict(self.slot, &mut self.scan_slot, self.identity);
+            cell.slot.store(self.slot, Ordering::Relaxed);
+            Ok(None)
+        } else {
+            self.finished = true;
+            self.cell = None;
+            Err(CreationError::Occupied)
+        }
+    }
+}
+
+impl<R: Record> Drop for Creation<R> {
+    fn drop(&mut self) {
+        if self.nominated {
+            self.owner.vacancy.finish(self.identity);
+        }
+    }
+}
+
 pub struct Catalog<R: Record = ()> {
     owner: Arc<Owner>,
     head: PooledLink<Control<R>>,
@@ -256,6 +423,86 @@ impl<R: Record> Catalog<R> {
     }
 }
 
+impl<R: Record> Catalog<R> {
+    pub fn begin_create_with(
+        &self,
+        slot: usize,
+        address: usize,
+        record: R,
+    ) -> Result<Creation<R>, RecordFailure<R>> {
+        self.prepare_private_creation(slot, address, record, true)
+    }
+    pub(crate) fn prepare_private_creation(
+        &self,
+        slot: usize,
+        address: usize,
+        record: R,
+        require_vacancy: bool,
+    ) -> Result<Creation<R>, RecordFailure<R>> {
+        let preflight = || {
+            let entry = self.slots.get(slot).ok_or(PrepareError::InvalidSlot)?;
+            if address == 0 {
+                return Err(PrepareError::InvalidAddress);
+            }
+            if require_vacancy && entry.load().map_err(|_| PrepareError::Contended)?.is_some() {
+                return Err(PrepareError::Occupied);
+            }
+            let identity = self.next_identity.load(Ordering::Relaxed);
+            let next = identity
+                .checked_add(1)
+                .ok_or(PrepareError::IdentityExhausted)?;
+            self.next_identity
+                .compare_exchange(identity, next, Ordering::Relaxed, Ordering::Relaxed)
+                .map_err(|_| PrepareError::Contended)?;
+            Ok(identity)
+        };
+        let identity = match preflight() {
+            Ok(identity) => identity,
+            Err(error) => return Err(RecordFailure { error, record }),
+        };
+        Ok(Creation {
+            record: Some(record),
+            owner: self.owner.clone(),
+            slot,
+            scan_slot: slot,
+            misses: 0,
+            nominated: false,
+            address,
+            identity,
+            membership: None,
+            private_cell: None,
+            cell: None,
+            finished: false,
+        })
+    }
+    pub(crate) fn object_slot_occupied(&self, slot: usize) -> bool {
+        self.slots.get(slot).is_some_and(OptionalLink::is_occupied)
+    }
+    pub(crate) fn next_slot_after_conflict(
+        &self,
+        slot: usize,
+        scan: &mut usize,
+        identity: u64,
+    ) -> usize {
+        if slot == *scan {
+            let hint = self
+                .owner
+                .vacancy
+                .slot_for(identity)
+                .unwrap_or_else(|| self.released_slot.load(Ordering::Relaxed));
+            if hint < self.capacity() && hint != slot {
+                return hint;
+            }
+        }
+        *scan = following_slot(*scan, self.capacity());
+        *scan
+    }
+}
+
 #[cfg(test)]
 #[path = "backing_tests.rs"]
 mod backing_tests;
+
+#[cfg(test)]
+#[path = "creation_tests.rs"]
+mod creation_tests;
