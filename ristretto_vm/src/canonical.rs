@@ -1,5 +1,7 @@
 //! Explicit admission and execution of a closed set of restricted Java classes.
 
+mod integer;
+
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classfile::verifiers::bytecode::{VerifierConfig, verify_class};
 use ristretto_classfile::verifiers::context::{MemberAccess, VerificationContext};
@@ -16,6 +18,8 @@ pub enum Error {
     Unsupported(String),
     #[error("invalid canonical Java execution: {0}")]
     Invalid(String),
+    #[error("canonical Java {0} limit reached")]
+    Limit(&'static str),
     #[error(transparent)]
     Classfile(#[from] ristretto_classfile::Error),
     #[error(transparent)]
@@ -98,8 +102,11 @@ impl Program {
         }
         if method.is_static()
             && method.descriptor() == "(I)I"
-            && let [value, I::Ireturn] = method.code().as_slice()
-            && scalar(value, 0).is_some()
+            && !method.code().is_empty()
+            && method
+                .code()
+                .iter()
+                .all(|instruction| integer::Operation::decode(instruction).is_some())
         {
             return Ok(());
         }
@@ -111,6 +118,20 @@ impl Program {
     /// # Errors
     /// Reports a missing or inaccessible entry.
     pub fn run_scalar(&self, class: &str, method: &str, argument: i32) -> Result<i32> {
+        self.run_scalar_with_limit(class, method, argument, 1_000_000)
+    }
+
+    /// Execute a scalar entry with an explicit maximum number of interpreted instructions.
+    ///
+    /// # Errors
+    /// Reports entry resolution or execution errors and instruction-budget exhaustion.
+    pub fn run_scalar_with_limit(
+        &self,
+        class: &str,
+        method: &str,
+        argument: i32,
+        limit: usize,
+    ) -> Result<i32> {
         let name = JavaString::from(class);
         let owner = self
             .classes
@@ -120,11 +141,7 @@ impl Program {
         if !entry.access_flags().contains(MethodAccessFlags::PUBLIC) {
             return Err(Error::Unsupported(entry.signature()));
         }
-        entry
-            .code()
-            .first()
-            .and_then(|value| scalar(value, argument))
-            .ok_or_else(|| Error::Invalid(entry.signature()))
+        integer::run(&entry, argument, limit)
     }
 
     fn known(&self, name: &JavaStr) -> VerificationResult<()> {
@@ -134,23 +151,6 @@ impl Program {
             Err(VerifyError::VerifyError(format!("unresolved class {name}")))
         }
     }
-}
-
-fn scalar(instruction: &Instruction, argument: i32) -> Option<i32> {
-    use Instruction as I;
-    Some(match instruction {
-        I::Iload_0 => argument,
-        I::Iconst_m1 => -1,
-        I::Iconst_0 => 0,
-        I::Iconst_1 => 1,
-        I::Iconst_2 => 2,
-        I::Iconst_3 => 3,
-        I::Iconst_4 => 4,
-        I::Iconst_5 => 5,
-        I::Bipush(value) => i32::from(*value),
-        I::Sipush(value) => i32::from(*value),
-        _ => return None,
-    })
 }
 
 impl VerificationContext for Program {
