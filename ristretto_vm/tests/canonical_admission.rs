@@ -116,3 +116,33 @@ fn typed_scalar_results_and_category_two_locals() -> Result<(), Box<dyn std::err
     }
     Ok(())
 }
+
+#[test]
+fn reject_unsupported_instance_layouts_before_execution() -> Result<(), Box<dyn std::error::Error>>
+{
+    use ristretto_classfile::FieldAccessFlags;
+    let bytes = include_bytes!("fixtures/canonical/CanonicalIntLayout.class");
+    let file = ClassFile::from_bytes(bytes)?;
+    let program = Program::from_classfiles([file.clone()])?;
+    assert_eq!(17, program.run_scalar("CanonicalIntLayout", "scalar", 17)?);
+    for flag in [
+        FieldAccessFlags::STATIC,
+        FieldAccessFlags::FINAL,
+        FieldAccessFlags::VOLATILE,
+    ] {
+        let mut modified = file.clone();
+        modified
+            .fields
+            .first_mut()
+            .ok_or("missing field")?
+            .access_flags
+            .insert(flag);
+        assert!(Program::from_classfiles([modified]).is_err());
+    }
+    let mut ninth = file;
+    let mut field = ninth.fields.first().ok_or("missing field")?.clone();
+    field.name_index = ninth.constant_pool.add_utf8("ninth")?;
+    ninth.fields.push(field);
+    assert!(Program::from_classfiles([ninth]).is_err());
+    Ok(())
+}
