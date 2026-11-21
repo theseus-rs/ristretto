@@ -8,12 +8,16 @@ use crate::canonical_catalog as gc_catalog;
 use crate::{GarbageCollector, Trace};
 use gc_catalog::bounded::{
     BoundedCatalog, Budget, Capacities, CatalogHandle, ConfigError, EdgeCommand, EdgeHandle,
-    EdgeObservation, Footprint, GuardedCommand, Participant, Progress, RegisterError, RequestError,
-    RootHandle,
+    EdgeKey, EdgeObservation, Footprint, GuardedCommand, Participant, Progress, RegisterError,
+    RequestError, RootHandle,
 };
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::sync::Arc;
+
+#[path = "canonical_graph_access.rs"]
+mod access;
+pub(in crate::canonical_adapter) use access::GraphWrite;
 
 type Worker = Participant<LeafRecord, GuardedCommand>;
 const MAX_DEGREE: usize = 8;
@@ -80,7 +84,7 @@ impl GraphFootprint {
             .checked_add(backing)
             .and_then(|n| n.checked_sub(size_of::<RootHandle<LeafRecord>>()))
             .ok_or(GraphError::Config(ConfigError::CapacityOverflow))?;
-        let request = size_of::<GraphAllocation<'_, '_, ()>>();
+        let request = size_of::<GraphAllocation<'_, '_, ()>>().max(size_of::<GraphWrite<'_, '_>>());
         let mutator = size_of::<GraphMutator<'_>>()
             .checked_sub(size_of::<Worker>())
             .and_then(|v| v.checked_add(request))
