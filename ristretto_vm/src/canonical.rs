@@ -55,6 +55,9 @@ pub enum Error {
     Classfile(#[from] ristretto_classfile::Error),
     #[error(transparent)]
     Classloader(#[from] ristretto_classloader::Error),
+    #[cfg(feature = "experimental-canonical-jit")]
+    #[error(transparent)]
+    Jit(#[from] ristretto_jit::Error),
 }
 
 /// Closed set of admitted classfiles. Each class directly extends Object.
