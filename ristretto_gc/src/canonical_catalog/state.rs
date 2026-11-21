@@ -173,6 +173,157 @@ impl<R: Record> Control<R> {
     }
 }
 
+pub struct Snapshot<R: Record = ()> {
+    owner: Arc<Owner>,
+    head: Pooled<Control<R>>,
+}
+impl<R: Record> Snapshot<R> {
+    pub fn phase(&self) -> Phase {
+        self.head.phase()
+    }
+}
+pub struct Attempt<R: Record = ()> {
+    owner: Arc<Owner>,
+    expected: Pooled<Control<R>>,
+    busy: Pooled<Control<R>>,
+}
+
+/// Private, resumable backing preparation. Dropping this value cancels only the
+/// private proposal; no controller or membership effect has been installed.
+pub struct Preparation<R: Record = ()> {
+    owner: Arc<Owner>,
+    expected: Option<Pooled<Control<R>>>,
+    committed_phase: Phase,
+    cancelled_phase: Phase,
+    effect: Option<Effect<R>>,
+
+    successor: Option<Pooled<Control<R>>>,
+    operation: Option<Operation<R>>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PreparationError {
+    Foreign,
+    Finished,
+    GenerationExhausted,
+}
+
+impl<R: Record> Preparation<R> {
+    /// At most one selected-slot allocation attempt. Partial successes remain
+    /// owned here across polls, so a later miss cannot repeatedly erase them.
+    pub fn poll(&mut self, catalog: &Catalog<R>) -> Result<Option<Attempt<R>>, PreparationError> {
+        if !Arc::ptr_eq(&self.owner, &catalog.owner) {
+            return Err(PreparationError::Foreign);
+        }
+        if self.expected.is_none() {
+            return Err(PreparationError::Finished);
+        }
+        if self.successor.is_none() && self.operation.is_none() {
+            let outcome = PhaseOperation {
+                committed: self.committed_phase,
+                cancelled: self.cancelled_phase,
+                decision: AtomicU8::new(UNDECIDED),
+            };
+            let successor = match catalog
+                .controls
+                .try_allocate_status(Control::Phase(outcome))
+            {
+                Ok(value) => value,
+                Err(failure) if failure.error == AllocationError::GenerationExhausted => {
+                    return Err(PreparationError::GenerationExhausted);
+                }
+                Err(_) => return Ok(None),
+            };
+            if self.effect.is_none() {
+                return Ok(Some(Attempt {
+                    owner: self.owner.clone(),
+                    expected: self.expected.take().expect("unconsumed phase preparation"),
+                    busy: successor,
+                }));
+            }
+            self.successor = Some(successor);
+            return Ok(None);
+        }
+        let operation = self.operation.take().unwrap_or_else(|| Operation {
+            effect: self.effect.take(),
+
+            successor: self.successor.take().expect("prepared phase outcomes"),
+            decision: AtomicU8::new(UNDECIDED),
+        });
+        match catalog
+            .controls
+            .try_allocate_status(Control::Busy(operation))
+        {
+            Ok(busy) => Ok(Some(Attempt {
+                owner: self.owner.clone(),
+                expected: self.expected.take().expect("unconsumed preparation"),
+                busy,
+            })),
+            Err(failure) => {
+                let Control::Busy(operation) = failure.value else {
+                    unreachable!("allocation returned a different proposal")
+                };
+                self.operation = Some(operation);
+                if failure.error == AllocationError::GenerationExhausted {
+                    Err(PreparationError::GenerationExhausted)
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
+}
+impl<R: Record> Attempt<R> {
+    pub(crate) fn is_phase_only(&self) -> bool {
+        matches!(*self.busy, Control::Phase(_))
+    }
+    #[cfg(test)]
+    fn operation(&self) -> &Operation<R> {
+        let Control::Busy(operation) = &*self.busy else {
+            unreachable!()
+        };
+        operation
+    }
+    fn decision(&self) -> &AtomicU8 {
+        match &*self.busy {
+            Control::Busy(operation) => &operation.decision,
+            Control::Phase(operation) => &operation.decision,
+            Control::Stable(_) => unreachable!("stable proposal"),
+        }
+    }
+    fn completed(&self) -> u8 {
+        match &*self.busy {
+            Control::Busy(operation) => operation.outcome().decision.load(Ordering::Acquire),
+            Control::Phase(operation) => operation.decision.load(Ordering::Acquire),
+            Control::Stable(_) => unreachable!("stable proposal"),
+        }
+    }
+    /// The immutable decision is shared by all helpers. Cancellation does not
+    /// release an already installed controller; a subsequent helper does that.
+    pub fn cancel(&self) -> bool {
+        match self.decision().compare_exchange(
+            UNDECIDED,
+            CANCEL,
+            Ordering::AcqRel,
+            Ordering::Acquire,
+        ) {
+            Ok(_) => true,
+            Err(value) => value == CANCEL,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Outcome {
+    Committed,
+    Cancelled,
+    /// This exact request may still commit. Retain and poll it, or cancel it;
+    /// preparing a replacement here can lose the original completion result.
+    Pending,
+    /// The expected controller was superseded without installing this request.
+    Retry,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PrepareError {
     InvalidSlot,
@@ -506,3 +657,72 @@ mod backing_tests;
 #[cfg(test)]
 #[path = "creation_tests.rs"]
 mod creation_tests;
+
+impl<R: Record> Catalog<R> {
+    fn begin_prepare(
+        &self,
+        snapshot: Snapshot<R>,
+        mut phase: Phase,
+        effect: Option<Effect<R>>,
+    ) -> Option<Preparation<R>> {
+        if !Arc::ptr_eq(&snapshot.owner, &self.owner) {
+            return None;
+        }
+        let mut cancelled = snapshot.phase();
+        cancelled.revision = cancelled.revision.checked_add(1)?;
+        phase.revision = cancelled.revision;
+        Some(Preparation {
+            owner: snapshot.owner,
+            expected: Some(snapshot.head),
+            committed_phase: phase,
+            cancelled_phase: cancelled,
+            effect,
+
+            successor: None,
+            operation: None,
+        })
+    }
+    fn prepare_now(&self, mut preparation: Preparation<R>) -> Option<Attempt<R>> {
+        for _ in 0..24 {
+            match preparation.poll(self) {
+                Ok(Some(attempt)) => return Some(attempt),
+                Ok(None) => {}
+                Err(PreparationError::GenerationExhausted) => return None,
+                Err(_) => unreachable!("same unfinished preparation"),
+            }
+        }
+        None
+    }
+    fn effect(
+        &self,
+        cell: Pooled<Cell<R>>,
+        expected: Pooled<Membership>,
+        proposed: Membership,
+    ) -> Option<Effect<R>> {
+        if !Arc::ptr_eq(&cell.owner, &self.owner) {
+            return None;
+        }
+        Some(Effect {
+            cell,
+            expected,
+            proposed: allocate(&self.memberships, proposed)?,
+        })
+    }
+    pub fn begin_publish(
+        &self,
+        snapshot: Snapshot<R>,
+        cell: Pooled<Cell<R>>,
+    ) -> Option<Preparation<R>> {
+        let expected = cell.state.load()?;
+        if *expected != Membership::Prepared {
+            return None;
+        }
+        let (marks, phase) = TraceState::publication(snapshot.phase()).ok()?;
+        let effect = self.effect(cell, expected, Membership::Tracing(marks))?;
+        self.begin_prepare(snapshot, phase, Some(effect))
+    }
+}
+
+#[cfg(test)]
+#[path = "preparation_tests.rs"]
+mod preparation_tests;
