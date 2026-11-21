@@ -2,8 +2,8 @@
 mod activation;
 pub(crate) use activation::ContinuationLayout;
 pub use activation::{
-    Activation, AllocationKind, AllocationRequest, ArrayAccessKind, ArrayAccessRequest, CallKind,
-    CallRequest, ExecutionStep, FieldAccess, FieldRequest,
+    Activation, AllocationKind, AllocationRequest, ArrayAccessKind, ArrayAccessRequest,
+    ArrayStoreRequest, CallKind, CallRequest, ExecutionStep, FieldAccess, FieldRequest,
 };
 
 use crate::Error::InternalError;

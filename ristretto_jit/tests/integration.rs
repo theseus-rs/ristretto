@@ -88,3 +88,7 @@ mod numeric_constants;
 #[cfg(feature = "experimental-reference-dispatch")]
 #[path = "integration/array_requests.rs"]
 mod array_requests;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/reference_array_requests.rs"]
+mod reference_array_requests;
