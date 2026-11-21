@@ -189,7 +189,13 @@ impl Compiler {
 
         let constant_pool = &class_file.constant_pool;
         let method_descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
-        let (_, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
+        let (parameter_types, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
+        let argument_types = std::iter::once(crate::jit_value::PTR)
+            .take(usize::from(
+                !method.access_flags.contains(MethodAccessFlags::STATIC),
+            ))
+            .chain(parameter_types.iter().map(Self::argument_tag))
+            .collect();
         let is_static = method.access_flags.contains(MethodAccessFlags::STATIC);
         let mut jit_module = self.jit_module(symbols);
         let class_name = class_file.class_name()?;
@@ -307,7 +313,7 @@ impl Compiler {
         let function = unsafe {
             let function: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8) =
                 mem::transmute(code);
-            Function::with_module(function, jit_module)
+            Function::with_module(function, jit_module, argument_types)
         };
         Ok(function)
     }
@@ -500,6 +506,17 @@ impl Compiler {
         }
 
         Ok(LocalVariables::new())
+    }
+
+    /// The native ABI uses one tagged cell per argument, including wide JVM values.
+    fn argument_tag(field_type: &FieldType) -> i8 {
+        match field_type {
+            FieldType::Object(_) | FieldType::Array(_) => crate::jit_value::PTR,
+            FieldType::Base(BaseType::Long) => crate::jit_value::I64,
+            FieldType::Base(BaseType::Float) => crate::jit_value::F32,
+            FieldType::Base(BaseType::Double) => crate::jit_value::F64,
+            FieldType::Base(_) => crate::jit_value::I32,
+        }
     }
 
     /// Creates a new native type from the given field type.
