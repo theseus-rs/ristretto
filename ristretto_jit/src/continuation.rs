@@ -1,9 +1,11 @@
 //! Spill typed scalar state only at taken backward edges; resume at the destination.
 //! No native frame remains on the stack while the activation is suspended.
+use super::frame_roots::FrameRoots;
 use crate::Error::{InternalError, InvalidBlockAddress};
 use crate::Result;
 use crate::function::ContinuationLayout;
 use crate::local_variables::LocalVariables;
+use crate::runtime_helpers::RuntimeHelpers;
 use ahash::AHashMap;
 use cranelift::codegen::ir::MemFlagsData;
 use cranelift::prelude::*;
@@ -15,6 +17,7 @@ struct Point {
     edge: Block,
     restore: Block,
     operands: Vec<Type>,
+    reference_operands: Vec<usize>,
 }
 
 pub(crate) struct Continuation {
@@ -31,6 +34,8 @@ impl Continuation {
         instructions: &[Instruction],
         locals: &LocalVariables,
         max_stack: u16,
+        references: &[Value],
+        requires_context: bool,
     ) -> Result<Self> {
         let mut addresses = BTreeSet::new();
         for (pc, instruction) in Instruction::with_offsets(instructions) {
@@ -59,6 +64,12 @@ impl Continuation {
                 .iter()
                 .map(|value| builder.func.dfg.value_type(*value))
                 .collect();
+            let reference_operands = builder
+                .block_params(target)
+                .iter()
+                .enumerate()
+                .filter_map(|(index, value)| references.contains(value).then_some(index))
+                .collect();
             let edge = builder.create_block();
             let restore = builder.create_block();
             for kind in &operands {
@@ -71,6 +82,7 @@ impl Continuation {
                     edge,
                     restore,
                     operands,
+                    reference_operands,
                 },
             );
         }
@@ -91,6 +103,7 @@ impl Continuation {
             layout: ContinuationLayout {
                 words,
                 instructions: instructions.len(),
+                requires_context,
             },
         })
     }
@@ -192,7 +205,15 @@ impl Continuation {
     }
 
     /// Emit one spill point per selected backward destination. SSA supplies locals.
-    pub(super) fn finish(&self, builder: &mut FunctionBuilder, state: Value) -> Result<()> {
+    pub(super) fn finish(
+        &self,
+        builder: &mut FunctionBuilder,
+        state: Value,
+        locals: &LocalVariables,
+        mut frame_roots: Option<&mut FrameRoots>,
+        helpers: &RuntimeHelpers,
+        context: Value,
+    ) -> Result<()> {
         for (&address, point) in &self.points {
             builder.switch_to_block(point.edge);
             let remaining = builder.use_var(self.remaining);
@@ -211,6 +232,19 @@ impl Continuation {
                 .ins()
                 .brif(remaining, point.target, &arguments, spill, &[]);
             builder.switch_to_block(spill);
+            if let Some(roots) = &mut frame_roots {
+                let references = point
+                    .reference_operands
+                    .iter()
+                    .map(|index| {
+                        operands.get(*index).copied().ok_or_else(|| {
+                            InternalError("missing continuation reference operand".to_owned())
+                        })
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                // The destination live set is authoritative while suspended.
+                roots.publish(builder, locals, references, helpers, context, address)?;
+            }
             for (index, &(variable, _)) in self.locals.iter().enumerate() {
                 let value = builder.use_var(variable);
                 builder.ins().store(

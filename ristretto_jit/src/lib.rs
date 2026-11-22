@@ -161,3 +161,6 @@ pub use value::Value;
     target_os = "solaris"
 ))]
 pub use wasm_compiler::Compiler;
+
+/// Maximum reference cells published by one experimental generated frame.
+pub const FRAME_ROOT_CAPACITY: usize = 4096;

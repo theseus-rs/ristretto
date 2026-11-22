@@ -68,3 +68,7 @@ mod instructions {
 #[cfg(feature = "experimental-reference-dispatch")]
 #[path = "integration/continuation.rs"]
 mod continuation;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/frame_roots.rs"]
+mod frame_roots;

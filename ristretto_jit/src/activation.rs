@@ -7,6 +7,7 @@ use std::num::NonZeroU32;
 pub(crate) struct ContinuationLayout {
     pub words: usize,
     pub instructions: usize,
+    pub requires_context: bool,
 }
 
 impl ContinuationLayout {
@@ -23,7 +24,8 @@ pub enum ExecutionStep {
 
 /// Owns generated code, arguments and spilled scalar locals/operands.
 /// Dropping the activation cancels it without re-entering generated code.
-/// This first capability slice admits no references or runtime helper operations.
+/// Reference identities are opaque tokens. The embedding must keep the same owning
+/// frame context alive across all suspensions, returns and cancellation.
 #[derive(Debug)]
 pub struct Activation {
     function: Function,
@@ -79,18 +81,24 @@ impl Activation {
         self.resume_with_context(backedge_budget, std::ptr::null())
     }
 
-    /// Resume scalar code. The context is reserved for later owning request capabilities;
-    /// it is neither dereferenced nor retained by this capability slice.
+    /// Resume with the owning frame context required by reference-bearing code.
+    /// Its address is used only for this native slice and is forgotten before return.
+    /// The context and its published roots must outlive the activation and result handoff.
     ///
     /// # Errors
     /// Returns the same errors as [`Self::resume`].
     pub fn resume_with_context(
         &mut self,
         backedge_budget: NonZeroU32,
-        _context: *const u8,
+        context: *const u8,
     ) -> Result<ExecutionStep> {
         if self.finished {
             return Err(InternalError("invocation already completed".to_owned()));
+        }
+        if self.function.cooperation_requires_context() && context.is_null() {
+            return Err(InternalError(
+                "continuation requires a runtime context".to_owned(),
+            ));
         }
         self.function.check_native_stack()?;
         *self
@@ -98,6 +106,11 @@ impl Activation {
             .get_mut(1)
             .ok_or_else(|| InternalError("missing continuation budget".to_owned()))? =
             u64::from(backedge_budget.get());
+        *self
+            .state
+            .get_mut(2)
+            .ok_or_else(|| InternalError("missing context cell".to_owned()))? =
+            context as usize as u64;
         self.started = true;
         let mut result = JitValue::new();
         // SAFETY: the owning compiler fixes every private offset into this initialized,
@@ -111,6 +124,10 @@ impl Activation {
                 self.state.as_mut_ptr().cast::<u8>(),
             );
         }
+        *self
+            .state
+            .get_mut(2)
+            .ok_or_else(|| InternalError("missing context cell".to_owned()))? = 0;
         if self.state.first() == Some(&u64::MAX) {
             self.finished = true;
             Ok(ExecutionStep::Returned(result.try_into()?))
