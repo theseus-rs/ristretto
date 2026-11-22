@@ -691,12 +691,25 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         {
             return Err(RequestError::Foreign);
         }
-        // Edge-bearing catalogs must use traversal before acknowledging work.
-        // The next facade slice wires that resumable request; never bypass it.
-        if self.lease.owner.capacities.edge_slots != 0
-            && matches!(command.numeric(), Command::TraceAcknowledge { .. })
-        {
-            return Err(RequestError::Conflict);
+        if self.lease.owner.capacities.edge_slots != 0 {
+            match command.numeric() {
+                Command::TraceAcknowledge {
+                    key,
+                    domain,
+                    ticket,
+                } => {
+                    self.state = RequestState::Edge(Request::Traverse {
+                        key,
+                        domain,
+                        ticket,
+                    });
+                    return Ok(());
+                }
+                Command::Start { mode, .. } if mode != super::DomainMode::Full => {
+                    return Err(RequestError::Conflict);
+                }
+                _ => {}
+            }
         }
         self.state = RequestState::Starting(command);
         Ok(())
