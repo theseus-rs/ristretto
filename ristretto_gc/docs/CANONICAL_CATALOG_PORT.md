@@ -226,3 +226,13 @@ fixed source-degree layout is checked at setup; failed discovery is distinct fro
 an empty slot. Three portable tests cover private cancellation, competing creators,
 foreign rejection, geometry and intent-only drop. Native/WASI catalog totals are
 66/60; strict Clippy passes. Bounded edge-capacity admission remains disabled.
+
+## C10 prerequisite: paired membership and edge effects
+
+A frozen edge operation can retain two tracing effects plus one edge replacement
+under the same immutable decision. Every fallible proposed-owner acquisition
+precedes COMMIT; both memberships and the edge precede the completion certificate.
+Three portable tests force late acquisition failure, cancellation and help after
+the owner stops at its first effect. Native/WASI catalog totals are 69/63; strict
+Clippy passes. The existing decision/order models remain scoped to their actual
+atomic helpers; these additional cases execute the real multi-effect controller.
