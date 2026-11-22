@@ -8,6 +8,8 @@ use cranelift::codegen::ir::{Block, BlockArg, MemFlagsData, Value};
 use cranelift::prelude::{FunctionBuilder, InstBuilder, types};
 use ristretto_classfile::attributes::ExceptionTableEntry;
 
+const CATCH_ALL: u16 = 0;
+
 /// Prepares a throw target for `throw_context.program_counter`.
 ///
 /// Returns `(block, is_new)`. If `is_new` is `true`, the caller is responsible for calling
@@ -74,7 +76,7 @@ fn populate_dispatch_block(
             .blocks
             .get(&handler_pc)
             .ok_or(InvalidBlockAddress(handler_pc))?;
-        if entry.catch_type == 0 {
+        if entry.catch_type == CATCH_ALL {
             let call = function_builder
                 .ins()
                 .call(helpers.take_pending_exception, &[context_pointer]);
@@ -236,14 +238,21 @@ pub(crate) fn emit_null_check(
 /// Emits the body of the shared exception return block: write a `NONE` discriminant to the
 /// return pointer and return from the function. Callers must have switched to `exception_block`
 /// before invoking this.
-pub(crate) fn emit_exception_return(function_builder: &mut FunctionBuilder, return_pointer: Value) {
+pub(crate) fn emit_exception_return(
+    function_builder: &mut FunctionBuilder,
+    return_pointer: Value,
+) -> Result<()> {
     let none_discriminant = function_builder
         .ins()
         .iconst(types::I8, i64::from(jit_value::NONE));
-    function_builder
-        .ins()
-        .store(MemFlagsData::new(), none_discriminant, return_pointer, 0);
+    function_builder.ins().store(
+        MemFlagsData::new(),
+        none_discriminant,
+        return_pointer,
+        i32::try_from(jit_value::JitValue::DISCRIMINANT_OFFSET)?,
+    );
     function_builder.ins().return_(&[]);
+    Ok(())
 }
 
 /// Emit the `athrow` instruction: store the popped reference as the pending exception and

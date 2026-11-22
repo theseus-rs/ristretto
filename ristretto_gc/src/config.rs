@@ -1,5 +1,11 @@
 //! Configuration and statistics for garbage collection.
 
+pub(crate) const AUTO_THREADS: usize = 0;
+const DEFAULT_ALLOCATION_THRESHOLD_BYTES: usize = 8 * 1024 * 1024;
+const DEFAULT_MAX_PAUSE_TIME_US: u64 = 100;
+const DEFAULT_INCREMENTAL_STEP_SIZE: usize = 1_000;
+const DEFAULT_PARALLEL_THRESHOLD: usize = 1_000_000;
+
 /// Configuration for the garbage collector
 #[derive(Debug, Clone)]
 pub struct Configuration {
@@ -27,11 +33,11 @@ impl Default for Configuration {
     /// - `incremental_step_size` to 1000 objects
     fn default() -> Self {
         Self {
-            threads: 0,
-            allocation_threshold: 8 * 1024 * 1024,
-            max_pause_time_us: 100,
-            incremental_step_size: 1000,
-            parallel_threshold: 1_000_000,
+            threads: AUTO_THREADS,
+            allocation_threshold: DEFAULT_ALLOCATION_THRESHOLD_BYTES,
+            max_pause_time_us: DEFAULT_MAX_PAUSE_TIME_US,
+            incremental_step_size: DEFAULT_INCREMENTAL_STEP_SIZE,
+            parallel_threshold: DEFAULT_PARALLEL_THRESHOLD,
             max_heap_bytes: usize::MAX,
         }
     }

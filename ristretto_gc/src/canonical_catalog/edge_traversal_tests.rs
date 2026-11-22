@@ -20,17 +20,20 @@ fn edge(c: &Catalog, slot: usize, source: &RootToken, target: Option<&RootToken>
     );
     edge
 }
+
 fn remove(c: &Catalog, root: &RootToken) {
     commit(
         c,
         c.begin_remove_root(snapshot(c), root.try_share().unwrap()),
     );
 }
+
 fn scan_roots(c: &Catalog) {
     for _ in 0..c.root_capacity() {
         commit(c, c.begin_scan_root(snapshot(c), 0));
     }
 }
+
 fn begin(c: &Catalog, source: &Owned<Cell>) -> EdgeTraversal {
     let Some(Membership::Tracing(marks)) = source.membership() else {
         panic!()
@@ -38,6 +41,7 @@ fn begin(c: &Catalog, source: &Owned<Cell>) -> EdgeTraversal {
     c.begin_edge_traversal(snapshot(c), source.try_clone().unwrap(), 0, marks[0].ticket)
         .unwrap()
 }
+
 fn finish(c: &Catalog, traversal: &mut EdgeTraversal) -> EdgeTraversalProgress {
     for _ in 0..128 {
         let progress = traversal.poll(c, &()).unwrap();

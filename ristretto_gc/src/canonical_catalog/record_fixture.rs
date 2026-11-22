@@ -1,5 +1,7 @@
-use super::{Arc, AtomicU8, AtomicUsize, Entered, Ordering, Record, RecordError};
+use super::{Arc, AtomicU8, AtomicUsize, Entered, Ordering, Record, RecordError, UNPUBLISHED};
 use std::sync::{Mutex, atomic::AtomicBool};
+
+const NOT_RELEASED: u8 = 2;
 
 pub(crate) struct Inner {
     pub(crate) after_admission: Mutex<Option<Box<dyn FnOnce() + Send>>>,
@@ -20,14 +22,16 @@ impl Fixture {
             handles: AtomicUsize::new(1),
             enters: AtomicUsize::new(0),
             contended: AtomicBool::new(false),
-            published: AtomicU8::new(0),
-            last_release: AtomicU8::new(2),
+            published: AtomicU8::new(UNPUBLISHED),
+            last_release: AtomicU8::new(NOT_RELEASED),
         }))
     }
+
     pub(crate) fn release_origin(&self) {
         release(&self.0);
     }
 }
+
 fn release(inner: &Inner) {
     let previous = inner.handles.fetch_sub(1, Ordering::AcqRel);
     assert!(previous > 0);
@@ -46,6 +50,7 @@ impl Drop for Guard<'_> {
 impl Record for Fixture {
     type Context = usize;
     type Guard<'a> = Guard<'a>;
+
     #[expect(
         clippy::unwrap_in_result,
         reason = "test fixture panics on poisoned control hooks or impossible handle overflow"

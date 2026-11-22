@@ -1,10 +1,12 @@
 use super::*;
+use crate::canonical_catalog::{PUBLISHED, UNPUBLISHED};
 
 fn catalog() -> (CatalogHandle, Arc<Budget>) {
     let budget = Budget::new(usize::MAX);
     let catalog = BoundedCatalog::new_in(Capacities::derive(2, 1, 1).unwrap(), &budget).unwrap();
     (catalog, budget)
 }
+
 fn created(worker: &mut Participant) -> RecordKey {
     worker.submit_record(0, 8, ()).unwrap();
     for _ in 0..8 {
@@ -14,6 +16,7 @@ fn created(worker: &mut Participant) -> RecordKey {
     }
     panic!("finite creation did not finish");
 }
+
 fn reach_attempt(worker: &mut Participant, key: RecordKey) {
     worker.submit(Command::Publish(key)).unwrap();
     for _ in 0..8 {
@@ -86,6 +89,7 @@ struct Payload {
 impl super::Payload for Payload {
     type Context = usize;
     type Guard<'a> = ();
+
     fn enter<'a>(
         &'a self,
         context: &'a usize,
@@ -101,13 +105,15 @@ impl Drop for Payload {
         self.drops.fetch_add(1, Ordering::Relaxed);
     }
 }
+
 fn payload(drops: &Arc<AtomicUsize>) -> Payload {
     Payload {
         identity: 42,
         drops: drops.clone(),
-        published: std::sync::atomic::AtomicU8::new(0),
+        published: std::sync::atomic::AtomicU8::new(UNPUBLISHED),
     }
 }
+
 fn record_catalog() -> (CatalogHandle<Payload>, Arc<Budget>, Arc<AtomicUsize>) {
     let budget = Budget::new(usize::MAX);
     let catalog =
@@ -115,6 +121,7 @@ fn record_catalog() -> (CatalogHandle<Payload>, Arc<Budget>, Arc<AtomicUsize>) {
             .unwrap();
     (catalog, budget, Arc::new(AtomicUsize::new(0)))
 }
+
 fn record_created(worker: &mut Participant<Payload, GuardedCommand>, value: Payload) -> RecordKey {
     worker.submit_record(0, 8, value).unwrap();
     for _ in 0..8 {
@@ -124,6 +131,7 @@ fn record_created(worker: &mut Participant<Payload, GuardedCommand>, value: Payl
     }
     panic!("finite record creation did not finish");
 }
+
 fn record_attempt(worker: &mut Participant<Payload, GuardedCommand>, key: RecordKey) {
     worker.submit(GuardedCommand::Publish(key)).unwrap();
     for _ in 0..8 {
@@ -192,7 +200,7 @@ fn dropping_creator_after_commit_selection_cannot_cancel_or_double_drop() {
                 .record()
                 .published
                 .load(Ordering::Acquire),
-            1
+            PUBLISHED
         );
         assert_eq!(drops.load(Ordering::Relaxed), 0);
         drop((replacement, catalog));

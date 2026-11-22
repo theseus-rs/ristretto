@@ -9,6 +9,7 @@ use ristretto_classfile::attributes::{ExceptionTableEntry, Instruction};
 use std::collections::VecDeque;
 
 const MAX_STATE_BYTES: usize = 8 * 1024 * 1024;
+const BITS_PER_WORD: usize = u64::BITS as usize;
 const MAX_EDGES: usize = 1_000_000;
 
 pub(super) struct ReferenceLiveness {
@@ -28,7 +29,7 @@ impl ReferenceLiveness {
             .enumerate()
             .map(|(index, (address, _))| (address, index))
             .collect();
-        let words = locals.len().div_ceil(64);
+        let words = locals.len().div_ceil(BITS_PER_WORD);
         let cells = instructions.len().checked_mul(words).ok_or_else(|| {
             UnsupportedMethod("reference liveness state exceeds analysis limit".to_owned())
         })?;
@@ -60,12 +61,16 @@ impl ReferenceLiveness {
             .live
             .get(row * self.words..(row + 1) * self.words)
             .ok_or_else(|| InternalError("invalid reference liveness row".to_owned()))?;
-        Ok(self.locals.chunks(64).zip(bits).flat_map(|(locals, bits)| {
-            locals
-                .iter()
-                .enumerate()
-                .filter_map(move |(bit, local)| (bits & (1 << bit) != 0).then_some(*local))
-        }))
+        Ok(self
+            .locals
+            .chunks(BITS_PER_WORD)
+            .zip(bits)
+            .flat_map(|(locals, bits)| {
+                locals
+                    .iter()
+                    .enumerate()
+                    .filter_map(move |(bit, local)| (bits & (1 << bit) != 0).then_some(*local))
+            }))
     }
 
     #[expect(
@@ -111,10 +116,10 @@ impl ReferenceLiveness {
                 );
             }
             for bit in definitions[index].iter().flatten() {
-                next[bit / 64] &= !(1 << (bit % 64));
+                next[bit / BITS_PER_WORD] &= !(1 << (bit % BITS_PER_WORD));
             }
             if let Some(bit) = uses[index] {
-                next[bit / 64] |= 1 << (bit % 64);
+                next[bit / BITS_PER_WORD] |= 1 << (bit % BITS_PER_WORD);
             }
             // A throw observes incoming locals. Normal definitions cannot kill
             // references needed only by a handler; merge these after the kills.

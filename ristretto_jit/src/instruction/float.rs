@@ -4,7 +4,6 @@ use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
 use crate::{Result, jit_value};
-use cranelift::codegen::ir::MemFlagsData;
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{FloatCC, InstBuilder, Value, types};
 
@@ -394,14 +393,5 @@ pub(crate) fn freturn(
     return_pointer: Value,
 ) -> Result<()> {
     let value = stack.pop_float(function_builder)?;
-    let discriminate = i64::from(jit_value::F32);
-    let discriminate = function_builder.ins().iconst(types::I8, discriminate);
-    function_builder
-        .ins()
-        .store(MemFlagsData::new(), discriminate, return_pointer, 0);
-    function_builder
-        .ins()
-        .store(MemFlagsData::new(), value, return_pointer, 8);
-    function_builder.ins().return_(&[]);
-    Ok(())
+    super::emit_value_return(function_builder, return_pointer, jit_value::F32, value)
 }

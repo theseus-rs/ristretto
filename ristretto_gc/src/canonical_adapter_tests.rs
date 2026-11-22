@@ -8,6 +8,7 @@ use std::sync::atomic::AtomicUsize;
 fn heap() -> Arc<GarbageCollector> {
     GarbageCollector::with_config(Configuration::builder().threads(1).build())
 }
+
 fn capacities() -> Capacities {
     Capacities::derive(3, 1, 1).unwrap().with_roots(3).unwrap()
 }
@@ -75,9 +76,11 @@ fn wrapper_and_participant_reservations_are_admitted_before_use() {
 struct Counted(Arc<AtomicUsize>);
 impl Trace for Counted {
     fn trace(&self, _: &GarbageCollector) {}
+
     fn may_contain_gc_references() -> bool {
         false
     }
+
     fn canonical_payload() -> Option<CanonicalPayload<Self>> {
         // SAFETY: the only owned backing is a host counter, with no GC references.
         Some(unsafe { CanonicalPayload::new() })

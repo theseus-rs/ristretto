@@ -6,6 +6,7 @@ fn private_and_announced_records_release_the_exact_owner_once() {
     impl Record for Counted {
         type Context = ();
         type Guard<'a> = ();
+
         fn enter<'a>(&'a self, (): &'a ()) -> Result<Entered<'a, ()>, RecordError> {
             unreachable!("private creation never admits a payload");
         }

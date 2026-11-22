@@ -1,7 +1,10 @@
 //! Independently own generated scalar state while no native frame is active.
 use crate::Error::InternalError;
 use crate::{Function, JitValue, Result, Value};
+use ristretto_classfile::attributes::{ArrayType, Instruction};
+use ristretto_classfile::byte_reader::ByteReader;
 use std::num::NonZeroU32;
+use zerocopy::TryFromBytes;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct ContinuationLayout {
@@ -13,10 +16,43 @@ pub(crate) struct ContinuationLayout {
 }
 
 impl ContinuationLayout {
-    // Resume token, fuel, and two reserved words for future request/context state.
+    // Word indices shared by generated code and the owning activation.
+    pub const RESUME_TOKEN: usize = 0;
+    pub const FUEL: usize = 1;
+    pub const CONTEXT: usize = 2;
+    // The fourth header word is reserved.
     pub const HEADER_WORDS: usize = 4;
-    pub const CALL_TOKEN_BASE: u64 = 1 << 32;
-    pub const CALL_HEADER_WORDS: usize = 5;
+    pub const INITIAL_TOKEN: u64 = 0;
+    pub const BACKEDGE_TOKEN_BASE: u64 = 1;
+    pub const CALL_TOKEN_BASE: u64 = 1 << u32::BITS;
+    pub const RETURNED_TOKEN: u64 = u64::MAX;
+
+    pub const CALL_KIND: usize = 0;
+    pub const CALL_BCI: usize = 1;
+    pub const CALL_INDEX: usize = 2;
+    pub const CALL_COUNT: usize = 3;
+    pub const CALL_RESULT: usize = 4;
+    pub const CALL_HEADER_WORDS: usize = Self::CALL_RESULT + 1;
+}
+
+/// Tag stored in the first word of a pending runtime request.
+#[derive(Clone, Copy, TryFromBytes)]
+#[repr(u64)]
+pub(crate) enum RequestKind {
+    InvokeStatic = 0,
+    InvokeSpecial = 1,
+    InvokeVirtual = 2,
+    InvokeInterface = 3,
+    NewObject = 6,
+    NewPrimitiveArray = 7,
+    NewReferenceArray = 8,
+    GetStatic = 10,
+    PutStatic = 11,
+    GetField = 12,
+    PutField = 13,
+    CheckCast = 14,
+    ReferenceArrayStore = 16,
+    ArrayAccess = 17,
 }
 
 /// Invocation form resolved by the embedding after the native caller returns.
@@ -40,7 +76,7 @@ pub struct CallRequest {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AllocationKind {
     Object(u16),
-    PrimitiveArray(ristretto_classfile::attributes::ArrayType),
+    PrimitiveArray(ArrayType),
     ReferenceArray(u16),
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -86,42 +122,59 @@ pub enum ArrayAccessKind {
 }
 
 impl ArrayAccessKind {
-    pub(crate) fn from_code(code: u16) -> Result<Self> {
-        Ok(match code {
-            46 => Self::IntLoad,
-            47 => Self::LongLoad,
-            48 => Self::FloatLoad,
-            49 => Self::DoubleLoad,
-            50 => Self::ReferenceLoad,
-            51 => Self::ByteLoad,
-            52 => Self::CharLoad,
-            53 => Self::ShortLoad,
-            79 => Self::IntStore,
-            80 => Self::LongStore,
-            81 => Self::FloatStore,
-            82 => Self::DoubleStore,
-            84 => Self::ByteStore,
-            85 => Self::CharStore,
-            86 => Self::ShortStore,
-            190 => Self::Length,
-            _ => return Err(InternalError("invalid array access kind".to_owned())),
+    pub(crate) fn from_instruction(instruction: &Instruction) -> Option<Self> {
+        Some(match instruction {
+            Instruction::Aaload => Self::ReferenceLoad,
+            Instruction::Iaload => Self::IntLoad,
+            Instruction::Laload => Self::LongLoad,
+            Instruction::Faload => Self::FloatLoad,
+            Instruction::Daload => Self::DoubleLoad,
+            Instruction::Baload => Self::ByteLoad,
+            Instruction::Caload => Self::CharLoad,
+            Instruction::Saload => Self::ShortLoad,
+            Instruction::Iastore => Self::IntStore,
+            Instruction::Lastore => Self::LongStore,
+            Instruction::Fastore => Self::FloatStore,
+            Instruction::Dastore => Self::DoubleStore,
+            Instruction::Bastore => Self::ByteStore,
+            Instruction::Castore => Self::CharStore,
+            Instruction::Sastore => Self::ShortStore,
+            Instruction::Arraylength => Self::Length,
+            _ => return None,
         })
+    }
+
+    fn from_code(code: u16) -> Result<Self> {
+        u8::try_from(code)
+            .ok()
+            .and_then(|byte| Instruction::from_bytes(&mut ByteReader::new(&[byte])).ok())
+            .and_then(|instruction| Self::from_instruction(&instruction))
+            .ok_or_else(|| InternalError("invalid array access kind".to_owned()))
     }
 
     /// Number of logical eight-byte cells: array, optional index and optional value.
     #[must_use]
     pub const fn argument_count(self) -> usize {
-        match self {
-            Self::Length => 1,
-            Self::IntStore
-            | Self::LongStore
-            | Self::FloatStore
-            | Self::DoubleStore
-            | Self::ByteStore
-            | Self::CharStore
-            | Self::ShortStore => 3,
-            _ => 2,
+        if self.is_store() {
+            3
+        } else if matches!(self, Self::Length) {
+            1
+        } else {
+            2
         }
+    }
+
+    pub(crate) const fn is_store(self) -> bool {
+        matches!(
+            self,
+            Self::IntStore
+                | Self::LongStore
+                | Self::FloatStore
+                | Self::DoubleStore
+                | Self::ByteStore
+                | Self::CharStore
+                | Self::ShortStore
+        )
     }
 }
 
@@ -211,12 +264,12 @@ impl Activation {
         if !self.started || self.finished {
             return None;
         }
-        let token = *self.state.first()?;
+        let token = *self.state.get(ContinuationLayout::RESUME_TOKEN)?;
         if token >= ContinuationLayout::CALL_TOKEN_BASE {
             let (offset, _) = self.call_layout().ok()?;
-            return usize::try_from(*self.state.get(offset + 1)?).ok();
+            return usize::try_from(*self.state.get(offset + ContinuationLayout::CALL_BCI)?).ok();
         }
-        usize::try_from(token.checked_sub(1)?).ok()
+        usize::try_from(token.checked_sub(ContinuationLayout::BACKEDGE_TOKEN_BASE)?).ok()
     }
 
     fn call_layout(&self) -> Result<(usize, usize)> {
@@ -243,7 +296,7 @@ impl Activation {
         let count = usize::try_from(
             *self
                 .state
-                .get(offset + 3)
+                .get(offset + ContinuationLayout::CALL_COUNT)
                 .ok_or_else(|| InternalError("missing call count".to_owned()))?,
         )?;
         if count > capacity {
@@ -270,7 +323,7 @@ impl Activation {
         }
         let remaining = self
             .state
-            .get(1)
+            .get(ContinuationLayout::FUEL)
             .ok_or_else(|| InternalError("missing continuation fuel".to_owned()))?;
         Ok(NonZeroU32::new(u32::try_from(*remaining)?))
     }
@@ -285,7 +338,7 @@ impl Activation {
         let (offset, _) = self.call_layout()?;
         *self
             .state
-            .get_mut(offset + 4)
+            .get_mut(offset + ContinuationLayout::CALL_RESULT)
             .ok_or_else(|| InternalError("missing call result".to_owned()))? =
             u64::from_ne_bytes(bits.to_ne_bytes());
         self.awaiting_call = false;
@@ -294,76 +347,48 @@ impl Activation {
 
     fn pending_request(&self) -> Result<ExecutionStep> {
         let (offset, _) = self.call_layout()?;
-        let metadata = self
-            .state
-            .get(offset..offset + 3)
-            .ok_or_else(|| InternalError("missing call metadata".to_owned()))?;
-        let [kind, bci, index] = metadata else {
-            return Err(InternalError("invalid call metadata".to_owned()));
+        let word = |cell: usize| {
+            self.state
+                .get(offset + cell)
+                .copied()
+                .ok_or_else(|| InternalError("missing call metadata".to_owned()))
         };
-        if *kind == 14 {
-            return Ok(ExecutionStep::TypeCheck(TypeCheckRequest {
+        let tag = word(ContinuationLayout::CALL_KIND)?;
+        let kind: RequestKind = zerocopy::try_transmute!(tag)
+            .map_err(|_| InternalError("invalid invocation kind".to_owned()))?;
+        let bci = usize::try_from(word(ContinuationLayout::CALL_BCI)?)?;
+        let index = u16::try_from(word(ContinuationLayout::CALL_INDEX)?)?;
+        let call = |kind| ExecutionStep::Call(CallRequest { kind, bci, index });
+        let field = |kind| ExecutionStep::Field(FieldRequest { kind, index, bci });
+        let allocation = |kind| ExecutionStep::Allocation(AllocationRequest { kind, bci });
+        Ok(match kind {
+            RequestKind::InvokeStatic => call(CallKind::Static),
+            RequestKind::InvokeSpecial => call(CallKind::Special),
+            RequestKind::InvokeVirtual => call(CallKind::Virtual),
+            RequestKind::InvokeInterface => call(CallKind::Interface),
+            RequestKind::NewObject => allocation(AllocationKind::Object(index)),
+            RequestKind::NewPrimitiveArray => {
+                let kind = ArrayType::from_bytes(&mut ByteReader::new(&[u8::try_from(index)?]))?;
+                allocation(AllocationKind::PrimitiveArray(kind))
+            }
+            RequestKind::NewReferenceArray => allocation(AllocationKind::ReferenceArray(index)),
+            RequestKind::GetStatic => field(FieldAccess::GetStatic),
+            RequestKind::PutStatic => field(FieldAccess::PutStatic),
+            RequestKind::GetField => field(FieldAccess::GetField),
+            RequestKind::PutField => field(FieldAccess::PutField),
+            RequestKind::CheckCast => ExecutionStep::TypeCheck(TypeCheckRequest {
                 kind: TypeCheckKind::CheckCast,
-                index: u16::try_from(*index)?,
-                bci: usize::try_from(*bci)?,
-            }));
-        }
-        if *kind == 16 {
-            return Ok(ExecutionStep::ArrayStore(ArrayStoreRequest {
-                bci: usize::try_from(*bci)?,
-            }));
-        }
-        if *kind == 8 {
-            return Ok(ExecutionStep::Allocation(AllocationRequest {
-                kind: AllocationKind::ReferenceArray(u16::try_from(*index)?),
-                bci: usize::try_from(*bci)?,
-            }));
-        }
-        if *kind == 17 {
-            return Ok(ExecutionStep::ArrayAccess(ArrayAccessRequest {
-                kind: ArrayAccessKind::from_code(u16::try_from(*index)?)?,
-                bci: usize::try_from(*bci)?,
-            }));
-        }
-        if *kind == 7 {
-            let kind = ristretto_classfile::attributes::ArrayType::from_bytes(
-                &mut ristretto_classfile::byte_reader::ByteReader::new(&[u8::try_from(*index)?]),
-            )?;
-            return Ok(ExecutionStep::Allocation(AllocationRequest {
-                kind: AllocationKind::PrimitiveArray(kind),
-                bci: usize::try_from(*bci)?,
-            }));
-        }
-        if *kind == 6 {
-            return Ok(ExecutionStep::Allocation(AllocationRequest {
-                kind: AllocationKind::Object(u16::try_from(*index)?),
-                bci: usize::try_from(*bci)?,
-            }));
-        }
-        if matches!(kind, 10..=13) {
-            return Ok(ExecutionStep::Field(FieldRequest {
-                kind: match kind {
-                    10 => FieldAccess::GetStatic,
-                    11 => FieldAccess::PutStatic,
-                    12 => FieldAccess::GetField,
-                    _ => FieldAccess::PutField,
-                },
-                index: u16::try_from(*index)?,
-                bci: usize::try_from(*bci)?,
-            }));
-        }
-        let kind = match kind {
-            0 => CallKind::Static,
-            1 => CallKind::Special,
-            2 => CallKind::Virtual,
-            3 => CallKind::Interface,
-            _ => return Err(InternalError("invalid invocation kind".to_owned())),
-        };
-        Ok(ExecutionStep::Call(CallRequest {
-            kind,
-            bci: usize::try_from(*bci)?,
-            index: u16::try_from(*index)?,
-        }))
+                index,
+                bci,
+            }),
+            RequestKind::ReferenceArrayStore => {
+                ExecutionStep::ArrayStore(ArrayStoreRequest { bci })
+            }
+            RequestKind::ArrayAccess => ExecutionStep::ArrayAccess(ArrayAccessRequest {
+                kind: ArrayAccessKind::from_code(index)?,
+                bci,
+            }),
+        })
     }
 
     /// Resume until completion or the specified number of taken backward edges.
@@ -401,12 +426,12 @@ impl Activation {
         self.function.check_native_stack()?;
         *self
             .state
-            .get_mut(1)
+            .get_mut(ContinuationLayout::FUEL)
             .ok_or_else(|| InternalError("missing continuation budget".to_owned()))? =
             u64::from(backedge_budget.get());
         *self
             .state
-            .get_mut(2)
+            .get_mut(ContinuationLayout::CONTEXT)
             .ok_or_else(|| InternalError("missing context cell".to_owned()))? =
             context as usize as u64;
         self.started = true;
@@ -424,14 +449,16 @@ impl Activation {
         }
         *self
             .state
-            .get_mut(2)
+            .get_mut(ContinuationLayout::CONTEXT)
             .ok_or_else(|| InternalError("missing context cell".to_owned()))? = 0;
-        if self.state.first() == Some(&u64::MAX) {
+        if self.state.get(ContinuationLayout::RESUME_TOKEN)
+            == Some(&ContinuationLayout::RETURNED_TOKEN)
+        {
             self.finished = true;
             Ok(ExecutionStep::Returned(result.try_into()?))
         } else if self
             .state
-            .first()
+            .get(ContinuationLayout::RESUME_TOKEN)
             .is_some_and(|token| *token >= ContinuationLayout::CALL_TOKEN_BASE)
         {
             let request = self.pending_request()?;

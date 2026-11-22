@@ -1,6 +1,8 @@
 //! Primitive array operations return to the owning host before accessing heap storage.
 use super::CallContinuation;
 use super::call::{argument_bits, push_result};
+use crate::compiler::native_frame::{word_offset, word_stack_slot};
+use crate::function::activation::RequestKind;
 use crate::operand_stack::OperandStack;
 use crate::{ArrayAccessKind, Result};
 use cranelift::prelude::*;
@@ -19,25 +21,13 @@ impl ArrayRequest {
             Instruction::Newarray(kind) => Self::New(kind.code()),
             Instruction::Anewarray(index) => Self::ReferenceNew(*index),
             Instruction::Aastore => Self::ReferenceStore,
-            Instruction::Aaload => Self::Access(ArrayAccessKind::ReferenceLoad, 50),
-            Instruction::Iaload => Self::Access(ArrayAccessKind::IntLoad, 46),
-            Instruction::Laload => Self::Access(ArrayAccessKind::LongLoad, 47),
-            Instruction::Faload => Self::Access(ArrayAccessKind::FloatLoad, 48),
-            Instruction::Daload => Self::Access(ArrayAccessKind::DoubleLoad, 49),
-            Instruction::Baload => Self::Access(ArrayAccessKind::ByteLoad, 51),
-            Instruction::Caload => Self::Access(ArrayAccessKind::CharLoad, 52),
-            Instruction::Saload => Self::Access(ArrayAccessKind::ShortLoad, 53),
-            Instruction::Iastore => Self::Access(ArrayAccessKind::IntStore, 79),
-            Instruction::Lastore => Self::Access(ArrayAccessKind::LongStore, 80),
-            Instruction::Fastore => Self::Access(ArrayAccessKind::FloatStore, 81),
-            Instruction::Dastore => Self::Access(ArrayAccessKind::DoubleStore, 82),
-            Instruction::Bastore => Self::Access(ArrayAccessKind::ByteStore, 84),
-            Instruction::Castore => Self::Access(ArrayAccessKind::CharStore, 85),
-            Instruction::Sastore => Self::Access(ArrayAccessKind::ShortStore, 86),
-            Instruction::Arraylength => Self::Access(ArrayAccessKind::Length, 190),
-            _ => return None,
+            _ => Self::Access(
+                ArrayAccessKind::from_instruction(instruction)?,
+                u16::from(instruction.code()),
+            ),
         })
     }
+
     pub fn capacity(self) -> usize {
         match self {
             Self::New(_) | Self::ReferenceNew(_) => 1,
@@ -45,6 +35,7 @@ impl ArrayRequest {
             Self::Access(kind, _) => kind.argument_count(),
         }
     }
+
     pub fn emit(
         self,
         continuation: &CallContinuation<'_>,
@@ -54,11 +45,7 @@ impl ArrayRequest {
         bci: usize,
     ) -> Result<()> {
         let count = self.capacity();
-        let arguments = builder.create_sized_stack_slot(StackSlotData::new(
-            StackSlotKind::ExplicitSlot,
-            u32::try_from(count * 8)?,
-            3,
-        ));
+        let arguments = word_stack_slot(builder, count)?;
         let (tag, index, result) = match self {
             Self::ReferenceStore => {
                 let value = stack.pop_object(builder)?;
@@ -66,9 +53,13 @@ impl ArrayRequest {
                 let index = builder.ins().sextend(types::I64, index);
                 let array = stack.pop_object(builder)?;
                 builder.ins().stack_store(types::I64, array, arguments, 0);
-                builder.ins().stack_store(types::I64, index, arguments, 8);
-                builder.ins().stack_store(types::I64, value, arguments, 16);
-                (16, 0, None)
+                builder
+                    .ins()
+                    .stack_store(types::I64, index, arguments, word_offset(1)?);
+                builder
+                    .ins()
+                    .stack_store(types::I64, value, arguments, word_offset(2)?);
+                (RequestKind::ReferenceArrayStore, 0, None)
             }
             Self::ReferenceNew(index) => {
                 if pool.try_get_class(index)?.as_bytes().starts_with(b"[") {
@@ -79,13 +70,13 @@ impl ArrayRequest {
                 let length = stack.pop_int(builder)?;
                 let bits = builder.ins().sextend(types::I64, length);
                 builder.ins().stack_store(types::I64, bits, arguments, 0);
-                (8, index, None)
+                (RequestKind::NewReferenceArray, index, None)
             }
             Self::New(kind) => {
                 let length = stack.pop_int(builder)?;
                 let bits = builder.ins().sextend(types::I64, length);
                 builder.ins().stack_store(types::I64, bits, arguments, 0);
-                (7, u16::from(kind), None)
+                (RequestKind::NewPrimitiveArray, u16::from(kind), None)
             }
             Self::Access(kind, code) => {
                 let field = if kind == ArrayAccessKind::ReferenceLoad {
@@ -100,18 +91,26 @@ impl ArrayRequest {
                         _ => BaseType::Int,
                     })
                 };
-                if count == 3 {
+                if kind.is_store() {
                     let value = argument_bits(builder, stack, &field)?;
-                    builder.ins().stack_store(types::I64, value, arguments, 16);
+                    builder
+                        .ins()
+                        .stack_store(types::I64, value, arguments, word_offset(2)?);
                 }
                 if kind != ArrayAccessKind::Length {
                     let index = stack.pop_int(builder)?;
                     let bits = builder.ins().sextend(types::I64, index);
-                    builder.ins().stack_store(types::I64, bits, arguments, 8);
+                    builder
+                        .ins()
+                        .stack_store(types::I64, bits, arguments, word_offset(1)?);
                 }
                 let array = stack.pop_object(builder)?;
                 builder.ins().stack_store(types::I64, array, arguments, 0);
-                (17, code, (count != 3).then_some(field))
+                (
+                    RequestKind::ArrayAccess,
+                    code,
+                    (!kind.is_store()).then_some(field),
+                )
             }
         };
         let bits = continuation.emit(builder, stack, arguments, count, bci, (tag, index))?;

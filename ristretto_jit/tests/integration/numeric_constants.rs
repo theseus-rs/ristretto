@@ -49,6 +49,7 @@ fn numeric_ldc_and_ldc_w_preserve_integer_and_float_bits() -> Result<()> {
     }
     Ok(())
 }
+
 #[test]
 fn class_and_string_constants_remain_rejected() -> Result<()> {
     for string in [false, true] {

@@ -105,6 +105,7 @@ extern "C" fn read_counter(context: *const AtomicI64, bci: i32, array: i64, inde
 extern "C" fn publish(_context: *const u8, _roots: *const i64, _count: i32) -> i32 {
     1
 }
+
 extern "C" fn pending(_context: *const u8) -> i64 {
     0
 }

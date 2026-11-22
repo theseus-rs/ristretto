@@ -30,10 +30,11 @@
 //! * `wide` - Wide instruction prefix for accessing local variables with wider indices
 
 use crate::Error::InternalError;
-use crate::Result;
+use crate::{JitValue, Result};
 use ahash::AHashMap;
-use cranelift::codegen::ir::{Block, Inst, Value};
+use cranelift::codegen::ir::{Block, Inst, MemFlagsData, Value};
 use cranelift::frontend::FunctionBuilder;
+use cranelift::prelude::{InstBuilder, types};
 use ristretto_classfile::attributes::ExceptionTableEntry;
 
 /// Bundles the context required to emit a branch to an exception handler (or propagate) when a
@@ -57,6 +58,29 @@ fn single_inst_result(function_builder: &FunctionBuilder<'_>, instruction: Inst)
         .first()
         .copied()
         .ok_or_else(|| InternalError("Cranelift instruction did not produce a result".to_string()))
+}
+
+fn emit_value_return(
+    builder: &mut FunctionBuilder,
+    return_pointer: Value,
+    tag: i8,
+    value: Value,
+) -> Result<()> {
+    let discriminant = builder.ins().iconst(types::I8, i64::from(tag));
+    builder.ins().store(
+        MemFlagsData::new(),
+        discriminant,
+        return_pointer,
+        i32::try_from(JitValue::DISCRIMINANT_OFFSET)?,
+    );
+    builder.ins().store(
+        MemFlagsData::new(),
+        value,
+        return_pointer,
+        i32::try_from(JitValue::VALUE_OFFSET)?,
+    );
+    builder.ins().return_(&[]);
+    Ok(())
 }
 
 mod array;
@@ -123,9 +147,8 @@ pub(crate) fn emit_bci(
     function_builder: &mut FunctionBuilder<'_>,
     throw_context: &ThrowContext<'_>,
 ) -> Value {
-    use cranelift::prelude::InstBuilder;
     function_builder.ins().iconst(
-        cranelift::prelude::types::I32,
+        types::I32,
         i64::try_from(throw_context.program_counter).unwrap_or(i64::from(i32::MAX)),
     )
 }

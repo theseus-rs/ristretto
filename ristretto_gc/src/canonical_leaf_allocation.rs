@@ -52,6 +52,7 @@ impl<T: 'static> LeafRoot<T> {
     ) -> bool {
         self.root.belongs_to(catalog)
     }
+
     pub(in crate::canonical_adapter) fn borrow<'a>(
         &'a self,
         gc: &'a GarbageCollector,
@@ -80,6 +81,7 @@ impl<'a, T: Trace + Send + Sync + 'static> LeafAllocation<'a, T> {
     ) -> Result<Self, AllocationError> {
         Self::begin_at(worker, collector, Some((slot, root_slot)), value)
     }
+
     pub(in crate::canonical_adapter) fn begin_any(
         worker: &'a mut Worker,
         collector: &'a GarbageCollector,
@@ -87,6 +89,7 @@ impl<'a, T: Trace + Send + Sync + 'static> LeafAllocation<'a, T> {
     ) -> Result<Self, AllocationError> {
         Self::begin_at(worker, collector, None, value)
     }
+
     fn begin_at(
         worker: &'a mut Worker,
         collector: &'a GarbageCollector,
@@ -110,6 +113,7 @@ impl<'a, T: Trace + Send + Sync + 'static> LeafAllocation<'a, T> {
             value: PhantomData,
         })
     }
+
     /// One catalog transition. Completion transfers a typed shared owner once;
     /// dropping an unfinished request posts cancellation without polling in Drop.
     pub(in crate::canonical_adapter) fn poll(

@@ -11,6 +11,7 @@ struct Value {
 impl Payload for Value {
     type Context = ();
     type Guard<'a> = ();
+
     fn enter<'a>(&'a self, context: &'a ()) -> Result<Entered<'a, ()>, RecordError> {
         ().enter(context)
     }
@@ -21,6 +22,7 @@ impl Drop for Value {
     }
 }
 type Worker = Participant<Value, GuardedCommand>;
+
 fn setup(edges: usize) -> (CatalogHandle<Value>, Arc<Budget>, Arc<AtomicUsize>) {
     let capacities = Capacities::derive(3, 2, 1)
         .unwrap()
@@ -33,6 +35,7 @@ fn setup(edges: usize) -> (CatalogHandle<Value>, Arc<Budget>, Arc<AtomicUsize>) 
     let owner = BoundedCatalog::with_records_in(capacities, &budget).unwrap();
     (owner, budget, Arc::new(AtomicUsize::new(0)))
 }
+
 fn finish(worker: &mut Worker) -> Progress {
     for _ in 0..4096 {
         let result = worker.poll_in(&());
@@ -42,18 +45,22 @@ fn finish(worker: &mut Worker) -> Progress {
     }
     panic!("bounded edge request did not settle");
 }
+
 fn run(worker: &mut Worker, command: GuardedCommand) {
     worker.submit(command).unwrap();
     assert_eq!(finish(worker), Progress::Committed);
 }
+
 fn root_run(worker: &mut Worker, command: RootCommand) {
     worker.submit_root(command).unwrap();
     assert_eq!(finish(worker), Progress::Committed);
 }
+
 fn edge_run(worker: &mut Worker, command: EdgeCommand) {
     worker.submit_edge(command).unwrap();
     assert_eq!(finish(worker), Progress::Committed);
 }
+
 fn record(worker: &mut Worker, slot: usize, drops: &Arc<AtomicUsize>) -> RootHandle<Value> {
     assert!(
         worker
@@ -71,11 +78,13 @@ fn record(worker: &mut Worker, slot: usize, drops: &Arc<AtomicUsize>) -> RootHan
     assert!(matches!(finish(worker), Progress::RootCreated(_)));
     worker.take_root().unwrap()
 }
+
 fn edge(worker: &mut Worker, slot: usize) -> EdgeHandle<Value> {
     worker.submit_edge_creation(slot).unwrap();
     assert!(matches!(finish(worker), Progress::EdgeCreated(_)));
     worker.take_edge().unwrap()
 }
+
 fn publish(
     worker: &mut Worker,
     slot: usize,
@@ -100,6 +109,7 @@ fn publish(
         Err(failure) => panic!("certified edge handoff failed: {:?}", failure.error),
     }
 }
+
 fn acknowledge(worker: &mut Worker, key: RecordKey, domain: usize) {
     let Membership::Tracing(marks) = worker.observe(key).unwrap().membership else {
         panic!()
@@ -115,11 +125,13 @@ fn acknowledge(worker: &mut Worker, key: RecordKey, domain: usize) {
         );
     }
 }
+
 fn scan(worker: &mut Worker, domain: usize) {
     while worker.phase_in(&()).unwrap().root_cursors[domain] < 4 {
         root_run(worker, RootCommand::ScanBatch { domain });
     }
 }
+
 fn end(worker: &mut Worker, domain: usize) {
     scan(worker, domain);
     for _ in 0..RETIREMENT_FLOOR {
@@ -127,6 +139,7 @@ fn end(worker: &mut Worker, domain: usize) {
     }
     run(worker, GuardedCommand::Finish { domain });
 }
+
 fn drop_root(worker: &mut Worker, root: RootHandle<Value>) {
     let key = root.key();
     drop(root);
@@ -534,6 +547,7 @@ fn bounded_edge_mutation_child_reads_and_full_epochs_share_one_controller() {
         }
         panic!("concurrent observation exceeded fixture watchdog");
     }
+
     fn settle(worker: &mut Worker) -> Progress {
         for _ in 0..1_000_000 {
             let progress = worker.poll_in(&());
@@ -544,6 +558,7 @@ fn bounded_edge_mutation_child_reads_and_full_epochs_share_one_controller() {
         }
         panic!("concurrent edge request exceeded fixture watchdog");
     }
+
     fn phase(worker: &mut Worker) -> Phase {
         for _ in 0..1_000_000 {
             match worker.phase_in(&()) {
@@ -554,6 +569,7 @@ fn bounded_edge_mutation_child_reads_and_full_epochs_share_one_controller() {
         }
         panic!("concurrent edge phase exceeded fixture watchdog");
     }
+
     fn command(worker: &mut Worker, command: GuardedCommand) {
         worker.submit(command).unwrap();
         assert_eq!(settle(worker), Progress::Committed);

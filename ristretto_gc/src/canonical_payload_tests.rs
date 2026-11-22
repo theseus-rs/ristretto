@@ -18,6 +18,7 @@ fn heap(limit: usize) -> Arc<GarbageCollector> {
 struct Uncertified;
 impl Trace for Uncertified {
     fn trace(&self, _: &GarbageCollector) {}
+
     fn may_contain_gc_references() -> bool {
         false
     }
@@ -54,13 +55,16 @@ fn scalar_proof_preserves_exact_type_and_heap_identity() -> crate::Result<()> {
 struct Backing(Box<[u8]>);
 impl Trace for Backing {
     fn trace(&self, _: &GarbageCollector) {}
+
     fn may_contain_gc_references() -> bool {
         false
     }
+
     fn canonical_payload() -> Option<CanonicalPayload<Self>> {
         // SAFETY: immutable byte storage has no GC edges or required callbacks.
         Some(unsafe { CanonicalPayload::new() })
     }
+
     fn external_size(&self) -> usize {
         self.0.len()
     }
@@ -88,14 +92,17 @@ impl HeapOwner for Owner {
 }
 impl Trace for Owner {
     fn trace(&self, _: &GarbageCollector) {}
+
     fn may_contain_gc_references() -> bool {
         false
     }
+
     fn canonical_payload() -> Option<CanonicalPayload<Self>> {
         // SAFETY: this empty payload has no edges. Its reported owner is still
         // rejected independently of the type certificate.
         Some(unsafe { CanonicalPayload::new() })
     }
+
     fn heap_owner(&self) -> Option<Arc<dyn HeapOwner>> {
         Some(Arc::new(Self))
     }

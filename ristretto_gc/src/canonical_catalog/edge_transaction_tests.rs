@@ -7,6 +7,7 @@ pub(crate) fn catalog() -> Catalog {
     Catalog::with_record_root_capacities_and_limit(3, 256, 256, 128, 8, 64, pool::MAX_GENERATION)
         .with_edge_capacities(2, 64, 128, pool::MAX_GENERATION)
 }
+
 pub(crate) fn snapshot(c: &Catalog) -> Snapshot {
     for _ in 0..32 {
         if let Some(s) = c.snapshot_in(&()) {
@@ -15,6 +16,7 @@ pub(crate) fn snapshot(c: &Catalog) -> Snapshot {
     }
     panic!("edge controller did not settle");
 }
+
 fn prepare(c: &Catalog, p: Option<Preparation>) -> Attempt {
     let mut p = p.expect("valid edge preparation");
     for _ in 0..32 {
@@ -24,6 +26,7 @@ fn prepare(c: &Catalog, p: Option<Preparation>) -> Attempt {
     }
     panic!("edge preparation did not settle");
 }
+
 pub(crate) fn commit(c: &Catalog, p: Option<Preparation>) {
     let a = prepare(c, p);
     for _ in 0..32 {
@@ -35,6 +38,7 @@ pub(crate) fn commit(c: &Catalog, p: Option<Preparation>) {
     }
     panic!("edge commit did not settle");
 }
+
 fn root(c: &Catalog, object: &Owned<Cell>, slot: usize) -> RootToken {
     let mut creation = c
         .begin_create_root(slot, object.try_clone().unwrap())
@@ -46,6 +50,7 @@ fn root(c: &Catalog, object: &Owned<Cell>, slot: usize) -> RootToken {
     }
     panic!("root did not announce");
 }
+
 pub(crate) fn object(c: &Catalog, slot: usize) -> (Owned<Cell>, RootToken) {
     let mut creation = c.begin_create_with(slot, slot + 8, ()).unwrap();
     for _ in 0..32 {
@@ -60,6 +65,7 @@ pub(crate) fn object(c: &Catalog, slot: usize) -> (Owned<Cell>, RootToken) {
     }
     panic!("object did not announce");
 }
+
 fn edge(c: &Catalog) -> EdgeToken {
     let mut creation = c.begin_create_edge(0).unwrap();
     for _ in 0..32 {
@@ -69,18 +75,21 @@ fn edge(c: &Catalog) -> EdgeToken {
     }
     panic!("edge did not announce");
 }
+
 pub(crate) fn key(object: &Cell) -> ObjectKey {
     ObjectKey {
         identity: object.identity,
         slot: object.slot(),
     }
 }
+
 fn state(edge: &EdgeSlot) -> EdgeState {
     let Some(EdgeMembership::Live(state)) = edge.membership() else {
         panic!("edge not live")
     };
     state
 }
+
 pub(crate) fn acknowledge(c: &Catalog, object: &Owned<Cell>) {
     let Some(Membership::Tracing(marks)) = object.membership() else {
         panic!("not tracing")
@@ -99,6 +108,7 @@ pub(crate) fn acknowledge(c: &Catalog, object: &Owned<Cell>) {
         }
     }
 }
+
 pub(crate) fn restart(c: &Catalog, objects: &[&Owned<Cell>]) {
     for object in objects {
         acknowledge(c, object);

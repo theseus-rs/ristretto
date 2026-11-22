@@ -18,6 +18,9 @@ pub struct JitValue {
 }
 
 impl JitValue {
+    pub(crate) const DISCRIMINANT_OFFSET: usize = std::mem::offset_of!(Self, discriminant);
+    pub(crate) const VALUE_OFFSET: usize = std::mem::offset_of!(Self, value);
+
     /// Validate while marshalling, before generated code performs untagged loads.
     pub(crate) fn argument(
         value: &crate::Value,

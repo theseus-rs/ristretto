@@ -5,6 +5,7 @@
 use super::LeafRecord;
 use crate::GarbageCollector;
 use crate::canonical_catalog as gc_catalog;
+use crate::canonical_catalog::{DOMAIN_COUNT, NO_TICKET, STRONG_FLOOR, YOUNG_DOMAIN};
 use gc_catalog::bounded::{
     CatalogHandle, GuardedCommand, Participant, Progress, RecordKey, RegisterError, RequestError,
     RootCommand, RootKey,
@@ -80,7 +81,7 @@ pub(in crate::canonical_adapter) struct LeafMaintenance<'gc> {
     pending: Pending,
     phase: Option<Phase>,
     visits_since_phase: usize,
-    swept: [usize; 2],
+    swept: [usize; DOMAIN_COUNT],
 }
 impl<'gc> LeafMaintenance<'gc> {
     pub(in crate::canonical_adapter) fn new(
@@ -110,7 +111,7 @@ impl<'gc> LeafMaintenance<'gc> {
             pending: Pending::None,
             phase: None,
             visits_since_phase: 0,
-            swept: [0; 2],
+            swept: [0; DOMAIN_COUNT],
         })
     }
 
@@ -134,13 +135,14 @@ impl<'gc> LeafMaintenance<'gc> {
                     // required; counting just successful visits could count the
                     // same slots repeatedly while always skipping another one.
                     self.visits_since_phase = 0;
-                    self.swept = [0; 2];
+                    self.swept = [0; DOMAIN_COUNT];
                 }
                 Lane::Phase
             }
             Lane::Phase => Lane::Root,
         };
     }
+
     fn command(&mut self, command: GuardedCommand) -> Result<MaintenanceStep, MaintenanceError> {
         self.worker
             .submit(command)
@@ -148,6 +150,7 @@ impl<'gc> LeafMaintenance<'gc> {
         self.pending = Pending::Command;
         Ok(MaintenanceStep::Pending)
     }
+
     fn root_command(&mut self, command: RootCommand) -> Result<MaintenanceStep, MaintenanceError> {
         self.worker
             .submit_root(command)
@@ -155,12 +158,13 @@ impl<'gc> LeafMaintenance<'gc> {
         self.pending = Pending::Command;
         Ok(MaintenanceStep::Pending)
     }
+
     #[expect(
         clippy::indexing_slicing,
         reason = "fixed two-element domain arrays indexed by 0..2"
     )]
     fn observed_phase(&mut self, phase: Phase) {
-        for domain in 0..2 {
+        for domain in 0..DOMAIN_COUNT {
             let current = phase.domains[domain];
             let continuous = self.phase.is_some_and(|previous| {
                 let previous = previous.domains[domain];
@@ -230,6 +234,7 @@ impl<'gc> LeafMaintenance<'gc> {
             Lane::Phase => self.phase(),
         }
     }
+
     fn root(&mut self) -> Result<MaintenanceStep, MaintenanceError> {
         if self.roots == 0 {
             self.finish_lane(true);
@@ -265,6 +270,7 @@ impl<'gc> LeafMaintenance<'gc> {
             }
         }
     }
+
     #[expect(
         clippy::indexing_slicing,
         reason = "domain indices are reduced modulo the fixed two-element domain count"
@@ -306,11 +312,11 @@ impl<'gc> LeafMaintenance<'gc> {
             Membership::Tracing(marks) => {
                 // Alternate domains so a stream of replacement tickets in one
                 // domain cannot always outrank the other's existing ticket.
-                for offset in 0..2 {
-                    let domain = (self.trace_cursor + offset) % 2;
+                for offset in 0..DOMAIN_COUNT {
+                    let domain = (self.trace_cursor + offset) % DOMAIN_COUNT;
                     let ticket = marks.marks[domain].ticket;
-                    if ticket != 0 {
-                        self.trace_cursor = 1 - domain;
+                    if ticket != NO_TICKET {
+                        self.trace_cursor = (domain + 1) % DOMAIN_COUNT;
                         return self.command(GuardedCommand::Acknowledge {
                             key: record.key,
                             domain,
@@ -319,7 +325,7 @@ impl<'gc> LeafMaintenance<'gc> {
                     }
                 }
                 if let Some(phase) = self.phase {
-                    for domain in 0..2 {
+                    for domain in 0..DOMAIN_COUNT {
                         if marks.can_retire(phase, domain).is_ok() {
                             return self.command(GuardedCommand::Retire {
                                 key: record.key,
@@ -338,6 +344,7 @@ impl<'gc> LeafMaintenance<'gc> {
             Membership::Live(_) => Err(MaintenanceError::Protocol),
         }
     }
+
     #[expect(
         clippy::indexing_slicing,
         reason = "domain indices are reduced modulo the fixed two-element domain count"
@@ -355,19 +362,19 @@ impl<'gc> LeafMaintenance<'gc> {
             }
         };
         self.observed_phase(phase);
-        for offset in 0..2 {
-            let domain = (self.domain_cursor + offset) % 2;
+        for offset in 0..DOMAIN_COUNT {
+            let domain = (self.domain_cursor + offset) % DOMAIN_COUNT;
             let state = phase.domains[domain];
             let command = if state.mode == DomainMode::Inactive {
-                if domain != 0 {
+                if domain != YOUNG_DOMAIN {
                     continue;
                 }
                 GuardedCommand::Start {
                     domain,
                     mode: DomainMode::Full,
                 }
-            } else if state.floor == 0 && phase.root_cursors[domain] < self.roots {
-                self.domain_cursor = 1 - domain;
+            } else if state.floor == STRONG_FLOOR && phase.root_cursors[domain] < self.roots {
+                self.domain_cursor = (domain + 1) % DOMAIN_COUNT;
                 return self.root_command(RootCommand::ScanBatch { domain });
             } else if state.pending != 0 {
                 continue;
@@ -381,13 +388,14 @@ impl<'gc> LeafMaintenance<'gc> {
             } else {
                 continue;
             };
-            self.domain_cursor = 1 - domain;
+            self.domain_cursor = (domain + 1) % DOMAIN_COUNT;
             return self.command(command);
         }
         self.finish_lane(true);
         Ok(MaintenanceStep::Visited)
     }
 }
+
 fn release_result(
     result: Result<bool, RequestError>,
     released: MaintenanceStep,

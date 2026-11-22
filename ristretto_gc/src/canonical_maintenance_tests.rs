@@ -12,9 +12,11 @@ struct Value {
 }
 impl Trace for Value {
     fn trace(&self, _: &GarbageCollector) {}
+
     fn may_contain_gc_references() -> bool {
         false
     }
+
     fn canonical_payload() -> Option<CanonicalPayload<Self>> {
         // SAFETY: only a scalar and a host atomic counter; no managed edges.
         Some(unsafe { CanonicalPayload::new() })
@@ -29,6 +31,7 @@ impl Drop for Value {
 fn heap() -> Arc<GarbageCollector> {
     GarbageCollector::with_config(Configuration::builder().threads(1).build())
 }
+
 fn allocate(
     worker: &mut LeafMutator<'_>,
     helper: &mut LeafMaintenance<'_>,
@@ -51,6 +54,7 @@ fn allocate(
         })
         .expect("finite leaf allocation")
 }
+
 fn until_dropped(helper: &mut LeafMaintenance<'_>, drops: &AtomicUsize, count: usize) {
     assert!(
         (0..20_000).any(|_| {
@@ -214,6 +218,7 @@ fn empty_batch_is_bounded_and_wraps_without_duplicate_visits() {
         }
     }
 }
+
 #[test]
 fn empty_batch_stops_at_each_occupied_or_failed_observation() {
     for stop in 0..8 {
@@ -262,10 +267,12 @@ fn phase(epoch: u64, floor: u8, mode: DomainMode) -> Phase {
         ],
     }
 }
+
 fn visited(helper: &mut LeafMaintenance<'_>, success: bool) {
     helper.lane = Lane::Object;
     helper.finish_lane(success);
 }
+
 #[test]
 fn sweep_counts_consecutive_visits_across_delayed_phase_observations() {
     let gc = GarbageCollector::new();
@@ -289,6 +296,7 @@ fn sweep_counts_consecutive_visits_across_delayed_phase_observations() {
     assert_eq!(helper.visits_since_phase, 0);
     assert_eq!(helper.swept[1], 0);
 }
+
 #[test]
 fn a_failed_object_discovery_requires_a_new_complete_sweep() {
     let gc = GarbageCollector::new();
@@ -315,6 +323,7 @@ fn a_failed_object_discovery_requires_a_new_complete_sweep() {
     helper.observed_phase(phase);
     assert_eq!(helper.swept[0], 3);
 }
+
 #[test]
 fn a_changed_epoch_mode_or_floor_cannot_certify_prior_visits() {
     let gc = GarbageCollector::new();
@@ -342,6 +351,7 @@ fn a_changed_epoch_mode_or_floor_cannot_certify_prior_visits() {
         assert_eq!(helper.visits_since_phase, 0);
     }
 }
+
 #[test]
 fn stale_queued_finish_cannot_close_a_later_unswept_epoch() {
     fn run(worker: &mut Worker, gc: &GarbageCollector, command: GuardedCommand) {

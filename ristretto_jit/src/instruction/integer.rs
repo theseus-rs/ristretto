@@ -4,9 +4,11 @@ use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
 use crate::{Result, jit_value};
-use cranelift::codegen::ir::{MemFlagsData, Value};
+use cranelift::codegen::ir::Value;
 use cranelift::prelude::{FunctionBuilder, InstBuilder, types};
 use ristretto_classfile::{BaseType, FieldType};
+
+const SHIFT_DISTANCE_MASK: i64 = (i32::BITS - 1) as i64;
 
 /// # References
 /// - [JVMS §6.5.iconst_i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i)
@@ -357,7 +359,9 @@ pub(crate) fn ineg(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
 pub(crate) fn ishl(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
-    let mask = function_builder.ins().iconst(types::I32, 0x1f);
+    let mask = function_builder
+        .ins()
+        .iconst(types::I32, SHIFT_DISTANCE_MASK);
     let value2 = function_builder.ins().band(value2, mask);
     let value = function_builder.ins().ishl(value1, value2);
     stack.push_int(function_builder, value)?;
@@ -369,7 +373,9 @@ pub(crate) fn ishl(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
 pub(crate) fn ishr(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
-    let mask = function_builder.ins().iconst(types::I32, 0x1f);
+    let mask = function_builder
+        .ins()
+        .iconst(types::I32, SHIFT_DISTANCE_MASK);
     let value2 = function_builder.ins().band(value2, mask);
     let value = function_builder.ins().sshr(value1, value2);
     stack.push_int(function_builder, value)?;
@@ -384,7 +390,9 @@ pub(crate) fn iushr(
 ) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
-    let mask = function_builder.ins().iconst(types::I32, 0x1f);
+    let mask = function_builder
+        .ins()
+        .iconst(types::I32, SHIFT_DISTANCE_MASK);
     let value2 = function_builder.ins().band(value2, mask);
     let value = function_builder.ins().ushr(value1, value2);
     stack.push_int(function_builder, value)?;
@@ -482,14 +490,5 @@ pub(crate) fn ireturn(
         _ => value,
     };
     let value = function_builder.ins().sextend(types::I64, value);
-    let discriminate = i64::from(jit_value::I32);
-    let discriminate = function_builder.ins().iconst(types::I8, discriminate);
-    function_builder
-        .ins()
-        .store(MemFlagsData::new(), discriminate, return_pointer, 0);
-    function_builder
-        .ins()
-        .store(MemFlagsData::new(), value, return_pointer, 8);
-    function_builder.ins().return_(&[]);
-    Ok(())
+    super::emit_value_return(function_builder, return_pointer, jit_value::I32, value)
 }

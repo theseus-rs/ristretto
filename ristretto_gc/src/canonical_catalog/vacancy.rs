@@ -5,6 +5,8 @@ use super::{AtomicU64, AtomicUsize, Ordering::Relaxed};
 /// After this many unsuccessful probes, an automatic request may prepare its
 /// private backing and ask for a recently reclaimed slot.
 pub(crate) const PROBE_INTERVAL: usize = 128;
+const NO_WAITER: u64 = 0;
+const NO_OFFER: usize = 0;
 const OFFER_STRIDE: usize = 128;
 pub(super) const DEFERRALS: usize = OFFER_STRIDE - 1;
 
@@ -21,53 +23,60 @@ pub(crate) struct Preference {
 impl Preference {
     pub(crate) fn nominate(&self, identity: u64) -> bool {
         self.waiter
-            .compare_exchange(0, identity, Relaxed, Relaxed)
+            .compare_exchange(NO_WAITER, identity, Relaxed, Relaxed)
             .is_ok()
     }
 
     pub(crate) fn offer(&self, slot: usize) {
-        if self.waiter.load(Relaxed) != 0
+        if self.waiter.load(Relaxed) != NO_WAITER
             && let Some(word) = slot
                 .checked_mul(OFFER_STRIDE)
                 .and_then(|base| base.checked_add(DEFERRALS))
         {
-            let _ = self.offer.compare_exchange(0, word, Relaxed, Relaxed);
+            let _ = self
+                .offer
+                .compare_exchange(NO_OFFER, word, Relaxed, Relaxed);
         }
     }
 
     pub(crate) fn slot_for(&self, identity: u64) -> Option<usize> {
-        if identity == 0 || self.waiter.load(Relaxed) != identity {
+        if identity == NO_WAITER || self.waiter.load(Relaxed) != identity {
             return None;
         }
         let word = self.offer.load(Relaxed);
-        (word != 0).then_some(word / OFFER_STRIDE)
+        (word != NO_OFFER).then_some(word / OFFER_STRIDE)
     }
 
     /// A competing installation can win between releasing the slot and
     /// publishing its numeric hint. Let the nominee request a fresh location.
     pub(crate) fn missed(&self, identity: u64, slot: usize) {
         let word = self.offer.load(Relaxed);
-        if word != 0 && word / OFFER_STRIDE == slot && self.waiter.load(Relaxed) == identity {
-            let _ = self.offer.compare_exchange(word, 0, Relaxed, Relaxed);
+        if word != NO_OFFER && word / OFFER_STRIDE == slot && self.waiter.load(Relaxed) == identity
+        {
+            let _ = self
+                .offer
+                .compare_exchange(word, NO_OFFER, Relaxed, Relaxed);
         }
     }
 
     pub(crate) fn defer(&self, slot: usize, identity: u64) -> bool {
         let word = self.offer.load(Relaxed);
-        if word == 0 || word / OFFER_STRIDE != slot {
+        if word == NO_OFFER || word / OFFER_STRIDE != slot {
             return false;
         }
         let waiting = self.waiter.load(Relaxed);
-        if waiting == 0 || waiting == identity {
+        if waiting == NO_WAITER || waiting == identity {
             return false;
         }
         if word % OFFER_STRIDE == 1 {
             if self
                 .offer
-                .compare_exchange(word, 0, Relaxed, Relaxed)
+                .compare_exchange(word, NO_OFFER, Relaxed, Relaxed)
                 .is_ok()
             {
-                let _ = self.waiter.compare_exchange(waiting, 0, Relaxed, Relaxed);
+                let _ = self
+                    .waiter
+                    .compare_exchange(waiting, NO_WAITER, Relaxed, Relaxed);
             }
             return false;
         }
@@ -81,10 +90,12 @@ impl Preference {
             let word = self.offer.load(Relaxed);
             if self
                 .waiter
-                .compare_exchange(identity, 0, Relaxed, Relaxed)
+                .compare_exchange(identity, NO_WAITER, Relaxed, Relaxed)
                 .is_ok()
             {
-                let _ = self.offer.compare_exchange(word, 0, Relaxed, Relaxed);
+                let _ = self
+                    .offer
+                    .compare_exchange(word, NO_OFFER, Relaxed, Relaxed);
             }
         }
     }

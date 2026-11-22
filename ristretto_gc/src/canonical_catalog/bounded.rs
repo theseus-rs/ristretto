@@ -13,6 +13,7 @@ use super::{
     Ordering, Outcome, Owned, Phase, Preparation, PreparationError, PrepareError,
     Record as Payload,
 };
+use crate::canonical_catalog::{OLD_DOMAIN, YOUNG_DOMAIN};
 use crate::canonical_pool as pool;
 use std::ops::Deref;
 mod allocations;
@@ -27,7 +28,50 @@ mod budget;
 mod quota;
 use budget::Charge;
 pub use budget::{Budget, Footprint};
-const MAX_POOL: usize = 1 << 24;
+
+// Bounds on backing retained by root, reference and edge owners.
+const RETAINED_PER_ROOT: usize = 2;
+const RETAINED_PER_REFERENCE: usize = 2;
+const RETAINED_PER_EDGE: usize = 2;
+const TARGETS_PER_REFERENCE: usize = 6;
+
+// Each pool also needs temporary backing for participants and fixed slack for
+// in-flight operations. Reference and edge transactions use the same reserves.
+struct PoolReserve {
+    per_participant: usize,
+    slack: usize,
+}
+
+impl PoolReserve {
+    const CONTROLS: Self = Self::new(8, 8);
+    const ORDINARY_CELLS: Self = Self::new(2, 2);
+    const ROOT_CELLS: Self = Self::new(2, 2);
+    const CELLS_WITH_ROOTS: Self = Self::new(6, 4);
+    const MEMBERSHIPS_WITH_ROOTS: Self = Self::new(10, 8);
+    const LINK_CELLS: Self = Self::new(6, 4);
+    const LINK_STATES: Self = Self::new(20, 8);
+    const ROOT_CELLS_WITH_LINKS: Self = Self::new(24, 16);
+    const CELLS_WITH_LINKS: Self = Self::new(40, 24);
+    const MEMBERSHIPS_WITH_LINKS: Self = Self::new(56, 32);
+
+    const fn new(per_participant: usize, slack: usize) -> Self {
+        Self {
+            per_participant,
+            slack,
+        }
+    }
+
+    fn capacity(&self, participants: usize, retained: usize) -> Result<usize, ConfigError> {
+        participants
+            .checked_mul(self.per_participant)
+            .and_then(|slots| slots.checked_add(self.slack))
+            .and_then(|slots| slots.checked_add(retained))
+            .and_then(usize::checked_next_power_of_two)
+            .filter(|slots| *slots <= pool::MAX_CAPACITY)
+            .ok_or(ConfigError::CapacityOverflow)
+    }
+}
+
 static NEXT_CATALOG: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -63,12 +107,6 @@ pub struct Capacities {
 }
 impl Capacities {
     pub fn derive(registry: usize, mutators: usize, helpers: usize) -> Result<Self, ConfigError> {
-        fn rounded(value: usize) -> Result<usize, ConfigError> {
-            value
-                .checked_next_power_of_two()
-                .filter(|v| *v <= MAX_POOL)
-                .ok_or(ConfigError::CapacityOverflow)
-        }
         if registry == 0 {
             return Err(ConfigError::EmptyRegistry);
         }
@@ -77,24 +115,13 @@ impl Capacities {
         }
         let overflow = ConfigError::CapacityOverflow;
         let participants = mutators.checked_add(helpers).ok_or(overflow)?;
-        let reserve = participants
-            .checked_mul(8)
-            .and_then(|v| v.checked_add(8))
-            .ok_or(overflow)?;
-
         Ok(Self {
             registry,
             mutators,
             helpers,
-            controls: rounded(reserve)?,
-            memberships: rounded(registry.checked_add(reserve).ok_or(overflow)?)?,
-            cells: rounded(
-                participants
-                    .checked_mul(2)
-                    .and_then(|v| v.checked_add(2))
-                    .and_then(|v| v.checked_add(registry))
-                    .ok_or(overflow)?,
-            )?,
+            controls: PoolReserve::CONTROLS.capacity(participants, 0)?,
+            memberships: PoolReserve::CONTROLS.capacity(participants, registry)?,
+            cells: PoolReserve::ORDINARY_CELLS.capacity(participants, registry)?,
             generation_limit: pool::MAX_GENERATION,
             root_slots: 0,
             root_cells: 0,
@@ -106,6 +133,7 @@ impl Capacities {
             edge_states: 0,
         })
     }
+
     /// Reserve M independent root tokens and M discoverable slots. Root ownership
     /// can retain target cells after their object-registry slots are released.
     /// Each destructor stays charged to its participant or root-token quota.
@@ -118,121 +146,92 @@ impl Capacities {
         self.root_slots = roots;
         self.root_cells = 0;
         if roots == 0 {
-            return self.derive_reference_pools();
+            return self.derive_link_pools();
         }
         let overflow = ConfigError::CapacityOverflow;
-        let retained = roots.checked_mul(2).ok_or(overflow)?;
+        let retained = roots.checked_mul(RETAINED_PER_ROOT).ok_or(overflow)?;
         let participants = self.participants();
-        let pool_size = |factor: usize, extra: usize, registry: usize| {
-            participants
-                .checked_mul(factor)
-                .and_then(|v| v.checked_add(extra))
-                .and_then(|v| v.checked_add(retained))
-                .and_then(|v| v.checked_add(registry))
-                .and_then(usize::checked_next_power_of_two)
-                .filter(|v| *v <= MAX_POOL)
-                .ok_or(overflow)
-        };
-        self.root_cells = pool_size(2, 2, 0)?;
-        self.cells = pool_size(6, 4, self.registry)?;
-        self.memberships = pool_size(10, 8, self.registry)?;
-        self.derive_reference_pools()
+        self.root_cells = PoolReserve::ROOT_CELLS.capacity(participants, retained)?;
+        let retained = retained.checked_add(self.registry).ok_or(overflow)?;
+        self.cells = PoolReserve::CELLS_WITH_ROOTS.capacity(participants, retained)?;
+        self.memberships = PoolReserve::MEMBERSHIPS_WITH_ROOTS.capacity(participants, retained)?;
+        self.derive_link_pools()
     }
+
     pub fn with_references(mut self, references: usize) -> Result<Self, ConfigError> {
         self.reference_slots = references;
         self.with_roots(self.root_slots)
     }
-    fn derive_reference_pools(mut self) -> Result<Self, ConfigError> {
-        self.reference_cells = 0;
-        self.reference_states = 0;
-        if self.reference_slots == 0 {
-            return self.derive_edge_pools();
-        }
-        let overflow = ConfigError::CapacityOverflow;
-        let q = self.reference_slots;
-        let k = self.participants();
-        self.root_slots
-            .checked_add(q.checked_mul(2).ok_or(overflow)?)
-            .ok_or(overflow)?;
-        let pool = |n: usize, m: usize, refs: usize, participants: usize, slack: usize| {
-            self.root_slots
-                .checked_mul(m)
-                .and_then(|v| q.checked_mul(refs).and_then(|r| v.checked_add(r)))
-                .and_then(|v| k.checked_mul(participants).and_then(|p| v.checked_add(p)))
-                .and_then(|v| v.checked_add(n))
-                .and_then(|v| v.checked_add(slack))
-                .and_then(usize::checked_next_power_of_two)
-                .filter(|v| *v <= MAX_POOL)
-                .ok_or(overflow)
-        };
-        // Conservative development reserves; the final request/destructor audit
-        // and allocator fixtures must validate these before integration.
-        self.reference_cells = pool(0, 0, 2, 6, 4)?;
-        self.reference_states = pool(0, 0, 2, 20, 8)?;
-        self.root_cells = pool(0, 2, 6, 24, 16)?;
-        self.cells = pool(self.registry, 2, 6, 40, 24)?;
-        self.memberships = pool(self.registry, 2, 6, 56, 32)?;
-        self.derive_edge_pools()
-    }
+
     /// E permanent edge slots and at most E independent creation owners. Live
     /// source-owned edges retain no Cell or catalog owner through their keys.
     pub fn with_edges(mut self, edges: usize) -> Result<Self, ConfigError> {
         self.edge_slots = edges;
         self.with_roots(self.root_slots)
     }
-    fn derive_edge_pools(mut self) -> Result<Self, ConfigError> {
-        self.edge_cells = 0;
-        self.edge_states = 0;
-        if self.edge_slots == 0 {
-            return Ok(self);
+
+    fn derive_link_pools(mut self) -> Result<Self, ConfigError> {
+        let participants = self.participants();
+        let link_pools = |slots: usize, retained_per_slot: usize| {
+            if slots == 0 {
+                return Ok((0, 0));
+            }
+            let retained = slots
+                .checked_mul(retained_per_slot)
+                .ok_or(ConfigError::CapacityOverflow)?;
+            Ok((
+                PoolReserve::LINK_CELLS.capacity(participants, retained)?,
+                PoolReserve::LINK_STATES.capacity(participants, retained)?,
+            ))
+        };
+        (self.reference_cells, self.reference_states) =
+            link_pools(self.reference_slots, RETAINED_PER_REFERENCE)?;
+        (self.edge_cells, self.edge_states) = link_pools(self.edge_slots, RETAINED_PER_EDGE)?;
+        if self.reference_slots != 0 || self.edge_slots != 0 {
+            self.reserve_link_targets()?;
         }
-        let overflow = ConfigError::CapacityOverflow;
-        let rounded = |value: Option<usize>| {
-            value
-                .and_then(usize::checked_next_power_of_two)
-                .filter(|v| *v <= MAX_POOL)
-                .ok_or(overflow)
-        };
-        let k = self.participants();
-        let retained = self.edge_slots.checked_mul(2).ok_or(overflow)?;
-        self.edge_cells = rounded(
-            k.checked_mul(6)
-                .and_then(|n| n.checked_add(4))
-                .and_then(|n| n.checked_add(retained)),
-        )?;
-        self.edge_states = rounded(
-            k.checked_mul(20)
-                .and_then(|n| n.checked_add(8))
-                .and_then(|n| n.checked_add(retained)),
-        )?;
-        // Conservative reserves cover two target effects, temporary root reads,
-        // a retained traversal source and stopped request/destructor ownership.
-        // Keep the existing larger conditional reserves when they dominate.
-        let roots = self.root_slots.checked_mul(2).ok_or(overflow)?;
-        let refs = self.reference_slots.checked_mul(6).ok_or(overflow)?;
-        let pool = |base: usize, factor: usize, slack: usize| {
-            rounded(
-                k.checked_mul(factor)
-                    .and_then(|n| n.checked_add(slack))
-                    .and_then(|n| n.checked_add(roots))
-                    .and_then(|n| n.checked_add(refs))
-                    .and_then(|n| n.checked_add(base)),
-            )
-        };
-        self.root_cells = self.root_cells.max(pool(0, 24, 16)?);
-        self.cells = self.cells.max(pool(self.registry, 40, 24)?);
-        self.memberships = self.memberships.max(pool(self.registry, 56, 32)?);
         Ok(self)
     }
+
+    // Reference and edge operations can retain target cells and memberships
+    // through temporary root reads, traversals and stopped destructors.
+    fn reserve_link_targets(&mut self) -> Result<(), ConfigError> {
+        let overflow = ConfigError::CapacityOverflow;
+        let roots = self
+            .root_slots
+            .checked_mul(RETAINED_PER_ROOT)
+            .ok_or(overflow)?;
+        let references = self
+            .reference_slots
+            .checked_mul(TARGETS_PER_REFERENCE)
+            .ok_or(overflow)?;
+        let retained = roots.checked_add(references).ok_or(overflow)?;
+        let participants = self.participants();
+        self.root_cells = self
+            .root_cells
+            .max(PoolReserve::ROOT_CELLS_WITH_LINKS.capacity(participants, retained)?);
+        let retained = retained.checked_add(self.registry).ok_or(overflow)?;
+        self.cells = self
+            .cells
+            .max(PoolReserve::CELLS_WITH_LINKS.capacity(participants, retained)?);
+        self.memberships = self
+            .memberships
+            .max(PoolReserve::MEMBERSHIPS_WITH_LINKS.capacity(participants, retained)?);
+        Ok(())
+    }
+
     pub fn edge_slots(self) -> usize {
         self.edge_slots
     }
+
     pub fn edge_pools(self) -> (usize, usize) {
         (self.edge_cells, self.edge_states)
     }
+
     pub fn reference_slots(self) -> usize {
         self.reference_slots
     }
+
     pub fn reference_pools(self) -> (usize, usize) {
         (self.reference_cells, self.reference_states)
     }
@@ -240,24 +239,31 @@ impl Capacities {
     pub fn root_slots(self) -> usize {
         self.root_slots
     }
+
     pub fn root_pool(self) -> usize {
         self.root_cells
     }
+
     pub fn registry(self) -> usize {
         self.registry
     }
+
     pub fn participants(self) -> usize {
         self.mutators + self.helpers
     }
+
     pub fn mutators(self) -> usize {
         self.mutators
     }
+
     pub fn helpers(self) -> usize {
         self.helpers
     }
+
     pub fn pools(self) -> (usize, usize, usize) {
         (self.controls, self.memberships, self.cells)
     }
+
     /// Limit successful allocations per slot for validation. Setup encodes this
     /// budget in opaque generations. The default retains the full token width.
     pub fn with_generation_limit(mut self, limit: u64) -> Result<Self, ConfigError> {
@@ -267,6 +273,7 @@ impl Capacities {
         self.generation_limit = limit;
         Ok(self)
     }
+
     pub fn generation_limit(self) -> u64 {
         self.generation_limit
     }
@@ -291,6 +298,7 @@ impl BoundedCatalog {
     pub fn new(capacities: Capacities) -> Result<CatalogHandle, ConfigError> {
         Self::new_in(capacities, &Budget::new(usize::MAX))
     }
+
     pub fn new_in(
         capacities: Capacities,
         budget: &Arc<Budget>,
@@ -305,6 +313,7 @@ impl<R: Payload> BoundedCatalog<R> {
     ) -> Result<CatalogHandle<R>, ConfigError> {
         Self::with_records_and_storage_in(capacities, budget, 0)
     }
+
     pub fn with_records_and_storage_in(
         capacities: Capacities,
         budget: &Arc<Budget>,
@@ -312,6 +321,7 @@ impl<R: Payload> BoundedCatalog<R> {
     ) -> Result<CatalogHandle<R>, ConfigError> {
         Self::with_record_layout_in(capacities, budget, inline_storage, None)
     }
+
     pub fn with_indexed_records_and_storage_in(
         capacities: Capacities,
         budget: &Arc<Budget>,
@@ -323,6 +333,7 @@ impl<R: Payload> BoundedCatalog<R> {
         }
         Self::with_record_layout_in(capacities, budget, inline_storage, Some(degree))
     }
+
     fn with_record_layout_in(
         capacities: Capacities,
         budget: &Arc<Budget>,
@@ -372,30 +383,38 @@ impl<R: Payload> BoundedCatalog<R> {
             })),
         })
     }
+
     pub fn footprint(&self) -> Footprint {
         Footprint::for_records::<R>(self.capacities).expect("validated capacities")
     }
+
     pub fn charged_bytes(&self) -> usize {
         self.charge.bytes()
     }
+
     pub fn reserved_storage_bytes(&self) -> usize {
         self.charge.bytes() - self.footprint().total()
     }
+
     pub fn capacities(&self) -> Capacities {
         self.capacities
     }
+
     pub fn reserved_edge_tokens(&self) -> usize {
         self.edge_tokens.load(Ordering::Acquire)
     }
+
     pub fn reserved_root_tokens(&self) -> usize {
         self.root_tokens.load(Ordering::Acquire)
     }
+
     pub fn registered(&self) -> (usize, usize) {
         (
             self.mutators.load(Ordering::Acquire),
             self.helpers.load(Ordering::Acquire),
         )
     }
+
     fn counter(&self, role: Role) -> (&AtomicUsize, usize) {
         match role {
             Role::Mutator => (&self.mutators, self.capacities.mutators),
@@ -417,6 +436,7 @@ impl<R: Payload> Clone for CatalogHandle<R> {
 }
 impl<R: Payload> Deref for CatalogHandle<R> {
     type Target = BoundedCatalog<R>;
+
     fn deref(&self) -> &Self::Target {
         self.inner.as_ref().expect("live handle")
     }
@@ -432,6 +452,7 @@ impl CatalogHandle {
     pub fn register_mutator(&self) -> Result<Participant, RegisterError> {
         self.register(Role::Mutator)
     }
+
     pub fn register_helper(&self) -> Result<Participant, RegisterError> {
         self.register(Role::Helper)
     }
@@ -488,6 +509,7 @@ impl<R: Payload> CatalogHandle<R> {
     pub fn register_record_mutator(&self) -> Result<Participant<R, GuardedCommand>, RegisterError> {
         self.register(Role::Mutator)
     }
+
     pub fn register_record_helper(&self) -> Result<Participant<R, GuardedCommand>, RegisterError> {
         self.register(Role::Helper)
     }
@@ -503,6 +525,7 @@ impl RecordKey {
     pub fn identity(self) -> u64 {
         self.identity
     }
+
     pub fn slot(self) -> usize {
         self.slot
     }
@@ -606,6 +629,7 @@ impl<R: Payload> PhaseYield<R> {
             first: true,
         }
     }
+
     #[expect(
         clippy::unwrap_in_result,
         reason = "the private second phase poll consumes its one retained attempt"
@@ -618,6 +642,7 @@ impl<R: Payload> PhaseYield<R> {
             Some(self.attempt.take().expect("private phase proposal"))
         }
     }
+
     fn cancel(&self) -> bool {
         self.attempt
             .as_ref()
@@ -666,6 +691,7 @@ impl Participant {
     pub fn poll(&mut self) -> Progress {
         self.poll_in(&())
     }
+
     pub fn phase(&mut self) -> Result<Phase, RequestError> {
         self.phase_in(&())
     }
@@ -682,6 +708,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
             Err(RequestError::Busy)
         }
     }
+
     pub fn submit(&mut self, command: C) -> Result<(), RequestError> {
         self.idle()?;
         if command
@@ -714,6 +741,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         self.state = RequestState::Starting(command);
         Ok(())
     }
+
     pub fn submit_record(
         &mut self,
         slot: usize,
@@ -730,6 +758,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         };
         Ok(())
     }
+
     #[expect(
         clippy::too_many_lines,
         reason = "keep the frozen bounded state transitions in one exhaustive dispatcher"
@@ -945,6 +974,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
             }
         }
     }
+
     /// False means commit already won; retain the request to observe its result.
     pub fn cancel(&mut self) -> bool {
         if let RequestState::Edge(request) = &self.state
@@ -972,6 +1002,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         self.state = RequestState::Idle;
         true
     }
+
     /// Copy possible outcomes without helping or granting an owning snapshot.
     /// The temporary owner can run destruction on drop; this is not a cycle count.
     pub fn possible_phase_outcomes(&mut self) -> Result<[Phase; 2], RequestError> {
@@ -982,6 +1013,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
             .possible_phase_outcomes()
             .ok_or(RequestError::Contended)
     }
+
     pub fn phase_in(&mut self, context: &R::Context) -> Result<Phase, RequestError> {
         self.idle()?;
         self.lease
@@ -990,17 +1022,20 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
             .phase_in(context)
             .ok_or(RequestError::Contended)
     }
+
     /// Drop this observation without waiting; an installed winner stays helpable.
     pub fn discard_request(&mut self) {
         let _ = self.cancel();
         self.state = RequestState::Idle;
     }
+
     pub fn observe(&mut self, record: RecordKey) -> Result<Record, RequestError> {
         self.idle()?;
         let catalog = &self.lease.owner;
         let cell = lookup(catalog, record)?;
         record_info(catalog, &cell)
     }
+
     pub fn discover(&mut self, slot: usize) -> Result<Option<Record>, RequestError> {
         self.idle()?;
         let catalog = &self.lease.owner;
@@ -1014,6 +1049,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
             .map(|cell| record_info(catalog, &cell))
             .transpose()
     }
+
     pub fn release_retired(&mut self, record: RecordKey) -> Result<bool, RequestError> {
         self.idle()?;
         let catalog = &self.lease.owner;
@@ -1042,6 +1078,7 @@ impl<R: Payload, C: Copy> Drop for Participant<R, C> {
         // Automatic field drop destroys request storage before its lease.
     }
 }
+
 fn key<R: Payload>(catalog: &BoundedCatalog<R>, cell: &Cell<R>) -> RecordKey {
     RecordKey {
         catalog: catalog.identity,
@@ -1049,6 +1086,7 @@ fn key<R: Payload>(catalog: &BoundedCatalog<R>, cell: &Cell<R>) -> RecordKey {
         slot: cell.slot(),
     }
 }
+
 fn record_info<R: Payload>(
     catalog: &BoundedCatalog<R>,
     cell: &Cell<R>,
@@ -1060,6 +1098,7 @@ fn record_info<R: Payload>(
         abandon_requested: cell.abandon_requested(),
     })
 }
+
 fn lookup<R: Payload>(
     catalog: &BoundedCatalog<R>,
     record: RecordKey,
@@ -1080,12 +1119,14 @@ fn lookup<R: Payload>(
 
 trait Commands<R: Payload>: Copy {
     fn numeric(self) -> Command;
+
     fn start(
         self,
         catalog: &BoundedCatalog<R>,
         context: &R::Context,
     ) -> Result<RequestState<R, Self>, RequestError>;
 }
+
 fn start<R: Payload, C: Copy>(
     catalog: &BoundedCatalog<R>,
     command: Command,
@@ -1139,6 +1180,7 @@ fn start<R: Payload, C: Copy>(
     }
     diagnose_failure(catalog, command, phase)
 }
+
 #[expect(
     clippy::indexing_slicing,
     reason = "domain indexes are checked before fixed-array access"
@@ -1181,8 +1223,8 @@ fn diagnose_failure<R: Payload, C: Copy>(
                 .get(domain)
                 .ok_or(RequestError::InvalidDomain)?;
             if mode == crate::canonical_catalog::DomainMode::Inactive
-                || (mode == crate::canonical_catalog::DomainMode::Old && domain != 1)
-                || (mode == crate::canonical_catalog::DomainMode::Young && domain != 0)
+                || (mode == crate::canonical_catalog::DomainMode::Old && domain != OLD_DOMAIN)
+                || (mode == crate::canonical_catalog::DomainMode::Young && domain != YOUNG_DOMAIN)
                 || entry.mode != crate::canonical_catalog::DomainMode::Inactive
                 || entry.pending != 0
             {
@@ -1251,6 +1293,7 @@ impl Commands<()> for Command {
     fn numeric(self) -> Command {
         self
     }
+
     fn start(self, catalog: &BoundedCatalog, (): &()) -> Result<RequestState, RequestError> {
         start(catalog, self, self, &())
     }
@@ -1267,6 +1310,7 @@ impl<R> std::fmt::Debug for SubmitFailure<R> {
             .finish_non_exhaustive()
     }
 }
+
 fn prepare_error(error: PrepareError) -> RequestError {
     match error {
         PrepareError::InvalidSlot => RequestError::InvalidSlot,

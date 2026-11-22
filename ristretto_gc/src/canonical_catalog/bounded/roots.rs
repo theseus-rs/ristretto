@@ -4,6 +4,7 @@ use super::{
     BoundedCatalog, CatalogHandle, Commands, Membership, Ordering, Owned, Participant, Payload,
     Phase, Preparation, RecordKey, RequestError, RequestState, trace_error,
 };
+use crate::canonical_catalog::STRONG_FLOOR;
 
 #[cfg(test)]
 thread_local! {
@@ -22,6 +23,7 @@ impl RootKey {
     pub fn identity(self) -> u64 {
         self.identity
     }
+
     pub fn slot(self) -> usize {
         self.slot
     }
@@ -46,26 +48,32 @@ impl<R: Payload> RootHandle<R> {
     pub(super) fn new(token: RootToken<R>, lease: RootLease<R>) -> Self {
         Self { token, lease }
     }
+
     pub fn key(&self) -> RootKey {
         key(&self.lease.owner, &self.token)
     }
+
     /// Compare the exact non-reused catalog identity without acquiring an owner.
     pub fn belongs_to(&self, catalog: &CatalogHandle<R>) -> bool {
         self.lease.owner.identity == catalog.identity
     }
+
     /// The token retains this exact root and target through slot reuse.
     pub fn target_slot(&self) -> usize {
         self.token.target_slot()
     }
+
     pub(super) fn entry(&self) -> &Root<R> {
         &self.token
     }
+
     pub(super) fn stably_live_in(&self, context: &R::Context) -> Option<bool> {
         self.lease
             .owner
             .raw
             .root_is_stably_live_in(&self.token, context)
     }
+
     pub fn observe(&self) -> RootObservation {
         observation(&self.lease.owner, &self.token)
     }
@@ -164,6 +172,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         };
         Ok(())
     }
+
     pub fn take_root(&mut self) -> Option<RootHandle<R>> {
         if let RequestState::Allocation(request) = &mut self.state {
             let root = request.take_root()?;
@@ -187,6 +196,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         };
         Some(root)
     }
+
     pub fn submit_root(&mut self, command: RootCommand) -> Result<(), RequestError> {
         self.idle()?;
         if command
@@ -198,11 +208,13 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         self.state = RequestState::StartingRoot(command);
         Ok(())
     }
+
     pub fn observe_root(&mut self, key: RootKey) -> Result<RootObservation, RequestError> {
         self.idle()?;
         let catalog = &self.lease.owner;
         lookup(catalog, key).map(|root| observation(catalog, &root))
     }
+
     /// Failed owning discovery is Contended, never an empty-slot observation.
     pub fn discover_root(&mut self, slot: usize) -> Result<Option<RootObservation>, RequestError> {
         self.idle()?;
@@ -216,12 +228,14 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
             .map_err(|_| RequestError::Contended)?
             .map(|root| observation(catalog, &root)))
     }
+
     pub fn release_retired_root(&mut self, key: RootKey) -> Result<bool, RequestError> {
         self.idle()?;
         let catalog = &self.lease.owner;
         Ok(catalog.raw.release_retired_root(&lookup(catalog, key)?))
     }
 }
+
 pub(super) fn key<R: Payload>(catalog: &BoundedCatalog<R>, root: &Root<R>) -> RootKey {
     RootKey {
         catalog: catalog.identity,
@@ -229,6 +243,7 @@ pub(super) fn key<R: Payload>(catalog: &BoundedCatalog<R>, root: &Root<R>) -> Ro
         slot: root.slot(),
     }
 }
+
 pub(super) fn observation<R: Payload>(
     catalog: &BoundedCatalog<R>,
     root: &Root<R>,
@@ -245,6 +260,7 @@ pub(super) fn observation<R: Payload>(
         internal: root.is_internal(),
     }
 }
+
 pub(super) fn lookup<R: Payload>(
     catalog: &BoundedCatalog<R>,
     key: RootKey,
@@ -369,7 +385,7 @@ pub(super) fn start<R: Payload>(
                 .get(domain)
                 .ok_or(RequestError::InvalidDomain)?;
             if entry.mode == crate::canonical_catalog::DomainMode::Inactive
-                || entry.floor != 0
+                || entry.floor != STRONG_FLOOR
                 || phase.root_cursors[domain] >= catalog.raw.root_capacity()
             {
                 return Err(RequestError::Conflict);
@@ -394,6 +410,7 @@ pub(super) fn start<R: Payload>(
         Err(RequestError::Contended)
     }
 }
+
 fn require_status<R: Payload>(root: &Root<R>, expected: RootStatus) -> Result<(), RequestError> {
     if !root.is_internal() && root.status() == expected {
         Ok(())
@@ -401,6 +418,7 @@ fn require_status<R: Payload>(root: &Root<R>, expected: RootStatus) -> Result<()
         Err(RequestError::Conflict)
     }
 }
+
 pub(super) fn barrier_valid<R: Payload>(
     root: &Root<R>,
     phase: Phase,
@@ -414,6 +432,7 @@ pub(super) fn barrier_valid<R: Payload>(
     .map(|_| ())
     .map_err(trace_error)
 }
+
 pub(super) fn prepare_error(error: RootPrepareError) -> RequestError {
     match error {
         RootPrepareError::Foreign => RequestError::Foreign,

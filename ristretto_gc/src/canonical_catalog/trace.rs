@@ -5,6 +5,14 @@
 )]
 use super::{Domain, Phase};
 
+pub(crate) const YOUNG_DOMAIN: usize = 0;
+pub(crate) const OLD_DOMAIN: usize = 1;
+pub(crate) const DOMAIN_COUNT: usize = 2;
+pub(crate) const NO_TICKET: u64 = 0;
+
+pub(crate) const STRONG_FLOOR: u8 = 0;
+const FINAL_FLOORS: std::ops::RangeInclusive<u8> = 1..=2;
+const PHANTOM_FLOORS: std::ops::RangeInclusive<u8> = 3..=4;
 pub const RETIREMENT_FLOOR: u8 = 5;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -41,9 +49,9 @@ pub enum TraceRetention {
 impl TraceRetention {
     pub fn at_floor(floor: u8) -> Option<Self> {
         match floor {
-            0 => Some(Self::Strong),
-            1 | 2 => Some(Self::Final),
-            3 | 4 => Some(Self::Phantom),
+            STRONG_FLOOR => Some(Self::Strong),
+            floor if FINAL_FLOORS.contains(&floor) => Some(Self::Final),
+            floor if PHANTOM_FLOORS.contains(&floor) => Some(Self::Phantom),
             _ => None,
         }
     }
@@ -63,18 +71,21 @@ impl TraceMark {
         Self {
             epoch,
             retention: None,
-            ticket: 0,
+            ticket: NO_TICKET,
             born: false,
             phantom_decided: false,
         }
     }
+
     pub fn retention_at(self, epoch: u64) -> Option<TraceRetention> {
         (self.epoch == epoch).then_some(self.retention).flatten()
     }
+
     /// Birth exemption is physical liveness, not earlier strong/final reachability.
     pub fn marked(self, epoch: u64) -> bool {
         self.epoch == epoch && (self.born || self.retention.is_some())
     }
+
     pub fn marked_before(self, epoch: u64, include_final: bool) -> bool {
         self.retention_at(epoch).is_some_and(|strength| {
             strength
@@ -100,10 +111,11 @@ pub struct TraceState {
     pub generation: Generation,
     /// Stable birth identity, even after a later deletion retains the object.
     pub old_birth: u64,
-    pub marks: [TraceMark; 2],
+    pub marks: [TraceMark; DOMAIN_COUNT],
 }
 impl std::ops::Deref for TraceState {
-    type Target = [TraceMark; 2];
+    type Target = [TraceMark; DOMAIN_COUNT];
+
     fn deref(&self) -> &Self::Target {
         &self.marks
     }
@@ -121,20 +133,22 @@ impl TraceState {
     /// payloads/children and supply canonical root and reference protocols.
     pub fn publication(mut phase: Phase) -> Result<(Self, Phase), TraceError> {
         let mut state = Self::unmarked(phase);
-        for index in 0..2 {
+        for index in 0..DOMAIN_COUNT {
             let domain = phase.domains[index];
             if domain.mode == DomainMode::Inactive {
                 continue;
             }
             let mark = &mut state.marks[index];
-            if domain.mode == DomainMode::Old || (index == 1 && domain.floor == RETIREMENT_FLOOR) {
+            if domain.mode == DomainMode::Old
+                || (index == OLD_DOMAIN && domain.floor == RETIREMENT_FLOOR)
+            {
                 mark.born = true;
                 if domain.mode == DomainMode::Old {
                     state.old_birth = domain.epoch;
                 }
             } else {
                 mark.retention = Some(TraceRetention::Strong);
-                if domain.floor == 0 {
+                if domain.floor == STRONG_FLOOR {
                     mark.ticket = phase.revision.checked_add(1).ok_or(TraceError::Exhausted)?;
                     phase.domains[index].pending =
                         domain.pending.checked_add(1).ok_or(TraceError::Exhausted)?;
@@ -188,13 +202,13 @@ impl TraceState {
         {
             return Err(TraceError::AlreadyMarked);
         }
-        if mark.ticket != 0 && mark.epoch != domain.epoch {
+        if mark.ticket != NO_TICKET && mark.epoch != domain.epoch {
             return Err(TraceError::Conflict);
         }
         let ticket = if old_young {
-            0
+            NO_TICKET
         } else {
-            if mark.ticket == 0 {
+            if mark.ticket == NO_TICKET {
                 phase.domains[index].pending =
                     domain.pending.checked_add(1).ok_or(TraceError::Exhausted)?;
             }
@@ -219,13 +233,13 @@ impl TraceState {
         let domain = *phase.domains.get(index).ok_or(TraceError::InvalidDomain)?;
         let mark = &mut self.marks[index];
         if domain.mode == DomainMode::Inactive
-            || ticket == 0
+            || ticket == NO_TICKET
             || mark.ticket != ticket
             || mark.epoch != domain.epoch
         {
             return Err(TraceError::Conflict);
         }
-        mark.ticket = 0;
+        mark.ticket = NO_TICKET;
         phase.domains[index].pending = domain.pending.checked_sub(1).ok_or(TraceError::Conflict)?;
         Ok((self, phase))
     }
@@ -235,7 +249,7 @@ impl TraceState {
         if !domain.mode.collects(self.generation)
             || domain.floor != RETIREMENT_FLOOR
             || self.marks[index].marked(domain.epoch)
-            || self.marks.iter().any(|m| m.ticket != 0)
+            || self.marks.iter().any(|m| m.ticket != NO_TICKET)
         {
             return Err(TraceError::Conflict);
         }
@@ -248,32 +262,32 @@ impl TraceState {
         if self.generation != Generation::Young || self.logically_retired(phase) {
             return Err(TraceError::Conflict);
         }
-        let old = phase.domains[1];
+        let old = phase.domains[OLD_DOMAIN];
         match old.mode {
             DomainMode::Old => {
-                let ticket = if old.floor == 0 {
-                    if self.marks[1].ticket == 0 {
-                        phase.domains[1].pending =
+                let ticket = if old.floor == STRONG_FLOOR {
+                    if self.marks[OLD_DOMAIN].ticket == NO_TICKET {
+                        phase.domains[OLD_DOMAIN].pending =
                             old.pending.checked_add(1).ok_or(TraceError::Exhausted)?;
                     }
                     phase.revision.checked_add(1).ok_or(TraceError::Exhausted)?
                 } else {
-                    0
+                    NO_TICKET
                 };
-                self.marks[1] = TraceMark {
+                self.marks[OLD_DOMAIN] = TraceMark {
                     epoch: old.epoch,
                     retention: Some(TraceRetention::Strong),
                     ticket,
                     born: false,
-                    phantom_decided: self.marks[1].epoch == old.epoch
-                        && self.marks[1].phantom_decided,
+                    phantom_decided: self.marks[OLD_DOMAIN].epoch == old.epoch
+                        && self.marks[OLD_DOMAIN].phantom_decided,
                 };
             }
             DomainMode::Full if old.floor < RETIREMENT_FLOOR => {
-                let retention = self.marks[0]
-                    .retention_at(phase.domains[0].epoch)
+                let retention = self.marks[YOUNG_DOMAIN]
+                    .retention_at(phase.domains[YOUNG_DOMAIN].epoch)
                     .unwrap_or(TraceRetention::Phantom);
-                match self.shade(phase, 1, retention) {
+                match self.shade(phase, OLD_DOMAIN, retention) {
                     Ok((state, next)) => {
                         self = state;
                         phase = next;

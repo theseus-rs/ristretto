@@ -12,6 +12,7 @@ fn fixture() -> (Catalog<()>, RootToken<()>) {
     let token = root.poll(&catalog).unwrap().unwrap();
     (catalog, token)
 }
+
 fn attempt(catalog: &Catalog<()>, mut preparation: Preparation<()>) -> super::super::Attempt<()> {
     assert!(preparation.poll(catalog).unwrap().is_none());
     preparation.poll(catalog).unwrap().unwrap()

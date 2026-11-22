@@ -139,12 +139,12 @@ fn create_function_with_limits(
 // [i64 length][element data...]
 // ---------------------------------------------------------------------------
 
-const HEADER_SIZE: usize = 8;
+const HEADER_SIZE: usize = size_of::<i64>();
 
 unsafe fn alloc_array(count: i32, element_size: usize) -> i64 {
     let data_size = count as usize * element_size;
     let total_size = HEADER_SIZE + data_size;
-    let layout = Layout::from_size_align(total_size, 8).expect("invalid layout");
+    let layout = Layout::from_size_align(total_size, align_of::<i64>()).expect("invalid layout");
     let ptr = unsafe { alloc_zeroed(layout) };
     unsafe { *(ptr as *mut i64) = count as i64 };
     ptr as i64
@@ -160,35 +160,35 @@ fn alloc_primitive_array(ctx: *const u8, count: i32, element_size: usize) -> i64
 }
 
 extern "C" fn jit_new_bool_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
-    alloc_primitive_array(ctx, count, 1)
+    alloc_primitive_array(ctx, count, size_of::<u8>())
 }
 
 extern "C" fn jit_new_byte_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
-    alloc_primitive_array(ctx, count, 1)
+    alloc_primitive_array(ctx, count, size_of::<i8>())
 }
 
 extern "C" fn jit_new_char_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
-    alloc_primitive_array(ctx, count, 2)
+    alloc_primitive_array(ctx, count, size_of::<u16>())
 }
 
 extern "C" fn jit_new_short_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
-    alloc_primitive_array(ctx, count, 2)
+    alloc_primitive_array(ctx, count, size_of::<i16>())
 }
 
 extern "C" fn jit_new_int_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
-    alloc_primitive_array(ctx, count, 4)
+    alloc_primitive_array(ctx, count, size_of::<i32>())
 }
 
 extern "C" fn jit_new_long_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
-    alloc_primitive_array(ctx, count, 8)
+    alloc_primitive_array(ctx, count, size_of::<i64>())
 }
 
 extern "C" fn jit_new_float_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
-    alloc_primitive_array(ctx, count, 4)
+    alloc_primitive_array(ctx, count, size_of::<f32>())
 }
 
 extern "C" fn jit_new_double_array(ctx: *const u8, _bci: i32, count: i32) -> i64 {
-    alloc_primitive_array(ctx, count, 8)
+    alloc_primitive_array(ctx, count, size_of::<f64>())
 }
 
 extern "C" fn jit_arraylength(_ctx: *const u8, _bci: i32, array_ptr: i64) -> i32 {
@@ -405,7 +405,7 @@ extern "C" fn jit_new(_ctx: *const u8, _bci: i32, _cp_class_index: i32) -> i64 {
 }
 
 extern "C" fn jit_anewarray(_ctx: *const u8, _bci: i32, _cp_class_index: i32, count: i32) -> i64 {
-    unsafe { alloc_array(count, 8) }
+    unsafe { alloc_array(count, size_of::<i64>()) }
 }
 
 extern "C" fn jit_multianewarray(
@@ -420,7 +420,7 @@ extern "C" fn jit_multianewarray(
         return 0;
     }
     let outermost = unsafe { *dims_ptr };
-    unsafe { alloc_array(outermost, 8) }
+    unsafe { alloc_array(outermost, size_of::<i64>()) }
 }
 
 extern "C" fn jit_getstatic_int(ctx: *const u8, _bci: i32, field_ref: i32) -> i32 {

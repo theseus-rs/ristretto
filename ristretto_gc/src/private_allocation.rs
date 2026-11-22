@@ -69,6 +69,7 @@ impl Allocation {
     pub(crate) fn pointer(&self) -> Pointer {
         self.pointer
     }
+
     pub(crate) fn size(&self) -> usize {
         self.reservation.bytes()
     }

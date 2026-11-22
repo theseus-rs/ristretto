@@ -9,6 +9,9 @@ use cranelift::frontend::{FunctionBuilder, Switch};
 use cranelift::prelude::{Block, InstBuilder, IntCC, TrapCode, Value, types};
 use ristretto_classfile::attributes::{LookupSwitch, TableSwitch};
 
+const SHORT_BRANCH_BYTES: usize = size_of::<u8>() + size_of::<i16>();
+const WIDE_BRANCH_BYTES: usize = size_of::<u8>() + size_of::<i32>();
+
 /// # References
 ///
 /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
@@ -26,7 +29,7 @@ pub(crate) fn ifeq(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -62,7 +65,7 @@ pub(crate) fn ifne(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -98,7 +101,7 @@ pub(crate) fn iflt(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -136,7 +139,7 @@ pub(crate) fn ifge(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -175,7 +178,7 @@ pub(crate) fn ifgt(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -213,7 +216,7 @@ pub(crate) fn ifle(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -252,7 +255,7 @@ pub(crate) fn if_icmpeq(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -288,7 +291,7 @@ pub(crate) fn if_icmpne(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -324,7 +327,7 @@ pub(crate) fn if_icmplt(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -362,7 +365,7 @@ pub(crate) fn if_icmpge(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -401,7 +404,7 @@ pub(crate) fn if_icmpgt(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -439,7 +442,7 @@ pub(crate) fn if_icmple(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -477,7 +480,7 @@ pub(crate) fn if_acmpeq(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -513,7 +516,7 @@ pub(crate) fn if_acmpne(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -548,7 +551,7 @@ pub(crate) fn ifnull(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -584,7 +587,7 @@ pub(crate) fn ifnonnull(
         .get(&address)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_address = program_counter
-        .checked_add(3)
+        .checked_add(SHORT_BRANCH_BYTES)
         .ok_or_else(|| InvalidBlockAddress(address))?;
     let else_block = blocks
         .get(&else_address)
@@ -648,8 +651,14 @@ pub(crate) fn jsr(
     program_counter: usize,
     address: i16,
 ) -> Result<()> {
-    let address = i32::from(address);
-    jsr_at(function_builder, blocks, stack, program_counter, address, 3)
+    jsr_at(
+        function_builder,
+        blocks,
+        stack,
+        program_counter,
+        i32::from(address),
+        SHORT_BRANCH_BYTES,
+    )
 }
 
 /// # References
@@ -663,7 +672,14 @@ pub(crate) fn jsr_w(
     program_counter: usize,
     address: i32,
 ) -> Result<()> {
-    jsr_at(function_builder, blocks, stack, program_counter, address, 5)
+    jsr_at(
+        function_builder,
+        blocks,
+        stack,
+        program_counter,
+        address,
+        WIDE_BRANCH_BYTES,
+    )
 }
 
 fn jsr_at(
@@ -672,13 +688,14 @@ fn jsr_at(
     stack: &mut OperandStack,
     program_counter: usize,
     address: i32,
-    length: i64,
+    length: usize,
 ) -> Result<()> {
-    let next_address = i64::try_from(program_counter)?;
-    let next_address = next_address
+    let next_address = program_counter
         .checked_add(length)
         .ok_or_else(|| InvalidBlockAddress(program_counter))?;
-    let value = function_builder.ins().iconst(types::I32, next_address);
+    let value = function_builder
+        .ins()
+        .iconst(types::I32, i64::try_from(next_address)?);
     stack.push(value)?;
 
     let address = usize::try_from(i64::try_from(program_counter)? + i64::from(address))?;
@@ -839,17 +856,7 @@ pub(crate) fn r#return(
     stack: &mut OperandStack,
     _return_pointer: Value,
 ) {
-    // This optimization relies on the fact that when returning from a "void" method, the default
-    // return pointer values should be initialized to 0 which is the same as the following code:
-    // let value = function_builder.ins().iconst(types::I64, 0);
-    // let discriminate = i64::from(jit_value::NONE);
-    // let discriminate = function_builder.ins().iconst(types::I8, discriminate);
-    // function_builder
-    //     .ins()
-    //     .store(MemFlags::new(), discriminate, return_pointer, 0);
-    // function_builder
-    //     .ins()
-    //     .store(MemFlags::new(), value, return_pointer, 8);
+    // The caller initializes the result to JitValue::new() for a void return.
     let stack_values = stack.as_slice();
     function_builder.ins().return_(stack_values);
 }

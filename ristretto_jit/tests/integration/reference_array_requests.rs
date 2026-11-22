@@ -5,12 +5,15 @@ use ristretto_jit::{
     Compiler, ExecutionStep, Function, Result, Value,
 };
 use std::num::NonZeroU32;
+
 extern "C" fn publish(_context: *const u8, _roots: *const i64, _count: i32) -> i32 {
     1
 }
+
 fn pointer() -> *const u8 {
     std::ptr::from_ref(&0u8)
 }
+
 fn allocation(component: &str) -> Result<(Function, u16)> {
     let mut class = super::continuation::fixture(
         "(I)[Ljava/lang/Object;",
@@ -41,6 +44,7 @@ fn allocation(component: &str) -> Result<(Function, u16)> {
         component,
     ))
 }
+
 #[test]
 fn reference_allocation_carries_component_length_and_result_token() -> Result<()> {
     let (function, index) = allocation("java/lang/Object")?;
@@ -67,6 +71,7 @@ fn reference_allocation_carries_component_length_and_result_token() -> Result<()
     assert!(allocation("[Ljava/lang/Object;").is_err());
     Ok(())
 }
+
 #[test]
 fn reference_store_and_load_keep_array_index_and_value_tokens() -> Result<()> {
     let class = super::continuation::fixture(

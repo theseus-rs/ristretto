@@ -1,5 +1,6 @@
 use super::super::{Attempt, Cell, Membership, Outcome, Preparation, allocate};
 use super::*;
+
 fn cell(catalog: &Catalog, slot: usize) -> Owned<Cell> {
     let mut creation = catalog.begin_create_with(slot, 8 * (slot + 1), ()).unwrap();
     for _ in 0..4 {
@@ -9,6 +10,7 @@ fn cell(catalog: &Catalog, slot: usize) -> Owned<Cell> {
     }
     panic!("finite creation");
 }
+
 fn fixture() -> (Catalog, Owned<Cell>, Owned<Cell>, EdgeToken, Attempt) {
     let catalog = Catalog::with_record_capacities_and_limit(2, 32, 32, 32, 32)
         .with_edge_capacities(1, 16, 16, 32);
@@ -51,6 +53,7 @@ fn fixture() -> (Catalog, Owned<Cell>, Owned<Cell>, EdgeToken, Attempt) {
     let attempt = preparation.poll(&catalog).unwrap().unwrap();
     (catalog, a, b, edge, attempt)
 }
+
 #[test]
 fn secondary_and_edge_acquisition_fail_before_irreversible_commit() {
     for successful_shares in [1, 2] {
@@ -67,6 +70,7 @@ fn secondary_and_edge_acquisition_fail_before_irreversible_commit() {
         assert_eq!(catalog.commit_in(&attempt, &()), Outcome::Cancelled);
     }
 }
+
 #[test]
 fn helper_completes_all_effects_after_owner_stops_at_first_membership() {
     let (catalog, a, b, edge, attempt) = fixture();
@@ -80,6 +84,7 @@ fn helper_completes_all_effects_after_owner_stops_at_first_membership() {
     assert_eq!(edge.membership(), Some(EdgeMembership::Retired));
     assert_eq!(catalog.commit_in(&attempt, &()), Outcome::Committed);
 }
+
 #[test]
 fn cancelled_multi_effect_proposal_changes_no_membership() {
     let (catalog, a, b, edge, attempt) = fixture();

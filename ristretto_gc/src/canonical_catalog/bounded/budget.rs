@@ -14,6 +14,7 @@ impl Footprint {
     pub fn for_capacities(capacities: Capacities) -> Result<Self, ConfigError> {
         Self::for_records::<()>(capacities)
     }
+
     pub fn for_records<R: super::Payload>(capacities: Capacities) -> Result<Self, ConfigError> {
         if capacities.reference_slots != 0 {
             return Err(ConfigError::UnsupportedReferences);
@@ -65,18 +66,23 @@ impl Footprint {
                 .ok_or(overflow)?,
         })
     }
+
     pub fn backing(self) -> usize {
         self.backing
     }
+
     pub fn participants(self) -> usize {
         self.participants
     }
+
     pub fn root_tokens(self) -> usize {
         self.root_tokens
     }
+
     pub fn edge_tokens(self) -> usize {
         self.edge_tokens
     }
+
     pub fn total(self) -> usize {
         self.total
     }
@@ -95,12 +101,15 @@ impl Budget {
             used: AtomicUsize::new(0),
         })
     }
+
     pub fn limit(&self) -> usize {
         self.limit
     }
+
     pub fn used(&self) -> usize {
         self.used.load(Ordering::Acquire)
     }
+
     pub(super) fn reserve(self: &Arc<Self>, bytes: usize) -> Result<Charge, ConfigError> {
         let owner = self.clone();
         let old = self.used.load(Ordering::Relaxed);

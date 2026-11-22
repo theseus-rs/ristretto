@@ -52,6 +52,7 @@ impl<R: Payload> Request<R> {
             _ => true,
         }
     }
+
     pub(super) fn take_root(&mut self) -> Option<RootHandle<R>> {
         if !matches!(self.stage, Stage::Ready) {
             return None;
@@ -59,6 +60,7 @@ impl<R: Payload> Request<R> {
         self.stage = Stage::Taken;
         self.root.take()
     }
+
     #[expect(
         clippy::too_many_lines,
         reason = "preserve the frozen resumable transaction dispatcher"
@@ -306,6 +308,7 @@ impl<R: Payload> Participant<R, GuardedCommand> {
             true,
         )
     }
+
     fn submit_rooted_at(
         &mut self,
         slot: usize,
@@ -355,6 +358,7 @@ impl<R: Payload> Participant<R, GuardedCommand> {
 mod tests {
     use super::super::{BoundedCatalog, Budget, Capacities, Membership, Ordering};
     use super::*;
+    use crate::canonical_catalog::PUBLISHED;
     use crate::canonical_catalog::record_fixture::Fixture;
     use std::collections::BTreeSet;
 
@@ -365,6 +369,7 @@ mod tests {
         let worker = catalog.register_record_mutator().unwrap();
         (catalog, worker)
     }
+
     fn stage(worker: &Participant<Fixture, GuardedCommand>) -> &'static str {
         let RequestState::Allocation(request) = &worker.state else {
             panic!("allocation request")
@@ -381,6 +386,7 @@ mod tests {
             Stage::Taken => "taken",
         }
     }
+
     fn published_by_helper(
         paused_stage: &str,
     ) -> (
@@ -405,9 +411,10 @@ mod tests {
                 .find(|p| *p != Progress::Pending),
             Some(Progress::Committed)
         );
-        assert_eq!(record.0.published.load(Ordering::Acquire), 1);
+        assert_eq!(record.0.published.load(Ordering::Acquire), PUBLISHED);
         (catalog, worker, record)
     }
+
     #[test]
     fn allocation_recovers_helper_publication_from_every_private_publication_stage() {
         for paused in ["start-publish", "prepare-publish", "attempt"] {
@@ -423,7 +430,7 @@ mod tests {
                     .0
                     .published
                     .load(Ordering::Acquire),
-                1
+                PUBLISHED
             );
             assert!(
                 worker.take_root().is_none(),
@@ -457,6 +464,7 @@ mod tests {
             record.release_origin();
         }
     }
+
     #[test]
     fn helper_result_recovery_requires_admission_and_successful_observations() {
         {
@@ -556,6 +564,7 @@ mod tests {
         }
         panic!("allocation did not settle");
     }
+
     #[test]
     fn retry_automatic_request_retries_both_private_cell_and_root_collisions() {
         let caps = Capacities::derive(3, 2, 1).unwrap().with_roots(3).unwrap();
@@ -596,6 +605,7 @@ mod tests {
         assert_eq!(catalog.reserved_root_tokens(), 2);
         assert_eq!(catalog.raw.discover(1).unwrap().unwrap().address, 16);
     }
+
     #[test]
     fn retry_automatic_preflight_skips_occupied_slots_without_new_record_preparation() {
         let (catalog, mut worker) = setup();
@@ -646,9 +656,12 @@ mod tests {
         drop((keeper, second));
         assert_eq!(catalog.reserved_root_tokens(), 0);
     }
+
     #[test]
     #[cfg(not(target_family = "wasm"))]
     fn allocation_retries_partial_helper_publication_after_its_snapshot() {
+        use crate::canonical_catalog::UNPUBLISHED;
+
         let (catalog, mut worker) = setup();
         let record = Fixture::new();
         worker
@@ -685,7 +698,7 @@ mod tests {
         let progress = worker.poll_in(&7);
         let prepared = root.status() == crate::canonical_catalog::RootStatus::Prepared;
         let tracing = matches!(root.target_membership(), Some(Membership::Tracing(_)));
-        let unpublished = record.0.published.load(Ordering::Acquire) == 0;
+        let unpublished = record.0.published.load(Ordering::Acquire) == UNPUBLISHED;
         let absent = worker.take_root().is_none();
         resume.send(()).unwrap();
         assert_eq!(publisher.join().unwrap(), Some(Progress::Committed));
@@ -740,7 +753,7 @@ mod tests {
             panic!("attempt")
         };
         assert_eq!(catalog.raw.commit_in(attempt, &7), Outcome::Committed);
-        assert_eq!(record.0.published.load(Ordering::Acquire), 1);
+        assert_eq!(record.0.published.load(Ordering::Acquire), PUBLISHED);
         assert!(
             !worker.cancel(),
             "a committed publication cannot be cancelled"

@@ -1,5 +1,5 @@
 #[path = "activation.rs"]
-mod activation;
+pub(crate) mod activation;
 pub(crate) use activation::ContinuationLayout;
 pub use activation::{
     Activation, AllocationKind, AllocationRequest, ArrayAccessKind, ArrayAccessRequest,
@@ -120,6 +120,9 @@ impl Debug for Function {
 }
 
 impl Function {
+    const COOPERATIVE_INSTRUCTION_BUDGET: usize = 4096;
+    pub(crate) const INLINE_ARGUMENT_CAPACITY: usize = 8;
+
     /// Native space reserved beyond the generated frame for runtime transitions.
     pub const STACK_RESERVE_BYTES: usize = 256 * 1024;
 
@@ -210,7 +213,8 @@ impl Function {
         let instructions = self
             .continuation
             .map_or(1, |layout| layout.instructions.max(1));
-        let budget = u32::try_from((4096 / instructions).max(1)).unwrap_or(1);
+        let budget = u32::try_from((Self::COOPERATIVE_INSTRUCTION_BUDGET / instructions).max(1))
+            .unwrap_or(1);
         std::num::NonZeroU32::new(budget).unwrap_or(std::num::NonZeroU32::MIN)
     }
 
@@ -250,7 +254,7 @@ impl Function {
             });
         }
         // Use a stack-allocated buffer for small argument lists (most JVM methods have 0-5 args)
-        let mut stack_buf = [JitValue::new(); 8];
+        let mut stack_buf = [JitValue::new(); Self::INLINE_ARGUMENT_CAPACITY];
         let mut result = JitValue::new();
         if arguments.len() <= stack_buf.len() {
             for (i, (arg, expected)) in arguments.iter().zip(self.argument_types.iter()).enumerate()
@@ -292,6 +296,7 @@ impl Function {
         }
         result.try_into()
     }
+
     #[cfg_attr(
         any(
             target_family = "wasm",

@@ -5,12 +5,15 @@ use ristretto_jit::{
     ExecutionStep, Function, Result, Value,
 };
 use std::num::NonZeroU32;
+
 extern "C" fn publish(_context: *const u8, _roots: *const i64, _count: i32) -> i32 {
     1
 }
+
 fn pointer() -> *const u8 {
     std::ptr::from_ref(&0u8)
 }
+
 fn compile(descriptor: &str, code: &[Instruction]) -> Result<Function> {
     let class = super::continuation::fixture(descriptor, code)?;
     Compiler::new()?.compile_requests(
@@ -19,6 +22,7 @@ fn compile(descriptor: &str, code: &[Instruction]) -> Result<Function> {
         &[("jit_publish_frame_roots", publish as *const u8)],
     )
 }
+
 #[test]
 fn all_primitive_allocations_keep_signed_length_and_owned_result_protocol() -> Result<()> {
     for (kind, descriptor) in [
@@ -62,6 +66,7 @@ fn all_primitive_allocations_keep_signed_length_and_owned_result_protocol() -> R
     }
     Ok(())
 }
+
 #[test]
 #[expect(clippy::too_many_lines, reason = "explicit primitive request matrix")]
 fn primitive_store_load_cells_preserve_types_bits_and_signed_index() -> Result<()> {
@@ -190,6 +195,7 @@ fn primitive_store_load_cells_preserve_types_bits_and_signed_index() -> Result<(
     }
     Ok(())
 }
+
 #[test]
 fn array_length_null_and_cancel_are_explicit_host_boundaries() -> Result<()> {
     let function = compile(

@@ -2,10 +2,11 @@
 //! complete source traversal or a runtime payload/child-access API.
 use super::super::reference::ObjectKey;
 use super::{
-    AllocationError, Arc, AtomicU8, Catalog, Cell, Contended, CreationError, Membership,
-    OptionalLink, Ordering, Owned, Owner, Phase, Pool, PooledLink, Preparation, Record, Root,
-    RootStatus, Snapshot, allocate, share,
+    AllocationError, Arc, Catalog, Cell, Contended, CreationError, Membership, OptionalLink,
+    Ordering, Owned, Owner, Phase, Pool, PooledLink, Preparation, Record, Root, RootStatus,
+    Snapshot, allocate, share,
 };
+use std::sync::atomic::AtomicBool;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct EdgeState {
@@ -23,7 +24,7 @@ pub struct EdgeSlot {
     pub identity: u64,
     pub slot: usize,
     state: PooledLink<EdgeMembership>,
-    removal_requested: AtomicU8,
+    removal_requested: AtomicBool,
     #[cfg(test)]
     before_effect: std::sync::Mutex<Option<Box<dyn FnOnce() + Send>>>,
 }
@@ -31,9 +32,11 @@ impl EdgeSlot {
     pub fn membership(&self) -> Option<EdgeMembership> {
         self.state.load().map(|state| *state)
     }
+
     pub fn removal_requested(&self) -> bool {
-        self.removal_requested.load(Ordering::Acquire) != 0
+        self.removal_requested.load(Ordering::Acquire)
     }
+
     #[cfg(all(test, not(target_family = "wasm")))]
     pub(crate) fn pause_next_effect(&self, hook: impl FnOnce() + Send + 'static) {
         *self.before_effect.lock().expect("unpoisoned test hook") = Some(Box::new(hook));
@@ -45,6 +48,7 @@ pub struct EdgeToken {
 }
 impl std::ops::Deref for EdgeToken {
     type Target = EdgeSlot;
+
     fn deref(&self) -> &Self::Target {
         &self.slot
     }
@@ -70,7 +74,7 @@ impl EdgeToken {
 impl Drop for EdgeToken {
     fn drop(&mut self) {
         if self.remove_on_drop {
-            self.slot.removal_requested.store(1, Ordering::Release);
+            self.slot.removal_requested.store(true, Ordering::Release);
         }
     }
 }
@@ -154,7 +158,7 @@ impl EdgeCreation {
                     edges.states.clone(),
                     self.membership.take().expect("private state"),
                 ),
-                removal_requested: AtomicU8::new(0),
+                removal_requested: AtomicBool::new(false),
                 #[cfg(test)]
                 before_effect: std::sync::Mutex::new(None),
             });
@@ -217,6 +221,7 @@ impl<R: Record> Catalog<R> {
         }
         self
     }
+
     /// Setup-only geometry. Publication enforces placement before traversal can
     /// trust this range; no source or participant can later change the degree.
     pub fn with_source_edge_degree(mut self, degree: usize) -> Self {
@@ -242,6 +247,7 @@ impl<R: Record> Catalog<R> {
         edges.source_degree = Some(degree);
         self
     }
+
     pub(crate) fn source_edge_range(&self, source: usize) -> Option<std::ops::Range<usize>> {
         let edges = self.edges.as_ref()?;
         match edges.source_degree {
@@ -255,10 +261,12 @@ impl<R: Record> Catalog<R> {
             }
         }
     }
+
     pub(crate) fn edge_slot_matches_source(&self, edge: usize, source: usize) -> bool {
         self.source_edge_range(source)
             .is_some_and(|range| range.contains(&edge))
     }
+
     pub fn edge_backing_bytes(slots: usize, backing: usize, states: usize) -> Option<usize> {
         if slots == 0 {
             return Some(0);
@@ -269,15 +277,18 @@ impl<R: Record> Catalog<R> {
             .checked_add(Pool::<EdgeSlot>::requested_backing_bytes(backing)?)?
             .checked_add(Pool::<EdgeMembership>::requested_backing_bytes(states)?)
     }
+
     pub fn edge_capacity(&self) -> usize {
         self.edges.as_ref().map_or(0, |edges| edges.slots.len())
     }
+
     pub fn discover_edge(&self, slot: usize) -> Result<Option<Owned<EdgeSlot>>, Contended> {
         self.edges
             .as_ref()
             .and_then(|edges| edges.slots.get(slot))
             .map_or(Ok(None), OptionalLink::load)
     }
+
     pub fn begin_create_edge(&self, slot: usize) -> Result<EdgeCreation, EdgePrepareError> {
         let entry = self
             .edges
@@ -336,6 +347,7 @@ impl<R: Record> Catalog<R> {
         });
         Some(preparation)
     }
+
     fn edge_source(&self, root: &Root<R>, phase: Phase) -> Option<ObjectKey> {
         if !Arc::ptr_eq(&root.owner, &self.owner)
             || root.status() != RootStatus::Live
@@ -354,6 +366,7 @@ impl<R: Record> Catalog<R> {
             slot: root.target_slot(),
         })
     }
+
     // Outer None is failed observation, inner None is absent or a different identity.
     #[expect(
         clippy::option_option,
@@ -366,6 +379,7 @@ impl<R: Record> Catalog<R> {
                 .filter(|cell| cell.identity == key.identity),
         )
     }
+
     #[expect(
         clippy::needless_pass_by_value,
         reason = "preserve the frozen owning-preparation API and exact owner destruction boundary"
@@ -405,6 +419,7 @@ impl<R: Record> Catalog<R> {
             EdgeMembership::Live(EdgeState { source, target }),
         )
     }
+
     #[expect(
         clippy::needless_pass_by_value,
         reason = "preserve the frozen owning-preparation API and exact owner destruction boundary"
@@ -452,6 +467,7 @@ impl<R: Record> Catalog<R> {
         state.target = target;
         self.edge_effect(preparation, edge, expected, EdgeMembership::Live(state))
     }
+
     #[expect(
         clippy::needless_pass_by_value,
         reason = "preserve the frozen owning-preparation API and exact owner destruction boundary"
@@ -483,6 +499,7 @@ impl<R: Record> Catalog<R> {
         // mutation or discovery replacement can slip between validation and CAS.
         self.begin_activate_root(snapshot, child)
     }
+
     pub fn begin_requested_edge_removal(
         &self,
         snapshot: Snapshot<R>,
@@ -541,6 +558,7 @@ impl<R: Record> Catalog<R> {
         let preparation = self.begin_prepare(snapshot, phase, effect)?;
         self.edge_effect(preparation, edge, expected, EdgeMembership::Retired)
     }
+
     pub fn release_retired_edge(&self, edge: &Owned<EdgeSlot>) -> bool {
         if !Arc::ptr_eq(&edge.owner, &self.owner)
             || edge.membership() != Some(EdgeMembership::Retired)

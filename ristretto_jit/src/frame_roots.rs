@@ -2,6 +2,7 @@
 //! Reference-bearing production eligibility remains closed pending the rest of
 //! the GC/ABI qualification and publication-cost measurements.
 use super::reference_liveness::ReferenceLiveness;
+use crate::compiler::native_frame::{word_offset, word_stack_slot};
 use crate::local_variables::LocalVariables;
 use crate::runtime_helpers::RuntimeHelpers;
 use crate::{Error, Result};
@@ -36,11 +37,7 @@ impl FrameRoots {
         let spill = if capacity == 0 {
             None
         } else {
-            Some(builder.create_sized_stack_slot(StackSlotData::new(
-                StackSlotKind::ExplicitSlot,
-                u32::try_from(capacity * 8)?,
-                3,
-            )))
+            Some(word_stack_slot(builder, capacity)?)
         };
         Ok(Self {
             liveness,
@@ -78,7 +75,7 @@ impl FrameRoots {
             for (index, value) in roots.iter().enumerate() {
                 builder
                     .ins()
-                    .stack_store(pointer_type, *value, spill, i32::try_from(index * 8)?);
+                    .stack_store(pointer_type, *value, spill, word_offset(index)?);
             }
             builder.ins().stack_addr(pointer_type, spill, 0)
         };

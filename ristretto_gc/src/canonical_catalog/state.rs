@@ -15,8 +15,10 @@ use super::{
     Arc, AtomicU8, AtomicU64, AtomicUsize, Contended, Domain, DomainMode, OptionalLink, Ordering,
     Owned, Phase, Pool, PooledLink, TraceState, allocate, share,
 };
+use crate::canonical_catalog::{DOMAIN_COUNT, STRONG_FLOOR};
 use crate::canonical_pool as pool;
 use pool::AllocationError;
+use std::sync::atomic::AtomicBool;
 #[path = "edge_traversal.rs"]
 mod edge_traversal;
 pub use edge_traversal::*;
@@ -31,6 +33,9 @@ use edges::{EdgeEffect, EdgeRegistry};
 pub(crate) use roots::root_barrier_plan;
 pub use roots::{Root, RootCreation, RootPrepareError, RootStatus, RootToken};
 use roots::{RootEffect, RootRegistry};
+const MAX_PREPARATION_POLLS: usize = 24;
+pub(crate) const UNPUBLISHED: u8 = 0;
+pub(crate) const PUBLISHED: u8 = 1;
 const UNDECIDED: u8 = 0;
 const COMMIT: u8 = 1;
 const CANCEL: u8 = 2;
@@ -60,9 +65,10 @@ impl<'a, G> Entered<'a, G> {
             published: Some(published),
         }
     }
+
     fn certified(&self) {
         if let Some(latch) = self.published {
-            latch.store(COMMIT, Ordering::Release);
+            latch.store(PUBLISHED, Ordering::Release);
         }
     }
 }
@@ -77,6 +83,7 @@ pub trait Record {
     type Guard<'a>
     where
         Self: 'a;
+
     fn enter<'a>(
         &'a self,
         context: &'a Self::Context,
@@ -85,6 +92,7 @@ pub trait Record {
 impl Record for () {
     type Context = ();
     type Guard<'a> = ();
+
     fn enter<'a>(&'a self, (): &'a ()) -> Result<Entered<'a, ()>, RecordError> {
         Ok(Entered {
             _guard: (),
@@ -96,7 +104,7 @@ impl Record for () {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Membership {
     Prepared,
-    Live([u64; 2]),
+    Live([u64; DOMAIN_COUNT]),
     Tracing(TraceState),
     Retired,
 }
@@ -108,7 +116,7 @@ pub struct Cell<R: Record = ()> {
     pub address: usize,
     slot: AtomicUsize,
     state: PooledLink<Membership>,
-    abandon_requested: AtomicU8,
+    abandon_requested: AtomicBool,
 }
 impl<R: Record> Cell<R> {
     /// Fixed after successful announcement. Only its private creator can rotate
@@ -120,14 +128,17 @@ impl<R: Record> Cell<R> {
     /// Durable intent from a cancelled rooted-allocation owner. Helpers may
     /// abandon only Prepared membership through the canonical controller.
     pub fn abandon_requested(&self) -> bool {
-        self.abandon_requested.load(Ordering::Acquire) != 0
+        self.abandon_requested.load(Ordering::Acquire)
     }
+
     pub(crate) fn request_abandon(&self) {
-        self.abandon_requested.store(1, Ordering::Release);
+        self.abandon_requested.store(true, Ordering::Release);
     }
+
     pub fn record(&self) -> &R {
         &self.record
     }
+
     pub fn membership(&self) -> Option<Membership> {
         self.state.load().map(|state| *state)
     }
@@ -177,6 +188,7 @@ impl<R: Record> Control<R> {
             Self::Phase(operation) => operation.decision.load(Ordering::Acquire) != UNDECIDED,
         }
     }
+
     fn phase(&self) -> Phase {
         match self {
             Control::Stable(phase) => *phase,
@@ -304,6 +316,7 @@ impl<R: Record> Attempt<R> {
     pub(crate) fn is_phase_only(&self) -> bool {
         matches!(*self.busy, Control::Phase(_))
     }
+
     #[cfg(test)]
     fn operation(&self) -> &Operation<R> {
         let Control::Busy(operation) = &*self.busy else {
@@ -311,6 +324,7 @@ impl<R: Record> Attempt<R> {
         };
         operation
     }
+
     fn decision(&self) -> &AtomicU8 {
         match &*self.busy {
             Control::Busy(operation) => &operation.decision,
@@ -318,6 +332,7 @@ impl<R: Record> Attempt<R> {
             Control::Stable(_) => unreachable!("stable proposal"),
         }
     }
+
     fn completed(&self) -> u8 {
         match &*self.busy {
             Control::Busy(operation) => operation.outcome().decision.load(Ordering::Acquire),
@@ -325,6 +340,7 @@ impl<R: Record> Attempt<R> {
             Control::Stable(_) => unreachable!("stable proposal"),
         }
     }
+
     /// The immutable decision is shared by all helpers. Cancellation does not
     /// release an already installed controller; a subsequent helper does that.
     pub fn cancel(&self) -> bool {
@@ -404,6 +420,7 @@ impl<R: Record> Creation<R> {
     pub fn poll(&mut self, catalog: &Catalog<R>) -> Result<Option<Owned<Cell<R>>>, CreationError> {
         self.poll_at(catalog, false)
     }
+
     /// Retain this exact private record after a lost announcement and select the
     /// next discovery slot. Full arrays remain pending; no scan or collection is
     /// performed. A successful announcement permanently seals the location.
@@ -413,6 +430,7 @@ impl<R: Record> Creation<R> {
     ) -> Result<Option<Owned<Cell<R>>>, CreationError> {
         self.poll_at(catalog, true)
     }
+
     #[expect(
         clippy::indexing_slicing,
         reason = "preflight validates the slot and rotation remains inside catalog capacity"
@@ -448,7 +466,7 @@ impl<R: Record> Creation<R> {
                 identity: self.identity,
                 address: self.address,
                 slot: AtomicUsize::new(self.slot),
-                abandon_requested: AtomicU8::new(0),
+                abandon_requested: AtomicBool::new(false),
                 state: PooledLink::new(
                     catalog.memberships.clone(),
                     self.membership.take().expect("prepared membership"),
@@ -544,6 +562,7 @@ impl<R: Record> Catalog<R> {
             .checked_add(Pool::<Membership>::requested_backing_bytes(memberships)?)?
             .checked_add(Pool::<Cell<R>>::requested_backing_bytes(cells)?)
     }
+
     pub fn with_record_capacities_and_limit(
         capacity: usize,
         control_capacity: usize,
@@ -556,15 +575,15 @@ impl<R: Record> Catalog<R> {
         let memberships = Pool::with_generation_limit(state_capacity, generation_limit);
         let cells = Pool::with_generation_limit(cell_capacity, generation_limit);
         let phase = Phase {
-            root_cursors: [0; 2],
-            reference_cursors: [0; 2],
+            root_cursors: [0; DOMAIN_COUNT],
+            reference_cursors: [0; DOMAIN_COUNT],
             revision: 1,
             domains: [Domain {
                 mode: DomainMode::Full,
                 epoch: 1,
-                floor: 0,
+                floor: STRONG_FLOOR,
                 pending: 0,
-            }; 2],
+            }; DOMAIN_COUNT],
         };
         let head = PooledLink::new(
             controls.clone(),
@@ -587,9 +606,11 @@ impl<R: Record> Catalog<R> {
             edges: None,
         }
     }
+
     pub fn capacity(&self) -> usize {
         self.slots.len()
     }
+
     pub fn generation_exhaustion_observed(&self) -> bool {
         self.edges.as_ref().is_some_and(|edges| {
             edges.slots_pool.generation_exhaustion_observed()
@@ -602,6 +623,7 @@ impl<R: Record> Catalog<R> {
                 .as_ref()
                 .is_some_and(|roots| roots.pool.generation_exhaustion_observed())
     }
+
     pub fn discover(&self, slot: usize) -> Result<Option<Owned<Cell<R>>>, Contended> {
         self.slots.get(slot).map_or(Ok(None), OptionalLink::load)
     }
@@ -616,6 +638,7 @@ impl<R: Record> Catalog<R> {
     ) -> Result<Creation<R>, RecordFailure<R>> {
         self.prepare_private_creation(slot, address, record, true)
     }
+
     pub(crate) fn prepare_private_creation(
         &self,
         slot: usize,
@@ -659,9 +682,11 @@ impl<R: Record> Catalog<R> {
             finished: false,
         })
     }
+
     pub(crate) fn object_slot_occupied(&self, slot: usize) -> bool {
         self.slots.get(slot).is_some_and(OptionalLink::is_occupied)
     }
+
     pub(crate) fn next_slot_after_conflict(
         &self,
         slot: usize,
@@ -717,8 +742,9 @@ impl<R: Record> Catalog<R> {
             operation: None,
         })
     }
+
     fn prepare_now(&self, mut preparation: Preparation<R>) -> Option<Attempt<R>> {
-        for _ in 0..24 {
+        for _ in 0..MAX_PREPARATION_POLLS {
             match preparation.poll(self) {
                 Ok(Some(attempt)) => return Some(attempt),
                 Ok(None) => {}
@@ -728,6 +754,7 @@ impl<R: Record> Catalog<R> {
         }
         None
     }
+
     fn effect(
         &self,
         cell: Owned<Cell<R>>,
@@ -743,6 +770,7 @@ impl<R: Record> Catalog<R> {
             proposed: allocate(&self.memberships, proposed)?,
         })
     }
+
     pub fn begin_publish(
         &self,
         snapshot: Snapshot<R>,
@@ -781,6 +809,7 @@ impl<R: Record> Catalog<R> {
             }
         }
     }
+
     fn stable_head_in(&self, context: &R::Context) -> Option<Owned<Control<R>>> {
         let head = self.head.load()?;
         if head.is_stable() {
@@ -790,21 +819,25 @@ impl<R: Record> Catalog<R> {
             None
         }
     }
+
     pub fn snapshot_in(&self, context: &R::Context) -> Option<Snapshot<R>> {
         Some(Snapshot {
             head: self.stable_head_in(context)?,
             owner: self.owner.clone(),
         })
     }
+
     pub(crate) fn phase_in(&self, context: &R::Context) -> Option<Phase> {
         Some(self.stable_head_in(context)?.phase())
     }
+
     fn validates_head_in(&self, head: &Owned<Control<R>>, context: &R::Context) -> bool {
         self.head.points_to(head)
             || self
                 .phase_in(context)
                 .is_some_and(|current| current.revision == head.phase().revision)
     }
+
     pub(crate) fn validates_snapshot_in(
         &self,
         snapshot: &Snapshot<R>,
@@ -812,9 +845,11 @@ impl<R: Record> Catalog<R> {
     ) -> bool {
         Arc::ptr_eq(&snapshot.owner, &self.owner) && self.validates_head_in(&snapshot.head, context)
     }
+
     fn finish(&self, busy: &Owned<Control<R>>, context: &R::Context) {
         self.finish_at(busy, context, || {}, || {}, || {}, || {});
     }
+
     #[expect(
         clippy::too_many_lines,
         reason = "keep all fallible acquisitions before the shared commit/effect certificate sequence"
@@ -965,6 +1000,7 @@ impl<R: Record> Catalog<R> {
         self.head.compare(busy, after);
         after_release();
     }
+
     pub fn commit_in(&self, attempt: &Attempt<R>, context: &R::Context) -> Outcome {
         assert!(
             Arc::ptr_eq(&attempt.owner, &self.owner),
@@ -991,6 +1027,7 @@ impl<R: Record> Catalog<R> {
             _ => Outcome::Pending,
         }
     }
+
     #[cfg(test)]
     pub fn install_and_stop(&self, attempt: &Attempt<R>) -> bool {
         self.head.compare(
@@ -998,6 +1035,7 @@ impl<R: Record> Catalog<R> {
             share(&attempt.busy).expect("quiescent fixture clone"),
         )
     }
+
     #[cfg(test)]
     pub fn effect_and_stop(&self, attempt: &Attempt<R>) {
         assert!(self.install_and_stop(attempt));
@@ -1048,6 +1086,7 @@ impl<R: Record> Catalog<R> {
         let effect = self.effect(cell, expected, Membership::Retired)?;
         self.begin_prepare(snapshot, phase, Some(effect))
     }
+
     #[expect(
         clippy::indexing_slicing,
         reason = "an exact same-catalog cell owns its validated immutable discovery slot"

@@ -407,7 +407,7 @@ impl Compiler {
                 types::I64,
                 MemFlagsData::trusted(),
                 continuation_pointer,
-                16,
+                native_frame::word_offset(crate::function::ContinuationLayout::CONTEXT)?,
             )
         } else {
             context_pointer
@@ -589,7 +589,7 @@ impl Compiler {
         // Emit the shared exception return block body: write NONE to the return pointer
         // and return from the function. This block has no parameters.
         function_builder.switch_to_block(exception_block);
-        emit_exception_return(&mut function_builder, return_pointer);
+        emit_exception_return(&mut function_builder, return_pointer)?;
 
         function_builder.seal_all_blocks();
         function_builder.finalize(jit_module.target_config());
@@ -706,7 +706,7 @@ impl Compiler {
                 kind.machine_type(),
                 MemFlagsData::trusted(),
                 address,
-                8,
+                i32::try_from(JitValue::VALUE_OFFSET)?,
             );
             function_builder.def_var(variable, value);
             // A wide argument consumes two JVM slots but has one SSA value. Its

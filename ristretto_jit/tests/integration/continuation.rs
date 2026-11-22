@@ -240,8 +240,20 @@ fn excessive_state_transfer_is_rejected_before_codegen() -> Result<()> {
 #[test]
 fn pre_entry_stack_failure_preserves_the_activation() -> Result<()> {
     let mut activation = compile(&sum()?)?.activation(&[Value::I32(1)])?;
-    let rejected = stacker::grow(128 * 1024, || activation.resume(NonZeroU32::MIN));
-    assert!(matches!(rejected, Err(Error::NativeStackOverflow { .. })));
+    // Windows fibers may reserve more stack than requested. A sized thread lets
+    // us run just the first resume with less than the JIT's required reserve.
+    let rejected = std::thread::scope(|scope| {
+        std::thread::Builder::new()
+            .stack_size(Function::STACK_RESERVE_BYTES / 2)
+            .spawn_scoped(scope, || activation.resume(NonZeroU32::MIN))
+            .expect("spawn the small-stack thread")
+            .join()
+            .expect("resume on the small-stack thread")
+    });
+    assert!(
+        matches!(rejected, Err(Error::NativeStackOverflow { required, available }) if available < required),
+        "{rejected:?}"
+    );
     assert_eq!(activation.suspended_bci(), None);
     assert_eq!(activation.resume(NonZeroU32::MIN)?, ExecutionStep::Yielded);
     assert_eq!(
