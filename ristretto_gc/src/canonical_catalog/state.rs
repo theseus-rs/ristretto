@@ -17,6 +17,8 @@ use super::{
 };
 use crate::canonical_pool as pool;
 use pool::AllocationError;
+#[path = "phase_ops.rs"]
+mod phase_ops;
 #[path = "roots.rs"]
 mod roots;
 pub use roots::{Root, RootCreation, RootPrepareError, RootStatus, RootToken};

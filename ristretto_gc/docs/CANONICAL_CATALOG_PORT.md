@@ -181,3 +181,11 @@ Automatic placement keeps the frozen bounded rotating-slot preference. Six
 portable frozen regressions cover every private stage, helped results, failed
 observations and simultaneous object/root collisions. Native/WASI catalog totals
 are 48/43; strict Clippy passes. Root removal/scanning follows separately.
+
+## C09 prerequisite: guarded phase transitions
+
+Frozen tracing transitions couple membership tickets and pending counts. Phase
+advancement and finish reject unscanned roots and pending work; `FinishEpoch`
+retains the sweep's original epoch. Q=0 requires no conditional-reference scan.
+Four portable tests cover stale epochs, outstanding obligations, stale tickets,
+and invalid phase input. Native/WASI catalog totals are 52/47; strict Clippy passes.
