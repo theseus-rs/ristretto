@@ -3,11 +3,11 @@ use super::*;
 use crate::canonical_catalog::reference::ObjectKey;
 use crate::canonical_catalog::{DomainMode, FAIL_LOAD, FAIL_SHARE, RETIREMENT_FLOOR};
 
-pub(super) fn catalog() -> Catalog {
+pub(crate) fn catalog() -> Catalog {
     Catalog::with_record_root_capacities_and_limit(3, 256, 256, 128, 8, 64, pool::MAX_GENERATION)
         .with_edge_capacities(2, 64, 128, pool::MAX_GENERATION)
 }
-pub(super) fn snapshot(c: &Catalog) -> Snapshot {
+pub(crate) fn snapshot(c: &Catalog) -> Snapshot {
     for _ in 0..32 {
         if let Some(s) = c.snapshot_in(&()) {
             return s;
@@ -24,7 +24,7 @@ fn prepare(c: &Catalog, p: Option<Preparation>) -> Attempt {
     }
     panic!("edge preparation did not settle");
 }
-pub(super) fn commit(c: &Catalog, p: Option<Preparation>) {
+pub(crate) fn commit(c: &Catalog, p: Option<Preparation>) {
     let a = prepare(c, p);
     for _ in 0..32 {
         match c.commit_in(&a, &()) {
@@ -46,7 +46,7 @@ fn root(c: &Catalog, object: &Pooled<Cell>, slot: usize) -> RootToken {
     }
     panic!("root did not announce");
 }
-pub(super) fn object(c: &Catalog, slot: usize) -> (Pooled<Cell>, RootToken) {
+pub(crate) fn object(c: &Catalog, slot: usize) -> (Pooled<Cell>, RootToken) {
     let mut creation = c.begin_create_with(slot, slot + 8, ()).unwrap();
     for _ in 0..32 {
         if let Some(object) = creation.poll(c).unwrap() {
@@ -69,7 +69,7 @@ fn edge(c: &Catalog) -> EdgeToken {
     }
     panic!("edge did not announce");
 }
-pub(super) fn key(object: &Cell) -> ObjectKey {
+pub(crate) fn key(object: &Cell) -> ObjectKey {
     ObjectKey {
         identity: object.identity,
         slot: object.slot(),
@@ -81,7 +81,7 @@ fn state(edge: &EdgeSlot) -> EdgeState {
     };
     state
 }
-pub(super) fn acknowledge(c: &Catalog, object: &Pooled<Cell>) {
+pub(crate) fn acknowledge(c: &Catalog, object: &Pooled<Cell>) {
     let Some(Membership::Tracing(marks)) = object.membership() else {
         panic!("not tracing")
     };
@@ -99,7 +99,7 @@ pub(super) fn acknowledge(c: &Catalog, object: &Pooled<Cell>) {
         }
     }
 }
-pub(super) fn restart(c: &Catalog, objects: &[&Pooled<Cell>]) {
+pub(crate) fn restart(c: &Catalog, objects: &[&Pooled<Cell>]) {
     for object in objects {
         acknowledge(c, object);
     }
