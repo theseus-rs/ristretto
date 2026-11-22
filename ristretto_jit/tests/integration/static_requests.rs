@@ -9,27 +9,32 @@ use ristretto_classfile::{ClassFile, Field, FieldAccessFlags};
 use ristretto_jit::{Compiler, ExecutionStep, FieldAccess, FieldRequest, Function, Result, Value};
 use std::cell::Cell;
 use std::num::NonZeroU32;
+
+const ROOT_CAPACITY: usize = 8;
+
 struct Context {
-    roots: Cell<[i64; 8]>,
+    roots: Cell<[i64; ROOT_CAPACITY]>,
     count: Cell<usize>,
 }
 impl Context {
     fn new() -> Self {
         Self {
-            roots: Cell::new([0; 8]),
+            roots: Cell::new([0; ROOT_CAPACITY]),
             count: Cell::new(0),
         }
     }
+
     fn pointer(&self) -> *const u8 {
         std::ptr::from_ref(self).cast()
     }
 }
+
 extern "C" fn publish(context: *const u8, roots: *const i64, count: i32) -> i32 {
     let context = unsafe { &*context.cast::<Context>() };
     let Ok(count) = usize::try_from(count) else {
         return 0;
     };
-    if count > 8 {
+    if count > ROOT_CAPACITY {
         return 0;
     }
     let values = if count == 0 {
@@ -37,12 +42,13 @@ extern "C" fn publish(context: *const u8, roots: *const i64, count: i32) -> i32 
     } else {
         unsafe { std::slice::from_raw_parts(roots, count) }
     };
-    let mut copy = [0; 8];
+    let mut copy = [0; ROOT_CAPACITY];
     copy[..count].copy_from_slice(values);
     context.roots.set(copy);
     context.count.set(count);
     1
 }
+
 fn fixture(
     descriptor: &str,
     field: &str,
@@ -82,6 +88,7 @@ fn fixture(
     class.verify()?;
     compile(&class, index)
 }
+
 fn compile(class: &ClassFile, index: u16) -> Result<(Function, u16)> {
     Ok((
         Compiler::new()?.compile_requests(
@@ -92,6 +99,7 @@ fn compile(class: &ClassFile, index: u16) -> Result<(Function, u16)> {
         index,
     ))
 }
+
 #[test]
 fn static_read_and_write_suspend_without_a_receiver() -> Result<()> {
     let (function, index) = fixture(
@@ -135,6 +143,7 @@ fn static_read_and_write_suspend_without_a_receiver() -> Result<()> {
     );
     Ok(())
 }
+
 #[test]
 fn putstatic_reference_remains_published_during_initializer_wait() -> Result<()> {
     let (function, index) = fixture(
@@ -170,6 +179,7 @@ fn putstatic_reference_remains_published_during_initializer_wait() -> Result<()>
     drop(activation); // failed initialization cancels; no placeholder/static pointer is returned
     Ok(())
 }
+
 #[test]
 fn class_initializer_bytecode_uses_the_same_explicit_static_request_protocol() -> Result<()> {
     let (function, index) = fixture(

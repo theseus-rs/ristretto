@@ -9,6 +9,7 @@ fn fixture() -> (Catalog<()>, Owned<Cell<()>>) {
     let cell = creation.poll(&catalog).unwrap().unwrap();
     (catalog, cell)
 }
+
 fn private_snapshot(catalog: &Catalog<()>) -> Snapshot<()> {
     Snapshot {
         owner: catalog.owner.clone(),

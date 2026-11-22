@@ -15,6 +15,7 @@ fn fixture() -> (Catalog<()>, Owned<Cell<()>>, Attempt<()>) {
     let attempt = preparation.poll(&catalog).unwrap().unwrap();
     (catalog, cell, attempt)
 }
+
 fn completed_phase(catalog: &Catalog<()>) -> Phase {
     for _ in 0..4 {
         if let Some(snapshot) = catalog.snapshot_in(&()) {

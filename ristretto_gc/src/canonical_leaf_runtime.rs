@@ -68,12 +68,15 @@ impl RuntimeFootprint {
             total,
         })
     }
+
     pub(in crate::canonical_adapter) fn catalog(self) -> Footprint {
         self.catalog
     }
+
     pub(in crate::canonical_adapter) fn runtime(self) -> usize {
         self.runtime
     }
+
     pub(in crate::canonical_adapter) fn total(self) -> usize {
         self.total
     }
@@ -97,17 +100,20 @@ impl<'gc> LeafRuntime<'gc> {
                 .map_err(RuntimeError::Config)?;
         Ok(Self { catalog, collector })
     }
+
     pub(in crate::canonical_adapter) fn mutator(&self) -> Result<LeafMutator<'gc>, RegisterError> {
         Ok(LeafMutator {
             worker: self.catalog.register_record_mutator()?,
             collector: self.collector,
         })
     }
+
     pub(in crate::canonical_adapter) fn maintenance(
         &self,
     ) -> Result<LeafMaintenance<'gc>, MaintenanceError> {
         LeafMaintenance::new(&self.catalog, self.collector)
     }
+
     pub(in crate::canonical_adapter) fn borrow<'a, T: 'static>(
         &'a self,
         root: &'a LeafRoot<T>,
@@ -117,9 +123,11 @@ impl<'gc> LeafRuntime<'gc> {
         }
         root.borrow(self.collector)
     }
+
     pub(in crate::canonical_adapter) fn charged_bytes(&self) -> usize {
         self.catalog.charged_bytes()
     }
+
     pub(in crate::canonical_adapter) fn registered(&self) -> (usize, usize) {
         self.catalog.registered()
     }

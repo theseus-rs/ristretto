@@ -16,6 +16,7 @@ fn setup() -> (CatalogHandle, Participant, Arc<Budget>, RecordKey) {
     }
     (catalog, worker, budget, key.unwrap())
 }
+
 fn root(worker: &mut Participant, target: RecordKey) -> RootHandle {
     worker.submit_root_creation(0, target).unwrap();
     for _ in 0..8 {

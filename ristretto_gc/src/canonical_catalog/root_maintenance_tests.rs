@@ -10,6 +10,7 @@ fn commit(catalog: &Catalog, mut preparation: Preparation) {
     }
     panic!("finite preparation did not finish");
 }
+
 fn fixture(roots: usize, slot: usize) -> (Catalog, RootToken) {
     let catalog = Catalog::with_record_root_capacities_and_limit(1, 32, 32, 32, roots, 32, 32);
     let mut creation = catalog.begin_create_with(0, 8, ()).unwrap();
@@ -22,6 +23,7 @@ fn fixture(roots: usize, slot: usize) -> (Catalog, RootToken) {
     let token = creation.poll(&catalog).unwrap().unwrap();
     (catalog, token)
 }
+
 #[test]
 fn scan_batches_stop_at_eight_slots_and_serialize_requested_removal() {
     let (catalog, token) = fixture(10, 8);
@@ -56,6 +58,7 @@ fn scan_batches_stop_at_eight_slots_and_serialize_requested_removal() {
             .unwrap(),
     );
 }
+
 #[test]
 fn failed_root_observation_cannot_advance_the_scan_cursor() {
     let (catalog, _token) = fixture(2, 1);
@@ -64,6 +67,7 @@ fn failed_root_observation_cannot_advance_the_scan_cursor() {
     assert!(catalog.begin_scan_root_batch(snapshot, 0).is_none());
     assert_eq!(catalog.phase_in(&()).unwrap().root_cursors[0], 0);
 }
+
 #[test]
 fn root_removal_preserves_target_work_until_retirement_is_authorized() {
     let (catalog, token) = fixture(1, 0);
@@ -100,6 +104,7 @@ fn root_removal_preserves_target_work_until_retirement_is_authorized() {
     assert_eq!(catalog.phase_in(&()).unwrap().domains[0].pending, 1);
     assert!(catalog.release_retired_root(&root));
 }
+
 #[test]
 fn activation_cannot_publish_a_prepared_target_or_a_foreign_root() {
     let (catalog, token) = fixture(1, 0);

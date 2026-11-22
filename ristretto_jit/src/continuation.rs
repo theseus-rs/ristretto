@@ -1,6 +1,7 @@
 //! Spill typed scalar state only at taken backward edges; resume at the destination.
 //! No native frame remains on the stack while the activation is suspended.
 use super::frame_roots::FrameRoots;
+use super::native_frame::word_offset;
 use crate::Error::{InternalError, InvalidBlockAddress};
 use crate::Result;
 use crate::function::ContinuationLayout;
@@ -22,6 +23,9 @@ pub(crate) use heap::HeapRequest;
 mod array;
 pub(crate) use array::ArrayRequest;
 use std::collections::{BTreeMap, BTreeSet};
+
+const MAX_TRANSFER_SLOTS: usize = 64 * 1024;
+const INVALID_CONTINUATION_TRAP: u8 = 1;
 
 struct Point {
     target: Block,
@@ -76,12 +80,12 @@ impl Continuation {
         let locals = locals.continuation_variables();
         let frame_slots = locals.len().checked_add(usize::from(max_stack));
         if frame_slots.is_none_or(|slots| {
-            slots > 64 * 1024
+            slots > MAX_TRANSFER_SLOTS
                 || addresses
                     .len()
                     .saturating_add(calls.len())
                     .checked_mul(slots)
-                    .is_none_or(|total| total > 64 * 1024)
+                    .is_none_or(|total| total > MAX_TRANSFER_SLOTS)
         }) {
             return Err(crate::Error::UnsupportedMethod(
                 "continuation state-transfer limit exceeded".to_owned(),
@@ -140,7 +144,7 @@ impl Continuation {
                 .and_then(|words| words.checked_add(call_capacity))
                 .ok_or_else(|| InternalError("call continuation size overflow".to_owned()))?
         };
-        let _ = Self::offset(words)?;
+        let _ = word_offset(words)?;
         Ok(Self {
             points,
             calls,
@@ -156,31 +160,39 @@ impl Continuation {
         })
     }
 
-    fn offset(cell: usize) -> Result<i32> {
-        Ok(i32::try_from(cell.checked_mul(8).ok_or_else(|| {
-            InternalError("continuation offset overflow".to_owned())
-        })?)?)
-    }
-
     /// Emit in the ABI entry block, after argument locals have been declared.
     pub fn entry(&self, builder: &mut FunctionBuilder, state: Value, initial: Block) -> Result<()> {
-        let token = builder
+        let token = builder.ins().load(
+            types::I64,
+            MemFlagsData::trusted(),
+            state,
+            word_offset(ContinuationLayout::RESUME_TOKEN)?,
+        );
+        let complete = builder
             .ins()
-            .load(types::I64, MemFlagsData::trusted(), state, 0);
-        let complete = builder.ins().iconst(types::I64, -1);
-        builder
-            .ins()
-            .store(MemFlagsData::trusted(), complete, state, 0);
-        let remaining = builder
-            .ins()
-            .load(types::I64, MemFlagsData::trusted(), state, 8);
+            .iconst(types::I64, ContinuationLayout::RETURNED_TOKEN.cast_signed());
+        builder.ins().store(
+            MemFlagsData::trusted(),
+            complete,
+            state,
+            word_offset(ContinuationLayout::RESUME_TOKEN)?,
+        );
+        let remaining = builder.ins().load(
+            types::I64,
+            MemFlagsData::trusted(),
+            state,
+            word_offset(ContinuationLayout::FUEL)?,
+        );
         builder.def_var(self.remaining, remaining);
         let invalid = builder.create_block();
         builder.set_cold_block(invalid);
         let mut dispatch = cranelift::frontend::Switch::new();
-        dispatch.set_entry(0, initial);
+        dispatch.set_entry(u128::from(ContinuationLayout::INITIAL_TOKEN), initial);
         for (&address, point) in &self.points {
-            dispatch.set_entry(u128::try_from(address)? + 1, point.restore);
+            dispatch.set_entry(
+                u128::try_from(address)? + u128::from(ContinuationLayout::BACKEDGE_TOKEN_BASE),
+                point.restore,
+            );
         }
         for (&address, block) in &self.calls {
             dispatch.set_entry(
@@ -191,7 +203,7 @@ impl Continuation {
         dispatch.emit(builder, token, invalid);
         builder.switch_to_block(invalid);
         builder.ins().trap(
-            TrapCode::user(1)
+            TrapCode::user(INVALID_CONTINUATION_TRAP)
                 .ok_or_else(|| InternalError("invalid continuation trap code".to_owned()))?,
         );
         for point in self.points.values() {
@@ -201,7 +213,7 @@ impl Continuation {
                     kind,
                     MemFlagsData::trusted(),
                     state,
-                    Self::offset(ContinuationLayout::HEADER_WORDS + index)?,
+                    word_offset(ContinuationLayout::HEADER_WORDS + index)?,
                 );
                 builder.def_var(variable, value);
             }
@@ -211,7 +223,7 @@ impl Continuation {
                     *kind,
                     MemFlagsData::trusted(),
                     state,
-                    Self::offset(ContinuationLayout::HEADER_WORDS + self.locals.len() + index)?,
+                    word_offset(ContinuationLayout::HEADER_WORDS + self.locals.len() + index)?,
                 );
                 arguments.push(value.into());
             }
@@ -305,7 +317,7 @@ impl Continuation {
                     MemFlagsData::trusted(),
                     value,
                     state,
-                    Self::offset(ContinuationLayout::HEADER_WORDS + index)?,
+                    word_offset(ContinuationLayout::HEADER_WORDS + index)?,
                 );
             }
             for (index, value) in operands.iter().enumerate() {
@@ -313,15 +325,19 @@ impl Continuation {
                     MemFlagsData::trusted(),
                     *value,
                     state,
-                    Self::offset(ContinuationLayout::HEADER_WORDS + self.locals.len() + index)?,
+                    word_offset(ContinuationLayout::HEADER_WORDS + self.locals.len() + index)?,
                 );
             }
-            let token = builder
-                .ins()
-                .iconst(types::I64, i64::try_from(address)? + 1);
-            builder
-                .ins()
-                .store(MemFlagsData::trusted(), token, state, 0);
+            let token = builder.ins().iconst(
+                types::I64,
+                i64::try_from(address)? + ContinuationLayout::BACKEDGE_TOKEN_BASE.cast_signed(),
+            );
+            builder.ins().store(
+                MemFlagsData::trusted(),
+                token,
+                state,
+                word_offset(ContinuationLayout::RESUME_TOKEN)?,
+            );
             builder.ins().return_(&[]);
         }
         // A syntactically present call can be unreachable. Keep its private dispatch
@@ -330,7 +346,7 @@ impl Continuation {
             if builder.func.layout.block_insts(*block).next().is_none() {
                 builder.switch_to_block(*block);
                 builder.ins().trap(
-                    TrapCode::user(1).ok_or_else(|| {
+                    TrapCode::user(INVALID_CONTINUATION_TRAP).ok_or_else(|| {
                         InternalError("invalid continuation trap code".to_owned())
                     })?,
                 );

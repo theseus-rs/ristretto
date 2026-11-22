@@ -2,6 +2,8 @@
 use super::CallContinuation;
 use super::call::{argument_bits, push_result};
 use crate::Result;
+use crate::compiler::native_frame::{word_offset, word_stack_slot};
+use crate::function::activation::RequestKind;
 use crate::operand_stack::OperandStack;
 use cranelift::prelude::*;
 use ristretto_classfile::attributes::Instruction;
@@ -28,11 +30,13 @@ impl HeapRequest {
             _ => return None,
         })
     }
+
     fn field(pool: &ConstantPool, index: u16) -> Result<FieldType> {
         let (_, name_type) = pool.try_get_field_ref(index)?;
         let (_, descriptor) = pool.try_get_name_and_type(*name_type)?;
         Ok(FieldType::parse_java_str(pool.try_get_utf8(*descriptor)?)?)
     }
+
     pub fn capacity(self, pool: &ConstantPool) -> Result<usize> {
         match self {
             Self::New(index) => {
@@ -71,6 +75,7 @@ impl HeapRequest {
             }
         }
     }
+
     pub fn emit(
         self,
         continuation: &CallContinuation<'_>,
@@ -80,35 +85,41 @@ impl HeapRequest {
         bci: usize,
     ) -> Result<()> {
         let count = self.capacity(pool)?;
-        let arguments = builder.create_sized_stack_slot(StackSlotData::new(
-            StackSlotKind::ExplicitSlot,
-            u32::try_from(count.max(1) * 8)?,
-            3,
-        ));
+        let arguments = word_stack_slot(builder, count.max(1))?;
         let (tag, index, result) = match self {
-            Self::New(index) => (6, index, None),
-            Self::GetStatic(index) => (10, index, Some(Self::field(pool, index)?)),
+            Self::New(index) => (RequestKind::NewObject, index, None),
+            Self::GetStatic(index) => (
+                RequestKind::GetStatic,
+                index,
+                Some(Self::field(pool, index)?),
+            ),
             Self::PutStatic(index) => {
                 let bits = argument_bits(builder, stack, &Self::field(pool, index)?)?;
                 builder.ins().stack_store(types::I64, bits, arguments, 0);
-                (11, index, None)
+                (RequestKind::PutStatic, index, None)
             }
             Self::CheckCast(index) => {
                 let root = stack.pop_object(builder)?;
                 builder.ins().stack_store(types::I64, root, arguments, 0);
-                (14, index, None)
+                (RequestKind::CheckCast, index, None)
             }
             Self::Get(index) => {
                 let root = stack.pop_object(builder)?;
                 builder.ins().stack_store(types::I64, root, arguments, 0);
-                (12, index, Some(Self::field(pool, index)?))
+                (
+                    RequestKind::GetField,
+                    index,
+                    Some(Self::field(pool, index)?),
+                )
             }
             Self::Put(index) => {
                 let bits = argument_bits(builder, stack, &Self::field(pool, index)?)?;
                 let root = stack.pop_object(builder)?;
                 builder.ins().stack_store(types::I64, root, arguments, 0);
-                builder.ins().stack_store(types::I64, bits, arguments, 8);
-                (13, index, None)
+                builder
+                    .ins()
+                    .stack_store(types::I64, bits, arguments, word_offset(1)?);
+                (RequestKind::PutField, index, None)
             }
         };
         let bits = continuation.emit(builder, stack, arguments, count, bci, (tag, index))?;

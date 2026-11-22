@@ -4,7 +4,7 @@ use crate::GarbageCollector;
 use crate::canonical_catalog as gc_catalog;
 use crate::canonical_payload::PreparedPayload;
 use gc_catalog::bounded::RootHandle;
-use gc_catalog::{Entered, Record, RecordError};
+use gc_catalog::{Entered, Record, RecordError, UNPUBLISHED};
 use std::sync::atomic::{AtomicU8, Ordering};
 
 #[path = "canonical_leaf_allocation.rs"]
@@ -42,6 +42,7 @@ struct LeafView<'a, T> {
 
 impl<T> std::ops::Deref for LeafView<'_, T> {
     type Target = T;
+
     fn deref(&self) -> &T {
         self.value
     }
@@ -51,7 +52,7 @@ impl LeafRecord {
     fn new(payload: PreparedPayload) -> Self {
         Self {
             payload,
-            published: AtomicU8::new(0),
+            published: AtomicU8::new(UNPUBLISHED),
         }
     }
 
@@ -67,7 +68,7 @@ impl LeafRecord {
         let admission = record
             .enter(collector)
             .map_err(LeafAccessError::Admission)?;
-        if record.published.load(Ordering::Acquire) == 0 {
+        if record.published.load(Ordering::Acquire) == UNPUBLISHED {
             return Err(LeafAccessError::NotPublished);
         }
         let value = record.payload.borrow().ok_or(LeafAccessError::WrongType)?;
@@ -82,6 +83,7 @@ impl LeafRecord {
 impl Record for LeafRecord {
     type Context = GarbageCollector;
     type Guard<'a> = LeafGuard<'a>;
+
     fn enter<'a>(
         &'a self,
         collector: &'a GarbageCollector,

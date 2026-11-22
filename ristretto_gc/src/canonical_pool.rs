@@ -14,6 +14,9 @@ use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, AtomicUsize, Ordering}
 mod state;
 use state::{BITS, MASK, State};
 
+pub(crate) const MAX_CAPACITY: usize = 1 << BITS;
+const ARC_REF_COUNTS: usize = 2; // Strong and weak reference counts.
+
 pub const MAX_GENERATION: u64 = state::MAX_GENERATION;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -35,7 +38,7 @@ pub struct AllocationFailure<T> {
 /// target; it is not a stable standard-library layout guarantee or an RSS bound.
 pub fn arc_requested_bytes<T>() -> Option<usize> {
     Some(
-        Layout::new::<[AtomicUsize; 2]>()
+        Layout::new::<[AtomicUsize; ARC_REF_COUNTS]>()
             .extend(Layout::new::<T>())
             .ok()?
             .0
@@ -47,12 +50,16 @@ pub fn arc_requested_bytes<T>() -> Option<usize> {
 #[derive(Clone, Copy, Eq, PartialEq)]
 struct Token(u64);
 impl Token {
+    const EMPTY: Self = Self(0);
+
     fn new(index: usize, generation: u64) -> Self {
         Self((generation << BITS) | index as u64)
     }
+
     fn index(self) -> usize {
         (self.0 & MASK) as usize
     }
+
     fn generation(self) -> u64 {
         self.0 >> BITS
     }
@@ -74,7 +81,7 @@ pub struct Pool<T> {
 }
 impl<T> Pool<T> {
     pub fn requested_backing_bytes(capacity: usize) -> Option<usize> {
-        if !capacity.is_power_of_two() || capacity as u64 > MASK + 1 {
+        if !capacity.is_power_of_two() || capacity > MAX_CAPACITY {
             return None;
         }
         Layout::array::<Slot<T>>(capacity)
@@ -82,6 +89,7 @@ impl<T> Pool<T> {
             .size()
             .checked_add(arc_requested_bytes::<Self>()?)
     }
+
     /// Diagnostic scan, outside any bounded allocation/acquisition attempt.
     pub fn occupied(&self) -> usize {
         self.slots
@@ -98,7 +106,7 @@ impl<T> Pool<T> {
     /// budget in its starting generation; tokens remain private. The limit must
     /// be nonzero and no larger than `MAX_GENERATION`.
     pub fn with_generation_limit(capacity: usize, generation_limit: u64) -> Arc<Self> {
-        assert!(capacity.is_power_of_two() && capacity as u64 <= MASK + 1);
+        assert!(capacity.is_power_of_two() && capacity <= MAX_CAPACITY);
         assert!((1..=MAX_GENERATION).contains(&generation_limit));
         let pool = Arc::new(Self {
             slots: (0..capacity)
@@ -219,9 +227,11 @@ impl<T> Owned<T> {
             token: self.token,
         })
     }
+
     pub fn ptr_eq(left: &Self, right: &Self) -> bool {
         left.slot == right.slot && left.token == right.token
     }
+
     fn belongs_to(&self, pool: &Arc<Pool<T>>) -> bool {
         // SAFETY: the owning reference retains the immutable owner identity.
         unsafe { self.slot.as_ref() }.owner.load(Ordering::Relaxed) == Arc::as_ptr(pool).cast_mut()
@@ -241,6 +251,7 @@ impl<T> Observer<T> {
 }
 impl<T> Deref for Owned<T> {
     type Target = T;
+
     fn deref(&self) -> &T {
         // SAFETY: a count for this exact generation prevents destruction/reuse.
         unsafe { (*self.slot.as_ref().value.get()).assume_init_ref() }
@@ -307,14 +318,14 @@ impl<T> Link<T> {
     pub fn empty(pool: Arc<Pool<T>>) -> Self {
         Self {
             pool,
-            token: AtomicU64::new(0),
+            token: AtomicU64::new(Token::EMPTY.0),
         }
     }
 
     /// Observe a vacant link without acquiring its occupant. The observation
     /// can immediately become stale. Only a successful compare installs a value.
     pub fn is_empty(&self) -> bool {
-        self.token.load(Ordering::Acquire) == 0
+        self.token.load(Ordering::Acquire) == Token::EMPTY.0
     }
 
     /// Compare against an owner that already pins its slot and generation.
@@ -326,7 +337,7 @@ impl<T> Link<T> {
     /// At most one head load and one exact-generation acquisition attempt.
     pub fn try_load(&self) -> Result<Option<Owned<T>>, Contended> {
         let token = Token(self.token.load(Ordering::Acquire));
-        if token.0 == 0 {
+        if token == Token::EMPTY {
             return Ok(None);
         }
         self.pool.try_acquire(token).map(Some).ok_or(Contended)
@@ -341,8 +352,8 @@ impl<T> Link<T> {
         {
             return Compare::Foreign(proposed);
         }
-        let old = expected.map_or(0, |v| v.token.0);
-        let new = proposed.as_ref().map_or(0, |v| v.token.0);
+        let old = expected.map_or(Token::EMPTY.0, |v| v.token.0);
+        let new = proposed.as_ref().map_or(Token::EMPTY.0, |v| v.token.0);
         if !link_state::replace(&self.token, old, new) {
             return Compare::Unchanged(proposed);
         }
@@ -365,7 +376,7 @@ impl<T> Drop for Link<T> {
     )]
     fn drop(&mut self) {
         let token = Token(*self.token.get_mut());
-        if token.0 != 0 {
+        if token != Token::EMPTY {
             // This unique link still owns exactly one count for its token.
             drop(Owned {
                 slot: NonNull::from(&self.pool.slots[token.index()]),

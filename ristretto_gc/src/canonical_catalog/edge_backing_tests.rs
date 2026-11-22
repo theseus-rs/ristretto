@@ -1,9 +1,11 @@
 use super::*;
+
 fn catalog() -> Catalog {
     Catalog::with_record_capacities_and_limit(2, 32, 32, 32, 32)
         .with_edge_capacities(4, 16, 16, 32)
         .with_source_edge_degree(2)
 }
+
 fn edge(catalog: &Catalog, slot: usize) -> EdgeToken {
     let mut creation = catalog.begin_create_edge(slot).unwrap();
     for _ in 0..4 {
@@ -13,6 +15,7 @@ fn edge(catalog: &Catalog, slot: usize) -> EdgeToken {
     }
     panic!("finite edge creation did not finish")
 }
+
 #[test]
 fn edge_identity_has_fixed_source_geometry_and_posts_only_removal_intent() {
     let catalog = catalog();
@@ -32,6 +35,7 @@ fn edge_identity_has_fixed_source_geometry_and_posts_only_removal_intent() {
         held.identity
     );
 }
+
 #[test]
 fn private_edge_creation_cancellation_refunds_backing_and_rejects_foreign_poll() {
     for prefix in 0..3 {
@@ -54,6 +58,7 @@ fn private_edge_creation_cancellation_refunds_backing_and_rejects_foreign_poll()
         assert!(catalog.discover_edge(0).unwrap().is_none());
     }
 }
+
 #[test]
 fn failed_edge_discovery_is_contended_and_competing_creators_preserve_winner() {
     let catalog = catalog();

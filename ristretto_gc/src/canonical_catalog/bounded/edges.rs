@@ -4,6 +4,7 @@ use super::{
     Owned, Participant, Payload, Phase, Preparation, PreparationError, Progress, RecordKey,
     RequestError, RequestState, RootHandle, RootKey, roots, trace_error,
 };
+use crate::canonical_catalog::NO_TICKET;
 use crate::canonical_catalog::reference::ObjectKey;
 use crate::canonical_catalog::{
     EdgeCreation, EdgeMembership, EdgePrepareError, EdgeSlot, EdgeToken, EdgeTraversal,
@@ -27,6 +28,7 @@ impl EdgeKey {
     pub fn identity(self) -> u64 {
         self.identity
     }
+
     pub fn slot(self) -> usize {
         self.slot
     }
@@ -132,6 +134,7 @@ pub(super) enum Step {
     Ready(EdgeKey),
     Complete(Progress),
 }
+
 fn rejected(error: RequestError) -> Step {
     if error == RequestError::Contended {
         Step::Pending
@@ -139,6 +142,7 @@ fn rejected(error: RequestError) -> Step {
         Step::Complete(Progress::Rejected(error))
     }
 }
+
 fn retry_error<R: Payload>(owner: &BoundedCatalog<R>) -> RequestError {
     if owner.raw.generation_exhaustion_observed() {
         RequestError::GenerationExhausted
@@ -154,6 +158,7 @@ impl<R: Payload> Request<R> {
             _ => true,
         }
     }
+
     pub(super) fn poll(&mut self, owner: &CatalogHandle<R>, context: &R::Context) -> Step {
         match self {
             Self::CreatingStart { slot, lease } => match owner.raw.begin_create_edge(*slot) {
@@ -258,6 +263,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         });
         Ok(())
     }
+
     pub fn take_edge(&mut self) -> Option<EdgeHandle<R>> {
         if !matches!(self.state, RequestState::Edge(Request::Ready(_))) {
             return None;
@@ -269,6 +275,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         };
         Some(handle)
     }
+
     pub fn submit_edge(&mut self, command: EdgeCommand) -> Result<(), RequestError> {
         self.idle()?;
         if command.key().catalog != self.lease.owner.identity {
@@ -277,11 +284,13 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         self.state = RequestState::Edge(Request::Start(command));
         Ok(())
     }
+
     pub fn observe_edge(&mut self, key: EdgeKey) -> Result<EdgeObservation, RequestError> {
         self.idle()?;
         let edge = lookup(&self.lease.owner, key)?;
         observation(&self.lease.owner, &edge)
     }
+
     /// A copied edge observation validated with its live source under one stable
     /// controller revision. In particular, null is a committed graph read, not
     /// merely a transient edge effect seen before its controller certificate.
@@ -296,6 +305,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
             live_root(owner, source, phase).map(|root| root_key(&root))
         })
     }
+
     /// A retained token already pins its registry entry. Check its visibility
     /// and target under the same stable revision as the edge observation.
     pub fn observe_rooted_edge(
@@ -313,6 +323,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
             Ok(root_key(root))
         })
     }
+
     fn read_source_edge(
         &mut self,
         slot: usize,
@@ -356,6 +367,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         }
         result
     }
+
     pub fn discover_edge(&mut self, slot: usize) -> Result<Option<EdgeObservation>, RequestError> {
         self.idle()?;
         let owner = &self.lease.owner;
@@ -369,11 +381,13 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
             .map(|edge| observation(owner, &edge))
             .transpose()
     }
+
     pub fn release_retired_edge(&mut self, key: EdgeKey) -> Result<bool, RequestError> {
         self.idle()?;
         let owner = &self.lease.owner;
         Ok(owner.raw.release_retired_edge(&lookup(owner, key)?))
     }
+
     /// Consume the external creation owner after a stable controller observation.
     /// Payloads retain only the returned key; it owns neither catalog nor Cells.
     pub fn release_edge_to_source(
@@ -418,6 +432,7 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         }
     }
 }
+
 fn key<R: Payload>(owner: &BoundedCatalog<R>, edge: &EdgeSlot) -> EdgeKey {
     EdgeKey {
         catalog: owner.identity,
@@ -425,6 +440,7 @@ fn key<R: Payload>(owner: &BoundedCatalog<R>, edge: &EdgeSlot) -> EdgeKey {
         slot: edge.slot,
     }
 }
+
 fn observation<R: Payload>(
     owner: &BoundedCatalog<R>,
     edge: &EdgeSlot,
@@ -435,6 +451,7 @@ fn observation<R: Payload>(
         removal_requested: edge.removal_requested(),
     })
 }
+
 fn lookup<R: Payload>(
     owner: &BoundedCatalog<R>,
     key: EdgeKey,
@@ -452,12 +469,14 @@ fn lookup<R: Payload>(
     }
     Ok(edge)
 }
+
 fn root_key<R: Payload>(root: &Root<R>) -> ObjectKey {
     ObjectKey {
         identity: root.target_identity(),
         slot: root.target_slot(),
     }
 }
+
 fn live_root<R: Payload>(
     owner: &BoundedCatalog<R>,
     key: RootKey,
@@ -467,6 +486,7 @@ fn live_root<R: Payload>(
     validate_live_root(&root, phase)?;
     Ok(root)
 }
+
 fn validate_live_root<R: Payload>(root: &Root<R>, phase: Phase) -> Result<(), RequestError> {
     if root.is_internal() || root.status() != RootStatus::Live {
         return Err(RequestError::Conflict);
@@ -480,6 +500,7 @@ fn validate_live_root<R: Payload>(root: &Root<R>, phase: Phase) -> Result<(), Re
     }
     Ok(())
 }
+
 fn deletion<R: Payload>(
     owner: &BoundedCatalog<R>,
     target: Option<ObjectKey>,
@@ -503,6 +524,7 @@ fn deletion<R: Payload>(
     .map(|(_, phase)| phase)
     .map_err(trace_error)
 }
+
 fn insertion<R: Payload>(
     target: Option<&Owned<Root<R>>>,
     phase: Phase,
@@ -512,6 +534,7 @@ fn insertion<R: Payload>(
     }
     Ok(())
 }
+
 pub(super) fn stable_failure<R: Payload, T>(
     owner: &BoundedCatalog<R>,
     context: &R::Context,
@@ -532,6 +555,7 @@ pub(super) fn stable_failure<R: Payload, T>(
         result => result,
     }
 }
+
 fn start<R: Payload>(
     owner: &BoundedCatalog<R>,
     context: &R::Context,
@@ -544,6 +568,7 @@ fn start<R: Payload>(
     let revision = snapshot.phase().revision;
     stable_failure(owner, context, revision, prepare(owner, snapshot, command))
 }
+
 fn prepare<R: Payload>(
     owner: &BoundedCatalog<R>,
     snapshot: crate::canonical_catalog::Snapshot<R>,
@@ -639,6 +664,7 @@ fn prepare<R: Payload>(
     };
     preparation.ok_or_else(|| retry_error(owner))
 }
+
 #[expect(
     clippy::indexing_slicing,
     reason = "domain is checked before fixed trace-mark access"
@@ -665,7 +691,7 @@ fn traversal<R: Payload>(
             return Err(RequestError::Conflict);
         };
         if active.mode != crate::canonical_catalog::DomainMode::Full
-            || ticket == 0
+            || ticket == NO_TICKET
             || marks[domain].epoch != active.epoch
             || marks[domain].ticket != ticket
         {

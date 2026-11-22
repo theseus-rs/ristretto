@@ -2,8 +2,8 @@
 //! allocated before bounded polling; published ownership is immutable.
 use super::LeafRecord;
 use crate::canonical_catalog as gc_catalog;
+use crate::canonical_pool::arc_requested_bytes;
 use gc_catalog::bounded::RootHandle;
-use std::alloc::Layout;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -23,10 +23,7 @@ pub(super) struct SharedRoot {
 /// Requested Arc backing, including its strong/weak counters and alignment.
 /// Allocator overhead and caller-owned alias variables are accounted separately.
 pub(super) fn backing_bytes() -> Option<usize> {
-    Layout::new::<[usize; 2]>()
-        .extend(Layout::new::<Storage>())
-        .ok()
-        .map(|(layout, _)| layout.pad_to_align().size())
+    arc_requested_bytes::<Storage>()
 }
 
 impl PreparedRoot {

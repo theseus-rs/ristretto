@@ -1,4 +1,5 @@
 use super::*;
+
 fn worker() -> (CatalogHandle, Participant<(), GuardedCommand>) {
     let catalog = BoundedCatalog::new_in(
         Capacities::derive(1, 2, 1).unwrap(),
@@ -8,6 +9,7 @@ fn worker() -> (CatalogHandle, Participant<(), GuardedCommand>) {
     let worker = catalog.register_record_mutator().unwrap();
     (catalog, worker)
 }
+
 fn finish(worker: &mut Participant<(), GuardedCommand>, command: GuardedCommand) -> Progress {
     worker.submit(command).unwrap();
     for _ in 0..32 {
@@ -18,6 +20,7 @@ fn finish(worker: &mut Participant<(), GuardedCommand>, command: GuardedCommand)
     }
     panic!("finite command did not finish")
 }
+
 #[test]
 fn queued_finish_keeps_swept_epoch_after_another_helper_restarts() {
     let (catalog, mut owner) = worker();
@@ -66,6 +69,7 @@ fn queued_finish_keeps_swept_epoch_after_another_helper_restarts() {
         super::super::DomainMode::Full
     );
 }
+
 #[test]
 fn private_phase_cancellation_has_no_visible_effect() {
     for prefix in 0..5 {
@@ -79,6 +83,7 @@ fn private_phase_cancellation_has_no_visible_effect() {
         assert_eq!(owner.phase_in(&()).unwrap(), before);
     }
 }
+
 #[test]
 fn guarded_dispatch_rejects_foreign_and_invalid_domain_commands() {
     let (_, mut owner) = worker();

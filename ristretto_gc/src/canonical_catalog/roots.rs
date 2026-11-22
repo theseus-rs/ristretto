@@ -5,6 +5,8 @@ use super::{
     Membership, OptionalLink, Ordering, Owned, Owner, Pool, Preparation, Record, Snapshot,
     following_slot, share,
 };
+use crate::canonical_catalog::{DOMAIN_COUNT, STRONG_FLOOR};
+use std::sync::atomic::AtomicBool;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u8)]
@@ -14,15 +16,7 @@ pub enum RootStatus {
     Retired = 2,
 }
 
-// Custody and visibility share one canonical atomic state. Token Drop only posts
-// intent; it cannot race this effect as a competing status writer.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[repr(u8)]
-pub(super) enum RootState {
-    Prepared = 0,
-    Live = 1,
-    Retired = 2,
-}
+const ROOT_SCAN_BATCH: usize = 8;
 
 pub struct Root<R: Record = ()> {
     pub(super) owner: Arc<Owner>,
@@ -30,7 +24,7 @@ pub struct Root<R: Record = ()> {
     slot: AtomicUsize,
     target: Owned<Cell<R>>,
     status: AtomicU8,
-    removal_requested: AtomicU8,
+    removal_requested: AtomicBool,
     #[cfg(test)]
     before_effect: std::sync::Mutex<Option<Box<dyn FnOnce() + Send>>>,
 }
@@ -47,12 +41,14 @@ impl<R: Record> Root<R> {
     }
 
     pub fn status(&self) -> RootStatus {
-        match self.state() {
-            RootState::Prepared => RootStatus::Prepared,
-            RootState::Live => RootStatus::Live,
-            RootState::Retired => RootStatus::Retired,
+        match self.status.load(Ordering::Acquire) {
+            state if state == RootStatus::Prepared as u8 => RootStatus::Prepared,
+            state if state == RootStatus::Live as u8 => RootStatus::Live,
+            state if state == RootStatus::Retired as u8 => RootStatus::Retired,
+            _ => unreachable!("invalid monotonic root state"),
         }
     }
+
     #[expect(
         clippy::unused_self,
         reason = "the Q=0 preview preserves the root observation interface"
@@ -61,24 +57,18 @@ impl<R: Record> Root<R> {
         false
     }
 
-    pub(super) fn state(&self) -> RootState {
-        match self.status.load(Ordering::Acquire) {
-            0 => RootState::Prepared,
-            1 => RootState::Live,
-            2 => RootState::Retired,
-            _ => unreachable!("invalid monotonic root state"),
-        }
+    pub fn removal_requested(&self) -> bool {
+        self.removal_requested.load(Ordering::Acquire)
     }
 
-    pub fn removal_requested(&self) -> bool {
-        self.removal_requested.load(Ordering::Acquire) != 0
-    }
     pub fn target_membership(&self) -> Option<Membership> {
         self.target.membership()
     }
+
     pub fn target_identity(&self) -> u64 {
         self.target.identity
     }
+
     pub fn target_slot(&self) -> usize {
         self.target.slot()
     }
@@ -101,6 +91,7 @@ pub struct RootToken<R: Record = ()> {
 }
 impl<R: Record> std::ops::Deref for RootToken<R> {
     type Target = Root<R>;
+
     fn deref(&self) -> &Self::Target {
         &self.root
     }
@@ -110,6 +101,7 @@ impl<R: Record> RootToken<R> {
     pub(crate) fn after_drop_request(&mut self, hook: impl FnOnce() + Send + Sync + 'static) {
         self.after_request = Some(Box::new(hook));
     }
+
     /// Raw experiment only; bounded handles do not expose owning root shares.
     pub fn try_share(&self) -> Option<Owned<Root<R>>> {
         share(&self.root)
@@ -117,7 +109,7 @@ impl<R: Record> RootToken<R> {
 }
 impl<R: Record> Drop for RootToken<R> {
     fn drop(&mut self) {
-        self.root.removal_requested.store(1, Ordering::Release);
+        self.root.removal_requested.store(true, Ordering::Release);
         #[cfg(test)]
         if let Some(hook) = self.after_request.take() {
             hook();
@@ -131,8 +123,8 @@ pub(super) struct RootRegistry<R: Record> {
 }
 pub(super) struct RootEffect<R: Record> {
     root: Owned<Root<R>>,
-    expected: RootState,
-    proposed: RootState,
+    expected: RootStatus,
+    proposed: RootStatus,
 }
 impl<R: Record> RootEffect<R> {
     pub(super) fn apply(&self) {
@@ -188,6 +180,7 @@ impl<R: Record> RootCreation<R> {
     pub fn poll(&mut self, catalog: &Catalog<R>) -> Result<Option<RootToken<R>>, CreationError> {
         self.poll_at(catalog, false)
     }
+
     /// Rotate only private external roots after a lost discovery announcement.
     pub fn poll_rotating(
         &mut self,
@@ -195,6 +188,7 @@ impl<R: Record> RootCreation<R> {
     ) -> Result<Option<RootToken<R>>, CreationError> {
         self.poll_at(catalog, true)
     }
+
     fn poll_at(
         &mut self,
         catalog: &Catalog<R>,
@@ -270,6 +264,7 @@ impl<R: Record> Catalog<R> {
         }
         catalog
     }
+
     pub fn record_root_backing_bytes(
         capacity: usize,
         controls: usize,
@@ -290,18 +285,22 @@ impl<R: Record> Catalog<R> {
             )?
             .checked_add(Pool::<Root<R>>::requested_backing_bytes(root_cells)?)
     }
+
     pub fn external_root_capacity(&self) -> usize {
         self.roots.as_ref().map_or(0, |r| r.slots.len())
     }
+
     pub(crate) fn external_root_slot_occupied(&self, slot: usize) -> bool {
         self.roots
             .as_ref()
             .and_then(|registry| registry.slots.get(slot))
             .is_some_and(OptionalLink::is_occupied)
     }
+
     pub fn root_capacity(&self) -> usize {
         self.external_root_capacity()
     }
+
     fn root_location(&self, slot: usize) -> Option<RootLocation> {
         (slot < self.external_root_capacity()).then_some(RootLocation::External(slot))
     }
@@ -312,6 +311,7 @@ impl<R: Record> Catalog<R> {
             None => Ok(None),
         }
     }
+
     pub fn begin_create_root(
         &self,
         slot: usize,
@@ -349,13 +349,14 @@ impl<R: Record> Catalog<R> {
                 identity,
                 slot: AtomicUsize::new(slot),
                 target,
-                status: AtomicU8::new(RootState::Prepared as u8),
-                removal_requested: AtomicU8::new(0),
+                status: AtomicU8::new(RootStatus::Prepared as u8),
+                removal_requested: AtomicBool::new(false),
                 #[cfg(test)]
                 before_effect: std::sync::Mutex::new(None),
             }),
         })
     }
+
     pub fn release_retired_root(&self, root: &Owned<Root<R>>) -> bool {
         if !Arc::ptr_eq(&root.owner, &self.owner)
             || root.status() != RootStatus::Retired
@@ -377,10 +378,10 @@ impl<R: Record> Catalog<R> {
         &self,
         mut preparation: Preparation<R>,
         root: Owned<Root<R>>,
-        expected: RootState,
-        proposed: RootState,
+        expected: RootStatus,
+        proposed: RootStatus,
     ) -> Option<Preparation<R>> {
-        if !Arc::ptr_eq(&root.owner, &self.owner) || root.state() != expected {
+        if !Arc::ptr_eq(&root.owner, &self.owner) || root.status() != expected {
             return None;
         }
         preparation.root = Some(RootEffect {
@@ -390,6 +391,7 @@ impl<R: Record> Catalog<R> {
         });
         Some(preparation)
     }
+
     pub fn root_is_stably_live_in(
         &self,
         root: &RootToken<R>,
@@ -402,25 +404,27 @@ impl<R: Record> Catalog<R> {
         let live = root.status() == RootStatus::Live;
         self.validates_head_in(&head, context).then_some(live)
     }
+
     pub fn begin_publish_root(
         &self,
         snapshot: Snapshot<R>,
         root: Owned<Root<R>>,
     ) -> Option<Preparation<R>> {
-        if !Arc::ptr_eq(&root.owner, &self.owner) || root.state() != RootState::Prepared {
+        if !Arc::ptr_eq(&root.owner, &self.owner) || root.status() != RootStatus::Prepared {
             return None;
         }
         let preparation = self.begin_publish(snapshot, share(&root.target)?)?;
-        self.attach_root_effect(preparation, root, RootState::Prepared, RootState::Live)
+        self.attach_root_effect(preparation, root, RootStatus::Prepared, RootStatus::Live)
     }
+
     pub fn begin_cancel_root(
         &self,
         snapshot: Snapshot<R>,
         root: Owned<Root<R>>,
     ) -> Option<Preparation<R>> {
-        let expected = root.state();
+        let expected = root.status();
         let proposed = match expected {
-            RootState::Prepared => RootState::Retired,
+            RootStatus::Prepared => RootStatus::Retired,
             _ => return None,
         };
         let phase = snapshot.phase();
@@ -457,12 +461,12 @@ impl<R: Record> Catalog<R> {
         snapshot: Snapshot<R>,
         root: Owned<Root<R>>,
     ) -> Option<Preparation<R>> {
-        if !Arc::ptr_eq(&root.owner, &self.owner) || root.state() != RootState::Prepared {
+        if !Arc::ptr_eq(&root.owner, &self.owner) || root.status() != RootStatus::Prepared {
             return None;
         }
         let (effect, phase) = self.root_barrier(share(&root.target)?, snapshot.phase(), false)?;
         let preparation = self.begin_prepare(snapshot, phase, effect)?;
-        self.attach_root_effect(preparation, root, RootState::Prepared, RootState::Live)
+        self.attach_root_effect(preparation, root, RootStatus::Prepared, RootStatus::Live)
     }
 
     /// Root removal preserves its deletion edge before exposing a later phase.
@@ -472,12 +476,12 @@ impl<R: Record> Catalog<R> {
         snapshot: Snapshot<R>,
         root: Owned<Root<R>>,
     ) -> Option<Preparation<R>> {
-        if !Arc::ptr_eq(&root.owner, &self.owner) || root.state() != RootState::Live {
+        if !Arc::ptr_eq(&root.owner, &self.owner) || root.status() != RootStatus::Live {
             return None;
         }
         let (effect, phase) = self.root_barrier(share(&root.target)?, snapshot.phase(), true)?;
         let preparation = self.begin_prepare(snapshot, phase, effect)?;
-        self.attach_root_effect(preparation, root, RootState::Live, RootState::Retired)
+        self.attach_root_effect(preparation, root, RootStatus::Live, RootStatus::Retired)
     }
 
     /// One bounded root-slot observation. Failed owning acquisition cannot move
@@ -494,7 +498,7 @@ impl<R: Record> Catalog<R> {
         snapshot: Snapshot<R>,
         domain: usize,
     ) -> Option<Preparation<R>> {
-        self.begin_scan_roots(snapshot, domain, 8)
+        self.begin_scan_roots(snapshot, domain, ROOT_SCAN_BATCH)
     }
 
     #[expect(
@@ -509,7 +513,7 @@ impl<R: Record> Catalog<R> {
     ) -> Option<Preparation<R>> {
         let mut phase = snapshot.phase();
         let entry = phase.domains.get(domain)?;
-        if entry.mode == DomainMode::Inactive || entry.floor != 0 {
+        if entry.mode == DomainMode::Inactive || entry.floor != STRONG_FLOOR {
             return None;
         }
         let slot = phase.root_cursors[domain];
@@ -522,27 +526,27 @@ impl<R: Record> Catalog<R> {
         for _ in 0..limit {
             let root = self.discover_root(cursor).ok()?;
             effect = if let Some(root) = root {
-                match (root.state(), root.removal_requested()) {
-                    (RootState::Live, true) => {
+                match (root.status(), root.removal_requested()) {
+                    (RootStatus::Live, true) => {
                         let (effect, next) =
                             self.root_barrier(share(&root.target)?, phase, true)?;
                         phase = next;
                         root_effect = Some(RootEffect {
                             root,
-                            expected: RootState::Live,
-                            proposed: RootState::Retired,
+                            expected: RootStatus::Live,
+                            proposed: RootStatus::Retired,
                         });
                         effect
                     }
-                    (state @ RootState::Prepared, true) => {
+                    (state @ RootStatus::Prepared, true) => {
                         root_effect = Some(RootEffect {
                             root,
                             expected: state,
-                            proposed: RootState::Retired,
+                            proposed: RootStatus::Retired,
                         });
                         None
                     }
-                    (RootState::Live, false) => {
+                    (RootStatus::Live, false) => {
                         let (effect, next) =
                             self.root_barrier(share(&root.target)?, phase, false)?;
                         phase = next;
@@ -576,13 +580,14 @@ impl<R: Record> Catalog<R> {
         if !root.removal_requested() {
             return None;
         }
-        match root.state() {
-            RootState::Prepared => self.begin_cancel_root(snapshot, root),
-            RootState::Live => self.begin_remove_root(snapshot, root),
-            RootState::Retired => None,
+        match root.status() {
+            RootStatus::Prepared => self.begin_cancel_root(snapshot, root),
+            RootStatus::Live => self.begin_remove_root(snapshot, root),
+            RootStatus::Retired => None,
         }
     }
 }
+
 // Shared pure validation for owning preparation and copied facade diagnostics.
 #[expect(
     clippy::indexing_slicing,
@@ -609,7 +614,7 @@ pub(crate) fn root_barrier_plan(
         };
     }
     let mut marks = original;
-    for index in 0..2 {
+    for index in 0..DOMAIN_COUNT {
         let domain = phase.domains[index];
         if domain.mode == DomainMode::Inactive
             || domain.floor >= RETIREMENT_FLOOR

@@ -72,6 +72,7 @@ impl<R: Payload> Commands<R> for GuardedCommand {
             Self::Retire { key, domain } => Command::TraceRetire { key, domain },
         }
     }
+
     fn start(
         self,
         catalog: &BoundedCatalog<R>,

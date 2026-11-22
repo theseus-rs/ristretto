@@ -9,6 +9,8 @@ use ristretto_jit::{Compiler, Error, ExecutionStep, Function, Result, Value};
 use std::cell::{Cell, RefCell};
 use std::num::NonZeroU32;
 
+const ROOT_CAPACITY: usize = 64;
+
 struct Context {
     roots: RefCell<Vec<i64>>,
     failed: Cell<bool>,
@@ -17,11 +19,12 @@ struct Context {
 impl Context {
     fn new() -> Self {
         Self {
-            roots: RefCell::new(Vec::with_capacity(64)),
+            roots: RefCell::new(Vec::with_capacity(ROOT_CAPACITY)),
             failed: Cell::new(false),
             rejected: Cell::new(-1),
         }
     }
+
     fn pointer(&self) -> *const u8 {
         std::ptr::from_ref(self).cast()
     }
@@ -30,13 +33,14 @@ impl Context {
 extern "C" fn publish(pointer: *const u8, handles: *const i64, count: i32) -> i32 {
     // SAFETY: every test keeps this aligned Context alive for the entire invocation.
     let context = unsafe { &*pointer.cast::<Context>() };
-    if context.failed.get() || !(0..=64).contains(&count) {
+    let Ok(count) = usize::try_from(count) else {
+        context.failed.set(true);
+        return 0;
+    };
+    if context.failed.get() || count > ROOT_CAPACITY {
         context.failed.set(true);
         return 0;
     }
-    let Ok(count) = usize::try_from(count) else {
-        return 0;
-    };
     let values = if count == 0 {
         &[]
     } else {

@@ -10,9 +10,11 @@ fn commit(catalog: &Catalog, mut preparation: Preparation) {
     }
     panic!("finite preparation did not finish");
 }
+
 fn snapshot(catalog: &Catalog) -> Snapshot {
     catalog.snapshot_in(&()).unwrap()
 }
+
 fn create(catalog: &Catalog) -> Owned<Cell> {
     let mut creation = catalog.begin_create_with(0, 8, ()).unwrap();
     for _ in 0..4 {
@@ -22,6 +24,7 @@ fn create(catalog: &Catalog) -> Owned<Cell> {
     }
     panic!("finite creation did not finish");
 }
+
 #[test]
 fn phase_finish_cannot_overtake_unscanned_roots_or_pending_work() {
     let catalog = Catalog::with_record_root_capacities_and_limit(1, 32, 32, 32, 1, 32, 32);
@@ -37,6 +40,7 @@ fn phase_finish_cannot_overtake_unscanned_roots_or_pending_work() {
     assert!(catalog.begin_advance(snapshot(&catalog), 0).is_none());
     assert_eq!(snapshot(&catalog).phase().domains[0].pending, 1);
 }
+
 #[test]
 fn stale_finish_epoch_cannot_finish_a_new_collection() {
     let catalog = Catalog::<()>::with_record_capacities_and_limit(1, 32, 32, 32, 32);
@@ -83,6 +87,7 @@ fn stale_finish_epoch_cannot_finish_a_new_collection() {
         DomainMode::Inactive
     );
 }
+
 #[test]
 fn acknowledgement_rejects_stale_ticket_and_settles_exact_work_once() {
     let catalog = Catalog::with_record_capacities_and_limit(1, 32, 32, 32, 32);
@@ -129,6 +134,7 @@ fn acknowledgement_rejects_stale_ticket_and_settles_exact_work_once() {
             .is_none()
     );
 }
+
 #[test]
 fn invalid_phase_domain_and_mode_have_no_effect() {
     let catalog = Catalog::<()>::with_record_capacities_and_limit(1, 32, 32, 32, 32);

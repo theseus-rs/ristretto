@@ -6,6 +6,7 @@ use super::{
     Arc, Attempt, Catalog, Cell, DomainMode, Membership, Outcome, Owned, Owner, Preparation,
     PreparationError, Record, Snapshot, share,
 };
+use crate::canonical_catalog::NO_TICKET;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EdgeTraversalProgress {
@@ -63,7 +64,7 @@ impl<R: Record> Catalog<R> {
         if !Arc::ptr_eq(&snapshot.owner, &self.owner)
             || !Arc::ptr_eq(&source.owner, &self.owner)
             || self.edges.is_none()
-            || ticket == 0
+            || ticket == NO_TICKET
         {
             return None;
         }
@@ -97,6 +98,7 @@ impl<R: Record> EdgeTraversal<R> {
     pub fn scanned_slots(&self) -> usize {
         self.cursor
     }
+
     /// False preserves a request whose irreversible commit decision already won.
     pub fn cancel(&self) -> bool {
         self.request

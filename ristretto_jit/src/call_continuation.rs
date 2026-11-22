@@ -1,6 +1,8 @@
 //! Return a pending Java invocation with no generated caller left on the stack.
 use super::Continuation;
+use crate::compiler::native_frame::{word_offset, word_stack_slot};
 use crate::function::ContinuationLayout;
+use crate::function::activation::RequestKind;
 use crate::operand_stack::OperandStack;
 use crate::{Error::InternalError, Result};
 use cranelift::codegen::ir::{MemFlagsData, StackSlot};
@@ -20,7 +22,7 @@ impl CallContinuation<'_> {
         arguments: StackSlot,
         count: usize,
         bci: usize,
-        request: (u64, u16),
+        request: (RequestKind, u16),
     ) -> Result<Value> {
         let site = bci;
         let state = self.state;
@@ -53,16 +55,19 @@ impl CallContinuation<'_> {
         // Embeddings carry this remainder across immediately-ready requests.
         let remaining = builder.use_var(self.continuation.remaining);
         let remaining = builder.ins().iadd_imm_s(remaining, -1);
-        builder
-            .ins()
-            .store(MemFlagsData::trusted(), remaining, state, 8);
+        builder.ins().store(
+            MemFlagsData::trusted(),
+            remaining,
+            state,
+            word_offset(ContinuationLayout::FUEL)?,
+        );
         for (index, &(variable, _)) in self.continuation.locals.iter().enumerate() {
             let value = builder.use_var(variable);
             builder.ins().store(
                 MemFlagsData::trusted(),
                 value,
                 state,
-                Continuation::offset(ContinuationLayout::HEADER_WORDS + index)?,
+                word_offset(ContinuationLayout::HEADER_WORDS + index)?,
             );
         }
         let operands = ContinuationLayout::HEADER_WORDS + self.continuation.locals.len();
@@ -71,49 +76,47 @@ impl CallContinuation<'_> {
                 MemFlagsData::trusted(),
                 *value,
                 state,
-                Continuation::offset(operands + index)?,
+                word_offset(operands + index)?,
             );
         }
         let (kind, index) = request;
         for (cell, value) in [
-            kind,
-            u64::try_from(bci)?,
-            u64::from(index),
-            u64::try_from(count)?,
-            0,
-        ]
-        .iter()
-        .enumerate()
-        {
-            let value = builder.ins().iconst(types::I64, i64::try_from(*value)?);
+            (ContinuationLayout::CALL_KIND, kind as u64),
+            (ContinuationLayout::CALL_BCI, u64::try_from(bci)?),
+            (ContinuationLayout::CALL_INDEX, u64::from(index)),
+            (ContinuationLayout::CALL_COUNT, u64::try_from(count)?),
+            (ContinuationLayout::CALL_RESULT, 0),
+        ] {
+            let value = builder.ins().iconst(types::I64, i64::try_from(value)?);
             builder.ins().store(
                 MemFlagsData::trusted(),
                 value,
                 state,
-                Continuation::offset(offset + cell)?,
+                word_offset(offset + cell)?,
             );
         }
         for index in 0..count {
-            let value = builder.ins().stack_load(
-                types::I64,
-                types::I64,
-                arguments,
-                i32::try_from(index * 8)?,
-            );
+            let value =
+                builder
+                    .ins()
+                    .stack_load(types::I64, types::I64, arguments, word_offset(index)?);
             builder.ins().store(
                 MemFlagsData::trusted(),
                 value,
                 state,
-                Continuation::offset(offset + ContinuationLayout::CALL_HEADER_WORDS + index)?,
+                word_offset(offset + ContinuationLayout::CALL_HEADER_WORDS + index)?,
             );
         }
         let token = builder.ins().iconst(
             types::I64,
             i64::try_from(ContinuationLayout::CALL_TOKEN_BASE + u64::try_from(site)?)?,
         );
-        builder
-            .ins()
-            .store(MemFlagsData::trusted(), token, state, 0);
+        builder.ins().store(
+            MemFlagsData::trusted(),
+            token,
+            state,
+            word_offset(ContinuationLayout::RESUME_TOKEN)?,
+        );
         builder.ins().return_(&[]);
 
         builder.switch_to_block(restore);
@@ -122,7 +125,7 @@ impl CallContinuation<'_> {
                 kind,
                 MemFlagsData::trusted(),
                 state,
-                Continuation::offset(ContinuationLayout::HEADER_WORDS + index)?,
+                word_offset(ContinuationLayout::HEADER_WORDS + index)?,
             );
             builder.def_var(variable, value);
         }
@@ -132,7 +135,7 @@ impl CallContinuation<'_> {
                 *kind,
                 MemFlagsData::trusted(),
                 state,
-                Continuation::offset(operands + index)?,
+                word_offset(operands + index)?,
             );
             values.push(value.into());
         }
@@ -140,7 +143,7 @@ impl CallContinuation<'_> {
             types::I64,
             MemFlagsData::trusted(),
             state,
-            Continuation::offset(offset + 4)?,
+            word_offset(offset + ContinuationLayout::CALL_RESULT)?,
         );
         builder.def_var(result, bits);
         builder.ins().jump(join, &values);
@@ -154,6 +157,8 @@ impl CallContinuation<'_> {
 
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classfile::{BaseType, Constant, ConstantPool, FieldType};
+
+const MAX_PARAMETER_SLOTS: usize = u8::MAX as usize;
 
 #[derive(Clone, Copy)]
 pub(crate) enum CallTarget {
@@ -172,17 +177,20 @@ impl CallTarget {
             _ => return None,
         })
     }
-    fn metadata(self) -> (u64, u16) {
+
+    fn metadata(self) -> (RequestKind, u16) {
         match self {
-            Self::Static(i) => (0, i),
-            Self::Special(i) => (1, i),
-            Self::Virtual(i) => (2, i),
-            Self::Interface(i, _) => (3, i),
+            Self::Static(i) => (RequestKind::InvokeStatic, i),
+            Self::Special(i) => (RequestKind::InvokeSpecial, i),
+            Self::Virtual(i) => (RequestKind::InvokeVirtual, i),
+            Self::Interface(i, _) => (RequestKind::InvokeInterface, i),
         }
     }
+
     pub fn receiver(self) -> usize {
         usize::from(!matches!(self, Self::Static(_)))
     }
+
     pub fn signature(self, pool: &ConstantPool) -> Result<(Vec<FieldType>, Option<FieldType>)> {
         let (_, index) = self.metadata();
         let entry = pool.try_get(index)?;
@@ -221,16 +229,10 @@ impl CallTarget {
         let slots = signature
             .0
             .iter()
-            .map(|kind| {
-                if matches!(kind, FieldType::Base(BaseType::Long | BaseType::Double)) {
-                    2
-                } else {
-                    1
-                }
-            })
+            .map(|kind| usize::from(kind.slot_count()))
             .sum::<usize>()
             + self.receiver();
-        if slots > 255 {
+        if slots > MAX_PARAMETER_SLOTS {
             return Err(crate::Error::UnsupportedMethod(
                 "compiled call exceeds the Java parameter-slot limit".to_owned(),
             ));
@@ -258,18 +260,14 @@ impl CallContinuation<'_> {
         let (parameters, result) = target.signature(pool)?;
         let receiver = target.receiver();
         let count = parameters.len() + receiver;
-        let arguments = builder.create_sized_stack_slot(StackSlotData::new(
-            StackSlotKind::ExplicitSlot,
-            u32::try_from(count.max(1) * 8)?,
-            3,
-        ));
+        let arguments = word_stack_slot(builder, count.max(1))?;
         for (position, kind) in parameters.iter().enumerate().rev() {
             let bits = argument_bits(builder, stack, kind)?;
             builder.ins().stack_store(
                 types::I64,
                 bits,
                 arguments,
-                i32::try_from((position + receiver) * 8)?,
+                word_offset(position + receiver)?,
             );
         }
         if receiver != 0 {
@@ -283,6 +281,7 @@ impl CallContinuation<'_> {
         Ok(())
     }
 }
+
 pub(super) fn argument_bits(
     builder: &mut FunctionBuilder,
     stack: &mut OperandStack,

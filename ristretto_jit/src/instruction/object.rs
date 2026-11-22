@@ -247,16 +247,17 @@ pub(crate) fn multianewarray(
     cp_class_index: u16,
     dimensions: u8,
 ) -> crate::Result<()> {
+    const DIMENSION_ALIGN_SHIFT: u8 = 2; // Each array length is a JVM int.
     if dimensions == 0 {
         return Err(InternalError(
             "multianewarray requires at least one dimension".to_string(),
         ));
     }
-    let slot_size = u32::from(dimensions) * 4;
+    let slot_size = u32::from(dimensions) * types::I32.bytes();
     let slot = function_builder.create_sized_stack_slot(StackSlotData::new(
         StackSlotKind::ExplicitSlot,
         slot_size,
-        2,
+        DIMENSION_ALIGN_SHIFT,
     ));
     let mut popped = Vec::with_capacity(usize::from(dimensions));
     for _ in 0..dimensions {
@@ -265,7 +266,8 @@ pub(crate) fn multianewarray(
     let ptr_type = function_builder.func.dfg.value_type(context_pointer);
     // The last popped value is the outermost dimension. Store outermost first (index 0).
     for (i, value) in popped.iter().rev().enumerate() {
-        let offset = i32::try_from(i * 4).map_err(|error| InternalError(format!("{error:?}")))?;
+        let offset = i32::try_from(i * size_of::<i32>())
+            .map_err(|error| InternalError(format!("{error:?}")))?;
         function_builder
             .ins()
             .stack_store(ptr_type, *value, slot, offset);

@@ -46,6 +46,7 @@ impl Compiler {
     ) -> Result<Function> {
         Err(crate::Error::InternalError("Not implemented".to_string()))
     }
+
     /// Request-only native code is unavailable on this target.
     /// # Errors
     /// Always returns an unsupported-target error.

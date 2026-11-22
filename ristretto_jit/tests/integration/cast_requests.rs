@@ -3,12 +3,15 @@ use ristretto_jit::{
     Compiler, ExecutionStep, Function, Result, TypeCheckKind, TypeCheckRequest, Value,
 };
 use std::num::NonZeroU32;
+
 extern "C" fn publish(_context: *const u8, _roots: *const i64, _count: i32) -> i32 {
     1
 }
+
 fn pointer() -> *const u8 {
     std::ptr::from_ref(&0u8)
 }
+
 fn compile(target: &str) -> Result<(Function, u16)> {
     let mut class = super::continuation::fixture(
         "(Ljava/lang/Object;)Ljava/lang/Object;",
@@ -31,6 +34,7 @@ fn compile(target: &str) -> Result<(Function, u16)> {
         index,
     ))
 }
+
 #[test]
 fn checked_cast_preserves_identity_null_and_exact_target_request() -> Result<()> {
     for target in ["Node", "java/lang/Object", "[I", "[Ljava/lang/Object;"] {
@@ -56,6 +60,7 @@ fn checked_cast_preserves_identity_null_and_exact_target_request() -> Result<()>
     assert!(compile("[[I").is_err());
     Ok(())
 }
+
 #[test]
 fn failed_cast_cancels_before_following_reference_code() -> Result<()> {
     let (function, _) = compile("Node")?;

@@ -1,6 +1,6 @@
 use crate::Finalize;
 use crate::allocation_budget::{AllocationBudget, Reservation};
-use crate::config::{Configuration, Statistics};
+use crate::config::{AUTO_THREADS, Configuration, Statistics};
 use crate::error::{Error, Result};
 use crate::gc::Gc;
 use crate::metadata::ObjectMetadata;
@@ -20,6 +20,9 @@ use std::thread;
 #[cfg(not(target_family = "wasm"))]
 use sysinfo::System;
 use tracing::{debug, error, info, trace, warn};
+
+#[cfg(not(target_family = "wasm"))]
+const CORES_PER_GC_THREAD: usize = 2;
 
 /// Host state that owns managed roots outside an ordinary traced graph.
 /// The canonical payload adapter rejects values reporting such an owner.
@@ -145,15 +148,15 @@ impl GarbageCollector {
     #[must_use]
     pub fn with_config(configuration: Configuration) -> Arc<Self> {
         #[cfg(not(target_family = "wasm"))]
-        let threads = if configuration.threads == 0 {
+        let threads = if configuration.threads == AUTO_THREADS {
             let cpus = System::physical_core_count().unwrap_or(1);
             // Default to 50% of available CPU cores, but at least 1 thread
-            (cpus >> 1).max(1)
+            (cpus / CORES_PER_GC_THREAD).max(1)
         } else {
             configuration.threads
         };
         #[cfg(target_family = "wasm")]
-        let threads = if configuration.threads == 0 {
+        let threads = if configuration.threads == AUTO_THREADS {
             1
         } else {
             configuration.threads
@@ -1121,11 +1124,14 @@ macro_rules! impl_trace_primitive {
         $(
             impl Trace for $t {
                 fn may_contain_gc_references() -> bool { false }
+
                 fn canonical_payload() -> Option<crate::CanonicalPayload<Self>> {
                     // SAFETY: primitive scalars have no graph, owner, backing or callbacks.
                     Some(unsafe { crate::CanonicalPayload::new() })
                 }
+
                 fn needs_write_barrier(&self) -> bool { false }
+
                 fn trace(&self, _collector: &GarbageCollector) {}
             }
         )*

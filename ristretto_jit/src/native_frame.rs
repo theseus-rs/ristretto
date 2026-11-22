@@ -10,13 +10,38 @@ use cranelift::prelude::*;
 
 pub(super) const PROBE_SYMBOL: &str = "ristretto_jit_native_frame_probe";
 
+const FRAME_SETUP_BYTES: usize = 16;
+const WORD_ALIGN_SHIFT: u8 = 3; // Eight-byte stack slot alignment.
+
+pub(super) fn word_stack_slot(builder: &mut FunctionBuilder, words: usize) -> Result<StackSlot> {
+    let bytes = u32::try_from(words)?
+        .checked_mul(types::I64.bytes())
+        .ok_or_else(|| Error::InternalError("stack slot size overflow".to_owned()))?;
+    Ok(builder.create_sized_stack_slot(StackSlotData::new(
+        StackSlotKind::ExplicitSlot,
+        bytes,
+        WORD_ALIGN_SHIFT,
+    )))
+}
+
+pub(super) fn word_offset(word: usize) -> Result<i32> {
+    Ok(i32::try_from(
+        word.checked_mul(size_of::<u64>())
+            .ok_or_else(|| Error::InternalError("continuation offset overflow".to_owned()))?,
+    )?)
+}
+
 pub(super) extern "C" fn probe() {}
 
 pub(super) struct SizeProbe(StackSlot);
 
 impl SizeProbe {
     pub(super) fn new(builder: &mut FunctionBuilder) -> Self {
-        Self(builder.create_sized_stack_slot(StackSlotData::new(StackSlotKind::ExplicitSlot, 8, 3)))
+        Self(builder.create_sized_stack_slot(StackSlotData::new(
+            StackSlotKind::ExplicitSlot,
+            types::I64.bytes(),
+            WORD_ALIGN_SHIFT,
+        )))
     }
 
     pub(super) fn initialize(&self, builder: &mut FunctionBuilder) {
@@ -92,7 +117,7 @@ pub(super) fn stack_bytes(context: &Context) -> Result<usize> {
     // FP/return-address setup. active_size covers clobbers, fixed slots/spills
     // and outgoing args. This compiler emits no tail calls or dynamic slots.
     usize::try_from(*span)?
-        .checked_add(16)
+        .checked_add(FRAME_SETUP_BYTES)
         .ok_or_else(|| Error::InternalError("native frame size overflow".to_owned()))
 }
 
@@ -158,13 +183,18 @@ mod tests {
         ));
         let value = builder.ins().iconst(types::I64, 42);
         builder.ins().stack_store(types::I64, value, slot, 0);
-        builder
-            .ins()
-            .stack_store(types::I64, value, slot, i32::try_from(bytes - 8)?);
-        let value =
-            builder
-                .ins()
-                .stack_load(types::I64, types::I64, slot, i32::try_from(bytes - 8)?);
+        builder.ins().stack_store(
+            types::I64,
+            value,
+            slot,
+            i32::try_from(bytes - types::I64.bytes())?,
+        );
+        let value = builder.ins().stack_load(
+            types::I64,
+            types::I64,
+            slot,
+            i32::try_from(bytes - types::I64.bytes())?,
+        );
         builder
             .ins()
             .store(MemFlagsData::trusted(), value, result, 0);
@@ -175,7 +205,7 @@ mod tests {
         builder.finalize(module.target_config());
         module.define_function(id, &mut context)?;
         let stack_bytes = stack_bytes(&context)?;
-        assert!(stack_bytes >= usize::try_from(bytes)? + 16);
+        assert!(stack_bytes >= usize::try_from(bytes)? + FRAME_SETUP_BYTES);
         assert_eq!(
             context
                 .compiled_code()

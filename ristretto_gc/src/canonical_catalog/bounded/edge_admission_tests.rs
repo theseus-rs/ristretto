@@ -1,5 +1,6 @@
 use super::super::{Arc, Budget, Capacities, Footprint};
 use super::*;
+
 fn fixture() -> (CatalogHandle, Participant, Arc<Budget>) {
     let budget = Budget::new(usize::MAX);
     let capacities = Capacities::derive(2, 1, 1).unwrap().with_edges(2).unwrap();
@@ -8,6 +9,7 @@ fn fixture() -> (CatalogHandle, Participant, Arc<Budget>) {
     let worker = catalog.register_mutator().unwrap();
     (catalog, worker, budget)
 }
+
 fn finish(worker: &mut Participant) -> EdgeHandle {
     for _ in 0..8 {
         if let Progress::EdgeCreated(_) = worker.poll() {
@@ -16,6 +18,7 @@ fn finish(worker: &mut Participant) -> EdgeHandle {
     }
     panic!("finite creation");
 }
+
 #[test]
 fn edge_creation_owner_retains_quota_and_credit_through_final_drop() {
     let (catalog, mut worker, budget) = fixture();
@@ -31,6 +34,7 @@ fn edge_creation_owner_retains_quota_and_credit_through_final_drop() {
     drop(second);
     assert_eq!(budget.used(), 0);
 }
+
 #[test]
 fn cancelling_each_edge_creation_prefix_refunds_quota_and_posts_cleanup() {
     for prefix in 0..=4 {
@@ -48,6 +52,7 @@ fn cancelling_each_edge_creation_prefix_refunds_quota_and_posts_cleanup() {
         assert_eq!(budget.used(), 0);
     }
 }
+
 #[test]
 fn edge_backing_and_token_storage_are_charged_before_setup() {
     let capacities = Capacities::derive(2, 1, 1).unwrap().with_edges(2).unwrap();
@@ -62,6 +67,7 @@ fn edge_backing_and_token_storage_are_charged_before_setup() {
     drop(catalog);
     assert_eq!(exact.used(), 0);
 }
+
 #[test]
 fn invalid_edge_geometry_cannot_reserve_credit() {
     let caps = Capacities::derive(2, 1, 1).unwrap().with_edges(3).unwrap();

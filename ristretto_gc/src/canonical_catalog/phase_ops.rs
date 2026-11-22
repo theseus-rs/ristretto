@@ -5,6 +5,7 @@
 )]
 use super::super::{RETIREMENT_FLOOR, TraceRetention};
 use super::{Attempt, Catalog, Cell, DomainMode, Membership, Owned, Preparation, Record, Snapshot};
+use crate::canonical_catalog::{OLD_DOMAIN, STRONG_FLOOR, YOUNG_DOMAIN};
 impl<R: Record> Catalog<R> {
     pub fn begin_shade(
         &self,
@@ -79,8 +80,8 @@ impl<R: Record> Catalog<R> {
         let mut phase = snapshot.phase();
         let entry = phase.domains.get_mut(domain)?;
         if mode == DomainMode::Inactive
-            || (mode == DomainMode::Old && domain != 1)
-            || (mode == DomainMode::Young && domain != 0)
+            || (mode == DomainMode::Old && domain != OLD_DOMAIN)
+            || (mode == DomainMode::Young && domain != YOUNG_DOMAIN)
             || entry.mode != DomainMode::Inactive
             || entry.pending != 0
         {
@@ -88,7 +89,7 @@ impl<R: Record> Catalog<R> {
         }
         entry.mode = mode;
         entry.epoch = entry.epoch.checked_add(1)?;
-        entry.floor = 0;
+        entry.floor = STRONG_FLOOR;
         phase.root_cursors[domain] = 0;
         phase.reference_cursors[domain] = 0;
         self.begin_prepare(snapshot, phase, None)
@@ -107,6 +108,7 @@ impl<R: Record> Catalog<R> {
         }
         self.begin_finish(snapshot, domain)
     }
+
     pub fn begin_finish(&self, snapshot: Snapshot<R>, domain: usize) -> Option<Preparation<R>> {
         let mut phase = snapshot.phase();
         let entry = phase.domains.get_mut(domain)?;
@@ -118,7 +120,7 @@ impl<R: Record> Catalog<R> {
             return None;
         }
         entry.mode = DomainMode::Inactive;
-        entry.floor = 0;
+        entry.floor = STRONG_FLOOR;
         self.begin_prepare(snapshot, phase, None)
     }
 

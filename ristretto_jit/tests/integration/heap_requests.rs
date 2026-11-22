@@ -10,9 +10,11 @@ use std::num::NonZeroU32;
 extern "C" fn publish(_context: *const u8, _roots: *const i64, _count: i32) -> i32 {
     1
 }
+
 fn pointer() -> *const u8 {
     std::ptr::from_ref(&0u8)
 }
+
 fn fixture(
     descriptor: &str,
     field: &str,

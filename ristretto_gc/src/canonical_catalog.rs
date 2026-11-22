@@ -21,11 +21,11 @@ pub struct Domain {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Phase {
     /// Per-domain root scan cursor; only a canonical scan operation advances it.
-    pub root_cursors: [usize; 2],
+    pub root_cursors: [usize; DOMAIN_COUNT],
     /// Per-domain cursor for the current conditional-reference stage.
-    pub reference_cursors: [usize; 2],
+    pub reference_cursors: [usize; DOMAIN_COUNT],
     pub revision: u64,
-    pub domains: [Domain; 2],
+    pub domains: [Domain; DOMAIN_COUNT],
 }
 
 #[cfg(test)]
@@ -38,6 +38,7 @@ impl<T> PooledLink<T> {
         assert!(matches!(link.compare(None, Some(value)), Compare::Changed));
         Self(link)
     }
+
     fn load(&self) -> Option<Owned<T>> {
         #[cfg(test)]
         if fail_load() {
@@ -45,9 +46,11 @@ impl<T> PooledLink<T> {
         }
         self.0.try_load().ok().flatten()
     }
+
     fn points_to(&self, value: &Owned<T>) -> bool {
         self.0.points_to(value)
     }
+
     #[expect(
         clippy::panic,
         reason = "private catalog links only accept owners from their reserved pool"
@@ -65,9 +68,11 @@ impl<T> OptionalLink<T> {
     fn empty(pool: Arc<Pool<T>>) -> Self {
         Self(Link::empty(pool))
     }
+
     fn is_occupied(&self) -> bool {
         !self.0.is_empty()
     }
+
     fn load(&self) -> Result<Option<Owned<T>>, Contended> {
         #[cfg(test)]
         if fail_load() {
@@ -75,6 +80,7 @@ impl<T> OptionalLink<T> {
         }
         self.0.try_load()
     }
+
     #[expect(
         clippy::panic,
         reason = "private catalog links only accept owners from their reserved pool"
@@ -87,6 +93,7 @@ impl<T> OptionalLink<T> {
         }
     }
 }
+
 fn share<T>(value: &Owned<T>) -> Option<Owned<T>> {
     #[cfg(test)]
     if FAIL_SHARE.with(|remaining| match remaining.get() {
@@ -125,8 +132,10 @@ fn fail_load() -> bool {
         None => false,
     })
 }
+const ALLOCATION_ATTEMPTS: usize = 8;
+
 fn allocate<T>(pool: &Arc<Pool<T>>, mut value: T) -> Option<Owned<T>> {
-    for _ in 0..8 {
+    for _ in 0..ALLOCATION_ATTEMPTS {
         match pool.try_allocate(value) {
             Ok(owned) => return Some(owned),
             Err(returned) => value = returned,
