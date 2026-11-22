@@ -1,3 +1,6 @@
+#[path = "continuation.rs"]
+mod continuation;
+
 #[path = "native_frame.rs"]
 mod native_frame;
 
@@ -161,12 +164,107 @@ impl Compiler {
     /// # Errors
     ///
     /// if the Java byte code cannot be compiled to native code
-    #[expect(clippy::too_many_lines)]
     pub fn compile(
         &self,
         class_file: &ClassFile,
         method: &Method,
         symbols: &[(&str, *const u8)],
+    ) -> Result<Function> {
+        self.compile_mode(class_file, method, symbols, false)
+    }
+
+    /// Restriction for the explicit scalar continuation capability. References,
+    /// calls, exception handlers, synchronization and trapping integer division
+    /// remain excluded until their owning request protocols are implemented.
+    #[cfg(feature = "experimental-reference-dispatch")]
+    #[must_use]
+    pub fn request_rejection_reason(class: &ClassFile, method: &Method) -> Option<&'static str> {
+        if !method.access_flags.contains(MethodAccessFlags::STATIC)
+            || method
+                .access_flags
+                .contains(MethodAccessFlags::SYNCHRONIZED)
+        {
+            return Some("experimental_method_kind");
+        }
+        let Ok(descriptor) = class.constant_pool.try_get_utf8(method.descriptor_index) else {
+            return Some("experimental_descriptor");
+        };
+        let Ok((parameters, result)) = FieldType::parse_method_descriptor(descriptor) else {
+            return Some("experimental_descriptor");
+        };
+        if parameters
+            .iter()
+            .chain(result.iter())
+            .any(|kind| !matches!(kind, FieldType::Base(_)))
+        {
+            return Some("experimental_reference_descriptor");
+        }
+        let Some((code, handlers)) = method.attributes.iter().find_map(|attribute| {
+            if let Attribute::Code {
+                code,
+                exception_table,
+                ..
+            } = attribute
+            {
+                Some((code, exception_table))
+            } else {
+                None
+            }
+        }) else {
+            return Some("missing_code");
+        };
+        if !handlers.is_empty() {
+            return Some("experimental_exception_handlers");
+        }
+        if code.iter().any(|instruction| {
+            !(Self::is_production_safe_instruction(instruction)
+                || matches!(
+                    instruction,
+                    Instruction::Ifeq(_)
+                        | Instruction::Ifne(_)
+                        | Instruction::Iflt(_)
+                        | Instruction::Ifge(_)
+                        | Instruction::Ifgt(_)
+                        | Instruction::Ifle(_)
+                        | Instruction::If_icmpeq(_)
+                        | Instruction::If_icmpne(_)
+                        | Instruction::If_icmplt(_)
+                        | Instruction::If_icmpge(_)
+                        | Instruction::If_icmpgt(_)
+                        | Instruction::If_icmple(_)
+                        | Instruction::Goto(_)
+                        | Instruction::Goto_w(_)
+                ))
+        }) {
+            return Some("experimental_unqualified_instruction");
+        }
+        None
+    }
+
+    /// Compile an explicit resumable scalar activation. Ordinary eligibility and
+    /// synchronous compilation are unchanged; the result requires activation dispatch.
+    /// # Errors
+    /// Rejects unsupported capabilities, malformed bytecode and excessive continuation state.
+    #[cfg(feature = "experimental-reference-dispatch")]
+    pub fn compile_requests(
+        &self,
+        class: &ClassFile,
+        method: &Method,
+        symbols: &[(&str, *const u8)],
+    ) -> Result<Function> {
+        if let Some(reason) = Self::request_rejection_reason(class, method) {
+            return Err(crate::Error::UnsupportedMethod(reason.to_owned()));
+        }
+        self.compile_mode(class, method, symbols, true)
+    }
+
+    #[expect(clippy::too_many_lines)]
+    fn compile_mode(
+        &self,
+        class_file: &ClassFile,
+        method: &Method,
+        symbols: &[(&str, *const u8)],
+        requests_only: bool,
     ) -> Result<Function> {
         let Some((max_stack, instructions, exception_table)) =
             method.attributes.iter().find_map(|attribute| {
@@ -251,17 +349,38 @@ impl Compiler {
         // and returns.
         let exception_block = function_builder.create_block();
 
+        let continuation = if requests_only {
+            Some(continuation::Continuation::new(
+                &mut function_builder,
+                &blocks,
+                instructions,
+                &locals,
+                max_stack,
+            )?)
+        } else {
+            None
+        };
+        let dispatch = if continuation.is_some() {
+            function_builder.create_block()
+        } else {
+            block_zero
+        };
         let frame_probe = native_frame::SizeProbe::new(&mut function_builder);
         frame_probe.emit_cold_path(
             &mut jit_module,
             &mut function_builder,
             arguments_length,
-            block_zero,
+            dispatch,
             exception_block,
         )?;
+        if let Some(continuation) = &continuation {
+            function_builder.switch_to_block(dispatch);
+            continuation.entry(&mut function_builder, context_pointer, block_zero)?;
+        }
         function_builder.switch_to_block(block_zero);
 
         let mut stack = OperandStack::with_capacity(max_stack);
+        let mut continued_blocks = continuation.as_ref().map(|_| blocks.clone());
         let mut block_is_terminated = false;
         for (program_counter, instruction) in Instruction::with_offsets(instructions) {
             if let Some(block) = blocks.get(&program_counter) {
@@ -284,10 +403,13 @@ impl Compiler {
                 continue;
             }
 
+            if let (Some(continuation), Some(targets)) = (&continuation, &mut continued_blocks) {
+                continuation.redirect(targets, program_counter, instruction)?;
+            }
             Self::process_instruction(
                 constant_pool,
                 &mut function_builder,
-                &blocks,
+                continued_blocks.as_ref().unwrap_or(&blocks),
                 &mut locals,
                 &mut stack,
                 program_counter,
@@ -300,10 +422,23 @@ impl Compiler {
                 instruction,
             )?;
 
+            if let Some(targets) = &mut continued_blocks {
+                continuation::Continuation::restore_targets(
+                    targets,
+                    &blocks,
+                    program_counter,
+                    instruction,
+                )?;
+            }
+
             // Check if this instruction terminates the block
             if instruction.changes_control_flow() {
                 block_is_terminated = true;
             }
+        }
+
+        if let Some(continuation) = &continuation {
+            continuation.finish(&mut function_builder, context_pointer)?;
         }
 
         // Emit the shared exception return block body: write NONE to the return pointer
@@ -331,6 +466,7 @@ impl Compiler {
             let function: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8) =
                 mem::transmute(code);
             Function::with_module(function, jit_module, native_stack_bytes, argument_types)
+                .with_continuation(continuation.map(|continuation| continuation.layout))
         };
         Ok(function)
     }

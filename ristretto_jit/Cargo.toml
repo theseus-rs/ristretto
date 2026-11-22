@@ -25,3 +25,6 @@ stacker = { workspace = true }
 
 [dev-dependencies]
 indexmap = { workspace = true }
+
+[features]
+experimental-reference-dispatch = []
