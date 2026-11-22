@@ -11,12 +11,19 @@ systemd-run --user --scope -p MemoryMax=1G -p CPUQuota=200% \
 ```
 
 Each fork launches a fresh JVM for each collector and alternates the launch order.
+G1 runs first by default. Pass `--first-collector ZGC` to start with ZGC.
 Both execute the same Java 17 classfiles on the same CPUs with a 64 MiB heap.
 The driver compiles the sources once per run, records the workload classfile hashes
 in the JSON, and checks each result against an independent integer model.
 The JSON records raw workload-call times and wall time for each process,
 including startup. The JVM controls when it collects. These finite samples do
 not measure sustainable throughput or GC pause percentiles.
+
+Each process records the elapsed time for the timed batch in `batch_ns`.
+Its `collection_changes` object gives the change in collection count and
+collection time in milliseconds for each named JVM collector bean. An
+unavailable counter is JSON null. ZGC cycle and pause beans can describe the
+same collection, so keep their names when reporting the values.
 
 Generate a per-process table and an SVG from a saved capture with Python 3.8
 or later. The report uses the Python standard library and verifies the workload

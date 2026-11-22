@@ -13,6 +13,7 @@ usage() {
     cat <<'EOF'
 Usage: hotspot.sh OUTPUT [--workload small|medium|large] [--steps N]
                          [--warmup N] [--samples N] [--forks N]
+                         [--first-collector G1|ZGC]
 Defaults: small workload, 257 steps, 10 warmup calls, 8 samples, 3 forks.
 EOF
 }
@@ -78,14 +79,15 @@ run_timed() {
     ' -- "$@"
 }
 
-output='' workload=small steps=257 warmup=10 samples=8 forks=3
+output='' workload=small steps=257 warmup=10 samples=8 forks=3 first_collector=G1
 while (( $# )); do
     case $1 in
         -h|--help) usage; exit 0 ;;
         --*=*) set -- "${1%%=*}" "${1#*=}" "${@:2}" ;;
-        --workload|--steps|--warmup|--samples|--forks)
+        --workload|--steps|--warmup|--samples|--forks|--first-collector)
             (( $# >= 2 )) || die "Missing value for $1"
-            printf -v "${1#--}" '%s' "$2"
+            option=${1#--}
+            printf -v "${option//-/_}" '%s' "$2"
             shift 2 ;;
         --) shift; (( $# == 1 )) && [[ -z $output ]] || die 'Expected one output path'
             output=$1; shift ;;
@@ -97,6 +99,11 @@ done
 [[ -n $output ]] || { usage >&2; exit 2; }
 [[ ! -e $output && ! -L $output ]] || die "Output already exists: $output"
 case $workload in small|medium|large) ;; *) die "Unknown workload: $workload" ;; esac
+case $first_collector in
+    G1) collectors=(G1 ZGC) ;;
+    ZGC) collectors=(ZGC G1) ;;
+    *) die "Unknown collector: $first_collector" ;;
+esac
 steps=$(bounded_integer "$steps" 0 100000)
 warmup=$(bounded_integer "$warmup" 0 128)
 samples=$(bounded_integer "$samples" 1 128)
@@ -122,8 +129,6 @@ hashes=$(cd -- "$tmp" && sha256sum CanonicalRingWorkload*.class |
     jq -Rn '[inputs | split("  ") | {key: .[1], value: .[0]}] | from_entries')
 
 for ((fork = 0; fork < forks; fork++)); do
-    collectors=(G1 ZGC)
-    if (( fork % 2 )); then collectors=(ZGC G1); fi
     for collector in "${collectors[@]}"; do
         [[ $(resource_limits) == "$limits" ]] || die 'Resource limits changed during capture'
         if [[ $collector == G1 ]]; then gc_flag=-XX:+UseG1GC; else gc_flag=-XX:+UseZGC; fi
@@ -135,19 +140,33 @@ for ((fork = 0; fork < forks; fork++)); do
             --argjson flags "$(printf '%s\n' "${flags[@]}" | jq -Rn '[inputs]')" \
             --argjson elapsed "$(< "$tmp/process.ns")" --argjson checksum "$checksum" \
             --argjson count "$samples" '
+            def counter:
+                if . == "-1" then null
+                elif test("^[0-9]+$") then tonumber
+                else error("invalid collection delta") end;
             [inputs | split("\t")] as $rows
             | [$rows[] | select(.[0] == "collector" and length == 2) | .[1]] as $beans
+            | [$rows[] | select(.[0] == "gc_delta" and length == 4)
+               | {key: .[1], value: {collections: (.[2]|counter),
+                                     collection_time_ms: (.[3]|counter)}}] as $deltas
+            | [$rows[] | select(.[0] == "batch_ns" and length == 2) | .[1]|tonumber] as $batches
             | [$rows[] | select(.[0] == "sample" and length == 3)
                | {checksum: (.[1]|tonumber), elapsed_ns: (.[2]|tonumber)}] as $samples
             | (if $collector == "G1" then "G1" else "Z" end) as $prefix
-            | if ($rows|length) == (($beans|length) + $count)
+            | if ($rows|length) == (($beans|length) + ($deltas|length) + 1 + $count)
                  and any($beans[]; startswith($prefix)) and ($samples|length) == $count
-                 and all($samples[]; .checksum == $checksum and .elapsed_ns >= 0)
+                 and ($beans|sort) == ($beans|unique)
+                 and ($deltas|map(.key)|sort) == ($beans|sort)
+                 and all($samples[]; .checksum == $checksum and .elapsed_ns > 0)
+                 and ($batches|length) == 1
+                 and ($samples|map(.elapsed_ns)|add) <= $batches[0] and $batches[0] <= $elapsed
               then {fork: $fork, collector: $collector, beans: $beans, flags: $flags,
-                    process_ns: $elapsed, samples: $samples}
+                    process_ns: $elapsed, batch_ns: $batches[0],
+                    collection_changes: ($deltas|from_entries), samples: $samples}
               else error("unexpected collector or sample data") end' \
             "$tmp/run.tsv" >> "$tmp/processes.jsonl"
     done
+    collectors=("${collectors[1]}" "${collectors[0]}")
 done
 
 jq -s --arg version "$version" --arg java "$(realpath -- "$java")" \
