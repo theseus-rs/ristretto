@@ -232,19 +232,21 @@ mod tests {
         ))
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     #[test]
     fn oversized_native_frames_are_rejected_before_entry() -> std::io::Result<()> {
         let mut command = std::process::Command::new("sh");
-        command
-            .args(["-c", "ulimit -c 0; exec \"$@\"", "frame-size-test"])
-            .arg(std::env::current_exe()?)
-            .args([
-                "--exact",
-                "compiler::native_frame::tests::large_frame_child",
-                "--ignored",
-                "--nocapture",
-            ]);
+        command.args(["-c", "ulimit -c 0; exec \"$@\"", "frame-size-test"]);
+        // Under cross, the host shell needs the same runner as the parent test.
+        if let Ok(runner) = std::env::var("CROSS_TARGET_RUNNER") {
+            command.args(runner.split_ascii_whitespace());
+        }
+        command.arg(std::env::current_exe()?).args([
+            "--exact",
+            "compiler::native_frame::tests::large_frame_child",
+            "--ignored",
+            "--nocapture",
+        ]);
         command
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped());
@@ -275,18 +277,29 @@ mod tests {
     #[test]
     #[ignore = "bounded subprocess fixture for generated-frame stack exhaustion"]
     fn large_frame_child() -> Result<()> {
-        let mut observed = 0_u64;
-        let context = (&raw mut observed).cast::<u8>().cast_const();
-        for arguments in [vec![], vec![crate::Value::I32(0); 9]] {
-            let function = large_frame(1024 * 1024, arguments.len())?;
-            observed = 0;
-            let error = stacker::grow(512 * 1024, || function.execute(&arguments, context));
+        const FRAME_BYTES: usize = 1024 * 1024;
+        for count in [0, crate::Function::INLINE_ARGUMENT_CAPACITY + 1] {
+            let arguments = vec![crate::Value::I32(0); count];
+            let function = large_frame(u32::try_from(FRAME_BYTES)?, count)?;
+            let mut observed = 0_u64;
+            let error = std::thread::scope(|scope| {
+                std::thread::Builder::new()
+                    .stack_size(2 * crate::Function::STACK_RESERVE_BYTES)
+                    .spawn_scoped(scope, || {
+                        function.execute(&arguments, (&raw mut observed).cast())
+                    })
+                    .expect("spawn the small-stack thread")
+                    .join()
+                    .expect("execute on the small-stack thread")
+            });
             assert!(
-                matches!(error, Err(Error::NativeStackOverflow { required, available }) if required > available && available > crate::Function::STACK_RESERVE_BYTES)
+                matches!(error, Err(Error::NativeStackOverflow { required, available }) if required > available && available > crate::Function::STACK_RESERVE_BYTES),
+                "{error:?}"
             );
             assert_eq!(observed, 0, "rejected function entered native code");
+            let context = (&raw mut observed).cast::<u8>().cast_const();
             assert_eq!(
-                stacker::grow(4 * 1024 * 1024, || function.execute(&arguments, context))?,
+                stacker::grow(4 * FRAME_BYTES, || function.execute(&arguments, context))?,
                 None
             );
             assert_eq!(observed, 42);

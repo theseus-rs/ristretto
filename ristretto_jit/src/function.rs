@@ -121,7 +121,7 @@ impl Debug for Function {
 
 impl Function {
     const COOPERATIVE_INSTRUCTION_BUDGET: usize = 4096;
-    const INLINE_ARGUMENT_CAPACITY: usize = 8;
+    pub(crate) const INLINE_ARGUMENT_CAPACITY: usize = 8;
 
     /// Native space reserved beyond the generated frame for runtime transitions.
     pub const STACK_RESERVE_BYTES: usize = 256 * 1024;
