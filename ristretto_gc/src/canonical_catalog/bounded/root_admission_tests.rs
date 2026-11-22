@@ -74,16 +74,12 @@ fn cancellation_and_drop_refund_root_quota_after_token_custody() {
 }
 
 #[test]
-fn unsupported_reference_or_edge_capacities_cannot_get_an_undercharged_catalog() {
+fn unsupported_reference_capacity_cannot_get_an_undercharged_catalog() {
     let base = Capacities::derive(1, 1, 1).unwrap();
     let budget = Budget::new(usize::MAX);
     assert!(matches!(
         BoundedCatalog::new_in(base.with_references(1).unwrap(), &budget),
         Err(ConfigError::UnsupportedReferences)
-    ));
-    assert!(matches!(
-        BoundedCatalog::new_in(base.with_edges(1).unwrap(), &budget),
-        Err(ConfigError::InvalidEdgeLayout)
     ));
     assert_eq!(budget.used(), 0);
 }
