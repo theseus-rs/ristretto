@@ -52,3 +52,13 @@ numeric regression tests pass on native and WASI, including exhausted counters,
 birth versus reachability, and cross-domain retirement. This slice makes no
 ownership, publication or collection-progress claim. Run the same commands above
 with the `canonical_catalog` selector for its tests.
+
+## C06 prerequisite: retained links and vacancy preference
+
+The catalog wrappers distinguish failed acquisition from an empty optional link.
+A stale replacement preserves the installed generation. The frozen vacancy hint
+is numeric and expires after a bounded number of competing deferrals; it grants
+no slot ownership or publication authority. Three direct regressions accompany
+this extraction, passing on native and WASI alongside the five numeric tests.
+The private-link assertions reject an internal foreign-pool programming error;
+public proposal rejection remains the pool API's fallible result.
