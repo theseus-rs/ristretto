@@ -48,9 +48,12 @@ pub struct AllocationRequest {
     pub kind: AllocationKind,
     pub bci: usize,
 }
-/// Instance field access; static storage is not admitted by this slice.
+/// Field operation resolved by the host. Static requests require declaring-class
+/// initialization before completion; reference cells remain owning-context tokens.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FieldAccess {
+    GetStatic,
+    PutStatic,
     GetField,
     PutField,
 }
@@ -337,12 +340,13 @@ impl Activation {
                 bci: usize::try_from(*bci)?,
             }));
         }
-        if matches!(kind, 12 | 13) {
+        if matches!(kind, 10..=13) {
             return Ok(ExecutionStep::Field(FieldRequest {
-                kind: if *kind == 12 {
-                    FieldAccess::GetField
-                } else {
-                    FieldAccess::PutField
+                kind: match kind {
+                    10 => FieldAccess::GetStatic,
+                    11 => FieldAccess::PutStatic,
+                    12 => FieldAccess::GetField,
+                    _ => FieldAccess::PutField,
                 },
                 index: u16::try_from(*index)?,
                 bci: usize::try_from(*bci)?,

@@ -202,7 +202,7 @@ fn ordinary_dispatch_and_unsupported_capabilities_stay_separate() -> Result<()> 
         Instruction::Multianewarray(1, 1),
         Instruction::Instanceof(1),
         Instruction::Invokedynamic(1),
-        Instruction::Getstatic(1),
+        Instruction::Athrow,
         Instruction::Monitorenter,
         Instruction::Idiv,
     ] {

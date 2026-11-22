@@ -179,7 +179,7 @@ impl Compiler {
     }
 
     /// Restriction for explicit scalar/reference/call and primitive-heap requests.
-    /// Static fields, multidimensional arrays, handlers, synchronization and integer division
+    /// Multidimensional arrays, handlers, synchronization and integer division
     /// remain excluded until their owning request protocols are implemented.
     #[cfg(feature = "experimental-reference-dispatch")]
     #[must_use]
@@ -270,6 +270,8 @@ impl Compiler {
                         | Instruction::New(_)
                         | Instruction::Getfield(_)
                         | Instruction::Putfield(_)
+                        | Instruction::Getstatic(_)
+                        | Instruction::Putstatic(_)
                         | Instruction::Checkcast(_)
                 ))
         }) {
