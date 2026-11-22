@@ -15,6 +15,7 @@ use super::{
 };
 use crate::canonical_pool as pool;
 use std::ops::Deref;
+mod allocations;
 mod roots;
 use roots::RootLease;
 pub use roots::*;
@@ -566,6 +567,7 @@ impl<R: Payload> PhaseYield<R> {
 
 enum RequestState<R: Payload = (), C: Copy = Command> {
     Idle,
+    Allocation(allocations::Request<R>),
     Starting(C),
     StartingRecord {
         slot: usize,
@@ -654,6 +656,14 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         let catalog = &self.lease.owner;
         match &mut self.state {
             RequestState::Idle => Progress::Idle,
+            RequestState::Allocation(request) => match request.poll(catalog, context) {
+                allocations::Step::Pending => Progress::Pending,
+                allocations::Step::Ready(key) => Progress::RootCreated(key),
+                allocations::Step::Complete(progress) => {
+                    self.state = RequestState::Idle;
+                    progress
+                }
+            },
             RequestState::StartingRootCreation {
                 slot,
                 target,
@@ -847,6 +857,11 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
     }
     /// False means commit already won; retain the request to observe its result.
     pub fn cancel(&mut self) -> bool {
+        if let RequestState::Allocation(request) = &self.state
+            && !request.cancel()
+        {
+            return false;
+        }
         if let RequestState::Yielding(_, yielding) | RequestState::YieldingRoot(_, yielding) =
             &self.state
             && !yielding.cancel()
@@ -913,6 +928,9 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
 }
 impl<R: Payload, C: Copy> Drop for Participant<R, C> {
     fn drop(&mut self) {
+        if let RequestState::Allocation(request) = &self.state {
+            request.cancel();
+        }
         if let RequestState::Yielding(_, yielding) | RequestState::YieldingRoot(_, yielding) =
             &self.state
         {
