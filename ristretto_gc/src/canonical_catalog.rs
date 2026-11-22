@@ -4,6 +4,8 @@ use crate::canonical_pool::{Compare, Contended, Link, Owned as Pooled, Pool};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, AtomicU64, AtomicUsize, Ordering};
 mod state;
+pub use state::*;
+pub mod bounded;
 mod trace;
 mod vacancy;
 pub use trace::*;
