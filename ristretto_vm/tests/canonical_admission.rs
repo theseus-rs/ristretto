@@ -72,3 +72,23 @@ fn strict_verifier_rejects_a_scalar_entry_with_no_operand_stack()
     assert!(Program::from_classfiles([file]).is_err());
     Ok(())
 }
+
+#[test]
+fn loop_matches_java_and_obeys_instruction_budget() -> Result<(), Box<dyn std::error::Error>> {
+    let file = ClassFile::from_bytes(include_bytes!(
+        "fixtures/canonical/CanonicalScalarLoop.class"
+    ))?;
+    let program = Program::from_classfiles([file])?;
+    for line in include_str!("fixtures/canonical/scalar-loop-oracle.txt").lines() {
+        let (rounds, expected) = line.split_once(' ').ok_or("invalid oracle row")?;
+        assert_eq!(
+            program.run_scalar("CanonicalScalarLoop", "calculate", rounds.parse()?)?,
+            expected.parse::<i32>()?
+        );
+    }
+    assert!(matches!(
+        program.run_scalar_with_limit("CanonicalScalarLoop", "calculate", i32::MAX, 80),
+        Err(ristretto_vm::canonical::Error::Limit("instructions"))
+    ));
+    Ok(())
+}
