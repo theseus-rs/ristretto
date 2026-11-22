@@ -2,8 +2,8 @@
 //! Cancellation posts durable intent; it never guesses that an installed commit
 //! lost. Helpers discover abandoned Prepared cells and requested root removals.
 use super::{
-    Attempt, CatalogHandle, Cell, Creation, CreationError, GuardedCommand, Outcome, Participant,
-    Payload, Pooled, Preparation, PreparationError, Progress, RequestError, RequestState,
+    Attempt, CatalogHandle, Cell, Creation, CreationError, GuardedCommand, Outcome, Owned,
+    Participant, Payload, Preparation, PreparationError, Progress, RequestError, RequestState,
     RootCommand, RootHandle, RootKey, RootLease, SubmitFailure, prepare_error, roots,
 };
 
@@ -34,7 +34,7 @@ enum Stage<R: Payload> {
 // separately quota-bound completed root.
 pub(super) struct Request<R: Payload> {
     stage: Stage<R>,
-    cell: Option<Pooled<Cell<R>>>,
+    cell: Option<Owned<Cell<R>>>,
     root: Option<RootHandle<R>>,
     lease: Option<RootLease<R>>,
     root_slot: usize,

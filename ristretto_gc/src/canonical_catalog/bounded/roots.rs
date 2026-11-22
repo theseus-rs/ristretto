@@ -1,8 +1,8 @@
 //! Separately quota-bound root ownership. Keys and observations carry no access.
 use super::super::{Root, RootPrepareError, RootStatus, RootToken};
 use super::{
-    BoundedCatalog, CatalogHandle, Commands, Membership, Ordering, Participant, Payload, Phase,
-    Pooled, Preparation, RecordKey, RequestError, RequestState, trace_error,
+    BoundedCatalog, CatalogHandle, Commands, Membership, Ordering, Owned, Participant, Payload,
+    Phase, Preparation, RecordKey, RequestError, RequestState, trace_error,
 };
 
 #[cfg(test)]
@@ -248,7 +248,7 @@ pub(super) fn observation<R: Payload>(
 pub(super) fn lookup<R: Payload>(
     catalog: &BoundedCatalog<R>,
     key: RootKey,
-) -> Result<Pooled<Root<R>>, RequestError> {
+) -> Result<Owned<Root<R>>, RequestError> {
     if key.catalog != catalog.identity {
         return Err(RequestError::Foreign);
     }

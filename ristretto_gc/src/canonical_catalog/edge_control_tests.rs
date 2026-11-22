@@ -1,6 +1,6 @@
 use super::super::{Attempt, Cell, Membership, Outcome, Preparation, allocate};
 use super::*;
-fn cell(catalog: &Catalog, slot: usize) -> Pooled<Cell> {
+fn cell(catalog: &Catalog, slot: usize) -> Owned<Cell> {
     let mut creation = catalog.begin_create_with(slot, 8 * (slot + 1), ()).unwrap();
     for _ in 0..4 {
         if let Some(cell) = creation.poll(catalog).unwrap() {
@@ -9,7 +9,7 @@ fn cell(catalog: &Catalog, slot: usize) -> Pooled<Cell> {
     }
     panic!("finite creation");
 }
-fn fixture() -> (Catalog, Pooled<Cell>, Pooled<Cell>, EdgeToken, Attempt) {
+fn fixture() -> (Catalog, Owned<Cell>, Owned<Cell>, EdgeToken, Attempt) {
     let catalog = Catalog::with_record_capacities_and_limit(2, 32, 32, 32, 32)
         .with_edge_capacities(1, 16, 16, 32);
     let a = cell(&catalog, 0);

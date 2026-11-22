@@ -1,6 +1,6 @@
 //! Private, bundled catalog for the optional canonical collector.
 //! Numeric trace states alone grant no ownership or payload access.
-use crate::canonical_pool::{Compare, Contended, Link, Owned as Pooled, Pool};
+use crate::canonical_pool::{Compare, Contended, Link, Owned, Pool};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, AtomicU64, AtomicUsize, Ordering};
 mod state;
@@ -33,26 +33,26 @@ mod trace_tests;
 
 struct PooledLink<T>(Link<T>);
 impl<T> PooledLink<T> {
-    fn new(pool: Arc<Pool<T>>, value: Pooled<T>) -> Self {
+    fn new(pool: Arc<Pool<T>>, value: Owned<T>) -> Self {
         let link = Link::empty(pool);
         assert!(matches!(link.compare(None, Some(value)), Compare::Changed));
         Self(link)
     }
-    fn load(&self) -> Option<Pooled<T>> {
+    fn load(&self) -> Option<Owned<T>> {
         #[cfg(test)]
         if fail_load() {
             return None;
         }
         self.0.try_load().ok().flatten()
     }
-    fn points_to(&self, value: &Pooled<T>) -> bool {
+    fn points_to(&self, value: &Owned<T>) -> bool {
         self.0.points_to(value)
     }
     #[expect(
         clippy::panic,
         reason = "private catalog links only accept owners from their reserved pool"
     )]
-    fn compare(&self, expected: &Pooled<T>, proposed: Pooled<T>) -> bool {
+    fn compare(&self, expected: &Owned<T>, proposed: Owned<T>) -> bool {
         match self.0.compare(Some(expected), Some(proposed)) {
             Compare::Changed => true,
             Compare::Unchanged(_) => false,
@@ -68,7 +68,7 @@ impl<T> OptionalLink<T> {
     fn is_occupied(&self) -> bool {
         !self.0.is_empty()
     }
-    fn load(&self) -> Result<Option<Pooled<T>>, Contended> {
+    fn load(&self) -> Result<Option<Owned<T>>, Contended> {
         #[cfg(test)]
         if fail_load() {
             return Err(Contended);
@@ -79,7 +79,7 @@ impl<T> OptionalLink<T> {
         clippy::panic,
         reason = "private catalog links only accept owners from their reserved pool"
     )]
-    fn compare(&self, expected: Option<&Pooled<T>>, proposed: Option<Pooled<T>>) -> bool {
+    fn compare(&self, expected: Option<&Owned<T>>, proposed: Option<Owned<T>>) -> bool {
         match self.0.compare(expected, proposed) {
             Compare::Changed => true,
             Compare::Unchanged(_) => false,
@@ -87,7 +87,7 @@ impl<T> OptionalLink<T> {
         }
     }
 }
-fn share<T>(value: &Pooled<T>) -> Option<Pooled<T>> {
+fn share<T>(value: &Owned<T>) -> Option<Owned<T>> {
     #[cfg(test)]
     if FAIL_SHARE.with(|remaining| match remaining.get() {
         Some(0) => {
@@ -125,7 +125,7 @@ fn fail_load() -> bool {
         None => false,
     })
 }
-fn allocate<T>(pool: &Arc<Pool<T>>, mut value: T) -> Option<Pooled<T>> {
+fn allocate<T>(pool: &Arc<Pool<T>>, mut value: T) -> Option<Owned<T>> {
     for _ in 0..8 {
         match pool.try_allocate(value) {
             Ok(owned) => return Some(owned),

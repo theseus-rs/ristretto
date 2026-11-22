@@ -46,7 +46,7 @@ fn competing_announcements_keep_the_installed_record() {
     let winner = first.poll(&catalog).unwrap().unwrap();
     assert!(matches!(other.poll(&catalog), Err(CreationError::Occupied)));
     let installed = catalog.discover(0).unwrap().unwrap();
-    assert!(Pooled::ptr_eq(&winner, &installed));
+    assert!(Owned::ptr_eq(&winner, &installed));
     assert_eq!(installed.address, 8);
 }
 

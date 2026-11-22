@@ -3,7 +3,7 @@
 use super::super::reference::ObjectKey;
 use super::{
     AllocationError, Arc, AtomicU8, Catalog, Cell, Contended, CreationError, Membership,
-    OptionalLink, Ordering, Owner, Phase, Pool, Pooled, PooledLink, Preparation, Record, Root,
+    OptionalLink, Ordering, Owned, Owner, Phase, Pool, PooledLink, Preparation, Record, Root,
     RootStatus, Snapshot, allocate, share,
 };
 
@@ -40,7 +40,7 @@ impl EdgeSlot {
     }
 }
 pub struct EdgeToken {
-    slot: Pooled<EdgeSlot>,
+    slot: Owned<EdgeSlot>,
     remove_on_drop: bool,
 }
 impl std::ops::Deref for EdgeToken {
@@ -51,7 +51,7 @@ impl std::ops::Deref for EdgeToken {
 }
 impl EdgeToken {
     /// Raw experiment only; bounded facade ownership must not escape its quota.
-    pub fn try_share(&self) -> Option<Pooled<EdgeSlot>> {
+    pub fn try_share(&self) -> Option<Owned<EdgeSlot>> {
         share(&self.slot)
     }
 
@@ -81,12 +81,12 @@ pub(super) struct EdgeRegistry {
     source_degree: Option<std::num::NonZeroUsize>,
 }
 pub(super) struct EdgeEffect {
-    slot: Pooled<EdgeSlot>,
-    expected: Pooled<EdgeMembership>,
-    pub(super) proposed: Pooled<EdgeMembership>,
+    slot: Owned<EdgeSlot>,
+    expected: Owned<EdgeMembership>,
+    pub(super) proposed: Owned<EdgeMembership>,
 }
 impl EdgeEffect {
-    pub(super) fn apply(&self, proposed: Pooled<EdgeMembership>) {
+    pub(super) fn apply(&self, proposed: Owned<EdgeMembership>) {
         #[cfg(test)]
         {
             let hook = self
@@ -113,9 +113,9 @@ pub struct EdgeCreation {
     owner: Arc<Owner>,
     identity: u64,
     slot: usize,
-    membership: Option<Pooled<EdgeMembership>>,
+    membership: Option<Owned<EdgeMembership>>,
     private: Option<EdgeSlot>,
-    prepared: Option<Pooled<EdgeSlot>>,
+    prepared: Option<Owned<EdgeSlot>>,
     finished: bool,
 }
 impl EdgeCreation {
@@ -272,7 +272,7 @@ impl<R: Record> Catalog<R> {
     pub fn edge_capacity(&self) -> usize {
         self.edges.as_ref().map_or(0, |edges| edges.slots.len())
     }
-    pub fn discover_edge(&self, slot: usize) -> Result<Option<Pooled<EdgeSlot>>, Contended> {
+    pub fn discover_edge(&self, slot: usize) -> Result<Option<Owned<EdgeSlot>>, Contended> {
         self.edges
             .as_ref()
             .and_then(|edges| edges.slots.get(slot))
@@ -322,8 +322,8 @@ impl<R: Record> Catalog<R> {
     fn edge_effect(
         &self,
         mut preparation: Preparation<R>,
-        slot: Pooled<EdgeSlot>,
-        expected: Pooled<EdgeMembership>,
+        slot: Owned<EdgeSlot>,
+        expected: Owned<EdgeMembership>,
         proposed: EdgeMembership,
     ) -> Option<Preparation<R>> {
         if !Arc::ptr_eq(&slot.owner, &self.owner) {
@@ -359,7 +359,7 @@ impl<R: Record> Catalog<R> {
         clippy::option_option,
         reason = "outer absence is contention; inner absence is a missing or replaced identity"
     )]
-    fn edge_target(&self, key: ObjectKey) -> Option<Option<Pooled<Cell<R>>>> {
+    fn edge_target(&self, key: ObjectKey) -> Option<Option<Owned<Cell<R>>>> {
         Some(
             self.discover(key.slot)
                 .ok()?
@@ -373,9 +373,9 @@ impl<R: Record> Catalog<R> {
     pub fn begin_publish_edge(
         &self,
         snapshot: Snapshot<R>,
-        edge: Pooled<EdgeSlot>,
-        source: Pooled<Root<R>>,
-        target: Option<Pooled<Root<R>>>,
+        edge: Owned<EdgeSlot>,
+        source: Owned<Root<R>>,
+        target: Option<Owned<Root<R>>>,
     ) -> Option<Preparation<R>> {
         if !Arc::ptr_eq(&edge.owner, &self.owner) {
             return None;
@@ -412,9 +412,9 @@ impl<R: Record> Catalog<R> {
     pub fn begin_replace_edge(
         &self,
         snapshot: Snapshot<R>,
-        edge: Pooled<EdgeSlot>,
-        source: Pooled<Root<R>>,
-        target: Option<Pooled<Root<R>>>,
+        edge: Owned<EdgeSlot>,
+        source: Owned<Root<R>>,
+        target: Option<Owned<Root<R>>>,
     ) -> Option<Preparation<R>> {
         if !Arc::ptr_eq(&edge.owner, &self.owner) {
             return None;
@@ -459,9 +459,9 @@ impl<R: Record> Catalog<R> {
     pub fn begin_root_edge_target(
         &self,
         snapshot: Snapshot<R>,
-        edge: Pooled<EdgeSlot>,
-        source: Pooled<Root<R>>,
-        child: Pooled<Root<R>>,
+        edge: Owned<EdgeSlot>,
+        source: Owned<Root<R>>,
+        child: Owned<Root<R>>,
     ) -> Option<Preparation<R>> {
         if !Arc::ptr_eq(&edge.owner, &self.owner) {
             return None;
@@ -486,7 +486,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_requested_edge_removal(
         &self,
         snapshot: Snapshot<R>,
-        edge: Pooled<EdgeSlot>,
+        edge: Owned<EdgeSlot>,
     ) -> Option<Preparation<R>> {
         if !Arc::ptr_eq(&edge.owner, &self.owner) || !edge.removal_requested() {
             return None;
@@ -502,7 +502,7 @@ impl<R: Record> Catalog<R> {
     pub fn begin_orphan_edge_removal(
         &self,
         snapshot: Snapshot<R>,
-        edge: Pooled<EdgeSlot>,
+        edge: Owned<EdgeSlot>,
     ) -> Option<Preparation<R>> {
         if !Arc::ptr_eq(&edge.owner, &self.owner) {
             return None;
@@ -522,8 +522,8 @@ impl<R: Record> Catalog<R> {
     fn prepare_edge_removal(
         &self,
         snapshot: Snapshot<R>,
-        edge: Pooled<EdgeSlot>,
-        expected: Pooled<EdgeMembership>,
+        edge: Owned<EdgeSlot>,
+        expected: Owned<EdgeMembership>,
     ) -> Option<Preparation<R>> {
         let mut phase = snapshot.phase();
         let mut effect = None;
@@ -541,7 +541,7 @@ impl<R: Record> Catalog<R> {
         let preparation = self.begin_prepare(snapshot, phase, effect)?;
         self.edge_effect(preparation, edge, expected, EdgeMembership::Retired)
     }
-    pub fn release_retired_edge(&self, edge: &Pooled<EdgeSlot>) -> bool {
+    pub fn release_retired_edge(&self, edge: &Owned<EdgeSlot>) -> bool {
         if !Arc::ptr_eq(&edge.owner, &self.owner)
             || edge.membership() != Some(EdgeMembership::Retired)
         {

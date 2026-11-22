@@ -35,7 +35,7 @@ pub(crate) fn commit(c: &Catalog, p: Option<Preparation>) {
     }
     panic!("edge commit did not settle");
 }
-fn root(c: &Catalog, object: &Pooled<Cell>, slot: usize) -> RootToken {
+fn root(c: &Catalog, object: &Owned<Cell>, slot: usize) -> RootToken {
     let mut creation = c
         .begin_create_root(slot, object.try_clone().unwrap())
         .unwrap();
@@ -46,7 +46,7 @@ fn root(c: &Catalog, object: &Pooled<Cell>, slot: usize) -> RootToken {
     }
     panic!("root did not announce");
 }
-pub(crate) fn object(c: &Catalog, slot: usize) -> (Pooled<Cell>, RootToken) {
+pub(crate) fn object(c: &Catalog, slot: usize) -> (Owned<Cell>, RootToken) {
     let mut creation = c.begin_create_with(slot, slot + 8, ()).unwrap();
     for _ in 0..32 {
         if let Some(object) = creation.poll(c).unwrap() {
@@ -81,7 +81,7 @@ fn state(edge: &EdgeSlot) -> EdgeState {
     };
     state
 }
-pub(crate) fn acknowledge(c: &Catalog, object: &Pooled<Cell>) {
+pub(crate) fn acknowledge(c: &Catalog, object: &Owned<Cell>) {
     let Some(Membership::Tracing(marks)) = object.membership() else {
         panic!("not tracing")
     };
@@ -99,7 +99,7 @@ pub(crate) fn acknowledge(c: &Catalog, object: &Pooled<Cell>) {
         }
     }
 }
-pub(crate) fn restart(c: &Catalog, objects: &[&Pooled<Cell>]) {
+pub(crate) fn restart(c: &Catalog, objects: &[&Owned<Cell>]) {
     for object in objects {
         acknowledge(c, object);
     }

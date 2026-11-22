@@ -31,7 +31,7 @@ fn scan_roots(c: &Catalog) {
         commit(c, c.begin_scan_root(snapshot(c), 0));
     }
 }
-fn begin(c: &Catalog, source: &Pooled<Cell>) -> EdgeTraversal {
+fn begin(c: &Catalog, source: &Owned<Cell>) -> EdgeTraversal {
     let Some(Membership::Tracing(marks)) = source.membership() else {
         panic!()
     };

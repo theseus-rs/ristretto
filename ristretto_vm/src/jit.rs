@@ -25,12 +25,9 @@ use tracing::{debug, info};
 const BATCH_SIZE: usize = 5;
 const BATCH_TIMEOUT_MS: u64 = 10;
 
-/// Cache key derived from the `Arc<Method>` pointer, avoiding heap-allocated string keys.
-type CacheKey = usize;
-
-/// Derives a cache key from a method's Arc pointer.
-fn cache_key(method: &Arc<Method>) -> CacheKey {
-    Arc::as_ptr(method) as CacheKey
+/// Derives a cache key from the method pointer without allocating a string.
+fn cache_key(method: &Arc<Method>) -> usize {
+    Arc::as_ptr(method) as usize
 }
 
 /// A compilation request for the background batch compiler
@@ -69,7 +66,7 @@ pub struct Compiler {
     #[expect(clippy::struct_field_names)]
     jit_compiler: ristretto_jit::Compiler,
     /// Per-VM function cache for compiled functions (wrapped in Arc for sharing with background task)
-    function_cache: Arc<DashMap<CacheKey, Option<Arc<Function>>>>,
+    function_cache: Arc<DashMap<usize, Option<Arc<Function>>>>,
     /// Per-VM compilation queue for background batch processing
     compilation_queue: Mutex<Option<mpsc::UnboundedSender<CompilationRequest>>>,
     /// Whether batch compilation is enabled
@@ -123,17 +120,17 @@ impl Compiler {
     /// Returns `None` if the key is not in the cache, `Some(None)` if the method
     /// couldn't be compiled, or `Some(Some(function))` if the method was compiled.
     #[expect(clippy::option_option)]
-    pub fn get_cached(&self, key: CacheKey) -> Option<Option<Arc<Function>>> {
+    pub fn get_cached(&self, key: usize) -> Option<Option<Arc<Function>>> {
         self.function_cache.get(&key).map(|entry| entry.clone())
     }
 
     /// Inserts a function into the cache.
-    pub fn insert_cached(&self, key: CacheKey, function: Option<Arc<Function>>) {
+    pub fn insert_cached(&self, key: usize, function: Option<Arc<Function>>) {
         self.function_cache.insert(key, function);
     }
 
     /// Checks if a key exists in the cache.
-    pub fn contains_cached(&self, key: CacheKey) -> bool {
+    pub fn contains_cached(&self, key: usize) -> bool {
         self.function_cache.contains_key(&key)
     }
 
@@ -223,7 +220,7 @@ impl Compiler {
         &self,
         class: &Arc<Class>,
         method: &Arc<Method>,
-        key: CacheKey,
+        key: usize,
     ) -> Option<Arc<Function>> {
         let definition = method.definition();
 
@@ -325,7 +322,7 @@ fn process_compilation_batch(
     compiler_threads: usize,
     batch: &mut Vec<CompilationRequest>,
     jit_compiler: &ristretto_jit::Compiler,
-    function_cache: &Arc<DashMap<CacheKey, Option<Arc<Function>>>>,
+    function_cache: &Arc<DashMap<usize, Option<Arc<Function>>>>,
 ) {
     debug!("Processing compilation batch of {} methods", batch.len());
     let thread_pool = match ThreadPoolBuilder::new()
@@ -638,7 +635,7 @@ mod tests {
     #[test]
     fn test_compiler_cache_operations() {
         let compiler = Compiler::new(false, false).unwrap();
-        let test_key: CacheKey = 42;
+        let test_key = 42;
 
         // Initially cache is empty
         assert!(!compiler.contains_cached(test_key));
