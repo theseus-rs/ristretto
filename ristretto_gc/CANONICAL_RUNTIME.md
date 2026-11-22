@@ -31,4 +31,12 @@ cargo test --locked -p ristretto_gc --features experimental-canonical-runtime --
 ```
 
 This slice makes no global pause, throughput, callback-latency or default-backend
-claim. Incremental reclamation and graph operations are separate dependent slices.
+claim. Graph operations are a separate dependent slice.
+
+
+Helpers advance one protocol request or scan at most eight consecutive empty
+positions per poll, stopping at an occupied or contended position. A failed
+object discovery invalidates the local complete-sweep certificate. Epoch finish
+requests carry the exact epoch; they cannot finish a later unswept epoch.
+Dropping a root permits incremental retirement and slot reuse. A retained typed
+view keeps its payload alive while unrelated payloads can be reclaimed.
