@@ -76,6 +76,7 @@ tls-rustls-aws-lc-rs = [
 tls-rustls-ring = [
     "ristretto_classloader/tls-rustls-ring",
 ]
+experimental-canonical-runtime = []
 startup-trace = []
 url = [
     "ristretto_classloader/url",
