@@ -20,6 +20,8 @@
 
 mod allocation_budget;
 #[cfg(feature = "experimental-canonical-runtime")]
+mod canonical_adapter;
+#[cfg(feature = "experimental-canonical-runtime")]
 pub(crate) mod canonical_catalog;
 mod canonical_payload;
 #[cfg(feature = "experimental-canonical-runtime")]
