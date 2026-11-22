@@ -92,3 +92,27 @@ fn loop_matches_java_and_obeys_instruction_budget() -> Result<(), Box<dyn std::e
     ));
     Ok(())
 }
+
+#[test]
+fn typed_scalar_results_and_category_two_locals() -> Result<(), Box<dyn std::error::Error>> {
+    use ristretto_vm::canonical::ScalarValue::{Double, Float, Int, Long};
+    let file = ClassFile::from_bytes(include_bytes!(
+        "fixtures/canonical/CanonicalWideScalar.class"
+    ))?;
+    let program = Program::from_classfiles([file])?;
+    for (method, descriptor, input, expected) in [
+        ("wide", "(I)J", i32::MIN, Long(-6_442_450_943_999_999_983)),
+        ("single", "(I)F", 16_777_217, Float(16_777_216.0)),
+        ("fraction", "(I)D", -7, Double(-2.75)),
+        ("narrow", "(I)B", 255, Int(-1)),
+        ("unsigned", "(I)C", -1, Int(65535)),
+        ("saturate", "(I)J", 1, Long(i64::MAX)),
+        ("saturate", "(I)J", -1, Long(i64::MIN)),
+    ] {
+        assert_eq!(
+            expected,
+            program.run_primitive("CanonicalWideScalar", method, descriptor, input, 100)?
+        );
+    }
+    Ok(())
+}

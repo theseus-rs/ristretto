@@ -1,6 +1,11 @@
 //! Explicit admission and execution of a closed set of restricted Java classes.
 
 mod integer;
+mod scalar;
+mod value;
+pub use value::ScalarValue;
+use value::ScalarValue as Value;
+use value::{load, pop, store};
 
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classfile::verifiers::bytecode::{VerifierConfig, verify_class};
@@ -75,7 +80,6 @@ impl Program {
     }
 
     fn admit_method(class: &Class, method: &Method) -> Result<()> {
-        use Instruction as I;
         if !method.exception_table().is_empty()
             || method.access_flags().intersects(
                 MethodAccessFlags::SYNCHRONIZED
@@ -88,7 +92,11 @@ impl Program {
         if method.name() == "<init>"
             && method.descriptor() == "()V"
             && !method.is_static()
-            && let [I::Aload_0, I::Invokespecial(index), I::Return] = method.code().as_slice()
+            && let [
+                Instruction::Aload_0,
+                Instruction::Invokespecial(index),
+                Instruction::Return,
+            ] = method.code().as_slice()
         {
             let pool = class.constant_pool();
             let (owner, signature) = pool.try_get_method_ref(*index)?;
@@ -101,12 +109,15 @@ impl Program {
             }
         }
         if method.is_static()
-            && method.descriptor() == "(I)I"
+            && matches!(
+                method.descriptor(),
+                "(I)I" | "(I)B" | "(I)S" | "(I)C" | "(I)Z" | "(I)J" | "(I)F" | "(I)D"
+            )
             && !method.code().is_empty()
             && method
                 .code()
                 .iter()
-                .all(|instruction| integer::Operation::decode(instruction).is_some())
+                .all(|op| integer::admitted(op, class.constant_pool()))
         {
             return Ok(());
         }
@@ -132,16 +143,32 @@ impl Program {
         argument: i32,
         limit: usize,
     ) -> Result<i32> {
+        self.run_primitive(class, method, "(I)I", argument, limit)?
+            .int()
+    }
+
+    /// Run a verified static entry with one int argument and a primitive result.
+    ///
+    /// # Errors
+    /// Reports an inaccessible entry, an unsupported descriptor or exhausted instruction budget.
+    pub fn run_primitive(
+        &self,
+        class: &str,
+        method: &str,
+        descriptor: &str,
+        argument: i32,
+        limit: usize,
+    ) -> Result<ScalarValue> {
         let name = JavaString::from(class);
         let owner = self
             .classes
             .get(&name)
             .ok_or_else(|| Error::Unsupported(class.into()))?;
-        let entry = owner.try_get_method(method, "(I)I")?;
-        if !entry.access_flags().contains(MethodAccessFlags::PUBLIC) {
+        let entry = owner.try_get_method(method, descriptor)?;
+        if !entry.is_static() || !entry.access_flags().contains(MethodAccessFlags::PUBLIC) {
             return Err(Error::Unsupported(entry.signature()));
         }
-        integer::run(&entry, argument, limit)
+        integer::run(&entry, owner.constant_pool(), argument, limit)
     }
 
     fn known(&self, name: &JavaStr) -> VerificationResult<()> {
