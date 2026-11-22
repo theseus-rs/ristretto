@@ -150,8 +150,8 @@ mod wasm_compiler;
 pub use compiler::Compiler;
 pub use error::{Error, Result};
 pub use function::{
-    Activation, AllocationKind, AllocationRequest, ArrayAccessKind, ArrayAccessRequest, CallKind,
-    CallRequest, ExecutionStep, FieldAccess, FieldRequest, Function,
+    Activation, AllocationKind, AllocationRequest, ArrayAccessKind, ArrayAccessRequest,
+    ArrayStoreRequest, CallKind, CallRequest, ExecutionStep, FieldAccess, FieldRequest, Function,
 };
 pub(crate) use jit_value::JitValue;
 pub use value::Value;
