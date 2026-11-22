@@ -217,3 +217,12 @@ after commit has already won. An additional portable facade test checks scan
 batch bounds, cancellation and invalid domains. Native/WASI catalog totals are
 63/57; strict Clippy passes. This completes the root/phase API needed by the leaf
 maintenance adapter; strong-edge storage is still rejected at setup.
+
+## C10 prerequisite: exact edge backing and geometry
+
+Edge tokens own bounded preparation storage and post removal intent on drop.
+Live identities contain source/target keys rather than owning payload links. The
+fixed source-degree layout is checked at setup; failed discovery is distinct from
+an empty slot. Three portable tests cover private cancellation, competing creators,
+foreign rejection, geometry and intent-only drop. Native/WASI catalog totals are
+66/60; strict Clippy passes. Bounded edge-capacity admission remains disabled.

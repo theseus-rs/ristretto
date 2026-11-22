@@ -141,3 +141,6 @@ mod link_tests;
 #[cfg(test)]
 #[path = "canonical_catalog/record_fixture.rs"]
 mod record_fixture;
+
+#[path = "canonical_catalog/reference.rs"]
+pub mod reference;
