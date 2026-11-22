@@ -15,6 +15,9 @@ use super::{
 };
 use crate::canonical_pool as pool;
 use std::ops::Deref;
+mod roots;
+use roots::RootLease;
+pub use roots::*;
 mod budget;
 mod quota;
 use budget::Charge;
@@ -32,6 +35,7 @@ pub enum ConfigError {
     BudgetContended,
     InvalidGenerationLimit,
     InvalidEdgeLayout,
+    UnsupportedReferences,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -43,6 +47,14 @@ pub struct Capacities {
     memberships: usize,
     cells: usize,
     generation_limit: u64,
+    root_slots: usize,
+    root_cells: usize,
+    reference_slots: usize,
+    reference_cells: usize,
+    reference_states: usize,
+    edge_slots: usize,
+    edge_cells: usize,
+    edge_states: usize,
 }
 impl Capacities {
     pub fn derive(registry: usize, mutators: usize, helpers: usize) -> Result<Self, ConfigError> {
@@ -79,12 +91,158 @@ impl Capacities {
                     .ok_or(overflow)?,
             )?,
             generation_limit: pool::MAX_GENERATION,
+            root_slots: 0,
+            root_cells: 0,
+            reference_slots: 0,
+            reference_cells: 0,
+            reference_states: 0,
+            edge_slots: 0,
+            edge_cells: 0,
+            edge_states: 0,
         })
     }
-}
-impl Capacities {
+    /// Reserve M independent root tokens and M discoverable slots. Root ownership
+    /// can retain target cells after their object-registry slots are released.
+    /// Each destructor stays charged to its participant or root-token quota.
+    pub fn with_roots(mut self, roots: usize) -> Result<Self, ConfigError> {
+        // Derive afresh so removing/changing root capacity is deterministic.
+        let ordinary = Self::derive(self.registry, self.mutators, self.helpers)?;
+        self.controls = ordinary.controls;
+        self.memberships = ordinary.memberships;
+        self.cells = ordinary.cells;
+        self.root_slots = roots;
+        self.root_cells = 0;
+        if roots == 0 {
+            return self.derive_reference_pools();
+        }
+        let overflow = ConfigError::CapacityOverflow;
+        let retained = roots.checked_mul(2).ok_or(overflow)?;
+        let participants = self.participants();
+        let pool_size = |factor: usize, extra: usize, registry: usize| {
+            participants
+                .checked_mul(factor)
+                .and_then(|v| v.checked_add(extra))
+                .and_then(|v| v.checked_add(retained))
+                .and_then(|v| v.checked_add(registry))
+                .and_then(usize::checked_next_power_of_two)
+                .filter(|v| *v <= MAX_POOL)
+                .ok_or(overflow)
+        };
+        self.root_cells = pool_size(2, 2, 0)?;
+        self.cells = pool_size(6, 4, self.registry)?;
+        self.memberships = pool_size(10, 8, self.registry)?;
+        self.derive_reference_pools()
+    }
+    pub fn with_references(mut self, references: usize) -> Result<Self, ConfigError> {
+        self.reference_slots = references;
+        self.with_roots(self.root_slots)
+    }
+    fn derive_reference_pools(mut self) -> Result<Self, ConfigError> {
+        self.reference_cells = 0;
+        self.reference_states = 0;
+        if self.reference_slots == 0 {
+            return self.derive_edge_pools();
+        }
+        let overflow = ConfigError::CapacityOverflow;
+        let q = self.reference_slots;
+        let k = self.participants();
+        self.root_slots
+            .checked_add(q.checked_mul(2).ok_or(overflow)?)
+            .ok_or(overflow)?;
+        let pool = |n: usize, m: usize, refs: usize, participants: usize, slack: usize| {
+            self.root_slots
+                .checked_mul(m)
+                .and_then(|v| q.checked_mul(refs).and_then(|r| v.checked_add(r)))
+                .and_then(|v| k.checked_mul(participants).and_then(|p| v.checked_add(p)))
+                .and_then(|v| v.checked_add(n))
+                .and_then(|v| v.checked_add(slack))
+                .and_then(usize::checked_next_power_of_two)
+                .filter(|v| *v <= MAX_POOL)
+                .ok_or(overflow)
+        };
+        // Conservative development reserves; the final request/destructor audit
+        // and allocator fixtures must validate these before integration.
+        self.reference_cells = pool(0, 0, 2, 6, 4)?;
+        self.reference_states = pool(0, 0, 2, 20, 8)?;
+        self.root_cells = pool(0, 2, 6, 24, 16)?;
+        self.cells = pool(self.registry, 2, 6, 40, 24)?;
+        self.memberships = pool(self.registry, 2, 6, 56, 32)?;
+        self.derive_edge_pools()
+    }
+    /// E permanent edge slots and at most E independent creation owners. Live
+    /// source-owned edges retain no Cell or catalog owner through their keys.
+    pub fn with_edges(mut self, edges: usize) -> Result<Self, ConfigError> {
+        self.edge_slots = edges;
+        self.with_roots(self.root_slots)
+    }
+    fn derive_edge_pools(mut self) -> Result<Self, ConfigError> {
+        self.edge_cells = 0;
+        self.edge_states = 0;
+        if self.edge_slots == 0 {
+            return Ok(self);
+        }
+        let overflow = ConfigError::CapacityOverflow;
+        let rounded = |value: Option<usize>| {
+            value
+                .and_then(usize::checked_next_power_of_two)
+                .filter(|v| *v <= MAX_POOL)
+                .ok_or(overflow)
+        };
+        let k = self.participants();
+        let retained = self.edge_slots.checked_mul(2).ok_or(overflow)?;
+        self.edge_cells = rounded(
+            k.checked_mul(6)
+                .and_then(|n| n.checked_add(4))
+                .and_then(|n| n.checked_add(retained)),
+        )?;
+        self.edge_states = rounded(
+            k.checked_mul(20)
+                .and_then(|n| n.checked_add(8))
+                .and_then(|n| n.checked_add(retained)),
+        )?;
+        // Conservative reserves cover two target effects, temporary root reads,
+        // a retained traversal source and stopped request/destructor ownership.
+        // Keep the existing larger conditional reserves when they dominate.
+        let roots = self.root_slots.checked_mul(2).ok_or(overflow)?;
+        let refs = self.reference_slots.checked_mul(6).ok_or(overflow)?;
+        let pool = |base: usize, factor: usize, slack: usize| {
+            rounded(
+                k.checked_mul(factor)
+                    .and_then(|n| n.checked_add(slack))
+                    .and_then(|n| n.checked_add(roots))
+                    .and_then(|n| n.checked_add(refs))
+                    .and_then(|n| n.checked_add(base)),
+            )
+        };
+        self.root_cells = self.root_cells.max(pool(0, 24, 16)?);
+        self.cells = self.cells.max(pool(self.registry, 40, 24)?);
+        self.memberships = self.memberships.max(pool(self.registry, 56, 32)?);
+        Ok(self)
+    }
+    pub fn edge_slots(self) -> usize {
+        self.edge_slots
+    }
+    pub fn edge_pools(self) -> (usize, usize) {
+        (self.edge_cells, self.edge_states)
+    }
+    pub fn reference_slots(self) -> usize {
+        self.reference_slots
+    }
+    pub fn reference_pools(self) -> (usize, usize) {
+        (self.reference_cells, self.reference_states)
+    }
+
+    pub fn root_slots(self) -> usize {
+        self.root_slots
+    }
+    pub fn root_pool(self) -> usize {
+        self.root_cells
+    }
     pub fn registry(self) -> usize {
         self.registry
+    }
+    pub fn participants(self) -> usize {
+        self.mutators + self.helpers
     }
     pub fn mutators(self) -> usize {
         self.mutators
@@ -92,21 +250,20 @@ impl Capacities {
     pub fn helpers(self) -> usize {
         self.helpers
     }
-    pub fn participants(self) -> usize {
-        self.mutators + self.helpers
-    }
     pub fn pools(self) -> (usize, usize, usize) {
         (self.controls, self.memberships, self.cells)
     }
-    pub fn generation_limit(self) -> u64 {
-        self.generation_limit
-    }
+    /// Limit successful allocations per slot for validation. Setup encodes this
+    /// budget in opaque generations. The default retains the full token width.
     pub fn with_generation_limit(mut self, limit: u64) -> Result<Self, ConfigError> {
         if !(1..=pool::MAX_GENERATION).contains(&limit) {
             return Err(ConfigError::InvalidGenerationLimit);
         }
         self.generation_limit = limit;
         Ok(self)
+    }
+    pub fn generation_limit(self) -> u64 {
+        self.generation_limit
     }
 }
 
@@ -116,6 +273,7 @@ pub struct BoundedCatalog<R: Payload = ()> {
     identity: u64,
     mutators: AtomicUsize,
     helpers: AtomicUsize,
+    root_tokens: AtomicUsize,
     // Last: catalog backing is destroyed before its charge is refunded.
     charge: Charge,
 }
@@ -157,11 +315,13 @@ impl<R: Payload> BoundedCatalog<R> {
                 value.checked_add(1)
             })
             .map_err(|_| ConfigError::IdentityExhausted)?;
-        let raw = Catalog::with_record_capacities_and_limit(
+        let raw = Catalog::with_record_root_capacities_and_limit(
             capacities.registry,
             capacities.controls,
             capacities.memberships,
             capacities.cells,
+            capacities.root_slots,
+            capacities.root_cells,
             capacities.generation_limit,
         );
         Ok(CatalogHandle {
@@ -171,6 +331,7 @@ impl<R: Payload> BoundedCatalog<R> {
                 identity,
                 mutators: AtomicUsize::new(0),
                 helpers: AtomicUsize::new(0),
+                root_tokens: AtomicUsize::new(0),
                 charge,
             })),
         })
@@ -186,6 +347,9 @@ impl<R: Payload> BoundedCatalog<R> {
     }
     pub fn capacities(&self) -> Capacities {
         self.capacities
+    }
+    pub fn reserved_root_tokens(&self) -> usize {
+        self.root_tokens.load(Ordering::Acquire)
     }
     pub fn registered(&self) -> (usize, usize) {
         (
@@ -241,7 +405,7 @@ impl<R: Payload> CatalogHandle<R> {
         Ok(Participant {
             state: RequestState::Idle,
             next_object_slot: before % self.capacities.registry,
-            next_root_slot: 0,
+            next_root_slot: before.checked_rem(self.capacities.root_slots).unwrap_or(0),
             lease: Lease {
                 owner,
                 role,
@@ -360,6 +524,7 @@ pub enum Progress {
     Pending,
     Committed,
     Created(RecordKey),
+    RootCreated(RootKey),
     Cancelled,
     Rejected(RequestError),
 }
@@ -399,10 +564,6 @@ impl<R: Payload> PhaseYield<R> {
     }
 }
 
-#[expect(
-    clippy::large_enum_variant,
-    reason = "request storage is prepaid inline; polls must not allocate boxes"
-)]
 enum RequestState<R: Payload = (), C: Copy = Command> {
     Idle,
     Starting(C),
@@ -415,6 +576,20 @@ enum RequestState<R: Payload = (), C: Copy = Command> {
     Preparing(C, Preparation<R>),
     Yielding(C, PhaseYield<R>),
     Attempt(C, Attempt<R>),
+    StartingRootCreation {
+        slot: usize,
+        target: RecordKey,
+        lease: Option<RootLease<R>>,
+    },
+    CreatingRoot {
+        creation: super::RootCreation<R>,
+        lease: Option<RootLease<R>>,
+    },
+    RootReady(RootHandle<R>),
+    StartingRoot(RootCommand),
+    PreparingRoot(RootCommand, Preparation<R>),
+    YieldingRoot(RootCommand, PhaseYield<R>),
+    AttemptRoot(RootCommand, Attempt<R>),
 }
 /// Request state drops before the lease releases its registration quota.
 pub struct Participant<R: Payload = (), C: Copy = Command> {
@@ -471,10 +646,111 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
         };
         Ok(())
     }
+    #[expect(
+        clippy::too_many_lines,
+        reason = "keep the frozen bounded state transitions in one exhaustive dispatcher"
+    )]
     pub fn poll_in(&mut self, context: &R::Context) -> Progress {
         let catalog = &self.lease.owner;
         match &mut self.state {
             RequestState::Idle => Progress::Idle,
+            RequestState::StartingRootCreation {
+                slot,
+                target,
+                lease,
+            } => {
+                let creation = lookup(catalog, *target).and_then(|target| {
+                    catalog
+                        .raw
+                        .begin_create_root(*slot, target)
+                        .map_err(roots::prepare_error)
+                });
+                match creation {
+                    Ok(creation) => {
+                        self.state = RequestState::CreatingRoot {
+                            creation,
+                            lease: lease.take(),
+                        }
+                    }
+                    Err(RequestError::Contended) => {}
+                    Err(error) => {
+                        self.state = RequestState::Idle;
+                        return Progress::Rejected(error);
+                    }
+                }
+                Progress::Pending
+            }
+            RequestState::CreatingRoot { creation, lease } => match creation.poll(&catalog.raw) {
+                Ok(Some(token)) => {
+                    let root = RootHandle::new(token, lease.take().expect("root reservation"));
+                    let key = root.key();
+                    self.state = RequestState::RootReady(root);
+                    Progress::RootCreated(key)
+                }
+                Ok(None) => Progress::Pending,
+                Err(CreationError::Occupied) => {
+                    self.state = RequestState::Idle;
+                    Progress::Rejected(RequestError::Conflict)
+                }
+                Err(CreationError::GenerationExhausted) => {
+                    self.state = RequestState::Idle;
+                    Progress::Rejected(RequestError::GenerationExhausted)
+                }
+                Err(_) => unreachable!("same unfinished root creation"),
+            },
+            RequestState::RootReady(root) => Progress::RootCreated(root.key()),
+            RequestState::StartingRoot(command) => match roots::start(catalog, context, *command) {
+                Ok(preparation) => {
+                    self.state = RequestState::PreparingRoot(*command, preparation);
+                    Progress::Pending
+                }
+                Err(RequestError::Contended) => Progress::Pending,
+                Err(error) => {
+                    self.state = RequestState::Idle;
+                    Progress::Rejected(error)
+                }
+            },
+            RequestState::PreparingRoot(command, preparation) => {
+                match preparation.poll(&catalog.raw) {
+                    Ok(Some(attempt)) => {
+                        self.state = if attempt.is_phase_only() {
+                            RequestState::YieldingRoot(*command, PhaseYield::new(attempt))
+                        } else {
+                            RequestState::AttemptRoot(*command, attempt)
+                        };
+                    }
+                    Ok(None) => {}
+                    Err(PreparationError::GenerationExhausted) => {
+                        self.state = RequestState::Idle;
+                        return Progress::Rejected(RequestError::GenerationExhausted);
+                    }
+                    Err(_) => unreachable!("same unfinished root preparation"),
+                }
+                Progress::Pending
+            }
+            RequestState::YieldingRoot(command, yielding) => {
+                if let Some(attempt) = yielding.poll() {
+                    self.state = RequestState::AttemptRoot(*command, attempt);
+                }
+                Progress::Pending
+            }
+            RequestState::AttemptRoot(command, attempt) => {
+                match catalog.raw.commit_in(attempt, context) {
+                    Outcome::Committed => {
+                        self.state = RequestState::Idle;
+                        Progress::Committed
+                    }
+                    Outcome::Cancelled => {
+                        self.state = RequestState::Idle;
+                        Progress::Cancelled
+                    }
+                    Outcome::Pending => Progress::Pending,
+                    Outcome::Retry => {
+                        self.state = RequestState::StartingRoot(*command);
+                        Progress::Pending
+                    }
+                }
+            }
             RequestState::Starting(command) => match command.start(catalog, context) {
                 Ok(next) => {
                     self.state = next;
@@ -571,12 +847,14 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
     }
     /// False means commit already won; retain the request to observe its result.
     pub fn cancel(&mut self) -> bool {
-        if let RequestState::Yielding(_, yielding) = &self.state
+        if let RequestState::Yielding(_, yielding) | RequestState::YieldingRoot(_, yielding) =
+            &self.state
             && !yielding.cancel()
         {
             return false;
         }
-        if let RequestState::Attempt(_, attempt) = &self.state
+        if let RequestState::Attempt(_, attempt) | RequestState::AttemptRoot(_, attempt) =
+            &self.state
             && !attempt.cancel()
         {
             return false;
@@ -635,10 +913,14 @@ impl<R: Payload, C: Commands<R>> Participant<R, C> {
 }
 impl<R: Payload, C: Copy> Drop for Participant<R, C> {
     fn drop(&mut self) {
-        if let RequestState::Yielding(_, yielding) = &self.state {
+        if let RequestState::Yielding(_, yielding) | RequestState::YieldingRoot(_, yielding) =
+            &self.state
+        {
             yielding.cancel();
         }
-        if let RequestState::Attempt(_, attempt) = &self.state {
+        if let RequestState::Attempt(_, attempt) | RequestState::AttemptRoot(_, attempt) =
+            &self.state
+        {
             attempt.cancel();
         }
         // Automatic field drop destroys request storage before its lease.

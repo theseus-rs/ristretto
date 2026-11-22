@@ -159,3 +159,14 @@ publication. Prepared-root cancellation and exact late slot release preserve
 unique token custody. Two portable regressions and one native competing-helper
 case cover these boundaries. Native/WASI catalog totals are 38/33; strict Clippy
 passes. Bounded root-token admission follows separately.
+
+## C08 prerequisite: bounded root admission
+
+Root ownership has its own finite token quota and retains the backing charge
+through target/token destruction. A participant owns private creation and root
+publication until it transfers one completed token. Failed discovery remains
+Contended. Four portable tests cover cancellation at each boundary, slot reuse,
+retained catalog charges and rejection of currently unsupported backing. Numeric
+capacity formulas retain the frozen API; nonzero reference or edge capacity is
+rejected until the corresponding supported storage is wired. Native/WASI catalog
+totals are 42/37; strict Clippy passes.
