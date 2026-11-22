@@ -25,6 +25,20 @@ pub struct Gc<T> {
 }
 
 impl<T> Gc<T> {
+    /// Inline payload bytes plus explicitly reported owned external backing.
+    /// Canonical allocation reserves this amount; legacy constructors retain
+    /// their existing inline-only accounting.
+    /// # Errors
+    /// Returns [`Error::OutOfMemory`] if the reported total overflows.
+    pub fn allocation_size(data: &T) -> Result<usize>
+    where
+        T: Trace,
+    {
+        size_of::<T>()
+            .checked_add(data.external_size())
+            .ok_or(Error::OutOfMemory)
+    }
+
     /// Heap-allocates `data`, records the allocation with the collector, and returns
     /// a `Gc<T>` wrapping the raw pointer along with the pointer and size needed
     /// for subsequent registration.
