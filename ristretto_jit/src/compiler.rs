@@ -253,6 +253,9 @@ impl Compiler {
                         | Instruction::Invokespecial(_)
                         | Instruction::Invokevirtual(_)
                         | Instruction::Invokeinterface(..)
+                        | Instruction::New(_)
+                        | Instruction::Getfield(_)
+                        | Instruction::Putfield(_)
                 ))
         }) {
             return Some("experimental_unqualified_instruction");
@@ -378,6 +381,7 @@ impl Compiler {
                 || instructions.iter().any(|instruction| {
                     matches!(instruction, Instruction::Aconst_null | Instruction::Areturn)
                         || continuation::CallTarget::from_instruction(instruction).is_some()
+                        || continuation::HeapRequest::from_instruction(instruction).is_some()
                 }));
         let continuation_pointer = context_pointer;
         let context_pointer = if requests_only {
@@ -490,6 +494,20 @@ impl Compiler {
                     &mut function_builder,
                     &mut stack,
                     target,
+                    program_counter,
+                )?;
+            } else if let (Some(continuation), Some(request)) = (
+                continuation.as_ref(),
+                continuation::HeapRequest::from_instruction(instruction),
+            ) {
+                request.emit(
+                    &continuation::CallContinuation {
+                        continuation,
+                        state: continuation_pointer,
+                    },
+                    constant_pool,
+                    &mut function_builder,
+                    &mut stack,
                     program_counter,
                 )?;
             } else {
