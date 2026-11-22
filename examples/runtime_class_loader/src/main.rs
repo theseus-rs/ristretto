@@ -27,11 +27,10 @@ mod test {
 
     #[tokio::test(flavor = "current_thread")]
     #[ignore = "requires network access"]
-    async fn test_load_class() -> Result<()> {
-        let (java_version, class) = load_class().await?;
+    async fn test_load_class() {
+        let (java_version, class) = load_class().await.unwrap();
 
         assert!(java_version.starts_with("21"));
         assert_eq!("java/util/HashMap", class.name());
-        Ok(())
     }
 }

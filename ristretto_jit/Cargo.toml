@@ -17,10 +17,14 @@ workspace = true
 ahash = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.35.0" }
 thiserror = { workspace = true }
-zerocopy = { workspace = true }
+zerocopy = { workspace = true, features = ["derive"] }
 
 [target.'cfg(all(not(target_family = "wasm"), target_endian = "little", not(any(target_arch = "mips", target_arch = "mips64", target_os = "dragonfly", target_os = "solaris"))))'.dependencies]
 cranelift = { workspace = true, features = ["jit", "module", "native"] }
+stacker = { workspace = true }
 
 [dev-dependencies]
 indexmap = { workspace = true }
+
+[features]
+experimental-reference-dispatch = []

@@ -3,7 +3,7 @@ authors.workspace = true
 categories.workspace = true
 description = "Java Virtual Machine and compiler"
 edition.workspace = true
-keywords = ["java", "jvm"]
+keywords.workspace = true
 license.workspace = true
 name = "ristretto_vm"
 repository.workspace = true
@@ -76,6 +76,7 @@ tls-rustls-aws-lc-rs = [
 tls-rustls-ring = [
     "ristretto_classloader/tls-rustls-ring",
 ]
+experimental-canonical-runtime = []
 startup-trace = []
 url = [
     "ristretto_classloader/url",

@@ -149,7 +149,11 @@ mod wasm_compiler;
 ))]
 pub use compiler::Compiler;
 pub use error::{Error, Result};
-pub use function::Function;
+pub use function::{
+    Activation, AllocationKind, AllocationRequest, ArrayAccessKind, ArrayAccessRequest,
+    ArrayStoreRequest, CallKind, CallRequest, ExecutionStep, FieldAccess, FieldRequest, Function,
+    TypeCheckKind, TypeCheckRequest,
+};
 pub(crate) use jit_value::JitValue;
 pub use value::Value;
 #[cfg(any(
@@ -161,3 +165,6 @@ pub use value::Value;
     target_os = "solaris"
 ))]
 pub use wasm_compiler::Compiler;
+
+/// Maximum reference cells published by one experimental generated frame.
+pub const FRAME_ROOT_CAPACITY: usize = 4096;

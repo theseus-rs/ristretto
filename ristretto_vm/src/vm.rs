@@ -15,6 +15,7 @@ use crate::string_pool::StringPool;
 use crate::thread::Thread;
 use crate::{Configuration, ConfigurationBuilder, Result, startup_trace};
 use ahash::AHashMap;
+use portable_atomic::AtomicU64;
 use ristretto_classfile::{
     ClassAccessFlags, JAVA_8, JAVA_17, JAVA_21, JAVA_PREVIEW_MINOR_VERSION, Version,
 };
@@ -29,10 +30,7 @@ use ristretto_types::ResourceManager;
 use ristretto_types::StringFactory;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_types::handles::SocketHandle;
-use ristretto_types::handles::{FileHandle, HandleManager, MemberHandle};
-
-type ThreadHandle = ristretto_types::handles::ThreadHandle<Thread>;
-use portable_atomic::AtomicU64;
+use ristretto_types::handles::{FileHandle, HandleManager, MemberHandle, ThreadHandle};
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::io::{Read, Write};
@@ -102,7 +100,7 @@ pub struct VM {
     /// The next NIO file descriptor
     next_nio_fd: AtomicI32,
     /// The VM thread handles
-    thread_handles: HandleManager<u64, ThreadHandle>,
+    thread_handles: HandleManager<u64, ThreadHandle<Thread>>,
     /// The VM file handles
     file_handles: HandleManager<i64, FileHandle>,
     /// Socket handles for TCP/UDP sockets.
@@ -499,7 +497,7 @@ impl VM {
 
     /// Get the VM thread handles
     #[must_use]
-    pub(crate) fn thread_handles(&self) -> &HandleManager<u64, ThreadHandle> {
+    pub(crate) fn thread_handles(&self) -> &HandleManager<u64, ThreadHandle<Thread>> {
         &self.thread_handles
     }
 
@@ -1194,9 +1192,7 @@ impl ristretto_types::VM for VM {
         VM::file_handles(self)
     }
 
-    fn thread_handles(
-        &self,
-    ) -> &HandleManager<u64, ristretto_types::handles::ThreadHandle<Thread>> {
+    fn thread_handles(&self) -> &HandleManager<u64, ThreadHandle<Thread>> {
         VM::thread_handles(self)
     }
 

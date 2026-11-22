@@ -5,8 +5,7 @@ extern crate libfuzzer_sys;
 use ristretto_classfile::BaseType;
 
 fuzz_target!(|data: &[u8]| {
-    if data.len() < 1 {
-        return;
+    if let Some(&byte) = data.first() {
+        let _ = BaseType::parse(char::from(byte));
     }
-    let _ = BaseType::parse(data[0] as char);
 });

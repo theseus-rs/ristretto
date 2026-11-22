@@ -23,6 +23,8 @@ mod functions {
 }
 
 mod instructions {
+    #[path = "../instructions/arguments.rs"]
+    mod arguments;
     #[path = "../instructions/array.rs"]
     mod array;
     #[path = "../instructions/branch.rs"]
@@ -62,3 +64,39 @@ mod instructions {
     #[path = "../instructions/stack.rs"]
     mod stack;
 }
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/continuation.rs"]
+mod continuation;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/frame_roots.rs"]
+mod frame_roots;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/call_requests.rs"]
+mod call_requests;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/heap_requests.rs"]
+mod heap_requests;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/numeric_constants.rs"]
+mod numeric_constants;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/array_requests.rs"]
+mod array_requests;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/reference_array_requests.rs"]
+mod reference_array_requests;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/cast_requests.rs"]
+mod cast_requests;
+
+#[cfg(feature = "experimental-reference-dispatch")]
+#[path = "integration/static_requests.rs"]
+mod static_requests;

@@ -18,6 +18,26 @@ pub struct JitValue {
 }
 
 impl JitValue {
+    pub(crate) const DISCRIMINANT_OFFSET: usize = std::mem::offset_of!(Self, discriminant);
+    pub(crate) const VALUE_OFFSET: usize = std::mem::offset_of!(Self, value);
+
+    /// Validate while marshalling, before generated code performs untagged loads.
+    pub(crate) fn argument(
+        value: &crate::Value,
+        expected: i8,
+        index: usize,
+    ) -> Result<Self, Error> {
+        let value = Self::from(value.clone());
+        if value.discriminant != expected {
+            return Err(Error::InvalidArgumentType {
+                index,
+                expected,
+                actual: value.discriminant,
+            });
+        }
+        Ok(value)
+    }
+
     /// Creates a new `Value` equivalent to `Option::None`.
     #[must_use]
     pub fn new() -> JitValue {

@@ -1,6 +1,34 @@
 use crate::Result;
+use cranelift::prelude::{Type, types};
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classfile::{BaseType, FieldType, JavaString};
+
+/// Java reference/category information must survive lowering to machine types.
+/// A reference and a long both use I64 registers, but occupy different JVM categories.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub(crate) enum StackType {
+    Primitive(Type),
+    Reference,
+}
+
+impl StackType {
+    pub(crate) fn machine_type(self) -> Type {
+        match self {
+            Self::Primitive(value) => value,
+            Self::Reference => types::I64,
+        }
+    }
+
+    pub(crate) fn is_category_two(self) -> bool {
+        matches!(self, Self::Primitive(value) if value == types::I64 || value == types::F64)
+    }
+}
+
+impl From<Type> for StackType {
+    fn from(value: Type) -> Self {
+        Self::Primitive(value)
+    }
+}
 
 /// Represents an Object type local.
 const OBJECT_TYPE: FieldType = FieldType::Object(JavaString::new());

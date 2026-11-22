@@ -300,9 +300,8 @@ impl Debug for Configuration {
 mod tests {
     use super::super::ConfigurationBuilder;
     use super::*;
+    use crate::Result;
     use ristretto_classloader::DEFAULT_JAVA_VERSION;
-
-    type Result<T> = std::result::Result<T, crate::Error>;
 
     #[test]
     fn test_class_path() -> Result<()> {

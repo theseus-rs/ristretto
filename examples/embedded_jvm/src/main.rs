@@ -1,5 +1,4 @@
 #![forbid(unsafe_code)]
-#![allow(clippy::result_large_err)]
 
 use ristretto_vm::{ClassPath, Configuration, ConfigurationBuilder, Result, VM, Value};
 use std::path::PathBuf;
@@ -45,16 +44,18 @@ mod test {
     use tokio::sync::Mutex;
 
     #[tokio::test(flavor = "current_thread")]
-    async fn test_invoke_main() -> Result<()> {
+    async fn test_invoke_main() {
         let stdout = Arc::new(Mutex::new(Cursor::new(Vec::<u8>::new())));
-        let configuration = configuration_builder().stdout(stdout.clone()).build()?;
+        let configuration = configuration_builder()
+            .stdout(stdout.clone())
+            .build()
+            .unwrap();
 
-        let result = invoke_main(configuration).await?;
+        let result = invoke_main(configuration).await.unwrap();
 
         assert!(result.is_none());
         let stdout = stdout.lock().await;
         let output = String::from_utf8_lossy(stdout.get_ref());
         assert_eq!("Hello, World!", output.trim());
-        Ok(())
     }
 }

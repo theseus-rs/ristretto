@@ -1,14 +1,14 @@
 {
   "rust": {
-    "release": "1.99.1",
-    "commit": "58cf8f9c35b355199727627d07ae34a4e2846d67"
+    "release": "1.100.0",
+    "commit": "0ef1bc386059596dada8fb65b50425aab2ea637a"
   },
   "components": [
     {
-      "name": "Rust standard library 1.99.1",
+      "name": "Rust standard library 1.100.0",
       "directory": "rust",
       "repository": "https://github.com/rust-lang/rust",
-      "revision": "58cf8f9c35b355199727627d07ae34a4e2846d67",
+      "revision": "0ef1bc386059596dada8fb65b50425aab2ea637a",
       "license": "Apache-2.0 OR MIT",
       "files": [
         {
@@ -26,10 +26,10 @@
       ]
     },
     {
-      "name": "wasi-libc (wasi-sdk 33)",
+      "name": "wasi-libc (wasi-sdk 34)",
       "directory": "wasi-libc",
       "repository": "https://github.com/WebAssembly/wasi-libc",
-      "revision": "161b3195fc2558d2b1ba3eb9ffae3b2b47407623",
+      "revision": "2e6fb9d8ee0cdf9e431fbcabe8af3115de000a13",
       "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT; third-party notices below",
       "files": [
         {
@@ -54,7 +54,7 @@
         },
         {
           "path": "libc-top-half/musl/COPYRIGHT",
-          "sha256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af"
+          "sha256": "b870108ec5e7790e9f9919064f1b9421d62d5f9b0e6c230c6adf7ea2da62e97b"
         },
         {
           "path": "fts/musl-fts/COPYING",
@@ -67,10 +67,10 @@
       ]
     },
     {
-      "name": "LLVM runtime libraries (wasi-sdk 33)",
+      "name": "LLVM runtime libraries (wasi-sdk 34)",
       "directory": "llvm",
       "repository": "https://github.com/llvm/llvm-project",
-      "revision": "4434dabb69916856b824f68a64b029c67175e532",
+      "revision": "895aa2c896ada719451be2e3673c83da8ddf1141",
       "license": "Apache-2.0 WITH LLVM-exception; third-party notices below",
       "files": [
         {

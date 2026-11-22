@@ -1697,8 +1697,7 @@ impl<'a> ResolutionSession<'a> {
             }
             let repositories = constraint_repositories
                 .get(&key)
-                .map(Vec::as_slice)
-                .unwrap_or_default();
+                .map_or_default(Vec::as_slice);
             let candidate = self
                 .select_version_matching_all(&key, &constraints, repositories)
                 .await?

@@ -1,7 +1,10 @@
 use crate::Error::{InvalidConstant, InvalidConstantIndex};
 use crate::Result;
 use crate::control_flow_graph::type_stack::TypeStack;
-use cranelift::prelude::{Type, types};
+use crate::local_type::StackType;
+use cranelift::prelude::Type;
+#[cfg(test)]
+use cranelift::prelude::types;
 use ristretto_classfile::Error::InvalidConstantPoolIndexType;
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classfile::{BaseType, Constant, ConstantPool, FieldType};
@@ -262,6 +265,7 @@ pub(crate) fn simulate(
                     stack.push(value1)?;
                     stack.push(value4)?;
                 } else {
+                    stack.push(value2)?;
                     stack.push(value1)?;
                 }
                 stack.push(value3)?;
@@ -575,7 +579,7 @@ pub(crate) fn simulate(
 ///
 /// In the JVM, computational types are divided into categories. Category 1 types occupy a single
 /// slot on the operand stack, while category 2 types occupy two slots.
-fn is_category_1(value_type: Type) -> bool {
+fn is_category_1(value_type: impl Into<StackType>) -> bool {
     !is_category_2(value_type)
 }
 
@@ -584,8 +588,8 @@ fn is_category_1(value_type: Type) -> bool {
 /// In the JVM, computational types are divided into categories. Category 1 types occupy a single
 /// slot on the operand stack, while category 2 types occupy two slots. Long and double are category
 /// 2 types.
-fn is_category_2(value_type: Type) -> bool {
-    value_type == types::I64 || value_type == types::F64
+fn is_category_2(value_type: impl Into<StackType>) -> bool {
+    value_type.into().is_category_two()
 }
 
 /// Loads a constant from the constant pool and pushes the type onto the stack.
@@ -1541,11 +1545,12 @@ mod tests {
         stack.push_float()?;
         stack.push_int()?;
         simulate(&mut stack, &constant_pool, &Instruction::Dup2_x2)?;
-        assert_eq!(stack.len(), 4);
+        assert_eq!(stack.len(), 5);
         assert!(stack.pop_int().is_ok());
         assert!(stack.pop_float().is_ok());
         assert!(stack.pop_long().is_ok());
         assert!(stack.pop_int().is_ok());
+        assert!(stack.pop_float().is_ok());
         Ok(())
     }
 

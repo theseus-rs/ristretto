@@ -148,6 +148,7 @@ mod imp {
 
     impl<T: ?Sized> Deref for RwLockReadGuard<'_, T> {
         type Target = T;
+
         fn deref(&self) -> &T {
             &self.0
         }
@@ -207,6 +208,7 @@ mod imp {
 
     impl<T: ?Sized> Deref for RwLockWriteGuard<'_, T> {
         type Target = T;
+
         fn deref(&self) -> &T {
             &self.0
         }
@@ -265,6 +267,7 @@ mod imp {
 
     impl<T: ?Sized> Deref for MappedRwLockReadGuard<'_, T> {
         type Target = T;
+
         fn deref(&self) -> &T {
             // SAFETY: parent guard still alive; pointer is valid.
             unsafe { self.ptr.as_ref() }
@@ -318,6 +321,7 @@ mod imp {
 
     impl<T: ?Sized> Deref for MappedRwLockWriteGuard<'_, T> {
         type Target = T;
+
         fn deref(&self) -> &T {
             // SAFETY: parent guard still alive; pointer is valid.
             unsafe { self.ptr.as_ref() }
@@ -350,6 +354,7 @@ mod imp {
 
     impl<T: ?Sized> Deref for RwLockUpgradableReadGuard<'_, T> {
         type Target = T;
+
         fn deref(&self) -> &T {
             &self.0
         }
@@ -426,6 +431,7 @@ mod imp {
 
     impl<T: ?Sized> Deref for MutexGuard<'_, T> {
         type Target = T;
+
         fn deref(&self) -> &T {
             &self.0
         }
@@ -451,6 +457,7 @@ mod imp {
 
     impl<T: ?Sized> Deref for MappedMutexGuard<'_, T> {
         type Target = T;
+
         fn deref(&self) -> &T {
             // SAFETY: parent guard still alive; pointer is valid.
             unsafe { self.ptr.as_ref() }

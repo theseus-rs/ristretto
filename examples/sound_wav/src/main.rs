@@ -1,5 +1,4 @@
 #![forbid(unsafe_code)]
-#![allow(clippy::result_large_err)]
 
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
 use std::path::PathBuf;

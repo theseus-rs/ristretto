@@ -1,6 +1,7 @@
 use crate::Error::InternalError;
 use crate::Result;
-use cranelift::codegen::ir::{BlockArg, Value};
+use ahash::AHashSet;
+use cranelift::codegen::ir::{Block, BlockArg, Value};
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{Type, types};
 
@@ -9,6 +10,9 @@ const POINTER_SIZE: i32 = 8;
 /// Operand stack for the JIT compiler.
 pub struct OperandStack {
     stack: Vec<Value>,
+    // SSA identities keep reference categories through dup/swap and block resets.
+    // These are compiler metadata, not runtime GC roots or payload pointers.
+    references: AHashSet<Value>,
 }
 
 impl OperandStack {
@@ -16,6 +20,7 @@ impl OperandStack {
     pub fn with_capacity(capacity: u16) -> Self {
         OperandStack {
             stack: Vec::with_capacity(usize::from(capacity)),
+            references: AHashSet::default(),
         }
     }
 
@@ -82,7 +87,38 @@ impl OperandStack {
         function_builder: &mut FunctionBuilder,
         value: Value,
     ) -> Result<()> {
-        self.push_type(function_builder, types::I64, value)
+        self.push_type(function_builder, types::I64, value)?;
+        self.references.insert(value);
+        Ok(())
+    }
+
+    pub(crate) fn mark_references(&mut self, values: impl IntoIterator<Item = Value>) {
+        self.references.extend(values);
+    }
+
+    pub(crate) fn is_reference(&self, value: Value) -> bool {
+        self.references.contains(&value)
+    }
+
+    /// Helper continuations create fresh SSA parameters for the current operands.
+    /// Preserve their reference kinds before resetting the stack to those parameters.
+    pub(crate) fn inherit_block_references(
+        &mut self,
+        function_builder: &FunctionBuilder,
+        block: Block,
+    ) -> Result<()> {
+        let parameters = function_builder.func.dfg.block_params(block);
+        if parameters.len() != self.stack.len() {
+            return Err(InternalError(
+                "continuation stack arity mismatch".to_owned(),
+            ));
+        }
+        for (source, target) in self.stack.iter().zip(parameters) {
+            if self.references.contains(source) {
+                self.references.insert(*target);
+            }
+        }
+        Ok(())
     }
 
     /// Pops a value from the stack.

@@ -478,7 +478,7 @@ fn run_family(
             };
             if reason.is_none() {
                 let mut java = java::command(home, "java");
-                java.args(jvm_flags(family, case, mode));
+                java.args(jvm_flags(version, family, case, mode));
                 if version >= 25 {
                     java.args([
                         "--enable-native-access=ALL-UNNAMED",
@@ -527,7 +527,7 @@ fn passed(output: &process::Output, expected: &str) -> bool {
     output.success() && passes.next() == Some(expected) && passes.next().is_none()
 }
 
-fn jvm_flags(family: Family, case: &str, mode: Mode) -> Vec<String> {
+fn jvm_flags(version: u8, family: Family, case: &str, mode: Mode) -> Vec<String> {
     let heap = if case == "compressed-class-space" {
         "128m"
     } else if family == Family::Stack || matches!(case, "metaspace" | "constant-pool") {
@@ -535,10 +535,17 @@ fn jvm_flags(family: Family, case: &str, mode: Mode) -> Vec<String> {
     } else {
         "16m"
     };
+    // Use a small stack so compiled recursion overflows before the fixture's depth limit.
+    // HotSpot 8 on Apple Silicon requires at least 640 KiB to start.
+    let stack = if version == 8 && cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        "-Xss640k"
+    } else {
+        "-Xss256k"
+    };
     let mut flags = vec![
         "-Xms16m".to_string(),
         format!("-Xmx{heap}"),
-        "-Xss256k".to_string(),
+        stack.to_string(),
         "-Xverify:all".to_string(),
         "-XX:-HeapDumpOnOutOfMemoryError".to_string(),
     ];

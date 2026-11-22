@@ -26,6 +26,13 @@ impl Compiler {
         false
     }
 
+    /// Request-only native preparation is unavailable on this target.
+    #[cfg(feature = "experimental-reference-dispatch")]
+    #[must_use]
+    pub fn request_rejection_reason(_class: &ClassFile, _method: &Method) -> Option<&'static str> {
+        Some("unsupported_target")
+    }
+
     /// Compiles the given bytecode into native code.
     ///
     /// # Errors
@@ -39,6 +46,21 @@ impl Compiler {
     ) -> Result<Function> {
         Err(crate::Error::InternalError("Not implemented".to_string()))
     }
+
+    /// Request-only native code is unavailable on this target.
+    /// # Errors
+    /// Always returns an unsupported-target error.
+    #[cfg(feature = "experimental-reference-dispatch")]
+    pub fn compile_requests(
+        &self,
+        _class_file: &ClassFile,
+        _method: &Method,
+        _symbols: &[(&str, *const u8)],
+    ) -> Result<Function> {
+        Err(crate::Error::UnsupportedMethod(
+            "unsupported_target".to_owned(),
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -49,6 +71,21 @@ mod tests {
     fn test_compiler_new() {
         let result = Compiler::new();
         assert!(result.is_ok());
+    }
+
+    #[cfg(feature = "experimental-reference-dispatch")]
+    #[test]
+    fn request_compilation_fails_closed() -> Result<()> {
+        let class = ClassFile::default();
+        let method = Method::default();
+        assert_eq!(
+            Compiler::request_rejection_reason(&class, &method),
+            Some("unsupported_target")
+        );
+        assert!(
+            matches!(Compiler::new()?.compile_requests(&class, &method, &[]), Err(crate::Error::UnsupportedMethod(reason)) if reason == "unsupported_target")
+        );
+        Ok(())
     }
 
     #[test]

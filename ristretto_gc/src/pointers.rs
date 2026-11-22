@@ -3,6 +3,8 @@
 use crate::GarbageCollector;
 use crate::collector::Trace;
 
+const MIN_TRACE_ADDRESS: usize = 4096;
+
 /// Thread-safe pointer wrapper for object tracking
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub(crate) struct SafePtr(pub(crate) usize);
@@ -61,7 +63,7 @@ impl TracePtr {
 
             // Basic safety check: ensure pointer is in reasonable range
             let ptr_addr = ptr as usize;
-            if ptr_addr < 4096 {
+            if ptr_addr < MIN_TRACE_ADDRESS {
                 return;
             }
 
@@ -92,7 +94,7 @@ impl TracePtr {
 
             // Basic safety check: ensure pointer is in reasonable range
             let ptr_addr = ptr as usize;
-            if ptr_addr < 4096 {
+            if ptr_addr < MIN_TRACE_ADDRESS {
                 return;
             }
 

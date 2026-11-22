@@ -93,16 +93,17 @@ fn wait_windows_socket(
     }
 }
 
-async fn socket_wait_interrupted<T: Thread + 'static>(thread: &Arc<T>, fd: i32) -> Result<bool> {
+pub(super) async fn socket_wait_interrupted<T: Thread + 'static>(
+    thread: &Arc<T>,
+    fd: i32,
+) -> Result<bool> {
     let vm = thread.vm()?;
-    if vm.socket_handles().get(&fd).await.is_none() {
-        return Ok(true);
+    let closed = vm.socket_handles().get(&fd).await.is_none();
+    #[cfg(unix)]
+    if !closed {
+        return super::nativethread::take_signal(thread.as_ref());
     }
-    #[cfg(target_family = "unix")]
-    if super::nativethread::take_signal(&**thread)? {
-        return Ok(true);
-    }
-    Ok(false)
+    Ok(closed)
 }
 
 /// Waits for a raw socket without permanently occupying a blocking worker thread.
