@@ -475,6 +475,16 @@ pub unsafe trait Trace {
         true
     }
 
+    /// Whether all outgoing edges currently carry owning strong registrations and
+    /// demotion only converts those same edges using ordinary deletion barriers.
+    /// Returning true permits a write guard to publish remembered membership
+    /// while those registrations still protect the graph. Conditional edges and
+    /// custom trace actions must return false. The query runs under exclusive
+    /// access and must not allocate, lock or call into the collector.
+    fn edges_rooted_before_unroot(&self) -> bool {
+        false
+    }
+
     /// Maximum useful slots per scan, sampled before allocation publication.
     /// A small value still traces correctly if the payload later changes shape.
     fn trace_work(&self) -> usize {
@@ -1548,10 +1558,34 @@ impl GarbageCollector {
         }
     }
 
+    /// The caller pins the exact managed owner and retains every incoming edge
+    /// until this returns. Root deletion covers a young scan that already passed
+    /// this owner. Later scans see membership before the last root can disappear.
+    pub(crate) fn remember_before_unroot(&self, address: usize) -> bool {
+        if self.configuration.barrier_buffer_size != 0 {
+            return false;
+        }
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        barrier_progress_tests::pause_before_remembering();
+        let _measurement = self
+            .diagnostics
+            .barrier_record
+            .measure(self.diagnostics_enabled());
+        let mut remembered = self.remembered.lock(address);
+        // Sweep unlinks the exact descriptor under this same shard. A storage
+        // pin can outlive registry retirement, but cannot permit address reuse.
+        let Some(metadata) = self.objects.lookup(address) else {
+            return false;
+        };
+        metadata.record_mutation();
+        remembered.insert(address);
+        true
+    }
+
     pub(crate) fn remember_address(&self, address: usize) {
         let _publication = self.allocation_guard();
         if let Some(metadata) = self.objects.lock(address).get(&address) {
-            metadata.mutation.fetch_add(1, Ordering::Release);
+            metadata.record_mutation();
         } else {
             return;
         }
@@ -3437,17 +3471,18 @@ impl GarbageCollector {
     ) {
         // Pruning is optional. Keep the entry if either shard is busy, so a
         // suspended shard owner cannot strand an in-flight mark task.
-        if has_young || !self.remembered.may_contain(address) {
+        if has_young || version == usize::MAX || !self.remembered.may_contain(address) {
             return;
         }
         let Some(objects) = self.objects.try_lock(address) else {
             return;
         };
-        // A writer increments the mutation version under this same object
-        // shard. Keep it through removal so we cannot discard a newer edge.
-        if objects.get(&address).is_some_and(|metadata| {
-            metadata.id == identity && metadata.mutation.load(Ordering::Acquire) == version
-        }) && let Some(mut remembered) = self.remembered.try_lock(address)
+        // Ordinary writes update under the object shard. Prepared writes update
+        // under the remembered shard. Compare only after acquiring both.
+        if let Some(mut remembered) = self.remembered.try_lock(address)
+            && objects.get(&address).is_some_and(|metadata| {
+                metadata.id == identity && metadata.mutation.load(Ordering::Acquire) == version
+            })
         {
             remembered.remove(address);
         }
@@ -5541,6 +5576,10 @@ impl Drop for GarbageCollector {
 
 // SAFETY: all hooks forward to the present value with the same protected owner.
 unsafe impl<T: Trace> Trace for Option<T> {
+    fn edges_rooted_before_unroot(&self) -> bool {
+        self.as_ref().is_some_and(Trace::edges_rooted_before_unroot)
+    }
+
     fn may_contain_gc_references() -> bool {
         T::may_contain_gc_references()
     }
