@@ -10,7 +10,8 @@ struct Value {
     number: usize,
     drops: Arc<AtomicUsize>,
 }
-impl Trace for Value {
+// SAFETY: this fixture has no managed edges and requires no tracing.
+unsafe impl Trace for Value {
     fn trace(&self, _: &GarbageCollector) {}
 
     fn may_contain_gc_references() -> bool {

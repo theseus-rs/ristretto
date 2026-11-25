@@ -1,74 +1,241 @@
 //! Object metadata and pointer management for garbage collection.
 
 use crate::Finalize;
+use crate::Trace;
 use crate::finalizer::FinalizerFn;
 use crate::pointers::SafePtr;
-use crate::private_allocation::Allocation;
-use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, Ordering};
+use crate::pointers::TracePtr;
+use portable_atomic::AtomicU64;
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, Weak};
 use tracing::warn;
 
-/// Type-safe drop function for garbage-collected objects
-type DropFn = Option<Box<dyn FnOnce() + Send + Sync>>;
+#[path = "birth_visibility.rs"]
+mod birth_visibility;
 
-/// New objects start marked (`true`) so they survive any in-flight GC cycle at allocation time.
-/// This is called "allocation-color-black" in GC literature. Changing this to `false` would
-/// cause use-after-free when objects are allocated concurrently with a collection cycle.
-const INITIAL_MARK_STATE: bool = true;
+#[path = "storage_state.rs"]
+mod storage_state;
+
+#[path = "mark_state.rs"]
+mod mark_state;
+use mark_state::MarkWord;
+pub(crate) use mark_state::{EPOCH_STRIDE, Retention};
+
+/// A storage lease is deliberately separate from logical reachability. It admits
+/// no weak upgrade or root resurrection after the collector's retirement decision.
+pub(crate) struct StorageLease(MetadataRef);
+
+/// Conditional references validate object IDs in the registry; they do not need
+/// weak metadata ownership. Internal work and storage leases share one counter.
+pub(crate) type MetadataRef = triomphe::Arc<ObjectMetadata>;
+
+impl Drop for StorageLease {
+    fn drop(&mut self) {
+        if self.0.storage.release()
+            && let Some(gc) = self.0.collector.upgrade()
+        {
+            gc.storage_ready(self.0.clone());
+        }
+    }
+}
+
+/// Keep shutdown metadata alive through payload destruction, then release its
+/// managed roots even if inert descriptor snapshots remain. No separate boxed
+/// destructor allocation is introduced.
+struct Payload {
+    allocation: crate::allocation::Erased,
+    owner: Option<Arc<dyn crate::HeapOwner>>,
+}
+type DropFn = Option<Payload>;
+
+/// Type and callback identity are immutable and shared by all matching allocations.
+struct Kind {
+    type_id: std::any::TypeId,
+    finalizer: Option<FinalizerFn>,
+}
 
 /// Metadata for tracking garbage-collected objects
 ///
 /// This struct contains the pointer to the object, its size, manages the marked state, provides
 /// type-safe dropping functionality, and supports finalizers.
 pub(crate) struct ObjectMetadata {
-    ptr: SafePtr,
+    pub(crate) id: crate::ObjectId,
     size: usize,
-    marked: AtomicBool,
-    /// Tracks whether this object was ever marked as reachable during a GC mark phase.
-    /// Objects that were never reachable from roots (e.g., VM internal objects held only
-    /// by Rust containers like `ClassLoader`) are never swept. Only objects that were
-    /// previously traceable from a root and subsequently became unreachable are collected.
-    was_ever_marked: AtomicBool,
-    /// Host-owned allocations are released during shutdown, even if once traced.
-    retained: AtomicBool,
+    logical_size: usize,
+    pub(crate) birth: birth_visibility::BirthVisibility,
     drop_fn: Mutex<DropFn>,
-    finalizer: Mutex<Option<FinalizerFn>>,
+    kind: &'static Kind,
+    finalized: AtomicBool,
+    pub(crate) trace: TracePtr,
+    epochs: [MarkWord; 2],
+    pub(crate) age: AtomicUsize,
+    pub(crate) old_birth: AtomicU64,
+    pub(crate) mutation: AtomicUsize,
+    pub(crate) scan: Mutex<()>,
+    // Discovery must not turn old descriptor snapshots into managed roots.
+    // The matching strong owner lives only in the payload destruction record.
+    pub(crate) owner: Option<Weak<dyn crate::HeapOwner>>,
+    // Installing this link transfers the reservation's logical charge. It stays
+    // charged until this descriptor destroys its payload, even before publication
+    // or after removal from the catalog. Old MetadataRefs alone retain no charge.
+    pub(crate) collector: Weak<crate::GarbageCollector>,
+    storage: storage_state::StorageState,
+    pub(crate) relocation: Option<Box<crate::relocation_history::History>>,
+}
+
+/// The sole storage destructor refunds on every exit after payload drop glue,
+/// including an unwind from diagnostics reporting a panicking destructor.
+struct Refund<'a> {
+    metadata: &'a ObjectMetadata,
+    collector: Option<&'a crate::GarbageCollector>,
+}
+
+impl Drop for Refund<'_> {
+    fn drop(&mut self) {
+        if let Some(collector) = self.collector {
+            self.metadata.refund_publication(collector);
+            collector.cancel_allocation(self.metadata.size);
+        } else if let Some(collector) = self.metadata.collector.upgrade() {
+            self.metadata.refund_publication(&collector);
+            collector.cancel_allocation(self.metadata.size);
+        }
+    }
+}
+
+/// Ensure finalizer/diagnostic unwind reaches the guarded payload destructor.
+struct DestroyPayload<'a>(&'a ObjectMetadata);
+
+impl Drop for DestroyPayload<'_> {
+    fn drop(&mut self) {
+        self.0.run_drop_fn();
+    }
 }
 
 impl ObjectMetadata {
-    /// Owns the initialized allocation before any ordinary index can discover it.
-    pub(crate) fn new_for_gc(allocation: Allocation) -> Self {
-        let ptr = SafePtr::from_ptr(allocation.pointer().get());
-        let size = allocation.size();
-        Self {
-            ptr,
-            size,
-            marked: AtomicBool::new(INITIAL_MARK_STATE),
-            was_ever_marked: AtomicBool::new(false),
-            retained: AtomicBool::new(false),
-            drop_fn: Mutex::new(Some(Box::new(move || drop(allocation)))),
-            finalizer: Mutex::new(None),
+    pub(crate) fn is_type<T: 'static>(&self) -> bool {
+        self.kind.type_id == std::any::TypeId::of::<T>()
+    }
+
+    pub(crate) fn lease(metadata: &MetadataRef) -> Option<StorageLease> {
+        metadata
+            .storage
+            .acquire()
+            .then(|| StorageLease(metadata.clone()))
+    }
+
+    pub(crate) fn retire(&self) -> bool {
+        self.storage.retire()
+    }
+
+    pub(crate) fn arm_retirement_notification(&self) -> bool {
+        self.storage.arm_notification()
+    }
+
+    pub(crate) fn storage_ready(&self) -> bool {
+        self.storage.ready()
+    }
+
+    fn mark_word(&self, index: usize) -> &MarkWord {
+        if index == 0 {
+            &self.epochs[0]
+        } else {
+            &self.epochs[1]
         }
     }
 
-    /// # Safety
-    /// The allocation must contain the same initialized T used at construction.
-    pub(crate) unsafe fn new_for_gc_with_finalizer<T: Send + Sync + Finalize>(
-        allocation: Allocation,
+    pub(crate) fn marked(&self, index: usize, epoch: u64) -> bool {
+        self.mark_word(index).marked(epoch)
+    }
+
+    pub(crate) fn retention(&self, index: usize, epoch: u64) -> Option<Retention> {
+        self.mark_word(index).retention(epoch)
+    }
+
+    /// Liveness at a closed reference boundary, independent of later retention.
+    pub(crate) fn marked_before(&self, index: usize, epoch: u64, final_retention: bool) -> bool {
+        self.mark_word(index).marked_before(epoch, final_retention)
+    }
+
+    pub(crate) fn mark_black(&self, index: usize, epoch: u64) {
+        self.mark_word(index).mark_black(epoch);
+    }
+
+    pub(crate) fn mark_born(&self, index: usize, epoch: u64) {
+        self.mark_word(index).mark_born(epoch);
+    }
+
+    pub(crate) fn reset_mark(&self, index: usize) {
+        self.mark_word(index).reset();
+    }
+
+    /// Callers clamp strength to the domain's phase floor before publication.
+    pub(crate) fn mark(&self, index: usize, epoch: u64, strength: Retention) -> bool {
+        self.mark_word(index).mark(epoch, strength)
+    }
+
+    /// Creates a new `ObjectMetadata` instance for a `Gc<T>`.
+    pub(crate) fn new_for_gc<T: Send + Sync + Trace + 'static>(
+        allocation: crate::allocation::Initialized<crate::gc::Allocation<T>>,
+        size: usize,
+        id: crate::ObjectId,
     ) -> Self {
-        let pointer = allocation.pointer();
-        let mut metadata = Self::new_for_gc(allocation);
-        metadata.finalizer = Mutex::new(Some(Box::new(move || {
-            // SAFETY: the matching unique allocation remains in metadata until
-            // after finalizers finish; this wrapper preserves pointer provenance.
-            unsafe { (&*pointer.get().cast::<T>()).finalize() };
-        })));
+        let ptr = allocation.ptr().cast::<T>();
+        // Partial metadata construction destroys this owner on unwind. Successful
+        // metadata takes and destroys it exactly once after storage retirement.
+        let allocation = allocation.erase();
+        let mut trace = TracePtr::new_from_ptr(ptr);
+        // SAFETY: the unpublished initialized T remains owned by allocation.
+        trace.budget = unsafe { (&*ptr).trace_work().clamp(1, 32) };
+        // SAFETY: constructors exclusively own this initialized, unpublished T.
+        let owner = unsafe { (&*ptr).heap_owner() };
+        let discovery = owner.as_ref().map(Arc::downgrade);
+        let drop_fn: DropFn = Some(Payload { allocation, owner });
+
+        Self {
+            id,
+            size,
+            logical_size: size - crate::gc::Allocation::<T>::layout().size() + size_of::<T>(),
+            birth: birth_visibility::BirthVisibility::default(),
+            drop_fn: Mutex::new(drop_fn),
+            kind: &const {
+                Kind {
+                    type_id: std::any::TypeId::of::<T>(),
+                    finalizer: None,
+                }
+            },
+            finalized: AtomicBool::new(false),
+            trace,
+            epochs: std::array::from_fn(|_| MarkWord::default()),
+            age: AtomicUsize::new(0),
+            old_birth: AtomicU64::new(0),
+            mutation: AtomicUsize::new(0),
+            scan: Mutex::new(()),
+            owner: discovery,
+            collector: Weak::new(),
+            storage: storage_state::StorageState::default(),
+            relocation: None,
+        }
+    }
+
+    /// Creates a new `ObjectMetadata` instance for a `Gc<T>` with finalizer support.
+    pub(crate) fn new_for_gc_with_finalizer<T: Send + Sync + Finalize + Trace + 'static>(
+        allocation: crate::allocation::Initialized<crate::gc::Allocation<T>>,
+        size: usize,
+        id: crate::ObjectId,
+    ) -> Self {
+        let mut metadata = Self::new_for_gc::<T>(allocation, size, id);
+        metadata.kind = &const {
+            Kind {
+                type_id: std::any::TypeId::of::<T>(),
+                finalizer: Some(crate::finalizer::finalize::<T>),
+            }
+        };
         metadata
     }
 
     /// Returns the pointer to the object.
-    pub(crate) fn ptr(&self) -> &SafePtr {
-        &self.ptr
+    pub(crate) fn ptr(&self) -> SafePtr {
+        SafePtr::from_ptr(self.trace.ptr)
     }
 
     /// Returns the size of the object.
@@ -76,98 +243,127 @@ impl ObjectMetadata {
         self.size
     }
 
-    /// Returns whether the object is marked.
-    pub(crate) fn is_marked(&self) -> bool {
-        self.marked.load(Ordering::Acquire)
+    /// Logical payload bytes exclude the ordinary allocator's inline wrapper.
+    pub(crate) fn logical_size(&self) -> usize {
+        self.logical_size
     }
 
-    /// Marks the object as reachable.
-    /// Returns true if this call actually marked the object.
-    pub(crate) fn mark(&self) -> bool {
-        self.was_ever_marked.store(true, Ordering::Release);
-        !self.marked.swap(true, Ordering::AcqRel)
+    pub(crate) fn record_publication(&self, collector: &crate::GarbageCollector) {
+        self.birth.index();
+        collector.record_published_bytes(self.logical_size);
     }
 
-    /// Returns whether this object was ever marked as reachable during a GC mark phase.
-    pub(crate) fn was_ever_marked(&self) -> bool {
-        self.was_ever_marked.load(Ordering::Acquire)
+    fn refund_publication(&self, collector: &crate::GarbageCollector) {
+        // StorageState::destroy and the taken Payload grant exactly one Refund.
+        // An indexed descriptor retains its history even after storage retirement.
+        if self.birth.indexed() {
+            collector.release_published_bytes(self.logical_size);
+        }
     }
 
-    /// Keeps this allocation alive until collector shutdown, independently of tracing.
-    pub(crate) fn retain(&self) {
-        self.retained.store(true, Ordering::Release);
-    }
-
-    pub(crate) fn is_retained(&self) -> bool {
-        self.retained.load(Ordering::Acquire)
-    }
-
-    /// Unmarks the object.
-    pub(crate) fn unmark(&self) {
-        self.marked.store(false, Ordering::Release);
+    /// The initial concrete catalog adapter has no graph or shutdown callbacks.
+    /// This does not certify that ordinary Rust destruction is bounded.
+    #[cfg(feature = "experimental-canonical-leaves")]
+    pub(crate) fn canonical_leaf_eligible(&self) -> bool {
+        self.trace.step_fn.is_none() && self.owner.is_none() && self.kind.finalizer.is_none()
     }
 
     /// Drops the object using the type-safe drop function. This first calls the finalizer (if any),
     /// then properly calls the destructor and deallocates memory. Can only be called once;
-    /// subsequent calls are no-ops (guarded by `Option::take()` inside the closures).
+    /// subsequent calls are no-ops, guarded by the finalizer claim and destructor take.
     ///
     /// # Caller contract
     ///
-    /// This must only be called after the `ObjectMetadata` has been **removed** from the shared
-    /// `objects` `DashMap`, giving the caller exclusive ownership. Because the metadata is no
-    /// longer visible to any other thread, no concurrent re-mark race is possible and no
-    /// atomic guard is needed here.
+    /// Registry retirement must precede this call. Borrow admission is closed
+    /// independently of registry visibility; existing leases can delay destruction.
     pub(crate) fn drop_object(&self) {
-        self.run_drop_closures();
-    }
-
-    /// Runs only the finalizer closure if present. `take()`-guarded so it executes at most once.
-    /// Used in shutdown phase 1: all finalizers run while every object's memory is still valid,
-    /// so finalizers may safely access other GC managed objects.
-    ///
-    /// Uses `try_lock` to avoid deadlocking on a poisoned mutex from a prior panic.
-    pub(crate) fn run_finalizer(&self) {
-        match self.finalizer.try_lock() {
-            Ok(mut guard) => {
-                if let Some(finalizer) = guard.take() {
-                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        finalizer();
-                    }))
-                    .unwrap_or_else(|_| {
-                        warn!("Finalizer panicked during object cleanup");
-                    });
-                }
-            }
-            Err(_) => {
-                warn!("Failed to acquire finalizer lock during object cleanup; finalizer skipped");
-            }
+        self.retire();
+        if self.storage_ready() {
+            self.run_drop_closures();
         }
     }
 
-    /// Runs only the drop/deallocation closure if present. `take()`-guarded so it executes at
-    /// most once. Used in shutdown phase 2: after all finalizers have run, drop closures
-    /// deallocate object memory.
+    /// Claims the optional type callback once before invoking it outside any lock.
+    /// Also used in shutdown phase 1 before destroying the remaining allocations.
+    /// The `Finalize` contract still forbids accessing other GC managed objects.
+    pub(crate) fn run_finalizer(&self) {
+        let Some(finalizer) = self.kind.finalizer else {
+            return;
+        };
+        if self.finalized.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            // SAFETY: this metadata pairs T's callback with its original pointer.
+            // The atomic claim runs it once, before the caller destroys storage.
+            unsafe { finalizer(self.trace.ptr) };
+        }))
+        .unwrap_or_else(|_| {
+            warn!("Finalizer panicked during object cleanup");
+        });
+    }
+
+    /// Destroys the erased allocation owner if present. `take()`-guarded so it runs
+    /// at most once. Used in shutdown phase 2 after all finalizers have run.
     ///
     /// Uses `try_lock` to avoid deadlocking on a poisoned mutex from a prior panic.
     pub(crate) fn run_drop_fn(&self) {
-        let drop_fn = {
-            let Ok(mut guard) = self.drop_fn.try_lock() else {
-                warn!("Failed to acquire drop_fn lock during object cleanup; drop skipped");
-                return;
-            };
+        self.run_drop_fn_with_collector(None);
+    }
+
+    /// Reclamation already borrows the owning heap. Validate that identity before
+    /// claiming storage, then reuse the borrow instead of upgrading a weak owner.
+    pub(crate) fn run_drop_fn_in(&self, collector: &crate::GarbageCollector) {
+        assert!(
+            std::ptr::eq(self.collector.as_ptr(), collector),
+            "foreign descriptor refund collector"
+        );
+        self.run_drop_fn_with_collector(Some(collector));
+    }
+
+    fn run_drop_fn_with_collector(&self, collector: Option<&crate::GarbageCollector>) {
+        if !self.storage.destroy() {
+            return;
+        }
+        let drop_fn = if let Ok(mut guard) = self.drop_fn.try_lock() {
             guard.take()
+        } else {
+            warn!("Failed to acquire drop_fn lock during object cleanup; drop skipped");
+            return;
         };
-        if let Some(drop_fn) = drop_fn {
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(drop_fn))
-                .unwrap_or_else(|_| warn!("Drop function panicked during object cleanup"));
+        if let Some(Payload { allocation, owner }) = drop_fn {
+            {
+                let _refund = Refund {
+                    metadata: self,
+                    collector,
+                };
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    drop(allocation);
+                }))
+                .unwrap_or_else(|_| {
+                    warn!("Drop function panicked during object cleanup");
+                });
+                // Refund backing after its destruction, including diagnostic
+                // unwind, before releasing any unrelated roots owned by owner.
+            }
+            // No descriptor mutex or collector coordination guard is acquired
+            // here. Metadata snapshots retain only the weak discovery link.
+            drop(owner);
         }
     }
 
-    /// Runs the finalizer and drop closures sequentially. Each closure is `take()`-guarded so
-    /// it runs at most once.
+    /// Runs the claimed finalizer and taken destructor sequentially, at most once each.
     fn run_drop_closures(&self) {
+        let _destruction = DestroyPayload(self);
         self.run_finalizer();
-        self.run_drop_fn();
+    }
+}
+
+impl Drop for ObjectMetadata {
+    fn drop(&mut self) {
+        // The last Arc cannot disappear with a lease outstanding. This also
+        // cleans retired storage if its collector was destroyed before release.
+        self.drop_object();
     }
 }
 
@@ -175,11 +371,123 @@ impl ObjectMetadata {
 impl std::fmt::Debug for ObjectMetadata {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ObjectMetadata")
-            .field("ptr", &self.ptr)
+            .field("ptr", &self.trace.ptr)
             .field("size", &self.size)
-            .field("marked", &self.is_marked())
-            .field("was_ever_marked", &self.was_ever_marked())
-            .field("retained", &self.is_retained())
+            .field("epochs", &self.epochs.each_ref().map(MarkWord::word))
+            .field("age", &self.age.load(Ordering::Acquire))
             .finish()
+    }
+}
+
+#[cfg(test)]
+#[expect(clippy::panic_in_result_fn)]
+mod kind_tests {
+    use super::*;
+    use crate::{GarbageCollector, Gc, Result};
+
+    struct Probe {
+        finalized: Arc<AtomicUsize>,
+        dropped: Arc<AtomicUsize>,
+        panic: bool,
+    }
+    // SAFETY: this fixture contains no outgoing GC references.
+    unsafe impl Trace for Probe {
+        fn may_contain_gc_references() -> bool {
+            false
+        }
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+    impl Finalize for Probe {
+        fn finalize(&self) {
+            self.finalized.fetch_add(1, Ordering::Relaxed);
+            assert!(!self.panic, "intentional finalizer panic");
+        }
+    }
+    impl Drop for Probe {
+        fn drop(&mut self) {
+            self.dropped.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    #[test]
+    fn shared_type_identity_preserves_optional_finalization_and_panic_claim() -> Result<()> {
+        for panic in [false, true] {
+            // These Wasm targets abort on panic; native/Miri exercise unwinding.
+            if panic && cfg!(target_family = "wasm") {
+                continue;
+            }
+            let gc = GarbageCollector::new();
+            let finalized = Arc::new(AtomicUsize::new(0));
+            let dropped = Arc::new(AtomicUsize::new(0));
+            let probe = || Probe {
+                finalized: finalized.clone(),
+                dropped: dropped.clone(),
+                panic,
+            };
+            let plain = Gc::try_new(&gc, probe())?;
+            let finalizable = Gc::new_with_finalizer(&gc, probe());
+            for (root, expected) in [(&plain, 0), (&finalizable, 1)] {
+                let metadata = gc
+                    .metadata_for_address(root.as_ptr() as usize)
+                    .expect("metadata");
+                assert!(metadata.is_type::<Probe>());
+                assert!(!metadata.is_type::<u64>());
+                assert!(Gc::<Probe>::from_handle_rooted(&gc, root.as_handle_i64()).is_ok());
+                assert!(Gc::<u64>::from_handle_rooted(&gc, root.as_handle_i64()).is_err());
+                for _ in 0..3 {
+                    metadata.run_finalizer();
+                }
+                assert_eq!(finalized.load(Ordering::Relaxed), expected);
+                assert_eq!(dropped.load(Ordering::Relaxed), 0);
+            }
+            drop((plain, finalizable));
+            gc.stop()?;
+            assert_eq!(finalized.load(Ordering::Relaxed), 1);
+            assert_eq!(dropped.load(Ordering::Relaxed), 2);
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+        Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn concurrent_finalizer_claims_execute_once() -> Result<()> {
+        let gc = GarbageCollector::new();
+        let finalized = Arc::new(AtomicUsize::new(0));
+        let dropped = Arc::new(AtomicUsize::new(0));
+        let root = Gc::new_with_finalizer(
+            &gc,
+            Probe {
+                finalized: finalized.clone(),
+                dropped: dropped.clone(),
+                panic: false,
+            },
+        );
+        let metadata = gc
+            .metadata_for_address(root.as_ptr() as usize)
+            .expect("metadata");
+        let start = Arc::new(std::sync::Barrier::new(5));
+        let mut workers = Vec::new();
+        for _ in 0..4 {
+            let metadata = metadata.clone();
+            let start = start.clone();
+            workers.push(std::thread::spawn(move || {
+                start.wait();
+                metadata.run_finalizer();
+            }));
+        }
+        start.wait();
+        for worker in workers {
+            worker
+                .join()
+                .map_err(|_| crate::Error::SyncError("finalizer claimant panicked".into()))?;
+        }
+        assert_eq!(finalized.load(Ordering::Relaxed), 1);
+        assert_eq!(dropped.load(Ordering::Relaxed), 0);
+        drop((metadata, root));
+        gc.stop()?;
+        assert_eq!(finalized.load(Ordering::Relaxed), 1);
+        assert_eq!(dropped.load(Ordering::Relaxed), 1);
+        Ok(())
     }
 }

@@ -6,7 +6,6 @@ use super::root_owner::{PreparedRoot, SharedRoot, backing_bytes};
 use super::{LeafAccessError, LeafRecord, LeafView};
 use crate::canonical_catalog as gc_catalog;
 use crate::{GarbageCollector, Trace};
-use gc_catalog::EdgeMembership;
 use gc_catalog::bounded::{
     BoundedCatalog, Budget, Capacities, CatalogHandle, ConfigError, EdgeCommand, EdgeHandle,
     EdgeKey, EdgeObservation, Footprint, GuardedCommand, Participant, Progress, RegisterError,

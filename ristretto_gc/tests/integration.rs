@@ -37,7 +37,9 @@ fn test_zero_sized_types() {
     #[derive(Debug, PartialEq)]
     struct ZeroSized;
 
-    impl Trace for ZeroSized {
+    // SAFETY: this fixture contains no outgoing GC references.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for ZeroSized {
         fn trace(&self, _collector: &GarbageCollector) {
             // Nothing to trace
         }
@@ -82,7 +84,21 @@ fn test_deeply_nested_structures() -> Result<()> {
         },
     }
 
-    impl Trace for NestedEnum {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for NestedEnum {
+        fn root(&mut self) {
+            if let Self::Branch { left, right, .. } = self {
+                left.root();
+                right.root();
+            }
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            if let Self::Branch { left, right, .. } = self {
+                unsafe { Trace::unroot(left, owner) };
+                unsafe { Trace::unroot(right, owner) };
+            }
+        }
         fn trace(&self, collector: &GarbageCollector) {
             match self {
                 NestedEnum::Leaf(_) => {}
@@ -307,7 +323,17 @@ fn test_complex_reachability_scenario() -> Result<()> {
         optional_ref: Option<Gc<ComplexObject>>,
     }
 
-    impl Trace for ComplexObject {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for ComplexObject {
+        fn root(&mut self) {
+            self.references.root();
+            self.optional_ref.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.references, owner) };
+            unsafe { Trace::unroot(&mut self.optional_ref, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
             for reference in &self.references {
                 reference.trace(collector);

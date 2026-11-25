@@ -1,0 +1,268 @@
+//! Preserve roots released by synchronous construction hooks without retaining
+//! publication admission across arbitrary callbacks or system allocation.
+use crate::GarbageCollector;
+use crate::roots::Registration;
+use std::cell::{Cell, RefCell};
+use std::marker::PhantomData;
+use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
+
+thread_local! {
+    static CURRENT: Cell<*const ()> = const { Cell::new(std::ptr::null()) };
+}
+
+pub(crate) struct Roots<'gc> {
+    collector: &'gc GarbageCollector,
+    previous: Cell<*const ()>,
+    registrations: RefCell<Vec<Registration>>,
+    // Temporary roots protect referents while a per-slot pending count excludes
+    // decisions. A stalled hook owns no collector-wide publication admission.
+    reference_owners: RefCell<Vec<Arc<crate::weak::WeakSlot>>>,
+}
+
+impl<'gc> Roots<'gc> {
+    pub(crate) fn new(collector: &'gc GarbageCollector) -> Self {
+        Self {
+            collector,
+            previous: Cell::new(std::ptr::null()),
+            registrations: RefCell::new(Vec::new()),
+            reference_owners: RefCell::new(Vec::new()),
+        }
+    }
+
+    /// The borrow keeps this stack location stable until the scope restores TLS.
+    /// Constructors enter once, then seal protection after metadata hooks finish.
+    pub(crate) fn enter(&mut self) -> Scope<'_, 'gc> {
+        self.previous
+            .set(CURRENT.replace(std::ptr::from_ref(self).cast()));
+        Scope {
+            roots: self,
+            _thread: PhantomData,
+        }
+    }
+    /// A reference-free constructor leaves any enclosing TLS scope untouched.
+    /// Option uses Scope's non-null reference niche; the ordinary scope stays small.
+    pub(crate) fn enter_for<T: crate::Trace>(&mut self) -> Option<Scope<'_, 'gc>> {
+        T::may_contain_gc_references().then(|| self.enter())
+    }
+}
+
+pub(crate) struct Scope<'a, 'gc> {
+    roots: &'a Roots<'gc>,
+    // A synchronous construction scope must leave TLS on the thread that entered it.
+    _thread: PhantomData<Rc<()>>,
+}
+
+/// Owned construction protection after hooks leave their thread-local scope.
+/// Its shared heap borrow excludes shutdown; no origin TLS borrow survives sealing.
+/// Cleanup never adopts a helper's ambient construction scope.
+pub(crate) struct Detached<'gc> {
+    collector: &'gc GarbageCollector,
+    registrations: Vec<Registration>,
+    reference_owners: Vec<Arc<crate::weak::WeakSlot>>,
+}
+
+impl<'gc> Scope<'_, 'gc> {
+    pub(crate) fn detach(self) -> Detached<'gc> {
+        let detached = Detached {
+            collector: self.roots.collector,
+            registrations: std::mem::take(&mut *self.roots.registrations.borrow_mut()),
+            reference_owners: std::mem::take(&mut *self.roots.reference_owners.borrow_mut()),
+        };
+        // Restore the origin's TLS while it is still on that thread. Empty vectors
+        // leave no registrations or pending-owner counts for Scope::drop to release.
+        drop(self);
+        detached
+    }
+}
+
+/// Exact owned tokens; the shared publication protocol supplies the heap borrow
+/// for their eventual cleanup. This private type never grants payload access.
+pub(crate) struct OwnedTokens {
+    registrations: Vec<Registration>,
+    reference_owners: Vec<Arc<crate::weak::WeakSlot>>,
+}
+
+impl OwnedTokens {
+    pub(crate) fn attach(self, collector: &GarbageCollector) -> Detached<'_> {
+        Detached {
+            collector,
+            registrations: self.registrations,
+            reference_owners: self.reference_owners,
+        }
+    }
+}
+
+impl<'gc> Detached<'gc> {
+    /// A leaf transfer must not discard an enclosing constructor's protection.
+    #[cfg(feature = "experimental-canonical-leaves")]
+    pub(crate) fn is_empty(&self) -> bool {
+        self.registrations.is_empty() && self.reference_owners.is_empty()
+    }
+
+    pub(crate) fn take_owned(&mut self) -> OwnedTokens {
+        OwnedTokens {
+            registrations: std::mem::take(&mut self.registrations),
+            reference_owners: std::mem::take(&mut self.reference_owners),
+        }
+    }
+
+    /// Only an entered scope owns captured roots. An absent leaf scope neither
+    /// installs nor restores TLS and needs no `RefCell` extraction.
+    pub(crate) fn from_scope(
+        collector: &'gc GarbageCollector,
+        scope: Option<Scope<'_, 'gc>>,
+    ) -> Self {
+        scope.map_or_else(
+            || Self {
+                collector,
+                registrations: Vec::new(),
+                reference_owners: Vec::new(),
+            },
+            Scope::detach,
+        )
+    }
+
+    pub(crate) fn belongs_to(&self, collector: &GarbageCollector) -> bool {
+        std::ptr::eq(self.collector, collector)
+    }
+
+    pub(crate) fn collector(&self) -> &'gc GarbageCollector {
+        self.collector
+    }
+
+    /// Binding needs the exact construction batch, not the helper's current scope.
+    pub(crate) fn publish_reference_owner(&self, metadata: &crate::metadata::ObjectMetadata) {
+        for slot in &self.reference_owners {
+            let _decision = slot.decision();
+            if slot.owner.load(Ordering::Acquire) == metadata.ptr().0 {
+                slot.bind_owner(Some(metadata.id));
+            }
+        }
+    }
+}
+
+impl Drop for Detached<'_> {
+    fn drop(&mut self) {
+        for slot in self.reference_owners.drain(..) {
+            let _decision = slot.decision();
+            slot.unpublished_owners.fetch_sub(1, Ordering::Release);
+        }
+        for registration in self.registrations.drain(..) {
+            self.collector.remove_detached_root(&registration);
+        }
+    }
+}
+
+impl Drop for Scope<'_, '_> {
+    fn drop(&mut self) {
+        CURRENT.set(self.roots.previous.get());
+        for slot in self.roots.reference_owners.borrow_mut().drain(..) {
+            let _decision = slot.decision();
+            slot.unpublished_owners.fetch_sub(1, Ordering::Release);
+        }
+        let mut registrations = std::mem::take(&mut *self.roots.registrations.borrow_mut());
+        if !registrations.is_empty() && !adopt_batch(self.roots.collector, &mut registrations) {
+            // No matching enclosing constructor adopted the batch. Cleanup owns
+            // these exact tokens and needs no further construction-TLS lookup.
+            // Deletion barriers and slot reuse retain their existing admission.
+            for id in registrations {
+                self.roots.collector.remove_detached_root(&id);
+            }
+        }
+    }
+}
+
+/// Called between root removal and its deletion barrier, under publication read
+/// admission. A replacement registration closes that gap before admission ends.
+/// Each replacement has a fresh ID; repeated removals cannot alias its cleanup.
+pub(crate) fn retain(collector: &GarbageCollector, address: usize) {
+    with_roots(collector, |roots| {
+        if let Some(id) = collector.retain_construction_root(address) {
+            roots
+                .registrations
+                .borrow_mut()
+                .push(Registration::Tree(id));
+        }
+    });
+}
+
+/// The last owning handle transfers its existing registration rather than
+/// removing/reinserting it. The registration stays visible throughout the hook.
+pub(crate) fn defer_owned(collector: &GarbageCollector, id: &Registration) -> bool {
+    with_roots(collector, |roots| {
+        roots.registrations.borrow_mut().push(id.clone());
+    })
+}
+
+/// Move ownership once, including context/page owners. An empty destination can
+/// reuse the complete vector backing instead of allocating and cloning each token.
+/// Only synchronous scope exit adopts into TLS; detached cleanup never does.
+fn adopt_batch(collector: &GarbageCollector, registrations: &mut Vec<Registration>) -> bool {
+    with_roots(collector, |roots| {
+        let mut destination = roots.registrations.borrow_mut();
+        if destination.is_empty() {
+            *destination = std::mem::take(registrations);
+        } else {
+            destination.append(registrations);
+        }
+    })
+}
+
+/// An unpublished Reference owner cannot yet participate in reference processing
+/// or queue delivery. Root its eligible referent before publishing a pending
+/// count, so collectors can skip this slot and finish while the hook is stalled.
+/// The caller holds short publication admission and the slot's decision lock
+/// (or has not registered the slot yet). Neither is held across user callbacks.
+pub(crate) fn protect_reference_owner(
+    collector: &GarbageCollector,
+    slot: &Arc<crate::weak::WeakSlot>,
+) {
+    with_roots(collector, |roots| {
+        if roots
+            .reference_owners
+            .borrow()
+            .iter()
+            .any(|existing| Arc::ptr_eq(existing, slot))
+        {
+            return;
+        }
+        // set_owner holds the slot decision lock. Record ownership before
+        // publishing the count so allocation unwind cannot strand a reservation.
+        let pending = slot.unpublished_owners.load(Ordering::Acquire);
+        assert!(
+            pending < usize::MAX,
+            "conditional owner publication count exhausted"
+        );
+        if let Some(id) = collector.retain_construction_referent(slot) {
+            roots
+                .registrations
+                .borrow_mut()
+                .push(Registration::Tree(id));
+        }
+        roots.reference_owners.borrow_mut().push(slot.clone());
+        slot.unpublished_owners
+            .store(pending + 1, Ordering::Release);
+    });
+}
+
+fn with_roots(collector: &GarbageCollector, operation: impl FnOnce(&Roots<'_>)) -> bool {
+    let mut current = CURRENT.get();
+    while !current.is_null() {
+        // SAFETY: enter borrows the stack Roots until Scope::drop restores the
+        // previous pointer. Scopes cannot migrate, and nested scopes keep every
+        // predecessor alive. This reference never escapes this synchronous call.
+        let roots = unsafe { &*current.cast::<Roots<'_>>() };
+        if std::ptr::eq(roots.collector, collector) {
+            operation(roots);
+            return true;
+        }
+        current = roots.previous.get();
+    }
+    false
+}
+
+#[cfg(test)]
+#[path = "construction_tests.rs"]
+mod tests;

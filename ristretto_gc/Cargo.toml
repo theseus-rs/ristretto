@@ -13,22 +13,84 @@ version.workspace = true
 [lints]
 workspace = true
 
+[features]
+# Linux-only bounded publication-gate evidence; not complete pause qualification.
+experimental-pause-recorder = []
+# Catalog migration prototype; measured overhead currently rejects default use.
+experimental-identity-index = []
+# Compatibility alias: complete-graph projection coverage is always enabled.
+experimental-trace-projections = []
+# Concrete leaf ownership adapter; no public allocation policy selects it yet.
+experimental-canonical-leaves = []
+# Explicit incremental caller API; legacy VM/backend selection is unchanged.
+experimental-canonical-runtime = ["experimental-canonical-leaves"]
+# Separate allocator-order instrumentation; never used for timing builds.
+experimental-canonical-audit = ["experimental-canonical-leaves"]
+
+# Fixed-capacity service diagnostics; this does not certify pause coverage.
+experimental-canonical-service = []
+
 [dependencies]
-dashmap = { workspace = true }
+arc-swap = { workspace = true }
+once_cell = { workspace = true }
+portable-atomic = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+triomphe = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-dashmap = { workspace = true, features = ["rayon"] }
 parking_lot = { workspace = true }
-rayon = { workspace = true }
-sysinfo = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+loom = { workspace = true }
 
 [dev-dependencies]
 test-log = { workspace = true, features = ["trace"] }
 
-[features]
-experimental-canonical-runtime = []
+[[example]]
+name = "wasm_smoke"
+crate-type = ["cdylib"]
 
-[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
-loom = "=0.7.2"
+[[example]]
+name = "gc_browser"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "leaf_lifecycle"
+required-features = ["experimental-canonical-leaves"]
+
+[[example]]
+name = "leaf_lifecycle_counts"
+required-features = ["experimental-canonical-leaves"]
+
+[[example]]
+name = "leaf_contention"
+required-features = ["experimental-canonical-leaves"]
+
+[[example]]
+name = "graph_lifecycle"
+required-features = ["experimental-canonical-leaves"]
+
+[[example]]
+name = "graph_lifecycle_counts"
+required-features = ["experimental-canonical-leaves"]
+
+[[example]]
+name = "root_aliases"
+required-features = ["experimental-canonical-leaves"]
+
+[[example]]
+name = "root_aliases_counts"
+required-features = ["experimental-canonical-leaves"]
+
+[[example]]
+name = "root_refund_order"
+required-features = ["experimental-canonical-audit"]
+
+[[example]]
+name = "canonical_client_smoke"
+crate-type = ["cdylib"]
+required-features = ["experimental-canonical-runtime"]

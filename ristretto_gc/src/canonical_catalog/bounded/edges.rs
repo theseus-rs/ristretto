@@ -39,6 +39,21 @@ pub struct EdgeObservation {
     pub state: EdgeMembership,
     pub removal_requested: bool,
 }
+impl EdgeObservation {
+    /// Copy the observed target identity for a later checked root creation.
+    /// This key grants no ownership or payload access. Root creation validates
+    /// its exact generation, and activation revalidates the source edge.
+    pub fn target_key(&self) -> Result<Option<RecordKey>, RequestError> {
+        let EdgeMembership::Live(state) = self.state else {
+            return Err(RequestError::Conflict);
+        };
+        Ok(state.target.map(|target| RecordKey {
+            catalog: self.key.catalog,
+            slot: target.slot,
+            identity: target.identity,
+        }))
+    }
+}
 /// A temporary external creation owner, never a payload field. Publication can
 /// transfer it into a non-owning `EdgeKey`; otherwise `Drop` requests removal.
 pub struct EdgeHandle<R: Payload = ()> {

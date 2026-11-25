@@ -1,13 +1,15 @@
-//! Opt-in type authority for reference-free payloads; ordinary Trace stays safe.
+//! Opt-in type authority for reference-free payloads; independent of ordinary Trace.
+#[cfg(test)]
+use crate::Gc;
 use crate::private_allocation::Allocation;
-use crate::{Error, GarbageCollector, Gc, Trace};
+use crate::{Error, GarbageCollector, Trace};
 use std::any::TypeId;
 use std::marker::PhantomData;
 use std::sync::Weak;
 
 /// An audited, type-invariant certificate for catalog-owned graph payloads.
 ///
-/// Ordinary implementations of [`Trace`] remain safe and uncertified. Returning
+/// Implementing [`Trace`] alone leaves a type uncertified. Returning
 /// `false` from a tracing hint alone does not grant this authority.
 ///
 /// ```compile_fail
@@ -18,6 +20,19 @@ use std::sync::Weak;
 pub struct CanonicalPayload<T>(PhantomData<fn(T) -> T>);
 
 impl<T> CanonicalPayload<T> {
+    /// Inline bytes and separately owned backing reserved by the canonical adapter.
+    ///
+    /// # Errors
+    /// Returns an allocation error when the total cannot be represented.
+    pub fn allocation_size(value: &T) -> crate::Result<usize>
+    where
+        T: Trace,
+    {
+        size_of::<T>()
+            .checked_add(value.external_size())
+            .ok_or(Error::OutOfMemory)
+    }
+
     /// Certifies every value of exactly T, including values after interior mutation.
     ///
     /// # Safety
@@ -58,9 +73,9 @@ impl PreparedPayload {
         {
             return Err(PrepareError::Unsupported);
         }
-        let bytes = Gc::allocation_size(&value).map_err(PrepareError::Heap)?;
+        let bytes = CanonicalPayload::allocation_size(&value).map_err(PrepareError::Heap)?;
         let reservation = collector
-            .reserve_exact_bytes(bytes)
+            .reserve_private_bytes(bytes)
             .map_err(PrepareError::Heap)?;
         let (allocation, _) = Allocation::new(value, reservation).map_err(PrepareError::Heap)?;
         Ok(Self {

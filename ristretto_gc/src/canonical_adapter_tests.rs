@@ -74,7 +74,8 @@ fn wrapper_and_participant_reservations_are_admitted_before_use() {
 }
 
 struct Counted(Arc<AtomicUsize>);
-impl Trace for Counted {
+// SAFETY: this fixture has no managed edges and requires no tracing.
+unsafe impl Trace for Counted {
     fn trace(&self, _: &GarbageCollector) {}
 
     fn may_contain_gc_references() -> bool {
@@ -172,7 +173,8 @@ fn catalog_root_checks_payload_type_before_borrow() {
 #[test]
 fn unproven_or_finalizer_payload_never_enters_catalog() {
     struct Finalized;
-    impl Trace for Finalized {
+    // SAFETY: this fixture has no managed edges and requires no tracing.
+    unsafe impl Trace for Finalized {
         fn trace(&self, _: &GarbageCollector) {}
     }
     impl crate::Finalize for Finalized {

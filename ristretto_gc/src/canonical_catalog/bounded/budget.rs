@@ -136,6 +136,8 @@ impl Charge {
 }
 impl Drop for Charge {
     fn drop(&mut self) {
+        #[cfg(feature = "experimental-canonical-audit")]
+        crate::canonical_catalog::audit::refunded(self.bytes);
         let old = self.owner.used.fetch_sub(self.bytes, Ordering::Release);
         debug_assert!(old >= self.bytes, "duplicate budget refund");
     }

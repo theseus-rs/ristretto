@@ -7,7 +7,7 @@ struct Value {
     drops: Arc<AtomicUsize>,
 }
 // SAFETY: no payload managed references; graph edges exist only in the inventory.
-impl Trace for Value {
+unsafe impl Trace for Value {
     fn canonical_payload() -> Option<crate::CanonicalPayload<Self>> {
         // SAFETY: only scalar data and a host counter; managed edges are in the catalog.
         Some(unsafe { crate::CanonicalPayload::new() })
@@ -1119,4 +1119,47 @@ fn passive_observation_primary_mapping_is_full_only_checked_and_conservative() {
             ));
         }
     }
+}
+
+#[test]
+fn a_parked_child_read_cannot_acquire_a_replacement_in_the_old_target_slot() {
+    let gc = GarbageCollector::new();
+    let caps = Capacities::derive(2, 2, 1)
+        .unwrap()
+        .with_roots(8)
+        .unwrap()
+        .with_edges(2)
+        .unwrap();
+    let budget = Budget::new(GraphFootprint::new(caps, 1).unwrap().total());
+    let runtime = GraphRuntime::new(&gc, caps, 1, &budget).unwrap();
+    let drops = Arc::new(AtomicUsize::new(0));
+    let mut reader = runtime.mutator().unwrap();
+    let mut writer = runtime.mutator().unwrap();
+    let mut helper = runtime.maintenance().unwrap();
+    let source = alloc(&mut writer, &mut helper, &drops, 1);
+    let first = alloc(&mut writer, &mut helper, &drops, 2);
+    let old_key = first.root.observe().target;
+    write(&mut writer, &mut helper, &source, Some(&first));
+    let mut read = reader.child::<Value, Value>(&source, 0).unwrap();
+    assert!(read.poll().unwrap().is_none());
+    write(&mut writer, &mut helper, &source, None);
+    drop(first);
+    collect(&mut helper, &drops, 1);
+    let replacement = alloc(&mut writer, &mut helper, &drops, 3);
+    let new_key = replacement.root.observe().target;
+    assert_eq!(new_key.slot(), old_key.slot());
+    assert_ne!(new_key.identity(), old_key.identity());
+
+    let completed = (0..1000).find_map(|_| {
+        let value = read.poll().unwrap();
+        helper.poll().unwrap();
+        value
+    });
+    assert!(matches!(completed, Some(GraphReadValue::Null)));
+    drop(read);
+    assert_eq!(runtime.borrow(&replacement).unwrap().identity, 3);
+    drop((replacement, source));
+    collect(&mut helper, &drops, 3);
+    drop((reader, writer, helper, runtime));
+    assert_eq!(budget.used(), 0);
 }

@@ -29,7 +29,9 @@ impl Drop for TestObject {
     }
 }
 
-impl Trace for TestObject {
+// SAFETY: this fixture contains no outgoing GC references.
+#[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+unsafe impl Trace for TestObject {
     fn trace(&self, _collector: &GarbageCollector) {
         // No GC references to trace
     }
@@ -70,7 +72,9 @@ impl Finalize for TestObjectWithFinalizer {
     }
 }
 
-impl Trace for TestObjectWithFinalizer {
+// SAFETY: this fixture contains no outgoing GC references.
+#[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+unsafe impl Trace for TestObjectWithFinalizer {
     fn trace(&self, _collector: &GarbageCollector) {
         // No GC references to trace
     }

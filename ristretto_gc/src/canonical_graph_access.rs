@@ -1,7 +1,7 @@
 //! Root-borrowing graph operations. Copied identities never expose payloads.
 use super::{
-    EdgeCommand, EdgeKey, EdgeMembership, GraphError, GraphMutator, GraphReadValue, GraphRoot,
-    LeafRecord, PhantomData, PreparedRoot, Progress, RequestError, RootHandle,
+    EdgeCommand, EdgeKey, GraphError, GraphMutator, GraphReadValue, GraphRoot, LeafRecord,
+    PhantomData, PreparedRoot, Progress, RequestError, RootHandle,
 };
 use crate::canonical_catalog as gc_catalog;
 use gc_catalog::bounded::RecordKey;
@@ -40,7 +40,6 @@ impl<'gc> GraphMutator<'gc> {
             index,
             stage: ReadStage::Observe,
             edge: None,
-            target: None,
             child: None,
             finished: false,
             value: PhantomData,
@@ -112,8 +111,7 @@ impl Drop for GraphWrite<'_, '_> {
 #[derive(Clone, Copy)]
 enum ReadStage {
     Observe,
-    Target(gc_catalog::reference::ObjectKey),
-    Root,
+    Root(RecordKey),
     Creating,
     Activate,
     Activating,
@@ -124,7 +122,6 @@ pub(in crate::canonical_adapter) struct GraphRead<'a, 'gc, T> {
     index: usize,
     stage: ReadStage,
     edge: Option<EdgeKey>,
-    target: Option<RecordKey>,
     child: Option<RootHandle<LeafRecord>>,
     finished: bool,
     value: PhantomData<T>,
@@ -152,12 +149,11 @@ impl<T: 'static> GraphRead<'_, '_, T> {
         match self.stage {
             ReadStage::Observe => match self.mutator.observe(self.source, self.index) {
                 Ok(observed) => {
-                    let EdgeMembership::Live(state) = observed.state else {
-                        return Err(GraphError::Protocol);
-                    };
                     self.edge = Some(observed.key);
-                    if let Some(target) = state.target {
-                        self.stage = ReadStage::Target(target);
+                    if let Some(target) = observed.target_key().map_err(GraphError::Catalog)? {
+                        // Root creation validates the exact slot and identity.
+                        // Activation then rechecks the edge under its controller.
+                        self.stage = ReadStage::Root(target);
                     } else {
                         self.finished = true;
                         return Ok(Some(GraphReadValue::Null));
@@ -166,17 +162,7 @@ impl<T: 'static> GraphRead<'_, '_, T> {
                 Err(RequestError::Contended) => {}
                 Err(e) => return Err(GraphError::Catalog(e)),
             },
-            ReadStage::Target(target) => match self.mutator.worker.discover(target.slot) {
-                Ok(Some(record)) if record.key.identity() == target.identity => {
-                    self.target = Some(record.key);
-                    self.stage = ReadStage::Root;
-                }
-                Ok(_) => self.stage = ReadStage::Observe,
-                Err(RequestError::Contended) => {}
-                Err(e) => return Err(GraphError::Catalog(e)),
-            },
-            ReadStage::Root => {
-                let target = self.target.ok_or(GraphError::Protocol)?;
+            ReadStage::Root(target) => {
                 match self
                     .mutator
                     .worker

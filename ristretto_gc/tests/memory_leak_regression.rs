@@ -63,7 +63,9 @@ impl Drop for DropTracker {
     }
 }
 
-impl Trace for DropTracker {
+// SAFETY: this fixture contains no outgoing GC references.
+#[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+unsafe impl Trace for DropTracker {
     fn trace(&self, _collector: &GarbageCollector) {}
 }
 
@@ -100,7 +102,9 @@ impl Drop for LargeObject {
     }
 }
 
-impl Trace for LargeObject {
+// SAFETY: this fixture contains no outgoing GC references.
+#[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+unsafe impl Trace for LargeObject {
     fn trace(&self, _collector: &GarbageCollector) {}
 }
 
@@ -138,7 +142,9 @@ impl Finalize for FinalizerTracker {
     }
 }
 
-impl Trace for FinalizerTracker {
+// SAFETY: this fixture contains no outgoing GC references.
+#[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+unsafe impl Trace for FinalizerTracker {
     fn trace(&self, _collector: &GarbageCollector) {}
 }
 
@@ -320,7 +326,9 @@ fn test_memory_stable_across_cycles() {
                         self.count.fetch_add(1, Ordering::Relaxed);
                     }
                 }
-                impl Trace for Tracked {
+                // SAFETY: this fixture contains no outgoing GC references.
+                #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+                unsafe impl Trace for Tracked {
                     fn trace(&self, _collector: &GarbageCollector) {}
                 }
                 Gc::new(
@@ -374,7 +382,9 @@ fn test_all_objects_dropped_exactly_once() {
         }
     }
 
-    impl Trace for Counted {
+    // SAFETY: this fixture contains no outgoing GC references.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for Counted {
         fn trace(&self, _collector: &GarbageCollector) {}
     }
 
@@ -543,7 +553,9 @@ fn test_concurrent_allocation_during_sweep() {
                     self.drop_count.fetch_add(1, Ordering::Relaxed);
                 }
             }
-            impl Trace for SweepSurvivor {
+            // SAFETY: this fixture contains no outgoing GC references.
+            #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+            unsafe impl Trace for SweepSurvivor {
                 fn trace(&self, _collector: &GarbageCollector) {}
             }
             Gc::new(
@@ -603,22 +615,26 @@ fn test_concurrent_allocation_during_sweep() {
 /// the collector must break the cycle and free both.
 #[test]
 fn test_cyclic_object_graph_collection() {
-    use std::sync::Mutex;
+    use ristretto_gc::cell::RwLock;
 
     #[derive(Debug)]
     struct Node {
         _name: String,
-        next: Mutex<Option<Gc<Node>>>,
+        next: Option<Gc<RwLock<Node>>>,
         dropped: Arc<AtomicBool>,
     }
 
-    impl Trace for Node {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for Node {
+        fn root(&mut self) {
+            self.next.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.next, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
-            if let Ok(guard) = self.next.lock()
-                && let Some(ref gc_next) = *guard
-            {
-                gc_next.trace(collector);
-            }
+            self.next.trace(collector);
         }
     }
 
@@ -637,26 +653,26 @@ fn test_cyclic_object_graph_collection() {
     // Create two nodes
     let guard_a = Gc::new(
         &collector,
-        Node {
+        RwLock::new(Node {
             _name: "A".to_string(),
-            next: Mutex::new(None),
+            next: None,
             dropped: dropped_a.clone(),
-        },
+        }),
     );
     let guard_b = Gc::new(
         &collector,
-        Node {
+        RwLock::new(Node {
             _name: "B".to_string(),
-            next: Mutex::new(None),
+            next: None,
             dropped: dropped_b.clone(),
-        },
+        }),
     );
 
     // Wire up cycle: A -> B -> A
-    let gc_a: Gc<Node> = guard_a.clone_gc();
-    let gc_b: Gc<Node> = guard_b.clone_gc();
-    *gc_a.next.lock().unwrap() = Some(gc_b.clone());
-    *gc_b.next.lock().unwrap() = Some(gc_a.clone());
+    let gc_a: Gc<RwLock<Node>> = guard_a.clone_gc();
+    let gc_b: Gc<RwLock<Node>> = guard_b.clone_gc();
+    gc_a.write().next = Some(gc_b.clone());
+    gc_b.write().next = Some(gc_a.clone());
 
     // Verify both survive when rooted
     collector.collect();
@@ -676,6 +692,8 @@ fn test_cyclic_object_graph_collection() {
         !dropped_b.load(Ordering::Acquire),
         "rooted node B must survive"
     );
+
+    drop((gc_a, gc_b));
 
     // Drop root guards; both nodes are now only reachable through each other (cycle)
     drop(guard_a);
@@ -698,22 +716,26 @@ fn test_cyclic_object_graph_collection() {
 /// the last root is dropped.
 #[test]
 fn test_rooted_cyclic_graph_partial_unroot() {
-    use std::sync::Mutex;
+    use ristretto_gc::cell::RwLock;
 
     #[derive(Debug)]
     struct CycleNode {
         _id: usize,
-        next: Mutex<Option<Gc<CycleNode>>>,
+        next: Option<Gc<RwLock<CycleNode>>>,
         dropped: Arc<AtomicBool>,
     }
 
-    impl Trace for CycleNode {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for CycleNode {
+        fn root(&mut self) {
+            self.next.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.next, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
-            if let Ok(guard) = self.next.lock()
-                && let Some(ref gc_next) = *guard
-            {
-                gc_next.trace(collector);
-            }
+            self.next.trace(collector);
         }
     }
 
@@ -733,36 +755,38 @@ fn test_rooted_cyclic_graph_partial_unroot() {
     // Create A -> B -> C -> A cycle
     let guard_a = Gc::new(
         &collector,
-        CycleNode {
+        RwLock::new(CycleNode {
             _id: 0,
-            next: Mutex::new(None),
+            next: None,
             dropped: dropped_a.clone(),
-        },
+        }),
     );
     let guard_b = Gc::new(
         &collector,
-        CycleNode {
+        RwLock::new(CycleNode {
             _id: 1,
-            next: Mutex::new(None),
+            next: None,
             dropped: dropped_b.clone(),
-        },
+        }),
     );
     let guard_c = Gc::new(
         &collector,
-        CycleNode {
+        RwLock::new(CycleNode {
             _id: 2,
-            next: Mutex::new(None),
+            next: None,
             dropped: dropped_c.clone(),
-        },
+        }),
     );
 
-    let gc_a: Gc<CycleNode> = guard_a.clone_gc();
-    let gc_b: Gc<CycleNode> = guard_b.clone_gc();
-    let gc_c: Gc<CycleNode> = guard_c.clone_gc();
+    let gc_a: Gc<RwLock<CycleNode>> = guard_a.clone_gc();
+    let gc_b: Gc<RwLock<CycleNode>> = guard_b.clone_gc();
+    let gc_c: Gc<RwLock<CycleNode>> = guard_c.clone_gc();
 
-    *gc_a.next.lock().unwrap() = Some(gc_b.clone());
-    *gc_b.next.lock().unwrap() = Some(gc_c.clone());
-    *gc_c.next.lock().unwrap() = Some(gc_a.clone());
+    gc_a.write().next = Some(gc_b.clone());
+    gc_b.write().next = Some(gc_c.clone());
+    gc_c.write().next = Some(gc_a.clone());
+
+    drop((gc_a, gc_b, gc_c));
 
     // Drop roots for B and C but keep A rooted
     drop(guard_b);
@@ -863,7 +887,9 @@ fn test_sweep_actively_frees_memory() {
                         self.count.fetch_add(1, Ordering::Relaxed);
                     }
                 }
-                impl Trace for ShortLived {
+                // SAFETY: this fixture contains no outgoing GC references.
+                #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+                unsafe impl Trace for ShortLived {
                     fn trace(&self, _collector: &GarbageCollector) {}
                 }
                 Gc::new(

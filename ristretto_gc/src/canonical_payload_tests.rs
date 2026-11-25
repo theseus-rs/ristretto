@@ -16,7 +16,8 @@ fn heap(limit: usize) -> Arc<GarbageCollector> {
 }
 
 struct Uncertified;
-impl Trace for Uncertified {
+// SAFETY: this fixture has no managed edges and requires no tracing.
+unsafe impl Trace for Uncertified {
     fn trace(&self, _: &GarbageCollector) {}
 
     fn may_contain_gc_references() -> bool {
@@ -47,13 +48,19 @@ fn scalar_proof_preserves_exact_type_and_heap_identity() -> crate::Result<()> {
     assert!(payload.belongs_to(&collector));
     assert!(!payload.belongs_to(&foreign));
     assert_eq!(collector.managed_bytes(), size_of::<u64>());
+    let snapshot = collector.statistics()?;
+    assert_eq!(snapshot.bytes_managed, size_of::<u64>());
+    assert_eq!(snapshot.bytes_live, 0);
+    assert_eq!(snapshot.bytes_allocated, 0);
+    assert_eq!(snapshot.allocation_debt, 0);
     drop(payload);
     assert_eq!(collector.managed_bytes(), 0);
     Ok(())
 }
 
 struct Backing(Box<[u8]>);
-impl Trace for Backing {
+// SAFETY: this fixture has no managed edges and requires no tracing.
+unsafe impl Trace for Backing {
     fn trace(&self, _: &GarbageCollector) {}
 
     fn may_contain_gc_references() -> bool {
@@ -90,7 +97,8 @@ struct Owner;
 impl HeapOwner for Owner {
     fn release_heap_roots(&self) {}
 }
-impl Trace for Owner {
+// SAFETY: this fixture has no managed edges and requires no tracing.
+unsafe impl Trace for Owner {
     fn trace(&self, _: &GarbageCollector) {}
 
     fn may_contain_gc_references() -> bool {

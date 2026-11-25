@@ -2,7 +2,6 @@ use crate::Finalize;
 use crate::collector::{GarbageCollector, Trace};
 use crate::error::{Error, Result};
 use crate::pointers::SafePtr;
-use crate::private_allocation::Allocation;
 use crate::root_guard::GcRootGuard;
 use std::borrow::Borrow;
 use std::cmp::Ordering;
@@ -11,61 +10,136 @@ use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::ops::Deref;
-use std::ptr::{self, NonNull};
-use std::sync::Arc;
+use std::ptr::NonNull;
+use std::sync::{Arc, Weak};
+use triomphe::Arc as RootArc;
+
+// Nonempty values use their own layout. An empty value still needs a distinct
+// address because ordinary root and object registries use that address as a key.
+#[repr(transparent)]
+pub(crate) struct Allocation<T> {
+    pub(crate) value: T,
+}
+
+impl<T> Allocation<T> {
+    pub(crate) fn new(value: T) -> Self {
+        Self { value }
+    }
+
+    pub(crate) fn layout() -> std::alloc::Layout {
+        if size_of::<T>() == 0 {
+            std::alloc::Layout::new::<(T, u8)>()
+        } else {
+            std::alloc::Layout::new::<T>()
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct OwnedRoot {
+    pub(crate) collector: Arc<GarbageCollector>,
+    pub(crate) id: crate::roots::Registration,
+    pub(crate) target: crate::ObjectId,
+}
+
+impl Drop for OwnedRoot {
+    fn drop(&mut self) {
+        if !crate::construction::defer_owned(&self.collector, &self.id) {
+            self.collector.remove_owned_root(&self.id);
+        }
+    }
+}
+
+/// A registered root needs no shared-owner allocation to protect its graph.
+/// Keep its removal guard on the stack until admission has ended. Cancellation
+/// drops the exact registration; successful completion transfers it unchanged.
+pub(crate) struct PreparedRoot<T> {
+    ptr: NonNull<T>,
+    registration: OwnedRoot,
+}
+
+impl<T: Trace> PreparedRoot<T> {
+    pub(crate) fn finish(self) -> Gc<T> {
+        Gc {
+            id: self.registration.target,
+            ptr: self.ptr,
+            phantom: PhantomData,
+            owner: Owner::Root(RootArc::new(self.registration)),
+        }
+    }
+}
+
+// Prepared publication owns metadata and graph protection across thread handoff.
+#[path = "publication_owner.rs"]
+mod publication_owner;
+use publication_owner::Publication;
+
+/// An owning registration already keeps the collector alive. Store exactly one
+/// ownership mode so cloning an owning handle touches only its registration's
+/// reference count. Heap edges retain weak collector access for deletion barriers.
+#[derive(Clone)]
+enum Owner {
+    Edge(Weak<GarbageCollector>),
+    Root(RootArc<OwnedRoot>),
+}
 
 /// A garbage collected pointer type for `T`.
 ///
 /// `Gc<T>` provides shared ownership of a value of type `T`, allocated in the heap. Unlike
 /// `Arc<T>`, `Gc<T>` can automatically detect and collect circular references using a low-pause,
-/// parallel, concurrent, garbage collector with reachability analysis.
+/// generational, concurrent collector with reachability analysis.
 pub struct Gc<T> {
+    id: crate::ObjectId,
     pub(crate) ptr: NonNull<T>,
     pub(crate) phantom: PhantomData<T>,
+    owner: Owner,
 }
 
 impl<T> Gc<T> {
-    /// Inline payload bytes plus explicitly reported owned external backing.
-    /// Canonical allocation reserves this amount; legacy constructors retain
-    /// their existing inline-only accounting.
-    /// # Errors
-    /// Returns [`Error::OutOfMemory`] if the reported total overflows.
-    pub fn allocation_size(data: &T) -> Result<usize>
+    /// Own descriptor storage and logical credit until registration commits.
+    #[expect(clippy::expect_used, reason = "legacy infallible allocation API")]
+    fn allocate(
+        collector: &GarbageCollector,
+        mut data: T,
+    ) -> (
+        Self,
+        crate::allocation::Initialized<Allocation<T>>,
+        crate::collector::AllocationReservation<'_>,
+    )
     where
         T: Trace,
     {
-        size_of::<T>()
-            .checked_add(data.external_size())
-            .ok_or(Error::OutOfMemory)
-    }
-
-    /// Heap-allocates `data`, records the allocation with the collector, and returns
-    /// a `Gc<T>` wrapping the raw pointer along with the pointer and size needed
-    /// for subsequent registration.
-    fn allocate(collector: &GarbageCollector, data: T) -> Result<(Self, Allocation)>
-    where
-        T: Send + Sync,
-    {
-        let size = size_of::<T>();
-        let reservation = collector.reserve_exact_bytes(size)?;
-        let (allocation, ptr) = Allocation::new(data, reservation)?;
-
+        collector
+            .prepare_payload(&mut data)
+            .expect("region heap exhausted; use Gc::try_new");
+        let size = Self::allocation_size(&data).expect("managed allocation size overflow");
+        let id = crate::ObjectId::allocate().expect("object identity exhausted");
+        let reservation = collector
+            .reserve_exact_bytes(size)
+            .expect("managed heap limit exhausted; use Gc::try_new for fallible allocation");
+        let storage = crate::allocation::Storage::global(Allocation::<T>::layout())
+            .expect("descriptor allocation failed; use Gc::try_new");
+        // SAFETY: storage has the complete descriptor's size and alignment.
+        let allocation =
+            unsafe { crate::allocation::Initialized::new(storage, Allocation::new(data)) };
+        // SAFETY: this initialized allocation is still exclusively owned. Both its
+        // storage and logical reservation unwind if attachment or metadata hooks panic.
+        unsafe {
+            (*allocation.ptr())
+                .value
+                .attach(collector.trace_owner(allocation.ptr() as usize));
+        }
+        // Derive the published pointer after attachment's exclusive borrow ends.
+        let ptr = NonNull::new(allocation.ptr())
+            .expect("initialized descriptor is non-null")
+            .cast::<T>();
         let gc = Self {
+            id,
             ptr,
             phantom: PhantomData,
+            owner: Owner::Edge(collector.weak()),
         };
-        Ok((gc, allocation))
-    }
-
-    #[expect(
-        clippy::expect_used,
-        reason = "the existing infallible API panics on budget exhaustion"
-    )]
-    fn allocate_infallible(collector: &GarbageCollector, data: T) -> (Self, Allocation)
-    where
-        T: Send + Sync,
-    {
-        Self::allocate(collector, data).expect("managed payload budget exhausted")
+        (gc, allocation, reservation)
     }
 
     /// Constructs a new `Gc<T>` and registers it as a root.
@@ -75,23 +149,208 @@ impl<T> Gc<T> {
     #[expect(clippy::new_ret_no_self)]
     pub fn new(collector: &Arc<GarbageCollector>, data: T) -> GcRootGuard<T>
     where
-        T: Send + Sync + Trace,
+        T: Send + Sync + Trace + 'static,
     {
         Self::with_collector(collector, data)
     }
 
-    /// Allocates and roots a value after reserving its managed payload bytes.
-    ///
+    /// Bytes charged for a value and its exclusively owned backing storage.
     /// # Errors
-    /// Returns [`Error::OutOfMemory`] without allocating when the byte limit is exceeded.
-    pub fn try_new(collector: &Arc<GarbageCollector>, data: T) -> Result<GcRootGuard<T>>
+    /// Returns `OutOfMemory` if the size overflows.
+    pub fn allocation_size(data: &T) -> Result<usize>
     where
-        T: Send + Sync + Trace,
+        T: Trace,
     {
-        let (gc, allocation) = Self::allocate(collector, data)?;
-        let root = collector.create_root_guard(gc);
-        collector.register_object(allocation);
-        Ok(root)
+        Allocation::<T>::layout()
+            .size()
+            .checked_add(data.external_size())
+            .ok_or(Error::OutOfMemory)
+    }
+
+    /// Fallibly allocates and roots a value within the configured managed heap limit.
+    /// Backing storage is charged through `Trace::external_size`.
+    /// # Errors
+    /// Returns `OutOfMemory` for heap-limit exhaustion, size overflow, or allocation failure.
+    pub fn try_new(collector: &Arc<GarbageCollector>, mut data: T) -> Result<GcRootGuard<T>>
+    where
+        T: Send + Sync + Trace + 'static,
+    {
+        for attempt in 0..=2 {
+            match collector.prepare_payload(&mut data) {
+                Ok(()) => break,
+                Err(error) if attempt == 2 || crate::cell::has_guards() => return Err(error),
+                Err(_) => {
+                    collector.recover_allocation()?;
+                }
+            }
+        }
+        Self::publish(collector, data).map_err(|(error, _)| error)
+    }
+
+    /// Attempts preparation and publication once, without running collection.
+    /// # Errors
+    /// Returns the error and unpublished value, allowing the caller to retry after
+    /// releasing locks or awaiting collection. Successful preparation may change
+    /// backing storage even if the later publication reservation fails.
+    pub fn try_new_once(
+        collector: &Arc<GarbageCollector>,
+        mut data: T,
+    ) -> Result<GcRootGuard<T>, (Error, T)>
+    where
+        T: Send + Sync + Trace + 'static,
+    {
+        if let Err(error) = collector.prepare_payload(&mut data) {
+            return Err((error, data));
+        }
+        Self::publish(collector, data)
+    }
+
+    /// Allocates a rooted value, resuming as soon as reclaimed space can be reserved.
+    /// Payload preparation and logical reservation fail after two recovery cycles
+    /// without progress. Physical reclamation consumed by competing allocators
+    /// resets preparation's failure allowance; sustained contention can delay it.
+    /// The unpublished value remains owned by the future across retries and is
+    /// dropped if the future is cancelled. Construction edges must be rooted as
+    /// for the synchronous constructor. No publication lock spans an await.
+    /// # Errors
+    /// Returns the allocation error after bounded recovery, or a collection error.
+    pub async fn try_new_async(
+        collector: &Arc<GarbageCollector>,
+        mut data: T,
+    ) -> Result<GcRootGuard<T>>
+    where
+        T: Send + Sync + Trace + 'static,
+    {
+        if crate::cell::has_guards() {
+            return Err(Error::CollectionPhaseError(
+                "asynchronous publication requires released managed guards".into(),
+            ));
+        }
+        let mut retry = crate::recovery::PhysicalRetry::default();
+        loop {
+            match collector.prepare_payload_async(&mut data).await {
+                Ok(()) => break,
+                Err(error) => {
+                    if !matches!(error, Error::OutOfMemory)
+                        || retry.exhausted(collector)
+                        || crate::cell::has_guards()
+                    {
+                        return Err(error);
+                    }
+                    collector.recover_allocation_async().await?;
+                }
+            }
+        }
+        let size = Self::allocation_size(&data)?;
+        for attempt in 0..=2 {
+            let reservation = collector.reserve_bytes_async(size).await?;
+            match Self::publish_reserved(collector, data, reservation) {
+                Ok(root) => return Ok(root),
+                Err((error, value)) => {
+                    if !matches!(error, Error::OutOfMemory)
+                        || attempt == 2
+                        || crate::cell::has_guards()
+                    {
+                        return Err(error);
+                    }
+                    // Host descriptor allocation can fail even with logical credit.
+                    // Its reservation was refunded before attempting full recovery.
+                    data = value;
+                    collector.recover_allocation_async().await?;
+                }
+            }
+        }
+        Err(Error::OutOfMemory)
+    }
+
+    fn publish(collector: &Arc<GarbageCollector>, data: T) -> Result<GcRootGuard<T>, (Error, T)>
+    where
+        T: Send + Sync + Trace + 'static,
+    {
+        let size = match Self::allocation_size(&data) {
+            Ok(size) => size,
+            Err(error) => return Err((error, data)),
+        };
+        let reservation = match collector.reserve_bytes(size) {
+            Ok(reservation) => reservation,
+            Err(error) => return Err((error, data)),
+        };
+        Self::publish_reserved(collector, data, reservation)
+    }
+
+    fn publish_reserved(
+        collector: &Arc<GarbageCollector>,
+        data: T,
+        reservation: crate::collector::AllocationReservation<'_>,
+    ) -> Result<GcRootGuard<T>, (Error, T)>
+    where
+        T: Send + Sync + Trace + 'static,
+    {
+        Self::prepare_reserved(collector, data, reservation, true)
+            .map(|publication| publication.finish_rooted(collector))
+    }
+
+    /// Prepare unique storage without choosing its publication backend. Keeping
+    /// root installation in Publication preserves cleanup ordering on unwind.
+    fn prepare_reserved<'gc>(
+        collector: &'gc GarbageCollector,
+        data: T,
+        reservation: crate::collector::AllocationReservation<'gc>,
+        rooted: bool,
+    ) -> Result<Publication<'gc, T>, (Error, T)>
+    where
+        T: Send + Sync + Trace + 'static,
+    {
+        let _measurement = collector
+            .diagnostics
+            .descriptor_publication
+            .measure(collector.diagnostics_enabled());
+        let id = match crate::ObjectId::allocate() {
+            Ok(id) => id,
+            Err(error) => return Err((error, data)),
+        };
+        // Hook-driven unrooting transfers to temporary roots until registration.
+        // Allocation and arbitrary hooks do not retain global publication admission.
+        let mut construction = crate::construction::Roots::new(collector);
+        let construction_scope = construction.enter_for::<T>();
+        let layout = Allocation::<T>::layout();
+        let storage = match collector.allocate_descriptor(layout) {
+            Ok(storage) => storage,
+            Err(error) => return Err((error, data)),
+        };
+        // SAFETY: storage was reserved with the complete Allocation<T> layout.
+        let allocation =
+            unsafe { crate::allocation::Initialized::new(storage, Allocation::new(data)) };
+        // SAFETY: the unpublished descriptor remains exclusively owned.
+        unsafe {
+            (*allocation.ptr())
+                .value
+                .attach(collector.trace_owner(allocation.ptr() as usize));
+        }
+        // SAFETY: both storage variants contain a non-null live allocation.
+        let raw = unsafe { NonNull::new_unchecked(allocation.ptr()) };
+        // Derive the published pointer from the allocation after attach's mutable
+        // borrow ends. A pointer reborrowed from `data` before attach is invalidated
+        // by the hook's subsequent exclusive borrow (including for scalar values).
+        let ptr = raw.cast::<T>();
+        let handle = Self {
+            id,
+            ptr,
+            phantom: PhantomData,
+            owner: Owner::Edge(collector.weak()),
+        };
+        // Metadata hooks finish before the initial parent root is installed.
+        // The publication record owns root removal before private storage drop,
+        // with the sealed construction graph retained through payload destruction.
+        let metadata = collector.prepare_allocated_object::<T>(allocation, reservation, id);
+        let publication = Publication::new(
+            collector,
+            handle,
+            metadata,
+            crate::construction::Detached::from_scope(collector, construction_scope),
+            rooted,
+        );
+        Ok(publication)
     }
 
     /// Constructs a new `Gc<T>` without rooting it.
@@ -103,7 +362,7 @@ impl<T> Gc<T> {
     /// will be immediately rooted or stored in a reachable object.
     pub unsafe fn new_unrooted(collector: &GarbageCollector, data: T) -> Self
     where
-        T: Send + Sync,
+        T: Send + Sync + Trace + 'static,
     {
         // Safety: The caller guarantees that the returned Gc<T> will be rooted immediately
         unsafe { Self::with_collector_unrooted(collector, data) }
@@ -112,7 +371,7 @@ impl<T> Gc<T> {
     /// Constructs a new `Gc<T>` with finalization support and registers it as a root.
     pub fn new_with_finalizer(collector: &Arc<GarbageCollector>, data: T) -> GcRootGuard<T>
     where
-        T: Send + Sync + Finalize + Trace,
+        T: Send + Sync + Finalize + Trace + 'static,
     {
         Self::with_collector_and_finalizer(collector, data)
     }
@@ -125,17 +384,24 @@ impl<T> Gc<T> {
     ///
     pub fn with_collector(collector: &Arc<GarbageCollector>, data: T) -> GcRootGuard<T>
     where
-        T: Send + Sync + Trace,
+        T: Send + Sync + Trace + 'static,
     {
-        let (gc, allocation) = Self::allocate_infallible(collector, data);
+        let mut construction = crate::construction::Roots::new(collector);
+        let construction_scope = construction.enter_for::<T>();
+        let (gc, allocation, reservation) = Self::allocate(collector, data);
 
         // Register root BEFORE registering object to prevent race with GC cycle.
         // If the root exists first, any GC cycle will find the root during marking.
         // The object isn't in the tracking map yet, so it can't be swept.
-        let root_guard = collector.create_root_guard(gc);
-
-        collector.register_object(allocation);
-        root_guard
+        let metadata = collector.prepare_allocated_object::<T>(allocation, reservation, gc.id);
+        let publication = Publication::new(
+            collector,
+            gc,
+            metadata,
+            crate::construction::Detached::from_scope(collector, construction_scope),
+            true,
+        );
+        publication.finish_rooted(collector)
     }
 
     /// Constructs a new `Gc<T>` with a specific garbage collector without rooting it.
@@ -146,14 +412,23 @@ impl<T> Gc<T> {
     ///
     /// # Panics
     ///
-    /// if `Box::into_raw` returns a null pointer, which should never happen
+    /// Panics if payload preparation, descriptor allocation, or logical reservation fails.
     pub unsafe fn with_collector_unrooted(collector: &GarbageCollector, data: T) -> Self
     where
-        T: Send + Sync,
+        T: Send + Sync + Trace + 'static,
     {
-        let (gc, allocation) = Self::allocate_infallible(collector, data);
-        collector.register_object(allocation);
-        gc
+        let mut construction = crate::construction::Roots::new(collector);
+        let construction_scope = construction.enter_for::<T>();
+        let (gc, allocation, reservation) = Self::allocate(collector, data);
+        let metadata = collector.prepare_allocated_object::<T>(allocation, reservation, gc.id);
+        let publication = Publication::new(
+            collector,
+            gc,
+            metadata,
+            crate::construction::Detached::from_scope(collector, construction_scope),
+            false,
+        );
+        publication.finish_unrooted(collector)
     }
 
     /// Constructs a new `Gc<T>` with a specific garbage collector and finalization support.
@@ -167,16 +442,23 @@ impl<T> Gc<T> {
         data: T,
     ) -> GcRootGuard<T>
     where
-        T: Send + Sync + Finalize + Trace,
+        T: Send + Sync + Finalize + Trace + 'static,
     {
-        let (gc, allocation) = Self::allocate_infallible(collector, data);
+        let mut construction = crate::construction::Roots::new(collector);
+        let construction_scope = construction.enter_for::<T>();
+        let (gc, allocation, reservation) = Self::allocate(collector, data);
 
         // Register root BEFORE registering object (same rationale as with_collector)
-        let root_guard = collector.create_root_guard(gc);
-
-        // SAFETY: allocate created this exact allocation from T.
-        unsafe { collector.register_object_with_finalizer::<T>(allocation) };
-        root_guard
+        let metadata =
+            collector.prepare_allocated_object_with_finalizer::<T>(allocation, reservation, gc.id);
+        let publication = Publication::new(
+            collector,
+            gc,
+            metadata,
+            crate::construction::Detached::from_scope(collector, construction_scope),
+            true,
+        );
+        publication.finish_rooted(collector)
     }
 
     /// Constructs a new `Gc<T>` with a specific garbage collector and finalization support without
@@ -188,18 +470,76 @@ impl<T> Gc<T> {
     ///
     /// # Panics
     ///
-    /// Panics if `Box::into_raw` returns a null pointer.
+    /// Panics if payload preparation, descriptor allocation, or logical reservation fails.
     pub unsafe fn with_collector_and_finalizer_unrooted(
         collector: &GarbageCollector,
         data: T,
     ) -> Self
     where
-        T: Send + Sync + Finalize,
+        T: Send + Sync + Finalize + Trace + 'static,
     {
-        let (gc, allocation) = Self::allocate_infallible(collector, data);
-        // SAFETY: allocate created this exact allocation from T.
-        unsafe { collector.register_object_with_finalizer::<T>(allocation) };
-        gc
+        let mut construction = crate::construction::Roots::new(collector);
+        let construction_scope = construction.enter_for::<T>();
+        let (gc, allocation, reservation) = Self::allocate(collector, data);
+        let metadata =
+            collector.prepare_allocated_object_with_finalizer::<T>(allocation, reservation, gc.id);
+        let publication = Publication::new(
+            collector,
+            gc,
+            metadata,
+            crate::construction::Detached::from_scope(collector, construction_scope),
+            false,
+        );
+        publication.finish_unrooted(collector)
+    }
+
+    pub(crate) fn collector(&self) -> Weak<GarbageCollector> {
+        match &self.owner {
+            Owner::Edge(collector) => collector.clone(),
+            Owner::Root(root) => Arc::downgrade(&root.collector),
+        }
+    }
+
+    /// Stable identity for managed handles, independent of storage addresses.
+    /// Unassociated unsafe raw wrappers have the sentinel identity zero; resolve them
+    /// through `from_raw_rooted` before using identity-based VM APIs.
+    #[must_use]
+    pub fn identity(&self) -> crate::ObjectId {
+        self.id
+    }
+
+    /// Encodes a stable reference for VM and JIT runtime helpers.
+    #[must_use]
+    pub fn as_handle_i64(&self) -> i64 {
+        self.id.to_i64()
+    }
+
+    /// Resolves and roots a typed identity in this heap.
+    /// # Errors
+    /// Rejects expired, foreign-heap, null, and incorrectly typed identities.
+    pub fn from_handle_rooted(collector: &Arc<GarbageCollector>, handle: i64) -> Result<Self>
+    where
+        T: Trace + 'static,
+    {
+        let expected = crate::ObjectId::from_i64(handle);
+        let address = collector
+            .address_for_identity(expected)
+            .ok_or_else(|| Error::InvalidPointer("unknown object identity".into()))?;
+        // The identity index yields only an address hint. Its lock wait must not
+        // retain phase admission; the expected ID, type and logical eligibility
+        // are all revalidated below before any payload pointer is exposed.
+        let mut reservation = collector.reserve_owned_root(address);
+        let publication = collector.root_publication_guard();
+        let prepared = Self::prepare_conditional_root(
+            collector,
+            i64::try_from(address).map_err(|_| Error::InvalidPointer("address overflow".into()))?,
+            false,
+            Some(expected),
+            &publication,
+            &mut reservation,
+        )?;
+        drop(publication);
+        Ok(prepared.finish())
     }
 
     /// Returns `true` if the two `Gc`s point to the same allocation.
@@ -214,7 +554,7 @@ impl<T> Gc<T> {
     /// will end up pointing to garbage.
     #[must_use]
     pub fn as_ptr(&self) -> *const T {
-        ptr::addr_of!(**self)
+        self.ptr.as_ptr()
     }
 
     /// Returns the raw pointer as an `i64` value suitable for passing through JIT-compiled code.
@@ -241,8 +581,10 @@ impl<T> Gc<T> {
             Error::InvalidPointer("Gc::from_raw received null pointer".to_string())
         })?;
         Ok(Self {
+            id: crate::ObjectId::from_i64(0),
             ptr,
             phantom: PhantomData,
+            owner: Owner::Edge(Weak::new()),
         })
     }
 
@@ -255,7 +597,9 @@ impl<T> Gc<T> {
     /// # Errors
     ///
     /// Returns an error if the pointer is null, negative, or cannot be represented as a pointer.
-    pub fn from_raw_i64(ptr: i64) -> Result<Self> {
+    /// # Safety
+    /// The address must identify a live T whose lifetime is protected by the caller.
+    pub unsafe fn from_raw_i64(ptr: i64) -> Result<Self> {
         let address = usize::try_from(ptr).map_err(|_| {
             Error::InvalidPointer(format!("Gc::from_raw_i64 received negative pointer {ptr}"))
         })?;
@@ -267,8 +611,13 @@ impl<T> Gc<T> {
     /// Makes a mutable reference into the given `Gc`.
     ///
     /// # Safety
-    /// This method is unsafe because it does not check for aliasing.
-    /// The caller must ensure no other references to the data exist.
+    /// The caller must protect this allocation and its graph for the entire
+    /// borrow and exclude all conflicting access, including collector tracing
+    /// and relocation. Restore owning protection before any embedded edge or
+    /// managed cell can escape through this mutable reference. Demotion and
+    /// attachment must use the actual owner, and mutation barriers must be
+    /// published before collector access resumes. This method supplies none of
+    /// those protections; use a managed cell guard for ordinary mutation.
     #[must_use]
     pub unsafe fn get_mut_unchecked(&mut self) -> &mut T {
         // Safety: The caller guarantees no other references exist,
@@ -284,17 +633,247 @@ impl<T> Gc<T> {
         unsafe { self.ptr.as_ref() }
     }
 
+    /// Checks the allocation's associated heap without cloning a weak reference.
+    pub(crate) fn belongs_to(&self, collector: &GarbageCollector) -> bool {
+        let source = match &self.owner {
+            Owner::Root(root) => Arc::as_ptr(&root.collector),
+            Owner::Edge(source) => source.as_ptr(),
+        };
+        std::ptr::eq(source, collector)
+    }
+
+    /// Clones this handle with an owning root, suitable for Rust locals and suspended futures.
+    /// This is equivalent to `Clone::clone`.
+    ///
+    /// # Panics
+    /// Panics if the handle is raw, expired, logically retired, or has a stale identity.
+    #[must_use]
+    #[expect(
+        clippy::expect_used,
+        reason = "cloning rejects unassociated or retired handles"
+    )]
+    pub fn rooted_clone(&self) -> Self {
+        match &self.owner {
+            Owner::Root(root) => Self {
+                id: self.id,
+                ptr: self.ptr,
+                phantom: PhantomData,
+                owner: Owner::Root(root.clone()),
+            },
+            Owner::Edge(owner) => {
+                let collector = owner
+                    .upgrade()
+                    .expect("rooting requires a live managed allocation");
+                let id = collector
+                    .clone_edge_root(self)
+                    .expect("rooting requires a live managed allocation with matching identity");
+                Self {
+                    id: self.id,
+                    ptr: self.ptr,
+                    phantom: PhantomData,
+                    owner: Owner::Root(RootArc::new(OwnedRoot {
+                        collector,
+                        id,
+                        target: self.id,
+                    })),
+                }
+            }
+        }
+    }
+
+    /// Copy a guard's inner handle without acquiring a second registration.
+    ///
+    /// # Safety
+    /// The caller must retain `registration` in the resulting root guard. A
+    /// replaced handle cannot borrow the old target's protection and is rooted
+    /// independently instead.
+    pub(crate) unsafe fn clone_for_guard(&self, registration: &OwnedRoot) -> Self {
+        if self.id == registration.target {
+            Self {
+                id: self.id,
+                ptr: self.ptr,
+                phantom: PhantomData,
+                owner: self.owner.clone(),
+            }
+        } else {
+            self.clone()
+        }
+    }
+
+    /// Shares the guard's registration when it still protects this identity.
+    pub(crate) fn clone_with_registration(&self, registration: RootArc<OwnedRoot>) -> Self {
+        if self.id == registration.target {
+            Self {
+                id: self.id,
+                ptr: self.ptr,
+                phantom: PhantomData,
+                owner: Owner::Root(registration),
+            }
+        } else {
+            self.clone()
+        }
+    }
+
+    pub(crate) fn with_registration(mut self, registration: RootArc<OwnedRoot>) -> Self
+    where
+        T: Trace,
+    {
+        if registration.target == self.id {
+            self.owner = Owner::Root(registration);
+            self
+        } else {
+            // DerefMut on a root guard permits replacing its handle. The original
+            // registration then protects a different allocation and cannot transfer.
+            self.rooted_clone()
+        }
+    }
+
+    /// Root-guard destruction releases the matching registration immediately
+    /// afterward; that removal publishes the required deletion barrier. Avoid a
+    /// second edge barrier for the same allocation. Replaced/foreign handles keep
+    /// their ordinary edge-drop behavior. Explicit root revocation already ran
+    /// its deletion barrier and cannot be undone by dropping this stale guard.
+    pub(crate) fn suppress_guard_edge_barrier(&mut self, registration: &OwnedRoot) {
+        if self.id == registration.target
+            && let Owner::Edge(collector) = &mut self.owner
+            && std::ptr::eq(collector.as_ptr(), Arc::as_ptr(&registration.collector))
+        {
+            *collector = Weak::new();
+        }
+    }
+
+    /// Converts a rooted handle into an edge owned by a traced heap allocation.
+    ///
+    /// # Safety
+    /// The same heap's tracing or another root must protect this handle and its
+    /// graph until its final payload access. It must regain owning protection
+    /// before escaping that lifetime. Identity-only inspection and dropping the
+    /// edge after reclamation are allowed; payload access is not.
+    ///
+    /// ```compile_fail,E0133
+    /// use ristretto_gc::Gc;
+    /// fn demote(value: &mut Gc<u64>) { value.unroot(); }
+    /// ```
+    pub unsafe fn unroot(&mut self) {
+        if let Owner::Root(root) = &self.owner {
+            // Establish weak access before releasing the owning registration:
+            // removal may run a deletion barrier or release the last collector.
+            self.owner = Owner::Edge(Arc::downgrade(&root.collector));
+        }
+    }
+
+    /// Reconstructs an owning handle after validating the allocation address and Rust type.
+    /// Validation and root registration exclude concurrent reclamation. Physically
+    /// present allocations that are already logically dead cannot be resurrected.
+    /// # Errors
+    /// Returns an error for an invalid integer address.
+    pub fn from_raw_rooted(collector: &Arc<GarbageCollector>, address: i64) -> Result<Self>
+    where
+        T: Trace + 'static,
+    {
+        Self::from_conditional_rooted(collector, address, false, None)
+    }
+
+    /// Retaining conditional edges may admit a white graph before sweep starts.
+    /// The caller must first validate the slot identity and reference decision.
+    pub(crate) fn from_conditional_rooted(
+        collector: &Arc<GarbageCollector>,
+        address: i64,
+        retaining: bool,
+        expected: Option<crate::ObjectId>,
+    ) -> Result<Self>
+    where
+        T: Trace + 'static,
+    {
+        let address_usize = usize::try_from(address)
+            .map_err(|_| Error::InvalidPointer("invalid managed address".into()))?;
+        let mut reservation = collector.reserve_owned_root(address_usize);
+        let publication = collector.root_publication_guard();
+        let prepared = Self::prepare_conditional_root(
+            collector,
+            address,
+            retaining,
+            expected,
+            &publication,
+            &mut reservation,
+        )?;
+        drop(publication);
+        Ok(prepared.finish())
+    }
+
+    /// The same admission must span reference/identity validation and registration.
+    pub(crate) fn prepare_conditional_root(
+        collector: &Arc<GarbageCollector>,
+        address: i64,
+        retaining: bool,
+        expected: Option<crate::ObjectId>,
+        publication: &crate::collector::RootPublication<'_>,
+        reservation: &mut crate::collector::RootReservation<'_>,
+    ) -> Result<PreparedRoot<T>>
+    where
+        T: Trace + 'static,
+    {
+        if !publication.protects(collector) {
+            return Err(Error::InvalidPointer("foreign publication token".into()));
+        }
+        let address_usize = usize::try_from(address)
+            .map_err(|_| Error::InvalidPointer("invalid managed address".into()))?;
+        if !reservation.protects(collector, address_usize) {
+            return Err(Error::InvalidPointer("foreign root reservation".into()));
+        }
+        let (id, ptr) = collector
+            .resolve_address::<T>(address_usize, retaining, expected)
+            .ok_or_else(|| {
+                Error::InvalidPointer(
+                    "unknown, logically dead, or incorrectly typed allocation".into(),
+                )
+            })?;
+        // SAFETY: the matching typed descriptor supplies the original allocation
+        // pointer, and publication admission protects it through root installation.
+        let mut gc = unsafe { Self::from_raw(ptr)? };
+        gc.id = id;
+        let registration = OwnedRoot {
+            collector: collector.clone(),
+            id: publication.add_owned_root(&gc, reservation),
+            target: id,
+        };
+        Ok(PreparedRoot {
+            ptr: gc.ptr,
+            registration,
+        })
+    }
+
     /// Add this `Gc` object as a root to the global garbage collector.
     /// Returns a `GcRootGuard` that automatically removes the root when dropped.
     ///
     /// # Errors
     ///
-    /// If the collector is not initialized or if the object cannot be registered as a root.
+    /// Returns an error if this allocation belongs to a different collector,
+    /// has no associated collector, or the borrowed edge has been retired.
     pub fn as_root(&self, collector: &Arc<GarbageCollector>) -> Result<GcRootGuard<T>>
     where
         T: Trace,
     {
-        Ok(collector.create_root_guard(self.clone()))
+        if !self.belongs_to(collector) {
+            return Err(Error::InvalidPointer(
+                "root guard collector does not own this allocation".into(),
+            ));
+        }
+        let registration = match &self.owner {
+            Owner::Root(_) => collector.add_owned_root(self),
+            Owner::Edge(_) => collector.clone_edge_root(self).ok_or_else(|| {
+                Error::InvalidPointer("root guard target is no longer live".into())
+            })?,
+        };
+        // The guard owns the new registration. Copying the inner handle can
+        // preserve its current ownership without promoting an edge a second time.
+        let root = Self {
+            id: self.id,
+            ptr: self.ptr,
+            phantom: PhantomData,
+            owner: self.owner.clone(),
+        };
+        Ok(GcRootGuard::new(collector.clone(), registration, root))
     }
 
     /// Triggers a write barrier for this `Gc`.
@@ -310,11 +889,14 @@ impl<T> Gc<T> {
 }
 
 impl<T> Clone for Gc<T> {
+    /// Creates an owning handle. Cloning a borrowed heap edge registers a root;
+    /// cloning an owning handle shares its existing registration.
+    ///
+    /// # Panics
+    /// Panics for unassociated raw handles or expired heap edges. Use `ObjectId`
+    /// or `GcWeak` to retain an identity without keeping its allocation alive.
     fn clone(&self) -> Self {
-        Self {
-            ptr: self.ptr,
-            phantom: PhantomData,
-        }
+        self.rooted_clone()
     }
 }
 
@@ -328,8 +910,11 @@ impl<T> Deref for Gc<T> {
 
 impl<T> Drop for Gc<T> {
     fn drop(&mut self) {
-        // Dropping a Gc<T> doesn't immediately free the object since other Gc<T> pointers might
-        // still reference it.
+        if let Owner::Edge(owner) = &self.owner
+            && let Some(collector) = owner.upgrade()
+        {
+            collector.snapshot_edge(self.ptr.as_ptr() as usize);
+        }
     }
 }
 
@@ -403,24 +988,129 @@ impl<T> AsRef<T> for Gc<T> {
     }
 }
 
-impl<T: Trace> Trace for Gc<T> {
+// SAFETY: same-heap edges are traced, owning roots protect foreign heaps, and
+// root restores ownership before a handle can move independently of its owner.
+unsafe impl<T: Trace> Trace for Gc<T> {
+    fn root(&mut self) {
+        if matches!(self.owner, Owner::Edge(_)) {
+            *self = self.rooted_clone();
+        }
+    }
+    unsafe fn unroot(&mut self, owner: crate::TraceOwner<'_>) {
+        let same_heap = match &self.owner {
+            Owner::Root(root) => {
+                std::ptr::eq(Arc::as_ptr(&root.collector), owner.collector().as_ptr())
+            }
+            Owner::Edge(collector) => Weak::ptr_eq(collector, owner.collector()),
+        };
+        if same_heap {
+            // SAFETY: the caller binds this edge to its actual traced owner.
+            unsafe { Self::unroot(self) };
+        } else {
+            // A different collector cannot trace this allocation. Retain its
+            // source heap independently, including when an edge is rebound.
+            self.root();
+        }
+    }
     fn trace(&self, collector: &GarbageCollector) {
         // Mark this object as reachable in the object registry
         let ptr = SafePtr::from_ptr(self.ptr.as_ptr().cast::<u8>());
 
-        // Check if this object was already marked to prevent infinite recursion in cycles
-        if collector.try_mark_object(ptr) {
-            // Only trace the contents if this is the first time we're marking this object
-            // This prevents infinite recursion in cyclic object graphs
-            (**self).trace(collector);
-        }
+        collector.mark_object(ptr);
     }
+}
+
+#[cfg(feature = "experimental-canonical-leaves")]
+pub(crate) fn leaf_lifecycle_benchmark(
+    mode: &str,
+    operations: u64,
+    batch: usize,
+) -> Result<String> {
+    publication_owner::leaf_lifecycle_benchmark(mode, operations, batch)
+}
+
+#[cfg(feature = "experimental-canonical-leaves")]
+pub(crate) fn graph_lifecycle_benchmark(rounds: u64, capacity: usize) -> Result<String> {
+    publication_owner::graph_lifecycle_benchmark(rounds, capacity)
+}
+
+#[cfg(feature = "experimental-canonical-leaves")]
+pub(crate) fn leaf_contention(
+    mode: &str,
+    actors: usize,
+    helpers: usize,
+    operations: usize,
+    capacity: usize,
+    retained: usize,
+) -> Result<String> {
+    publication_owner::leaf_contention(mode, actors, helpers, operations, capacity, retained)
+}
+
+#[cfg(feature = "experimental-canonical-leaves")]
+pub(crate) fn root_alias_benchmark(
+    mode: &str,
+    copies: u64,
+    checkpoint: impl FnMut(&'static str),
+) -> Result<String> {
+    publication_owner::root_alias_benchmark(mode, copies, checkpoint)
+}
+
+#[cfg(feature = "experimental-canonical-audit")]
+pub(crate) fn root_refund_order(
+    mode: &str,
+    checkpoint: impl FnMut(&'static str, usize),
+) -> Result<()> {
+    publication_owner::root_refund_order(mode, checkpoint)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::{HashMap, HashSet};
+
+    #[test]
+    #[expect(clippy::panic_in_result_fn, reason = "private cancellation invariants")]
+    fn initial_root_cancellation_releases_registration_without_scope_adoption() -> Result<()> {
+        for counted in [false, true] {
+            for storage in [
+                crate::RootStorage::Tree,
+                crate::RootStorage::Slots,
+                crate::RootStorage::Contexts,
+            ] {
+                let collector = GarbageCollector::with_config(
+                    crate::Configuration::builder()
+                        .concurrent_publication(counted)
+                        .root_storage(storage)
+                        .allocation_threshold(usize::MAX)
+                        .build(),
+                );
+                let context = collector.register_context();
+                context.with(|| -> Result<()> {
+                    let mut construction = crate::construction::Roots::new(&collector);
+                    let scope = construction.enter();
+                    let (handle, allocation, reservation) = Gc::allocate(&collector, 42_u64);
+                    let metadata = collector.prepare_allocated_object::<u64>(
+                        allocation,
+                        reservation,
+                        handle.id,
+                    );
+                    let initial =
+                        Publication::new(&collector, handle, metadata, scope.detach(), true);
+                    let roots = collector.root_statistics();
+                    assert_eq!(roots.compatibility_roots + roots.slot_roots, 1);
+                    drop(initial);
+                    let roots = collector.root_statistics();
+                    assert_eq!(roots.compatibility_roots + roots.slot_roots, 0);
+                    assert_eq!(collector.statistics()?.live_objects, 0);
+                    assert_eq!(collector.managed_bytes(), 0);
+                    Ok(())
+                })?;
+                drop(context);
+                collector.stop()?;
+            }
+        }
+        Ok(())
+    }
 
     #[test]
     fn test_creation_and_access() {
@@ -601,7 +1291,6 @@ mod tests {
     }
 
     #[test]
-    #[expect(clippy::mutable_key_type)]
     fn test_hash() {
         let collector = GarbageCollector::new();
         let gc1 = Gc::new(&collector, 42);

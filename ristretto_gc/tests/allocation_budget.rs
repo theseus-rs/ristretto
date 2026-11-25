@@ -13,7 +13,9 @@ struct Payload {
     charged_drops: Arc<AtomicUsize>,
 }
 
-impl Trace for Payload {
+// SAFETY: the weak collector link and atomic counters contain no managed edges.
+#[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+unsafe impl Trace for Payload {
     fn trace(&self, _: &GarbageCollector) {}
 }
 

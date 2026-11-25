@@ -1,17 +1,24 @@
 //! Owning managed-payload reservations, independent of allocation-pressure statistics.
 use crate::{Error, Result};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Weak};
 
 #[derive(Debug)]
 pub(crate) struct AllocationBudget {
+    collector: Weak<crate::GarbageCollector>,
     limit: usize,
     used: AtomicUsize,
 }
 
 impl AllocationBudget {
+    #[cfg(test)]
     pub(crate) fn new(limit: usize) -> Self {
+        Self::with_collector(limit, Weak::new())
+    }
+
+    pub(crate) fn with_collector(limit: usize, collector: Weak<crate::GarbageCollector>) -> Self {
         Self {
+            collector,
             limit,
             used: AtomicUsize::new(0),
         }
@@ -21,12 +28,25 @@ impl AllocationBudget {
         self.used.load(Ordering::Acquire)
     }
 
-    pub(crate) fn reserve(self: &Arc<Self>, bytes: usize) -> Result<Reservation> {
+    pub(crate) fn try_charge(&self, bytes: usize) -> Result<()> {
         self.used
             .try_update(Ordering::AcqRel, Ordering::Acquire, |used| {
                 used.checked_add(bytes).filter(|total| *total <= self.limit)
             })
             .map_err(|_| Error::OutOfMemory)?;
+        Ok(())
+    }
+
+    pub(crate) fn release(&self, bytes: usize) -> usize {
+        self.used.fetch_sub(bytes, Ordering::AcqRel)
+    }
+
+    pub(crate) fn record(&self, bytes: usize) {
+        self.used.fetch_add(bytes, Ordering::AcqRel);
+    }
+
+    pub(crate) fn reserve(self: &Arc<Self>, bytes: usize) -> Result<Reservation> {
+        self.try_charge(bytes)?;
         Ok(Reservation {
             budget: self.clone(),
             bytes,
@@ -40,15 +60,14 @@ pub(crate) struct Reservation {
     bytes: usize,
 }
 
-impl Reservation {
-    pub(crate) fn bytes(&self) -> usize {
-        self.bytes
-    }
-}
-
 impl Drop for Reservation {
     fn drop(&mut self) {
-        self.budget.used.fetch_sub(self.bytes, Ordering::AcqRel);
+        if let Some(collector) = self.budget.collector.upgrade() {
+            // A private refund makes space available to ordinary allocation waiters.
+            collector.cancel_allocation(self.bytes);
+        } else {
+            self.budget.release(self.bytes);
+        }
     }
 }
 

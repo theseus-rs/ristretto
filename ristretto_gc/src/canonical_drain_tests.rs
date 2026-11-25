@@ -60,7 +60,7 @@ fn drain_has_one_cell_observation_per_step_and_excludes_participants() {
 #[test]
 fn drain_is_owner_local_and_cannot_certify_a_retained_root() {
     let collector = GarbageCollector::new();
-    let ordinary = crate::Gc::new(&collector, 97_u64).into_retained();
+    let ordinary = crate::Gc::new(&collector, 97_u64).into_rooted();
     let ordinary_bytes = collector.managed_bytes();
     let budget = Budget::new(usize::MAX);
     let mut first = Runtime::new(&collector, configuration(), &budget).unwrap();
@@ -88,7 +88,7 @@ fn drain_is_owner_local_and_cannot_certify_a_retained_root() {
 #[test]
 fn cancelled_request_and_drain_prefixes_refund_only_their_owner() {
     let collector = GarbageCollector::new();
-    let ordinary = crate::Gc::new(&collector, 97_u64).into_retained();
+    let ordinary = crate::Gc::new(&collector, 97_u64).into_rooted();
     let ordinary_bytes = collector.managed_bytes();
     for prefix in 0..32 {
         let budget = Budget::new(configuration().charged_bytes().unwrap());

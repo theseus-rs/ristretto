@@ -153,3 +153,8 @@ mod record_fixture;
 
 #[path = "canonical_catalog/reference.rs"]
 pub mod reference;
+
+/// Optional allocator-order diagnostics, excluded from timing builds.
+#[cfg(feature = "experimental-canonical-audit")]
+#[path = "canonical_catalog/audit.rs"]
+pub mod audit;

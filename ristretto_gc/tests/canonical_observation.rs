@@ -12,7 +12,8 @@ use std::task::Poll;
 
 struct Value(Arc<AtomicUsize>);
 #[expect(unsafe_code, reason = "the fixture contains no managed references")]
-impl Trace for Value {
+// SAFETY: this fixture has no managed edges and requires no tracing.
+unsafe impl Trace for Value {
     fn canonical_payload() -> Option<ristretto_gc::CanonicalPayload<Self>> {
         // SAFETY: only primitive data and a host counter; no managed edges.
         Some(unsafe { ristretto_gc::CanonicalPayload::new() })

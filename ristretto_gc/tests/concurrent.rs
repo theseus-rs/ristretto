@@ -11,8 +11,8 @@
 )]
 
 use ristretto_gc::{GarbageCollector, Gc, Result, Trace};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -161,7 +161,9 @@ fn test_concurrent_roots_management() -> Result<()> {
         child: Option<Gc<RootObject>>,
     }
 
-    impl Trace for RootObject {
+    // SAFETY: outgoing fields remain independently rooted and are included in tracing.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for RootObject {
         fn trace(&self, collector: &GarbageCollector) {
             if let Some(ref child) = self.child {
                 child.trace(collector);
@@ -222,14 +224,20 @@ fn test_concurrent_complex_graph() -> Result<()> {
     #[derive(Debug)]
     struct GraphNode {
         id: usize,
-        connections: Mutex<Vec<Gc<GraphNode>>>,
+        connections: Vec<Gc<ristretto_gc::cell::RwLock<GraphNode>>>,
     }
 
-    impl Trace for GraphNode {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for GraphNode {
+        fn root(&mut self) {
+            self.connections.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.connections, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
-            if let Ok(connections) = self.connections.lock() {
-                connections.trace(collector);
-            }
+            self.connections.trace(collector);
         }
     }
 
@@ -241,10 +249,10 @@ fn test_concurrent_complex_graph() -> Result<()> {
         .map(|i| {
             Gc::with_collector(
                 &collector,
-                GraphNode {
+                ristretto_gc::cell::RwLock::new(GraphNode {
                     id: i,
-                    connections: Mutex::new(Vec::new()),
-                },
+                    connections: Vec::new(),
+                }),
             )
         })
         .collect();
@@ -263,9 +271,10 @@ fn test_concurrent_complex_graph() -> Result<()> {
                 let from_idx = (thread_id * 30 + i) % thread_nodes.len();
                 let to_idx = (from_idx + thread_id + 1) % thread_nodes.len();
 
-                if let Ok(mut connections) = thread_nodes[from_idx].connections.lock() {
-                    connections.push(thread_nodes[to_idx].clone_gc());
-                }
+                thread_nodes[from_idx]
+                    .write()
+                    .connections
+                    .push(thread_nodes[to_idx].clone_gc());
 
                 thread::sleep(Duration::from_millis(2));
             }
@@ -274,9 +283,10 @@ fn test_concurrent_complex_graph() -> Result<()> {
     }
 
     // Background collection
+    let worker_gc = collector.clone();
     let gc_handle = thread::spawn(move || {
         for _ in 0..25 {
-            collector.collect();
+            worker_gc.collect();
             thread::sleep(Duration::from_millis(12));
         }
     });
@@ -288,15 +298,16 @@ fn test_concurrent_complex_graph() -> Result<()> {
 
     // Verify graph integrity
     for node in &nodes {
-        assert!(node.id < 20);
-        // Check that connections are accessible
-        if let Ok(connections) = node.connections.lock() {
-            for connection in connections.iter() {
-                assert!(connection.id < 20);
-            }
+        let read = node.read();
+        assert!(read.id < 20);
+        for connection in &read.connections {
+            assert!(connection.read().id < 20);
         }
     }
 
+    drop(nodes);
+    collector.stop()?;
+    assert_eq!(collector.managed_bytes(), 0);
     Ok(())
 }
 

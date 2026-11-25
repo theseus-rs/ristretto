@@ -17,7 +17,8 @@ struct Value {
     drops: Arc<AtomicUsize>,
 }
 #[expect(unsafe_code, reason = "fixture payload has no managed references")]
-impl Trace for Value {
+// SAFETY: this fixture has no managed edges and requires no tracing.
+unsafe impl Trace for Value {
     fn canonical_payload() -> Option<ristretto_gc::CanonicalPayload<Self>> {
         // SAFETY: only primitive data and a host counter; no managed edges.
         Some(unsafe { ristretto_gc::CanonicalPayload::new() })
@@ -217,7 +218,9 @@ fn cancelled_public_requests_release_real_values_and_allow_reuse()
 fn public_admission_type_index_and_foreign_runtime_errors() -> Result<(), Box<dyn std::error::Error>>
 {
     struct Opaque;
-    impl Trace for Opaque {
+    // SAFETY: this fixture has no managed edges and requires no tracing.
+    #[expect(unsafe_code, reason = "empty fixture has no managed references")]
+    unsafe impl Trace for Opaque {
         fn trace(&self, _: &GarbageCollector) {}
     }
     let gc = GarbageCollector::new();

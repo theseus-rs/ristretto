@@ -1,28 +1,19 @@
 //! Cross-target synchronization primitives.
 //!
-//! On non-wasm targets these re-export `parking_lot::{Mutex, RwLock}` and
-//! their associated guard types.
-//!
-//! On `target_family = "wasm"` they are thin wrappers around
-//! `std::sync::{Mutex, RwLock}` that:
-//!
-//! * present the same surface as the `parking_lot` types used elsewhere in the
-//!   workspace,
-//! * convert poisoned guards into the inner data (matching `parking_lot`'s
-//!   non-poisoning behavior), and
-//! * provide guard projection (`map`/`try_map` and the `Mapped*` guards) by
-//!   pairing the underlying std guard with a projected raw pointer.
+//! Managed `RwLock` cells publish tracing and mutation hooks on every platform.
+//! Other locks use `parking_lot` on native hosts and non-poisoning std wrappers on wasm.
+//! Guard projections retain their parent guards and mutation hooks.
 
 #[cfg(not(target_family = "wasm"))]
 mod imp {
     pub use parking_lot::{
-        MappedMutexGuard, MappedRwLockReadGuard, MappedRwLockWriteGuard, Mutex, MutexGuard, RwLock,
-        RwLockReadGuard, RwLockUpgradableReadGuard, RwLockWriteGuard,
+        MappedMutexGuard, Mutex, MutexGuard, RecursiveRwLock, RecursiveRwLockReadGuard,
+        RecursiveRwLockWriteGuard,
     };
 }
 
 #[cfg(target_family = "wasm")]
-#[expect(clippy::missing_errors_doc, clippy::must_use_candidate, missing_docs)]
+#[expect(missing_docs)]
 mod imp {
     use std::fmt;
     use std::marker::PhantomData;
@@ -58,6 +49,10 @@ mod imp {
 
     pub struct RwLock<T: ?Sized>(sync::RwLock<T>);
 
+    pub type RecursiveRwLock<T> = RwLock<T>;
+    pub type RecursiveRwLockReadGuard<'a, T> = RwLockReadGuard<'a, T>;
+    pub type RecursiveRwLockWriteGuard<'a, T> = RwLockWriteGuard<'a, T>;
+
     impl<T> RwLock<T> {
         pub const fn new(value: T) -> Self {
             Self(sync::RwLock::new(value))
@@ -69,6 +64,10 @@ mod imp {
     }
 
     impl<T: ?Sized> RwLock<T> {
+        pub fn read_recursive(&self) -> RwLockReadGuard<'_, T> {
+            self.read()
+        }
+
         pub fn read(&self) -> RwLockReadGuard<'_, T> {
             RwLockReadGuard(unpoison(self.0.read()))
         }
@@ -478,4 +477,11 @@ mod imp {
     }
 }
 
-pub use imp::*;
+pub use crate::cell::{
+    MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard,
+    RwLockUpgradableReadGuard, RwLockWriteGuard,
+};
+pub use imp::{
+    MappedMutexGuard, Mutex, MutexGuard, RecursiveRwLock, RecursiveRwLockReadGuard,
+    RecursiveRwLockWriteGuard,
+};

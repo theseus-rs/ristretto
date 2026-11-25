@@ -10,7 +10,9 @@ struct Allocation {
     dropped: Arc<AtomicBool>,
 }
 
-impl Trace for Allocation {
+// SAFETY: this fixture contains no outgoing GC references.
+#[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+unsafe impl Trace for Allocation {
     fn trace(&self, _collector: &GarbageCollector) {}
 }
 
