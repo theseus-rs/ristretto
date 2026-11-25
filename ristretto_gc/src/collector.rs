@@ -3048,8 +3048,9 @@ impl GarbageCollector {
         if !self.domain().active() {
             return false;
         }
-        let metadata = self.objects.lock(address).get(&address).cloned();
-        metadata.is_some_and(|metadata| self.shade_known(&metadata))
+        self.objects
+            .live(address)
+            .is_some_and(|metadata| self.shade_known(&metadata))
     }
 
     /// A root enumerator retains its position when the object shard is busy.

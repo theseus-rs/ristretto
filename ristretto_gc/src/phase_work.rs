@@ -567,8 +567,26 @@ impl GarbageCollector {
                     crate::index::Scan::Done => None,
                 }
             } else {
-                match self.objects.scan(&mut cycle.sweep_object_cursor, |_| ()) {
-                    crate::index::Scan::Entry(address, ()) => Some(address),
+                // Keep the deadline check between individual entries when a
+                // time limit is active. Otherwise share one admission and
+                // shard lookup across at most the remaining sweep budget.
+                let limit = if self.configuration.max_pause_time_us == 0 {
+                    scan_budget
+                } else {
+                    1
+                };
+                match self.objects.scan_sweep(
+                    &mut cycle.sweep_object_cursor,
+                    index,
+                    cycle.epoch,
+                    self.configuration.promotion_age.max(1),
+                    limit,
+                ) {
+                    crate::index::Scan::Entry(address, 0) => Some(address),
+                    crate::index::Scan::Entry(_, survivors) => {
+                        *work -= survivors - 1;
+                        return Unit::Progress;
+                    }
                     crate::index::Scan::Advance => return Unit::Progress,
                     crate::index::Scan::Busy => return Unit::Busy,
                     crate::index::Scan::Done => None,

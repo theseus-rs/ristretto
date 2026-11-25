@@ -358,6 +358,13 @@ impl Objects {
         })
     }
 
+    /// Mark traversal needs only the visible descriptor. Keep the same shard
+    /// ordering as sweep, without acquiring a second owner of its address page.
+    pub(crate) fn live(&self, address: usize) -> Option<MetadataRef> {
+        let _guard = self.guards.lock(address);
+        self.lookup(address)
+    }
+
     /// An owning snapshot of the exact cell. It grants no graph or payload access.
     pub(crate) fn lookup(&self, address: usize) -> Option<MetadataRef> {
         let key = position(address);
@@ -398,6 +405,16 @@ impl Objects {
         cursor: &mut Cursor,
         read: impl FnOnce(&MetadataRef) -> R,
     ) -> Scan<R> {
+        self.scan_page(cursor, |metadata, _, _, _| read(metadata))
+    }
+
+    // All reads in a batch use the same live-operation guard. New births
+    // behind the cursor have the usual per-domain publication obligations.
+    fn scan_page<R>(
+        &self,
+        cursor: &mut Cursor,
+        read: impl FnOnce(&MetadataRef, &Page, usize, &mut Cursor) -> R,
+    ) -> Scan<R> {
         if !cursor.begin(self.pages.len()) {
             return Scan::Done;
         }
@@ -407,9 +424,13 @@ impl Objects {
         };
         match Self::next(&self.pages[cursor.shard].pages, cursor, &mut None, || {}) {
             Scan::Entry(key, page) => {
-                let entry = page.entry(key).and_then(Cell::load_full);
-                if let Some(metadata) = entry.as_ref().filter(|m| m.birth.visible()) {
-                    Scan::Entry(address_of(key), read(metadata))
+                let entry = page.entry(key).map(Cell::load);
+                if let Some(metadata) = entry
+                    .as_deref()
+                    .and_then(Option::as_ref)
+                    .filter(|m| m.birth.visible())
+                {
+                    Scan::Entry(address_of(key), read(metadata, &page, key, cursor))
                 } else {
                     Scan::Advance
                 }
@@ -418,6 +439,45 @@ impl Objects {
             Scan::Busy => Scan::Busy,
             Scan::Done => Scan::Done,
         }
+    }
+
+    /// A mature survivor already marked in this exact epoch has no remaining
+    /// age, promotion or retirement work. Stop before the first other entry
+    /// so the normal sweep can revalidate and perform its side effects.
+    pub(crate) fn scan_sweep(
+        &self,
+        cursor: &mut Cursor,
+        domain: usize,
+        epoch: u64,
+        promotion_age: usize,
+        limit: usize,
+    ) -> Scan<usize> {
+        let survivor =
+            |m: &MetadataRef| m.age.load(Acquire) == promotion_age && m.marked(domain, epoch);
+        self.scan_page(cursor, |metadata, page, key, cursor| {
+            if !survivor(metadata) {
+                return 0;
+            }
+            let mut offset = key & PAGE_MASK;
+            let mut count = 1;
+            while count < limit {
+                let Some(next) = page.occupied.next(offset + 1) else {
+                    break;
+                };
+                let Some(entry) = page.entry(next) else { break };
+                if !entry
+                    .load()
+                    .as_ref()
+                    .is_some_and(|m| m.birth.is_live() && survivor(m))
+                {
+                    break;
+                }
+                cursor.selected((key & !PAGE_MASK) | next);
+                offset = next;
+                count += 1;
+            }
+            count
+        })
     }
 
     pub(crate) fn scan_young(&self, cursor: &mut YoungCursor) -> Scan<()> {
@@ -627,6 +687,44 @@ mod tests {
                 assert_eq!(position(address_of(address)), address);
             }
         }
+    }
+
+    #[test]
+    fn sweep_batches_stop_at_budget_young_and_white_entries() {
+        use crate::{GarbageCollector, Gc};
+        let gc = GarbageCollector::new();
+        let kept = Gc::new(&gc, 1_u64);
+        let young = Gc::new(&gc, 2_u64);
+        let white = Gc::new(&gc, 3_u64);
+        let meta = |root: &crate::GcRootGuard<u64>| {
+            gc.metadata_for_address(root.as_ptr().addr())
+                .expect("metadata")
+        };
+        let (kept, young, white) = (meta(&kept), meta(&young), meta(&white));
+        kept.age.store(2, Relaxed);
+        white.age.store(2, Relaxed);
+        kept.mark_black(1, 4);
+        young.mark_black(1, 4);
+        let objects = Objects::new(1);
+        for (address, m) in [
+            (8, &kept),
+            (16, &kept),
+            (24, &kept),
+            (32, &young),
+            (40, &white),
+            (48, &kept),
+        ] {
+            objects.replace_for_test(address, Some(m.clone()));
+        }
+        let mut cursor = Cursor::default();
+        for (address, count) in [(8, 2), (24, 1), (32, 0), (40, 0), (48, 1)] {
+            assert!(matches!(objects.scan_sweep(&mut cursor,1,4,2,2),
+                        Scan::Entry(a,n) if (a,n)==(address,count)));
+        }
+        assert!(matches!(
+            objects.scan_sweep(&mut cursor, 1, 4, 2, 2),
+            Scan::Done
+        ));
     }
 
     #[test]
