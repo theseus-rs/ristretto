@@ -598,7 +598,7 @@ impl CompiledExecution<'_, '_, '_, '_> {
                                 .first()
                                 .ok_or(Error::Boundary("static store value"))?;
                             let value = match field.field {
-                                super::Field::Int(_) => Value::Int(int_bits(bits)),
+                                super::Field::Integer { .. } => Value::Int(int_bits(bits)),
                                 super::Field::Reference { .. } => frame.context.reference(bits)?,
                             };
                             // This action owns the value while another logical owner initializes.
@@ -642,7 +642,7 @@ impl CompiledExecution<'_, '_, '_, '_> {
                                 .get(1)
                                 .ok_or(Error::Boundary("compiled field value"))?;
                             let value = match field {
-                                super::Field::Int(_) => Value::Int(int_bits(bits)),
+                                super::Field::Integer { .. } => Value::Int(int_bits(bits)),
                                 super::Field::Reference { .. } => frame.context.reference(bits)?,
                             };
                             self.execution

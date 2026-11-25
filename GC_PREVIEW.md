@@ -62,11 +62,11 @@ supplied set. The admitted interpreter and native compiled tier cover:
 
 - Integer/scalar arithmetic, conversions, branches and bounded loops; constructors
   and static calls in the admitted set.
-- Instance integer fields and graph references, identity comparisons, child
+- Instance boolean, byte, char, short and int fields and graph references, identity comparisons, child
   retention across unlinking, and cyclic reclamation.
 - One-dimensional primitive and reference arrays, their checked accesses, and
   checked casts within the admitted type system.
-- Shared static integer/reference storage and bounded class initialization,
+- Shared static integral/reference storage and bounded class initialization,
   including owner/waiter ordering and cancellation cleanup.
 
 The heap example enters a static `(I)I` method. Separate scalar entry APIs expose

@@ -1,10 +1,10 @@
 //! Heap-owned canonical static roots and logical-owner class initialization.
-use super::layout::{Field, reference_type};
+use super::layout::Field;
 use super::objects::{Execution, Payload, Value, complete, help};
 use super::{Error, Program};
+use ristretto_classfile::ConstantPool;
 use ristretto_classfile::attributes::Attribute;
-use ristretto_classfile::{BaseType, ConstantPool};
-use ristretto_classfile::{FieldAccessFlags, FieldType, JavaString};
+use ristretto_classfile::{FieldAccessFlags, JavaString};
 use ristretto_classloader::Method;
 use ristretto_gc::canonical::{Configuration, Root};
 use std::collections::HashMap;
@@ -40,26 +40,12 @@ impl StaticLayout {
         if field.access_flags.contains(FieldAccessFlags::VOLATILE) {
             return Err(Error::Unsupported("volatile static fields".to_owned()));
         }
-        let slot = match &field.field_type {
-            FieldType::Base(BaseType::Int) if self.integers < 8 => {
-                let index = self.integers;
-                self.integers += 1;
-                Field::Int(index)
-            }
-            ty @ (FieldType::Object(_) | FieldType::Array(_)) if self.references < 8 => {
-                let edge = self.references;
-                self.references += 1;
-                Field::Reference {
-                    edge,
-                    target: reference_type(ty, names)?,
-                }
-            }
-            _ => {
-                return Err(Error::Unsupported(
-                    "static field type or eight-field quota".to_owned(),
-                ));
-            }
-        };
+        let slot = Field::allocate(
+            &field.field_type,
+            names,
+            &mut self.integers,
+            &mut self.references,
+        )?;
         let mut constant = None;
         for attribute in &field.attributes {
             if let Attribute::ConstantValue {
@@ -72,12 +58,18 @@ impl StaticLayout {
                         "duplicate static ConstantValue".to_owned(),
                     ));
                 }
-                let Field::Int(index) = slot else {
+                let Field::Integer { index, kind } = slot else {
                     return Err(Error::Unsupported(
-                        "non-int static ConstantValue".to_owned(),
+                        "non-integral static ConstantValue".to_owned(),
                     ));
                 };
-                constant = Some((index, *pool.try_get_integer(*constant_value_index)?));
+                constant = Some((
+                    index,
+                    super::scalar::narrow_integer(
+                        *pool.try_get_integer(*constant_value_index)?,
+                        kind,
+                    ),
+                ));
             }
         }
         if let Some(constant) = constant {
@@ -592,7 +584,7 @@ impl Execution<'_, '_, '_> {
         self.statics.prepared(owner)?;
         let root = self.statics.root(owner)?;
         match field.field {
-            Field::Int(index) => Ok(Value::Int(
+            Field::Integer { index, .. } => Ok(Value::Int(
                 static_integer(&*self.runtime.borrow(&root)?, owner, index)?
                     .load(Ordering::Relaxed),
             )),
@@ -648,8 +640,12 @@ impl Execution<'_, '_, '_> {
         }
         let root = self.statics.root(owner)?;
         match field.field {
-            Field::Int(index) => static_integer(&*self.runtime.borrow(&root)?, owner, index)?
-                .store(value.int()?, Ordering::Relaxed),
+            Field::Integer { index, kind } => {
+                static_integer(&*self.runtime.borrow(&root)?, owner, index)?.store(
+                    super::scalar::narrow_integer(value.int()?, kind),
+                    Ordering::Relaxed,
+                );
+            }
             Field::Reference { edge, target } => {
                 self.check_static_storage(&root, owner)?;
                 let value = value.reference()?;

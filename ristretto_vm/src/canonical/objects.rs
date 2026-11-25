@@ -771,7 +771,7 @@ impl Execution<'_, '_, '_> {
         let (owner, field) = self.program.field(class, index)?;
         self.check_class(root, owner)?;
         Ok(match field {
-            Field::Int(index) => Value::Int(
+            Field::Integer { index, .. } => Value::Int(
                 self.runtime
                     .borrow(root)?
                     .integer(index)?
@@ -802,11 +802,10 @@ impl Execution<'_, '_, '_> {
         let (owner, field) = self.program.field(class, index)?;
         self.check_class(root, owner)?;
         match field {
-            Field::Int(index) => self
-                .runtime
-                .borrow(root)?
-                .integer(index)?
-                .store(value.int()?, Ordering::Relaxed),
+            Field::Integer { index, kind } => self.runtime.borrow(root)?.integer(index)?.store(
+                scalar::narrow_integer(value.int()?, kind),
+                Ordering::Relaxed,
+            ),
             Field::Reference {
                 edge,
                 target: expected,

@@ -60,8 +60,40 @@ pub(super) fn reference_type(
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum Field {
-    Int(usize),
+    Integer { index: usize, kind: BaseType },
     Reference { edge: usize, target: ReferenceType },
+}
+
+impl Field {
+    pub(super) fn allocate(
+        ty: &FieldType,
+        names: &HashMap<JavaString, usize>,
+        integers: &mut usize,
+        references: &mut usize,
+    ) -> Result<Self, Error> {
+        match ty {
+            FieldType::Base(
+                kind @ (BaseType::Boolean
+                | BaseType::Byte
+                | BaseType::Char
+                | BaseType::Short
+                | BaseType::Int),
+            ) if *integers < MAX_INTEGER_FIELDS => {
+                let index = *integers;
+                *integers += 1;
+                Ok(Self::Integer { index, kind: *kind })
+            }
+            FieldType::Object(_) | FieldType::Array(_) if *references < 8 => {
+                let target = reference_type(ty, names)?;
+                let edge = *references;
+                *references += 1;
+                Ok(Self::Reference { edge, target })
+            }
+            _ => Err(Error::Unsupported(format!(
+                "field type or eight-field quota for {ty}"
+            ))),
+        }
+    }
 }
 
 /// Fixed slots for fields of a verified non-inheriting Java instance.
@@ -98,26 +130,12 @@ impl Layout {
                     "instance field {name} {descriptor}"
                 )));
             }
-            let storage = match FieldType::parse_java_str(descriptor)? {
-                FieldType::Base(BaseType::Int) if integers < MAX_INTEGER_FIELDS => {
-                    let field = Field::Int(integers);
-                    integers += 1;
-                    field
-                }
-                reference @ (FieldType::Object(_) | FieldType::Array(_)) if references < 8 => {
-                    let field = Field::Reference {
-                        edge: references,
-                        target: reference_type(&reference, names)?,
-                    };
-                    references += 1;
-                    field
-                }
-                _ => {
-                    return Err(Error::Unsupported(format!(
-                        "instance field {name} {descriptor}"
-                    )));
-                }
-            };
+            let storage = Field::allocate(
+                &FieldType::parse_java_str(descriptor)?,
+                names,
+                &mut integers,
+                &mut references,
+            )?;
             fields.insert((name.to_owned(), descriptor.to_owned()), storage);
         }
         let class = Class::from(None, file)?;
@@ -150,7 +168,13 @@ mod tests {
         ))?;
         let layout = Layout::new(file, &HashMap::new())?;
         for (slot, name) in ["x", "y", "z", "a", "b", "c", "d", "e"].iter().enumerate() {
-            assert_eq!(layout.field(name, "I"), Some(Field::Int(slot)));
+            assert_eq!(
+                layout.field(name, "I"),
+                Some(Field::Integer {
+                    index: slot,
+                    kind: BaseType::Int
+                })
+            );
         }
         assert_eq!(layout.field("missing", "I"), None);
         Ok(())

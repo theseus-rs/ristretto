@@ -17,3 +17,14 @@ Never include the peer driver in the canonical Program's class set.
 
 The JVM requires this conversion at return, as described in
 [JVMS ireturn](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ireturn).
+
+## Narrow field stores
+
+The integral field oracle generates Java 17 bytecode that stores raw int operands
+into boolean, byte, char and short fields. It records 116 HotSpot results for
+instance stores, static stores and integer constants. Regenerate the two checked-in
+fixtures from the repository root using JDK 25.
+
+```sh
+java -Xverify:all benchmarks/gc/canonical-integral-field-oracle/IntegralFieldOracle.java ristretto_vm/tests/fixtures/canonical_bytecode
+```

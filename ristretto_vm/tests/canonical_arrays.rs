@@ -31,7 +31,7 @@ struct OracleCase {
     expected_count: usize,
 }
 
-fn cases() -> Result<[OracleCase; 3], Box<dyn std::error::Error>> {
+fn cases() -> Result<[OracleCase; 4], Box<dyn std::error::Error>> {
     Ok([
         OracleCase {
             program: program()?,
@@ -52,6 +52,14 @@ fn cases() -> Result<[OracleCase; 3], Box<dyn std::error::Error>> {
             class: "CanonicalNumericEdgeWorkload",
             oracle: include_str!("fixtures/canonical/numeric-edge-oracle.tsv"),
             expected_count: 114,
+        },
+        OracleCase {
+            program: Program::from_classfiles([ClassFile::from_bytes(include_bytes!(
+                "fixtures/canonical_bytecode/CanonicalIntegralFields.class"
+            ))?])?,
+            class: "CanonicalIntegralFields",
+            oracle: include_str!("fixtures/canonical_bytecode/integral-field-oracle.tsv"),
+            expected_count: 116,
         },
     ])
 }

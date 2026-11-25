@@ -3,22 +3,27 @@ use super::value::PrimitiveFrameValue;
 use super::{Error, ScalarValue};
 use ristretto_classfile::{BaseType, Constant, ConstantPool, FieldType, attributes::Instruction};
 
-/// JVMS ireturn narrows before handing the result to the caller, even when the
-/// verified method's bytecode did not explicitly perform a narrowing conversion.
+/// JVM field stores and integer returns narrow the stack value to its declared type.
 #[expect(
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
-    reason = "JVM ireturn narrowing for byte, char, short and boolean descriptors"
+    reason = "JVM narrowing for byte, char, short and boolean descriptors"
 )]
+pub(super) fn narrow_integer(value: i32, kind: BaseType) -> i32 {
+    match kind {
+        BaseType::Byte => i32::from(value as i8),
+        BaseType::Char => i32::from(value as u16),
+        BaseType::Short => i32::from(value as i16),
+        BaseType::Boolean => value & 1,
+        _ => value,
+    }
+}
+
 pub(super) fn normalize_return(value: ScalarValue, field: &FieldType) -> ScalarValue {
     match (value, field) {
-        (ScalarValue::Int(value), FieldType::Base(kind)) => ScalarValue::Int(match kind {
-            BaseType::Byte => i32::from(value as i8),
-            BaseType::Char => i32::from(value as u16),
-            BaseType::Short => i32::from(value as i16),
-            BaseType::Boolean => value & 1,
-            _ => value,
-        }),
+        (ScalarValue::Int(value), FieldType::Base(kind)) => {
+            ScalarValue::Int(narrow_integer(value, *kind))
+        }
         (value, _) => value,
     }
 }

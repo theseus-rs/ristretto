@@ -1,14 +1,14 @@
 # Canonical static field storage
 
-The restricted tier admits static `int` fields and references to closed admitted
+The restricted tier admits static `boolean`, `byte`, `char`, `short` and `int` fields and references to closed admitted
 classes. Each class with static fields owns one hidden catalog object and one
 root permit on its Java heap. Its reference fields use ordinary catalog child
 loads and coupled writes, so replacing a static reference releases the old graph
 when no other root or edge retains it. Hidden backing is tagged and rejected by
 Java receiver/type checks. It never becomes a Java value.
 
-`ConstantValue` integer values are installed before the class is prepared.
-Ordinary static integers use nontearing atomics. Volatile statics, non-int scalar
+Class preparation installs integral `ConstantValue` values with the declared width.
+Ordinary static integers use nontearing atomics. Volatile statics, long, float and double
 statics, array statics, unsupported inheritance and instance final fields remain
 rejected. Final static writes are accepted only in the declaring `<clinit>` while that
 context owns initialization. The class state is published with release/acquire
