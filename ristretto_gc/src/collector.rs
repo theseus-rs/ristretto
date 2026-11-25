@@ -1779,7 +1779,11 @@ impl GarbageCollector {
             metadata.relocation =
                 crate::relocation_history::History::new(value, heap).map(Box::new);
         }
-        MetadataRef::new(metadata)
+        MetadataRef::allocate(
+            metadata,
+            (self.regions.is_none() && self.descriptor_regions.is_none())
+                .then_some(&self.small_allocations),
+        )
     }
 
     /// The constructor keeps an owner outside this call so private storage cannot

@@ -90,7 +90,7 @@ impl Cache {
 #[derive(Debug)]
 pub(crate) struct SmallAllocations {
     budget: Arc<crate::region::Budget>,
-    pages: [Mutex<Weak<SmallPage>>; 4],
+    pages: [Mutex<Weak<SmallPage>>; 5],
 }
 
 impl SmallAllocations {
@@ -108,9 +108,24 @@ impl SmallAllocations {
         }
         let stride = size.max(8).next_power_of_two();
         let class = (stride.trailing_zeros() - 3) as usize;
+        self.allocate_class(class, stride)
+    }
+
+    /// Callers use this class only for the collector's one descriptor layout.
+    pub(crate) fn allocate_metadata(&self, layout: Layout) -> Option<Storage> {
+        if layout.align() > 64 || layout.size() == 0 {
+            return None;
+        }
+        self.allocate_class(4, layout.pad_to_align().size())
+    }
+
+    fn allocate_class(&self, class: usize, stride: usize) -> Option<Storage> {
         let pages = self.pages.get(class)?;
         let cached = pages.try_lock().ok()?.upgrade();
         if let Some(page) = &cached {
+            if page.stride != stride {
+                return None;
+            }
             let bits = page.free.load(Relaxed);
             if bits != 0 {
                 // A concurrent claim can take the observed slot. Fall back to
@@ -118,7 +133,7 @@ impl SmallAllocations {
                 return page.claim(bits);
             }
         }
-        let page_layout = Layout::from_size_align(64 * stride, 64).ok()?;
+        let page_layout = Layout::from_size_align(stride.checked_mul(64)?, 64).ok()?;
         let credit = self.budget.reserve(page_layout.size(), false).ok()?;
         let backing = RawAllocation::new(page_layout).ok()?;
         let page = Arc::new(SmallPage {

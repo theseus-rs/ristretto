@@ -28,7 +28,9 @@ pub(crate) struct StorageLease(MetadataRef);
 
 /// Conditional references validate object IDs in the registry; they do not need
 /// weak metadata ownership. Internal work and storage leases share one counter.
-pub(crate) type MetadataRef = triomphe::Arc<ObjectMetadata>;
+#[path = "metadata_ref.rs"]
+mod metadata_ref;
+pub(crate) use metadata_ref::MetadataRef;
 
 #[cfg(test)]
 impl Drop for StorageLease {
