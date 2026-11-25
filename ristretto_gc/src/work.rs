@@ -457,7 +457,15 @@ impl MarkQueues {
         mut mark: impl FnMut(&MetadataRef) -> Option<bool>,
     ) -> usize {
         let local = local % self.queues.len();
-        for source in std::iter::once(local).chain((local != 0).then_some(0)) {
+        // A group can use the same destinations as a scalar push. Select the
+        // destination before marking any edge so a failed probe is retryable.
+        let others = (1..self.queues.len())
+            .map(|offset| (local + offset) % self.queues.len())
+            .filter(|&index| index != 0);
+        for source in std::iter::once(local)
+            .chain((local != 0).then_some(0))
+            .chain(others)
+        {
             let Ok(mut queue) = self.queues[source].queue.try_lock() else {
                 continue;
             };
@@ -850,6 +858,35 @@ mod tests {
             version,
             has_young: true,
         }
+    }
+
+    #[test]
+    fn mature_group_can_use_a_peer_without_consuming_edges_on_failure() {
+        let queues = MarkQueues::new(2, 1);
+        let edges: [_; 8] = std::array::from_fn(|_| item(0, None).metadata);
+        let local = lock(&queues.queues[1].queue);
+        let injector = lock(&queues.queues[0].queue);
+        let peer = lock(&queues.queues[2].queue);
+        assert_eq!(
+            queues.append_mature(1, edges.len(), edges.iter().map(Some), |_| panic!(
+                "no destination"
+            )),
+            0
+        );
+        drop(peer);
+        assert_eq!(
+            queues.append_mature(1, edges.len(), edges.iter().map(Some), |_| Some(true)),
+            edges.len()
+        );
+        let mut peer = lock(&queues.queues[2].queue);
+        for edge in edges {
+            assert_eq!(
+                peer.pop(false).expect("published edge").metadata.id,
+                edge.id
+            );
+        }
+        assert!(peer.pop(false).is_none());
+        drop((injector, local));
     }
 
     #[test]
