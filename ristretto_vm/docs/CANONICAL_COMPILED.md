@@ -26,7 +26,10 @@ legacy context, interpreter fallback or payload pointer is linked into generated
 code. Object/field requests use the same typed Execution helpers as the interpreter.
 Programs containing static storage or any class initializer are rejected before
 code generation, including a fieldless scalar initializer. Later consumer commits
-separately connect array and static helpers.
+separately connect reference-array, cast and static helpers. Primitive arrays use
+the shared typed allocation, length, load and store helpers. The native oracle suite
+covers all eight kinds, wide arguments, array returns, saturation, narrowing and
+null/bounds/negative-length faults (301 HotSpot rows).
 
 Runnable proof:
 
