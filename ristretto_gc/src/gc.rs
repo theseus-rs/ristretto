@@ -1052,10 +1052,9 @@ unsafe impl<T: Trace> Trace for Gc<T> {
                 Owner::Traced(metadata) => Some(metadata),
                 _ => None,
             });
-            if !collector.try_mark_mature_slice(group.len(), descriptors) {
-                for item in group {
-                    item.trace(collector);
-                }
+            let handled = collector.try_mark_mature_slice(group.len(), descriptors);
+            for item in group.iter().skip(handled) {
+                item.trace(collector);
             }
         }
     }

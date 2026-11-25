@@ -3935,36 +3935,31 @@ impl GarbageCollector {
     pub(crate) fn try_mark_mature_slice<'a>(
         &self,
         count: usize,
-        edges: impl Iterator<Item = Option<&'a MetadataRef>> + Clone,
-    ) -> bool {
+        edges: impl Iterator<Item = Option<&'a MetadataRef>>,
+    ) -> usize {
         let Some((owner, retention, true)) = TRACE_RETENTION.get() else {
-            return false;
+            return 0;
         };
         if owner != std::ptr::from_ref(self) as usize || self.domain_index() != 1 {
-            return false;
+            return 0;
         }
         let full = &self.domains[1];
         let phase = full.weak_phase();
         if phase >= 5 || !full.active() {
-            return false;
+            return 0;
         }
         let mature = self.configuration.promotion_age.max(1);
-        if !edges.clone().all(|entry| {
-            entry.is_some_and(|m| {
-                std::ptr::eq(m.collector.as_ptr(), self) && m.age.load(Ordering::Acquire) >= mature
-            })
-        }) {
-            return false;
-        }
         let epoch = full.epoch.load(Ordering::Acquire);
         let strength = retention.max(Retention::at_phase(phase));
-        full.mark_queue.try_append_fresh(
-            self.local_queue(),
-            count,
-            edges
-                .flatten()
-                .filter(|m| m.birth.is_live() && m.mark(1, epoch, strength)),
-        )
+        full.mark_queue
+            .append_mature(self.local_queue(), count, edges, |m| {
+                if !std::ptr::eq(m.collector.as_ptr(), self)
+                    || m.age.load(Ordering::Acquire) < mature
+                {
+                    return None;
+                }
+                Some(m.birth.is_live() && m.mark(1, epoch, strength))
+            })
     }
 
     pub(crate) fn mark_object(&self, ptr: SafePtr) {
@@ -4180,10 +4175,12 @@ impl GarbageCollector {
     }
 
     fn claim_mark_batch(&self, tasks: &mut [Option<MarkTask>; 8], remaining: &mut usize) -> usize {
-        let claim = self.domain().mark_queue.claim(
+        let mut claim = crate::work::Claim::default();
+        self.domain().mark_queue.claim_into(
             self.local_queue(),
             self.configuration.mark_batch_size,
             remaining,
+            &mut claim,
         );
         #[cfg(test)]
         if claim.items.iter().any(Option::is_some) {
@@ -4205,7 +4202,10 @@ impl GarbageCollector {
                 .fetch_add(claim.misses as u64, Ordering::Relaxed);
         }
         let mut count = 0;
-        for (task, claimed) in tasks.iter_mut().zip(claim.items) {
+        for (task, claimed) in tasks
+            .iter_mut()
+            .zip(claim.items.iter_mut().map(Option::take))
+        {
             let Some((item, budget)) = claimed else {
                 continue;
             };
@@ -4239,8 +4239,8 @@ impl GarbageCollector {
         count
     }
 
-    fn publish_mark_batch(&self, tasks: [Option<MarkTask>; 8], counters: &mut WorkCounters) {
-        for task in tasks.into_iter().flatten() {
+    fn publish_mark_batch(&self, tasks: &mut [Option<MarkTask>; 8], counters: &mut WorkCounters) {
+        for task in tasks.iter_mut().filter_map(Option::take) {
             match task.progress {
                 TraceProgress::Complete => {
                     counters.marked += 1;
@@ -4350,7 +4350,7 @@ impl GarbageCollector {
         let mut counters = WorkCounters::default();
         loop {
             let stalled = self.trace_mark_batch(&mut tasks, started);
-            self.publish_mark_batch(tasks, &mut counters);
+            self.publish_mark_batch(&mut tasks, &mut counters);
             if stalled || remaining == 0 {
                 break;
             }
@@ -4934,7 +4934,7 @@ impl GarbageCollector {
                                 Some(lock(&self.coordinator))
                             };
                             cycle = lock(&self.domain().cycle);
-                            self.publish_mark_batch(tasks, &mut counters);
+                            self.publish_mark_batch(&mut tasks, &mut counters);
                             // Another worker can close the epoch as soon as the last
                             // reservation is released. Publish completed mark work first.
                             if counters.marked != 0 {
@@ -6230,7 +6230,7 @@ mod tests {
             let version = tasks[0].as_ref().expect("claim").version;
             metadata.mutation.store(version, Ordering::Release);
             gc.remembered.lock(address).insert(address);
-            gc.publish_mark_batch(tasks, &mut WorkCounters::default());
+            gc.publish_mark_batch(&mut tasks, &mut WorkCounters::default());
             assert!(gc.remembered.lock(address).contains(&address));
             if address != replacement_address {
                 gc.objects.replace_for_test(address, None);
