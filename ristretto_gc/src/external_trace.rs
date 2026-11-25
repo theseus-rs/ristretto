@@ -99,7 +99,7 @@ impl GarbageCollector {
             let mut intent = None;
             let mut strengths = [None; 2];
             if !dead {
-                for (i, epoch) in epochs.iter().enumerate() {
+                for (i, (epoch, proposed)) in epochs.iter().zip(&mut strengths).enumerate() {
                     let (Some(stage), Some(epoch)) = (snapshot.stage(i), epoch) else {
                         continue;
                     };
@@ -115,7 +115,7 @@ impl GarbageCollector {
                     {
                         continue;
                     }
-                    strengths[i] = Some(strength);
+                    *proposed = Some(strength);
                     let record = intent.get_or_insert_with(|| {
                         Arc::new(crate::roots::Record::typed(metadata.ptr().0))
                     });
@@ -139,17 +139,22 @@ impl GarbageCollector {
                 })
                 && intent.is_none_or(|record| record.commit_typed())
             {
-                for (i, (strength, epoch)) in strengths.into_iter().zip(&epochs).enumerate() {
-                    if let (Some(strength), Some(epoch)) = (strength, epoch) {
-                        metadata.direct_marks.publish(
-                            i,
-                            epoch,
-                            strength,
-                            &self.domain_at(i).mark_queue,
-                        );
-                    }
-                }
+                self.expose_committed_trace(metadata, &epochs, strengths);
                 return;
+            }
+        }
+    }
+    fn expose_committed_trace(
+        &self,
+        metadata: &MetadataRef,
+        epochs: &[Option<Arc<crate::work::BirthEpoch>>; 2],
+        strengths: [Option<Retention>; 2],
+    ) {
+        for (i, (strength, epoch)) in strengths.into_iter().zip(epochs).enumerate() {
+            if let (Some(strength), Some(epoch)) = (strength, epoch) {
+                metadata
+                    .direct_marks
+                    .publish(i, epoch, strength, &self.domain_at(i).mark_queue);
             }
         }
     }

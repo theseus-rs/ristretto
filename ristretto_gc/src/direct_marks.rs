@@ -31,7 +31,7 @@ impl DirectMarks {
         strength: Retention,
         queues: &MarkQueues,
     ) {
-        let slots = self.0.get_or_init(|| Box::new(Default::default()));
+        let slots = self.0.get_or_init(Box::default);
         let Some(slot) = slots.get(index) else { return };
         let replacement = Arc::new(Entry {
             epoch: Arc::downgrade(epoch),

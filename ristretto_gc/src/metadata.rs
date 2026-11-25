@@ -266,7 +266,7 @@ impl ObjectMetadata {
             },
             finalized: AtomicBool::new(false),
             trace,
-            direct_marks: Default::default(),
+            direct_marks: direct_marks::DirectMarks::default(),
             epochs: std::array::from_fn(|_| MarkWord::default()),
             age: AtomicUsize::new(0),
             old_birth: AtomicU64::new(0),
