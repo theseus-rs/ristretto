@@ -42,6 +42,37 @@ struct Waiters {
     observations: BTreeMap<(usize, WaiterId), Arc<AtomicBool>>,
 }
 
+impl Waiters {
+    fn take_fitting_allocation(
+        &mut self,
+        gc: &GarbageCollector,
+        available: usize,
+    ) -> Option<((u64, WaiterId), Waiter, usize)> {
+        let (&(bytes, id), &cycle) = self.space.first_key_value()?;
+        if bytes > available {
+            return None;
+        }
+        self.space.remove(&(bytes, id));
+        let entry = self.entries.remove(&(cycle, id))?;
+        if let Some(seen) = &entry.space_seen {
+            seen.store(true, Ordering::Release);
+        }
+        if gc.diagnostics_enabled() {
+            gc.diagnostics
+                .allocation_early_wakeups
+                .fetch_add(1, Ordering::Relaxed);
+        }
+        Some(((cycle, id), entry, bytes))
+    }
+
+    fn queue_fitting_allocations(&mut self, gc: &GarbageCollector, mut remaining: usize) {
+        while let Some((key, entry, bytes)) = self.take_fitting_allocation(gc, remaining) {
+            remaining -= bytes;
+            self.ready.insert(key, entry);
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 pub(crate) struct Recovery {
     waiters: Mutex<Waiters>,
@@ -81,6 +112,100 @@ impl Drop for DeliveryGuard<'_> {
         lock(&self.recovery.waiters)
             .delivering
             .retain(|thread| *thread != self.thread);
+    }
+}
+
+/// Native executor delivery is independent of user tracing callbacks. The
+/// dispatch thread never holds a collector owner while waiting for a refund.
+#[cfg(not(target_family = "wasm"))]
+#[derive(Debug)]
+pub(crate) struct RefundNotifier {
+    thread: std::thread::Thread,
+    handle: Mutex<Option<std::thread::JoinHandle<()>>>,
+    event: Arc<RefundEvent>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[derive(Debug, Default)]
+struct RefundEvent {
+    pending: AtomicBool,
+    closed: AtomicBool,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl RefundNotifier {
+    pub(crate) fn spawn(gc: &GarbageCollector) -> Result<Self> {
+        let event = Arc::new(RefundEvent::default());
+        let wake = event.clone();
+        let weak = gc.weak();
+        let handle = std::thread::Builder::new()
+            .name("gc-refund".into())
+            .spawn(move || {
+                while !wake.closed.load(Ordering::Acquire) {
+                    if wake.pending.swap(false, Ordering::AcqRel) {
+                        Self::dispatch(&weak, &wake);
+                    } else {
+                        std::thread::park();
+                    }
+                }
+            })
+            .map_err(|error| Error::SyncError(error.to_string()))?;
+        Ok(Self {
+            thread: handle.thread().clone(),
+            handle: Mutex::new(Some(handle)),
+            event,
+        })
+    }
+
+    fn dispatch(weak: &std::sync::Weak<GarbageCollector>, event: &RefundEvent) {
+        // A wake offers a retry. An executor can discard or delay that retry,
+        // so each independently fitting sleeper gets an opportunity.
+        while !event.closed.load(Ordering::Acquire) {
+            let Some(gc) = weak.upgrade() else { break };
+            if !gc.recovery.has_fitting_waiter(gc.allocation_headroom()) {
+                break;
+            }
+            let (send, receive) = std::sync::mpsc::sync_channel::<Waker>(1);
+            // Secure an independent delivery context before taking the waiter.
+            // A parked executor callback holds neither the collector nor its
+            // notification thread. Its siblings can be dispatched immediately.
+            if std::thread::Builder::new()
+                .name("gc-allocation-wake".into())
+                .spawn(move || {
+                    if let Ok(waker) = receive.recv() {
+                        waker.wake();
+                    }
+                })
+                .is_err()
+            {
+                drop(gc);
+                event.pending.store(true, Ordering::Release);
+                std::thread::park_timeout(std::time::Duration::from_millis(1));
+                break;
+            }
+            let waker = gc.recovery.take_refund_waker(&gc);
+            drop(gc);
+            let Some(waker) = waker else { break };
+            let _ = send.send(waker);
+        }
+    }
+
+    pub(crate) fn join(&self) {
+        if let Some(handle) = lock(&self.handle).take()
+            && handle.thread().id() != std::thread::current().id()
+        {
+            let _ = handle.join();
+        }
+    }
+
+    pub(crate) fn signal(&self) {
+        self.event.pending.store(true, Ordering::Release);
+        self.thread.unpark();
+    }
+
+    pub(crate) fn close(&self) {
+        self.event.closed.store(true, Ordering::Release);
+        self.signal();
     }
 }
 
@@ -203,6 +328,11 @@ impl Recovery {
         drop(previous);
     }
 
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn has_fitting_waiter(&self, available: usize) -> bool {
+        self.waiter_count() != 0 && available >= self.minimum_bytes.load(Ordering::Acquire)
+    }
+
     pub(crate) fn waiter_count(&self) -> usize {
         self.waiting.load(Ordering::Acquire)
     }
@@ -225,6 +355,14 @@ impl Recovery {
         );
         self.physical_waiting
             .store(waiters.physical.len(), Ordering::Release);
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn take_refund_waker(&self, gc: &GarbageCollector) -> Option<Waker> {
+        let mut waiters = lock(&self.waiters);
+        let (_, entry, _) = waiters.take_fitting_allocation(gc, gc.allocation_headroom())?;
+        self.update_counts(&waiters);
+        Some(entry.waker)
     }
 
     /// Called after releasing all collector locks.
@@ -262,26 +400,7 @@ impl Recovery {
                     }
                 }
             }
-            // Only inspect eligible sizes. Wake no more requested bytes than the
-            // observed headroom; recipients still reserve atomically when polled.
-            while let Some((&(bytes, id), &cycle)) = waiters.space.first_key_value() {
-                if bytes > remaining {
-                    break;
-                }
-                waiters.space.remove(&(bytes, id));
-                if let Some(entry) = waiters.entries.remove(&(cycle, id)) {
-                    remaining -= bytes;
-                    if let Some(seen) = &entry.space_seen {
-                        seen.store(true, Ordering::Release);
-                    }
-                    ready.insert((cycle, id), entry);
-                    if gc.diagnostics_enabled() {
-                        gc.diagnostics
-                            .allocation_early_wakeups
-                            .fetch_add(1, Ordering::Relaxed);
-                    }
-                }
-            }
+            waiters.queue_fitting_allocations(gc, remaining);
             // Publish logical wakes before looking at the heap. A paused
             // region probe must leave unrelated wakes and cancellation accessible.
             waiters.ready.append(&mut ready);
@@ -510,6 +629,16 @@ impl Future for CollectionWait<'_> {
             return Poll::Ready(Err(Error::SyncError("collector worker panicked".into())));
         }
         if gc.recovery.workers.load(Ordering::Acquire) != 0 {
+            #[cfg(not(target_family = "wasm"))]
+            if let Some(bytes) = this.bytes {
+                // Register first, then install delivery and check again. A worker
+                // may have started during this poll, or credit may already fit.
+                gc.ensure_refund_notifier()?;
+                if bytes <= gc.headroom_after_registration() {
+                    gc.recovery.remove(this.ticket, this.id);
+                    return Poll::Ready(Ok(true));
+                }
+            }
             return Poll::Pending;
         }
         gc.recovery.remove(this.ticket, this.id);

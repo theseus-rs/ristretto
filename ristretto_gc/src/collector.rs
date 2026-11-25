@@ -785,6 +785,8 @@ pub struct GarbageCollector {
     shutdown: AtomicBool,
     #[cfg(not(target_family = "wasm"))]
     collector_thread: Mutex<Vec<thread::JoinHandle<()>>>,
+    #[cfg(not(target_family = "wasm"))]
+    refund_notifier: arc_swap::ArcSwapOption<crate::recovery::RefundNotifier>,
     trigger: Arc<(Mutex<bool>, Condvar)>,
 }
 
@@ -1680,6 +1682,8 @@ impl GarbageCollector {
                 shutdown: AtomicBool::new(false),
                 #[cfg(not(target_family = "wasm"))]
                 collector_thread: Mutex::new(Vec::new()),
+                #[cfg(not(target_family = "wasm"))]
+                refund_notifier: arc_swap::ArcSwapOption::empty(),
                 trigger: Arc::new((Mutex::new(false), Condvar::new())),
             }
         })
@@ -2189,6 +2193,31 @@ impl GarbageCollector {
         self.recovery.registered_workers()
     }
 
+    /// Only a logical allocation that would sleep behind native collection needs
+    /// independent wake delivery. Reuse it until this set of workers stops.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn ensure_refund_notifier(&self) -> Result<()> {
+        if self.refund_notifier.load().is_some() {
+            return Ok(());
+        }
+        let _workers = lock(&self.collector_thread);
+        // stop() may already have taken the handles while a worker is still
+        // parked. Keep independent delivery available until the workers exit.
+        if self.recovery.registered_workers() == 0 || self.refund_notifier.load().is_some() {
+            return Ok(());
+        }
+        let notifier = crate::recovery::RefundNotifier::spawn(self)?;
+        self.refund_notifier.store(Some(Arc::new(notifier)));
+        Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn close_refund_notifier(&self) {
+        if let Some(notifier) = self.refund_notifier.swap(None) {
+            notifier.close();
+        }
+    }
+
     /// Starts the native worker. Cooperative hosts need no worker.
     #[cfg(not(target_family = "wasm"))]
     pub fn start(&self) {
@@ -2353,6 +2382,16 @@ impl GarbageCollector {
                 worker
                     .join()
                     .map_err(|_| crate::Error::SyncError("collector worker panicked".into()))?;
+            }
+            let notifier = {
+                let _workers = lock(&self.collector_thread);
+                (self.recovery.registered_workers() == 0)
+                    .then(|| self.refund_notifier.swap(None))
+                    .flatten()
+            };
+            if let Some(notifier) = notifier {
+                notifier.close();
+                notifier.join();
             }
         }
         self.collect_full()?;
@@ -2564,11 +2603,24 @@ impl GarbageCollector {
 
     pub(crate) fn cancel_allocation(&self, size: usize) {
         let previous = self.managed_budget.release(size);
-        self.recovery.record_headroom(
-            self.configuration
-                .max_heap_bytes
-                .saturating_sub(previous - size),
-        );
+        let available = self
+            .configuration
+            .max_heap_bytes
+            .saturating_sub(previous - size);
+        self.recovery.record_headroom(available);
+        #[cfg(not(target_family = "wasm"))]
+        if self.recovery.has_fitting_waiter(available)
+            && let Some(notifier) = self.refund_notifier.load().as_ref()
+        {
+            notifier.signal();
+        }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn headroom_after_registration(&self) -> usize {
+        self.configuration
+            .max_heap_bytes
+            .saturating_sub(self.managed_budget.used_after_registration())
     }
 
     pub(crate) fn allocation_headroom(&self) -> usize {
@@ -5352,6 +5404,8 @@ impl GarbageCollector {
 
 impl Drop for GarbageCollector {
     fn drop(&mut self) {
+        #[cfg(not(target_family = "wasm"))]
+        self.close_refund_notifier();
         self.shutdown.store(true, Ordering::Release);
         self.wake();
         self.cleanup_remaining_objects();

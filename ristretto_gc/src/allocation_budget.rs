@@ -28,6 +28,14 @@ impl AllocationBudget {
         self.used.load(Ordering::Acquire)
     }
 
+    /// Publish waiter registration into the same modification order as refunds.
+    /// A later release acquires that registration; an earlier refund is visible
+    /// in the returned charge. An acquire-only load would allow both sides to miss.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn used_after_registration(&self) -> usize {
+        self.used.fetch_or(0, Ordering::AcqRel)
+    }
+
     pub(crate) fn try_charge(&self, bytes: usize) -> Result<()> {
         self.used
             .try_update(Ordering::AcqRel, Ordering::Acquire, |used| {
