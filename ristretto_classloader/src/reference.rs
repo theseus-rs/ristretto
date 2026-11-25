@@ -687,7 +687,9 @@ impl PartialEq for Reference {
     }
 }
 
-impl Trace for Reference {
+// SAFETY: The array and object variants visit every managed edge. Other variants contain primitive elements. Attachment preserves ownership of these handles.
+#[expect(unsafe_code, reason = "explicit tracing contract for VM storage")]
+unsafe impl Trace for Reference {
     fn trace(&self, collector: &GarbageCollector) {
         match self {
             Reference::Array(object_array) => {

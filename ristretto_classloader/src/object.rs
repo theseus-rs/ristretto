@@ -742,7 +742,9 @@ impl Hash for Object {
     }
 }
 
-impl Trace for Object {
+// SAFETY: Instance storage visits each reference field. This layout keeps the handle in its owning form through attachment and movement.
+#[expect(unsafe_code, reason = "explicit tracing contract for VM storage")]
+unsafe impl Trace for Object {
     fn trace(&self, collector: &GarbageCollector) {
         for value in &self.values {
             if let Value::Object(Some(reference)) = value {
