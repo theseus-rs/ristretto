@@ -76,6 +76,7 @@ struct Bitmap {
     // Counts live bits and address claims between pinning and setting their
     // bit. Once this reaches zero a stale directory view cannot reopen it.
     users: AtomicUsize,
+    used_words: AtomicU64,
     words: [AtomicU64; WORDS],
 }
 
@@ -87,6 +88,7 @@ impl Bitmap {
     fn new(offset: usize) -> Self {
         let result = Self {
             users: AtomicUsize::new(1),
+            used_words: AtomicU64::new(1 << (offset / WORD)),
             words: [const { AtomicU64::new(0) }; WORDS],
         };
         result.words[offset / WORD].store(1 << (offset % WORD), Relaxed);
@@ -105,7 +107,12 @@ impl Bitmap {
 
     fn set(&self, offset: usize) -> bool {
         let bit = 1 << (offset % WORD);
-        self.words[offset / WORD].fetch_or(bit, AcqRel) & bit == 0
+        let word = offset / WORD;
+        let word_bit = 1 << word;
+        if self.used_words.load(Relaxed) & word_bit == 0 {
+            self.used_words.fetch_or(word_bit, AcqRel);
+        }
+        self.words[word].fetch_or(bit, AcqRel) & bit == 0
     }
 
     fn remove(&self, offset: usize) -> bool {
@@ -115,13 +122,25 @@ impl Bitmap {
 
     fn next(&self, start: usize) -> Option<usize> {
         let first = start / WORD;
-        let mut mask = u64::MAX << (start % WORD);
-        for (index, word) in self.words.iter().enumerate().skip(first) {
-            let bits = word.load(Acquire) & mask;
+        if first >= WORDS {
+            return None;
+        }
+        // A word enters the summary before its first bit is published. Its
+        // summary bit stays set even when the word empties, so removal never
+        // races a concurrent insertion to clear the summary.
+        let mut candidates = self.used_words.load(Acquire) & (u64::MAX << first);
+        while candidates != 0 {
+            let word = candidates.trailing_zeros() as usize;
+            let mask = if word == first {
+                u64::MAX << (start % WORD)
+            } else {
+                u64::MAX
+            };
+            let bits = self.words[word].load(Acquire) & mask;
             if bits != 0 {
-                return Some(index * WORD + bits.trailing_zeros() as usize);
+                return Some(word * WORD + bits.trailing_zeros() as usize);
             }
-            mask = u64::MAX;
+            candidates &= candidates - 1;
         }
         None
     }
