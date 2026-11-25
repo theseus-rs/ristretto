@@ -69,13 +69,16 @@ impl Drop for InstructionBudget<'_> {
 }
 
 #[derive(Debug)]
-struct MonitorGuard {
+pub(crate) struct MonitorGuard {
     monitor: Option<Arc<ristretto_types::monitor::Monitor>>,
     thread_id: u64,
 }
 
 impl MonitorGuard {
-    fn new(monitor: Option<Arc<ristretto_types::monitor::Monitor>>, thread_id: u64) -> Self {
+    pub(crate) fn new(
+        monitor: Option<Arc<ristretto_types::monitor::Monitor>>,
+        thread_id: u64,
+    ) -> Self {
         Self { monitor, thread_id }
     }
 }
@@ -1466,8 +1469,10 @@ impl Thread {
                 ));
             }
             let argument = arguments.pop_int()?;
-            let result = binding.invoke(vm.garbage_collector(), argument).await;
-            drop(monitor_guard);
+            let monitor = monitor_guard.monitor.is_some().then_some(monitor_guard);
+            let result = binding
+                .invoke(vm.garbage_collector(), argument, monitor)
+                .await;
             return match result {
                 Ok(value) => Ok(DispatchResult::Completed(Some(Value::Int(value)))),
                 Err(error) => Err(crate::canonical::native::java_error(self, error).await),
