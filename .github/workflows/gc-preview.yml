@@ -1,0 +1,66 @@
+name: GC preview source smoke
+on:
+  pull_request:
+    paths:
+      - 'ristretto_*/**'
+      - 'benchmarks/gc/**'
+      - 'GC_PREVIEW.md'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/gc-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CARGO_BUILD_JOBS: 1
+    strategy:
+      fail-fast: false
+      matrix:
+        tier: [native-interpreted, native-compiled, wasi-interpreted]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: rustup toolchain install --no-self-update
+      - if: matrix.tier == 'wasi-interpreted'
+        run: rustup target add wasm32-wasip2
+      - if: matrix.tier == 'wasi-interpreted'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasmtime@50.0.1
+      - name: Check the report verifier
+        run: python3 -m unittest discover -s benchmarks/gc/release -p 'test_*.py'
+      - name: Build and check the source archive
+        shell: bash
+        run: |
+          python3 benchmarks/gc/release/source_archive.py HEAD "$RUNNER_TEMP/preview"
+          python3 benchmarks/gc/release/source_archive.py HEAD "$RUNNER_TEMP/preview-repeat"
+          cmp "$RUNNER_TEMP"/preview/ristretto-gc-preview-*.tar.gz "$RUNNER_TEMP"/preview-repeat/ristretto-gc-preview-*.tar.gz
+          cmp "$RUNNER_TEMP/preview/SHA256SUMS" "$RUNNER_TEMP/preview-repeat/SHA256SUMS"
+          cd "$RUNNER_TEMP/preview"
+          sha256sum --check SHA256SUMS
+          tar -xzf ristretto-gc-preview-*.tar.gz
+      - name: Run the Java example from the extracted archive
+        shell: bash
+        env:
+          TIER: ${{ matrix.tier }}
+          CARGO_TARGET_WASM32_WASIP2_RUNNER: wasmtime run -W max-wasm-stack=8388608 -S http
+        run: |
+          export CARGO_TARGET_DIR="$RUNNER_TEMP/preview-target-$TIER"
+          python3 "$RUNNER_TEMP"/preview/ristretto-gc-preview-*/benchmarks/gc/release/verify_preview.py "$TIER" --receipt "$RUNNER_TEMP/preview-$TIER.json"
+      - name: Retain the source archive, checksum and functional receipt
+        uses: actions/upload-artifact@v7
+        with:
+          name: gc-preview-${{ matrix.tier }}
+          path: |
+            ${{ runner.temp }}/preview/ristretto-gc-preview-*.tar.gz
+            ${{ runner.temp }}/preview/SHA256SUMS
+            ${{ runner.temp }}/preview-${{ matrix.tier }}.json
+          if-no-files-found: error

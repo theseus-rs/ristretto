@@ -29,7 +29,8 @@ def main():
         archive = staging / filename
         with archive.open("wb") as raw, gzip.GzipFile(filename="", fileobj=raw, mode="wb",
                                                        compresslevel=9, mtime=0) as compressed:
-            with subprocess.Popen(["git", "archive", "--format=tar", "--prefix=" + prefix + "/", commit],
+            # Fix modes independently of the caller's tar.umask Git setting.
+            with subprocess.Popen(["git", "-c", "tar.umask=0022", "archive", "--format=tar", "--prefix=" + prefix + "/", commit],
                                   cwd=root, stdout=subprocess.PIPE) as export:
                 shutil.copyfileobj(export.stdout, compressed)
                 if export.wait():
