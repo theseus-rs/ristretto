@@ -2,12 +2,35 @@ use crate::java::lang::class::get_class_no_init;
 use byteorder::{BigEndian, WriteBytesExt};
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::attributes::Attribute;
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::{Class, Field, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
+
+/// Recover the declaration identified by java.lang.reflect.Field.slot.
+pub(crate) async fn reflected_field<T: Thread + 'static>(
+    thread: &T,
+    mirror: &Value,
+) -> Result<(Arc<Class>, Arc<Field>)> {
+    let (owner, slot) = {
+        let mirror = mirror.as_object_ref()?;
+        (mirror.value("clazz")?, mirror.value("slot")?.as_i32()?)
+    };
+    let class = get_class_no_init(thread, &owner).await?;
+    let field = class
+        .declared_fields()
+        .into_iter()
+        .find(|field| i32::from(field.offset()) == slot)
+        .ok_or_else(|| {
+            ristretto_types::Error::InternalError(format!(
+                "Invalid field slot {slot} in {}",
+                class.name()
+            ))
+        })?;
+    Ok((class, field))
+}
 
 #[intrinsic_method("java/lang/reflect/Field.getTypeAnnotationBytes0()[B", Any)]
 pub async fn get_type_annotation_bytes_0<T: Thread + 'static>(
@@ -17,37 +40,7 @@ pub async fn get_type_annotation_bytes_0<T: Thread + 'static>(
     // 'this' is the Field object
     let field_obj = parameters.pop()?;
 
-    let (declaring_class_value, slot) = {
-        let field_ref = field_obj.as_object_ref()?;
-        let declaring_class_value = field_ref.value("clazz")?;
-        let slot_i32 = field_ref.value("slot")?.as_i32()?;
-        let slot = usize::try_from(slot_i32).map_err(|_| {
-            ristretto_types::Error::InternalError(format!("Invalid slot value: {slot_i32}"))
-        })?;
-        (declaring_class_value, slot)
-    };
-
-    let declaring_class = get_class_no_init(&thread, &declaring_class_value).await?;
-
-    // Get the field name from the slot (offset)
-    let field_name = declaring_class.field_name(slot)?;
-
-    // Find the field in declared_fields
-    let field = declaring_class
-        .declared_fields()
-        .into_iter()
-        .find(|f| f.name() == field_name)
-        .ok_or_else(|| {
-            ristretto_types::Error::InternalError(
-                [
-                    "Field ",
-                    &field_name,
-                    " not found in ",
-                    declaring_class.name(),
-                ]
-                .concat(),
-            )
-        })?;
+    let (_, field) = reflected_field(&*thread, &field_obj).await?;
 
     // Collect all type annotations from both visible and invisible attributes
     let mut all_type_annotations = Vec::new();

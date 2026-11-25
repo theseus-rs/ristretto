@@ -1,0 +1,509 @@
+# Java SE 25 JVMS, chapter 2.
+version = 1
+suite = "."
+
+[spec]
+s2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html"
+s2_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.1"
+s2_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.2"
+s2_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.3"
+s2_3_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.3.1"
+s2_3_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.3.2"
+s2_3_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.3.3"
+s2_3_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.3.4"
+s2_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.4"
+s2_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.5"
+s2_5_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.5.1"
+s2_5_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.5.2"
+s2_5_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.5.3"
+s2_5_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.5.4"
+s2_5_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.5.5"
+s2_5_6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.5.6"
+s2_6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6"
+s2_6_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.1"
+s2_6_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.2"
+s2_6_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.3"
+s2_6_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.4"
+s2_6_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.5"
+s2_7 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.7"
+s2_8 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.8"
+s2_9 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.9"
+s2_9_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.9.1"
+s2_9_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.9.2"
+s2_9_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.9.3"
+s2_10 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.10"
+s2_11 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11"
+s2_11_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11.1"
+s2_11_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11.2"
+s2_11_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11.3"
+s2_11_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11.4"
+s2_11_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11.5"
+s2_11_6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11.6"
+s2_11_7 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11.7"
+s2_11_8 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11.8"
+s2_11_9 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11.9"
+s2_11_10 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11.10"
+s2_12 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.12"
+s2_13 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.13"
+
+# Informative text and overviews. Related behavioral cases appear under their own sections.
+[context]
+s2 = "Abstract execution model."
+s2_3 = "Overview of primitive values. The following sections define their domains."
+s2_5 = "Inventory of per-thread and shared run-time areas."
+s2_7 = "The VM may choose its own physical object layout."
+s2_9 = "Introduction to methods treated specially by the VM."
+s2_11 = "Overview of the instruction families specified in chapter 6."
+s2_13 = "Implementations may choose their internal design while preserving observable behavior."
+
+# Published source anchors beneath each section, in document order. Append a suffix to
+# the section fragment (jvms-N for a chapter) to locate the original clause, rule or table.
+[anchors]
+s2 = ["-100", "-110", "-120"]
+s2_1 = ["-100", "-110"]
+s2_2 = ["-100", "-110", "-120"]
+s2_3 = [
+  "-100", "-110", "-120", "-120-A", "-120-B", "-120-C", "-120-D", "-120-E", "-130", "-130-A",
+  "-130-B", "-200", "-300"
+]
+s2_3_1 = ["-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100-E"]
+s2_3_2 = [
+  "-100", "-110", "-120", "-120-A", "-120-B", "-120-C", "-120-D", "-130", "-140", "-150",
+  "-150-A", "-200", "-210", "-220", "-230"
+]
+s2_3_3 = ["-100"]
+s2_3_4 = ["-100", "-200", "-210"]
+s2_4 = ["-100", "-110", "-200", "-300"]
+s2_5 = ["-100"]
+s2_5_1 = ["-100"]
+s2_5_2 = ["-100", "-110", "-200", "-200-A", "-200-B"]
+s2_5_3 = ["-100", "-110", "-200", "-200-A"]
+s2_5_4 = ["-100", "-110", "-200", "-200-A"]
+s2_5_5 = ["-100", "-110", "-200", "-200-A"]
+s2_5_6 = ["-100", "-110", "-200", "-200-A", "-200-B"]
+s2_6 = ["-100", "-110", "-120", "-200", "-210", "-300"]
+s2_6_1 = ["-100", "-110", "-200", "-210", "-220", "-300"]
+s2_6_2 = ["-100", "-110", "-200", "-210", "-300", "-310", "-400"]
+s2_6_3 = ["-100", "-110"]
+s2_6_4 = ["-100", "-110"]
+s2_6_5 = ["-100"]
+s2_7 = ["-100"]
+s2_8 = [
+  "-100", "-200", "-200-A", "-300", "-300-A", "-300-B", "-300-C", "-300-D", "-300-E", "-300-F",
+  "-400", "-500", "-500-A", "-500-A.1", "-500-B", "-500-B.1", "-510", "-600"
+]
+s2_9_1 = ["-100", "-200", "-200-A", "-200-B", "-200-C", "-210", "-300"]
+s2_9_2 = ["-100", "-200", "-200-A", "-200-B", "-200-C", "-210"]
+s2_9_3 = ["-100", "-100-A", "-100-B", "-100-C", "-200", "-210"]
+s2_10 = [
+  "-100", "-110", "-110-A", "-110-B", "-110-B-A", "-110-B-A-A", "-110-B-A-B", "-110-B-B",
+  "-110-C", "-200", "-300", "-400", "-410", "-410-A", "-410-B", "-420", "-430"
+]
+s2_11 = ["-100", "-110", "-200", "-210"]
+s2_11_1 = ["-100", "-110", "-120", "-200", "-210", "-220", "-300", "-310", "-320"]
+s2_11_2 = ["-100", "-100-A", "-100-B", "-100-C", "-100-D", "-110", "-200", "-300"]
+s2_11_3 = [
+  "-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100-E", "-100-F", "-100-G", "-100-H",
+  "-100-I", "-100-J", "-100-K", "-100-L", "-110", "-200", "-210", "-300", "-310"
+]
+s2_11_4 = [
+  "-100", "-110", "-110-A", "-110-B", "-110-C", "-120", "-130", "-140", "-150", "-160", "-170",
+  "-200", "-200-A", "-200-B", "-200-C", "-200-D", "-210", "-220", "-230", "-230-A", "-230-B",
+  "-230-B-A", "-230-B-B", "-230-C", "-230-C-A", "-230-C-B", "-240", "-300"
+]
+s2_11_5 = ["-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100-E", "-100-F", "-100-G"]
+s2_11_6 = ["-100"]
+s2_11_7 = ["-100", "-100-A", "-100-B", "-100-C", "-110", "-120", "-130"]
+s2_11_8 = ["-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100-E", "-200"]
+s2_11_9 = ["-100"]
+s2_11_10 = ["-100", "-110", "-120", "-200", "-200-A", "-200-B", "-210"]
+s2_12 = ["-100", "-110", "-110-A", "-110-B", "-110-C", "-110-D", "-110-E", "-110-F", "-120"]
+s2_13 = ["-100", "-110", "-120", "-120-A", "-120-B", "-130"]
+
+[[case]]
+id = "JVMS.2.1"
+spec = ["s2_1"]
+java = "25"
+status = "planned"
+expect = "Decode a multi-byte class-file quantity with its most significant byte first."
+
+[[case]]
+id = "JVMS.2.2"
+spec = ["s2_2"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToByte"]
+expect = "Narrowing the same int to byte changes its value before it is passed back as an int."
+
+[[case]]
+id = "JVMS.2.3.1"
+spec = ["s2_3_1"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntAdd"]
+expect = "Addition at the signed int boundary yields the low 32 bits of the mathematical sum."
+
+[[case]]
+id = "JVMS.2.3.1.DOMAINS"
+spec = ["s2_3_1"]
+java = "25"
+status = "planned"
+expect = """
+Long values use signed 64-bit two's complement. Byte and short are signed while char represents \
+an unsigned UTF-16 code unit."""
+
+[[case]]
+id = "JVMS.2.3.2"
+spec = ["s2_3_2"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleSpecialValues"]
+expect = "The double fixture distinguishes NaN and infinities from finite double values."
+
+[[case]]
+id = "JVMS.2.3.2.ZERO"
+spec = ["s2_3_2"]
+java = "25"
+status = "planned"
+expect = """
+Positive and negative zero compare equal. Dividing a positive finite number by them produces \
+infinities of opposite sign."""
+
+[[case]]
+id = "JVMS.2.3.3"
+spec = ["s2_3_3"]
+java = "25"
+status = "planned"
+expect = "In legacy subroutine bytecode, ret resumes at the instruction following the calling jsr."
+
+[[case]]
+id = "JVMS.2.3.4"
+spec = ["s2_3_4"]
+java = "default"
+fixture = "array/boolean"
+evidence = ["Test.java#main"]
+expect = "A fresh boolean array reads false and a stored true reads back as true."
+
+[[case]]
+id = "JVMS.2.4"
+spec = ["s2_4"]
+java = "25"
+fixture = "classloader/array_bootstrap_hierarchy"
+evidence = ["Test.java#checkArray"]
+expect = """
+An array is an object whose class has the reference-type supertypes Object, Cloneable and \
+Serializable."""
+
+[[case]]
+id = "JVMS.2.5.1"
+spec = ["s2_5_1"]
+java = "25"
+status = "planned"
+expect = """
+A suspended thread resumes its own bytecode stream at the correct instruction after another \
+thread runs."""
+
+[[case]]
+id = "JVMS.2.5.2"
+spec = ["s2_5_2"]
+java = "25"
+fixture = "exceptions/stack_overflow_error"
+evidence = ["Test.java#direct", "Test.java#main"]
+expect = "Recursive calls that exhaust the Java stack raise StackOverflowError."
+
+[[case]]
+id = "JVMS.2.5.2.EXPANSION"
+spec = ["s2_5_2"]
+java = "25"
+status = "planned"
+expect = """
+On a VM with dynamically expanding stacks, failure to obtain memory for stack expansion throws \
+OutOfMemoryError."""
+
+[[case]]
+id = "JVMS.2.5.3"
+spec = ["s2_5_3"]
+java = "25"
+status = "planned"
+expect = """
+If an object allocation requires more heap than the VM can provide after reclamation, it throws \
+OutOfMemoryError."""
+
+[[case]]
+id = "JVMS.2.5.4"
+spec = ["s2_5_4"]
+java = "25"
+status = "planned"
+expect = """
+If the method area cannot satisfy a class-data allocation, the VM throws OutOfMemoryError."""
+
+[[case]]
+id = "JVMS.2.5.5"
+spec = ["s2_5_5"]
+java = "25"
+status = "planned"
+expect = """
+Two defining classes may use the same numerical pool index for different constants. Each \
+resolves its own entry."""
+
+[[case]]
+id = "JVMS.2.5.5.ALLOCATION"
+spec = ["s2_5_5"]
+java = "25"
+status = "planned"
+expect = """
+If a new run-time constant pool cannot be allocated in the method area, class creation throws \
+OutOfMemoryError."""
+
+[[case]]
+id = "JVMS.2.5.6"
+spec = ["s2_5_6"]
+java = "25"
+status = "planned"
+expect = """
+On a VM using native method stacks, exceeding the permitted native stack depth raises \
+StackOverflowError."""
+
+[[case]]
+id = "JVMS.2.6"
+spec = ["s2_6"]
+java = "default"
+fixture = "algorithm/merge_sort"
+evidence = ["Test.java#mergeSort"]
+expect = """
+Each recursive invocation retains its own array bounds while the child invocations sort their \
+subranges."""
+
+[[case]]
+id = "JVMS.2.6.1"
+spec = ["s2_6_1"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+expect = "A method reads mixed-width parameters from their respective local slots."
+
+[[case]]
+id = "JVMS.2.6.1.OVERLAP"
+spec = ["s2_6_1"]
+java = "25"
+status = "planned"
+expect = """
+Writing a local slot that holds the upper half of a two-slot value makes the original wide value \
+unusable."""
+
+[[case]]
+id = "JVMS.2.6.1.ARGUMENT_ZERO"
+spec = ["s2_6_1"]
+java = "25"
+status = "planned"
+expect = """
+On an instance call local zero receives the target. On a static call the first argument starts \
+at zero."""
+
+[[case]]
+id = "JVMS.2.6.2"
+spec = ["s2_6_2"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntSub"]
+expect = """
+The top two operands of a subtraction are consumed in the order needed for left minus right."""
+
+[[case]]
+id = "JVMS.2.6.3"
+spec = ["s2_6_3"]
+java = "default"
+fixture = "method/invocation_dispatch"
+evidence = ["Test.java#testMethodDispatch"]
+expect = "A symbolic virtual call uses the receiver class to select an overriding implementation."
+
+[[case]]
+id = "JVMS.2.6.4"
+spec = ["s2_6_4"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#returnArray", "Test.java#main"]
+expect = "The caller receives the array reference returned by the callee and can read its elements."
+
+[[case]]
+id = "JVMS.2.6.5"
+spec = ["s2_6_5"]
+java = "default"
+fixture = "method/exceptions"
+evidence = ["Test.java#handleExceptions"]
+expect = "An exception propagates to the matching handler without delivering a normal return value."
+
+[[case]]
+id = "JVMS.2.8"
+spec = ["s2_8"]
+java = "25"
+status = "planned"
+expect = """
+For float and double, compare raw results for signed zero, subnormal operands and halfway \
+rounding under Java 25 strict arithmetic."""
+
+[[case]]
+id = "JVMS.2.8.GRADUAL_UNDERFLOW"
+spec = ["s2_8"]
+java = "25"
+status = "planned"
+expect = """
+A floating-point operation whose exact magnitude falls below the normal range may produce a \
+nonzero subnormal result."""
+
+[[case]]
+id = "JVMS.2.9.1"
+spec = ["s2_9_1"]
+java = "default"
+fixture = "method/constructors"
+evidence = ["Test.java#main"]
+expect = """
+Construction runs the superclass and subclass initialization code in the order observed by the \
+fixture."""
+
+[[case]]
+id = "JVMS.2.9.2"
+spec = ["s2_9_2"]
+java = "default"
+fixture = "field/static/initialization_order"
+evidence = ["Test.java#main"]
+expect = """
+Active use runs the declaring class initializer and preserves the observable ordering of its \
+static initializations."""
+
+[[case]]
+id = "JVMS.2.9.3"
+spec = ["s2_9_3"]
+java = "25"
+fixture = "method/varhandle/exact_invocation"
+evidence = ["Test.java#main"]
+expect = """
+A signature-polymorphic access uses the descriptor at its invocation site to decide whether an \
+exact call succeeds."""
+
+[[case]]
+id = "JVMS.2.10"
+spec = ["s2_10"]
+java = "25"
+fixture = "thread/uncaught_dispatch"
+evidence = ["Test.java#main"]
+expect = "An uncaught throwable reaches the terminating thread's uncaught-exception handler."
+
+[[case]]
+id = "JVMS.2.10.HANDLER_ORDER"
+spec = ["s2_10"]
+java = "25"
+status = "planned"
+expect = """
+When two exception table entries cover an instruction and match the thrown type, the earlier \
+entry handles it."""
+
+[[case]]
+id = "JVMS.2.10.ATHROW_PC"
+spec = ["s2_10"]
+java = "25"
+status = "planned"
+expect = "A protected range includes its start offset and excludes its end offset."
+
+[[case]]
+id = "JVMS.2.11.1"
+spec = ["s2_11_1"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToChar"]
+expect = """
+The char conversion produces an unsigned 16-bit value represented on the operand stack as an \
+int."""
+
+[[case]]
+id = "JVMS.2.11.2"
+spec = ["s2_11_2"]
+java = "default"
+fixture = "array/int"
+evidence = ["Test.java#main"]
+expect = "A write to one array index is visible on a subsequent load from that index."
+
+[[case]]
+id = "JVMS.2.11.3"
+spec = ["s2_11_3"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntDiv"]
+expect = """
+Signed integral division produces a quotient truncated toward zero for the exercised operands."""
+
+[[case]]
+id = "JVMS.2.11.4"
+spec = ["s2_11_4"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testLongToInt"]
+expect = "Converting a long to int retains the low 32 bits."
+
+[[case]]
+id = "JVMS.2.11.5"
+spec = ["s2_11_5"]
+java = "default"
+fixture = "array/object"
+evidence = ["Test.java#main"]
+expect = "A newly allocated reference array contains null until elements are stored."
+
+[[case]]
+id = "JVMS.2.11.6"
+spec = ["s2_11_6"]
+java = "25"
+status = "planned"
+expect = """
+Each legal dup form preserves the duplicated values and category widths in the specified stack \
+order."""
+
+[[case]]
+id = "JVMS.2.11.7"
+spec = ["s2_11_7"]
+java = "default"
+fixture = "branch/tableswitch"
+evidence = ["Test.java#testSwitchValue"]
+expect = "Each dense switch key reaches its case and an out-of-range key reaches the default."
+
+[[case]]
+id = "JVMS.2.11.8"
+spec = ["s2_11_8"]
+java = "default"
+fixture = "method/invocation_dispatch"
+evidence = ["Test.java#testInterfaceDispatch"]
+expect = "An interface call dispatches to the selected implementation for the receiver."
+
+[[case]]
+id = "JVMS.2.11.9"
+spec = ["s2_11_9"]
+java = "default"
+fixture = "method/exceptions"
+evidence = ["Test.java#handleExceptions"]
+expect = "A thrown object transfers control to the applicable handler."
+
+[[case]]
+id = "JVMS.2.11.10"
+spec = ["s2_11_10"]
+java = "default"
+fixture = "thread/interrupt_complex"
+evidence = ["Test.java#testInterruptDuringWait"]
+expect = """
+A waiting thread reacquires its monitor before handling the interrupt and leaving the \
+synchronized block."""
+
+[[case]]
+id = "JVMS.2.11.10.REENTRANT"
+spec = ["s2_11_10"]
+java = "25"
+status = "planned"
+expect = """
+A thread can reenter an owned monitor. Another thread cannot acquire it until the ownership \
+count drops to zero."""
+
+[[case]]
+id = "JVMS.2.12"
+spec = ["s2_12"]
+java = "25"
+status = "planned"
+expect = """
+Resolve and call a required platform class from application code using its standard binary name."""

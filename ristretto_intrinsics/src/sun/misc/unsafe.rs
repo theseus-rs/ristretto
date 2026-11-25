@@ -82,11 +82,11 @@ pub async fn compare_and_swap_long<T: Thread + 'static>(
     "sun/misc/Unsafe.compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
     LessThanOrEqual(JAVA_8)
 )]
-pub fn compare_and_swap_object<T: Thread + 'static>(
+pub async fn compare_and_swap_object<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    jdk::internal::misc::r#unsafe::compare_and_set_reference(thread, parameters)
+    jdk::internal::misc::r#unsafe::compare_and_set_reference(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -1334,14 +1334,26 @@ mod tests {
     #[tokio::test]
     async fn test_static_field_offset() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let field = create_field(&thread).await?;
+        let owner = thread.class("java/lang/Integer").await?;
+        let field = thread
+            .try_invoke(
+                "java/lang/Class",
+                "getDeclaredField(Ljava/lang/String;)Ljava/lang/reflect/Field;",
+                &[
+                    owner.to_object(&thread).await?,
+                    "MAX_VALUE".to_object(&thread).await?,
+                ],
+            )
+            .await?;
+        let expected = i64::try_from(owner.field_storage_slot(&owner.static_field("MAX_VALUE")?)?)?;
+
         let mut parameters = Parameters::default();
         parameters.push(field);
         let value = static_field_offset(thread, parameters)
             .await?
             .expect("offset");
         let offset = value.as_i64()?;
-        assert_eq!(offset, STATIC_FIELD_OFFSET_MASK);
+        assert_eq!(offset, STATIC_FIELD_OFFSET_MASK | expected);
         Ok(())
     }
 

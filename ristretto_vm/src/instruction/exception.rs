@@ -1,11 +1,11 @@
 use crate::Error::{JavaError, Throwable};
 use crate::JavaError::NullPointerException;
-use crate::assignable::Assignable;
 use crate::frame::Frame;
 use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use crate::{Error, Result};
 use ristretto_classloader::Value;
+use ristretto_types::Assignable;
 
 /// # References
 ///
@@ -63,7 +63,7 @@ pub(crate) async fn process_throwable(
                 .load_referenced_class(class, exception_class_name)
                 .await?;
             exception_class
-                .is_assignable_from(&thread, &throwable_class)
+                .is_assignable_from(thread.as_ref(), &throwable_class)
                 .await?
         };
 

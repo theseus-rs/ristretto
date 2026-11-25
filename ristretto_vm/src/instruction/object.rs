@@ -1,6 +1,5 @@
 use crate::Error::{InternalError, InvalidStackValue};
 use crate::JavaError::{ArrayIndexOutOfBoundsException, ClassCastException, NullPointerException};
-use crate::assignable::Assignable;
 use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue, Frame};
 use crate::local_variables::LocalVariables;
@@ -10,6 +9,7 @@ use crate::{Result, Value};
 use ristretto_classloader::{Class, Object, Reference};
 use ristretto_gc::Gc;
 use ristretto_gc::sync::RwLock;
+use ristretto_types::Assignable;
 use std::sync::Arc;
 
 /// # References

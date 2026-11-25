@@ -32,8 +32,11 @@ def main():
             if dep["kind"] != "dev" and name in packages and name not in required:
                 required.add(name)
                 pending.append(name)
-    # Package the workspace together so the published manifests and lockfiles are normalized.
-    subprocess.run(["cargo", "package", "--workspace", "--locked", "--no-verify"], check=True)
+    # Package publishable members together so Cargo can resolve their in-flight versions.
+    command = ["cargo", "package", "--locked", "--no-verify"]
+    for name in sorted(packages):
+        command.extend(["--package", name])
+    subprocess.run(command, check=True)
     archives = Path(metadata["target_directory"]) / "package"
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)

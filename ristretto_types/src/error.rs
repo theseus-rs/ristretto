@@ -25,7 +25,7 @@ pub enum Error {
     ClassFileError(#[from] ristretto_classfile::Error),
     /// An error occurred in class loading
     #[error(transparent)]
-    ClassLoaderError(#[from] ristretto_classloader::Error),
+    ClassLoaderError(ristretto_classloader::Error),
     /// An error occurred in garbage collection
     #[error(transparent)]
     GcError(#[from] ristretto_gc::Error),
@@ -92,6 +92,15 @@ pub enum Error {
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
         Error::InternalError(error.to_string())
+    }
+}
+
+impl From<ristretto_classloader::Error> for Error {
+    fn from(error: ristretto_classloader::Error) -> Self {
+        if matches!(error, ristretto_classloader::Error::LoadingConstraint(_)) {
+            return JavaError::LinkageError(error.to_string()).into();
+        }
+        Self::ClassLoaderError(error)
     }
 }
 

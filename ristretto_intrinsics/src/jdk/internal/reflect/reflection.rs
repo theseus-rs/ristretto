@@ -47,6 +47,9 @@ async fn get_nest_host<T: Thread + 'static>(
     thread: &Arc<T>,
     class: Arc<Class>,
 ) -> Result<Arc<Class>> {
+    if let Some(host) = class.dynamic_nest_host() {
+        return Ok(host.clone());
+    }
     let class_file = class.class_file();
     for attribute in &class_file.attributes {
         let Attribute::NestHost {

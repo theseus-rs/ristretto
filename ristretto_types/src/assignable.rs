@@ -53,19 +53,17 @@ impl<T: Thread + 'static> Assignable<T> for Arc<Class> {
                         return Ok(false);
                     }
 
-                    let self_component = this.component_type().unwrap_or_default();
-                    let other_component = other.component_type().unwrap_or_default();
-                    let self_component_class = thread
-                        .load_referenced_class(&this, &JavaStr::cow_from_str(self_component))
-                        .await?;
-                    let other_component_class = thread
-                        .load_referenced_class(&other, &JavaStr::cow_from_str(other_component))
-                        .await?;
-                    return self_component_class
-                        .is_assignable_from(thread, &other_component_class)
-                        .await;
-                } else if self_dimensions < other_dimensions && self_name == "[Ljava/lang/Object;" {
-                    return Ok(true);
+                    // Equal ranks reduce to the reference base types. Keep the resolved
+                    // definitions for hidden classes and classes from different loaders.
+                    let target = reference_base(thread, &this).await?;
+                    let source = reference_base(thread, &other).await?;
+                    return target.is_assignable_from(thread, &source).await;
+                } else if self_dimensions < other_dimensions {
+                    // At the target's innermost dimension the source component is still an array.
+                    return Ok(matches!(
+                        this.array_base_element_type(),
+                        "java/lang/Object" | "java/lang/Cloneable" | "java/io/Serializable"
+                    ));
                 }
 
                 return Ok(false);
@@ -88,6 +86,18 @@ impl<T: Thread + 'static> Assignable<T> for Arc<Class> {
             Ok(false)
         })
     }
+}
+
+async fn reference_base<T: Thread + 'static>(thread: &T, array: &Arc<Class>) -> Result<Arc<Class>> {
+    if let Some(base) = array.array_base_class() {
+        return thread.resolve_class(base, false).await;
+    }
+    thread
+        .load_referenced_class(
+            array,
+            &JavaStr::cow_from_str(array.array_base_element_type()),
+        )
+        .await
 }
 
 #[cfg(test)]

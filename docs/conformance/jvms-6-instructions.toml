@@ -1,0 +1,3565 @@
+# Java SE 25 JVMS, chapter 6.
+version = 1
+suite = "."
+
+[spec]
+s6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html"
+s6_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.1"
+s6_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2"
+s6_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.3"
+s6_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.4"
+s6_4_mnemonic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.4-mnemonic"
+s6_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5"
+s6_5_aaload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aaload"
+s6_5_aastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aastore"
+s6_5_aconst_null = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aconst_null"
+s6_5_aload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload"
+s6_5_aload_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n"
+s6_5_anewarray = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.anewarray"
+s6_5_areturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.areturn"
+s6_5_arraylength = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.arraylength"
+s6_5_astore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore"
+s6_5_astore_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n"
+s6_5_athrow = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.athrow"
+s6_5_baload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.baload"
+s6_5_bastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bastore"
+s6_5_bipush = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bipush"
+s6_5_caload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.caload"
+s6_5_castore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.castore"
+s6_5_checkcast = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.checkcast"
+s6_5_d2f = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2f"
+s6_5_d2i = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2i"
+s6_5_d2l = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2l"
+s6_5_dadd = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dadd"
+s6_5_daload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.daload"
+s6_5_dastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dastore"
+s6_5_dcmp_op = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dcmp_op"
+s6_5_dconst_d = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dconst_d"
+s6_5_ddiv = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ddiv"
+s6_5_dload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload"
+s6_5_dload_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n"
+s6_5_dmul = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dmul"
+s6_5_dneg = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dneg"
+s6_5_drem = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.drem"
+s6_5_dreturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dreturn"
+s6_5_dstore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore"
+s6_5_dstore_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n"
+s6_5_dsub = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dsub"
+s6_5_dup = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup"
+s6_5_dup_x1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x1"
+s6_5_dup_x2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x2"
+s6_5_dup2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2"
+s6_5_dup2_x1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x1"
+s6_5_dup2_x2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x2"
+s6_5_f2d = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2d"
+s6_5_f2i = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2i"
+s6_5_f2l = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2l"
+s6_5_fadd = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fadd"
+s6_5_faload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.faload"
+s6_5_fastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fastore"
+s6_5_fcmp_op = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fcmp_op"
+s6_5_fconst_f = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fconst_f"
+s6_5_fdiv = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fdiv"
+s6_5_fload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload"
+s6_5_fload_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload_n"
+s6_5_fmul = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fmul"
+s6_5_fneg = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fneg"
+s6_5_frem = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.frem"
+s6_5_freturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.freturn"
+s6_5_fstore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore"
+s6_5_fstore_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore_n"
+s6_5_fsub = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fsub"
+s6_5_getfield = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getfield"
+s6_5_getstatic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getstatic"
+s6_5_goto = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto"
+s6_5_goto_w = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto_w"
+s6_5_i2b = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2b"
+s6_5_i2c = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2c"
+s6_5_i2d = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2d"
+s6_5_i2f = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2f"
+s6_5_i2l = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2l"
+s6_5_i2s = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2s"
+s6_5_iadd = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iadd"
+s6_5_iaload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iaload"
+s6_5_iand = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iand"
+s6_5_iastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iastore"
+s6_5_iconst_i = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i"
+s6_5_idiv = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.idiv"
+s6_5_if_acmp_cond = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond"
+s6_5_if_icmp_cond = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond"
+s6_5_if_cond = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond"
+s6_5_ifnonnull = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnonnull"
+s6_5_ifnull = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnull"
+s6_5_iinc = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iinc"
+s6_5_iload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload"
+s6_5_iload_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n"
+s6_5_imul = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.imul"
+s6_5_ineg = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ineg"
+s6_5_instanceof = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.instanceof"
+s6_5_invokedynamic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokedynamic"
+s6_5_invokeinterface = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface"
+s6_5_invokespecial = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial"
+s6_5_invokestatic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokestatic"
+s6_5_invokevirtual = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual"
+s6_5_ior = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ior"
+s6_5_irem = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.irem"
+s6_5_ireturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ireturn"
+s6_5_ishl = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ishl"
+s6_5_ishr = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ishr"
+s6_5_istore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore"
+s6_5_istore_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n"
+s6_5_isub = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.isub"
+s6_5_iushr = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iushr"
+s6_5_ixor = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ixor"
+s6_5_jsr = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr"
+s6_5_jsr_w = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr_w"
+s6_5_l2d = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2d"
+s6_5_l2f = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2f"
+s6_5_l2i = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2i"
+s6_5_ladd = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ladd"
+s6_5_laload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.laload"
+s6_5_land = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.land"
+s6_5_lastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lastore"
+s6_5_lcmp = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lcmp"
+s6_5_lconst_l = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lconst_l"
+s6_5_ldc = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc"
+s6_5_ldc_w = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc_w"
+s6_5_ldc2_w = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc2_w"
+s6_5_ldiv = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldiv"
+s6_5_lload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload"
+s6_5_lload_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n"
+s6_5_lmul = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lmul"
+s6_5_lneg = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lneg"
+s6_5_lookupswitch = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch"
+s6_5_lor = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lor"
+s6_5_lrem = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lrem"
+s6_5_lreturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lreturn"
+s6_5_lshl = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshl"
+s6_5_lshr = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshr"
+s6_5_lstore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore"
+s6_5_lstore_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n"
+s6_5_lsub = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lsub"
+s6_5_lushr = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lushr"
+s6_5_lxor = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lxor"
+s6_5_monitorenter = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorenter"
+s6_5_monitorexit = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorexit"
+s6_5_multianewarray = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray"
+s6_5_new = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.new"
+s6_5_newarray = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray"
+s6_5_nop = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.nop"
+s6_5_pop = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop"
+s6_5_pop2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop2"
+s6_5_putfield = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putfield"
+s6_5_putstatic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic"
+s6_5_ret = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret"
+s6_5_return = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.return"
+s6_5_saload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.saload"
+s6_5_sastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sastore"
+s6_5_sipush = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sipush"
+s6_5_swap = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.swap"
+s6_5_tableswitch = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.tableswitch"
+s6_5_wide = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide"
+s6_5_aaload_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aaload.runtime-100"
+s6_5_aaload_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aaload.runtime-110"
+s6_5_aastore_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aastore.runtime-100"
+s6_5_aastore_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aastore.runtime-110"
+s6_5_aastore_runtime_120 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aastore.runtime-120"
+s6_5_anewarray_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.anewarray.linking-100"
+s6_5_anewarray_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.anewarray.runtime-100"
+s6_5_areturn_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.areturn.runtime-100"
+s6_5_areturn_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.areturn.runtime-110"
+s6_5_arraylength_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.arraylength.runtime-100"
+s6_5_athrow_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.athrow.runtime-100"
+s6_5_athrow_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.athrow.runtime-110"
+s6_5_athrow_runtime_120 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.athrow.runtime-120"
+s6_5_baload_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.baload.runtime-100"
+s6_5_baload_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.baload.runtime-110"
+s6_5_bastore_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bastore.runtime-100"
+s6_5_bastore_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bastore.runtime-110"
+s6_5_caload_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.caload.runtime-100"
+s6_5_caload_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.caload.runtime-110"
+s6_5_castore_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.castore.runtime-100"
+s6_5_castore_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.castore.runtime-110"
+s6_5_checkcast_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.checkcast.linking-100"
+s6_5_checkcast_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.checkcast.runtime-100"
+s6_5_daload_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.daload.runtime-100"
+s6_5_daload_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.daload.runtime-110"
+s6_5_dastore_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dastore.runtime-100"
+s6_5_dastore_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dastore.runtime-110"
+s6_5_dreturn_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dreturn.runtime-100"
+s6_5_dreturn_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dreturn.runtime-110"
+s6_5_faload_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.faload.runtime-100"
+s6_5_faload_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.faload.runtime-110"
+s6_5_fastore_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fastore.runtime-100"
+s6_5_fastore_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fastore.runtime-110"
+s6_5_freturn_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.freturn.runtime-100"
+s6_5_freturn_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.freturn.runtime-110"
+s6_5_getfield_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getfield.linking-100"
+s6_5_getfield_linking_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getfield.linking-110"
+s6_5_getfield_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getfield.runtime-100"
+s6_5_getstatic_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getstatic.linking-100"
+s6_5_getstatic_linking_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getstatic.linking-110"
+s6_5_getstatic_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getstatic.runtime-100"
+s6_5_iaload_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iaload.runtime-100"
+s6_5_iaload_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iaload.runtime-110"
+s6_5_iastore_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iastore.runtime-100"
+s6_5_iastore_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iastore.runtime-110"
+s6_5_idiv_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.idiv.runtime-100"
+s6_5_instanceof_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.instanceof.linking-100"
+s6_5_invokedynamic_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokedynamic.linking-100"
+s6_5_invokeinterface_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface.linking-100"
+s6_5_invokeinterface_linking_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface.linking-110"
+s6_5_invokeinterface_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface.runtime-100"
+s6_5_invokeinterface_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface.runtime-110"
+s6_5_invokeinterface_runtime_200 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface.runtime-200"
+s6_5_invokeinterface_runtime_210 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface.runtime-210"
+s6_5_invokeinterface_runtime_220 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface.runtime-220"
+s6_5_invokeinterface_runtime_300 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface.runtime-300"
+s6_5_invokeinterface_runtime_310 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface.runtime-310"
+s6_5_invokespecial_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial.linking-100"
+s6_5_invokespecial_linking_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial.linking-110"
+s6_5_invokespecial_linking_120 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial.linking-120"
+s6_5_invokespecial_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial.runtime-100"
+s6_5_invokespecial_runtime_200 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial.runtime-200"
+s6_5_invokespecial_runtime_210 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial.runtime-210"
+s6_5_invokespecial_runtime_300 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial.runtime-300"
+s6_5_invokespecial_runtime_310 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial.runtime-310"
+s6_5_invokestatic_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokestatic.linking-100"
+s6_5_invokestatic_linking_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokestatic.linking-110"
+s6_5_invokestatic_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokestatic.runtime-100"
+s6_5_invokestatic_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokestatic.runtime-110"
+s6_5_invokevirtual_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual.linking-100"
+s6_5_invokevirtual_linking_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual.linking-110"
+s6_5_invokevirtual_linking_120 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual.linking-120"
+s6_5_invokevirtual_linking_130 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual.linking-130"
+s6_5_invokevirtual_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual.runtime-100"
+s6_5_invokevirtual_runtime_200_A = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual.runtime-200-A"
+s6_5_invokevirtual_runtime_200_B = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual.runtime-200-B"
+s6_5_invokevirtual_runtime_200_C = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual.runtime-200-C"
+s6_5_invokevirtual_runtime_200_D = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual.runtime-200-D"
+s6_5_invokevirtual_runtime_300_A = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual.runtime-300-A"
+s6_5_invokevirtual_runtime_300_B = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual.runtime-300-B"
+s6_5_invokevirtual_runtime_310 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual.runtime-310"
+s6_5_irem_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.irem.runtime-100"
+s6_5_ireturn_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ireturn.runtime-100"
+s6_5_ireturn_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ireturn.runtime-110"
+s6_5_laload_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.laload.runtime-100"
+s6_5_laload_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.laload.runtime-110"
+s6_5_lastore_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lastore.runtime-100"
+s6_5_lastore_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lastore.runtime-110"
+s6_5_ldc_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc.linking-100"
+s6_5_ldc_w_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc_w.linking-100"
+s6_5_ldc2_w_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc2_w.linking-100"
+s6_5_ldiv_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldiv.runtime-100"
+s6_5_lrem_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lrem.runtime-100"
+s6_5_lreturn_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lreturn.runtime-100"
+s6_5_lreturn_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lreturn.runtime-110"
+s6_5_monitorenter_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorenter.runtime-100"
+s6_5_monitorexit_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorexit.runtime-100"
+s6_5_monitorexit_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorexit.runtime-110"
+s6_5_monitorexit_runtime_120 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorexit.runtime-120"
+s6_5_multianewarray_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray.linking-100"
+s6_5_multianewarray_linking_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray.linking-110"
+s6_5_multianewarray_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray.runtime-100"
+s6_5_new_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.new.linking-100"
+s6_5_new_linking_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.new.linking-110"
+s6_5_new_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.new.runtime-100"
+s6_5_newarray_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray.runtime-100"
+s6_5_putfield_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putfield.linking-100"
+s6_5_putfield_linking_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putfield.linking-110"
+s6_5_putfield_linking_120 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putfield.linking-120"
+s6_5_putfield_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putfield.runtime-100"
+s6_5_putstatic_linking_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic.linking-100"
+s6_5_putstatic_linking_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic.linking-110"
+s6_5_putstatic_linking_120 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic.linking-120"
+s6_5_putstatic_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic.runtime-100"
+s6_5_return_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.return.runtime-100"
+s6_5_return_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.return.runtime-110"
+s6_5_saload_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.saload.runtime-100"
+s6_5_saload_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.saload.runtime-110"
+s6_5_sastore_runtime_100 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sastore.runtime-100"
+s6_5_sastore_runtime_110 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sastore.runtime-110"
+
+# Informative text and overviews. Related behavioral cases appear under their own sections.
+[context]
+s6 = "Encoding and execution of JVM instructions."
+s6_1 = "Instruction semantics assume the static and structural constraints on code hold."
+s6_4 = "How to read an instruction description."
+s6_4_mnemonic = "Illustrative template for an instruction entry."
+s6_5 = "Instruction directory. Concrete opcodes have individual execution cases."
+
+# Published source anchors beneath each section, in document order. Append a suffix to
+# the section fragment (jvms-N for a chapter) to locate the original clause, rule or table.
+[anchors]
+s6 = ["-100"]
+s6_1 = ["-100", "-200"]
+s6_2 = ["-100", "-200", "-300"]
+s6_3 = ["-100", "-100-A", "-100-B", "-100-C", "-100-D"]
+s6_4 = ["-100", "-110", "-120", "-200", "-210", "-220", "-300", "-310", "-320", "-330", "-340"]
+s6_5_aaload = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_aastore = [
+  ".desc", ".desc-100", ".desc-200", ".desc-210", ".desc-220", ".runtime", ".runtime-100",
+  ".runtime-110", ".runtime-120"
+]
+s6_5_aconst_null = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_aload = [".desc", ".desc-100", ".notes", ".notes-100", ".notes-200"]
+s6_5_aload_n = [".desc", ".desc-100", ".notes", ".notes-100", ".notes-200"]
+s6_5_anewarray = [
+  ".desc", ".desc-100", ".linking", ".linking-100", ".runtime", ".runtime-100", ".notes",
+  ".notes-100"
+]
+s6_5_areturn = [".desc", ".desc-100", ".desc-110", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_arraylength = [".desc", ".desc-100", ".runtime", ".runtime-100"]
+s6_5_astore = [".desc", ".desc-100", ".notes", ".notes-100", ".notes-200", ".notes-300"]
+s6_5_astore_n = [".desc", ".desc-100", ".notes", ".notes-100", ".notes-200", ".notes-300"]
+s6_5_athrow = [
+  ".desc", ".desc-100", ".desc-110", ".desc-120", ".runtime", ".runtime-100", ".runtime-110",
+  ".runtime-120", ".notes", ".notes-100"
+]
+s6_5_baload = [
+  ".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110", ".notes", ".notes-100"
+]
+s6_5_bastore = [
+  ".desc", ".desc-100", ".desc-110", ".desc-120", ".runtime", ".runtime-100", ".runtime-110",
+  ".notes", ".notes-100"
+]
+s6_5_bipush = [".desc", ".desc-100"]
+s6_5_caload = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_castore = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_checkcast = [
+  ".desc", ".desc-100", ".desc-110", ".desc-120", ".desc-200", ".desc-200-A", ".desc-200-A-A",
+  ".desc-200-A-B", ".desc-200-B", ".desc-200-B-A", ".desc-200-B-B", ".desc-200-B-C",
+  ".desc-200-B-C-A", ".desc-200-B-C-B", ".desc-200-B-C-C", ".desc-200-B-C-D", ".linking",
+  ".linking-100", ".runtime", ".runtime-100", ".notes", ".notes-100"
+]
+s6_5_d2f = [".desc", ".desc-100", ".desc-200", ".notes", ".notes-100"]
+s6_5_d2i = [
+  ".desc", ".desc-100", ".desc-100-A", ".desc-100-B", ".desc-100-C", ".notes", ".notes-100"
+]
+s6_5_d2l = [
+  ".desc", ".desc-100", ".desc-100-A", ".desc-100-B", ".desc-100-C", ".notes", ".notes-100"
+]
+s6_5_dadd = [
+  ".desc", ".desc-100", ".desc-200", ".desc-200-A", ".desc-200-B", ".desc-200-C", ".desc-200-D",
+  ".desc-200-E", ".desc-200-F", ".desc-200-G", ".desc-200-H", ".desc-200-I", ".desc-300"
+]
+s6_5_daload = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_dastore = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_dcmp_op = [
+  ".desc", ".desc-100", ".desc-100-A", ".desc-100-B", ".desc-100-C", ".desc-100-D", ".desc-200",
+  ".notes", ".notes-100"
+]
+s6_5_dconst_d = [".desc", ".desc-100"]
+s6_5_ddiv = [
+  ".desc", ".desc-100", ".desc-200", ".desc-200-A", ".desc-200-B", ".desc-200-C", ".desc-200-D",
+  ".desc-200-E", ".desc-200-F", ".desc-200-G", ".desc-200-H", ".desc-300"
+]
+s6_5_dload = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_dload_n = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_dmul = [
+  ".desc", ".desc-100", ".desc-200", ".desc-200-A", ".desc-200-B", ".desc-200-C", ".desc-200-D",
+  ".desc-200-E", ".desc-300"
+]
+s6_5_dneg = [
+  ".desc", ".desc-100", ".desc-200", ".desc-300", ".desc-300-A", ".desc-300-B", ".desc-300-C"
+]
+s6_5_drem = [
+  ".desc", ".desc-100", ".desc-200", ".desc-300", ".desc-300-A", ".desc-300-B", ".desc-300-C",
+  ".desc-300-D", ".desc-300-E", ".desc-300-F", ".desc-400", ".notes", ".notes-100"
+]
+s6_5_dreturn = [".desc", ".desc-100", ".desc-110", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_dstore = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_dstore_n = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_dsub = [".desc", ".desc-100", ".desc-200", ".desc-300"]
+s6_5_dup = [".desc", ".desc-100", ".desc-110"]
+s6_5_dup_x1 = [".desc", ".desc-100", ".desc-110"]
+s6_5_dup_x2 = [
+  ".stack", ".stack-100", ".stack-100-A", ".stack-100-B", ".stack-110", ".stack-200",
+  ".stack-200-A", ".stack-200-B", ".stack-210", ".desc", ".desc-100"
+]
+s6_5_dup2 = [
+  ".stack", ".stack-100", ".stack-100-A", ".stack-100-B", ".stack-110", ".stack-200",
+  ".stack-200-A", ".stack-200-B", ".stack-210", ".desc", ".desc-100"
+]
+s6_5_dup2_x1 = [
+  ".stack", ".stack-100", ".stack-100-A", ".stack-100-B", ".stack-110", ".stack-200",
+  ".stack-200-A", ".stack-200-B", ".stack-210", ".desc", ".desc-100"
+]
+s6_5_dup2_x2 = [
+  ".stack", ".stack-100", ".stack-100-A", ".stack-100-B", ".stack-110", ".stack-200",
+  ".stack-200-A", ".stack-200-B", ".stack-210", ".stack-300", ".stack-300-A", ".stack-300-B",
+  ".stack-310", ".stack-400", ".stack-400-A", ".stack-400-B", ".stack-410", ".desc", ".desc-100"
+]
+s6_5_f2d = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_f2i = [
+  ".desc", ".desc-100", ".desc-100-A", ".desc-100-B", ".desc-100-C", ".notes", ".notes-100"
+]
+s6_5_f2l = [
+  ".desc", ".desc-100", ".desc-100-A", ".desc-100-B", ".desc-100-C", ".notes", ".notes-100"
+]
+s6_5_fadd = [
+  ".desc", ".desc-100", ".desc-200", ".desc-200-A", ".desc-200-B", ".desc-200-C", ".desc-200-D",
+  ".desc-200-E", ".desc-200-F", ".desc-200-G", ".desc-200-H", ".desc-200-I", ".desc-300"
+]
+s6_5_faload = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_fastore = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_fcmp_op = [
+  ".desc", ".desc-100", ".desc-100-A", ".desc-100-B", ".desc-100-C", ".desc-100-D", ".desc-200",
+  ".notes", ".notes-100"
+]
+s6_5_fconst_f = [".desc", ".desc-100"]
+s6_5_fdiv = [
+  ".desc", ".desc-100", ".desc-200", ".desc-200-A", ".desc-200-B", ".desc-200-C", ".desc-200-D",
+  ".desc-200-E", ".desc-200-F", ".desc-200-G", ".desc-200-H", ".desc-300"
+]
+s6_5_fload = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_fload_n = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_fmul = [
+  ".desc", ".desc-100", ".desc-200", ".desc-200-A", ".desc-200-B", ".desc-200-C", ".desc-200-D",
+  ".desc-200-E", ".desc-300"
+]
+s6_5_fneg = [
+  ".desc", ".desc-100", ".desc-200", ".desc-300", ".desc-300-A", ".desc-300-B", ".desc-300-C"
+]
+s6_5_frem = [
+  ".desc", ".desc-100", ".desc-200", ".desc-300", ".desc-300-A", ".desc-300-B", ".desc-300-C",
+  ".desc-300-D", ".desc-300-E", ".desc-300-F", ".desc-400", ".notes", ".notes-100"
+]
+s6_5_freturn = [".desc", ".desc-100", ".desc-110", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_fstore = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_fstore_n = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_fsub = [".desc", ".desc-100", ".desc-200", ".desc-300"]
+s6_5_getfield = [
+  ".desc", ".desc-100", ".desc-110", ".linking", ".linking-100", ".linking-110", ".runtime",
+  ".runtime-100", ".notes", ".notes-100"
+]
+s6_5_getstatic = [
+  ".desc", ".desc-100", ".desc-110", ".desc-120", ".linking", ".linking-100", ".linking-110",
+  ".runtime", ".runtime-100"
+]
+s6_5_goto = [".desc", ".desc-100"]
+s6_5_goto_w = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_i2b = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_i2c = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_i2d = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_i2f = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_i2l = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_i2s = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_iadd = [".desc", ".desc-100", ".desc-200", ".desc-300"]
+s6_5_iaload = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_iand = [".desc", ".desc-100"]
+s6_5_iastore = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_iconst_i = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_idiv = [".desc", ".desc-100", ".desc-200", ".desc-300", ".runtime", ".runtime-100"]
+s6_5_if_acmp_cond = [".desc", ".desc-100", ".desc-100-A", ".desc-100-B", ".desc-200", ".desc-300"]
+s6_5_if_icmp_cond = [
+  ".desc", ".desc-100", ".desc-100-A", ".desc-100-B", ".desc-100-C", ".desc-100-D", ".desc-100-E",
+  ".desc-100-F", ".desc-200", ".desc-300"
+]
+s6_5_if_cond = [
+  ".desc", ".desc-100", ".desc-100-A", ".desc-100-B", ".desc-100-C", ".desc-100-D", ".desc-100-E",
+  ".desc-100-F", ".desc-200", ".desc-300"
+]
+s6_5_ifnonnull = [".desc", ".desc-100", ".desc-200"]
+s6_5_ifnull = [".desc", ".desc-100", ".desc-200"]
+s6_5_iinc = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_iload = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_iload_n = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_imul = [".desc", ".desc-100", ".desc-200", ".desc-300"]
+s6_5_ineg = [".desc", ".desc-100", ".desc-200", ".desc-300"]
+s6_5_instanceof = [
+  ".desc", ".desc-100", ".desc-200", ".desc-210", ".desc-220", ".linking", ".linking-100",
+  ".notes", ".notes-100"
+]
+s6_5_invokedynamic = [
+  ".desc", ".desc-100", ".desc-110", ".desc-300", ".desc-300-A", ".desc-300-B", ".desc-300-C",
+  ".desc-300-D", ".desc-310", ".desc-310-A", ".desc-310-B", ".linking", ".linking-100", ".notes",
+  ".runtime-100", ".runtime-110", ".runtime-120"
+]
+s6_5_invokeinterface = [
+  ".desc", ".desc-100", ".desc-110", ".desc-120", ".desc-200", ".desc-300", ".desc-310",
+  ".desc-320", ".desc-320-A", ".desc-320-B", ".linking", ".linking-100", ".linking-110",
+  ".runtime", ".runtime-100", ".runtime-110", ".runtime-200", ".runtime-210", ".runtime-220",
+  ".runtime-300", ".runtime-310", ".notes", ".notes-100", ".notes-110", ".notes-200", ".notes-300"
+]
+s6_5_invokespecial = [
+  ".desc", ".desc-100", ".desc-200", ".desc-200-A", ".desc-200-B", ".desc-200-C", ".desc-210",
+  ".desc-300", ".desc-300-A", ".desc-300-B", ".desc-300-C", ".desc-300-D", ".desc-310",
+  ".desc-400", ".desc-410", ".desc-420", ".desc-420-A", ".desc-420-B", ".linking", ".linking-100",
+  ".linking-110", ".linking-120", ".runtime", ".runtime-100", ".runtime-200", ".runtime-210",
+  ".runtime-300", ".runtime-310", ".notes", ".notes-100", ".notes-200", ".notes-300"
+]
+s6_5_invokestatic = [
+  ".desc", ".desc-100", ".desc-110", ".desc-120", ".desc-200", ".desc-210", ".desc-300",
+  ".desc-310", ".desc-320", ".desc-320-A", ".desc-320-B", ".linking", ".linking-100",
+  ".linking-110", ".runtime", ".runtime-100", ".runtime-110", ".notes", ".notes-100"
+]
+s6_5_invokevirtual = [
+  ".desc", ".desc-100", ".desc-200", ".desc-210", ".desc-220", ".desc-300", ".desc-310",
+  ".desc-320", ".desc-320-A", ".desc-320-B", ".desc-400", ".desc-410", ".desc-410-A",
+  ".desc-410-B", ".desc-410-C", ".desc-420", ".desc-500", ".desc-510", ".desc-600", ".desc-610",
+  ".desc-620", ".desc-630", ".desc-700", ".desc-700-A", ".desc-700-B", ".desc-700-C",
+  ".desc-700-D", ".desc-710", ".desc-710-A", ".desc-710-B", ".desc-710-C", ".linking",
+  ".linking-100", ".linking-110", ".linking-120", ".linking-130", ".runtime", ".runtime-100",
+  ".runtime-200", ".runtime-200-A", ".runtime-200-B", ".runtime-200-C", ".runtime-200-D",
+  ".runtime-300", ".runtime-300-A", ".runtime-300-B", ".runtime-310", ".notes", ".notes-100",
+  ".notes-200"
+]
+s6_5_ior = [".desc", ".desc-100"]
+s6_5_irem = [".desc", ".desc-100", ".desc-200", ".runtime", ".runtime-100"]
+s6_5_ireturn = [
+  ".desc", ".desc-100", ".desc-110", ".desc-120", ".runtime", ".runtime-100", ".runtime-110"
+]
+s6_5_ishl = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_ishr = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_istore = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_istore_n = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_isub = [".desc", ".desc-100", ".desc-200", ".desc-300", ".desc-400"]
+s6_5_iushr = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_ixor = [".desc", ".desc-100"]
+s6_5_jsr = [".desc", ".desc-100", ".notes", ".notes-100", ".notes-200"]
+s6_5_jsr_w = [".desc", ".desc-100", ".notes", ".notes-100", ".notes-200", ".notes-300"]
+s6_5_l2d = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_l2f = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_l2i = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_ladd = [".desc", ".desc-100", ".desc-200", ".desc-300"]
+s6_5_laload = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_land = [".desc", ".desc-100"]
+s6_5_lastore = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_lcmp = [".desc", ".desc-100"]
+s6_5_lconst_l = [".desc", ".desc-100"]
+s6_5_ldc = [
+  ".desc", ".desc-100", ".desc-100-A", ".desc-100-B", ".desc-200", ".desc-210", ".desc-220",
+  ".desc-230", ".linking", ".linking-100"
+]
+s6_5_ldc_w = [
+  ".desc", ".desc-100", ".desc-100-A", ".desc-100-B", ".desc-200", ".desc-210", ".linking",
+  ".linking-100", ".notes", ".notes-100"
+]
+s6_5_ldc2_w = [
+  ".desc", ".desc-100", ".desc-100-A", ".desc-100-B", ".desc-200", ".desc-210", ".linking",
+  ".linking-100", ".notes", ".notes-100"
+]
+s6_5_ldiv = [".desc", ".desc-100", ".desc-200", ".desc-300", ".runtime", ".runtime-100"]
+s6_5_lload = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_lload_n = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_lmul = [".desc", ".desc-100", ".desc-200", ".desc-300"]
+s6_5_lneg = [".desc", ".desc-100", ".desc-200", ".desc-300"]
+s6_5_lookupswitch = [
+  ".desc", ".desc-100", ".desc-110", ".desc-120", ".desc-130", ".notes", ".notes-100",
+  ".notes-200"
+]
+s6_5_lor = [".desc", ".desc-100"]
+s6_5_lrem = [".desc", ".desc-100", ".desc-200", ".runtime", ".runtime-100"]
+s6_5_lreturn = [".desc", ".desc-100", ".desc-110", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_lshl = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_lshr = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_lstore = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_lstore_n = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_lsub = [".desc", ".desc-100", ".desc-200", ".desc-300", ".desc-400"]
+s6_5_lushr = [".desc", ".desc-100", ".notes", ".notes-100"]
+s6_5_lxor = [".desc", ".desc-100"]
+s6_5_monitorenter = [
+  ".desc", ".desc-100", ".desc-200", ".desc-200-A", ".desc-200-B", ".desc-200-C", ".runtime",
+  ".runtime-100", ".notes", ".notes-100", ".notes-200", ".notes-300"
+]
+s6_5_monitorexit = [
+  ".desc", ".desc-100", ".desc-110", ".desc-200", ".runtime", ".runtime-100", ".runtime-110",
+  ".runtime-120", ".notes", ".notes-100", ".notes-200", ".notes-200-A", ".notes-200-B"
+]
+s6_5_multianewarray = [
+  ".desc", ".desc-100", ".desc-200", ".desc-300", ".linking", ".linking-100", ".linking-110",
+  ".runtime", ".runtime-100", ".notes", ".notes-100", ".notes-200"
+]
+s6_5_new = [
+  ".desc", ".desc-100", ".desc-200", ".linking", ".linking-100", ".linking-110", ".runtime",
+  ".runtime-100", ".notes", ".notes-100"
+]
+s6_5_newarray = [
+  ".desc", ".desc-100", ".desc-110", ".desc-120", ".desc-200", ".runtime", ".runtime-100",
+  ".notes", ".notes-100"
+]
+s6_5_nop = [".desc", ".desc-100"]
+s6_5_pop = [".desc", ".desc-100", ".desc-110"]
+s6_5_pop2 = [
+  ".stack", ".stack-100", ".stack-100-A", ".stack-100-B", ".stack-110", ".stack-200",
+  ".stack-200-A", ".stack-200-B", ".stack-210", ".desc", ".desc-100"
+]
+s6_5_putfield = [
+  ".desc", ".desc-100", ".desc-200", ".desc-300", ".desc-310", ".desc-320", ".desc-400",
+  ".linking", ".linking-100", ".linking-110", ".linking-120", ".runtime", ".runtime-100"
+]
+s6_5_putstatic = [
+  ".desc", ".desc-100", ".desc-110", ".desc-200", ".desc-300", ".desc-310", ".desc-400",
+  ".linking", ".linking-100", ".linking-110", ".linking-120", ".runtime", ".runtime-100",
+  ".notes", ".notes-100"
+]
+s6_5_ret = [".desc", ".desc-100", ".notes", ".notes-100", ".notes-200", ".notes-300", ".notes-400"]
+s6_5_return = [".desc", ".desc-100", ".desc-110", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_saload = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_sastore = [".desc", ".desc-100", ".runtime", ".runtime-100", ".runtime-110"]
+s6_5_sipush = [".desc", ".desc-100"]
+s6_5_swap = [".desc", ".desc-100", ".desc-200", ".notes", ".notes-100"]
+s6_5_tableswitch = [".desc", ".desc-100", ".desc-200", ".desc-300", ".notes", ".notes-100"]
+s6_5_wide = [".desc", ".desc-100", ".desc-110", ".desc-200", ".notes", ".notes-100"]
+
+[[case]]
+id = "JVMS.6.2"
+spec = ["s6_2"]
+java = "25"
+status = "planned"
+expect = """
+The reserved breakpoint, impdep1 and impdep2 bytes cannot appear as instructions in a valid \
+class file."""
+
+[[case]]
+id = "JVMS.6.3"
+spec = ["s6_3"]
+java = "25"
+status = "planned"
+expect = """
+A resource failure during execution may raise the applicable VirtualMachineError even at an \
+instruction with no listed run-time exception."""
+
+[[case]]
+id = "JVMS.6.AALOAD"
+spec = ["s6_5_aaload"]
+java = "default"
+fixture = "array/object"
+evidence = ["Test.java#main"]
+axes = { opcode = "aaload" }
+expect = "Push the reference stored at the selected array index."
+
+[[case]]
+id = "JVMS.6.5.AALOAD.RUNTIME-100"
+spec = ["s6_5_aaload_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.AALOAD.RUNTIME-110"
+spec = ["s6_5_aaload_runtime_110"]
+java = "default"
+fixture = "array/object"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.AASTORE"
+spec = ["s6_5_aastore"]
+java = "default"
+fixture = "array/object"
+evidence = ["Test.java#main"]
+axes = { opcode = "aastore" }
+expect = "Store null or a reference compatible with the run-time component type at the given index."
+
+[[case]]
+id = "JVMS.6.5.AASTORE.RUNTIME-100"
+spec = ["s6_5_aastore_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.AASTORE.RUNTIME-110"
+spec = ["s6_5_aastore_runtime_110"]
+java = "default"
+fixture = "array/object"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.5.AASTORE.RUNTIME-120"
+spec = ["s6_5_aastore_runtime_120"]
+java = "25"
+status = "planned"
+expect = """
+A valid index with a non-null reference incompatible with the run-time component type throws \
+ArrayStoreException."""
+
+[[case]]
+id = "JVMS.6.5.AASTORE.NULL_ELEMENT"
+spec = ["s6_5_aastore"]
+java = "25"
+status = "planned"
+expect = """
+A null reference can be stored in any non-null reference array at a valid index, regardless of \
+its component class."""
+
+[[case]]
+id = "JVMS.6.ACONST_NULL"
+spec = ["s6_5_aconst_null"]
+java = "25"
+status = "planned"
+axes = { opcode = "aconst_null" }
+expect = "Push a null reference."
+
+[[case]]
+id = "JVMS.6.ALOAD"
+spec = ["s6_5_aload"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "aload" }
+expect = "Push the reference value from the indexed local."
+
+[[case]]
+id = "JVMS.6.ALOAD_0"
+spec = ["s6_5_aload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#boundedGeneric"]
+axes = { opcode = "aload_0" }
+expect = "Push the reference value from local 0."
+
+[[case]]
+id = "JVMS.6.ALOAD_1"
+spec = ["s6_5_aload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#returnArray"]
+axes = { opcode = "aload_1" }
+expect = "Push the reference value from local 1."
+
+[[case]]
+id = "JVMS.6.ALOAD_2"
+spec = ["s6_5_aload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#objectParameters"]
+axes = { opcode = "aload_2" }
+expect = "Push the reference value from local 2."
+
+[[case]]
+id = "JVMS.6.ALOAD_3"
+spec = ["s6_5_aload_n"]
+java = "default"
+fixture = "math/bigdecimal"
+evidence = ["Test.java#testConstructors"]
+axes = { opcode = "aload_3" }
+expect = "Push the reference value from local 3."
+
+[[case]]
+id = "JVMS.6.ANEWARRAY"
+spec = ["s6_5_anewarray"]
+java = "default"
+fixture = "array/object"
+evidence = ["Test.java#main"]
+axes = { opcode = "anewarray" }
+expect = "Allocate a reference array of the requested length, initially containing null elements."
+
+[[case]]
+id = "JVMS.6.5.ANEWARRAY.LINKING-100"
+spec = ["s6_5_anewarray_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+Failure to load the referenced class during type resolution raises NoClassDefFoundError before \
+the operation."""
+
+[[case]]
+id = "JVMS.6.5.ANEWARRAY.RUNTIME-100"
+spec = ["s6_5_anewarray_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A negative length in any requested dimension throws NegativeArraySizeException."
+
+[[case]]
+id = "JVMS.6.ARETURN"
+spec = ["s6_5_areturn"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#returnArray"]
+axes = { opcode = "areturn" }
+expect = "Complete the invocation and deliver the returned reference to the caller."
+
+[[case]]
+id = "JVMS.6.5.ARETURN.RUNTIME-100"
+spec = ["s6_5_areturn_runtime_100"]
+java = "25"
+status = "planned"
+expect = """
+With optional structured-locking checks disabled, exiting a synchronized method after losing \
+monitor ownership throws IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.5.ARETURN.RUNTIME-110"
+spec = ["s6_5_areturn_runtime_110"]
+java = "25"
+status = "planned"
+expect = """
+When structured locking is enforced, leaving an invocation with unmatched entries throws \
+IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.ARRAYLENGTH"
+spec = ["s6_5_arraylength"]
+java = "default"
+fixture = "array/int"
+evidence = ["Test.java#main"]
+axes = { opcode = "arraylength" }
+expect = "Push the number of elements in the referenced array as an int."
+
+[[case]]
+id = "JVMS.6.5.ARRAYLENGTH.RUNTIME-100"
+spec = ["s6_5_arraylength_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.ASTORE"
+spec = ["s6_5_astore"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "astore" }
+expect = "Store the reference (or a legacy returnAddress) into the indexed local."
+
+[[case]]
+id = "JVMS.6.ASTORE_0"
+spec = ["s6_5_astore_n"]
+java = "default"
+fixture = "math/bigdecimal"
+evidence = ["Test.java#testConstructors"]
+axes = { opcode = "astore_0" }
+expect = "Store the reference (or a legacy returnAddress) into local 0."
+
+[[case]]
+id = "JVMS.6.ASTORE_1"
+spec = ["s6_5_astore_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#returnArray"]
+axes = { opcode = "astore_1" }
+expect = "Store the reference (or a legacy returnAddress) into local 1."
+
+[[case]]
+id = "JVMS.6.ASTORE_2"
+spec = ["s6_5_astore_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "astore_2" }
+expect = "Store the reference (or a legacy returnAddress) into local 2."
+
+[[case]]
+id = "JVMS.6.ASTORE_3"
+spec = ["s6_5_astore_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "astore_3" }
+expect = "Store the reference (or a legacy returnAddress) into local 3."
+
+[[case]]
+id = "JVMS.6.ATHROW"
+spec = ["s6_5_athrow"]
+java = "default"
+fixture = "method/exceptions"
+evidence = ["Test.java#throwsCheckedException"]
+axes = { opcode = "athrow" }
+expect = "Transfer the throwable to the first applicable handler, unwinding frames if necessary."
+
+[[case]]
+id = "JVMS.6.5.ATHROW.RUNTIME-100"
+spec = ["s6_5_athrow_runtime_100"]
+java = "25"
+status = "planned"
+expect = "Throwing null delivers a NullPointerException to the exception mechanism."
+
+[[case]]
+id = "JVMS.6.5.ATHROW.RUNTIME-110"
+spec = ["s6_5_athrow_runtime_110"]
+java = "25"
+status = "planned"
+expect = """
+With optional structured-locking checks disabled, exiting a synchronized method after losing \
+monitor ownership throws IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.5.ATHROW.RUNTIME-120"
+spec = ["s6_5_athrow_runtime_120"]
+java = "25"
+status = "planned"
+expect = """
+When structured locking is enforced, leaving an invocation with unmatched entries throws \
+IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.BALOAD"
+spec = ["s6_5_baload"]
+java = "default"
+fixture = "array/byte"
+evidence = ["Test.java#main"]
+axes = { opcode = "baload" }
+expect = "Push a sign-extended byte, or the int value of the selected boolean element."
+
+[[case]]
+id = "JVMS.6.5.BALOAD.RUNTIME-100"
+spec = ["s6_5_baload_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.BALOAD.RUNTIME-110"
+spec = ["s6_5_baload_runtime_110"]
+java = "default"
+fixture = "array/byte"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.BASTORE"
+spec = ["s6_5_bastore"]
+java = "default"
+fixture = "array/byte"
+evidence = ["Test.java#main"]
+axes = { opcode = "bastore" }
+expect = "Store the low eight bits into a byte array or the low bit into a boolean array."
+
+[[case]]
+id = "JVMS.6.5.BASTORE.RUNTIME-100"
+spec = ["s6_5_bastore_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.BASTORE.RUNTIME-110"
+spec = ["s6_5_bastore_runtime_110"]
+java = "default"
+fixture = "array/byte"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.5.BASTORE.BOOLEAN"
+spec = ["s6_5_bastore"]
+java = "25"
+status = "planned"
+expect = "For a boolean array, storing the JVM integer 2 writes false and storing 3 writes true."
+
+[[case]]
+id = "JVMS.6.BIPUSH"
+spec = ["s6_5_bipush"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "bipush" }
+expect = "Sign-extend the immediate byte to int."
+
+[[case]]
+id = "JVMS.6.CALOAD"
+spec = ["s6_5_caload"]
+java = "default"
+fixture = "array/char"
+evidence = ["Test.java#main"]
+axes = { opcode = "caload" }
+expect = "Zero-extend the selected char to int."
+
+[[case]]
+id = "JVMS.6.5.CALOAD.RUNTIME-100"
+spec = ["s6_5_caload_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.CALOAD.RUNTIME-110"
+spec = ["s6_5_caload_runtime_110"]
+java = "default"
+fixture = "array/char"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.CASTORE"
+spec = ["s6_5_castore"]
+java = "default"
+fixture = "array/char"
+evidence = ["Test.java#main"]
+axes = { opcode = "castore" }
+expect = "Store the low sixteen bits of the int into the char element."
+
+[[case]]
+id = "JVMS.6.5.CASTORE.RUNTIME-100"
+spec = ["s6_5_castore_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.CASTORE.RUNTIME-110"
+spec = ["s6_5_castore_runtime_110"]
+java = "default"
+fixture = "array/char"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.CHECKCAST"
+spec = ["s6_5_checkcast"]
+java = "default"
+fixture = "field/object/shadowing"
+evidence = ["Test.java#main"]
+axes = { opcode = "checkcast" }
+expect = "Preserve the reference when it is null or compatible with the resolved target type."
+
+[[case]]
+id = "JVMS.6.5.CHECKCAST.LINKING-100"
+spec = ["s6_5_checkcast_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+With a non-null operand, failure to load the target class during resolution raises \
+NoClassDefFoundError."""
+
+[[case]]
+id = "JVMS.6.5.CHECKCAST.RUNTIME-100"
+spec = ["s6_5_checkcast_runtime_100"]
+java = "25"
+status = "planned"
+expect = "Casting a non-null instance to an incompatible resolved type throws ClassCastException."
+
+[[case]]
+id = "JVMS.6.D2F"
+spec = ["s6_5_d2f"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testDoubleToFloat"]
+axes = { opcode = "d2f" }
+expect = """
+Round the double to the nearest representable float using ties to even, with the specified \
+floating-point overflow behavior."""
+
+[[case]]
+id = "JVMS.6.D2I"
+spec = ["s6_5_d2i"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testDoubleToInt"]
+axes = { opcode = "d2i" }
+expect = """
+Convert double to int toward zero, yielding zero for NaN and saturating at the endpoints on \
+overflow."""
+
+[[case]]
+id = "JVMS.6.D2L"
+spec = ["s6_5_d2l"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testDoubleToLong"]
+axes = { opcode = "d2l" }
+expect = """
+Convert double to long toward zero, yielding zero for NaN and saturating at the endpoints on \
+overflow."""
+
+[[case]]
+id = "JVMS.6.DADD"
+spec = ["s6_5_dadd"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleAdd"]
+axes = { opcode = "dadd" }
+expect = """
+Push the IEEE 754 double sum for the two operands, rounding to the nearest representable result \
+with ties to even."""
+
+[[case]]
+id = "JVMS.6.DALOAD"
+spec = ["s6_5_daload"]
+java = "default"
+fixture = "array/double"
+evidence = ["Test.java#main"]
+axes = { opcode = "daload" }
+expect = "Push the double at the selected array index."
+
+[[case]]
+id = "JVMS.6.5.DALOAD.RUNTIME-100"
+spec = ["s6_5_daload_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.DALOAD.RUNTIME-110"
+spec = ["s6_5_daload_runtime_110"]
+java = "default"
+fixture = "array/double"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.DASTORE"
+spec = ["s6_5_dastore"]
+java = "default"
+fixture = "array/double"
+evidence = ["Test.java#main"]
+axes = { opcode = "dastore" }
+expect = "Write the double into the selected array element."
+
+[[case]]
+id = "JVMS.6.5.DASTORE.RUNTIME-100"
+spec = ["s6_5_dastore_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.DASTORE.RUNTIME-110"
+spec = ["s6_5_dastore_runtime_110"]
+java = "default"
+fixture = "array/double"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.DCMPL"
+spec = ["s6_5_dcmp_op"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleCompare"]
+axes = { opcode = "dcmpl" }
+expect = "Push -1, 0 or 1 for the numerical comparison. Push -1 if either double is NaN."
+
+[[case]]
+id = "JVMS.6.DCMPG"
+spec = ["s6_5_dcmp_op"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleCompare"]
+axes = { opcode = "dcmpg" }
+expect = "Push -1, 0 or 1 for the numerical comparison. Push 1 if either double is NaN."
+
+[[case]]
+id = "JVMS.6.DCONST_0"
+spec = ["s6_5_dconst_d"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleMul"]
+axes = { opcode = "dconst_0" }
+expect = "Push 0 as double."
+
+[[case]]
+id = "JVMS.6.DCONST_1"
+spec = ["s6_5_dconst_d"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleSub"]
+axes = { opcode = "dconst_1" }
+expect = "Push 1 as double."
+
+[[case]]
+id = "JVMS.6.DDIV"
+spec = ["s6_5_ddiv"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleDiv"]
+axes = { opcode = "ddiv" }
+expect = """
+Push the IEEE 754 double quotient for the two operands, rounding to the nearest representable \
+result with ties to even."""
+
+[[case]]
+id = "JVMS.6.DLOAD"
+spec = ["s6_5_dload"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteConversions"]
+axes = { opcode = "dload" }
+expect = "Push the double value from the indexed local."
+
+[[case]]
+id = "JVMS.6.DLOAD_0"
+spec = ["s6_5_dload_n"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleAdd"]
+axes = { opcode = "dload_0" }
+expect = "Push the double value from local 0."
+
+[[case]]
+id = "JVMS.6.DLOAD_1"
+spec = ["s6_5_dload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode = "dload_1" }
+expect = "Push the double value from local 1."
+
+[[case]]
+id = "JVMS.6.DLOAD_2"
+spec = ["s6_5_dload_n"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleAdd"]
+axes = { opcode = "dload_2" }
+expect = "Push the double value from local 2."
+
+[[case]]
+id = "JVMS.6.DLOAD_3"
+spec = ["s6_5_dload_n"]
+java = "25"
+status = "planned"
+axes = { opcode = "dload_3" }
+expect = "Push the double value from local 3."
+
+[[case]]
+id = "JVMS.6.DMUL"
+spec = ["s6_5_dmul"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleMul"]
+axes = { opcode = "dmul" }
+expect = """
+Push the IEEE 754 double product for the two operands, rounding to the nearest representable \
+result with ties to even."""
+
+[[case]]
+id = "JVMS.6.DNEG"
+spec = ["s6_5_dneg"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleNeg"]
+axes = { opcode = "dneg" }
+expect = "Reverse the sign of the double operand, including signed zero. Negating NaN yields NaN."
+
+[[case]]
+id = "JVMS.6.DREM"
+spec = ["s6_5_drem"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleRem"]
+axes = { opcode = "drem" }
+expect = """
+Compute the double remainder using a quotient truncated toward zero. A zero divisor gives NaN."""
+
+[[case]]
+id = "JVMS.6.DRETURN"
+spec = ["s6_5_dreturn"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#boundedGeneric"]
+axes = { opcode = "dreturn" }
+expect = "Complete the invocation and deliver the returned double to the caller."
+
+[[case]]
+id = "JVMS.6.5.DRETURN.RUNTIME-100"
+spec = ["s6_5_dreturn_runtime_100"]
+java = "25"
+status = "planned"
+expect = """
+With optional structured-locking checks disabled, exiting a synchronized method after losing \
+monitor ownership throws IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.5.DRETURN.RUNTIME-110"
+spec = ["s6_5_dreturn_runtime_110"]
+java = "25"
+status = "planned"
+expect = """
+When structured locking is enforced, leaving an invocation with unmatched entries throws \
+IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.DSTORE"
+spec = ["s6_5_dstore"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "dstore" }
+expect = "Pop the double into the indexed local."
+
+[[case]]
+id = "JVMS.6.DSTORE_0"
+spec = ["s6_5_dstore_n"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleAdd"]
+axes = { opcode = "dstore_0" }
+expect = "Pop the double into local 0."
+
+[[case]]
+id = "JVMS.6.DSTORE_1"
+spec = ["s6_5_dstore_n"]
+java = "default"
+fixture = "primitive/double"
+evidence = ["Test.java#main"]
+axes = { opcode = "dstore_1" }
+expect = "Pop the double into local 1."
+
+[[case]]
+id = "JVMS.6.DSTORE_2"
+spec = ["s6_5_dstore_n"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleAdd"]
+axes = { opcode = "dstore_2" }
+expect = "Pop the double into local 2."
+
+[[case]]
+id = "JVMS.6.DSTORE_3"
+spec = ["s6_5_dstore_n"]
+java = "25"
+status = "planned"
+axes = { opcode = "dstore_3" }
+expect = "Pop the double into local 3."
+
+[[case]]
+id = "JVMS.6.DSUB"
+spec = ["s6_5_dsub"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleSub"]
+axes = { opcode = "dsub" }
+expect = """
+Push the IEEE 754 double difference (left minus right) for the two operands, rounding to the \
+nearest representable result with ties to even."""
+
+[[case]]
+id = "JVMS.6.DUP"
+spec = ["s6_5_dup"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "dup" }
+expect = """
+Transform the top values in bottom-to-top order, using the following shapes (parentheses give \
+JVM categories). A (1) to AA."""
+
+[[case]]
+id = "JVMS.6.DUP_X1"
+spec = ["s6_5_dup_x1"]
+java = "25"
+status = "planned"
+axes = { opcode = "dup_x1" }
+expect = """
+Transform the top values in bottom-to-top order, using the following shapes (parentheses give \
+JVM categories). AB (11) to BAB."""
+
+[[case]]
+id = "JVMS.6.DUP_X2"
+spec = ["s6_5_dup_x2"]
+java = "25"
+status = "planned"
+axes = { opcode = "dup_x2" }
+expect = """
+Transform the top values in bottom-to-top order, using the following shapes (parentheses give \
+JVM categories). ABC (111) to CABC / AB (21) to BAB."""
+
+[[case]]
+id = "JVMS.6.DUP2"
+spec = ["s6_5_dup2"]
+java = "default"
+fixture = "primitive/double"
+evidence = ["Test.java#main"]
+axes = { opcode = "dup2" }
+expect = """
+Transform the top values in bottom-to-top order, using the following shapes (parentheses give \
+JVM categories). AB (11) to ABAB / A (2) to AA."""
+
+[[case]]
+id = "JVMS.6.DUP2_X1"
+spec = ["s6_5_dup2_x1"]
+java = "25"
+status = "planned"
+axes = { opcode = "dup2_x1" }
+expect = """
+Transform the top values in bottom-to-top order, using the following shapes (parentheses give \
+JVM categories). ABC (111) to BCABC / AB (12) to BAB."""
+
+[[case]]
+id = "JVMS.6.DUP2_X2"
+spec = ["s6_5_dup2_x2"]
+java = "25"
+status = "planned"
+axes = { opcode = "dup2_x2" }
+expect = """
+Transform the top values in bottom-to-top order, using the following shapes (parentheses give \
+JVM categories). ABCD (1111) to CDABCD / ABC (112) to CABC / ABC (211) to BCABC / AB (22) to \
+BAB."""
+
+[[case]]
+id = "JVMS.6.F2D"
+spec = ["s6_5_f2d"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testFloatToDouble"]
+axes = { opcode = "f2d" }
+expect = "Widen the float to double, preserving finite values exactly."
+
+[[case]]
+id = "JVMS.6.F2I"
+spec = ["s6_5_f2i"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testFloatToInt"]
+axes = { opcode = "f2i" }
+expect = """
+Convert float to int toward zero, yielding zero for NaN and saturating at the endpoints on \
+overflow."""
+
+[[case]]
+id = "JVMS.6.F2L"
+spec = ["s6_5_f2l"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testFloatToLong"]
+axes = { opcode = "f2l" }
+expect = """
+Convert float to long toward zero, yielding zero for NaN and saturating at the endpoints on \
+overflow."""
+
+[[case]]
+id = "JVMS.6.FADD"
+spec = ["s6_5_fadd"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode = "fadd" }
+expect = """
+Push the IEEE 754 float sum for the two operands, rounding to the nearest representable result \
+with ties to even."""
+
+[[case]]
+id = "JVMS.6.FALOAD"
+spec = ["s6_5_faload"]
+java = "default"
+fixture = "array/float"
+evidence = ["Test.java#main"]
+axes = { opcode = "faload" }
+expect = "Push the float at the selected array index."
+
+[[case]]
+id = "JVMS.6.5.FALOAD.RUNTIME-100"
+spec = ["s6_5_faload_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.FALOAD.RUNTIME-110"
+spec = ["s6_5_faload_runtime_110"]
+java = "default"
+fixture = "array/float"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.FASTORE"
+spec = ["s6_5_fastore"]
+java = "default"
+fixture = "array/float"
+evidence = ["Test.java#main"]
+axes = { opcode = "fastore" }
+expect = "Write the float into the selected array element."
+
+[[case]]
+id = "JVMS.6.5.FASTORE.RUNTIME-100"
+spec = ["s6_5_fastore_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.FASTORE.RUNTIME-110"
+spec = ["s6_5_fastore_runtime_110"]
+java = "default"
+fixture = "array/float"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.FCMPL"
+spec = ["s6_5_fcmp_op"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatCompare"]
+axes = { opcode = "fcmpl" }
+expect = "Push -1, 0 or 1 for the numerical comparison. Push -1 if either float is NaN."
+
+[[case]]
+id = "JVMS.6.FCMPG"
+spec = ["s6_5_fcmp_op"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatCompare"]
+axes = { opcode = "fcmpg" }
+expect = "Push -1, 0 or 1 for the numerical comparison. Push 1 if either float is NaN."
+
+[[case]]
+id = "JVMS.6.FCONST_0"
+spec = ["s6_5_fconst_f"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatMul"]
+axes = { opcode = "fconst_0" }
+expect = "Push 0 as float."
+
+[[case]]
+id = "JVMS.6.FCONST_1"
+spec = ["s6_5_fconst_f"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatSub"]
+axes = { opcode = "fconst_1" }
+expect = "Push 1 as float."
+
+[[case]]
+id = "JVMS.6.FCONST_2"
+spec = ["s6_5_fconst_f"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatMul"]
+axes = { opcode = "fconst_2" }
+expect = "Push 2 as float."
+
+[[case]]
+id = "JVMS.6.FDIV"
+spec = ["s6_5_fdiv"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatDiv"]
+axes = { opcode = "fdiv" }
+expect = """
+Push the IEEE 754 float quotient for the two operands, rounding to the nearest representable \
+result with ties to even."""
+
+[[case]]
+id = "JVMS.6.FLOAD"
+spec = ["s6_5_fload"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteConversions"]
+axes = { opcode = "fload" }
+expect = "Push the float value from the indexed local."
+
+[[case]]
+id = "JVMS.6.FLOAD_0"
+spec = ["s6_5_fload_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode = "fload_0" }
+expect = "Push the float value from local 0."
+
+[[case]]
+id = "JVMS.6.FLOAD_1"
+spec = ["s6_5_fload_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode = "fload_1" }
+expect = "Push the float value from local 1."
+
+[[case]]
+id = "JVMS.6.FLOAD_2"
+spec = ["s6_5_fload_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode = "fload_2" }
+expect = "Push the float value from local 2."
+
+[[case]]
+id = "JVMS.6.FLOAD_3"
+spec = ["s6_5_fload_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode = "fload_3" }
+expect = "Push the float value from local 3."
+
+[[case]]
+id = "JVMS.6.FMUL"
+spec = ["s6_5_fmul"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatMul"]
+axes = { opcode = "fmul" }
+expect = """
+Push the IEEE 754 float product for the two operands, rounding to the nearest representable \
+result with ties to even."""
+
+[[case]]
+id = "JVMS.6.FNEG"
+spec = ["s6_5_fneg"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatNeg"]
+axes = { opcode = "fneg" }
+expect = "Reverse the sign of the float operand, including signed zero. Negating NaN yields NaN."
+
+[[case]]
+id = "JVMS.6.FREM"
+spec = ["s6_5_frem"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatRem"]
+axes = { opcode = "frem" }
+expect = """
+Compute the float remainder using a quotient truncated toward zero. A zero divisor gives NaN."""
+
+[[case]]
+id = "JVMS.6.FRETURN"
+spec = ["s6_5_freturn"]
+java = "25"
+status = "planned"
+axes = { opcode = "freturn" }
+expect = "Complete the invocation and deliver the returned float to the caller."
+
+[[case]]
+id = "JVMS.6.5.FRETURN.RUNTIME-100"
+spec = ["s6_5_freturn_runtime_100"]
+java = "25"
+status = "planned"
+expect = """
+With optional structured-locking checks disabled, exiting a synchronized method after losing \
+monitor ownership throws IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.5.FRETURN.RUNTIME-110"
+spec = ["s6_5_freturn_runtime_110"]
+java = "25"
+status = "planned"
+expect = """
+When structured locking is enforced, leaving an invocation with unmatched entries throws \
+IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.FSTORE"
+spec = ["s6_5_fstore"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteConversions"]
+axes = { opcode = "fstore" }
+expect = "Pop the float into the indexed local."
+
+[[case]]
+id = "JVMS.6.FSTORE_0"
+spec = ["s6_5_fstore_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode = "fstore_0" }
+expect = "Pop the float into local 0."
+
+[[case]]
+id = "JVMS.6.FSTORE_1"
+spec = ["s6_5_fstore_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode = "fstore_1" }
+expect = "Pop the float into local 1."
+
+[[case]]
+id = "JVMS.6.FSTORE_2"
+spec = ["s6_5_fstore_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode = "fstore_2" }
+expect = "Pop the float into local 2."
+
+[[case]]
+id = "JVMS.6.FSTORE_3"
+spec = ["s6_5_fstore_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode = "fstore_3" }
+expect = "Pop the float into local 3."
+
+[[case]]
+id = "JVMS.6.FSUB"
+spec = ["s6_5_fsub"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatSub"]
+axes = { opcode = "fsub" }
+expect = """
+Push the IEEE 754 float difference (left minus right) for the two operands, rounding to the \
+nearest representable result with ties to even."""
+
+[[case]]
+id = "JVMS.6.GETFIELD"
+spec = ["s6_5_getfield"]
+java = "default"
+fixture = "field/object/shadowing"
+evidence = ["Test.java#main"]
+axes = { opcode = "getfield" }
+expect = """
+Read the resolved instance field from the receiver and push its value in the JVM computational \
+type."""
+
+[[case]]
+id = "JVMS.6.5.GETFIELD.LINKING-100"
+spec = ["s6_5_getfield_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+An unresolved field name and descriptor raises NoSuchFieldError before the field operation."""
+
+[[case]]
+id = "JVMS.6.5.GETFIELD.LINKING-110"
+spec = ["s6_5_getfield_linking_110"]
+java = "25"
+status = "planned"
+expect = """
+Resolving to a static member for this instance instruction throws IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.6.5.GETFIELD.RUNTIME-100"
+spec = ["s6_5_getfield_runtime_100"]
+java = "25"
+status = "planned"
+expect = "After required resolution, a null receiver throws NullPointerException."
+
+[[case]]
+id = "JVMS.6.GETSTATIC"
+spec = ["s6_5_getstatic"]
+java = "default"
+fixture = "field/static/basic"
+evidence = ["Test.java#main"]
+axes = { opcode = "getstatic" }
+expect = "Initialize the declaring type if necessary and push the resolved static field’s value."
+
+[[case]]
+id = "JVMS.6.5.GETSTATIC.LINKING-100"
+spec = ["s6_5_getstatic_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+An unresolved field name and descriptor raises NoSuchFieldError before the field operation."""
+
+[[case]]
+id = "JVMS.6.5.GETSTATIC.LINKING-110"
+spec = ["s6_5_getstatic_linking_110"]
+java = "25"
+status = "planned"
+expect = """
+Resolving to an instance member for this static instruction throws IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.6.5.GETSTATIC.RUNTIME-100"
+spec = ["s6_5_getstatic_runtime_100"]
+java = "25"
+status = "planned"
+expect = """
+If active use triggers failing class initialization, propagate the initialization error before \
+performing the operation."""
+
+[[case]]
+id = "JVMS.6.GOTO"
+spec = ["s6_5_goto"]
+java = "default"
+fixture = "branch/goto"
+evidence = ["Test.java#testGoto"]
+axes = { opcode = "goto" }
+expect = "Transfer control by the signed 16-bit displacement relative to the opcode."
+
+[[case]]
+id = "JVMS.6.GOTO_W"
+spec = ["s6_5_goto_w"]
+java = "25"
+status = "planned"
+axes = { opcode = "goto_w" }
+expect = "Transfer control by the signed 32-bit displacement relative to the opcode."
+
+[[case]]
+id = "JVMS.6.I2B"
+spec = ["s6_5_i2b"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToByte"]
+axes = { opcode = "i2b" }
+expect = "Narrow to eight bits and push the sign-extended int."
+
+[[case]]
+id = "JVMS.6.I2C"
+spec = ["s6_5_i2c"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToChar"]
+axes = { opcode = "i2c" }
+expect = "Narrow to sixteen bits and push the zero-extended int."
+
+[[case]]
+id = "JVMS.6.I2D"
+spec = ["s6_5_i2d"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToDouble"]
+axes = { opcode = "i2d" }
+expect = "Push the exact double value of the int."
+
+[[case]]
+id = "JVMS.6.I2F"
+spec = ["s6_5_i2f"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToFloat"]
+axes = { opcode = "i2f" }
+expect = """
+Round the int to the nearest representable float using ties to even, with the specified \
+floating-point overflow behavior."""
+
+[[case]]
+id = "JVMS.6.I2L"
+spec = ["s6_5_i2l"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToLong"]
+axes = { opcode = "i2l" }
+expect = "Sign-extend the int to a long."
+
+[[case]]
+id = "JVMS.6.I2S"
+spec = ["s6_5_i2s"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToShort"]
+axes = { opcode = "i2s" }
+expect = "Narrow to sixteen bits and push the sign-extended int."
+
+[[case]]
+id = "JVMS.6.IADD"
+spec = ["s6_5_iadd"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntAdd"]
+axes = { opcode = "iadd" }
+expect = "Push the sum modulo 2^32 as a signed int."
+
+[[case]]
+id = "JVMS.6.IALOAD"
+spec = ["s6_5_iaload"]
+java = "default"
+fixture = "array/int"
+evidence = ["Test.java#main"]
+axes = { opcode = "iaload" }
+expect = "Push the int at the selected array index."
+
+[[case]]
+id = "JVMS.6.5.IALOAD.RUNTIME-100"
+spec = ["s6_5_iaload_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.IALOAD.RUNTIME-110"
+spec = ["s6_5_iaload_runtime_110"]
+java = "default"
+fixture = "array/int"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.IAND"
+spec = ["s6_5_iand"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntBitwise"]
+axes = { opcode = "iand" }
+expect = "Push the bitwise AND of the two int operands."
+
+[[case]]
+id = "JVMS.6.IASTORE"
+spec = ["s6_5_iastore"]
+java = "default"
+fixture = "array/int"
+evidence = ["Test.java#main"]
+axes = { opcode = "iastore" }
+expect = "Write the int into the selected array element."
+
+[[case]]
+id = "JVMS.6.5.IASTORE.RUNTIME-100"
+spec = ["s6_5_iastore_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.IASTORE.RUNTIME-110"
+spec = ["s6_5_iastore_runtime_110"]
+java = "default"
+fixture = "array/int"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.ICONST_M1"
+spec = ["s6_5_iconst_i"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteAdd"]
+axes = { opcode = "iconst_m1" }
+expect = "Push -1 as int."
+
+[[case]]
+id = "JVMS.6.ICONST_0"
+spec = ["s6_5_iconst_i"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode = "iconst_0" }
+expect = "Push 0 as int."
+
+[[case]]
+id = "JVMS.6.ICONST_1"
+spec = ["s6_5_iconst_i"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode = "iconst_1" }
+expect = "Push 1 as int."
+
+[[case]]
+id = "JVMS.6.ICONST_2"
+spec = ["s6_5_iconst_i"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "iconst_2" }
+expect = "Push 2 as int."
+
+[[case]]
+id = "JVMS.6.ICONST_3"
+spec = ["s6_5_iconst_i"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "iconst_3" }
+expect = "Push 3 as int."
+
+[[case]]
+id = "JVMS.6.ICONST_4"
+spec = ["s6_5_iconst_i"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "iconst_4" }
+expect = "Push 4 as int."
+
+[[case]]
+id = "JVMS.6.ICONST_5"
+spec = ["s6_5_iconst_i"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "iconst_5" }
+expect = "Push 5 as int."
+
+[[case]]
+id = "JVMS.6.IDIV"
+spec = ["s6_5_idiv"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntDiv"]
+axes = { opcode = "idiv" }
+expect = """
+For a nonzero divisor, push the signed int quotient truncated toward zero. The minimum value \
+divided by -1 wraps to itself."""
+
+[[case]]
+id = "JVMS.6.5.IDIV.RUNTIME-100"
+spec = ["s6_5_idiv_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A zero integral divisor throws ArithmeticException."
+
+[[case]]
+id = "JVMS.6.5.IDIV.OVERFLOW"
+spec = ["s6_5_idiv"]
+java = "25"
+status = "planned"
+expect = "Dividing the minimum int by minus one yields the minimum int without throwing."
+
+[[case]]
+id = "JVMS.6.IF_ACMPEQ"
+spec = ["s6_5_if_acmp_cond"]
+java = "default"
+fixture = "branch/if_acmpne"
+evidence = ["Test.java#testIfAcmpNe"]
+axes = { opcode = "if_acmpeq" }
+expect = """
+Branch if the two reference identities satisfy == in operand order, otherwise fall through."""
+
+[[case]]
+id = "JVMS.6.IF_ACMPNE"
+spec = ["s6_5_if_acmp_cond"]
+java = "default"
+fixture = "branch/if_acmpeq"
+evidence = ["Test.java#testIfAcmpEq"]
+axes = { opcode = "if_acmpne" }
+expect = """
+Branch if the two reference identities satisfy != in operand order, otherwise fall through."""
+
+[[case]]
+id = "JVMS.6.IF_ICMPEQ"
+spec = ["s6_5_if_icmp_cond"]
+java = "default"
+fixture = "branch/if_icmpne"
+evidence = ["Test.java#testIfIcmpNe"]
+axes = { opcode = "if_icmpeq" }
+expect = "Branch if the two signed ints satisfy == in operand order, otherwise fall through."
+
+[[case]]
+id = "JVMS.6.IF_ICMPNE"
+spec = ["s6_5_if_icmp_cond"]
+java = "default"
+fixture = "branch/goto"
+evidence = ["Test.java#testGoto"]
+axes = { opcode = "if_icmpne" }
+expect = "Branch if the two signed ints satisfy != in operand order, otherwise fall through."
+
+[[case]]
+id = "JVMS.6.IF_ICMPLT"
+spec = ["s6_5_if_icmp_cond"]
+java = "default"
+fixture = "branch/if_icmpge"
+evidence = ["Test.java#testIfIcmpGe"]
+axes = { opcode = "if_icmplt" }
+expect = "Branch if the two signed ints satisfy < in operand order, otherwise fall through."
+
+[[case]]
+id = "JVMS.6.IF_ICMPGE"
+spec = ["s6_5_if_icmp_cond"]
+java = "default"
+fixture = "branch/goto"
+evidence = ["Test.java#testGoto"]
+axes = { opcode = "if_icmpge" }
+expect = "Branch if the two signed ints satisfy >= in operand order, otherwise fall through."
+
+[[case]]
+id = "JVMS.6.IF_ICMPGT"
+spec = ["s6_5_if_icmp_cond"]
+java = "default"
+fixture = "branch/if_icmple"
+evidence = ["Test.java#testIfIcmpLe"]
+axes = { opcode = "if_icmpgt" }
+expect = "Branch if the two signed ints satisfy > in operand order, otherwise fall through."
+
+[[case]]
+id = "JVMS.6.IF_ICMPLE"
+spec = ["s6_5_if_icmp_cond"]
+java = "default"
+fixture = "branch/goto"
+evidence = ["Test.java#testGoto"]
+axes = { opcode = "if_icmple" }
+expect = "Branch if the two signed ints satisfy <= in operand order, otherwise fall through."
+
+[[case]]
+id = "JVMS.6.IFEQ"
+spec = ["s6_5_if_cond"]
+java = "default"
+fixture = "branch/ifne"
+evidence = ["Test.java#testIfNe"]
+axes = { opcode = "ifeq" }
+expect = "Branch if the signed int and zero satisfy == in operand order, otherwise fall through."
+
+[[case]]
+id = "JVMS.6.IFNE"
+spec = ["s6_5_if_cond"]
+java = "default"
+fixture = "branch/ifeq"
+evidence = ["Test.java#testIfEq"]
+axes = { opcode = "ifne" }
+expect = "Branch if the signed int and zero satisfy != in operand order, otherwise fall through."
+
+[[case]]
+id = "JVMS.6.IFLT"
+spec = ["s6_5_if_cond"]
+java = "default"
+fixture = "branch/ifge"
+evidence = ["Test.java#testIfGe"]
+axes = { opcode = "iflt" }
+expect = "Branch if the signed int and zero satisfy < in operand order, otherwise fall through."
+
+[[case]]
+id = "JVMS.6.IFGE"
+spec = ["s6_5_if_cond"]
+java = "default"
+fixture = "branch/iflt"
+evidence = ["Test.java#testIfLt"]
+axes = { opcode = "ifge" }
+expect = "Branch if the signed int and zero satisfy >= in operand order, otherwise fall through."
+
+[[case]]
+id = "JVMS.6.IFGT"
+spec = ["s6_5_if_cond"]
+java = "default"
+fixture = "branch/ifle"
+evidence = ["Test.java#testIfLe"]
+axes = { opcode = "ifgt" }
+expect = "Branch if the signed int and zero satisfy > in operand order, otherwise fall through."
+
+[[case]]
+id = "JVMS.6.IFLE"
+spec = ["s6_5_if_cond"]
+java = "default"
+fixture = "branch/ifgt"
+evidence = ["Test.java#testIfGt"]
+axes = { opcode = "ifle" }
+expect = "Branch if the signed int and zero satisfy <= in operand order, otherwise fall through."
+
+[[case]]
+id = "JVMS.6.IFNONNULL"
+spec = ["s6_5_ifnonnull"]
+java = "default"
+fixture = "branch/ifnull"
+evidence = ["Test.java#testIfNull"]
+axes = { opcode = "ifnonnull" }
+expect = "Branch for a non-null reference and fall through for null."
+
+[[case]]
+id = "JVMS.6.IFNULL"
+spec = ["s6_5_ifnull"]
+java = "default"
+fixture = "branch/ifnonnull"
+evidence = ["Test.java#testIfNonNull"]
+axes = { opcode = "ifnull" }
+expect = "Branch for a null reference and fall through for a non-null reference."
+
+[[case]]
+id = "JVMS.6.IINC"
+spec = ["s6_5_iinc"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntInc"]
+axes = { opcode = "iinc" }
+expect = """
+Add the signed immediate to the selected int local with 32-bit wraparound. The operand stack is \
+unchanged."""
+
+[[case]]
+id = "JVMS.6.ILOAD"
+spec = ["s6_5_iload"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode = "iload" }
+expect = "Push the int value from the indexed local."
+
+[[case]]
+id = "JVMS.6.ILOAD_0"
+spec = ["s6_5_iload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode = "iload_0" }
+expect = "Push the int value from local 0."
+
+[[case]]
+id = "JVMS.6.ILOAD_1"
+spec = ["s6_5_iload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "iload_1" }
+expect = "Push the int value from local 1."
+
+[[case]]
+id = "JVMS.6.ILOAD_2"
+spec = ["s6_5_iload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#returnArray"]
+axes = { opcode = "iload_2" }
+expect = "Push the int value from local 2."
+
+[[case]]
+id = "JVMS.6.ILOAD_3"
+spec = ["s6_5_iload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode = "iload_3" }
+expect = "Push the int value from local 3."
+
+[[case]]
+id = "JVMS.6.IMUL"
+spec = ["s6_5_imul"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntMul"]
+axes = { opcode = "imul" }
+expect = "Push the product modulo 2^32 as a signed int."
+
+[[case]]
+id = "JVMS.6.INEG"
+spec = ["s6_5_ineg"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntNeg"]
+axes = { opcode = "ineg" }
+expect = "Push the arithmetic negation modulo 2^32 as a signed int."
+
+[[case]]
+id = "JVMS.6.INSTANCEOF"
+spec = ["s6_5_instanceof"]
+java = "default"
+fixture = "object/instanceof"
+evidence = ["Test.java#main"]
+axes = { opcode = "instanceof" }
+expect = """
+Push zero for null or an incompatible reference and one for an instance of the resolved type."""
+
+[[case]]
+id = "JVMS.6.5.INSTANCEOF.LINKING-100"
+spec = ["s6_5_instanceof_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+With a non-null operand, failure to load the target class during resolution raises \
+NoClassDefFoundError."""
+
+[[case]]
+id = "JVMS.6.INVOKEDYNAMIC"
+spec = ["s6_5_invokedynamic"]
+java = "default"
+fixture = "lambda/basic_syntax"
+evidence = ["Test.java#main"]
+axes = { opcode = "invokedynamic" }
+expect = """
+Link this instruction to its call site and invoke the current target with the call-site \
+arguments."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEDYNAMIC.LINKING-100"
+spec = ["s6_5_invokedynamic_linking_100"]
+java = "25"
+fixture = "method/bootstrap_linkage_errors"
+evidence = ["Test.java#main"]
+expect = """
+A call site whose bootstrap linkage fails delivers the specified linkage error at the \
+invokedynamic instruction."""
+
+[[case]]
+id = "JVMS.6.INVOKEINTERFACE"
+spec = ["s6_5_invokeinterface"]
+java = "default"
+fixture = "method/invocation_dispatch"
+evidence = ["Test.java#testInterfaceDispatch"]
+axes = { opcode = "invokeinterface" }
+expect = """
+Invoke the method selected for the interface reference and the run-time class of the receiver."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEINTERFACE.LINKING-100"
+spec = ["s6_5_invokeinterface_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+Failure to find the symbolically referenced method produces NoSuchMethodError before dispatch."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEINTERFACE.LINKING-110"
+spec = ["s6_5_invokeinterface_linking_110"]
+java = "25"
+status = "planned"
+expect = """
+Resolving to a static member for this instance instruction throws IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEINTERFACE.RUNTIME-100"
+spec = ["s6_5_invokeinterface_runtime_100"]
+java = "25"
+status = "planned"
+expect = "After required resolution, a null receiver throws NullPointerException."
+
+[[case]]
+id = "JVMS.6.5.INVOKEINTERFACE.RUNTIME-110"
+spec = ["s6_5_invokeinterface_runtime_110"]
+java = "25"
+status = "planned"
+expect = """
+A receiver that does not implement the resolved interface causes IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEINTERFACE.RUNTIME-200"
+spec = ["s6_5_invokeinterface_runtime_200"]
+java = "25"
+status = "planned"
+expect = """
+Selecting an interface invocation target with package or protected access throws \
+IllegalAccessError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEINTERFACE.RUNTIME-210"
+spec = ["s6_5_invokeinterface_runtime_210"]
+java = "25"
+status = "planned"
+expect = "Selecting an abstract target throws AbstractMethodError."
+
+[[case]]
+id = "JVMS.6.5.INVOKEINTERFACE.RUNTIME-220"
+spec = ["s6_5_invokeinterface_runtime_220"]
+java = "25"
+status = "planned"
+expect = """
+If the selected native implementation cannot be bound, invocation throws UnsatisfiedLinkError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEINTERFACE.RUNTIME-300"
+spec = ["s6_5_invokeinterface_runtime_300"]
+java = "25"
+status = "planned"
+expect = """
+Multiple competing concrete maximally specific defaults with no selected method cause \
+IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEINTERFACE.RUNTIME-310"
+spec = ["s6_5_invokeinterface_runtime_310"]
+java = "25"
+status = "planned"
+expect = """
+If lookup finds no concrete maximally specific target and selects no method, invocation throws \
+AbstractMethodError."""
+
+[[case]]
+id = "JVMS.6.INVOKESPECIAL"
+spec = ["s6_5_invokespecial"]
+java = "default"
+fixture = "object/creation"
+evidence = ["Test.java#main"]
+axes = { opcode = "invokespecial" }
+expect = """
+Invoke the selected constructor, private method or superclass or superinterface method with the \
+supplied receiver."""
+
+[[case]]
+id = "JVMS.6.5.INVOKESPECIAL.LINKING-100"
+spec = ["s6_5_invokespecial_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+Failure to find the symbolically referenced method produces NoSuchMethodError before dispatch."""
+
+[[case]]
+id = "JVMS.6.5.INVOKESPECIAL.LINKING-110"
+spec = ["s6_5_invokespecial_linking_110"]
+java = "25"
+status = "planned"
+expect = """
+A constructor resolved in a different class from the symbolic owner causes NoSuchMethodError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKESPECIAL.LINKING-120"
+spec = ["s6_5_invokespecial_linking_120"]
+java = "25"
+status = "planned"
+expect = """
+Resolving to a static member for this instance instruction throws IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKESPECIAL.RUNTIME-100"
+spec = ["s6_5_invokespecial_runtime_100"]
+java = "25"
+status = "planned"
+expect = "After required resolution, a null receiver throws NullPointerException."
+
+[[case]]
+id = "JVMS.6.5.INVOKESPECIAL.RUNTIME-200"
+spec = ["s6_5_invokespecial_runtime_200"]
+java = "25"
+status = "planned"
+expect = "Selecting an abstract target throws AbstractMethodError."
+
+[[case]]
+id = "JVMS.6.5.INVOKESPECIAL.RUNTIME-210"
+spec = ["s6_5_invokespecial_runtime_210"]
+java = "25"
+status = "planned"
+expect = """
+If the selected native implementation cannot be bound, invocation throws UnsatisfiedLinkError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKESPECIAL.RUNTIME-300"
+spec = ["s6_5_invokespecial_runtime_300"]
+java = "25"
+status = "planned"
+expect = """
+Multiple competing concrete maximally specific defaults with no selected method cause \
+IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKESPECIAL.RUNTIME-310"
+spec = ["s6_5_invokespecial_runtime_310"]
+java = "25"
+status = "planned"
+expect = """
+If lookup finds no concrete maximally specific target and selects no method, invocation throws \
+AbstractMethodError."""
+
+[[case]]
+id = "JVMS.6.INVOKESTATIC"
+spec = ["s6_5_invokestatic"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "invokestatic" }
+expect = """
+Initialize the declaring type if necessary and invoke the resolved static method with its \
+arguments."""
+
+[[case]]
+id = "JVMS.6.5.INVOKESTATIC.LINKING-100"
+spec = ["s6_5_invokestatic_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+Failure to find the symbolically referenced method produces NoSuchMethodError before dispatch."""
+
+[[case]]
+id = "JVMS.6.5.INVOKESTATIC.LINKING-110"
+spec = ["s6_5_invokestatic_linking_110"]
+java = "25"
+status = "planned"
+expect = """
+Resolving to an instance member for this static instruction throws IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKESTATIC.RUNTIME-100"
+spec = ["s6_5_invokestatic_runtime_100"]
+java = "25"
+status = "planned"
+expect = """
+If active use triggers failing class initialization, propagate the initialization error before \
+performing the operation."""
+
+[[case]]
+id = "JVMS.6.5.INVOKESTATIC.RUNTIME-110"
+spec = ["s6_5_invokestatic_runtime_110"]
+java = "default"
+fixture = "exceptions/unsatisfied_link_error"
+evidence = ["Test.java#main"]
+expect = """
+If the selected native implementation cannot be bound, invocation throws UnsatisfiedLinkError."""
+
+[[case]]
+id = "JVMS.6.INVOKEVIRTUAL"
+spec = ["s6_5_invokevirtual"]
+java = "default"
+fixture = "method/invocation_dispatch"
+evidence = ["Test.java#testMethodDispatch"]
+axes = { opcode = "invokevirtual" }
+expect = "Select the method for the receiver and invoke it with the arguments from the call site."
+
+[[case]]
+id = "JVMS.6.5.INVOKEVIRTUAL.LINKING-100"
+spec = ["s6_5_invokevirtual_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+Failure to find the symbolically referenced method produces NoSuchMethodError before dispatch."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEVIRTUAL.LINKING-110"
+spec = ["s6_5_invokevirtual_linking_110"]
+java = "25"
+status = "planned"
+expect = """
+Resolving to a static member for this instance instruction throws IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEVIRTUAL.LINKING-120"
+spec = ["s6_5_invokevirtual_linking_120"]
+java = "25"
+status = "planned"
+expect = """
+Resolving a signature-polymorphic MethodHandle descriptor with a missing parameter class raises \
+NoClassDefFoundError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEVIRTUAL.LINKING-130"
+spec = ["s6_5_invokevirtual_linking_130"]
+java = "25"
+status = "planned"
+expect = "A VarHandle access propagates the linkage error from its access-mode invoker."
+
+[[case]]
+id = "JVMS.6.5.INVOKEVIRTUAL.RUNTIME-100"
+spec = ["s6_5_invokevirtual_runtime_100"]
+java = "25"
+status = "planned"
+expect = "After required resolution, a null receiver throws NullPointerException."
+
+[[case]]
+id = "JVMS.6.5.INVOKEVIRTUAL.RUNTIME-200-A"
+spec = ["s6_5_invokevirtual_runtime_200_A"]
+java = "25"
+status = "planned"
+expect = "Selecting an abstract target throws AbstractMethodError."
+
+[[case]]
+id = "JVMS.6.5.INVOKEVIRTUAL.RUNTIME-200-B"
+spec = ["s6_5_invokevirtual_runtime_200_B"]
+java = "default"
+fixture = "exceptions/unsatisfied_link_error"
+evidence = ["Test.java#main"]
+expect = """
+If the selected native implementation cannot be bound, invocation throws UnsatisfiedLinkError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEVIRTUAL.RUNTIME-200-C"
+spec = ["s6_5_invokevirtual_runtime_200_C"]
+java = "25"
+status = "planned"
+expect = """
+Multiple competing concrete maximally specific defaults with no selected method cause \
+IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEVIRTUAL.RUNTIME-200-D"
+spec = ["s6_5_invokevirtual_runtime_200_D"]
+java = "25"
+status = "planned"
+expect = """
+If lookup finds no concrete maximally specific target and selects no method, invocation throws \
+AbstractMethodError."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEVIRTUAL.RUNTIME-300-A"
+spec = ["s6_5_invokevirtual_runtime_300_A"]
+java = "25"
+status = "planned"
+expect = "An invokeExact descriptor unequal to the handle type throws WrongMethodTypeException."
+
+[[case]]
+id = "JVMS.6.5.INVOKEVIRTUAL.RUNTIME-300-B"
+spec = ["s6_5_invokevirtual_runtime_300_B"]
+java = "25"
+status = "planned"
+expect = """
+An invoke descriptor that the handle cannot adapt to with asType throws \
+WrongMethodTypeException."""
+
+[[case]]
+id = "JVMS.6.5.INVOKEVIRTUAL.RUNTIME-310"
+spec = ["s6_5_invokevirtual_runtime_310"]
+java = "25"
+status = "planned"
+expect = """
+A VarHandle invocation propagates the run-time exception raised by the selected access-mode \
+invoker."""
+
+[[case]]
+id = "JVMS.6.IOR"
+spec = ["s6_5_ior"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntBitwise"]
+axes = { opcode = "ior" }
+expect = "Push the bitwise inclusive OR of the two int operands."
+
+[[case]]
+id = "JVMS.6.IREM"
+spec = ["s6_5_irem"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntRem"]
+axes = { opcode = "irem" }
+expect = """
+For a nonzero divisor, push the signed int remainder. Its sign is that of the dividend unless it \
+is zero."""
+
+[[case]]
+id = "JVMS.6.5.IREM.RUNTIME-100"
+spec = ["s6_5_irem_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A zero integral divisor throws ArithmeticException."
+
+[[case]]
+id = "JVMS.6.IRETURN"
+spec = ["s6_5_ireturn"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode = "ireturn" }
+expect = """
+Complete the method with the returned int, narrowing it for boolean, byte, char or short \
+descriptors."""
+
+[[case]]
+id = "JVMS.6.5.IRETURN.RUNTIME-100"
+spec = ["s6_5_ireturn_runtime_100"]
+java = "25"
+status = "planned"
+expect = """
+With optional structured-locking checks disabled, exiting a synchronized method after losing \
+monitor ownership throws IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.5.IRETURN.RUNTIME-110"
+spec = ["s6_5_ireturn_runtime_110"]
+java = "25"
+status = "planned"
+expect = """
+When structured locking is enforced, leaving an invocation with unmatched entries throws \
+IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.5.IRETURN.BOOLEAN"
+spec = ["s6_5_ireturn"]
+java = "25"
+status = "planned"
+expect = "For a method with boolean return type, the returned JVM int is narrowed to its low bit."
+
+[[case]]
+id = "JVMS.6.ISHL"
+spec = ["s6_5_ishl"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntShift"]
+axes = { opcode = "ishl" }
+expect = "Shift left, filling low bits with zero. Use the low 5 bits of the int shift distance."
+
+[[case]]
+id = "JVMS.6.ISHR"
+spec = ["s6_5_ishr"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntShift"]
+axes = { opcode = "ishr" }
+expect = "Shift right, replicating the sign bit. Use the low 5 bits of the int shift distance."
+
+[[case]]
+id = "JVMS.6.ISTORE"
+spec = ["s6_5_istore"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "istore" }
+expect = "Pop the int into the indexed local."
+
+[[case]]
+id = "JVMS.6.ISTORE_0"
+spec = ["s6_5_istore_n"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteAdd"]
+axes = { opcode = "istore_0" }
+expect = "Pop the int into local 0."
+
+[[case]]
+id = "JVMS.6.ISTORE_1"
+spec = ["s6_5_istore_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "istore_1" }
+expect = "Pop the int into local 1."
+
+[[case]]
+id = "JVMS.6.ISTORE_2"
+spec = ["s6_5_istore_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#returnArray"]
+axes = { opcode = "istore_2" }
+expect = "Pop the int into local 2."
+
+[[case]]
+id = "JVMS.6.ISTORE_3"
+spec = ["s6_5_istore_n"]
+java = "default"
+fixture = "math/bigdecimal"
+evidence = ["Test.java#testPrecisionAndScale"]
+axes = { opcode = "istore_3" }
+expect = "Pop the int into local 3."
+
+[[case]]
+id = "JVMS.6.ISUB"
+spec = ["s6_5_isub"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntSub"]
+axes = { opcode = "isub" }
+expect = "Push the difference (left minus right) modulo 2^32 as a signed int."
+
+[[case]]
+id = "JVMS.6.IUSHR"
+spec = ["s6_5_iushr"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntShift"]
+axes = { opcode = "iushr" }
+expect = "Shift right, filling high bits with zero. Use the low 5 bits of the int shift distance."
+
+[[case]]
+id = "JVMS.6.IXOR"
+spec = ["s6_5_ixor"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntBitwise"]
+axes = { opcode = "ixor" }
+expect = "Push the bitwise exclusive OR of the two int operands."
+
+[[case]]
+id = "JVMS.6.JSR"
+spec = ["s6_5_jsr"]
+java = "25"
+status = "planned"
+axes = { opcode = "jsr" }
+expect = """
+In a legacy method push the address following jsr and branch by the signed 16-bit displacement."""
+
+[[case]]
+id = "JVMS.6.JSR_W"
+spec = ["s6_5_jsr_w"]
+java = "25"
+status = "planned"
+axes = { opcode = "jsr_w" }
+expect = """
+In a legacy method push the address following jsr_w and branch by the signed 32-bit \
+displacement."""
+
+[[case]]
+id = "JVMS.6.L2D"
+spec = ["s6_5_l2d"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testLongToDouble"]
+axes = { opcode = "l2d" }
+expect = """
+Round the long to the nearest representable double using ties to even, with the specified \
+floating-point overflow behavior."""
+
+[[case]]
+id = "JVMS.6.L2F"
+spec = ["s6_5_l2f"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testLongToFloat"]
+axes = { opcode = "l2f" }
+expect = """
+Round the long to the nearest representable float using ties to even, with the specified \
+floating-point overflow behavior."""
+
+[[case]]
+id = "JVMS.6.L2I"
+spec = ["s6_5_l2i"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testLongToInt"]
+axes = { opcode = "l2i" }
+expect = "Push the low 32 bits of the long as a signed int."
+
+[[case]]
+id = "JVMS.6.LADD"
+spec = ["s6_5_ladd"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongAdd"]
+axes = { opcode = "ladd" }
+expect = "Push the sum modulo 2^64 as a signed long."
+
+[[case]]
+id = "JVMS.6.LALOAD"
+spec = ["s6_5_laload"]
+java = "default"
+fixture = "array/long"
+evidence = ["Test.java#main"]
+axes = { opcode = "laload" }
+expect = "Push the long at the selected array index."
+
+[[case]]
+id = "JVMS.6.5.LALOAD.RUNTIME-100"
+spec = ["s6_5_laload_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.LALOAD.RUNTIME-110"
+spec = ["s6_5_laload_runtime_110"]
+java = "default"
+fixture = "array/long"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.LAND"
+spec = ["s6_5_land"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongBitwise"]
+axes = { opcode = "land" }
+expect = "Push the bitwise AND of the two long operands."
+
+[[case]]
+id = "JVMS.6.LASTORE"
+spec = ["s6_5_lastore"]
+java = "default"
+fixture = "array/long"
+evidence = ["Test.java#main"]
+axes = { opcode = "lastore" }
+expect = "Write the long into the selected array element."
+
+[[case]]
+id = "JVMS.6.5.LASTORE.RUNTIME-100"
+spec = ["s6_5_lastore_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.LASTORE.RUNTIME-110"
+spec = ["s6_5_lastore_runtime_110"]
+java = "default"
+fixture = "array/long"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.LCMP"
+spec = ["s6_5_lcmp"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongCompare"]
+axes = { opcode = "lcmp" }
+expect = "Push negative one, zero or one for the signed ordering of the two long values."
+
+[[case]]
+id = "JVMS.6.LCONST_0"
+spec = ["s6_5_lconst_l"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongMul"]
+axes = { opcode = "lconst_0" }
+expect = "Push 0 as long."
+
+[[case]]
+id = "JVMS.6.LCONST_1"
+spec = ["s6_5_lconst_l"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongAdd"]
+axes = { opcode = "lconst_1" }
+expect = "Push 1 as long."
+
+[[case]]
+id = "JVMS.6.LDC"
+spec = ["s6_5_ldc"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "ldc" }
+expect = "Use the unsigned byte pool index to push a loadable category-1 constant."
+
+[[case]]
+id = "JVMS.6.5.LDC.LINKING-100"
+spec = ["s6_5_ldc_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+A failure to resolve the indexed symbolic constant propagates its corresponding linkage error \
+before a value is pushed."""
+
+[[case]]
+id = "JVMS.6.LDC_W"
+spec = ["s6_5_ldc_w"]
+java = "default"
+fixture = "math/bigdecimal"
+evidence = ["Test.java#testMathContext"]
+axes = { opcode = "ldc_w" }
+expect = "Use the unsigned 16-bit pool index to push a loadable category-1 constant."
+
+[[case]]
+id = "JVMS.6.5.LDC_W.LINKING-100"
+spec = ["s6_5_ldc_w_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+A failure to resolve the indexed symbolic constant propagates its corresponding linkage error \
+before a value is pushed."""
+
+[[case]]
+id = "JVMS.6.LDC2_W"
+spec = ["s6_5_ldc2_w"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "ldc2_w" }
+expect = """
+Push the long or double denoted by the unsigned 16-bit pool index, resolving a dynamic constant \
+when necessary."""
+
+[[case]]
+id = "JVMS.6.5.LDC2_W.LINKING-100"
+spec = ["s6_5_ldc2_w_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+A failure to resolve the indexed symbolic constant propagates its corresponding linkage error \
+before a value is pushed."""
+
+[[case]]
+id = "JVMS.6.LDIV"
+spec = ["s6_5_ldiv"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongDiv"]
+axes = { opcode = "ldiv" }
+expect = """
+For a nonzero divisor, push the signed long quotient truncated toward zero. The minimum value \
+divided by -1 wraps to itself."""
+
+[[case]]
+id = "JVMS.6.5.LDIV.RUNTIME-100"
+spec = ["s6_5_ldiv_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A zero integral divisor throws ArithmeticException."
+
+[[case]]
+id = "JVMS.6.5.LDIV.OVERFLOW"
+spec = ["s6_5_ldiv"]
+java = "25"
+status = "planned"
+expect = "Dividing the minimum long by minus one yields the minimum long without throwing."
+
+[[case]]
+id = "JVMS.6.LLOAD"
+spec = ["s6_5_lload"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleConversions"]
+axes = { opcode = "lload" }
+expect = "Push the long value from the indexed local."
+
+[[case]]
+id = "JVMS.6.LLOAD_0"
+spec = ["s6_5_lload_n"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongAdd"]
+axes = { opcode = "lload_0" }
+expect = "Push the long value from local 0."
+
+[[case]]
+id = "JVMS.6.LLOAD_1"
+spec = ["s6_5_lload_n"]
+java = "default"
+fixture = "primitive/long"
+evidence = ["Test.java#main"]
+axes = { opcode = "lload_1" }
+expect = "Push the long value from local 1."
+
+[[case]]
+id = "JVMS.6.LLOAD_2"
+spec = ["s6_5_lload_n"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongAdd"]
+axes = { opcode = "lload_2" }
+expect = "Push the long value from local 2."
+
+[[case]]
+id = "JVMS.6.LLOAD_3"
+spec = ["s6_5_lload_n"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteConversions"]
+axes = { opcode = "lload_3" }
+expect = "Push the long value from local 3."
+
+[[case]]
+id = "JVMS.6.LMUL"
+spec = ["s6_5_lmul"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongMul"]
+axes = { opcode = "lmul" }
+expect = "Push the product modulo 2^64 as a signed long."
+
+[[case]]
+id = "JVMS.6.LNEG"
+spec = ["s6_5_lneg"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongNeg"]
+axes = { opcode = "lneg" }
+expect = "Push the arithmetic negation modulo 2^64 as a signed long."
+
+[[case]]
+id = "JVMS.6.LOOKUPSWITCH"
+spec = ["s6_5_lookupswitch"]
+java = "default"
+fixture = "branch/lookupswitch"
+evidence = ["Test.java#testSparseSwitchValue"]
+axes = { opcode = "lookupswitch" }
+expect = """
+Jump relative to the opcode using the offset for the matching signed key, or the default for a \
+missing key."""
+
+[[case]]
+id = "JVMS.6.5.LOOKUPSWITCH.PADDING"
+spec = ["s6_5_lookupswitch"]
+java = "25"
+status = "planned"
+expect = """
+Padding depends on the switch opcode's position within its method. Decode signed key and offset \
+pairs after the aligned default and pair count."""
+
+[[case]]
+id = "JVMS.6.LOR"
+spec = ["s6_5_lor"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongBitwise"]
+axes = { opcode = "lor" }
+expect = "Push the bitwise inclusive OR of the two long operands."
+
+[[case]]
+id = "JVMS.6.LREM"
+spec = ["s6_5_lrem"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongRem"]
+axes = { opcode = "lrem" }
+expect = """
+For a nonzero divisor, push the signed long remainder. Its sign is that of the dividend unless \
+it is zero."""
+
+[[case]]
+id = "JVMS.6.5.LREM.RUNTIME-100"
+spec = ["s6_5_lrem_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A zero integral divisor throws ArithmeticException."
+
+[[case]]
+id = "JVMS.6.LRETURN"
+spec = ["s6_5_lreturn"]
+java = "25"
+status = "planned"
+axes = { opcode = "lreturn" }
+expect = "Complete the invocation and deliver the returned long to the caller."
+
+[[case]]
+id = "JVMS.6.5.LRETURN.RUNTIME-100"
+spec = ["s6_5_lreturn_runtime_100"]
+java = "25"
+status = "planned"
+expect = """
+With optional structured-locking checks disabled, exiting a synchronized method after losing \
+monitor ownership throws IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.5.LRETURN.RUNTIME-110"
+spec = ["s6_5_lreturn_runtime_110"]
+java = "25"
+status = "planned"
+expect = """
+When structured locking is enforced, leaving an invocation with unmatched entries throws \
+IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.LSHL"
+spec = ["s6_5_lshl"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongShift"]
+axes = { opcode = "lshl" }
+expect = "Shift left, filling low bits with zero. Use the low 6 bits of the int shift distance."
+
+[[case]]
+id = "JVMS.6.LSHR"
+spec = ["s6_5_lshr"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongShift"]
+axes = { opcode = "lshr" }
+expect = "Shift right, replicating the sign bit. Use the low 6 bits of the int shift distance."
+
+[[case]]
+id = "JVMS.6.LSTORE"
+spec = ["s6_5_lstore"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleConversions"]
+axes = { opcode = "lstore" }
+expect = "Pop the long into the indexed local."
+
+[[case]]
+id = "JVMS.6.LSTORE_0"
+spec = ["s6_5_lstore_n"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongAdd"]
+axes = { opcode = "lstore_0" }
+expect = "Pop the long into local 0."
+
+[[case]]
+id = "JVMS.6.LSTORE_1"
+spec = ["s6_5_lstore_n"]
+java = "default"
+fixture = "primitive/long"
+evidence = ["Test.java#main"]
+axes = { opcode = "lstore_1" }
+expect = "Pop the long into local 1."
+
+[[case]]
+id = "JVMS.6.LSTORE_2"
+spec = ["s6_5_lstore_n"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongAdd"]
+axes = { opcode = "lstore_2" }
+expect = "Pop the long into local 2."
+
+[[case]]
+id = "JVMS.6.LSTORE_3"
+spec = ["s6_5_lstore_n"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteConversions"]
+axes = { opcode = "lstore_3" }
+expect = "Pop the long into local 3."
+
+[[case]]
+id = "JVMS.6.LSUB"
+spec = ["s6_5_lsub"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongSub"]
+axes = { opcode = "lsub" }
+expect = "Push the difference (left minus right) modulo 2^64 as a signed long."
+
+[[case]]
+id = "JVMS.6.LUSHR"
+spec = ["s6_5_lushr"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongShift"]
+axes = { opcode = "lushr" }
+expect = "Shift right, filling high bits with zero. Use the low 6 bits of the int shift distance."
+
+[[case]]
+id = "JVMS.6.LXOR"
+spec = ["s6_5_lxor"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongBitwise"]
+axes = { opcode = "lxor" }
+expect = "Push the bitwise exclusive OR of the two long operands."
+
+[[case]]
+id = "JVMS.6.MONITORENTER"
+spec = ["s6_5_monitorenter"]
+java = "default"
+fixture = "thread/interrupt_complex"
+evidence = ["Test.java#testInterruptDuringWait"]
+axes = { opcode = "monitorenter" }
+expect = """
+Acquire the object monitor, waiting for a different owner and incrementing the entry count for \
+reentry."""
+
+[[case]]
+id = "JVMS.6.5.MONITORENTER.RUNTIME-100"
+spec = ["s6_5_monitorenter_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null monitor operand throws NullPointerException."
+
+[[case]]
+id = "JVMS.6.MONITOREXIT"
+spec = ["s6_5_monitorexit"]
+java = "default"
+fixture = "thread/interrupt_complex"
+evidence = ["Test.java#testInterruptDuringWait"]
+axes = { opcode = "monitorexit" }
+expect = "Decrement the entry count of an owned monitor and release ownership when it reaches zero."
+
+[[case]]
+id = "JVMS.6.5.MONITOREXIT.RUNTIME-100"
+spec = ["s6_5_monitorexit_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null monitor operand throws NullPointerException."
+
+[[case]]
+id = "JVMS.6.5.MONITOREXIT.RUNTIME-110"
+spec = ["s6_5_monitorexit_runtime_110"]
+java = "25"
+status = "planned"
+expect = "Releasing a monitor owned by a different thread throws IllegalMonitorStateException."
+
+[[case]]
+id = "JVMS.6.5.MONITOREXIT.RUNTIME-120"
+spec = ["s6_5_monitorexit_runtime_120"]
+java = "25"
+status = "planned"
+expect = """
+When structured locking is enforced, an exit exceeding the entries for that monitor in this \
+invocation throws IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.MULTIANEWARRAY"
+spec = ["s6_5_multianewarray"]
+java = "25"
+status = "planned"
+axes = { opcode = "multianewarray" }
+expect = """
+Allocate the requested leading dimensions. Unallocated trailing array dimensions remain null."""
+
+[[case]]
+id = "JVMS.6.5.MULTIANEWARRAY.LINKING-100"
+spec = ["s6_5_multianewarray_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+Failure to load the referenced class during type resolution raises NoClassDefFoundError before \
+the operation."""
+
+[[case]]
+id = "JVMS.6.5.MULTIANEWARRAY.LINKING-110"
+spec = ["s6_5_multianewarray_linking_110"]
+java = "25"
+status = "planned"
+expect = "An inaccessible element type of the resolved array class causes IllegalAccessError."
+
+[[case]]
+id = "JVMS.6.5.MULTIANEWARRAY.RUNTIME-100"
+spec = ["s6_5_multianewarray_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A negative length in any requested dimension throws NegativeArraySizeException."
+
+[[case]]
+id = "JVMS.6.5.MULTIANEWARRAY.ZERO_LENGTH"
+spec = ["s6_5_multianewarray"]
+java = "25"
+status = "planned"
+expect = """
+A zero-length allocated dimension has no children. Trailing dimensions beyond the supplied \
+counts are unallocated."""
+
+[[case]]
+id = "JVMS.6.NEW"
+spec = ["s6_5_new"]
+java = "default"
+fixture = "object/creation"
+evidence = ["Test.java#main"]
+axes = { opcode = "new" }
+expect = """
+Initialize the resolved class if required, allocate the object with default field values and \
+push its reference."""
+
+[[case]]
+id = "JVMS.6.5.NEW.LINKING-100"
+spec = ["s6_5_new_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+Failure to load the referenced class during type resolution raises NoClassDefFoundError before \
+the operation."""
+
+[[case]]
+id = "JVMS.6.5.NEW.LINKING-110"
+spec = ["s6_5_new_linking_110"]
+java = "25"
+status = "planned"
+expect = "Trying to instantiate an abstract class or an interface throws InstantiationError."
+
+[[case]]
+id = "JVMS.6.5.NEW.RUNTIME-100"
+spec = ["s6_5_new_runtime_100"]
+java = "25"
+status = "planned"
+expect = """
+If active use triggers failing class initialization, propagate the initialization error before \
+performing the operation."""
+
+[[case]]
+id = "JVMS.6.NEWARRAY"
+spec = ["s6_5_newarray"]
+java = "default"
+fixture = "array/int"
+evidence = ["Test.java#main"]
+axes = { opcode = "newarray" }
+expect = """
+Allocate the selected primitive array of the requested length with every element set to its \
+default value."""
+
+[[case]]
+id = "JVMS.6.5.NEWARRAY.RUNTIME-100"
+spec = ["s6_5_newarray_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A negative length in any requested dimension throws NegativeArraySizeException."
+
+[[case]]
+id = "JVMS.6.NOP"
+spec = ["s6_5_nop"]
+java = "25"
+status = "planned"
+axes = { opcode = "nop" }
+expect = "Advance to the next instruction without changing locals or the operand stack."
+
+[[case]]
+id = "JVMS.6.POP"
+spec = ["s6_5_pop"]
+java = "25"
+status = "planned"
+axes = { opcode = "pop" }
+expect = """
+Transform the top values in bottom-to-top order, using the following shapes (parentheses give \
+JVM categories). A (1) to empty."""
+
+[[case]]
+id = "JVMS.6.POP2"
+spec = ["s6_5_pop2"]
+java = "25"
+status = "planned"
+axes = { opcode = "pop2" }
+expect = """
+Transform the top values in bottom-to-top order, using the following shapes (parentheses give \
+JVM categories). A (2) to empty / AB (11) to empty."""
+
+[[case]]
+id = "JVMS.6.PUTFIELD"
+spec = ["s6_5_putfield"]
+java = "25"
+fixture = "method/varhandle/instance_field_access"
+evidence = ["Test.java#main"]
+axes = { opcode = "putfield" }
+expect = """
+Store the operand into the resolved instance field of the receiver, narrowing small integral \
+types."""
+
+[[case]]
+id = "JVMS.6.5.PUTFIELD.LINKING-100"
+spec = ["s6_5_putfield_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+An unresolved field name and descriptor raises NoSuchFieldError before the field operation."""
+
+[[case]]
+id = "JVMS.6.5.PUTFIELD.LINKING-110"
+spec = ["s6_5_putfield_linking_110"]
+java = "25"
+status = "planned"
+expect = """
+Resolving to a static member for this instance instruction throws IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.6.5.PUTFIELD.LINKING-120"
+spec = ["s6_5_putfield_linking_120"]
+java = "25"
+status = "planned"
+expect = """
+Writing a final field outside an instance initializer of its own declaring class throws \
+IllegalAccessError."""
+
+[[case]]
+id = "JVMS.6.5.PUTFIELD.RUNTIME-100"
+spec = ["s6_5_putfield_runtime_100"]
+java = "25"
+status = "planned"
+expect = "After required resolution, a null receiver throws NullPointerException."
+
+[[case]]
+id = "JVMS.6.PUTSTATIC"
+spec = ["s6_5_putstatic"]
+java = "default"
+fixture = "thread/synchronization"
+evidence = ["Test.java#testBasicSynchronization"]
+axes = { opcode = "putstatic" }
+expect = """
+Initialize the declaring type if necessary and store the supplied value in the resolved static \
+field."""
+
+[[case]]
+id = "JVMS.6.5.PUTSTATIC.LINKING-100"
+spec = ["s6_5_putstatic_linking_100"]
+java = "25"
+status = "planned"
+expect = """
+An unresolved field name and descriptor raises NoSuchFieldError before the field operation."""
+
+[[case]]
+id = "JVMS.6.5.PUTSTATIC.LINKING-110"
+spec = ["s6_5_putstatic_linking_110"]
+java = "25"
+status = "planned"
+expect = """
+Resolving to an instance member for this static instruction throws IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.6.5.PUTSTATIC.LINKING-120"
+spec = ["s6_5_putstatic_linking_120"]
+java = "25"
+status = "planned"
+expect = """
+Writing a final static field outside its declaring type’s class initializer throws \
+IllegalAccessError."""
+
+[[case]]
+id = "JVMS.6.5.PUTSTATIC.RUNTIME-100"
+spec = ["s6_5_putstatic_runtime_100"]
+java = "25"
+status = "planned"
+expect = """
+If active use triggers failing class initialization, propagate the initialization error before \
+performing the operation."""
+
+[[case]]
+id = "JVMS.6.RET"
+spec = ["s6_5_ret"]
+java = "25"
+status = "planned"
+axes = { opcode = "ret" }
+expect = "In a legacy method resume at the returnAddress stored in the indexed local."
+
+[[case]]
+id = "JVMS.6.RETURN"
+spec = ["s6_5_return"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "return" }
+expect = "Complete the void invocation and resume the caller without a return value."
+
+[[case]]
+id = "JVMS.6.5.RETURN.RUNTIME-100"
+spec = ["s6_5_return_runtime_100"]
+java = "25"
+status = "planned"
+expect = """
+With optional structured-locking checks disabled, exiting a synchronized method after losing \
+monitor ownership throws IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.5.RETURN.RUNTIME-110"
+spec = ["s6_5_return_runtime_110"]
+java = "25"
+status = "planned"
+expect = """
+When structured locking is enforced, leaving an invocation with unmatched entries throws \
+IllegalMonitorStateException."""
+
+[[case]]
+id = "JVMS.6.SALOAD"
+spec = ["s6_5_saload"]
+java = "default"
+fixture = "array/short"
+evidence = ["Test.java#main"]
+axes = { opcode = "saload" }
+expect = "Sign-extend the selected short to int."
+
+[[case]]
+id = "JVMS.6.5.SALOAD.RUNTIME-100"
+spec = ["s6_5_saload_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.SALOAD.RUNTIME-110"
+spec = ["s6_5_saload_runtime_110"]
+java = "default"
+fixture = "array/short"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.SASTORE"
+spec = ["s6_5_sastore"]
+java = "default"
+fixture = "array/short"
+evidence = ["Test.java#main"]
+axes = { opcode = "sastore" }
+expect = "Store the low sixteen bits of the int into the short element."
+
+[[case]]
+id = "JVMS.6.5.SASTORE.RUNTIME-100"
+spec = ["s6_5_sastore_runtime_100"]
+java = "25"
+status = "planned"
+expect = "A null array throws NullPointerException before any bounds check."
+
+[[case]]
+id = "JVMS.6.5.SASTORE.RUNTIME-110"
+spec = ["s6_5_sastore_runtime_110"]
+java = "default"
+fixture = "array/short"
+evidence = ["Test.java#main"]
+expect = "A non-null array with an index outside [0, length) throws ArrayIndexOutOfBoundsException."
+
+[[case]]
+id = "JVMS.6.SIPUSH"
+spec = ["s6_5_sipush"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode = "sipush" }
+expect = "Sign-extend the immediate short to int."
+
+[[case]]
+id = "JVMS.6.SWAP"
+spec = ["s6_5_swap"]
+java = "25"
+status = "planned"
+axes = { opcode = "swap" }
+expect = """
+Transform the top values in bottom-to-top order, using the following shapes (parentheses give \
+JVM categories). AB (11) to BA."""
+
+[[case]]
+id = "JVMS.6.TABLESWITCH"
+spec = ["s6_5_tableswitch"]
+java = "default"
+fixture = "branch/tableswitch"
+evidence = ["Test.java#testSwitchValue"]
+axes = { opcode = "tableswitch" }
+expect = """
+Use the low and high bounds to index offsets relative to the opcode. Out-of-range keys take the \
+default."""
+
+[[case]]
+id = "JVMS.6.5.TABLESWITCH.PADDING"
+spec = ["s6_5_tableswitch"]
+java = "25"
+status = "planned"
+expect = """
+Decode zero to three padding bytes so that default begins on a four-byte boundary measured from \
+this method's code start."""
+
+[[case]]
+id = "JVMS.6.WIDE"
+spec = ["s6_5_wide"]
+java = "25"
+status = "planned"
+axes = { opcode = "wide" }
+expect = """
+Use an unsigned 16-bit local index for the modified instruction. For iinc also use a signed \
+16-bit increment."""
+
+[[case]]
+id = "JVMS.6.5.WIDE.IINC"
+spec = ["s6_5_wide"]
+java = "25"
+status = "planned"
+expect = """
+A widened iinc sign-extends its 16-bit increment. Access to a local above index 255 leaves \
+lower-numbered locals intact."""
+
+[[case]]
+id = "JVMS.6.5.WIDE.RET"
+spec = ["s6_5_wide"]
+java = "25"
+status = "planned"
+expect = """
+In a legacy class, wide ret reads the returnAddress from the 16-bit local index and transfers \
+control there."""

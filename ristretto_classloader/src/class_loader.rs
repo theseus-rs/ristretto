@@ -56,6 +56,7 @@ static ARRAY_CLASS_TEMPLATE: LazyLock<Result<ClassFile<'static>>> = LazyLock::ne
 #[derive(Debug)]
 pub struct ClassLoader {
     this: Weak<ClassLoader>,
+    bindings: Arc<crate::loading_constraints::LoaderBindings>,
     name: String,
     loader_type: Option<ClassLoaderType>,
     class_path: ClassPath,
@@ -89,6 +90,7 @@ impl ClassLoader {
     ) -> Arc<Self> {
         Arc::new_cyclic(|weak_self| ClassLoader {
             this: weak_self.clone(),
+            bindings: Arc::default(),
             name: name.to_string(),
             loader_type,
             class_path,
@@ -179,9 +181,15 @@ impl ClassLoader {
         // can replace them, and an initiating alias would retain stale metadata.
         if !class_name_internal.as_bytes().starts_with(b"[")
             && let Some(parent) = self.parent().await
-            && let Ok(class) = parent.load_with_status_boxed(&class_name_internal).await
         {
-            return Ok(class);
+            match parent.load_with_status_boxed(&class_name_internal).await {
+                Ok((class, loaded)) => {
+                    self.record_initiated(&class)?;
+                    return Ok((class, loaded));
+                }
+                Err(error @ crate::Error::LoadingConstraint(_)) => return Err(error),
+                Err(_) => {}
+            }
         }
         // An empty path cannot supply an ordinary definition. Avoid allocating
         // the I/O future (and a second not-found error) for these common misses.
@@ -213,7 +221,7 @@ impl ClassLoader {
             {
                 let class = Class::from_shared(Some(self.this.clone()), class_file)?;
                 self.set_class_module_name(&class, &class_name_str)?;
-                return Ok(self.cache_class(class_name.to_owned(), class).await);
+                return self.cache_class(class_name.to_owned(), class).await;
             }
             Err(ClassNotFound(class_name.to_rust_string()))
         })
@@ -252,15 +260,40 @@ impl ClassLoader {
         }
     }
 
+    /// Impose equality of a reference type in two initiating loader namespaces without loading it.
+    ///
+    /// # Errors
+    /// Returns a loading constraint violation if the name already denotes distinct definitions.
+    pub fn constrain(&self, other: &Self, name: &JavaStr) -> Result<()> {
+        self.bindings.constrain(&other.bindings, name)
+    }
+
+    /// Record the definition obtained by loading or delegating a binary class name.
+    ///
+    /// # Errors
+    /// Returns a loading constraint violation if resolution would conflict with an earlier lookup.
+    pub fn record_initiated(&self, class: &Arc<Class>) -> Result<()> {
+        // Descriptor constraints name the innermost reference component of an array.
+        if class.is_array() || class.is_primitive() {
+            return Ok(());
+        }
+        self.bindings.record(class)
+    }
+
     /// Cache a class in the class loader.
-    async fn cache_class(&self, class_name: JavaString, class: Arc<Class>) -> (Arc<Class>, bool) {
+    async fn cache_class(
+        &self,
+        class_name: JavaString,
+        class: Arc<Class>,
+    ) -> Result<(Arc<Class>, bool)> {
         let mut classes = self.classes.write().await;
         // Check if the class was loaded while waiting for the lock.
         if let Some(class) = classes.get(&*class_name) {
-            return (class.clone(), true);
+            return Ok((class.clone(), true));
         }
+        self.record_initiated(&class)?;
         classes.insert(class_name, class.clone());
-        (class, false)
+        Ok((class, false))
     }
 
     /// Create an array class.
@@ -310,7 +343,7 @@ impl ClassLoader {
         if std::ptr::eq(self, defining_loader) {
             return Ok((class, loaded));
         }
-        let (class, raced) = self.cache_class(name.to_owned(), class).await;
+        let (class, raced) = self.cache_class(name.to_owned(), class).await?;
         Ok((class, loaded || raced))
     }
 
@@ -402,7 +435,7 @@ impl ClassLoader {
             .constant_pool
             .set(1, Constant::Utf8(Cow::Owned(name.to_owned())))?;
         let class = Class::from_array(Some(self.this.clone()), class_file, array_base_class)?;
-        Ok(self.cache_class(name.to_owned(), class).await)
+        self.cache_class(name.to_owned(), class).await
     }
 
     /// Register a class with the class loader.
@@ -413,6 +446,7 @@ impl ClassLoader {
     pub async fn register(&self, class: Arc<Class>) -> Result<()> {
         let mut classes = self.classes.write().await;
         let class_name = JavaString::from(class.java_name());
+        self.record_initiated(&class)?;
         classes.insert(class_name, class);
         Ok(())
     }
@@ -429,7 +463,10 @@ impl ClassLoader {
         let mut classes = self.classes.write().await;
         for class in class {
             let class_name = JavaString::from(class.java_name());
-            classes.entry(class_name).or_insert_with(|| class);
+            if let std::collections::hash_map::Entry::Vacant(entry) = classes.entry(class_name) {
+                self.record_initiated(&class)?;
+                entry.insert(class);
+            }
         }
         Ok(())
     }
@@ -553,6 +590,7 @@ impl Clone for ClassLoader {
     fn clone(&self) -> Self {
         Self {
             this: self.this.clone(),
+            bindings: self.bindings.clone(),
             name: self.name.clone(),
             loader_type: self.loader_type,
             class_path: self.class_path.clone(),

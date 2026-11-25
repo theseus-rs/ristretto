@@ -10,6 +10,7 @@ public class Test {
         for (ByteOrder order : new ByteOrder[]{ByteOrder.LITTLE_ENDIAN, ByteOrder.BIG_ENDIAN}) {
             arrays(order);
             buffers(order);
+            slicedBuffers(order);
         }
         receiverIdentity();
         errors();
@@ -53,9 +54,51 @@ public class Test {
                 check((int) ints.getAcquire(bytes, 0) == 37);
                 ints.setOpaque(bytes, 0, 41);
                 check((int) ints.getOpaque(bytes, 0) == 41);
+                check(ints.compareAndSet(bytes, 0, 41, 53));
+                check((int) ints.getAndAdd(bytes, 0, 4) == 53 && expected.getInt(0) == 57);
+            } else {
+                expect(UnsupportedOperationException.class, () -> { int v = (int) ints.getVolatile(bytes, 0); });
             }
         }
         System.out.println("array " + order);
+    }
+
+    static void slicedBuffers(ByteOrder order) {
+        VarHandle shorts = MethodHandles.byteBufferViewVarHandle(short[].class, order);
+        VarHandle chars = MethodHandles.byteBufferViewVarHandle(char[].class, order);
+        VarHandle ints = MethodHandles.byteBufferViewVarHandle(int[].class, order);
+        VarHandle longs = MethodHandles.byteBufferViewVarHandle(long[].class, order);
+        VarHandle floats = MethodHandles.byteBufferViewVarHandle(float[].class, order);
+        VarHandle doubles = MethodHandles.byteBufferViewVarHandle(double[].class, order);
+        for (ByteBuffer backing : new ByteBuffer[]{ByteBuffer.allocate(40), ByteBuffer.allocateDirect(40)}) {
+            backing.order(order).position(8);
+            ByteBuffer slice = backing.slice();
+            // The handle's byte order takes precedence over the buffer's byte order.
+            slice.order(order == ByteOrder.LITTLE_ENDIAN ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
+            slice.position(3).limit(16);
+            shorts.set(slice, 1, (short) -1234);
+            check(backing.getShort(9) == -1234 && (short) shorts.get(slice, 1) == -1234);
+            chars.set(slice, 1, '\ufedc');
+            check(backing.getChar(9) == '\ufedc' && (char) chars.get(slice, 1) == '\ufedc');
+            longs.set(slice, 1, 0x123456789abcdef0L);
+            check(backing.getLong(9) == 0x123456789abcdef0L && (long) longs.get(slice, 1) == backing.getLong(9));
+            floats.set(slice, 1, -1.25f);
+            check(backing.getFloat(9) == -1.25f && (float) floats.get(slice, 1) == -1.25f);
+            doubles.set(slice, 8, -3.5);
+            check(backing.getDouble(16) == -3.5 && (double) doubles.get(slice, 8) == -3.5);
+            expect(IndexOutOfBoundsException.class, () -> { double v = (double) doubles.get(slice, 9); });
+            check(slice.position() == 3 && slice.limit() == 16);
+
+            if (backing.isDirect() || Runtime.version().feature() < 25) {
+                ints.setVolatile(slice, 0, 13);
+                check((int) ints.compareAndExchange(slice, 0, 13, 7) == 13);
+                check((int) ints.getAndBitwiseXor(slice, 0, 3) == 7 && backing.getInt(8) == 4);
+                expect(IllegalStateException.class, () -> { int v = (int) ints.getVolatile(slice, 1); });
+                expect(ReadOnlyBufferException.class, () -> ints.compareAndSet(slice.asReadOnlyBuffer(), 0, 4, 7));
+            } else {
+                expect(IllegalStateException.class, () -> { int v = (int) ints.getVolatile(slice, 0); });
+            }
+        }
     }
 
     static void buffers(ByteOrder order) {
@@ -91,6 +134,9 @@ public class Test {
     }
 
     static void errors() {
+        VarHandle shorts = MethodHandles.byteArrayViewVarHandle(short[].class, ByteOrder.nativeOrder());
+        expect(UnsupportedOperationException.class, () -> shorts.getAndAdd(new byte[4], 0, 2L));
+        expect(UnsupportedOperationException.class, () -> shorts.getAndAdd((Object) new int[1], 0, (short) 2));
         VarHandle ints = MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.nativeOrder());
         byte[] bytes = new byte[8];
         for (int round = 0; round < 3; round++) {

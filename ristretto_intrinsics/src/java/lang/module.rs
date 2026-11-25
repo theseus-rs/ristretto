@@ -216,9 +216,13 @@ pub fn define_module_0_0<T: Thread + 'static>(
         defined_module.version = version;
         defined_module.location = location;
         defined_module.packages = packages;
-        defined_module.module_object = Some(module);
-
         let vm = thread.vm()?;
+        ristretto_types::ClassRegistry::for_vm(&*vm)?.register_module_packages(
+            vm.garbage_collector(),
+            &module,
+            defined_module.packages.iter(),
+        )?;
+        defined_module.module_object = Some(module);
         vm.module_system().define_module(defined_module);
     }
 
@@ -265,9 +269,13 @@ pub fn define_module_0_1<T: Thread + 'static>(
         defined_module.version = version;
         defined_module.location = location;
         defined_module.packages = packages;
-        defined_module.module_object = Some(module);
-
         let vm = thread.vm()?;
+        ristretto_types::ClassRegistry::for_vm(&*vm)?.register_module_packages(
+            vm.garbage_collector(),
+            &module,
+            defined_module.packages.iter(),
+        )?;
+        defined_module.module_object = Some(module);
         vm.module_system().define_module(defined_module);
     }
 

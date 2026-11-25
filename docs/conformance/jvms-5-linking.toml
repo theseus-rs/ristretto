@@ -1,0 +1,643 @@
+# Java SE 25 JVMS, chapter 5.
+version = 1
+suite = "."
+
+[spec]
+s5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html"
+s5_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.1"
+s5_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.2"
+s5_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3"
+s5_3_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.1"
+s5_3_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.2"
+s5_3_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.3"
+s5_3_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.4"
+s5_3_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.5"
+s5_3_6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.6"
+s5_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4"
+s5_4_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.1"
+s5_4_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.2"
+s5_4_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3"
+s5_4_3_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.1"
+s5_4_3_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.2"
+s5_4_3_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.3"
+s5_4_3_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.4"
+s5_4_3_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.5"
+s5_4_3_6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.6"
+s5_4_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.4"
+s5_4_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.5"
+s5_4_6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.6"
+s5_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5"
+s5_6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.6"
+s5_7 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.7"
+
+# Informative text and overviews. Related behavioral cases appear under their own sections.
+[context]
+s5 = "Class life cycle and the events that can trigger linkage or initialization."
+
+# Published source anchors beneath each section, in document order. Append a suffix to
+# the section fragment (jvms-N for a chapter) to locate the original clause, rule or table.
+[anchors]
+s5 = ["-100", "-110"]
+s5_1 = [
+  "-100", "-110", "-200", "-200-A", "-200-A-A", "-200-A-B", "-200-A-B-A", "-200-A-B-B",
+  "-200-A.1", "-200-B", "-200-C", "-200-D", "-200-E", "-200-F", "-200-G", "-200-G-A", "-200-G-B",
+  "-200-G-C", "-200-H", "-200-H-A", "-200-H-B", "-200-H-C", "-300", "-300-A", "-300-A-A",
+  "-300-A-B", "-300-B", "-300-B.1", "-400", "-500", "-500-A", "-500-B", "-510", "-510-A",
+  "-510-B", "-510-C", "-510-D", "-510-E"
+]
+s5_2 = ["-100", "-110", "-120"]
+s5_3 = [
+  "-100", "-110", "-200", "-210", "-220", "-230", "-240", "-300", "-300-A", "-300-B", "-400",
+  "-400-A", "-400-B", "-400-C", "-500", "-600"
+]
+s5_3_1 = ["-100", "-110", "-120", "-200", "-210", "-220"]
+s5_3_2 = [
+  "-100", "-110", "-120", "-130-A", "-130-B", "-200", "-200-A", "-200-B", "-200-C", "-300",
+  "-300-A", "-300-B"
+]
+s5_3_3 = ["-100", "-110", "-120", "-120-A", "-120-B", "-120-B.1", "-120-B.2", "-120-B.3"]
+s5_3_4 = ["-100", "-110", "-120", "-130", "-200", "-200-A", "-200-B", "-200-C", "-200-D"]
+s5_3_5 = [
+  "-100", "-100-A", "-100-A.1", "-100-A.2", "-100-B", "-100-B-A", "-100-B-B", "-100-B-C",
+  "-100-B-C.1", "-100-C", "-100-C.1", "-100-C.1-A", "-100-C.1-B", "-100-C.1-B-A", "-100-C.1-B-B",
+  "-100-C.1-B-C", "-100-C.1-C", "-100-D", "-100-D.1", "-100-D.1-A", "-100-D.1-B", "-100-D.1-B-A",
+  "-100-D.1-B-B", "-100-D.1-B-C", "-200", "-210", "-300"
+]
+s5_3_6 = [
+  "-100", "-200", "-210", "-220", "-230", "-240", "-300", "-310", "-320", "-330", "-400",
+  "-400-A", "-400-B", "-400-C", "-400-D"
+]
+s5_4 = ["-100", "-110", "-110-A", "-110-B", "-110-C", "-110-D", "-110-D.1", "-120", "-200"]
+s5_4_1 = ["-100", "-110", "-120"]
+s5_4_2 = ["-100", "-110", "-110-A", "-110-B", "-200"]
+s5_4_3 = [
+  "-100", "-200", "-300", "-300-A", "-300-A.1", "-300-B", "-300-B.1", "-400", "-400-A",
+  "-400-A.1", "-400-A.2", "-400-B", "-400-B.1", "-400-B.2", "-500", "-510"
+]
+s5_4_3_1 = ["-100", "-100-A", "-100-A.1", "-100-B", "-100-C", "-110"]
+s5_4_3_2 = [
+  "-100", "-200", "-200-A", "-200-B", "-200-C", "-200-D", "-210", "-210-A", "-210-B", "-210-B-A",
+  "-210-B-B", "-210-B-B.1", "-210-B-B.2", "-210-B-B.3"
+]
+s5_4_3_3 = [
+  "-100", "-200", "-200-A", "-200-B", "-200-B-A", "-200-B-A.1", "-200-B-B", "-200-B-C", "-200-C",
+  "-200-C-A", "-200-C-B", "-200-C-C", "-210", "-210-A", "-210-B", "-210-C", "-210-D", "-300",
+  "-300-A", "-300-B", "-300-B-A", "-300-B-B", "-300-B-B.1", "-300-B-B.2", "-300-B-B.3"
+]
+s5_4_3_4 = [
+  "-100", "-200", "-200-A", "-200-B", "-200-C", "-200-D", "-200-E", "-200-F", "-300", "-300-A",
+  "-300-B", "-300-B-A", "-300-B-B", "-300-B-B.1", "-300-B-B.2", "-300-B-B.4"
+]
+s5_4_3_5 = [
+  "-100", "-110", "-120", "-200", "-210", "-220", "-230", "-230-A", "-230-B", "-230-C", "-240",
+  "-240-A", "-240-B", "-240-B-A", "-240-B-B", "-240-B-C", "-240-B-C-A", "-240-B-C-B", "-240-B-D",
+  "-240-B-D-A", "-240-B-D-B", "-240-C", "-250", "-260", "-300", "-310", "-320", "-330", "-340",
+  "-400"
+]
+s5_4_3_6 = [
+  "-100", "-200", "-200-A", "-200-A.1", "-200-A.2", "-200-B", "-200-B.1", "-200-B.2", "-200-B.3",
+  "-200-C", "-200-C.1", "-200-C.2", "-200-D", "-200-D-A", "-200-D-B", "-200-D-B-A", "-200-D-B-B",
+  "-200-D-B-C", "-200-D-C", "-200-D-D", "-200-D.1", "-200-D.2", "-300", "-300-A", "-300-A.1",
+  "-300-A.2", "-300-A.3", "-300-A.4", "-300-B", "-300-B.1", "-300-B.2", "-300-B.3", "-300-B.4",
+  "-400", "-400-A", "-400-A.1", "-400-A.2", "-400-A.3", "-400-B", "-400-B-A", "-400-B-B",
+  "-400-B-C", "-400-B.1", "-500"
+]
+s5_4_4 = [
+  "-100", "-200", "-200-A", "-200-B", "-200-C", "-210", "-300", "-300-A", "-300-B", "-300-B.1",
+  "-300-C", "-300-D", "-310", "-400", "-410", "-500", "-500-A", "-500-B", "-500-B-A", "-500-B-B",
+  "-500-B-C", "-510", "-510-A", "-510-B", "-510-B.1", "-510-B.2", "-510-B.2-A", "-510-B.2-A-A",
+  "-510-B.2-A-B", "-510-B.2-A-C", "-510-B.2-B"
+]
+s5_4_5 = ["-100", "-100-A", "-100-B", "-100-C", "-100-C-A", "-100-C-B", "-100-C-C"]
+s5_4_6 = ["-100", "-100-A", "-100-B", "-100-B-A", "-100-B-B", "-100-B-C"]
+s5_5 = [
+  "-100", "-110", "-110-A", "-110-A.1", "-110-A.2", "-110-B", "-110-C", "-110-D", "-110-E",
+  "-110-F", "-120", "-200", "-200-A", "-200-B", "-200-C", "-200-D", "-201", "-210", "-210-A",
+  "-210-B", "-210-B.1", "-210-C", "-210-D", "-210-E", "-210-F", "-210-F.1", "-210-G", "-210-G.1",
+  "-210-G.2", "-210-H", "-210-I", "-210-J", "-210-K", "-210-L", "-300"
+]
+s5_6 = ["-100"]
+s5_7 = [
+  "-100", "-110", "-200", "-200-A", "-200-B", "-200-C", "-200-C.1", "-200-D", "-200-D.1", "-300",
+  "-310"
+]
+
+[[case]]
+id = "JVMS.5.1"
+spec = ["s5_1"]
+java = "25"
+fixture = "method/dynamic_bootstrap_arguments"
+evidence = ["Test.java#main"]
+expect = """
+Uses of the same resolved method-handle constant in bootstrap arguments observe the same handle \
+object."""
+
+[[case]]
+id = "JVMS.5.2"
+spec = ["s5_2"]
+java = "25"
+status = "planned"
+expect = "The initial class is linked and initialized before its selected main method starts."
+
+[[case]]
+id = "JVMS.5.3"
+spec = ["s5_3"]
+java = "25"
+fixture = "classloader/loader_resolution"
+evidence = ["Test.java#checkLoader"]
+expect = "Resolved references use the defining loader of their classes."
+
+[[case]]
+id = "JVMS.5.3.1"
+spec = ["s5_3_1"]
+java = "default"
+fixture = "class/define_class_identity"
+evidence = ["Test.java#testClassLoaderIdentity"]
+expect = "A bootstrap-defined class reports null as its Java class loader."
+
+[[case]]
+id = "JVMS.5.3.2"
+spec = ["s5_3_2"]
+java = "25"
+fixture = "classloader/shadowed_parent"
+evidence = ["Test.java#main"]
+expect = """
+A defined class reports its defining loader even when that loader shadows the ClassLoader parent \
+field."""
+
+[[case]]
+id = "JVMS.5.3.3"
+spec = ["s5_3_3"]
+java = "25"
+fixture = "classloader/sibling_array_delegation"
+evidence = ["Test.java#main"]
+expect = """
+Reference array identity follows the component definition even when an initiating loader \
+delegates."""
+
+[[case]]
+id = "JVMS.5.3.3.NO_COMPONENT_INIT"
+spec = ["s5_3_3"]
+java = "25"
+fixture = "classloader/array_for_name_no_init"
+evidence = ["Test.java#main"]
+expect = "Loading an array class does not run its component class initializer."
+
+[[case]]
+id = "JVMS.5.3.3.PRIMITIVE"
+spec = ["s5_3_3"]
+java = "25"
+status = "planned"
+expect = "A primitive array class has the bootstrap defining loader and is public."
+
+[[case]]
+id = "JVMS.5.3.4"
+spec = ["s5_3_4"]
+java = "25"
+fixture = "method/lookup_loader_constraints"
+evidence = ["Test.java#main"]
+expect = """
+A conflicting descriptor type causes a LinkageError and the earlier compatible lookup remains \
+usable."""
+
+[[case]]
+id = "JVMS.5.3.5"
+spec = ["s5_3_5"]
+java = "25"
+status = "planned"
+expect = """
+A class definition whose internal name differs from the requested binary name fails with \
+NoClassDefFoundError."""
+
+[[case]]
+id = "JVMS.5.3.5.FINAL_METHOD"
+spec = ["s5_3_5"]
+java = "25"
+status = "planned"
+expect = """
+Derivation fails with IncompatibleClassChangeError if a declared instance method can override a \
+final superclass method."""
+
+[[case]]
+id = "JVMS.5.3.5.DUPLICATE"
+spec = ["s5_3_5"]
+java = "25"
+status = "planned"
+expect = """
+A loader cannot define the same binary name a second time. The attempt fails with LinkageError."""
+
+[[case]]
+id = "JVMS.5.3.5.CYCLE"
+spec = ["s5_3_5"]
+java = "25"
+status = "planned"
+expect = """
+A circular superclass or superinterface dependency during derivation produces \
+ClassCircularityError."""
+
+[[case]]
+id = "JVMS.5.3.5.FINAL"
+spec = ["s5_3_5"]
+java = "25"
+status = "planned"
+expect = """
+Derivation fails with IncompatibleClassChangeError when the proposed direct superclass is final."""
+
+[[case]]
+id = "JVMS.5.3.5.INTERFACE_KIND"
+spec = ["s5_3_5"]
+java = "25"
+status = "planned"
+expect = """
+A proposed direct superinterface that resolves to a class causes IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.5.3.6"
+spec = ["s5_3_6"]
+java = "25"
+fixture = "method/varhandle/module_lookup"
+evidence = ["Test.java#main"]
+expect = "Classes in sibling module layers retain their own module and loader identities."
+
+[[case]]
+id = "JVMS.5.4"
+spec = ["s5_4"]
+java = "25"
+status = "planned"
+expect = """
+A linkage error may be discovered eagerly but is reported only at a point where an action could \
+require linkage."""
+
+[[case]]
+id = "JVMS.5.4.1"
+spec = ["s5_4_1"]
+java = "25"
+status = "planned"
+expect = "A class that fails bytecode verification raises VerifyError before its methods execute."
+
+[[case]]
+id = "JVMS.5.4.2"
+spec = ["s5_4_2"]
+java = "25"
+fixture = "class/unsafe_array_loader"
+evidence = ["Test.java#main"]
+expect = "Prepared static storage contains its default value before class initialization."
+
+[[case]]
+id = "JVMS.5.4.2.DEFAULTS"
+spec = ["s5_4_2"]
+java = "25"
+status = "planned"
+expect = """
+Preparation creates static fields with default values. ConstantValue assignments take place \
+during initialization."""
+
+[[case]]
+id = "JVMS.5.4.3"
+spec = ["s5_4_3"]
+java = "25"
+fixture = "method/bootstrap_linkage_errors"
+evidence = ["Test.java#main"]
+expect = """
+Repeating a failed invokedynamic linkage at one instruction preserves its linkage failure."""
+
+[[case]]
+id = "JVMS.5.4.3.1"
+spec = ["s5_4_3_1"]
+java = "25"
+status = "planned"
+expect = """
+Resolving an inaccessible symbolic class raises IllegalAccessError in the referring class."""
+
+[[case]]
+id = "JVMS.5.4.3.1.ARRAY"
+spec = ["s5_4_3_1"]
+java = "25"
+status = "planned"
+expect = """
+Resolving a reference array type requires successful resolution of its reference element type."""
+
+[[case]]
+id = "JVMS.5.4.3.2"
+spec = ["s5_4_3_2"]
+java = "default"
+fixture = "field/object/shadowing"
+evidence = ["Test.java#main"]
+expect = """
+Field references with the same name resolve to different declarations according to the symbolic \
+owner."""
+
+[[case]]
+id = "JVMS.5.4.3.2.ABSENT"
+spec = ["s5_4_3_2"]
+java = "25"
+status = "planned"
+expect = """
+A missing field name and descriptor after the class, superinterface and superclass search causes \
+NoSuchFieldError."""
+
+[[case]]
+id = "JVMS.5.4.3.3"
+spec = ["s5_4_3_3"]
+java = "25"
+fixture = "method/handle_reference_linkage"
+evidence = ["Test.java#main"]
+expect = """
+A class-method reference whose owner resolves to an interface fails with \
+IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.5.4.3.3.ABSENT"
+spec = ["s5_4_3_3"]
+java = "25"
+status = "planned"
+expect = "A missing class method after the specified search causes NoSuchMethodError."
+
+[[case]]
+id = "JVMS.5.4.3.4"
+spec = ["s5_4_3_4"]
+java = "25"
+fixture = "method/handle_reference_linkage"
+evidence = ["Test.java#main"]
+expect = """
+An interface-method reference whose owner resolves to a class fails with \
+IncompatibleClassChangeError."""
+
+[[case]]
+id = "JVMS.5.4.3.4.OBJECT"
+spec = ["s5_4_3_4"]
+java = "25"
+status = "planned"
+expect = "A matching public non-static Object method can resolve through an interface reference."
+
+[[case]]
+id = "JVMS.5.4.3.4.ABSENT"
+spec = ["s5_4_3_4"]
+java = "25"
+status = "planned"
+expect = "Interface method resolution with no suitable declaration produces NoSuchMethodError."
+
+[[case]]
+id = "JVMS.5.4.3.5"
+spec = ["s5_4_3_5"]
+java = "25"
+fixture = "method/handle_reference_linkage"
+evidence = ["Test.java#main"]
+expect = """
+Resolving a method handle checks symbolic member access before loading the handle's method type."""
+
+[[case]]
+id = "JVMS.5.4.3.5.TYPE"
+spec = ["s5_4_3_5"]
+java = "25"
+status = "planned"
+expect = """
+Resolving a method type resolves its reference parameter and return types in the referring \
+class's loading context."""
+
+[[case]]
+id = "JVMS.5.4.3.5.INITIALIZATION"
+spec = ["s5_4_3_5"]
+java = "25"
+status = "planned"
+expect = "Resolving a handle to a static member alone does not initialize the declaring class."
+
+[[case]]
+id = "JVMS.5.4.3.6"
+spec = ["s5_4_3_6"]
+java = "25"
+fixture = "method/bootstrap_linkage_errors"
+evidence = ["Test.java#main"]
+expect = """
+A bootstrap returning a CallSite with a target of the wrong type produces BootstrapMethodError."""
+
+[[case]]
+id = "JVMS.5.4.3.6.LOOKUP"
+spec = ["s5_4_3_6"]
+java = "25"
+fixture = "method/bootstrap_linkage_errors"
+evidence = ["Test.java#main"]
+expect = "The bootstrap Lookup designates the class containing the dynamic call site."
+
+[[case]]
+id = "JVMS.5.4.3.6.THROWABLE"
+spec = ["s5_4_3_6"]
+java = "25"
+fixture = "method/bootstrap_linkage_errors"
+evidence = ["Test.java#main"]
+expect = """
+An ordinary exception thrown by the bootstrap is wrapped in BootstrapMethodError. An Error can \
+propagate directly."""
+
+[[case]]
+id = "JVMS.5.4.3.6.ARGUMENTS"
+spec = ["s5_4_3_6"]
+java = "25"
+fixture = "method/dynamic_bootstrap_arguments"
+evidence = ["Test.java#main"]
+expect = "Static bootstrap arguments are resolved and passed after the lookup, name and type."
+
+[[case]]
+id = "JVMS.5.4.3.6.NULL_SITE"
+spec = ["s5_4_3_6"]
+java = "25"
+fixture = "method/bootstrap_linkage_errors"
+evidence = ["Test.java#main"]
+expect = "A bootstrap returning null instead of a CallSite causes BootstrapMethodError."
+
+[[case]]
+id = "JVMS.5.4.3.6.CONCURRENCY"
+spec = ["s5_4_3_6"]
+java = "25"
+status = "planned"
+expect = """
+Concurrent bootstrap invocations at one site can race. Normal executions subsequently observe \
+the one published call site."""
+
+[[case]]
+id = "JVMS.5.4.4"
+spec = ["s5_4_4"]
+java = "25"
+fixture = "method/varhandle/module_lookup"
+evidence = ["Test.java#main"]
+expect = "Qualified access is evaluated in the lookup class's run-time module."
+
+[[case]]
+id = "JVMS.5.4.4.NEST"
+spec = ["s5_4_4"]
+java = "25"
+status = "planned"
+expect = """
+Private member access between verified nestmates succeeds. A mere shared package does not grant \
+private access."""
+
+[[case]]
+id = "JVMS.5.4.4.PACKAGE"
+spec = ["s5_4_4"]
+java = "25"
+status = "planned"
+expect = """
+Classes with the same package spelling but different defining loaders are in different run-time \
+packages."""
+
+[[case]]
+id = "JVMS.5.4.4.EXPORT"
+spec = ["s5_4_4"]
+java = "25"
+status = "planned"
+expect = """
+Access from another named module requires readability and the applicable export of the declaring \
+class's package."""
+
+[[case]]
+id = "JVMS.5.4.5"
+spec = ["s5_4_5"]
+java = "25"
+fixture = "invoke/package_dispatch"
+evidence = ["Test.java#main"]
+expect = """
+Package-private declarations in different run-time packages do not automatically override one \
+another."""
+
+[[case]]
+id = "JVMS.5.4.5.PRIVATE"
+spec = ["s5_4_5"]
+java = "25"
+status = "planned"
+expect = """
+A private instance method cannot be overridden by a declaration of the same signature in a \
+subclass."""
+
+[[case]]
+id = "JVMS.5.4.6"
+spec = ["s5_4_6"]
+java = "default"
+fixture = "method/interface/specific_defaults"
+evidence = ["Test.java#main"]
+expect = "Interface dispatch selects the maximally specific applicable default."
+
+[[case]]
+id = "JVMS.5.4.6.CONFLICT"
+spec = ["s5_4_6"]
+java = "25"
+fixture = "method/interface/conflicting_defaults"
+evidence = ["Test.java#main"]
+expect = """
+Competing concrete defaults without a selected implementation lead to \
+IncompatibleClassChangeError at invocation."""
+
+[[case]]
+id = "JVMS.5.5"
+spec = ["s5_5"]
+java = "default"
+fixture = "field/static/initialization_failure"
+evidence = ["Test.java#main"]
+expect = "After initialization fails, a later active use of that class throws NoClassDefFoundError."
+
+[[case]]
+id = "JVMS.5.5.DECLARING_CLASS"
+spec = ["s5_5"]
+java = "25"
+fixture = "method/varhandle/static_initializer"
+evidence = ["Test.java#inheritedStatics"]
+expect = "An inherited static field access initializes the type that actually declares the field."
+
+[[case]]
+id = "JVMS.5.5.DEFAULT_INTERFACES"
+spec = ["s5_5"]
+java = "25"
+status = "planned"
+expect = """
+Class initialization visits the relevant superinterfaces declaring default methods in the \
+specified order."""
+
+[[case]]
+id = "JVMS.5.5.REENTRANT"
+spec = ["s5_5"]
+java = "25"
+status = "planned"
+expect = """
+A recursive request from the initializing thread proceeds without rerunning its class \
+initializer."""
+
+[[case]]
+id = "JVMS.5.5.CONTENDED"
+spec = ["s5_5"]
+java = "25"
+status = "planned"
+expect = """
+A second thread requesting initialization waits for the initializing thread and observes its \
+completed state."""
+
+[[case]]
+id = "JVMS.5.5.WRAP"
+spec = ["s5_5"]
+java = "default"
+fixture = "field/static/initialization_failure"
+evidence = ["Test.java#main"]
+expect = """
+A non-Error thrown from the class initializer is wrapped in ExceptionInInitializerError on the \
+first triggering use."""
+
+[[case]]
+id = "JVMS.5.5.ERROR"
+spec = ["s5_5"]
+java = "default"
+fixture = "field/static/initialization_failure"
+evidence = ["Test.java#main"]
+expect = "An Error thrown from the initializer propagates unchanged to the triggering caller."
+
+[[case]]
+id = "JVMS.5.5.FAILED_PARENT"
+spec = ["s5_5"]
+java = "default"
+fixture = "field/static/initialization_failure"
+evidence = ["Test.java#main"]
+expect = """
+If superclass initialization fails, the subclass initializer never runs and subsequent subclass \
+initialization requests fail."""
+
+[[case]]
+id = "JVMS.5.6"
+spec = ["s5_6"]
+java = "default"
+fixture = "exceptions/unsatisfied_link_error"
+evidence = ["Test.java#main"]
+expect = """
+Calling a native method for which no implementation can be bound throws UnsatisfiedLinkError."""
+
+[[case]]
+id = "JVMS.5.6.REBIND"
+spec = ["s5_6"]
+java = "25"
+status = "planned"
+expect = """
+The implementation chosen for a native call receives the arguments and returns according to the \
+method descriptor."""
+
+[[case]]
+id = "JVMS.5.7"
+spec = ["s5_7"]
+java = "25"
+status = "planned"
+expect = """
+When the last non-daemon thread exits normally, registered shutdown hooks can run before VM \
+termination."""
+
+[[case]]
+id = "JVMS.5.7.HALT"
+spec = ["s5_7"]
+java = "25"
+status = "planned"
+expect = """
+Runtime.halt terminates the VM without starting shutdown hooks and prevents remaining threads \
+from executing further Java code."""
+
+[[case]]
+id = "JVMS.5.7.EXIT"
+spec = ["s5_7"]
+java = "25"
+status = "planned"
+expect = """
+A requested orderly exit waits for the shutdown hooks it started to terminate before VM \
+termination."""

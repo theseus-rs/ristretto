@@ -1,0 +1,2001 @@
+# Java SE 25 JVMS, chapter 7.
+version = 1
+suite = "."
+
+[spec]
+s7 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-7.html"
+s6_5_nop = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.nop"
+s6_5_aconst_null = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aconst_null"
+s6_5_iconst_i = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i"
+s6_5_lconst_l = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lconst_l"
+s6_5_fconst_f = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fconst_f"
+s6_5_dconst_d = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dconst_d"
+s6_5_bipush = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bipush"
+s6_5_sipush = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sipush"
+s6_5_ldc = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc"
+s6_5_ldc_w = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc_w"
+s6_5_ldc2_w = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc2_w"
+s6_5_iload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload"
+s6_5_lload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload"
+s6_5_fload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload"
+s6_5_dload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload"
+s6_5_aload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload"
+s6_5_iload_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n"
+s6_5_lload_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n"
+s6_5_fload_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload_n"
+s6_5_dload_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n"
+s6_5_aload_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n"
+s6_5_iaload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iaload"
+s6_5_laload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.laload"
+s6_5_faload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.faload"
+s6_5_daload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.daload"
+s6_5_aaload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aaload"
+s6_5_baload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.baload"
+s6_5_caload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.caload"
+s6_5_saload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.saload"
+s6_5_istore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore"
+s6_5_lstore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore"
+s6_5_fstore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore"
+s6_5_dstore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore"
+s6_5_astore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore"
+s6_5_istore_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n"
+s6_5_lstore_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n"
+s6_5_fstore_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore_n"
+s6_5_dstore_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n"
+s6_5_astore_n = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n"
+s6_5_iastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iastore"
+s6_5_lastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lastore"
+s6_5_fastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fastore"
+s6_5_dastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dastore"
+s6_5_aastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aastore"
+s6_5_bastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bastore"
+s6_5_castore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.castore"
+s6_5_sastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sastore"
+s6_5_pop = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop"
+s6_5_pop2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop2"
+s6_5_dup = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup"
+s6_5_dup_x1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x1"
+s6_5_dup_x2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x2"
+s6_5_dup2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2"
+s6_5_dup2_x1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x1"
+s6_5_dup2_x2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x2"
+s6_5_swap = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.swap"
+s6_5_iadd = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iadd"
+s6_5_ladd = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ladd"
+s6_5_fadd = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fadd"
+s6_5_dadd = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dadd"
+s6_5_isub = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.isub"
+s6_5_lsub = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lsub"
+s6_5_fsub = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fsub"
+s6_5_dsub = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dsub"
+s6_5_imul = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.imul"
+s6_5_lmul = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lmul"
+s6_5_fmul = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fmul"
+s6_5_dmul = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dmul"
+s6_5_idiv = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.idiv"
+s6_5_ldiv = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldiv"
+s6_5_fdiv = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fdiv"
+s6_5_ddiv = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ddiv"
+s6_5_irem = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.irem"
+s6_5_lrem = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lrem"
+s6_5_frem = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.frem"
+s6_5_drem = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.drem"
+s6_5_ineg = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ineg"
+s6_5_lneg = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lneg"
+s6_5_fneg = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fneg"
+s6_5_dneg = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dneg"
+s6_5_ishl = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ishl"
+s6_5_lshl = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshl"
+s6_5_ishr = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ishr"
+s6_5_lshr = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshr"
+s6_5_iushr = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iushr"
+s6_5_lushr = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lushr"
+s6_5_iand = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iand"
+s6_5_land = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.land"
+s6_5_ior = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ior"
+s6_5_lor = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lor"
+s6_5_ixor = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ixor"
+s6_5_lxor = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lxor"
+s6_5_iinc = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iinc"
+s6_5_i2l = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2l"
+s6_5_i2f = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2f"
+s6_5_i2d = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2d"
+s6_5_l2i = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2i"
+s6_5_l2f = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2f"
+s6_5_l2d = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2d"
+s6_5_f2i = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2i"
+s6_5_f2l = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2l"
+s6_5_f2d = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2d"
+s6_5_d2i = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2i"
+s6_5_d2l = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2l"
+s6_5_d2f = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2f"
+s6_5_i2b = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2b"
+s6_5_i2c = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2c"
+s6_5_i2s = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2s"
+s6_5_lcmp = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lcmp"
+s6_5_fcmp_op = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fcmp_op"
+s6_5_dcmp_op = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dcmp_op"
+s6_5_if_cond = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond"
+s6_5_if_icmp_cond = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond"
+s6_5_if_acmp_cond = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond"
+s6_5_goto = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto"
+s6_5_jsr = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr"
+s6_5_ret = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret"
+s6_5_tableswitch = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.tableswitch"
+s6_5_lookupswitch = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch"
+s6_5_ireturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ireturn"
+s6_5_lreturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lreturn"
+s6_5_freturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.freturn"
+s6_5_dreturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dreturn"
+s6_5_areturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.areturn"
+s6_5_return = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.return"
+s6_5_getstatic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getstatic"
+s6_5_putstatic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic"
+s6_5_getfield = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getfield"
+s6_5_putfield = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putfield"
+s6_5_invokevirtual = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual"
+s6_5_invokespecial = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial"
+s6_5_invokestatic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokestatic"
+s6_5_invokeinterface = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface"
+s6_5_invokedynamic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokedynamic"
+s6_5_new = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.new"
+s6_5_newarray = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray"
+s6_5_anewarray = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.anewarray"
+s6_5_arraylength = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.arraylength"
+s6_5_athrow = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.athrow"
+s6_5_checkcast = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.checkcast"
+s6_5_instanceof = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.instanceof"
+s6_5_monitorenter = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorenter"
+s6_5_monitorexit = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorexit"
+s6_5_wide = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide"
+s6_5_multianewarray = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray"
+s6_5_ifnull = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnull"
+s6_5_ifnonnull = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnonnull"
+s6_5_goto_w = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto_w"
+s6_5_jsr_w = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr_w"
+s6_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2"
+s4_9_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.9.1"
+
+# Published source anchors beneath each section, in document order. Append a suffix to
+# the section fragment (jvms-N for a chapter) to locate the original clause, rule or table.
+[anchors]
+s7 = ["-100", "-200"]
+
+[[case]]
+id = "JVMS.7.NOP"
+spec = ["s7", "s6_5_nop"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0x00" }
+expect = "Decode 0x00 as nop."
+
+[[case]]
+id = "JVMS.7.ACONST_NULL"
+spec = ["s7", "s6_5_aconst_null"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0x01" }
+expect = "Decode 0x01 as aconst_null."
+
+[[case]]
+id = "JVMS.7.ICONST_M1"
+spec = ["s7", "s6_5_iconst_i"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteAdd"]
+axes = { opcode_byte = "0x02" }
+expect = "Decode 0x02 as iconst_m1."
+
+[[case]]
+id = "JVMS.7.ICONST_0"
+spec = ["s7", "s6_5_iconst_i"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode_byte = "0x03" }
+expect = "Decode 0x03 as iconst_0."
+
+[[case]]
+id = "JVMS.7.ICONST_1"
+spec = ["s7", "s6_5_iconst_i"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode_byte = "0x04" }
+expect = "Decode 0x04 as iconst_1."
+
+[[case]]
+id = "JVMS.7.ICONST_2"
+spec = ["s7", "s6_5_iconst_i"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x05" }
+expect = "Decode 0x05 as iconst_2."
+
+[[case]]
+id = "JVMS.7.ICONST_3"
+spec = ["s7", "s6_5_iconst_i"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x06" }
+expect = "Decode 0x06 as iconst_3."
+
+[[case]]
+id = "JVMS.7.ICONST_4"
+spec = ["s7", "s6_5_iconst_i"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x07" }
+expect = "Decode 0x07 as iconst_4."
+
+[[case]]
+id = "JVMS.7.ICONST_5"
+spec = ["s7", "s6_5_iconst_i"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x08" }
+expect = "Decode 0x08 as iconst_5."
+
+[[case]]
+id = "JVMS.7.LCONST_0"
+spec = ["s7", "s6_5_lconst_l"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongMul"]
+axes = { opcode_byte = "0x09" }
+expect = "Decode 0x09 as lconst_0."
+
+[[case]]
+id = "JVMS.7.LCONST_1"
+spec = ["s7", "s6_5_lconst_l"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongAdd"]
+axes = { opcode_byte = "0x0a" }
+expect = "Decode 0x0a as lconst_1."
+
+[[case]]
+id = "JVMS.7.FCONST_0"
+spec = ["s7", "s6_5_fconst_f"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatMul"]
+axes = { opcode_byte = "0x0b" }
+expect = "Decode 0x0b as fconst_0."
+
+[[case]]
+id = "JVMS.7.FCONST_1"
+spec = ["s7", "s6_5_fconst_f"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatSub"]
+axes = { opcode_byte = "0x0c" }
+expect = "Decode 0x0c as fconst_1."
+
+[[case]]
+id = "JVMS.7.FCONST_2"
+spec = ["s7", "s6_5_fconst_f"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatMul"]
+axes = { opcode_byte = "0x0d" }
+expect = "Decode 0x0d as fconst_2."
+
+[[case]]
+id = "JVMS.7.DCONST_0"
+spec = ["s7", "s6_5_dconst_d"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleMul"]
+axes = { opcode_byte = "0x0e" }
+expect = "Decode 0x0e as dconst_0."
+
+[[case]]
+id = "JVMS.7.DCONST_1"
+spec = ["s7", "s6_5_dconst_d"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleSub"]
+axes = { opcode_byte = "0x0f" }
+expect = "Decode 0x0f as dconst_1."
+
+[[case]]
+id = "JVMS.7.BIPUSH"
+spec = ["s7", "s6_5_bipush"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x10" }
+expect = "Decode 0x10 as bipush."
+
+[[case]]
+id = "JVMS.7.SIPUSH"
+spec = ["s7", "s6_5_sipush"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x11" }
+expect = "Decode 0x11 as sipush."
+
+[[case]]
+id = "JVMS.7.LDC"
+spec = ["s7", "s6_5_ldc"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x12" }
+expect = "Decode 0x12 as ldc."
+
+[[case]]
+id = "JVMS.7.LDC_W"
+spec = ["s7", "s6_5_ldc_w"]
+java = "default"
+fixture = "math/bigdecimal"
+evidence = ["Test.java#testMathContext"]
+axes = { opcode_byte = "0x13" }
+expect = "Decode 0x13 as ldc_w."
+
+[[case]]
+id = "JVMS.7.LDC2_W"
+spec = ["s7", "s6_5_ldc2_w"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x14" }
+expect = "Decode 0x14 as ldc2_w."
+
+[[case]]
+id = "JVMS.7.ILOAD"
+spec = ["s7", "s6_5_iload"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode_byte = "0x15" }
+expect = "Decode 0x15 as iload."
+
+[[case]]
+id = "JVMS.7.LLOAD"
+spec = ["s7", "s6_5_lload"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleConversions"]
+axes = { opcode_byte = "0x16" }
+expect = "Decode 0x16 as lload."
+
+[[case]]
+id = "JVMS.7.FLOAD"
+spec = ["s7", "s6_5_fload"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteConversions"]
+axes = { opcode_byte = "0x17" }
+expect = "Decode 0x17 as fload."
+
+[[case]]
+id = "JVMS.7.DLOAD"
+spec = ["s7", "s6_5_dload"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteConversions"]
+axes = { opcode_byte = "0x18" }
+expect = "Decode 0x18 as dload."
+
+[[case]]
+id = "JVMS.7.ALOAD"
+spec = ["s7", "s6_5_aload"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x19" }
+expect = "Decode 0x19 as aload."
+
+[[case]]
+id = "JVMS.7.ILOAD_0"
+spec = ["s7", "s6_5_iload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode_byte = "0x1a" }
+expect = "Decode 0x1a as iload_0."
+
+[[case]]
+id = "JVMS.7.ILOAD_1"
+spec = ["s7", "s6_5_iload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x1b" }
+expect = "Decode 0x1b as iload_1."
+
+[[case]]
+id = "JVMS.7.ILOAD_2"
+spec = ["s7", "s6_5_iload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#returnArray"]
+axes = { opcode_byte = "0x1c" }
+expect = "Decode 0x1c as iload_2."
+
+[[case]]
+id = "JVMS.7.ILOAD_3"
+spec = ["s7", "s6_5_iload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode_byte = "0x1d" }
+expect = "Decode 0x1d as iload_3."
+
+[[case]]
+id = "JVMS.7.LLOAD_0"
+spec = ["s7", "s6_5_lload_n"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongAdd"]
+axes = { opcode_byte = "0x1e" }
+expect = "Decode 0x1e as lload_0."
+
+[[case]]
+id = "JVMS.7.LLOAD_1"
+spec = ["s7", "s6_5_lload_n"]
+java = "default"
+fixture = "primitive/long"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x1f" }
+expect = "Decode 0x1f as lload_1."
+
+[[case]]
+id = "JVMS.7.LLOAD_2"
+spec = ["s7", "s6_5_lload_n"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongAdd"]
+axes = { opcode_byte = "0x20" }
+expect = "Decode 0x20 as lload_2."
+
+[[case]]
+id = "JVMS.7.LLOAD_3"
+spec = ["s7", "s6_5_lload_n"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteConversions"]
+axes = { opcode_byte = "0x21" }
+expect = "Decode 0x21 as lload_3."
+
+[[case]]
+id = "JVMS.7.FLOAD_0"
+spec = ["s7", "s6_5_fload_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode_byte = "0x22" }
+expect = "Decode 0x22 as fload_0."
+
+[[case]]
+id = "JVMS.7.FLOAD_1"
+spec = ["s7", "s6_5_fload_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode_byte = "0x23" }
+expect = "Decode 0x23 as fload_1."
+
+[[case]]
+id = "JVMS.7.FLOAD_2"
+spec = ["s7", "s6_5_fload_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode_byte = "0x24" }
+expect = "Decode 0x24 as fload_2."
+
+[[case]]
+id = "JVMS.7.FLOAD_3"
+spec = ["s7", "s6_5_fload_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode_byte = "0x25" }
+expect = "Decode 0x25 as fload_3."
+
+[[case]]
+id = "JVMS.7.DLOAD_0"
+spec = ["s7", "s6_5_dload_n"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleAdd"]
+axes = { opcode_byte = "0x26" }
+expect = "Decode 0x26 as dload_0."
+
+[[case]]
+id = "JVMS.7.DLOAD_1"
+spec = ["s7", "s6_5_dload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode_byte = "0x27" }
+expect = "Decode 0x27 as dload_1."
+
+[[case]]
+id = "JVMS.7.DLOAD_2"
+spec = ["s7", "s6_5_dload_n"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleAdd"]
+axes = { opcode_byte = "0x28" }
+expect = "Decode 0x28 as dload_2."
+
+[[case]]
+id = "JVMS.7.DLOAD_3"
+spec = ["s7", "s6_5_dload_n"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0x29" }
+expect = "Decode 0x29 as dload_3."
+
+[[case]]
+id = "JVMS.7.ALOAD_0"
+spec = ["s7", "s6_5_aload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#boundedGeneric"]
+axes = { opcode_byte = "0x2a" }
+expect = "Decode 0x2a as aload_0."
+
+[[case]]
+id = "JVMS.7.ALOAD_1"
+spec = ["s7", "s6_5_aload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#returnArray"]
+axes = { opcode_byte = "0x2b" }
+expect = "Decode 0x2b as aload_1."
+
+[[case]]
+id = "JVMS.7.ALOAD_2"
+spec = ["s7", "s6_5_aload_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#objectParameters"]
+axes = { opcode_byte = "0x2c" }
+expect = "Decode 0x2c as aload_2."
+
+[[case]]
+id = "JVMS.7.ALOAD_3"
+spec = ["s7", "s6_5_aload_n"]
+java = "default"
+fixture = "math/bigdecimal"
+evidence = ["Test.java#testConstructors"]
+axes = { opcode_byte = "0x2d" }
+expect = "Decode 0x2d as aload_3."
+
+[[case]]
+id = "JVMS.7.IALOAD"
+spec = ["s7", "s6_5_iaload"]
+java = "default"
+fixture = "array/int"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x2e" }
+expect = "Decode 0x2e as iaload."
+
+[[case]]
+id = "JVMS.7.LALOAD"
+spec = ["s7", "s6_5_laload"]
+java = "default"
+fixture = "array/long"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x2f" }
+expect = "Decode 0x2f as laload."
+
+[[case]]
+id = "JVMS.7.FALOAD"
+spec = ["s7", "s6_5_faload"]
+java = "default"
+fixture = "array/float"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x30" }
+expect = "Decode 0x30 as faload."
+
+[[case]]
+id = "JVMS.7.DALOAD"
+spec = ["s7", "s6_5_daload"]
+java = "default"
+fixture = "array/double"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x31" }
+expect = "Decode 0x31 as daload."
+
+[[case]]
+id = "JVMS.7.AALOAD"
+spec = ["s7", "s6_5_aaload"]
+java = "default"
+fixture = "array/object"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x32" }
+expect = "Decode 0x32 as aaload."
+
+[[case]]
+id = "JVMS.7.BALOAD"
+spec = ["s7", "s6_5_baload"]
+java = "default"
+fixture = "array/byte"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x33" }
+expect = "Decode 0x33 as baload."
+
+[[case]]
+id = "JVMS.7.CALOAD"
+spec = ["s7", "s6_5_caload"]
+java = "default"
+fixture = "array/char"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x34" }
+expect = "Decode 0x34 as caload."
+
+[[case]]
+id = "JVMS.7.SALOAD"
+spec = ["s7", "s6_5_saload"]
+java = "default"
+fixture = "array/short"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x35" }
+expect = "Decode 0x35 as saload."
+
+[[case]]
+id = "JVMS.7.ISTORE"
+spec = ["s7", "s6_5_istore"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x36" }
+expect = "Decode 0x36 as istore."
+
+[[case]]
+id = "JVMS.7.LSTORE"
+spec = ["s7", "s6_5_lstore"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleConversions"]
+axes = { opcode_byte = "0x37" }
+expect = "Decode 0x37 as lstore."
+
+[[case]]
+id = "JVMS.7.FSTORE"
+spec = ["s7", "s6_5_fstore"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteConversions"]
+axes = { opcode_byte = "0x38" }
+expect = "Decode 0x38 as fstore."
+
+[[case]]
+id = "JVMS.7.DSTORE"
+spec = ["s7", "s6_5_dstore"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x39" }
+expect = "Decode 0x39 as dstore."
+
+[[case]]
+id = "JVMS.7.ASTORE"
+spec = ["s7", "s6_5_astore"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x3a" }
+expect = "Decode 0x3a as astore."
+
+[[case]]
+id = "JVMS.7.ISTORE_0"
+spec = ["s7", "s6_5_istore_n"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteAdd"]
+axes = { opcode_byte = "0x3b" }
+expect = "Decode 0x3b as istore_0."
+
+[[case]]
+id = "JVMS.7.ISTORE_1"
+spec = ["s7", "s6_5_istore_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x3c" }
+expect = "Decode 0x3c as istore_1."
+
+[[case]]
+id = "JVMS.7.ISTORE_2"
+spec = ["s7", "s6_5_istore_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#returnArray"]
+axes = { opcode_byte = "0x3d" }
+expect = "Decode 0x3d as istore_2."
+
+[[case]]
+id = "JVMS.7.ISTORE_3"
+spec = ["s7", "s6_5_istore_n"]
+java = "default"
+fixture = "math/bigdecimal"
+evidence = ["Test.java#testPrecisionAndScale"]
+axes = { opcode_byte = "0x3e" }
+expect = "Decode 0x3e as istore_3."
+
+[[case]]
+id = "JVMS.7.LSTORE_0"
+spec = ["s7", "s6_5_lstore_n"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongAdd"]
+axes = { opcode_byte = "0x3f" }
+expect = "Decode 0x3f as lstore_0."
+
+[[case]]
+id = "JVMS.7.LSTORE_1"
+spec = ["s7", "s6_5_lstore_n"]
+java = "default"
+fixture = "primitive/long"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x40" }
+expect = "Decode 0x40 as lstore_1."
+
+[[case]]
+id = "JVMS.7.LSTORE_2"
+spec = ["s7", "s6_5_lstore_n"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongAdd"]
+axes = { opcode_byte = "0x41" }
+expect = "Decode 0x41 as lstore_2."
+
+[[case]]
+id = "JVMS.7.LSTORE_3"
+spec = ["s7", "s6_5_lstore_n"]
+java = "default"
+fixture = "math/byte"
+evidence = ["Test.java#testByteConversions"]
+axes = { opcode_byte = "0x42" }
+expect = "Decode 0x42 as lstore_3."
+
+[[case]]
+id = "JVMS.7.FSTORE_0"
+spec = ["s7", "s6_5_fstore_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode_byte = "0x43" }
+expect = "Decode 0x43 as fstore_0."
+
+[[case]]
+id = "JVMS.7.FSTORE_1"
+spec = ["s7", "s6_5_fstore_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode_byte = "0x44" }
+expect = "Decode 0x44 as fstore_1."
+
+[[case]]
+id = "JVMS.7.FSTORE_2"
+spec = ["s7", "s6_5_fstore_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode_byte = "0x45" }
+expect = "Decode 0x45 as fstore_2."
+
+[[case]]
+id = "JVMS.7.FSTORE_3"
+spec = ["s7", "s6_5_fstore_n"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode_byte = "0x46" }
+expect = "Decode 0x46 as fstore_3."
+
+[[case]]
+id = "JVMS.7.DSTORE_0"
+spec = ["s7", "s6_5_dstore_n"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleAdd"]
+axes = { opcode_byte = "0x47" }
+expect = "Decode 0x47 as dstore_0."
+
+[[case]]
+id = "JVMS.7.DSTORE_1"
+spec = ["s7", "s6_5_dstore_n"]
+java = "default"
+fixture = "primitive/double"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x48" }
+expect = "Decode 0x48 as dstore_1."
+
+[[case]]
+id = "JVMS.7.DSTORE_2"
+spec = ["s7", "s6_5_dstore_n"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleAdd"]
+axes = { opcode_byte = "0x49" }
+expect = "Decode 0x49 as dstore_2."
+
+[[case]]
+id = "JVMS.7.DSTORE_3"
+spec = ["s7", "s6_5_dstore_n"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0x4a" }
+expect = "Decode 0x4a as dstore_3."
+
+[[case]]
+id = "JVMS.7.ASTORE_0"
+spec = ["s7", "s6_5_astore_n"]
+java = "default"
+fixture = "math/bigdecimal"
+evidence = ["Test.java#testConstructors"]
+axes = { opcode_byte = "0x4b" }
+expect = "Decode 0x4b as astore_0."
+
+[[case]]
+id = "JVMS.7.ASTORE_1"
+spec = ["s7", "s6_5_astore_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#returnArray"]
+axes = { opcode_byte = "0x4c" }
+expect = "Decode 0x4c as astore_1."
+
+[[case]]
+id = "JVMS.7.ASTORE_2"
+spec = ["s7", "s6_5_astore_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x4d" }
+expect = "Decode 0x4d as astore_2."
+
+[[case]]
+id = "JVMS.7.ASTORE_3"
+spec = ["s7", "s6_5_astore_n"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x4e" }
+expect = "Decode 0x4e as astore_3."
+
+[[case]]
+id = "JVMS.7.IASTORE"
+spec = ["s7", "s6_5_iastore"]
+java = "default"
+fixture = "array/int"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x4f" }
+expect = "Decode 0x4f as iastore."
+
+[[case]]
+id = "JVMS.7.LASTORE"
+spec = ["s7", "s6_5_lastore"]
+java = "default"
+fixture = "array/long"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x50" }
+expect = "Decode 0x50 as lastore."
+
+[[case]]
+id = "JVMS.7.FASTORE"
+spec = ["s7", "s6_5_fastore"]
+java = "default"
+fixture = "array/float"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x51" }
+expect = "Decode 0x51 as fastore."
+
+[[case]]
+id = "JVMS.7.DASTORE"
+spec = ["s7", "s6_5_dastore"]
+java = "default"
+fixture = "array/double"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x52" }
+expect = "Decode 0x52 as dastore."
+
+[[case]]
+id = "JVMS.7.AASTORE"
+spec = ["s7", "s6_5_aastore"]
+java = "default"
+fixture = "array/object"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x53" }
+expect = "Decode 0x53 as aastore."
+
+[[case]]
+id = "JVMS.7.BASTORE"
+spec = ["s7", "s6_5_bastore"]
+java = "default"
+fixture = "array/byte"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x54" }
+expect = "Decode 0x54 as bastore."
+
+[[case]]
+id = "JVMS.7.CASTORE"
+spec = ["s7", "s6_5_castore"]
+java = "default"
+fixture = "array/char"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x55" }
+expect = "Decode 0x55 as castore."
+
+[[case]]
+id = "JVMS.7.SASTORE"
+spec = ["s7", "s6_5_sastore"]
+java = "default"
+fixture = "array/short"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x56" }
+expect = "Decode 0x56 as sastore."
+
+[[case]]
+id = "JVMS.7.POP"
+spec = ["s7", "s6_5_pop"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0x57" }
+expect = "Decode 0x57 as pop."
+
+[[case]]
+id = "JVMS.7.POP2"
+spec = ["s7", "s6_5_pop2"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0x58" }
+expect = "Decode 0x58 as pop2."
+
+[[case]]
+id = "JVMS.7.DUP"
+spec = ["s7", "s6_5_dup"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x59" }
+expect = "Decode 0x59 as dup."
+
+[[case]]
+id = "JVMS.7.DUP_X1"
+spec = ["s7", "s6_5_dup_x1"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0x5a" }
+expect = "Decode 0x5a as dup_x1."
+
+[[case]]
+id = "JVMS.7.DUP_X2"
+spec = ["s7", "s6_5_dup_x2"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0x5b" }
+expect = "Decode 0x5b as dup_x2."
+
+[[case]]
+id = "JVMS.7.DUP2"
+spec = ["s7", "s6_5_dup2"]
+java = "default"
+fixture = "primitive/double"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0x5c" }
+expect = "Decode 0x5c as dup2."
+
+[[case]]
+id = "JVMS.7.DUP2_X1"
+spec = ["s7", "s6_5_dup2_x1"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0x5d" }
+expect = "Decode 0x5d as dup2_x1."
+
+[[case]]
+id = "JVMS.7.DUP2_X2"
+spec = ["s7", "s6_5_dup2_x2"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0x5e" }
+expect = "Decode 0x5e as dup2_x2."
+
+[[case]]
+id = "JVMS.7.SWAP"
+spec = ["s7", "s6_5_swap"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0x5f" }
+expect = "Decode 0x5f as swap."
+
+[[case]]
+id = "JVMS.7.IADD"
+spec = ["s7", "s6_5_iadd"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntAdd"]
+axes = { opcode_byte = "0x60" }
+expect = "Decode 0x60 as iadd."
+
+[[case]]
+id = "JVMS.7.LADD"
+spec = ["s7", "s6_5_ladd"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongAdd"]
+axes = { opcode_byte = "0x61" }
+expect = "Decode 0x61 as ladd."
+
+[[case]]
+id = "JVMS.7.FADD"
+spec = ["s7", "s6_5_fadd"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatAdd"]
+axes = { opcode_byte = "0x62" }
+expect = "Decode 0x62 as fadd."
+
+[[case]]
+id = "JVMS.7.DADD"
+spec = ["s7", "s6_5_dadd"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleAdd"]
+axes = { opcode_byte = "0x63" }
+expect = "Decode 0x63 as dadd."
+
+[[case]]
+id = "JVMS.7.ISUB"
+spec = ["s7", "s6_5_isub"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntSub"]
+axes = { opcode_byte = "0x64" }
+expect = "Decode 0x64 as isub."
+
+[[case]]
+id = "JVMS.7.LSUB"
+spec = ["s7", "s6_5_lsub"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongSub"]
+axes = { opcode_byte = "0x65" }
+expect = "Decode 0x65 as lsub."
+
+[[case]]
+id = "JVMS.7.FSUB"
+spec = ["s7", "s6_5_fsub"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatSub"]
+axes = { opcode_byte = "0x66" }
+expect = "Decode 0x66 as fsub."
+
+[[case]]
+id = "JVMS.7.DSUB"
+spec = ["s7", "s6_5_dsub"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleSub"]
+axes = { opcode_byte = "0x67" }
+expect = "Decode 0x67 as dsub."
+
+[[case]]
+id = "JVMS.7.IMUL"
+spec = ["s7", "s6_5_imul"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntMul"]
+axes = { opcode_byte = "0x68" }
+expect = "Decode 0x68 as imul."
+
+[[case]]
+id = "JVMS.7.LMUL"
+spec = ["s7", "s6_5_lmul"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongMul"]
+axes = { opcode_byte = "0x69" }
+expect = "Decode 0x69 as lmul."
+
+[[case]]
+id = "JVMS.7.FMUL"
+spec = ["s7", "s6_5_fmul"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatMul"]
+axes = { opcode_byte = "0x6a" }
+expect = "Decode 0x6a as fmul."
+
+[[case]]
+id = "JVMS.7.DMUL"
+spec = ["s7", "s6_5_dmul"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleMul"]
+axes = { opcode_byte = "0x6b" }
+expect = "Decode 0x6b as dmul."
+
+[[case]]
+id = "JVMS.7.IDIV"
+spec = ["s7", "s6_5_idiv"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntDiv"]
+axes = { opcode_byte = "0x6c" }
+expect = "Decode 0x6c as idiv."
+
+[[case]]
+id = "JVMS.7.LDIV"
+spec = ["s7", "s6_5_ldiv"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongDiv"]
+axes = { opcode_byte = "0x6d" }
+expect = "Decode 0x6d as ldiv."
+
+[[case]]
+id = "JVMS.7.FDIV"
+spec = ["s7", "s6_5_fdiv"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatDiv"]
+axes = { opcode_byte = "0x6e" }
+expect = "Decode 0x6e as fdiv."
+
+[[case]]
+id = "JVMS.7.DDIV"
+spec = ["s7", "s6_5_ddiv"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleDiv"]
+axes = { opcode_byte = "0x6f" }
+expect = "Decode 0x6f as ddiv."
+
+[[case]]
+id = "JVMS.7.IREM"
+spec = ["s7", "s6_5_irem"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntRem"]
+axes = { opcode_byte = "0x70" }
+expect = "Decode 0x70 as irem."
+
+[[case]]
+id = "JVMS.7.LREM"
+spec = ["s7", "s6_5_lrem"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongRem"]
+axes = { opcode_byte = "0x71" }
+expect = "Decode 0x71 as lrem."
+
+[[case]]
+id = "JVMS.7.FREM"
+spec = ["s7", "s6_5_frem"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatRem"]
+axes = { opcode_byte = "0x72" }
+expect = "Decode 0x72 as frem."
+
+[[case]]
+id = "JVMS.7.DREM"
+spec = ["s7", "s6_5_drem"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleRem"]
+axes = { opcode_byte = "0x73" }
+expect = "Decode 0x73 as drem."
+
+[[case]]
+id = "JVMS.7.INEG"
+spec = ["s7", "s6_5_ineg"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntNeg"]
+axes = { opcode_byte = "0x74" }
+expect = "Decode 0x74 as ineg."
+
+[[case]]
+id = "JVMS.7.LNEG"
+spec = ["s7", "s6_5_lneg"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongNeg"]
+axes = { opcode_byte = "0x75" }
+expect = "Decode 0x75 as lneg."
+
+[[case]]
+id = "JVMS.7.FNEG"
+spec = ["s7", "s6_5_fneg"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatNeg"]
+axes = { opcode_byte = "0x76" }
+expect = "Decode 0x76 as fneg."
+
+[[case]]
+id = "JVMS.7.DNEG"
+spec = ["s7", "s6_5_dneg"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleNeg"]
+axes = { opcode_byte = "0x77" }
+expect = "Decode 0x77 as dneg."
+
+[[case]]
+id = "JVMS.7.ISHL"
+spec = ["s7", "s6_5_ishl"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntShift"]
+axes = { opcode_byte = "0x78" }
+expect = "Decode 0x78 as ishl."
+
+[[case]]
+id = "JVMS.7.LSHL"
+spec = ["s7", "s6_5_lshl"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongShift"]
+axes = { opcode_byte = "0x79" }
+expect = "Decode 0x79 as lshl."
+
+[[case]]
+id = "JVMS.7.ISHR"
+spec = ["s7", "s6_5_ishr"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntShift"]
+axes = { opcode_byte = "0x7a" }
+expect = "Decode 0x7a as ishr."
+
+[[case]]
+id = "JVMS.7.LSHR"
+spec = ["s7", "s6_5_lshr"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongShift"]
+axes = { opcode_byte = "0x7b" }
+expect = "Decode 0x7b as lshr."
+
+[[case]]
+id = "JVMS.7.IUSHR"
+spec = ["s7", "s6_5_iushr"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntShift"]
+axes = { opcode_byte = "0x7c" }
+expect = "Decode 0x7c as iushr."
+
+[[case]]
+id = "JVMS.7.LUSHR"
+spec = ["s7", "s6_5_lushr"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongShift"]
+axes = { opcode_byte = "0x7d" }
+expect = "Decode 0x7d as lushr."
+
+[[case]]
+id = "JVMS.7.IAND"
+spec = ["s7", "s6_5_iand"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntBitwise"]
+axes = { opcode_byte = "0x7e" }
+expect = "Decode 0x7e as iand."
+
+[[case]]
+id = "JVMS.7.LAND"
+spec = ["s7", "s6_5_land"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongBitwise"]
+axes = { opcode_byte = "0x7f" }
+expect = "Decode 0x7f as land."
+
+[[case]]
+id = "JVMS.7.IOR"
+spec = ["s7", "s6_5_ior"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntBitwise"]
+axes = { opcode_byte = "0x80" }
+expect = "Decode 0x80 as ior."
+
+[[case]]
+id = "JVMS.7.LOR"
+spec = ["s7", "s6_5_lor"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongBitwise"]
+axes = { opcode_byte = "0x81" }
+expect = "Decode 0x81 as lor."
+
+[[case]]
+id = "JVMS.7.IXOR"
+spec = ["s7", "s6_5_ixor"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntBitwise"]
+axes = { opcode_byte = "0x82" }
+expect = "Decode 0x82 as ixor."
+
+[[case]]
+id = "JVMS.7.LXOR"
+spec = ["s7", "s6_5_lxor"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongBitwise"]
+axes = { opcode_byte = "0x83" }
+expect = "Decode 0x83 as lxor."
+
+[[case]]
+id = "JVMS.7.IINC"
+spec = ["s7", "s6_5_iinc"]
+java = "default"
+fixture = "math/integer"
+evidence = ["Test.java#testIntInc"]
+axes = { opcode_byte = "0x84" }
+expect = "Decode 0x84 as iinc."
+
+[[case]]
+id = "JVMS.7.I2L"
+spec = ["s7", "s6_5_i2l"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToLong"]
+axes = { opcode_byte = "0x85" }
+expect = "Decode 0x85 as i2l."
+
+[[case]]
+id = "JVMS.7.I2F"
+spec = ["s7", "s6_5_i2f"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToFloat"]
+axes = { opcode_byte = "0x86" }
+expect = "Decode 0x86 as i2f."
+
+[[case]]
+id = "JVMS.7.I2D"
+spec = ["s7", "s6_5_i2d"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToDouble"]
+axes = { opcode_byte = "0x87" }
+expect = "Decode 0x87 as i2d."
+
+[[case]]
+id = "JVMS.7.L2I"
+spec = ["s7", "s6_5_l2i"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testLongToInt"]
+axes = { opcode_byte = "0x88" }
+expect = "Decode 0x88 as l2i."
+
+[[case]]
+id = "JVMS.7.L2F"
+spec = ["s7", "s6_5_l2f"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testLongToFloat"]
+axes = { opcode_byte = "0x89" }
+expect = "Decode 0x89 as l2f."
+
+[[case]]
+id = "JVMS.7.L2D"
+spec = ["s7", "s6_5_l2d"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testLongToDouble"]
+axes = { opcode_byte = "0x8a" }
+expect = "Decode 0x8a as l2d."
+
+[[case]]
+id = "JVMS.7.F2I"
+spec = ["s7", "s6_5_f2i"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testFloatToInt"]
+axes = { opcode_byte = "0x8b" }
+expect = "Decode 0x8b as f2i."
+
+[[case]]
+id = "JVMS.7.F2L"
+spec = ["s7", "s6_5_f2l"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testFloatToLong"]
+axes = { opcode_byte = "0x8c" }
+expect = "Decode 0x8c as f2l."
+
+[[case]]
+id = "JVMS.7.F2D"
+spec = ["s7", "s6_5_f2d"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testFloatToDouble"]
+axes = { opcode_byte = "0x8d" }
+expect = "Decode 0x8d as f2d."
+
+[[case]]
+id = "JVMS.7.D2I"
+spec = ["s7", "s6_5_d2i"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testDoubleToInt"]
+axes = { opcode_byte = "0x8e" }
+expect = "Decode 0x8e as d2i."
+
+[[case]]
+id = "JVMS.7.D2L"
+spec = ["s7", "s6_5_d2l"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testDoubleToLong"]
+axes = { opcode_byte = "0x8f" }
+expect = "Decode 0x8f as d2l."
+
+[[case]]
+id = "JVMS.7.D2F"
+spec = ["s7", "s6_5_d2f"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testDoubleToFloat"]
+axes = { opcode_byte = "0x90" }
+expect = "Decode 0x90 as d2f."
+
+[[case]]
+id = "JVMS.7.I2B"
+spec = ["s7", "s6_5_i2b"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToByte"]
+axes = { opcode_byte = "0x91" }
+expect = "Decode 0x91 as i2b."
+
+[[case]]
+id = "JVMS.7.I2C"
+spec = ["s7", "s6_5_i2c"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToChar"]
+axes = { opcode_byte = "0x92" }
+expect = "Decode 0x92 as i2c."
+
+[[case]]
+id = "JVMS.7.I2S"
+spec = ["s7", "s6_5_i2s"]
+java = "default"
+fixture = "primitive/conversion"
+evidence = ["Test.java#testIntToShort"]
+axes = { opcode_byte = "0x93" }
+expect = "Decode 0x93 as i2s."
+
+[[case]]
+id = "JVMS.7.LCMP"
+spec = ["s7", "s6_5_lcmp"]
+java = "default"
+fixture = "math/long"
+evidence = ["Test.java#testLongCompare"]
+axes = { opcode_byte = "0x94" }
+expect = "Decode 0x94 as lcmp."
+
+[[case]]
+id = "JVMS.7.FCMPL"
+spec = ["s7", "s6_5_fcmp_op"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatCompare"]
+axes = { opcode_byte = "0x95" }
+expect = "Decode 0x95 as fcmpl."
+
+[[case]]
+id = "JVMS.7.FCMPG"
+spec = ["s7", "s6_5_fcmp_op"]
+java = "default"
+fixture = "math/float"
+evidence = ["Test.java#testFloatCompare"]
+axes = { opcode_byte = "0x96" }
+expect = "Decode 0x96 as fcmpg."
+
+[[case]]
+id = "JVMS.7.DCMPL"
+spec = ["s7", "s6_5_dcmp_op"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleCompare"]
+axes = { opcode_byte = "0x97" }
+expect = "Decode 0x97 as dcmpl."
+
+[[case]]
+id = "JVMS.7.DCMPG"
+spec = ["s7", "s6_5_dcmp_op"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleCompare"]
+axes = { opcode_byte = "0x98" }
+expect = "Decode 0x98 as dcmpg."
+
+[[case]]
+id = "JVMS.7.IFEQ"
+spec = ["s7", "s6_5_if_cond"]
+java = "default"
+fixture = "branch/ifne"
+evidence = ["Test.java#testIfNe"]
+axes = { opcode_byte = "0x99" }
+expect = "Decode 0x99 as ifeq."
+
+[[case]]
+id = "JVMS.7.IFNE"
+spec = ["s7", "s6_5_if_cond"]
+java = "default"
+fixture = "branch/ifeq"
+evidence = ["Test.java#testIfEq"]
+axes = { opcode_byte = "0x9a" }
+expect = "Decode 0x9a as ifne."
+
+[[case]]
+id = "JVMS.7.IFLT"
+spec = ["s7", "s6_5_if_cond"]
+java = "default"
+fixture = "branch/ifge"
+evidence = ["Test.java#testIfGe"]
+axes = { opcode_byte = "0x9b" }
+expect = "Decode 0x9b as iflt."
+
+[[case]]
+id = "JVMS.7.IFGE"
+spec = ["s7", "s6_5_if_cond"]
+java = "default"
+fixture = "branch/iflt"
+evidence = ["Test.java#testIfLt"]
+axes = { opcode_byte = "0x9c" }
+expect = "Decode 0x9c as ifge."
+
+[[case]]
+id = "JVMS.7.IFGT"
+spec = ["s7", "s6_5_if_cond"]
+java = "default"
+fixture = "branch/ifle"
+evidence = ["Test.java#testIfLe"]
+axes = { opcode_byte = "0x9d" }
+expect = "Decode 0x9d as ifgt."
+
+[[case]]
+id = "JVMS.7.IFLE"
+spec = ["s7", "s6_5_if_cond"]
+java = "default"
+fixture = "branch/ifgt"
+evidence = ["Test.java#testIfGt"]
+axes = { opcode_byte = "0x9e" }
+expect = "Decode 0x9e as ifle."
+
+[[case]]
+id = "JVMS.7.IF_ICMPEQ"
+spec = ["s7", "s6_5_if_icmp_cond"]
+java = "default"
+fixture = "branch/if_icmpne"
+evidence = ["Test.java#testIfIcmpNe"]
+axes = { opcode_byte = "0x9f" }
+expect = "Decode 0x9f as if_icmpeq."
+
+[[case]]
+id = "JVMS.7.IF_ICMPNE"
+spec = ["s7", "s6_5_if_icmp_cond"]
+java = "default"
+fixture = "branch/goto"
+evidence = ["Test.java#testGoto"]
+axes = { opcode_byte = "0xa0" }
+expect = "Decode 0xa0 as if_icmpne."
+
+[[case]]
+id = "JVMS.7.IF_ICMPLT"
+spec = ["s7", "s6_5_if_icmp_cond"]
+java = "default"
+fixture = "branch/if_icmpge"
+evidence = ["Test.java#testIfIcmpGe"]
+axes = { opcode_byte = "0xa1" }
+expect = "Decode 0xa1 as if_icmplt."
+
+[[case]]
+id = "JVMS.7.IF_ICMPGE"
+spec = ["s7", "s6_5_if_icmp_cond"]
+java = "default"
+fixture = "branch/goto"
+evidence = ["Test.java#testGoto"]
+axes = { opcode_byte = "0xa2" }
+expect = "Decode 0xa2 as if_icmpge."
+
+[[case]]
+id = "JVMS.7.IF_ICMPGT"
+spec = ["s7", "s6_5_if_icmp_cond"]
+java = "default"
+fixture = "branch/if_icmple"
+evidence = ["Test.java#testIfIcmpLe"]
+axes = { opcode_byte = "0xa3" }
+expect = "Decode 0xa3 as if_icmpgt."
+
+[[case]]
+id = "JVMS.7.IF_ICMPLE"
+spec = ["s7", "s6_5_if_icmp_cond"]
+java = "default"
+fixture = "branch/goto"
+evidence = ["Test.java#testGoto"]
+axes = { opcode_byte = "0xa4" }
+expect = "Decode 0xa4 as if_icmple."
+
+[[case]]
+id = "JVMS.7.IF_ACMPEQ"
+spec = ["s7", "s6_5_if_acmp_cond"]
+java = "default"
+fixture = "branch/if_acmpne"
+evidence = ["Test.java#testIfAcmpNe"]
+axes = { opcode_byte = "0xa5" }
+expect = "Decode 0xa5 as if_acmpeq."
+
+[[case]]
+id = "JVMS.7.IF_ACMPNE"
+spec = ["s7", "s6_5_if_acmp_cond"]
+java = "default"
+fixture = "branch/if_acmpeq"
+evidence = ["Test.java#testIfAcmpEq"]
+axes = { opcode_byte = "0xa6" }
+expect = "Decode 0xa6 as if_acmpne."
+
+[[case]]
+id = "JVMS.7.GOTO"
+spec = ["s7", "s6_5_goto"]
+java = "default"
+fixture = "branch/goto"
+evidence = ["Test.java#testGoto"]
+axes = { opcode_byte = "0xa7" }
+expect = "Decode 0xa7 as goto."
+
+[[case]]
+id = "JVMS.7.JSR"
+spec = ["s7", "s6_5_jsr"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0xa8" }
+expect = "Decode 0xa8 as jsr."
+
+[[case]]
+id = "JVMS.7.RET"
+spec = ["s7", "s6_5_ret"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0xa9" }
+expect = "Decode 0xa9 as ret."
+
+[[case]]
+id = "JVMS.7.TABLESWITCH"
+spec = ["s7", "s6_5_tableswitch"]
+java = "default"
+fixture = "branch/tableswitch"
+evidence = ["Test.java#testSwitchValue"]
+axes = { opcode_byte = "0xaa" }
+expect = "Decode 0xaa as tableswitch."
+
+[[case]]
+id = "JVMS.7.LOOKUPSWITCH"
+spec = ["s7", "s6_5_lookupswitch"]
+java = "default"
+fixture = "branch/lookupswitch"
+evidence = ["Test.java#testSparseSwitchValue"]
+axes = { opcode_byte = "0xab" }
+expect = "Decode 0xab as lookupswitch."
+
+[[case]]
+id = "JVMS.7.IRETURN"
+spec = ["s7", "s6_5_ireturn"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+axes = { opcode_byte = "0xac" }
+expect = "Decode 0xac as ireturn."
+
+[[case]]
+id = "JVMS.7.LRETURN"
+spec = ["s7", "s6_5_lreturn"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0xad" }
+expect = "Decode 0xad as lreturn."
+
+[[case]]
+id = "JVMS.7.FRETURN"
+spec = ["s7", "s6_5_freturn"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0xae" }
+expect = "Decode 0xae as freturn."
+
+[[case]]
+id = "JVMS.7.DRETURN"
+spec = ["s7", "s6_5_dreturn"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#boundedGeneric"]
+axes = { opcode_byte = "0xaf" }
+expect = "Decode 0xaf as dreturn."
+
+[[case]]
+id = "JVMS.7.ARETURN"
+spec = ["s7", "s6_5_areturn"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#returnArray"]
+axes = { opcode_byte = "0xb0" }
+expect = "Decode 0xb0 as areturn."
+
+[[case]]
+id = "JVMS.7.RETURN"
+spec = ["s7", "s6_5_return"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xb1" }
+expect = "Decode 0xb1 as return."
+
+[[case]]
+id = "JVMS.7.GETSTATIC"
+spec = ["s7", "s6_5_getstatic"]
+java = "default"
+fixture = "field/static/basic"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xb2" }
+expect = "Decode 0xb2 as getstatic."
+
+[[case]]
+id = "JVMS.7.PUTSTATIC"
+spec = ["s7", "s6_5_putstatic"]
+java = "default"
+fixture = "thread/synchronization"
+evidence = ["Test.java#testBasicSynchronization"]
+axes = { opcode_byte = "0xb3" }
+expect = "Decode 0xb3 as putstatic."
+
+[[case]]
+id = "JVMS.7.GETFIELD"
+spec = ["s7", "s6_5_getfield"]
+java = "default"
+fixture = "field/object/shadowing"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xb4" }
+expect = "Decode 0xb4 as getfield."
+
+[[case]]
+id = "JVMS.7.PUTFIELD"
+spec = ["s7", "s6_5_putfield"]
+java = "25"
+fixture = "method/varhandle/instance_field_access"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xb5" }
+expect = "Decode 0xb5 as putfield."
+
+[[case]]
+id = "JVMS.7.INVOKEVIRTUAL"
+spec = ["s7", "s6_5_invokevirtual"]
+java = "default"
+fixture = "method/invocation_dispatch"
+evidence = ["Test.java#testMethodDispatch"]
+axes = { opcode_byte = "0xb6" }
+expect = "Decode 0xb6 as invokevirtual."
+
+[[case]]
+id = "JVMS.7.INVOKESPECIAL"
+spec = ["s7", "s6_5_invokespecial"]
+java = "default"
+fixture = "object/creation"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xb7" }
+expect = "Decode 0xb7 as invokespecial."
+
+[[case]]
+id = "JVMS.7.INVOKESTATIC"
+spec = ["s7", "s6_5_invokestatic"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xb8" }
+expect = "Decode 0xb8 as invokestatic."
+
+[[case]]
+id = "JVMS.7.INVOKEINTERFACE"
+spec = ["s7", "s6_5_invokeinterface"]
+java = "default"
+fixture = "method/invocation_dispatch"
+evidence = ["Test.java#testInterfaceDispatch"]
+axes = { opcode_byte = "0xb9" }
+expect = "Decode 0xb9 as invokeinterface."
+
+[[case]]
+id = "JVMS.7.INVOKEDYNAMIC"
+spec = ["s7", "s6_5_invokedynamic"]
+java = "default"
+fixture = "lambda/basic_syntax"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xba" }
+expect = "Decode 0xba as invokedynamic."
+
+[[case]]
+id = "JVMS.7.NEW"
+spec = ["s7", "s6_5_new"]
+java = "default"
+fixture = "object/creation"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xbb" }
+expect = "Decode 0xbb as new."
+
+[[case]]
+id = "JVMS.7.NEWARRAY"
+spec = ["s7", "s6_5_newarray"]
+java = "default"
+fixture = "array/int"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xbc" }
+expect = "Decode 0xbc as newarray."
+
+[[case]]
+id = "JVMS.7.ANEWARRAY"
+spec = ["s7", "s6_5_anewarray"]
+java = "default"
+fixture = "array/object"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xbd" }
+expect = "Decode 0xbd as anewarray."
+
+[[case]]
+id = "JVMS.7.ARRAYLENGTH"
+spec = ["s7", "s6_5_arraylength"]
+java = "default"
+fixture = "array/int"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xbe" }
+expect = "Decode 0xbe as arraylength."
+
+[[case]]
+id = "JVMS.7.ATHROW"
+spec = ["s7", "s6_5_athrow"]
+java = "default"
+fixture = "method/exceptions"
+evidence = ["Test.java#throwsCheckedException"]
+axes = { opcode_byte = "0xbf" }
+expect = "Decode 0xbf as athrow."
+
+[[case]]
+id = "JVMS.7.CHECKCAST"
+spec = ["s7", "s6_5_checkcast"]
+java = "default"
+fixture = "field/object/shadowing"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xc0" }
+expect = "Decode 0xc0 as checkcast."
+
+[[case]]
+id = "JVMS.7.INSTANCEOF"
+spec = ["s7", "s6_5_instanceof"]
+java = "default"
+fixture = "object/instanceof"
+evidence = ["Test.java#main"]
+axes = { opcode_byte = "0xc1" }
+expect = "Decode 0xc1 as instanceof."
+
+[[case]]
+id = "JVMS.7.MONITORENTER"
+spec = ["s7", "s6_5_monitorenter"]
+java = "default"
+fixture = "thread/interrupt_complex"
+evidence = ["Test.java#testInterruptDuringWait"]
+axes = { opcode_byte = "0xc2" }
+expect = "Decode 0xc2 as monitorenter."
+
+[[case]]
+id = "JVMS.7.MONITOREXIT"
+spec = ["s7", "s6_5_monitorexit"]
+java = "default"
+fixture = "thread/interrupt_complex"
+evidence = ["Test.java#testInterruptDuringWait"]
+axes = { opcode_byte = "0xc3" }
+expect = "Decode 0xc3 as monitorexit."
+
+[[case]]
+id = "JVMS.7.WIDE"
+spec = ["s7", "s6_5_wide"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0xc4" }
+expect = "Decode 0xc4 as wide."
+
+[[case]]
+id = "JVMS.7.MULTIANEWARRAY"
+spec = ["s7", "s6_5_multianewarray"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0xc5" }
+expect = "Decode 0xc5 as multianewarray."
+
+[[case]]
+id = "JVMS.7.IFNULL"
+spec = ["s7", "s6_5_ifnull"]
+java = "default"
+fixture = "branch/ifnonnull"
+evidence = ["Test.java#testIfNonNull"]
+axes = { opcode_byte = "0xc6" }
+expect = "Decode 0xc6 as ifnull."
+
+[[case]]
+id = "JVMS.7.IFNONNULL"
+spec = ["s7", "s6_5_ifnonnull"]
+java = "default"
+fixture = "branch/ifnull"
+evidence = ["Test.java#testIfNull"]
+axes = { opcode_byte = "0xc7" }
+expect = "Decode 0xc7 as ifnonnull."
+
+[[case]]
+id = "JVMS.7.GOTO_W"
+spec = ["s7", "s6_5_goto_w"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0xc8" }
+expect = "Decode 0xc8 as goto_w."
+
+[[case]]
+id = "JVMS.7.JSR_W"
+spec = ["s7", "s6_5_jsr_w"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0xc9" }
+expect = "Decode 0xc9 as jsr_w."
+
+[[case]]
+id = "JVMS.7.BREAKPOINT"
+spec = ["s7", "s6_2"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0xca" }
+expect = "0xca is reserved for breakpoint and cannot encode an instruction in a class file."
+
+[[case]]
+id = "JVMS.7.IMPDEP1"
+spec = ["s7", "s6_2"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0xfe" }
+expect = "0xfe is reserved for impdep1 and cannot encode an instruction in a class file."
+
+[[case]]
+id = "JVMS.7.IMPDEP2"
+spec = ["s7", "s6_2"]
+java = "25"
+status = "planned"
+axes = { opcode_byte = "0xff" }
+expect = "0xff is reserved for impdep2 and cannot encode an instruction in a class file."
+
+[[case]]
+id = "JVMS.7.UNASSIGNED"
+spec = ["s7", "s4_9_1"]
+java = "25"
+status = "planned"
+expect = """
+This byte has no assigned instruction in Java SE 25. Reject it at an instruction boundary."""
+[case.axes]
+opcode_byte = [
+  "0xcb", "0xcc", "0xcd", "0xce", "0xcf", "0xd0", "0xd1", "0xd2", "0xd3", "0xd4", "0xd5", "0xd6",
+  "0xd7", "0xd8", "0xd9", "0xda", "0xdb", "0xdc", "0xdd", "0xde", "0xdf", "0xe0", "0xe1", "0xe2",
+  "0xe3", "0xe4", "0xe5", "0xe6", "0xe7", "0xe8", "0xe9", "0xea", "0xeb", "0xec", "0xed", "0xee",
+  "0xef", "0xf0", "0xf1", "0xf2", "0xf3", "0xf4", "0xf5", "0xf6", "0xf7", "0xf8", "0xf9", "0xfa",
+  "0xfb", "0xfc", "0xfd"
+]

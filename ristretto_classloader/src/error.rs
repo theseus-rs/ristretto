@@ -25,6 +25,9 @@ pub enum Error {
     /// A class was not found
     #[error("Class not found: {0}")]
     ClassNotFound(String),
+    /// A binary name constrained across loaders was resolved to distinct classes.
+    #[error("Loader constraint violation for {0}")]
+    LoadingConstraint(String),
     /// Specified field not found
     #[error("Field not found: {class_name}.{field_name}")]
     FieldNotFound {

@@ -542,11 +542,10 @@ pub(crate) async fn set_len(
     }
 }
 
-pub(crate) async fn try_clone(
+pub(crate) async fn clone_file_handle(
     file_handles: &HandleManager<i64, FileHandle>,
-    resource_manager: &ResourceManager,
     fd: i64,
-) -> std::io::Result<i64> {
+) -> std::io::Result<FileHandle> {
     let file_handle = file_handles
         .get(&fd)
         .await
@@ -559,12 +558,19 @@ pub(crate) async fn try_clone(
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
     let cloned_file = file_handle.file.clone();
 
-    let cloned_handle = FileHandle {
+    Ok(FileHandle {
         file: cloned_file,
         append: file_handle.append,
         mode: file_handle.mode,
-    };
+    })
+}
 
+pub(crate) async fn try_clone(
+    file_handles: &HandleManager<i64, FileHandle>,
+    resource_manager: &ResourceManager,
+    fd: i64,
+) -> std::io::Result<i64> {
+    let cloned_handle = clone_file_handle(file_handles, fd).await?;
     let new_fd;
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
     {
@@ -578,7 +584,6 @@ pub(crate) async fn try_clone(
             .map_err(|e| std::io::Error::other(e.to_string()))?;
     }
 
-    drop(file_handle);
     file_handles
         .insert(new_fd, cloned_handle)
         .await

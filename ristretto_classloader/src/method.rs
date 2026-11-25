@@ -49,6 +49,7 @@ impl PartialEq for MethodDefinition {
 pub struct Method {
     definition: MethodDefinition,
     access_flags: MethodAccessFlags,
+    scoped_memory_access: bool,
     name: String,
     descriptor: String,
     parameters: Vec<FieldType>,
@@ -164,9 +165,23 @@ impl Method {
             .collect();
 
         let (parameters, return_type) = FieldType::parse_method_descriptor(descriptor)?;
+        let scoped_memory_access = class_file
+            .class_name()
+            .is_ok_and(|name| name == "jdk/internal/misc/ScopedMemoryAccess")
+            && definition.attributes.iter().any(|attribute| {
+                let Attribute::RuntimeVisibleAnnotations { annotations, .. } = attribute else {
+                    return false;
+                };
+                annotations.iter().any(|annotation| {
+                    constant_pool
+                        .try_get_utf8(annotation.type_index)
+                        .is_ok_and(|name| name == "Ljdk/internal/misc/ScopedMemoryAccess$Scoped;")
+                })
+            });
         Ok(Self {
             definition: owner,
             access_flags: definition.access_flags,
+            scoped_memory_access,
             name: name.to_rust_string(),
             descriptor: descriptor.to_rust_string(),
             parameters,
@@ -196,6 +211,7 @@ impl Method {
         Self {
             definition: MethodDefinition::Owned(Box::new(definition)),
             access_flags,
+            scoped_memory_access: false,
             name,
             descriptor,
             parameters,
@@ -239,6 +255,12 @@ impl Method {
     #[must_use]
     pub fn is_native(&self) -> bool {
         self.access_flags.contains(MethodAccessFlags::NATIVE)
+    }
+
+    /// Whether a foreign-memory session must stay accessible until this method returns.
+    #[must_use]
+    pub fn is_scoped_memory_access(&self) -> bool {
+        self.scoped_memory_access
     }
 
     /// Check if the method is static.
@@ -500,6 +522,7 @@ mod tests {
         let method = Method {
             definition: MethodDefinition::Owned(Box::default()),
             access_flags: MethodAccessFlags::empty(),
+            scoped_memory_access: false,
             name: "test".to_string(),
             descriptor: "()V".to_string(),
             parameters: Vec::new(),

@@ -334,7 +334,6 @@ jobs:
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          RISTRETTO_COMPATIBILITY_THREADS: "4"
           RUST_BACKTRACE: 1
           RUST_LOG: info
           RUST_LOG_SPAN_EVENTS: full

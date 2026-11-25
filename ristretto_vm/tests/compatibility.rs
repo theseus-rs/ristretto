@@ -69,6 +69,8 @@ struct TestCase {
     java_release: Option<String>,
     java_home: PathBuf,
     system_properties: Vec<(String, String)>,
+    /// Each argument list runs in a fresh JVM with its own timeout.
+    argument_sets: Vec<Vec<String>>,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -279,6 +281,43 @@ fn collect_test_dirs(tests_root_dir: &PathBuf) -> Result<Vec<PathBuf>> {
 }
 
 #[cfg(not(target_family = "wasm"))]
+fn argument_sets(specification: &str) -> Vec<Vec<String>> {
+    let mut sets = Vec::new();
+    for invocation in specification.split(';') {
+        let mut combinations = vec![Vec::new()];
+        for argument in invocation.split_whitespace() {
+            let mut next = Vec::new();
+            for prefix in &combinations {
+                for value in argument.split(',') {
+                    let mut arguments = prefix.clone();
+                    arguments.push(value.to_string());
+                    next.push(arguments);
+                }
+            }
+            combinations = next;
+        }
+        sets.extend(combinations);
+    }
+    sets
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn fixture_argument_combinations() {
+    assert_eq!(argument_sets(""), vec![Vec::<String>::new()]);
+    assert_eq!(
+        argument_sets("DIRECT;FIND,INVOKE int,long"),
+        [
+            vec!["DIRECT"],
+            vec!["FIND", "int"],
+            vec!["FIND", "long"],
+            vec!["INVOKE", "int"],
+            vec!["INVOKE", "long"],
+        ]
+    );
+}
+
+#[cfg(not(target_family = "wasm"))]
 fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<TestCase>> {
     let workspace_dir = tests_root_dir
         .parent()
@@ -313,6 +352,7 @@ fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<
                 java_release: None,
                 java_home: home,
                 system_properties: Vec::new(),
+                argument_sets: vec![Vec::new()],
             });
             continue;
         }
@@ -342,6 +382,8 @@ fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<
                     .map(|key| (key.to_string(), value.clone()))
             })
             .collect::<Vec<_>>();
+        let argument_sets =
+            argument_sets(properties.get("test.arguments").map_or("", String::as_str));
         for version in versions {
             let home = if let Some(home) = java_homes.get(version) {
                 home.clone()
@@ -358,6 +400,7 @@ fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<
                 java_release: properties.get("java.release").cloned(),
                 java_home: home,
                 system_properties: system_properties.clone(),
+                argument_sets: argument_sets.clone(),
             });
         }
     }
@@ -406,7 +449,7 @@ fn compile_test(test_case: &TestCase) -> Result<()> {
 
 /// Obtains the reference output in a bounded `OpenJDK` subprocess.
 #[cfg(not(target_family = "wasm"))]
-fn expected_output(test_case: &TestCase) -> Result<(Duration, String)> {
+fn expected_output(test_case: &TestCase) -> Result<(Duration, Vec<String>)> {
     let start_time = Instant::now();
     let mut arguments = vec![
         "-Dstdout.encoding=UTF-8".to_string(),
@@ -423,11 +466,17 @@ fn expected_output(test_case: &TestCase) -> Result<(Duration, String)> {
         test_case.class_dir.to_string_lossy().into_owned(),
         TEST_CLASS_NAME.to_string(),
     ]);
-    let mut java = java::command(&test_case.java_home, "java");
-    java.args(&arguments).current_dir(&test_case.source_dir);
-    let output = common::process::run(&mut java, Duration::from_secs(120))?;
-    output.require_success()?;
-    Ok((start_time.elapsed(), output.stdout))
+    let mut outputs = Vec::with_capacity(test_case.argument_sets.len());
+    for main_args in &test_case.argument_sets {
+        let mut java = java::command(&test_case.java_home, "java");
+        java.args(&arguments)
+            .args(main_args)
+            .current_dir(&test_case.source_dir);
+        let output = common::process::run(&mut java, Duration::from_secs(120))?;
+        output.require_success()?;
+        outputs.push(output.stdout);
+    }
+    Ok((start_time.elapsed(), outputs))
 }
 
 /// Tests the VM by running the `Test` class in the specified test directory.
@@ -437,7 +486,7 @@ fn test_vm(
     test_name: &str,
     interpreted: bool,
     expected_duration: &Duration,
-    expected_output: &str,
+    expected_output: &[String],
 ) -> Result<(), Failure> {
     let test_type = if interpreted { "int" } else { "jit" };
     let is_socket_test = test_name.starts_with("socket/");
@@ -448,7 +497,13 @@ fn test_vm(
     } else {
         Duration::from_mins(2)
     };
-    let worker_threads = if is_socket_test { 2 } else { 1 };
+    let contended = [
+        "method/varhandle/static_field_access",
+        "method/varhandle/ordering",
+    ]
+    .iter()
+    .any(|path| test_case.relative_dir == Path::new(path));
+    let worker_threads = if is_socket_test || contended { 2 } else { 1 };
     let max_attempts = if is_socket_test { 3 } else { 1 };
     let mut result = run_vm_once(test_case, interpreted, test_timeout, worker_threads);
     for attempt in 2..=max_attempts {
@@ -469,16 +524,22 @@ fn test_vm(
 
     match result {
         Ok(Ok((duration, output))) => {
-            if expected_output == output {
+            if let Some((arguments, (expected, actual))) = test_case
+                .argument_sets
+                .iter()
+                .zip(expected_output.iter().zip(&output))
+                .find(|(_, (expected, actual))| expected != actual)
+            {
+                let error_message = format!(
+                    "Output mismatch for arguments {arguments:?}: expected {expected}, actual {actual}"
+                );
+                error!("Failed ({test_type}) {test_name}: {error_message}");
+                Err(make_failure(error_message))
+            } else {
                 info!(
                     "Passed ({test_type}) {test_name} in {duration:.2?} (target: {expected_duration:.2?})"
                 );
                 Ok(())
-            } else {
-                let error_message =
-                    format!("Output mismatch: expected {expected_output}, actual {output}");
-                error!("Failed ({test_type}) {test_name}: {error_message}");
-                Err(make_failure(error_message))
             }
         }
         Ok(Err(error)) => {
@@ -502,11 +563,8 @@ fn run_vm_once(
     interpreted: bool,
     test_timeout: Duration,
     worker_threads: usize,
-) -> std::thread::Result<Result<(Duration, String)>> {
-    let java_version = test_case.java_version.clone();
-    let class_dir = test_case.class_dir.clone();
-    let source_dir = test_case.source_dir.clone();
-    let system_properties = test_case.system_properties.clone();
+) -> std::thread::Result<Result<(Duration, Vec<String>)>> {
+    let test_case = test_case.clone();
     let timeout_message = format!("{TEST_TIMEOUT_PREFIX}{} seconds", test_timeout.as_secs());
 
     std::thread::Builder::new()
@@ -525,33 +583,28 @@ fn run_vm_once(
                     .build()
                     .map_err(|error| InternalError(error.to_string()))?;
                 runtime.block_on(async {
-                    let stdout = Arc::new(sync::Mutex::new(Vec::new()));
-                    let stderr = Arc::new(sync::Mutex::new(Vec::new()));
-                    match tokio::time::timeout(
-                        test_timeout,
-                        run_test(
-                            &java_version,
-                            &class_dir,
-                            &source_dir,
-                            &system_properties,
-                            interpreted,
-                            stdout.clone(),
-                            stderr.clone(),
-                        ),
-                    )
-                    .await
-                    {
-                        Ok(result) => result,
-                        Err(_elapsed) => {
-                            let stdout = stdout.lock().await;
-                            let stdout = String::from_utf8_lossy(&stdout);
-                            let stderr = stderr.lock().await;
-                            let stderr = String::from_utf8_lossy(&stderr);
-                            Err(InternalError(format!(
-                                "{timeout_message}\nstdout: {stdout}\nstderr: {stderr}"
-                            )))
+                    let start = Instant::now();
+                    let mut outputs = Vec::with_capacity(test_case.argument_sets.len());
+                    for arguments in &test_case.argument_sets {
+                        let stdout = Arc::new(sync::Mutex::new(Vec::new()));
+                        let stderr = Arc::new(sync::Mutex::new(Vec::new()));
+                        let invocation = run_test(
+                            &test_case, arguments, interpreted, stdout.clone(), stderr.clone(),
+                        );
+                        match tokio::time::timeout(test_timeout, invocation).await {
+                            Ok(output) => outputs.push(output?),
+                            Err(_elapsed) => {
+                                let stdout = stdout.lock().await;
+                                let stdout = String::from_utf8_lossy(&stdout);
+                                let stderr = stderr.lock().await;
+                                let stderr = String::from_utf8_lossy(&stderr);
+                                return Err(InternalError(format!(
+                                    "{timeout_message} (arguments: {arguments:?})\nstdout: {stdout}\nstderr: {stderr}"
+                                )));
+                            }
                         }
                     }
+                    Ok((start.elapsed(), outputs))
                 })
             })
         })
@@ -581,33 +634,30 @@ fn socket_timeout_retry_policy() {
 /// Runs the test by creating a VM and invoking the `Test` class.
 #[cfg(not(target_family = "wasm"))]
 async fn run_test(
-    java_version: &str,
-    class_dir: &Path,
-    source_dir: &Path,
-    system_properties: &[(String, String)],
+    test_case: &TestCase,
+    arguments: &[String],
     interpreted: bool,
     stdout: Arc<sync::Mutex<Vec<u8>>>,
     stderr: Arc<sync::Mutex<Vec<u8>>>,
-) -> Result<(Duration, String)> {
-    let start_time = Instant::now();
-    let class_path = ClassPath::from(&[class_dir]);
+) -> Result<String> {
+    let class_path = ClassPath::from(&[test_case.class_dir.as_path()]);
 
     // Create a garbage collector configured to use only one thread
     let gc_config = ristretto_gc::ConfigurationBuilder::new().threads(1).build();
     let garbage_collector = GarbageCollector::with_config(gc_config);
     let user_dir = {
-        let s = source_dir.to_string_lossy().to_string();
+        let s = test_case.source_dir.to_string_lossy().to_string();
         s.strip_prefix(r"\\?\").map_or(s.clone(), str::to_string)
     };
     let mut configuration_builder = ConfigurationBuilder::new()
         .class_path(class_path)
-        .java_version(java_version)
+        .java_version(&test_case.java_version)
         .main_class(TEST_CLASS_NAME)
         .stdout(stdout.clone())
         .stderr(stderr.clone())
         .garbage_collector(garbage_collector)
         .add_system_property("user.dir", user_dir);
-    for (key, value) in system_properties {
+    for (key, value) in &test_case.system_properties {
         configuration_builder = configuration_builder.add_system_property(key, value);
     }
 
@@ -619,11 +669,10 @@ async fn run_test(
 
     let configuration = configuration_builder.build()?;
     let vm = VM::new(configuration).await?;
-    let parameters: Vec<&str> = Vec::new();
     // A thrown Java object is only rooted by the VM while it is executing. Do not retain or
     // format that unrooted GC reference across the thread-shutdown await.
     let invocation_error = vm
-        .invoke_main(&parameters)
+        .invoke_main(arguments)
         .await
         .err()
         .map(|error| error.to_string());
@@ -640,7 +689,7 @@ async fn run_test(
             "main invocation failed: {error}\nstdout: {stdout}\nstderr: {stderr}"
         )));
     }
-    Ok((start_time.elapsed(), stdout))
+    Ok(stdout)
 }
 
 #[cfg(target_family = "wasm")]

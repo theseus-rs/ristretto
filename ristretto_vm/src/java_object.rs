@@ -329,7 +329,16 @@ async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
             .as_object_ref()?
             .value("classLoader")?
     };
-    let module = get_class_module(thread, class, &class_loader_object).await?;
+    let module = if *java_version > JAVA_8 && !component_type_object.is_null() {
+        component_type_object.as_object_ref()?.value("module")?
+    } else if let Some(module) =
+        ristretto_types::ClassRegistry::for_vm(&*vm)?.package_module(class, &class_loader_object)
+    {
+        class.set_module_name(Some(module.as_object_ref()?.value("name")?.as_string()?))?;
+        module
+    } else {
+        get_class_module(thread, class, &class_loader_object).await?
+    };
 
     // Build constructor parameters based on Java version
     let (descriptor, parameters, module) = build_class_constructor_params(

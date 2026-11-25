@@ -1,17 +1,27 @@
 use portable_atomic::AtomicI64;
+use smallvec::SmallVec;
 use std::collections::BTreeMap;
 use std::sync::atomic::Ordering;
+use std::sync::{Arc, Weak};
+use tokio::sync::watch;
 
-use ristretto_gc::sync::RwLock;
+use ristretto_gc::sync::{Mutex, RwLock};
 
-const PAGE_ALIGNMENT: i64 = 4096;
 const MAX_NATIVE_ALLOCATION_BYTES: usize = 512 * 1024 * 1024;
+
+/// Held by a Java frame from before its session checks through its final memory operation.
+#[derive(Debug)]
+pub struct ScopedAccess {
+    sessions: SmallVec<[i64; 2]>,
+    finished: watch::Sender<()>,
+}
 
 /// Per-VM native memory manager.
 #[derive(Debug)]
 pub struct NativeMemory {
     next_address: AtomicI64,
     memory: RwLock<BTreeMap<i64, RwLock<Vec<u8>>>>,
+    scoped_accesses: Mutex<Vec<Weak<ScopedAccess>>>,
 }
 
 impl Default for NativeMemory {
@@ -21,13 +31,49 @@ impl Default for NativeMemory {
 }
 
 impl NativeMemory {
+    /// Byte alignment of virtual memory mappings.
+    pub const PAGE_ALIGNMENT: i64 = 4096;
+
     /// Creates a new `NativeMemory` instance.
     #[must_use]
     pub fn new() -> Self {
         NativeMemory {
             next_address: AtomicI64::new(0x1000_0000),
             memory: RwLock::new(BTreeMap::new()),
+            scoped_accesses: Mutex::new(Vec::new()),
         }
+    }
+
+    /// Register each non-null session used by a scoped Java access, including both ends of a copy.
+    #[must_use]
+    pub fn begin_scoped_access(
+        &self,
+        sessions: impl Iterator<Item = i64>,
+    ) -> Option<Arc<ScopedAccess>> {
+        let sessions: SmallVec<_> = sessions.collect();
+        if sessions.is_empty() {
+            return None;
+        }
+        let access = Arc::new(ScopedAccess {
+            sessions,
+            finished: watch::Sender::new(()),
+        });
+        let mut active = self.scoped_accesses.lock();
+        active.retain(|access| access.strong_count() != 0);
+        active.push(Arc::downgrade(&access));
+        Some(access)
+    }
+
+    /// Snapshot the accesses that may already have passed the Java session's validity check.
+    /// Each channel closes when its frame exits, including on exceptional return.
+    pub fn scope_accesses(&self, session: i64) -> Vec<watch::Receiver<()>> {
+        self.scoped_accesses
+            .lock()
+            .iter()
+            .filter_map(Weak::upgrade)
+            .filter(|access| access.sessions.contains(&session))
+            .map(|access| access.finished.subscribe())
+            .collect()
     }
 
     /// Allocates a block of memory and returns the base address.
@@ -38,7 +84,7 @@ impl NativeMemory {
             return None;
         }
         let size_i64 = i64::try_from(size).ok()?;
-        let allocation_size = size_i64.checked_add(PAGE_ALIGNMENT)?;
+        let allocation_size = size_i64.checked_add(Self::PAGE_ALIGNMENT)?;
         let mut bytes = Vec::new();
         if bytes.try_reserve_exact(size).is_err() {
             return None;
@@ -49,8 +95,8 @@ impl NativeMemory {
         let address = loop {
             let current = self.next_address.load(Ordering::Relaxed);
             let aligned = current
-                .checked_add(PAGE_ALIGNMENT - 1)
-                .map(|address| address & !(PAGE_ALIGNMENT - 1))?;
+                .checked_add(Self::PAGE_ALIGNMENT - 1)
+                .map(|address| address & !(Self::PAGE_ALIGNMENT - 1))?;
             let next = aligned.checked_add(allocation_size)?;
             if self
                 .next_address
@@ -126,6 +172,25 @@ impl NativeMemory {
         let end = offset.checked_add(len)?;
         let buf = buf_lock.read();
         buf.get(offset..end).map(f)
+    }
+
+    /// Compare and exchange a native word while holding the allocation's write lock.
+    pub fn compare_exchange<const N: usize>(
+        &self,
+        address: i64,
+        expected: [u8; N],
+        replacement: [u8; N],
+    ) -> Option<[u8; N]> {
+        let memory = self.memory.read();
+        let (&base, block) = memory.range(..=address).next_back()?;
+        let start = offset_from_base(address, base);
+        let mut block = block.write();
+        let word = block.get_mut(start..start.checked_add(N)?)?;
+        let old = <[u8; N]>::try_from(&*word).ok()?;
+        if old == expected {
+            word.copy_from_slice(&replacement);
+        }
+        Some(old)
     }
 
     /// Reads a single `i8` from `address`.
@@ -305,8 +370,8 @@ mod tests {
         let mem = NativeMemory::new();
         let first = allocate(&mem, 1);
         let second = allocate(&mem, 17);
-        assert_eq!(first % PAGE_ALIGNMENT, 0);
-        assert_eq!(second % PAGE_ALIGNMENT, 0);
+        assert_eq!(first % NativeMemory::PAGE_ALIGNMENT, 0);
+        assert_eq!(second % NativeMemory::PAGE_ALIGNMENT, 0);
     }
 
     #[test]

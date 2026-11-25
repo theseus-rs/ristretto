@@ -18,15 +18,13 @@ use std::sync::{Arc, Weak};
 use zerocopy::transmute_ref;
 
 /// Class-definition flag from `OpenJDK`'s `MethodHandleNatives.Constants`.
+const NESTMATE_CLASS: i32 = 0x0000_0001;
 const HIDDEN_CLASS: i32 = 0x0000_0002;
 
 /// Set the defining class loader and module on a class mirror created by defineClass.
 ///
-/// Per JVM spec §5.3.5, when defineClass is called, the class is defined by the given
-/// class loader. The class belongs to the unnamed module of that class loader (§7.7.5).
-/// This function sets both the `classLoader` and `module` fields on the java.lang.Class
-/// mirror to maintain consistency between the classLoader identity and the module's
-/// owning classLoader.
+/// Preserve the registered named module for a package owned by this loader. Other
+/// packages use the loader's unnamed module.
 fn set_defining_class_loader(class: &Value, class_loader: &Value) -> Result<()> {
     if class_loader.is_null() {
         return Ok(());
@@ -47,7 +45,14 @@ fn set_defining_class_loader(class: &Value, class_loader: &Value) -> Result<()> 
     class_object.set_value("classLoader", class_loader.clone())?;
 
     if !unnamed_module.is_null() {
-        class_object.set_value_unchecked("module", unnamed_module)?;
+        let existing = class_object.value("module")?;
+        let owns_module = existing.as_object_ref().is_ok_and(|module| {
+            matches!((module.value("loader"), class_loader),
+                (Ok(Value::Object(Some(owner))), Value::Object(Some(loader))) if Gc::ptr_eq(&owner, loader))
+        });
+        if !owns_module {
+            class_object.set_value_unchecked("module", unnamed_module)?;
+        }
     }
     Ok(())
 }
@@ -315,6 +320,10 @@ pub async fn define_class_0_1<T: Thread + 'static>(
     // LambdaForm hidden classes read it from their class initializer.
     let defined_class = get_class_no_init(&*thread, &class).await?;
     defined_class.set_module_name(lookup_class.module_name()?)?;
+    if defined_class.is_hidden() && flags & NESTMATE_CLASS != 0 {
+        let host = ristretto_types::method_resolution::nest_host(&*thread, &lookup_class).await?;
+        defined_class.set_dynamic_nest_host(host)?;
+    }
     let class_loader = parameters.pop()?;
     set_defining_class_loader(&class, &class_loader)?;
     // Set classData for hidden classes; this is used by StringConcatFactory and others

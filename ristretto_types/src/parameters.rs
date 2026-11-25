@@ -10,6 +10,8 @@ use std::fmt::Display;
 #[derive(Clone, Debug, Default)]
 pub struct Parameters {
     parameters: SmallVec<[Value; 4]>,
+    /// Resolved caller signature for a signature-polymorphic invocation.
+    pub call_site_type: Option<Value>,
 }
 
 impl Parameters {
@@ -18,6 +20,7 @@ impl Parameters {
     pub fn new(parameters: Vec<Value>) -> Self {
         Parameters {
             parameters: SmallVec::from_vec(parameters),
+            call_site_type: None,
         }
     }
 
@@ -201,6 +204,7 @@ impl FromIterator<Value> for Parameters {
     fn from_iter<I: IntoIterator<Item = Value>>(values: I) -> Self {
         Self {
             parameters: values.into_iter().collect(),
+            call_site_type: None,
         }
     }
 }

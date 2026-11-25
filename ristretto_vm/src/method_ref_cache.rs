@@ -66,6 +66,8 @@ pub struct ResolvedMethodRef {
     /// Whether this is a polymorphic method (e.g., `MethodHandle.invoke`). Cached to avoid
     /// `HashMap` lookup at invocation time.
     pub is_polymorphic: bool,
+    /// Caller-resolved signature of a signature-polymorphic invocation.
+    pub(crate) call_site_type: Option<ristretto_classloader::Value>,
     /// Number of parameters to pop from the operand stack. For polymorphic methods, this is
     /// computed from the call site descriptor. For regular methods, this is the method's declared
     /// parameter count.
@@ -127,6 +129,7 @@ impl ResolvedMethodRef {
             method_name,
             method_descriptor,
             is_polymorphic,
+            call_site_type: None,
             param_count,
             has_return_type,
         }

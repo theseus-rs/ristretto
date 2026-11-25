@@ -7,6 +7,8 @@ use ristretto_gc::{GarbageCollector, Gc, GcRootGuard};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+type PackageModules = AHashMap<String, Arc<GcRootGuard<RwLock<Reference>>>>;
+
 /// Native metadata associated with Java class and class-loader mirrors.
 ///
 /// Mirrors and loaders are keyed by object identity, with initiated classes scoped to each
@@ -15,6 +17,8 @@ use tokio::sync::Mutex;
 #[derive(Debug, Default)]
 pub struct ClassRegistry {
     mirrors: RwLock<AHashMap<usize, Arc<Class>>>,
+    named_packages: RwLock<AHashMap<i64, PackageModules>>,
+
     loaders: Mutex<AHashMap<usize, Arc<ClassLoader>>>,
     initiated_classes: RwLock<AHashMap<i64, InitiatingLoaderClasses>>,
 }
@@ -53,6 +57,42 @@ impl ClassRegistry {
             .read()
             .get(&(reference.as_ptr() as usize))
             .cloned()
+    }
+
+    /// Associate a named module's packages with their defining Java loader.
+    ///
+    /// # Errors
+    /// Returns an error if the module has no loader field.
+    pub fn register_module_packages<'a>(
+        &self,
+        collector: &Arc<GarbageCollector>,
+        module: &Value,
+        packages: impl Iterator<Item = &'a String>,
+    ) -> Result<()> {
+        let loader = module.as_object_ref()?.value("loader")?;
+        if let (Value::Object(Some(loader)), Value::Object(Some(module))) = (loader, module) {
+            // Rooting the module also retains its loader, so identities cannot be recycled.
+            let root = Arc::new(collector.create_root_guard(module.clone()));
+            let mut all = self.named_packages.write();
+            let by_package = all.entry(loader.as_ptr_i64()).or_default();
+            for package in packages {
+                by_package.insert(package.replace('.', "/"), root.clone());
+            }
+        }
+        Ok(())
+    }
+
+    /// Look up the module owning this runtime package without loading another class.
+    pub fn package_module(&self, class: &Class, loader: &Value) -> Option<Value> {
+        let Value::Object(Some(loader)) = loader else {
+            return None;
+        };
+        let package = ClassLoader::package_from_class_name(class.name());
+        self.named_packages
+            .read()
+            .get(&loader.as_ptr_i64())?
+            .get(package)
+            .map(|module| Value::Object(Some(module.clone_gc())))
     }
 
     /// Find a successful resolution by initiating loader and binary class name.

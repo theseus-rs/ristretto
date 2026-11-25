@@ -25,7 +25,7 @@ pub use method_resolution::{MethodResolutionError, ResolvedMethod};
 /// special invokedynamic mechanism to dispatch these methods.
 ///
 /// Each entry is a tuple of (`class_name`, `method_name`, `method_descriptor`) that identifies a
-/// polymorphic method. The method will be matched regardless of the descriptor at the call site.
+/// polymorphic method. `VarHandle` access modes with a fixed result also match the return descriptor.
 ///
 /// These methods are primarily used with method handles and the invokedynamic instruction
 /// in Java's reflection and lambda implementations.
@@ -303,6 +303,7 @@ pub struct Class {
     name_str: String,
     /// Set only by an explicit hidden-class definition.
     hidden: bool,
+    dynamic_nest_host: OnceLock<Arc<Class>>,
     /// The base element class of an object array, including hidden-definition metadata.
     array_base_class: Option<Arc<Class>>,
     source_file: Option<String>,
@@ -392,8 +393,7 @@ impl Class {
                 source_file_index, ..
             } = attribute
             {
-                let constant_pool = &class_file.constant_pool;
-                let source_file_name = constant_pool.try_get_utf8(*source_file_index)?;
+                let source_file_name = class_file.constant_pool.try_get_utf8(*source_file_index)?;
                 source_file = Some(source_file_name.to_rust_string());
                 break;
             }
@@ -480,6 +480,7 @@ impl Class {
             source_file,
             class_file,
             parent: RwLock::new(None),
+            dynamic_nest_host: OnceLock::new(),
             field_layout: OnceLock::new(),
             verification: OnceLock::new(),
             interfaces: RwLock::new(Vec::new()),
@@ -737,11 +738,7 @@ impl Class {
     /// Get the component name for an array class.
     #[must_use]
     pub fn component_type(&self) -> Option<&str> {
-        if !self.is_array() {
-            return None;
-        }
-        let component_type = self.array_component_type();
-        let component_type = match component_type {
+        let component_type = match self.name().strip_prefix('[')? {
             "B" => "byte",
             "C" => "char",
             "D" => "double",
@@ -750,7 +747,7 @@ impl Class {
             "J" => "long",
             "S" => "short",
             "Z" => "boolean",
-            _ => component_type,
+            _ => self.array_component_type(),
         };
         Some(component_type)
     }
@@ -958,6 +955,22 @@ impl Class {
             .contains(ClassAccessFlags::ANNOTATION)
     }
 
+    /// The nest inherited when the VM defined this class as a dynamic nestmate.
+    #[must_use]
+    pub fn dynamic_nest_host(&self) -> Option<&Arc<Class>> {
+        self.dynamic_nest_host.get()
+    }
+
+    /// Set the host while defining a dynamic nestmate.
+    ///
+    /// # Errors
+    /// Returns an error if a host was already installed.
+    pub fn set_dynamic_nest_host(&self, host: Arc<Class>) -> Result<()> {
+        self.dynamic_nest_host
+            .set(host)
+            .map_err(|_| InternalError(format!("Nest host already set for {}", self.name())))
+    }
+
     /// Determine if this class is a hidden class.
     ///
     /// Hidden classes are created via `Class::from_hidden` and have unique names with a suffix in the format `{original_name}+0x{suffix:016x}`. They cannot be found by name lookups and are typically used for dynamically generated code like lambda expressions. `Class::getName` reports the JEP 371 form `{binary_name}/0x{suffix:016x}`.
@@ -1130,6 +1143,25 @@ impl Class {
         Ok(Cow::Owned(self.build_object_fields()?))
     }
 
+    /// Get the storage slot for an already resolved field in its declaring class.
+    ///
+    /// # Errors
+    /// Returns an error if the field is missing from the layout.
+    pub fn field_storage_slot(&self, field: &Arc<Field>) -> Result<usize> {
+        let fields = if field.access_flags().contains(FieldAccessFlags::STATIC) {
+            Cow::Borrowed(self.static_fields())
+        } else {
+            self.object_field_layout()?
+        };
+        fields
+            .iter()
+            .position(|candidate| Arc::ptr_eq(candidate, field))
+            .ok_or_else(|| FieldNotFound {
+                class_name: self.name().to_owned(),
+                field_name: field.name().to_owned(),
+            })
+    }
+
     /// Get storage for a static field declared in this class, by its local static-field index.
     ///
     /// # Errors
@@ -1185,6 +1217,35 @@ impl Class {
         Ok(field)
     }
 
+    /// Resolve a field by name and optional descriptor, visiting direct superinterfaces
+    /// before the superclass as specified by JVMS 5.4.3.2.
+    ///
+    /// # Errors
+    /// Returns an error if the class hierarchy cannot be read.
+    pub fn resolve_field(
+        self: &Arc<Self>,
+        name: &str,
+        ty: Option<&ristretto_classfile::FieldType>,
+    ) -> Result<Option<(Arc<Self>, Arc<Field>)>> {
+        if let Some(field) = self
+            .static_fields
+            .iter()
+            .chain(&self.object_fields)
+            .find(|field| field.name() == name && ty.is_none_or(|ty| field.field_type() == ty))
+        {
+            return Ok(Some((self.clone(), field.clone())));
+        }
+        for interface in self.interfaces()? {
+            if let Some(found) = interface.resolve_field(name, ty)? {
+                return Ok(Some(found));
+            }
+        }
+        match self.parent()? {
+            Some(parent) => parent.resolve_field(name, ty),
+            None => Ok(None),
+        }
+    }
+
     /// Get the static fields declared in this class.
     ///
     /// Static fields are:
@@ -1227,7 +1288,10 @@ impl Class {
     /// # Errors
     ///
     /// if the field cannot be found.
-    fn static_field_value<K: FieldKey>(&self, key: K) -> Result<(Arc<Field>, Arc<RwLock<Value>>)> {
+    pub fn static_field_value<K: FieldKey>(
+        &self,
+        key: K,
+    ) -> Result<(Arc<Field>, Arc<RwLock<Value>>)> {
         if let Some((index, field)) = key.get_field(&self.static_fields)
             && let Some(value_lock) = self.static_values.get(index)
         {
@@ -1462,8 +1526,14 @@ impl Class {
 
         // Use the cached class name instead of parsing from class_file
         if let Some(polymorphic_descriptor) = POLYMORPHIC_METHODS.get(&(self.name(), name)) {
-            // If the class name and method name match a polymorphic method, we can return it
-            // regardless of the descriptor.
+            // A VarHandle method declared to return void or boolean keeps that
+            // result type even though its parameter types are signature-polymorphic.
+            if self.name() == "java/lang/invoke/VarHandle"
+                && let Some((_, result @ ("V" | "Z"))) = polymorphic_descriptor.rsplit_once(')')
+                && descriptor.rsplit_once(')').map(|(_, ty)| ty) != Some(result)
+            {
+                return None;
+            }
             let signature = [name, polymorphic_descriptor].concat();
             if let Some(method) = self.methods.get(&signature) {
                 return Some(method.clone());
@@ -1554,7 +1624,7 @@ impl Class {
     pub fn is_subclass_of(&self, class: &Class) -> Result<bool> {
         let mut current: Option<Arc<Class>> = self.parent()?;
         while let Some(ref parent) = current {
-            if parent.name() == class.name() {
+            if std::ptr::eq(parent.as_ref(), class) {
                 return Ok(true);
             }
             current = parent.parent()?;
@@ -2456,8 +2526,10 @@ mod tests {
     #[tokio::test]
     async fn test_string_is_subclass_of_object() -> Result<()> {
         let string_class = string_class().await?;
-        let object_class = object_class().await?;
-        assert!(string_class.is_subclass_of(&object_class)?);
+        let parent = string_class.parent()?.expect("linked superclass");
+        assert!(string_class.is_subclass_of(&parent)?);
+        let unrelated = Class::from(None, parent.class_file().clone())?;
+        assert!(!string_class.is_subclass_of(&unrelated)?);
         Ok(())
     }
 
