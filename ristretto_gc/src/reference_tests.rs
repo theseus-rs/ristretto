@@ -932,6 +932,185 @@ fn suspended_host_weak_activation_allows_capped_allocation_and_full_tickets() ->
     Ok(())
 }
 
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn host_weak_clone_is_independent_of_a_parked_source_decision() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for kind in [ReferenceKind::Soft, ReferenceKind::Weak] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let target = Gc::try_new(&gc, 971_u64)?;
+            let source = GcWeak::new(&target, kind, 0);
+            let held = source.slot.decision();
+            let (done, result) = mpsc::channel();
+            thread::scope(|scope| {
+                let source = &source;
+                scope.spawn(move || done.send(source.clone()).expect("report clone"));
+                let outcome = result.recv_timeout(Duration::from_secs(2));
+                drop(held);
+                let clone = outcome.expect("clone blocked on source");
+                assert_eq!(
+                    clone.upgrade().expect("live clone").identity(),
+                    target.identity()
+                );
+                source.clear();
+                assert!(source.clone().upgrade().is_none());
+                assert!(clone.upgrade().is_some());
+            });
+            drop(target);
+            gc.collect_full()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn suspended_host_weak_clone_cannot_reverse_a_clear_or_final_resurrection() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for clear in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .allocation_threshold(usize::MAX)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .build(),
+            );
+            let target = Gc::try_new(&gc, 42_u64)?;
+            let source = GcWeak::new(&target, ReferenceKind::Weak, 0);
+            let retaining = GcWeak::new(&target, ReferenceKind::Final, 0);
+            drop(target);
+            let (entered, parked) = mpsc::channel();
+            let (resume, release) = mpsc::channel();
+            thread::scope(|scope| {
+                let source_ref = &source;
+                let work = scope.spawn(move || {
+                    WEAK_ACTIVATION_PAUSE.set(Some(ClaimPause {
+                        entered,
+                        resume: release,
+                    }));
+                    source_ref.clone()
+                });
+                parked
+                    .recv_timeout(Duration::from_secs(3))
+                    .expect("stopped clone");
+                if clear {
+                    source.clear();
+                }
+                gc.collect();
+                at_reference_stage(&gc, 1, 2);
+                let resurrected = retaining.upgrade().expect("retained target");
+                let late = GcWeak::new(&resurrected, ReferenceKind::Weak, 0);
+                resume.send(()).expect("resume");
+                assert!(work.join().expect("clone").upgrade().is_none());
+                assert!(source.upgrade().is_none());
+                assert_eq!(
+                    late.clone()
+                        .upgrade()
+                        .expect("new reference inherits exemption")
+                        .identity(),
+                    resurrected.identity()
+                );
+                finish(&gc);
+            });
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn idle_host_clone_does_not_use_the_previous_legacy_retirement_flag() -> Result<()> {
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .concurrent_publication(false)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
+    gc.collect_full()?;
+    let target = Gc::try_new(&gc, 37_u64)?;
+    let source = GcWeak::new(&target, ReferenceKind::Weak, 0);
+    // The inactive phase-clock transition precedes clearing this legacy mirror.
+    // The new rooted target has no entry in the previous cycle's strong marks.
+    gc.domains[1].weak_phase.store(5, Ordering::Release);
+    let clone = source.clone();
+    gc.domains[1].weak_phase.store(0, Ordering::Release);
+    assert_eq!(
+        clone
+            .upgrade()
+            .expect("rooted target created while idle")
+            .identity(),
+        target.identity()
+    );
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn suspended_clone_cannot_carry_a_birth_stamp_across_epoch_reuse() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let target = Gc::try_new(&gc, 43_u64)?;
+        let final_ref = GcWeak::new(&target, ReferenceKind::Final, 0);
+        gc.collect();
+        at_reference_stage(&gc, 1, 2);
+        let source = GcWeak::new(&target, ReferenceKind::Weak, 0);
+        let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+        assert_eq!(epoch, crate::metadata::EPOCH_STRIDE);
+        assert_eq!(source.slot.birth_stamp(1).load(Ordering::Acquire), epoch);
+        let (entered, parked) = mpsc::channel();
+        let (resume, release) = mpsc::channel();
+        thread::scope(|scope| {
+            let borrowed = &source;
+            let worker = scope.spawn(move || {
+                WEAK_ACTIVATION_PAUSE.set(Some(ClaimPause {
+                    entered,
+                    resume: release,
+                }));
+                borrowed.clone()
+            });
+            parked
+                .recv_timeout(Duration::from_secs(3))
+                .expect("clone owns first epoch sample");
+            finish(&gc);
+            drop(target);
+            gc.domains[1].epoch.store(u64::MAX - 3, Ordering::Release);
+            gc.collect();
+            at_reference_stage(&gc, 1, 2);
+            assert_eq!(gc.domains[1].epoch.load(Ordering::Acquire), epoch);
+            let resurrected = final_ref.upgrade().expect("final target");
+            let fresh = GcWeak::new(&resurrected, ReferenceKind::Weak, 0);
+            resume.send(()).expect("resume clone after numeric reuse");
+            let stale = worker.join().expect("clone completed");
+            assert!(source.upgrade().is_none() && stale.upgrade().is_none());
+            assert_eq!(
+                fresh.clone().upgrade().expect("new exemption").identity(),
+                resurrected.identity()
+            );
+            finish(&gc);
+        });
+    }
+    Ok(())
+}
+
 #[test]
 fn final_clone_retains_a_referent_after_the_source_cursor_wraps() -> Result<()> {
     for counted in [false, true] {

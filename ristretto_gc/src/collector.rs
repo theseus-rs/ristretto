@@ -2156,23 +2156,30 @@ impl GarbageCollector {
         metadata: &ObjectMetadata,
         kind: crate::ReferenceKind,
     ) -> bool {
+        self.reference_metadata_live_at(
+            metadata,
+            kind,
+            self.domain_index(),
+            self.domain().epoch.load(Ordering::Acquire),
+        )
+    }
+
+    fn reference_metadata_live_at(
+        &self,
+        metadata: &ObjectMetadata,
+        kind: crate::ReferenceKind,
+        index: usize,
+        epoch: u64,
+    ) -> bool {
         let final_retention = matches!(
             kind,
             crate::ReferenceKind::Phantom | crate::ReferenceKind::PhantomRetained
         );
-        self.old_excludes_young(self.domain_index(), metadata)
-            || metadata.marked_before(
-                self.domain_index(),
-                self.domain().epoch.load(Ordering::Acquire),
-                final_retention,
-            )
+        self.old_excludes_young(index, metadata)
+            || metadata.marked_before(index, epoch, final_retention)
             || metadata
                 .direct_marks
-                .get(
-                    self.domain_index(),
-                    self.domain().epoch.load(Ordering::Acquire),
-                    &self.domain().mark_queue,
-                )
+                .get(index, epoch, &self.domain_at(index).mark_queue)
                 .is_some_and(|strength| {
                     strength
                         <= if final_retention {
@@ -2181,7 +2188,7 @@ impl GarbageCollector {
                             Retention::Strong
                         }
                 })
-            || (self.domain_index() == 0
+            || (index == 0
                 && metadata.age.load(Ordering::Acquire) >= self.configuration.promotion_age.max(1))
     }
 
