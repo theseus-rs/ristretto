@@ -1056,3 +1056,39 @@ fn first_graph_ticket_cannot_visit_a_later_live_attempt() {
         assert!(visibility.visible());
     });
 }
+
+#[test]
+fn a_published_bitmap_slot_cannot_be_hidden_by_an_older_word_summary() {
+    loom::model(|| {
+        let summary = Arc::new(AtomicU64::new(0));
+        let word = Arc::new(AtomicU64::new(0));
+        let published = Arc::new(AtomicBool::new(false));
+        let first = {
+            let summary = summary.clone();
+            thread::spawn(move || {
+                // First publisher stalls between selecting the word and setting its bit.
+                summary.fetch_or(1, Ordering::AcqRel);
+            })
+        };
+        let second = {
+            let (summary, word, published) = (summary.clone(), word.clone(), published.clone());
+            thread::spawn(move || {
+                // Bitmap::set can reuse the first publisher's monotonic summary bit.
+                if summary.load(Ordering::Relaxed) == 0 {
+                    summary.fetch_or(1, Ordering::AcqRel);
+                }
+                word.fetch_or(2, Ordering::AcqRel);
+                // Model the handoff from completed publication to a later scan.
+                published.store(true, Ordering::Release);
+            })
+        };
+        if published.load(Ordering::Acquire) {
+            // Read-read coherence on the monotonic summary also orders a reused
+            // bit: this scan happens after the second publisher observed it.
+            assert_eq!(summary.load(Ordering::Acquire) & 1, 1);
+            assert_eq!(word.load(Ordering::Acquire) & 2, 2);
+        }
+        first.join().unwrap();
+        second.join().unwrap();
+    });
+}
