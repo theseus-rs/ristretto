@@ -3740,10 +3740,10 @@ fn parked_external_trace_cannot_rewind_a_later_full_epoch() -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
     for counted in [false, true] {
-        for rooted in [false, true] {
-            for (conservative, same_stage) in
-                [(false, false), (true, false), (false, true), (true, true)]
-            {
+        // A separate strong root may be scanned in the first unit. The
+        // same-stage test needs a still-white edge reachable only via its parent.
+        for (rooted, same_stage) in [(false, false), (true, false), (false, true)] {
+            for conservative in [false, true] {
                 let gc = GarbageCollector::with_config(
                     Configuration::builder()
                         .allocation_threshold(usize::MAX)
@@ -3765,8 +3765,7 @@ fn parked_external_trace_cannot_rewind_a_later_full_epoch() -> Result<()> {
                 let first = gc.request_full_cycle();
                 assert!((0..1024).any(|_| {
                     gc.step();
-                    gc.domains[1].active()
-                        && !child_meta.marked(1, gc.domains[1].epoch.load(Ordering::Acquire))
+                    gc.domains[1].active() && gc.domains[1].weak_phase() == 0
                 }));
                 let (entered, parked) = mpsc::channel();
                 let (resume, receiver) = mpsc::channel();
