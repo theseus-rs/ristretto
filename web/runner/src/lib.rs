@@ -45,6 +45,8 @@ struct Request {
     class_name: String,
     source: String,
     #[serde(default)]
+    measure_collections: bool,
+    #[serde(default)]
     language: Language,
     #[serde(default)]
     scala_version: Option<String>,
@@ -187,6 +189,7 @@ async fn execute(
     emit(&json!({"id": id, "type": "compiled", "classes": classes.len()}))?;
     // Drop the compiler VM before starting the user's VM to reduce peak memory.
     drop(compiler);
+    let mut done = json!({"id": id, "type": "done"});
     if request.action == Action::Run {
         emit(&json!({"id": id, "type": "phase", "phase": "running"}))?;
         let memory = Memory::new("playground");
@@ -196,11 +199,26 @@ async fn execute(
             .class_path(ClassPath::new(vec![ClassPathEntry::Memory(memory)]))
             .build()?;
         let vm = VM::new(config).await?;
+        let collector = vm.garbage_collector();
+        let before = request
+            .measure_collections
+            .then(|| collector.statistics())
+            .transpose()?;
         if let Err(error) = vm.invoke_main(&[] as &[&str]).await {
             return report_vm_error(id, &vm, error).await;
         }
+        if let Some(before) = before {
+            let after = collector.statistics()?;
+            done["gc"] = json!({
+                "completed": after.collections_completed.checked_sub(before.collections_completed).ok_or("collection counter decreased")?,
+                "objectsSwept": after.objects_swept.checked_sub(before.objects_swept).ok_or("sweep counter decreased")?,
+                "bytesFreed": after.bytes_freed.checked_sub(before.bytes_freed).ok_or("refund counter decreased")?,
+                "liveBytesBefore": before.bytes_live,
+                "liveBytesAfter": after.bytes_live,
+            });
+        }
     }
-    emit(&json!({"id": id, "type": "done"}))?;
+    emit(&done)?;
     Ok(())
 }
 

@@ -4,10 +4,13 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const [webRoot, baseUrl, output, expectation] = process.argv.slice(2);
-if (!output)
+const [webRoot, baseUrl, output, ...flags] = process.argv.slice(2);
+if (
+  !output ||
+  flags.some((f) => !['--require-worker-progress', '--require-reclamation'].includes(f))
+)
   throw new Error(
-    'Usage: node scripts/probe-gc-turns.mjs WEB_ROOT PLAYGROUND_URL OUTPUT.json [--require-worker-progress]',
+    'Usage: node scripts/probe-gc-turns.mjs WEB_ROOT PLAYGROUND_URL OUTPUT.json [--require-worker-progress] [--require-reclamation]',
   );
 const timeoutMs = Number(process.env.RISTRETTO_GC_BROWSER_TIMEOUT_MS || 600_000);
 if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0)
@@ -29,7 +32,7 @@ try {
   });
   await page.goto(baseUrl);
   const result = await page.evaluate(
-    async ({ files, workerName, workerHash, source, timeoutMs }) => {
+    async ({ files, workerName, workerHash, source, timeoutMs, reclamation }) => {
       const assetUrl = (path) => new URL('../' + path, location.href).href;
       const digest = async (bytes) =>
         Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), (n) =>
@@ -135,6 +138,7 @@ try {
               className: 'GcTurns',
               language: 'java',
               source,
+              ...(reclamation ? { measureCollections: true } : {}),
             },
             assets,
           },
@@ -158,6 +162,7 @@ try {
     },
     {
       files: { ...manifest.files, 'jdk.zip': manifest.jdks['25'] },
+      reclamation: flags.includes('--require-reclamation'),
       workerName: workers[0],
       timeoutMs,
       workerHash,
@@ -178,12 +183,25 @@ try {
   const end = result.events.find((e) => e.type === 'output' && e.text.includes('GC_TURNS_END'));
   if (begin && end) {
     const scheduled = result.pings.filter((p) => p.t >= begin.t && p.t < end.t);
+    const responses = scheduled.filter(
+      (p) => p.workerT >= begin.workerT && p.workerT < end.workerT,
+    );
+    const times = [
+      begin.workerT,
+      ...responses.map((p) => p.workerT).sort((a, b) => a - b),
+      end.workerT,
+    ];
+    const gaps = times
+      .slice(1)
+      .map((t, i) => t - times[i])
+      .sort((a, b) => a - b);
     report.measurement = {
+      maxWorkerReplyGapMs: gaps.at(-1),
+      p95WorkerReplyGapMs: gaps[Math.ceil(0.95 * gaps.length) - 1],
+      p99WorkerReplyGapMs: gaps[Math.ceil(0.99 * gaps.length) - 1],
       javaWindowMs: end.workerT - begin.workerT,
       scheduledPings: scheduled.length,
-      workerRepliesDuringJava: scheduled.filter(
-        (p) => p.workerT >= begin.workerT && p.workerT < end.workerT,
-      ).length,
+      workerRepliesDuringJava: responses.length,
       unansweredPings: scheduled.filter((p) => p.ack === null).length,
     };
   }
@@ -198,8 +216,16 @@ try {
     !/GC_TURNS_END cycles=[1-9]\d* checksum=799864/.test(stdout)
   )
     throw new Error('Missing collection or checksum evidence: ' + stdout);
+  if (flags.includes('--require-reclamation')) {
+    const gc = result.terminal.gc;
+    if (
+      !gc ||
+      ![gc.completed, gc.objectsSwept, gc.bytesFreed].every((v) => Number.isSafeInteger(v) && v > 0)
+    )
+      throw new Error('Guest did not report completed collection, sweeping and byte refunds');
+  }
   if (
-    expectation === '--require-worker-progress' &&
+    flags.includes('--require-worker-progress') &&
     !(report.measurement?.workerRepliesDuringJava > 0)
   )
     throw new Error('No worker reply during the Java measurement window.');
