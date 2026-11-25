@@ -5,6 +5,7 @@ use super::{Cursor, Scan, Shards, address_bucket, shard_count};
 use crate::metadata::MetadataRef;
 use crate::publication_directory::Directory;
 use arc_swap::{ArcSwap, ArcSwapAny};
+use once_cell::race::OnceBox;
 use portable_atomic::AtomicU64;
 use std::ops::Deref;
 use std::sync::atomic::{
@@ -13,7 +14,9 @@ use std::sync::atomic::{
 };
 use std::sync::{Arc, MutexGuard, OnceLock};
 
-const PAGE_SIZE: usize = 64;
+const WORD: usize = 64;
+const WORDS: usize = 64;
+const PAGE_SIZE: usize = WORD * WORDS;
 const PAGE_MASK: usize = PAGE_SIZE - 1;
 
 // Group eight-byte aligned addresses while preserving every low-bit pattern.
@@ -32,14 +35,14 @@ type Cell = ArcSwapAny<Option<MetadataRef>>;
 #[derive(Debug, Default)]
 struct Head {
     pages: Pages<Page>,
-    young: Pages<AtomicU64>,
+    young: Pages<Bitmap>,
     indexed: AtomicUsize,
 }
 
 pub(crate) struct Sealed {
     address: usize,
     objects: Option<Arc<Page>>,
-    young: Option<Arc<AtomicU64>>,
+    young: Option<Arc<Bitmap>>,
 }
 
 impl Sealed {
@@ -69,60 +72,133 @@ fn unlink<T>(head: &Pages<T>, base: u64, sealed: &Arc<T>) {
 }
 
 #[derive(Debug)]
-struct Page {
-    occupied: AtomicU64,
-    // Only the exact reservation initializes a cell. Scans use get(), so a
-    // stalled initializer cannot hold up a reader or force it to initialize.
-    entries: [OnceLock<Cell>; PAGE_SIZE],
+struct Bitmap {
+    // Counts live bits and address claims between pinning and setting their
+    // bit. Once this reaches zero a stale directory view cannot reopen it.
+    users: AtomicUsize,
+    words: [AtomicU64; WORDS],
 }
 
-impl Page {
-    fn new(bit: u64) -> Self {
-        Self {
-            occupied: AtomicU64::new(bit),
-            entries: [const { OnceLock::new() }; PAGE_SIZE],
+#[expect(
+    clippy::indexing_slicing,
+    reason = "the masked offset selects a word inside its page"
+)]
+impl Bitmap {
+    fn new(offset: usize) -> Self {
+        let result = Self {
+            users: AtomicUsize::new(1),
+            words: [const { AtomicU64::new(0) }; WORDS],
+        };
+        result.words[offset / WORD].store(1 << (offset % WORD), Relaxed);
+        result
+    }
+
+    fn pin(&self) -> bool {
+        self.users
+            .try_update(AcqRel, Acquire, |users| (users != 0).then_some(users + 1))
+            .is_ok()
+    }
+
+    fn unpin(&self) -> bool {
+        self.users.fetch_sub(1, AcqRel) == 1
+    }
+
+    fn set(&self, offset: usize) -> bool {
+        let bit = 1 << (offset % WORD);
+        self.words[offset / WORD].fetch_or(bit, AcqRel) & bit == 0
+    }
+
+    fn remove(&self, offset: usize) -> bool {
+        let bit = 1 << (offset % WORD);
+        self.words[offset / WORD].fetch_and(!bit, AcqRel) & bit != 0 && self.unpin()
+    }
+
+    fn next(&self, start: usize) -> Option<usize> {
+        let first = start / WORD;
+        let mut mask = u64::MAX << (start % WORD);
+        for (index, word) in self.words.iter().enumerate().skip(first) {
+            let bits = word.load(Acquire) & mask;
+            if bits != 0 {
+                return Some(index * WORD + bits.trailing_zeros() as usize);
+            }
+            mask = u64::MAX;
         }
+        None
+    }
+
+    #[cfg(test)]
+    fn contains(&self, key: usize) -> bool {
+        let offset = key & PAGE_MASK;
+        self.words[offset / WORD].load(Acquire) & (1 << (offset % WORD)) != 0
+    }
+}
+
+#[derive(Debug)]
+struct Page {
+    occupied: Bitmap,
+    chunks: [OnceBox<[OnceLock<Cell>; WORD]>; WORDS],
+}
+
+#[expect(
+    clippy::indexing_slicing,
+    reason = "key is split into masked word and slot offsets"
+)]
+impl Page {
+    fn new(offset: usize) -> Self {
+        Self {
+            occupied: Bitmap::new(offset),
+            chunks: [const { OnceBox::new() }; WORDS],
+        }
+    }
+
+    fn entry(&self, key: usize) -> Option<&Cell> {
+        self.chunks[(key & PAGE_MASK) / WORD].get()?[key % WORD].get()
+    }
+
+    fn vacant_cell(&self, key: usize) -> &OnceLock<Cell> {
+        // A concurrent initializer prepares its own private chunk. Readers and
+        // other publishers never wait for a stalled chunk allocator.
+        let chunk = self.chunks[(key & PAGE_MASK) / WORD]
+            .get_or_init(|| Box::new([const { OnceLock::new() }; WORD]));
+        &chunk[key % WORD]
     }
 }
 
 trait Occupancy {
-    fn bits(&self) -> &AtomicU64;
-
-    fn next(&self, start: usize) -> Option<usize> {
-        let mask = self.bits().load(Acquire) & (u64::MAX << start);
-        (mask != 0).then(|| mask.trailing_zeros() as usize)
-    }
+    fn bitmap(&self) -> &Bitmap;
 }
-
 impl Occupancy for Page {
-    fn bits(&self) -> &AtomicU64 {
+    fn bitmap(&self) -> &Bitmap {
         &self.occupied
     }
 }
-
-impl Occupancy for AtomicU64 {
-    fn bits(&self) -> &AtomicU64 {
+impl Occupancy for Bitmap {
+    fn bitmap(&self) -> &Bitmap {
         self
     }
 }
 
-/// A zero mask permanently seals the page in this directory. Other slots
-/// remain independently claimable while the winner installs its descriptor.
-fn reserve<T: Occupancy>(head: &Pages<T>, key: usize, create: impl Fn(u64) -> T) -> Option<Arc<T>> {
+fn reserve<T: Occupancy>(
+    head: &Pages<T>,
+    key: usize,
+    create: impl Fn(usize) -> T,
+) -> Option<Arc<T>> {
     let base = (key & !PAGE_MASK) as u64;
-    let bit = 1 << (key & PAGE_MASK);
+    let offset = key & PAGE_MASK;
     loop {
         let current = head.load();
-        if let Some(page) = current.get(base) {
-            match page.bits().fetch_update(AcqRel, Acquire, |mask| {
-                (mask != 0 && mask & bit == 0).then_some(mask | bit)
-            }) {
-                Ok(_) => return Some(page.clone()),
-                Err(0) => {}
-                Err(_) => return None,
+        if let Some(page) = current.get(base)
+            && page.bitmap().pin()
+        {
+            if page.bitmap().set(offset) {
+                return Some(page.clone());
             }
+            if page.bitmap().unpin() {
+                unlink(head, base, page);
+            }
+            return None;
         }
-        let page = Arc::new(create(bit));
+        let page = Arc::new(create(offset));
         let (next, _) = current.insert(base, page.clone())?;
         if Arc::ptr_eq(&head.compare_and_swap(&*current, Arc::new(next)), &current) {
             return Some(page);
@@ -139,29 +215,21 @@ pub(crate) struct Slot<'a> {
     pub(crate) reserved: bool,
 }
 
-#[expect(
-    clippy::indexing_slicing,
-    reason = "the low six bits select an exact slot"
-)]
 impl Slot<'_> {
-    fn bit(&self) -> u64 {
-        1 << (self.key & PAGE_MASK)
-    }
-
     pub(crate) fn mark_young(&self) {
         // The address reservation excludes other writers to this young bit.
         // Directory exhaustion is impossible since each distinct key owns a page.
-        let _ = reserve(&self.head.young, self.key, AtomicU64::new);
+        let _ = reserve(&self.head.young, self.key, Bitmap::new);
     }
 
-    fn clear_young(&self) -> Option<Arc<AtomicU64>> {
+    fn clear_young(&self) -> Option<Arc<Bitmap>> {
         let current = self.head.young.load();
         let page = current.get((self.key & !PAGE_MASK) as u64)?;
-        (page.fetch_and(!self.bit(), AcqRel) == self.bit()).then(|| page.clone())
+        page.remove(self.key & PAGE_MASK).then(|| page.clone())
     }
 
     pub(crate) fn install(&self, metadata: MetadataRef) {
-        let slot = &self.page.entries[self.key & PAGE_MASK];
+        let slot = self.page.vacant_cell(self.key);
         if let Some(entry) = slot.get() {
             entry.store(Some(metadata));
         } else {
@@ -177,13 +245,11 @@ impl Slot<'_> {
 
     fn remove(&self) -> (Option<MetadataRef>, Option<Sealed>) {
         let young = self.clear_young();
-        let removed = self.page.entries[self.key & PAGE_MASK]
-            .get()
-            .and_then(|entry| entry.swap(None));
+        let removed = self.page.entry(self.key).and_then(|entry| entry.swap(None));
         if removed.is_some() {
             self.head.indexed.fetch_sub(1, Relaxed);
         }
-        let last = self.page.occupied.fetch_and(!self.bit(), AcqRel) == self.bit();
+        let last = self.page.occupied.remove(self.key & PAGE_MASK);
         let sealed = (last || young.is_some()).then(|| Sealed {
             address: address_of(self.key),
             objects: last.then(|| self.page.clone()),
@@ -245,7 +311,7 @@ impl Membership<'_> {
 #[derive(Debug, Default)]
 pub(crate) struct YoungCursor {
     position: Cursor,
-    page: Option<(usize, usize, Arc<AtomicU64>)>,
+    page: Option<(usize, usize, Arc<Bitmap>)>,
 }
 
 impl YoungCursor {
@@ -302,9 +368,7 @@ impl Objects {
             key,
             reserved: false,
         });
-        let metadata = slot
-            .as_ref()
-            .and_then(|s| s.page.entries[key & PAGE_MASK].get()?.load_full());
+        let metadata = slot.as_ref().and_then(|s| s.page.entry(key)?.load_full());
         Membership {
             _guard: guard,
             slot,
@@ -335,9 +399,7 @@ impl Objects {
         };
         match Self::next(&self.pages[cursor.shard].pages, cursor, &mut None, || {}) {
             Scan::Entry(key, page) => {
-                let entry = page.entries[key & PAGE_MASK]
-                    .get()
-                    .and_then(Cell::load_full);
+                let entry = page.entry(key).and_then(Cell::load_full);
                 if let Some(metadata) = entry.as_ref().filter(|m| m.birth.visible()) {
                     Scan::Entry(address_of(key), read(metadata))
                 } else {
@@ -388,7 +450,7 @@ impl Objects {
         if let Some((shard, key, page)) = cache
             && *shard == cursor.shard
             && *key == base
-            && let Some(offset) = page.next(start & PAGE_MASK)
+            && let Some(offset) = page.bitmap().next(start & PAGE_MASK)
         {
             let key = base | offset;
             cursor.selected(key);
@@ -396,9 +458,11 @@ impl Objects {
         }
         let pages = directory.load();
         observed();
-        let selected = pages
-            .get(base as u64)
-            .and_then(|p| p.next(start & PAGE_MASK).map(|offset| (base | offset, p)));
+        let selected = pages.get(base as u64).and_then(|p| {
+            p.bitmap()
+                .next(start & PAGE_MASK)
+                .map(|offset| (base | offset, p))
+        });
         let (key, page) = if let Some(entry) = selected {
             entry
         } else {
@@ -410,7 +474,7 @@ impl Objects {
                 reason = "all page keys originate from usize addresses"
             )]
             let base = base as usize;
-            let Some(offset) = page.next(0) else {
+            let Some(offset) = page.bitmap().next(0) else {
                 cursor.addresses[cursor.shard] = base | PAGE_MASK;
                 return Scan::Advance;
             };
@@ -438,15 +502,12 @@ impl Objects {
             let pages = head.pages.load();
             let mut after = None;
             while let Some((key, page)) = pages.next_after(after) {
-                let mut bits = page.occupied.load(Acquire);
-                while bits != 0 {
-                    if let Some(entry) = page.entries[bits.trailing_zeros() as usize]
-                        .get()
-                        .and_then(Cell::load_full)
-                    {
+                let mut start = 0;
+                while let Some(offset) = page.occupied.next(start) {
+                    if let Some(entry) = page.entry(offset).and_then(Cell::load_full) {
                         visit(&entry);
                     }
-                    bits &= bits - 1;
+                    start = offset + 1;
                 }
                 after = Some(key);
             }
@@ -462,8 +523,8 @@ impl Objects {
             head.indexed.store(0, Relaxed);
             let mut after = None;
             while let Some((key, page)) = pages.next_after(after) {
-                for entry in &page.entries {
-                    entries.extend(entry.get().and_then(|cell| cell.swap(None)));
+                for chunk in page.chunks.iter().filter_map(OnceBox::get) {
+                    entries.extend(chunk.iter().filter_map(|entry| entry.get()?.swap(None)));
                 }
                 after = Some(key);
             }
@@ -478,7 +539,7 @@ impl Objects {
             .young
             .load()
             .get((key & !PAGE_MASK) as u64)
-            .is_some_and(|p| p.load(Acquire) & (1 << (key & PAGE_MASK)) != 0)
+            .is_some_and(|p| p.contains(key))
     }
 
     // Fixtures can construct partial write sets. Keep their occupancy bit as
@@ -490,8 +551,9 @@ impl Objects {
         slot.reserved = false;
         edit(&slot);
         if !self.contains_young(address)
-            && slot.page.entries[slot.key & PAGE_MASK]
-                .get()
+            && slot
+                .page
+                .entry(slot.key)
                 .and_then(Cell::load_full)
                 .is_none()
         {
@@ -519,7 +581,9 @@ impl Objects {
         let mut old = None;
         self.edit_for_test(address, |s| {
             let present = entry.is_some();
-            old = s.page.entries[s.key & PAGE_MASK]
+            old = s
+                .page
+                .vacant_cell(s.key)
                 .get_or_init(|| Cell::from(None))
                 .swap(entry);
             match (old.is_some(), present) {
@@ -555,6 +619,21 @@ mod tests {
                 assert_eq!(position(address_of(address)), address);
             }
         }
+    }
+
+    #[test]
+    fn a_stalled_page_claim_cannot_lose_a_peer_in_another_word() {
+        let page = Bitmap::new(1);
+        assert!(page.pin()); // A publisher has not selected its slot yet.
+        assert!(!page.remove(1));
+        assert_eq!(page.next(0), None);
+        assert!(page.pin());
+        assert!(page.set(WORD + 3));
+        assert!(!page.unpin()); // First claimant abandons its pin.
+        assert_eq!(page.next(0), Some(WORD + 3));
+        assert!(page.remove(WORD + 3));
+        assert!(!page.pin());
+        assert_eq!(page.next(0), None);
     }
 
     #[test]
@@ -665,8 +744,8 @@ mod tests {
                 assert!(Instant::now() < deadline, "replacement was not published");
                 thread::yield_now();
             };
-            assert_ne!(page.load(Acquire) & (1 << position(16)), 0);
-            while page.load(Acquire) & (1 << position(24)) == 0 {
+            assert!(page.contains(position(16)));
+            while !page.contains(position(24)) {
                 assert!(Instant::now() < deadline, "slot was not published");
                 thread::yield_now();
             }
