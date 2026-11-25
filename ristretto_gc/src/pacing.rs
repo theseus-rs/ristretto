@@ -13,6 +13,7 @@ pub(crate) struct Demand {
 
 #[derive(Debug)]
 pub(crate) struct Controller {
+    primary: AtomicUsize,
     active: AtomicUsize,
     delay: AtomicU64,
     origin: Instant,
@@ -22,6 +23,7 @@ pub(crate) struct Controller {
 impl Controller {
     pub(crate) fn new(workers: usize, cpus: usize, limit: usize, batch: usize, delay: u64) -> Self {
         Self {
+            primary: AtomicUsize::new(0),
             active: AtomicUsize::new(1),
             delay: AtomicU64::new(delay.min(1000)),
             origin: Instant::now(),
@@ -31,10 +33,17 @@ impl Controller {
                 batch: batch.clamp(1, 8),
                 delay: delay.min(1000),
                 active: 1,
+                primary_seen: true,
                 lower_samples: 0,
                 next: Duration::ZERO,
             }),
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_sampling_frozen<T>(&self, f: impl FnOnce() -> T) -> T {
+        let _guard = self.model.lock().expect("test owns sampler");
+        f()
     }
 
     pub(crate) fn target(&self) -> usize {
@@ -44,16 +53,35 @@ impl Controller {
         self.delay.load(Ordering::Relaxed)
     }
 
+    /// One active seat can move between configured workers, even with one CPU.
+    pub(crate) fn admits(&self, index: usize) -> bool {
+        let active = self.target();
+        let primary = self.primary.load(Ordering::Relaxed);
+        index == primary || index < active - usize::from(primary >= active)
+    }
+
     /// Sample at most every 2 ms, deferring on contention. Input acquisition must
     /// also be nonblocking; ordinary mutators never touch this controller.
-    pub(crate) fn sample(&self, demand: impl FnOnce() -> Option<Demand>) {
+    pub(crate) fn sample(&self, index: usize, demand: impl FnOnce() -> Option<Demand>) {
+        if index != self.primary.load(Ordering::Relaxed) && self.admits(index) {
+            return;
+        }
         let Ok(mut model) = self.model.try_lock() else {
             return;
         };
+        let primary = self.primary.load(Ordering::Relaxed);
+        let reporting = index == primary;
         let now = self.origin.elapsed();
         if now < model.next {
+            model.primary_seen |= reporting;
             return;
         }
+        // A callback can park before the next step even with an empty mark
+        // queue. Transfer its seat without increasing the activation target.
+        if !model.primary_seen && !reporting && !self.admits(index) {
+            self.primary.store(index, Ordering::Relaxed);
+        }
+        model.primary_seen = index == self.primary.load(Ordering::Relaxed);
         model.next = now.saturating_add(Duration::from_millis(2));
         let Some(demand) = demand() else {
             return;
@@ -71,6 +99,7 @@ struct Model {
     batch: usize,
     delay: u64,
     active: usize,
+    primary_seen: bool,
     lower_samples: usize,
     next: Duration,
 }
@@ -169,12 +198,25 @@ mod tests {
     }
 
     #[test]
+    fn movable_primary_preserves_the_activation_budget() {
+        let controller = Controller::new(6, 4, 1024, 8, 50);
+        for active in 1..=4 {
+            controller.active.store(active, Ordering::Relaxed);
+            for primary in 0..6 {
+                controller.primary.store(primary, Ordering::Relaxed);
+                assert!(controller.admits(primary));
+                assert_eq!((0..6).filter(|i| controller.admits(*i)).count(), active);
+            }
+        }
+    }
+
+    #[test]
     fn contended_samples_defer_and_extreme_inputs_stay_bounded() {
         let controller = Controller::new(0, 0, usize::MAX, usize::MAX, u64::MAX);
         let guard = controller.model.lock().expect("model");
-        controller.sample(|| panic!("must not sample under contention"));
+        controller.sample(0, || panic!("must not sample under contention"));
         drop(guard);
-        controller.sample(|| {
+        controller.sample(0, || {
             Some(Demand {
                 queued: usize::MAX,
                 debt: usize::MAX,

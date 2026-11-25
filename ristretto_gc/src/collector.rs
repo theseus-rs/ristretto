@@ -2366,26 +2366,24 @@ impl GarbageCollector {
         let Some(pacing) = &self.pacing else {
             return true;
         };
-        if index == 0 {
-            pacing.sample(|| {
-                Some(crate::pacing::Demand {
-                    queued: self.domains.iter().try_fold(0, |count, domain| {
-                        domain.mark_queue.queued_sample().map(|queued| {
-                            count
-                                + queued
-                                + domain
-                                    .relocations
-                                    .as_ref()
-                                    .map_or(0, crate::relocation::Queues::len)
-                        })
-                    })?,
-                    debt: self.allocation_debt.load(Ordering::Relaxed),
-                    live: self.managed_budget.used(),
-                    waiters: self.recovery.waiter_count(),
-                })
-            });
-        }
-        let admitted = index < pacing.target();
+        pacing.sample(index, || {
+            Some(crate::pacing::Demand {
+                queued: self.domains.iter().try_fold(0, |count, domain| {
+                    domain.mark_queue.queued_sample().map(|queued| {
+                        count
+                            + queued
+                            + domain
+                                .relocations
+                                .as_ref()
+                                .map_or(0, crate::relocation::Queues::len)
+                    })
+                })?,
+                debt: self.allocation_debt.load(Ordering::Relaxed),
+                live: self.managed_budget.used(),
+                waiters: self.recovery.waiter_count(),
+            })
+        });
+        let admitted = pacing.admits(index);
         if !admitted && self.diagnostics_enabled() {
             self.diagnostics
                 .worker_throttles
