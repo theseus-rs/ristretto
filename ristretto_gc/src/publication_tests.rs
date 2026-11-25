@@ -960,29 +960,35 @@ fn typed_root_drop_orders_both_winners_against_a_new_full_cycle() -> Result<()> 
                         .max_pause_time_us(0)
                         .build(),
                 );
-                let child = Gc::try_new(&gc, 17_u64)?;
-                let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
-                let addr = parent.as_ptr().addr();
-                let handle = parent.as_handle_i64();
                 let context = gc.register_context();
-                let registration = drop_test_registration(&gc, &context, addr);
-                drop(parent);
-                let (entered, paused) = mpsc::channel();
-                let (resume, wait) = mpsc::channel();
-                let peer = gc.clone();
-                let stale = registration.clone();
-                let remover = thread::spawn(move || {
-                    DROP_COVERAGE_PAUSE.set(Some(ClaimPause {
-                        entered,
-                        resume: wait,
-                    }));
-                    peer.remove_detached_root(&registration);
-                });
-                paused
-                    .recv_timeout(Duration::from_secs(5))
-                    .expect("removal certified");
+                let mut removers = Vec::new();
+                // One startup step can already visit a root. Park three independent
+                // removers so the remaining sources definitely precede their scan.
+                for value in 17..20_u64 {
+                    let child = Gc::try_new(&gc, value)?;
+                    let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+                    let addr = parent.as_ptr().addr();
+                    let handle = parent.as_handle_i64();
+                    let registration = drop_test_registration(&gc, &context, addr);
+                    drop(parent);
+                    let (entered, paused) = mpsc::channel();
+                    let (resume, wait) = mpsc::channel();
+                    let peer = gc.clone();
+                    let stale = registration.clone();
+                    let remover = thread::spawn(move || {
+                        DROP_COVERAGE_PAUSE.set(Some(ClaimPause {
+                            entered,
+                            resume: wait,
+                        }));
+                        peer.remove_detached_root(&registration);
+                        COVERED_REMOVAL.take()
+                    });
+                    paused
+                        .recv_timeout(Duration::from_secs(5))
+                        .expect("removal certified");
+                    removers.push((resume, remover, handle, value, stale));
+                }
                 let ticket = gc.request_full_cycle();
-                // A one-unit step starts the epoch before the overflow scanner can visit.
                 gc.step();
                 assert_ne!(lock(&gc.domains[1].cycle).phase, Phase::Idle);
                 if scan_first {
@@ -991,23 +997,28 @@ fn typed_root_drop_orders_both_winners_against_a_new_full_cycle() -> Result<()> 
                         gc.completed_full_ticket() >= ticket
                     }));
                 }
-                resume.send(()).expect("resume removal");
-                remover.join().expect("remover");
+                let mut outcomes = Vec::new();
+                for (resume, remover, handle, value, stale) in removers {
+                    resume.send(()).expect("resume removal");
+                    outcomes.push((remover.join().expect("remover"), handle, value, stale));
+                }
+                assert_eq!(outcomes.iter().any(|(won, ..)| *won), !scan_first);
                 assert!((0..8192).any(|_| {
                     gc.step();
                     gc.completed_full_ticket() >= ticket
                 }));
-                let result = Gc::<Vec<Gc<u64>>>::from_handle_rooted(&gc, handle);
-                if scan_first {
-                    assert_eq!(result?.first().map(|child| **child), Some(17));
-                } else {
-                    assert!(
-                        result.is_err(),
-                        "a root deleted before its scan retained garbage"
-                    );
+                for (removed_first, handle, value, stale) in outcomes {
+                    let result = Gc::<Vec<Gc<u64>>>::from_handle_rooted(&gc, handle);
+                    if removed_first {
+                        assert!(
+                            result.is_err(),
+                            "a root deleted before its scan retained garbage"
+                        );
+                    } else {
+                        assert_eq!(result?.first().map(|child| **child), Some(value));
+                    }
+                    gc.remove_owned_root(&stale);
                 }
-                // A compatibility caller can still be holding the old directory view.
-                gc.remove_owned_root(&stale);
                 gc.stop()?;
                 assert_eq!(gc.managed_bytes(), 0);
             }
