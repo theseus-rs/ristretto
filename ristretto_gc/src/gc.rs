@@ -128,7 +128,8 @@ impl<T> Gc<T> {
         let reservation = collector
             .reserve_exact_bytes(size)
             .expect("managed heap limit exhausted; use Gc::try_new for fallible allocation");
-        let storage = crate::allocation::Storage::global(Allocation::<T>::layout())
+        let storage = collector
+            .default_descriptor(Allocation::<T>::layout())
             .expect("descriptor allocation failed; use Gc::try_new");
         // SAFETY: storage has the complete descriptor's size and alignment.
         let allocation =

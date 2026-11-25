@@ -1,9 +1,12 @@
 //! Bounded context-local allocation ranges and typed descriptor ownership.
 use crate::region::{Block, RegionHeap};
 use crate::{Error, Result};
+use portable_atomic::AtomicU64;
 use std::alloc::{Layout, alloc, dealloc};
 use std::marker::PhantomData;
 use std::ptr::NonNull;
+use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
+use std::sync::{Arc, Mutex, Weak};
 
 pub(crate) const CHUNK: usize = 16 * 1024;
 pub(crate) const SMALL: usize = 1024;
@@ -81,30 +84,135 @@ impl Cache {
     }
 }
 
-/// Storage owns the entire allocation, including padding and the trailing ZST marker.
-pub(crate) enum Storage {
-    Global { ptr: NonNull<u8>, layout: Layout },
-    Region(Block),
+/// Small global allocations share backing with other objects of the same size
+/// class. A slot owner keeps the page alive. The cache has weak ownership so
+/// the last returned slot releases the backing even if the heap is idle.
+#[derive(Debug)]
+pub(crate) struct SmallAllocations {
+    budget: Arc<crate::region::Budget>,
+    pages: [Mutex<Weak<SmallPage>>; 4],
 }
 
-// SAFETY: storage uniquely owns a disjoint, uninitialized range. Initialized<T>
-// carries T's ownership/auto-trait requirements; no reference is exposed by Storage.
-unsafe impl Send for Storage {}
-unsafe impl Sync for Storage {}
+impl SmallAllocations {
+    pub(crate) fn new(budget: Arc<crate::region::Budget>) -> Self {
+        Self {
+            budget,
+            pages: Default::default(),
+        }
+    }
 
-impl Storage {
-    pub(crate) fn global(layout: Layout) -> Result<Self> {
+    pub(crate) fn allocate(&self, layout: Layout) -> Option<Storage> {
+        let size = layout.size().max(layout.align());
+        if layout.size() == 0 || size > 64 {
+            return None;
+        }
+        let stride = size.max(8).next_power_of_two();
+        let class = (stride.trailing_zeros() - 3) as usize;
+        let pages = self.pages.get(class)?;
+        let cached = pages.try_lock().ok()?.upgrade();
+        if let Some(page) = &cached {
+            let bits = page.free.load(Relaxed);
+            if bits != 0 {
+                // A concurrent claim can take the observed slot. Fall back to
+                // exact backing without replacing a partially occupied page.
+                return page.claim(bits);
+            }
+        }
+        let page_layout = Layout::from_size_align(64 * stride, 64).ok()?;
+        let credit = self.budget.reserve(page_layout.size(), false).ok()?;
+        let backing = RawAllocation::new(page_layout).ok()?;
+        let page = Arc::new(SmallPage {
+            backing,
+            _credit: credit,
+            stride,
+            free: AtomicU64::new(u64::MAX ^ 1),
+        });
+        let mut head = pages.try_lock().ok()?;
+        if head.strong_count() != 0
+            && cached
+                .as_ref()
+                .is_none_or(|old| head.as_ptr() != Arc::as_ptr(old))
+        {
+            return None;
+        }
+        let previous = std::mem::replace(&mut *head, Arc::downgrade(&page));
+        drop(head);
+        drop(previous);
+        Some(Storage::Small(page, 0))
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct SmallPage {
+    // Field order returns host backing before releasing its budget credit.
+    backing: RawAllocation,
+    _credit: crate::region::BackingCredit,
+    stride: usize,
+    free: AtomicU64,
+}
+
+impl SmallPage {
+    fn claim(self: &Arc<Self>, bits: u64) -> Option<Storage> {
+        let index = bits.trailing_zeros();
+        // A failed claim can use a different page or exact global backing.
+        // Acquire pairs with the previous owner's release after destruction.
+        self.free
+            .compare_exchange(bits, bits & (bits - 1), Acquire, Relaxed)
+            .ok()?;
+        Some(Storage::Small(self.clone(), index))
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct RawAllocation {
+    ptr: NonNull<u8>,
+    layout: Layout,
+}
+
+// SAFETY: this owns raw storage, never a reference to an initialized value.
+// Access requires unique Storage ownership of the complete allocation or slot.
+unsafe impl Send for RawAllocation {}
+unsafe impl Sync for RawAllocation {}
+
+impl RawAllocation {
+    fn new(layout: Layout) -> Result<Self> {
         if layout.size() == 0 {
             return Err(Error::OutOfMemory);
         }
-        // SAFETY: descriptor layouts include a marker and are always nonzero.
+        // SAFETY: the layout is valid and nonzero.
         let ptr = NonNull::new(unsafe { alloc(layout) }).ok_or(Error::OutOfMemory)?;
-        Ok(Self::Global { ptr, layout })
+        Ok(Self { ptr, layout })
+    }
+}
+
+impl Drop for RawAllocation {
+    fn drop(&mut self) {
+        // SAFETY: the last owner releases the allocation with its original layout.
+        unsafe { dealloc(self.ptr.as_ptr(), self.layout) };
+    }
+}
+
+/// Storage owns the entire allocation, including padding and the trailing ZST marker.
+pub(crate) enum Storage {
+    Global(RawAllocation),
+    Small(Arc<SmallPage>, u32),
+    Region(Block),
+}
+
+impl Storage {
+    pub(crate) fn global(layout: Layout) -> Result<Self> {
+        Ok(Self::Global(RawAllocation::new(layout)?))
     }
 
     pub(crate) fn ptr<T>(&self) -> *mut T {
         match self {
-            Self::Global { ptr, .. } => ptr.as_ptr().cast(),
+            Self::Global(allocation) => allocation.ptr.as_ptr().cast(),
+            Self::Small(page, index) => page
+                .backing
+                .ptr
+                .as_ptr()
+                .wrapping_add(*index as usize * page.stride)
+                .cast(),
             Self::Region(block) => block.ptr(),
         }
     }
@@ -112,9 +220,10 @@ impl Storage {
 
 impl Drop for Storage {
     fn drop(&mut self) {
-        if let Self::Global { ptr, layout } = self {
-            // SAFETY: the initialized value has been destroyed; this owns the allocation.
-            unsafe { dealloc(ptr.as_ptr(), *layout) };
+        if let Self::Small(page, index) = self {
+            let bit = 1 << *index;
+            let previous = page.free.fetch_or(bit, Release);
+            debug_assert_eq!(previous & bit, 0, "double slot return");
         }
     }
 }
@@ -191,7 +300,7 @@ impl Drop for Erased {
 mod tests {
     use super::*;
     use std::sync::Arc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::AtomicUsize;
 
     #[repr(align(128))]
     struct Value {
@@ -200,9 +309,40 @@ mod tests {
     }
     impl Drop for Value {
         fn drop(&mut self) {
-            self.drops.fetch_add(1, Ordering::Relaxed);
+            self.drops.fetch_add(1, Relaxed);
             assert!(!self.panic, "injected descriptor destructor panic");
         }
+    }
+
+    #[test]
+    fn small_page_returns_slots_and_releases_backing_while_cached() {
+        let pool = SmallAllocations::new(crate::region::Budget::new(512));
+        let layout = Layout::new::<u64>();
+        let mut slots: Vec<_> = (0..64)
+            .map(|_| pool.allocate(layout).expect("page slot"))
+            .collect();
+        assert!(pool.allocate(layout).is_none());
+        let hole = slots.swap_remove(7);
+        let address = hole.ptr::<u64>();
+        drop(hole);
+        let reused = pool.allocate(layout).expect("returned slot");
+        assert_eq!(address, reused.ptr::<u64>());
+        assert!(slots.iter().all(|s| s.ptr::<u64>() != address));
+        drop((reused, slots));
+        let old = pool.pages[0].lock().unwrap().clone();
+        assert!(old.upgrade().is_none());
+        assert!(pool.allocate(layout).is_some());
+        assert!(pool.allocate(Layout::new::<Value>()).is_none());
+    }
+
+    #[test]
+    fn small_page_busy_cache_does_not_block_exact_allocation_fallback() {
+        let pool = SmallAllocations::new(crate::region::Budget::new(512));
+        let layout = Layout::new::<u64>();
+        let _held = pool.pages[0].lock().unwrap();
+        assert!(pool.allocate(layout).is_none());
+        assert!(Storage::global(layout).is_ok());
+        assert!(pool.allocate(Layout::new::<()>()).is_none());
     }
 
     #[test]
@@ -230,9 +370,9 @@ mod tests {
             let erased = initialized.erase();
             assert_eq!(erased.storage.ptr::<Value>(), pointer);
             assert_eq!(pointer as usize % 128, 0);
-            assert_eq!(drops.load(Ordering::Relaxed), 0);
+            assert_eq!(drops.load(Relaxed), 0);
             drop(erased);
-            assert_eq!(drops.load(Ordering::Relaxed), 1);
+            assert_eq!(drops.load(Relaxed), 1);
             assert_eq!(heap.statistics().occupied_bytes, 0);
         }
         Ok(())
@@ -259,7 +399,7 @@ mod tests {
         assert_eq!(heap.statistics().occupied_bytes, layout.size());
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop(erased)));
         assert!(result.is_err());
-        assert_eq!(drops.load(Ordering::Relaxed), 1);
+        assert_eq!(drops.load(Relaxed), 1);
         assert_eq!(heap.statistics().occupied_bytes, 0);
         Ok(())
     }

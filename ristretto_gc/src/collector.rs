@@ -713,6 +713,7 @@ pub struct GarbageCollector {
     configuration: Configuration,
     regions: Option<Arc<crate::region::RegionHeap>>,
     descriptor_regions: Option<Arc<crate::region::RegionHeap>>,
+    small_allocations: crate::allocation::SmallAllocations,
     statistics: Mutex<Statistics>,
     leaves_marked_at_birth: AtomicUsize,
     scheduler: Option<crate::scheduling::Scheduler>,
@@ -1581,7 +1582,7 @@ impl GarbageCollector {
                     crate::allocation::CHUNK,
                     configuration.max_heap_bytes,
                     0,
-                    budget,
+                    budget.clone(),
                     false,
                     configuration.region_shards,
                 )
@@ -1590,6 +1591,7 @@ impl GarbageCollector {
                 this: this.clone(),
                 regions,
                 descriptor_regions,
+                small_allocations: crate::allocation::SmallAllocations::new(budget),
                 #[cfg(not(target_family = "wasm"))]
                 pacing: configuration.adaptive_workers.then(|| {
                     crate::pacing::Controller::new(
@@ -1713,6 +1715,19 @@ impl GarbageCollector {
         }
         // Pooling is optional: an exhausted/fragmented arena must not make
         // an otherwise valid descriptor allocation fail prematurely.
+        self.default_descriptor(layout)
+    }
+
+    pub(crate) fn default_descriptor(
+        &self,
+        layout: std::alloc::Layout,
+    ) -> Result<crate::allocation::Storage> {
+        if self.regions.is_none()
+            && self.descriptor_regions.is_none()
+            && let Some(storage) = self.small_allocations.allocate(layout)
+        {
+            return Ok(storage);
+        }
         crate::allocation::Storage::global(layout)
     }
 
