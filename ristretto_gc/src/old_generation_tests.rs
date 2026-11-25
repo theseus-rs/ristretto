@@ -44,6 +44,35 @@ fn old_pass_reclaims_old_garbage_and_does_not_complete_full_tickets() -> Result<
 }
 
 #[test]
+fn late_weak_registration_marks_a_white_mature_target_in_the_old_pass() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(config(counted));
+        let original = Gc::try_new(&gc, 47_u64)?;
+        gc.collect_full()?;
+        let mut edge = original.clone_gc();
+        // SAFETY: the owner protects demotion. Only the inert identity is used
+        // below, and the collector is driven by this test alone.
+        unsafe { edge.unroot() };
+        let metadata = gc.objects.lookup(original.as_ptr().addr()).unwrap();
+        drop(original);
+        gc.collect_old();
+        assert!((0..10_000).any(|_| {
+            gc.step();
+            lock(&gc.domains[1].cycle).phase == Phase::Mark
+        }));
+        let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+        assert!(!metadata.marked(1, epoch));
+        let weak = crate::GcWeak::new(&edge, crate::ReferenceKind::Weak, 0);
+        assert!(metadata.marked(1, epoch));
+        assert!((0..10_000).any(|_| gc.step()));
+        assert_eq!(*weak.upgrade().unwrap(), 47);
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+    }
+    Ok(())
+}
+
+#[test]
 fn old_pass_retains_conditional_referents_until_precise_full_collection() -> Result<()> {
     for concurrent in [false, true] {
         let gc = GarbageCollector::with_config(config(concurrent));

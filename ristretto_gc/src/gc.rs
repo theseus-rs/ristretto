@@ -852,19 +852,14 @@ impl<T> Gc<T> {
                     "unknown, logically dead, or incorrectly typed allocation".into(),
                 )
             })?;
-        // SAFETY: the matching typed descriptor supplies the original allocation
-        // pointer, and publication admission protects it through root installation.
-        let mut gc = unsafe { Self::from_raw(metadata.trace.ptr.cast::<T>())? };
-        gc.id = metadata.id;
+        let ptr = NonNull::new(metadata.trace.ptr.cast_mut().cast::<T>())
+            .ok_or_else(|| Error::InvalidPointer("null conditional root".into()))?;
         let registration = OwnedRoot {
             collector: collector.clone(),
             id: publication.add_conditional_root(&metadata, reservation),
             target: metadata.id,
         };
-        Ok(PreparedRoot {
-            ptr: gc.ptr,
-            registration,
-        })
+        Ok(PreparedRoot { ptr, registration })
     }
 
     /// Add this `Gc` object as a root to the global garbage collector.
