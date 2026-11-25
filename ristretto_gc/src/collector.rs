@@ -809,8 +809,9 @@ pub struct GarbageCollector {
     next_domain: AtomicUsize,
     weak_slots: crate::weak_registry::WeakRegistry,
     next_weak_id: AtomicUsize,
-    pending_references: Mutex<VecDeque<(crate::ObjectId, crate::roots::TreeRoot)>>,
-    pending_notify: AtomicBool,
+    pending_references: once_cell::race::OnceBox<
+        crate::publication_queue::Queue<(crate::ObjectId, crate::roots::TreeRoot)>,
+    >,
     managed_budget: Arc<crate::allocation_budget::AllocationBudget>,
     allocation_debt: AtomicUsize,
     published_bytes: AtomicUsize,
@@ -1737,8 +1738,7 @@ impl GarbageCollector {
                 next_domain: AtomicUsize::new(0),
                 weak_slots: crate::weak_registry::WeakRegistry::default(),
                 next_weak_id: AtomicUsize::new(1),
-                pending_references: Mutex::new(VecDeque::new()),
-                pending_notify: AtomicBool::new(false),
+                pending_references: once_cell::race::OnceBox::new(),
                 allocation_debt: AtomicUsize::new(0),
                 published_bytes: AtomicUsize::new(0),
                 published_debt: AtomicUsize::new(0),
@@ -2222,7 +2222,10 @@ impl GarbageCollector {
     /// Returns whether Java reference processing has published work for the Reference Handler.
     #[must_use]
     pub fn has_pending_references(&self) -> bool {
-        !lock(&self.pending_references).is_empty()
+        self.pending_references.get().is_some_and(|queue| {
+            // A private append increments the reservation count before linking.
+            queue.pending() != 0 && !queue.is_empty()
+        })
     }
 
     /// Waits without polling for reference processing to publish a pending reference.
@@ -2235,7 +2238,13 @@ impl GarbageCollector {
     /// # Errors
     /// Returns an error if the caller requests the wrong allocation type.
     pub fn take_pending_reference<T: Trace + 'static>(self: &Arc<Self>) -> Result<Option<Gc<T>>> {
-        let next = lock(&self.pending_references).pop_front();
+        let Some(queue) = self.pending_references.get() else {
+            return Ok(None);
+        };
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        let next = queue.test_pop_after_head(reference_tests::pause_after_pending_head);
+        #[cfg(not(all(test, not(target_family = "wasm"), not(miri))))]
+        let next = queue.pop();
         let Some((identity, id)) = next else {
             return Ok(None);
         };
@@ -2274,10 +2283,16 @@ impl GarbageCollector {
     fn enqueue_reference(&self, slot: &crate::weak::WeakSlot) {
         if let Some(metadata) = self.reference_owner(slot) {
             let id = self.insert_root(metadata.ptr().0);
-            let mut pending = lock(&self.pending_references);
-            pending.push_back((metadata.id, id));
-            // Publish the notice before another participant can see the queue entry.
-            self.pending_notify.store(true, Ordering::Release);
+            let queue = self
+                .pending_references
+                .get_or_init(|| Box::new(crate::publication_queue::Queue::new()));
+            #[cfg(all(test, not(target_family = "wasm")))]
+            queue.test_push_after_link(
+                (metadata.id, id),
+                reference_tests::pause_after_pending_notice,
+            );
+            #[cfg(not(all(test, not(target_family = "wasm"))))]
+            queue.push((metadata.id, id));
         }
     }
 
@@ -4519,10 +4534,17 @@ impl GarbageCollector {
         {
             return Some(progress);
         }
-        self.independent_mark_step(concurrent)
+        let result = self
+            .independent_mark_step(concurrent)
             .or_else(|| self.independent_relocation_step(concurrent))
             .or_else(|| self.independent_phase_step(concurrent))
-            .or_else(|| self.coordinated_step(concurrent))
+            .or_else(|| self.coordinated_step(concurrent));
+        // A producer may park after linking while still holding the coordinator.
+        // Another ordinary worker or caller can deliver that visible notification.
+        if result.is_none() && self.has_pending_references() {
+            self.notify_progress();
+        }
+        result
     }
 
     fn next_relocation(&self, cycle: &mut Cycle) -> crate::index::Scan<MetadataRef> {
@@ -5526,10 +5548,8 @@ impl GarbageCollector {
     }
 
     fn notify_progress(&self) {
-        if self.pending_notify.load(Ordering::Acquire) {
-            #[cfg(all(test, not(target_family = "wasm")))]
-            reference_tests::pause_after_pending_notice();
-            self.recovery.references_ready(&self.pending_notify);
+        if self.has_pending_references() {
+            self.recovery.references_ready();
         }
         self.recovery.notify_progress(self);
     }
