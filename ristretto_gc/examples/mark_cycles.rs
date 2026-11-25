@@ -99,7 +99,7 @@ fn main() -> Result<()> {
         .and_then(|v| v.parse::<usize>().ok())
         .unwrap_or(0);
     let diagnostics = args.get(6).is_some_and(|v| v == "true");
-    assert!(["tree", "wide", "barrier"].contains(&shape));
+    assert!(["tree", "wide", "barrier", "mixed"].contains(&shape));
     assert!(["gated", "counted"].contains(&policy));
     assert!((2..=65535).contains(&nodes));
     assert!((1..=10000).contains(&cycles));
@@ -131,7 +131,15 @@ fn main() -> Result<()> {
             .diagnostics(diagnostics)
             .build(),
     );
-    let root = graph(&gc, nodes, if shape == "tree" { 8 } else { nodes })?;
+    let root = graph(
+        &gc,
+        nodes,
+        if matches!(shape, "tree" | "mixed") {
+            8
+        } else {
+            nodes
+        },
+    )?;
     let contexts: Vec<_> = if buffered {
         root.children
             .chunks(32)
@@ -172,11 +180,22 @@ fn main() -> Result<()> {
     let trace_before = gc.diagnostics().trace_tasks;
     let barriers_before = gc.diagnostics();
     assert_eq!(before.live_objects, nodes);
-    let start = Instant::now();
+    // A mixed cycle starts with the same reachable tree and a fresh cohort
+    // of unreachable scalars. Time only the collection that must reclaim it.
+    let garbage = if shape == "mixed" {
+        (nodes / 4).max(1)
+    } else {
+        0
+    };
+    let mut elapsed_ns = 0;
     for _ in 0..cycles {
+        for _ in 0..garbage {
+            drop(Gc::try_new(&gc, 17_u64)?);
+        }
+        let start = Instant::now();
         collect()?;
+        elapsed_ns += start.elapsed().as_nanos();
     }
-    let elapsed_ns = start.elapsed().as_nanos();
     let after = gc.statistics()?;
     let trace_tasks = gc.diagnostics().trace_tasks - trace_before;
     let barriers_after = gc.diagnostics();
@@ -191,6 +210,10 @@ fn main() -> Result<()> {
     assert_eq!(barrier_buffered, expected_barriers as u64);
     assert_eq!(barrier_flushed, expected_barriers as u64);
     assert_eq!(barrier_overflows, 0);
+    let swept = after.objects_swept - before.objects_swept;
+    let freed = after.managed_bytes_freed - before.managed_bytes_freed;
+    assert_eq!(swept, cycles * garbage);
+    assert_eq!(freed, swept * Gc::allocation_size(&17_u64)?);
     let marked = after.objects_marked - before.objects_marked;
     let completed = after.full_collections - before.full_collections;
     assert_eq!(completed, cycles);
@@ -205,7 +228,7 @@ fn main() -> Result<()> {
     assert_eq!(final_stats.live_objects, 0);
     assert_eq!(final_stats.bytes_managed, 0);
     println!(
-        "{{\"schema\":1,\"shape\":\"{shape}\",\"policy\":\"{policy}\",\"nodes\":{nodes},\"cycles\":{cycles},\"workers\":{workers},\"diagnostics\":{diagnostics},\"elapsed_ns\":{elapsed_ns},\"marked\":{marked},\"completed\":{completed},\"trace_tasks\":{trace_tasks},\"barrier_buffered\":{barrier_buffered},\"barrier_flushed\":{barrier_flushed},\"barrier_overflows\":{barrier_overflows},\"checksum\":{expected_checksum},\"teardown_live\":0,\"teardown_bytes\":0}}"
+        "{{\"schema\":1,\"shape\":\"{shape}\",\"policy\":\"{policy}\",\"nodes\":{nodes},\"cycles\":{cycles},\"workers\":{workers},\"diagnostics\":{diagnostics},\"elapsed_ns\":{elapsed_ns},\"swept\":{swept},\"freed\":{freed},\"marked\":{marked},\"completed\":{completed},\"trace_tasks\":{trace_tasks},\"barrier_buffered\":{barrier_buffered},\"barrier_flushed\":{barrier_flushed},\"barrier_overflows\":{barrier_overflows},\"checksum\":{expected_checksum},\"teardown_live\":0,\"teardown_bytes\":0}}"
     );
     Ok(())
 }
