@@ -9,7 +9,7 @@ version.workspace = true
 workspace = true
 
 [dependencies]
-ristretto_vm = { path = "../../ristretto_vm" }
+ristretto_vm = { path = "../../ristretto_vm", version = "0.35.0" }
 tempfile = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
