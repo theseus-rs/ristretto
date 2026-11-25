@@ -25,9 +25,20 @@ pub(super) enum WriteMode {
 
 impl Gate {
     pub(super) fn read(&self) -> ReadMode {
-        let old = self.0.fetch_add(1, Ordering::Acquire);
-        if old & READERS == READERS {
-            std::process::abort();
+        // Refuse saturation before changing the ownership bits, even if the
+        // overflowing caller is suspended immediately before aborting.
+        let mut old = self.0.load(Ordering::Relaxed);
+        loop {
+            if old & READERS == READERS {
+                std::process::abort();
+            }
+            match self
+                .0
+                .compare_exchange_weak(old, old + 1, Ordering::Acquire, Ordering::Relaxed)
+            {
+                Ok(_) => break,
+                Err(current) => old = current,
+            }
         }
         if old & SHARED != 0 {
             ReadMode::Shared
@@ -79,7 +90,7 @@ impl Gate {
         self.claim_cleanup()
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, not(target_family = "wasm")))]
     pub(super) fn cleaned(&self) -> bool {
         self.0.load(Ordering::Acquire) & CLEANED != 0
     }
