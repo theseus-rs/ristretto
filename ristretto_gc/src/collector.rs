@@ -663,7 +663,7 @@ impl Default for Cycle {
             relocations: VecDeque::new(),
             relocation_scan_done: false,
             phantom_retained: BTreeSet::new(),
-            reclaim: VecDeque::new(),
+            reclaim: VecDeque::with_capacity(phase_work::SWEEP_BATCH),
             reclaimed_bytes: 0,
             handoff: None,
             root_cursor: crate::roots::Cursor::default(),
