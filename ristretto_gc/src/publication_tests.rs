@@ -1251,6 +1251,87 @@ fn covered_active_typed_drop_preserves_outstanding_child_traversal() -> Result<(
     Ok(())
 }
 
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    reason = "bounded inter-thread retirement schedule"
+)]
+fn a_root_born_during_retirement_can_drop_before_or_after_the_next_scan() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for scan_first in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .root_storage(crate::RootStorage::Contexts)
+                    .overlapping_generations(true)
+                    .concurrent_publication(counted)
+                    .incremental_step_size(1)
+                    .allocation_threshold(usize::MAX)
+                    .max_pause_time_us(0)
+                    .build(),
+            );
+            let context = gc.register_context();
+            let anchor = Gc::try_new(&gc, 17_u64)?;
+            let previous = gc.request_full_cycle();
+            assert!((0..4096).any(|_| {
+                gc.step();
+                gc.domains[1].weak_phase() == 5
+            }));
+            let parent = Gc::try_new(&gc, vec![anchor.into_rooted()])?;
+            let handle = parent.as_handle_i64();
+            let address = parent.as_ptr().addr();
+            let registration = drop_test_registration(&gc, &context, address);
+            let metadata = gc.objects.lookup(address).unwrap();
+            let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+            assert_ne!(metadata.retention(1, epoch), Some(Retention::Strong));
+            drop(parent);
+            let (entered, paused) = mpsc::channel();
+            let (resume, wait) = mpsc::channel();
+            let peer = gc.clone();
+            let remover = thread::spawn(move || {
+                DROP_COVERAGE_PAUSE.set(Some(ClaimPause {
+                    entered,
+                    resume: wait,
+                }));
+                peer.remove_detached_root(&registration);
+                COVERED_REMOVAL.take()
+            });
+            paused
+                .recv_timeout(Duration::from_secs(5))
+                .expect("retirement sampled");
+            assert!((0..8192).any(|_| {
+                gc.step();
+                gc.completed_full_ticket() >= previous
+            }));
+            let next = gc.request_full_cycle();
+            if scan_first {
+                assert!((0..8192).any(|_| {
+                    gc.step();
+                    gc.completed_full_ticket() >= next
+                }));
+            }
+            resume.send(()).unwrap();
+            assert_eq!(remover.join().unwrap(), !scan_first);
+            assert!((0..8192).any(|_| {
+                gc.step();
+                gc.completed_full_ticket() >= next
+            }));
+            let recovered = Gc::<Vec<Gc<u64>>>::from_handle_rooted(&gc, handle);
+            if scan_first {
+                assert_eq!(*recovered?[0], 17);
+            } else {
+                assert!(recovered.is_err());
+            }
+            gc.collect_full()?;
+            gc.stop()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
+
 #[test]
 fn both_epochs_claim_released_root_debt_after_strong_closure() -> Result<()> {
     let gc = GarbageCollector::new();
