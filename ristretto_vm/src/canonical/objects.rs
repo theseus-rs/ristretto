@@ -46,12 +46,12 @@ pub struct Report {
 }
 
 impl Program {
-    fn layout(&self, class: usize) -> Result<&Layout, Error> {
+    pub(super) fn layout(&self, class: usize) -> Result<&Layout, Error> {
         self.classes
             .get(class)
             .ok_or_else(|| Error::Invalid("class index".into()))
     }
-    fn class_index(&self, name: &str) -> Result<usize, Error> {
+    pub(super) fn class_index(&self, name: &str) -> Result<usize, Error> {
         self.names
             .get(JavaStr::cow_from_str(name).as_ref())
             .copied()
@@ -271,11 +271,7 @@ impl Program {
         configuration: Configuration,
         limits: Limits,
     ) -> Result<Report, Error> {
-        let class = self.class_index(class)?;
-        let method = self.layout(class)?.class.try_get_method(method, "(I)I")?;
-        if !method.access_flags().contains(MethodAccessFlags::STATIC) {
-            return Err(Error::Unsupported("entry must be static (I)I".to_owned()));
-        }
+        let (class, method) = self.entry_method(class, method)?;
         if configuration.mutators != 1
             || configuration.helpers != 1
             || self
@@ -299,24 +295,7 @@ impl Program {
             limits,
             report: Report::default(),
         };
-        let pool = self.layout(class)?.class.constant_pool();
-        let result = if method
-            .code()
-            .iter()
-            .all(|op| super::integer::admitted(op, pool))
-        {
-            execution.report.calls = 1;
-            super::integer::run_counted(&method, pool, argument, limits.instructions).and_then(
-                |(value, count)| {
-                    execution.report.instructions = count;
-                    Ok(Some(Value::Int(value.int()?)))
-                },
-            )
-        } else {
-            execution
-                .call(class, method, vec![Value::Int(argument)], 0)
-                .await
-        };
+        let result = execution.entry(class, method, argument).await;
         // Even execution errors release all frame roots before cleanup.
         execution.cleanup(&collector).await?;
         let mut report = execution.report.clone();
@@ -337,7 +316,7 @@ impl Program {
 /// No managed references, callbacks, dynamic backing or custom destruction.
 /// Class metadata lives exclusively in the external immutable Program.
 #[derive(Debug)]
-struct Payload {
+pub(super) struct Payload {
     class: usize,
     integers: [AtomicI32; 8],
 }
@@ -361,14 +340,14 @@ impl Trace for Payload {
 }
 
 #[derive(Clone, Debug)]
-enum Value {
+pub(super) enum Value {
     Int(i32),
     Reference(Option<Root<Payload>>),
     Unused,
 }
 
 impl Value {
-    fn int(self) -> Result<i32, Error> {
+    pub(super) fn int(self) -> Result<i32, Error> {
         if let Self::Int(value) = self {
             Ok(value)
         } else {
@@ -388,13 +367,13 @@ impl Value {
     }
 }
 
-struct Execution<'p, 'r, 'gc> {
-    program: &'p Program,
-    runtime: &'r Runtime<'gc>,
-    mutator: Mutator<'gc>,
-    helper: Helper<'gc>,
-    limits: Limits,
-    report: Report,
+pub(super) struct Execution<'p, 'r, 'gc> {
+    pub(super) program: &'p Program,
+    pub(super) runtime: &'r Runtime<'gc>,
+    pub(super) mutator: Mutator<'gc>,
+    pub(super) helper: Helper<'gc>,
+    pub(super) limits: Limits,
+    pub(super) report: Report,
 }
 
 async fn complete<T>(
@@ -423,6 +402,29 @@ fn help(helper: &mut Helper<'_>, report: &mut Report) -> Result<(), Error> {
 }
 
 impl Execution<'_, '_, '_> {
+    pub(super) async fn entry(
+        &mut self,
+        class: usize,
+        method: Arc<Method>,
+        argument: i32,
+    ) -> Result<Option<Value>, Error> {
+        let pool = self.program.layout(class)?.class.constant_pool();
+        if method
+            .code()
+            .iter()
+            .all(|op| super::integer::admitted(op, pool))
+        {
+            self.report.calls = 1;
+            let (value, count) =
+                super::integer::run_counted(&method, pool, argument, self.limits.instructions)?;
+            self.report.instructions = count;
+            Ok(Some(Value::Int(value.int()?)))
+        } else {
+            self.call(class, method, vec![Value::Int(argument)], 0)
+                .await
+        }
+    }
+
     async fn cleanup(&mut self, collector: &GarbageCollector) -> Result<(), Error> {
         for index in 0..self.limits.cleanup_polls {
             help(&mut self.helper, &mut self.report)?;
