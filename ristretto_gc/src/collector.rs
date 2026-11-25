@@ -284,6 +284,7 @@ struct Domain {
     in_flight: AtomicUsize,
     trace_ready: AtomicBool,
     weak_phase: AtomicUsize,
+    late_references: crate::weak_registry::LateReferences,
     request_ticket: AtomicU64,
     completed_ticket: AtomicU64,
 }
@@ -333,6 +334,7 @@ impl Domain {
             in_flight: AtomicUsize::new(0),
             trace_ready: AtomicBool::new(false),
             weak_phase: AtomicUsize::new(0),
+            late_references: crate::weak_registry::LateReferences::default(),
             request_ticket: AtomicU64::new(0),
             completed_ticket: AtomicU64::new(0),
         }
@@ -645,6 +647,8 @@ struct Cycle {
     epoch: u64,
     started: Option<std::time::Instant>,
     reference_stage: usize,
+    late_reference_turn: bool,
+    retry_reference: Option<crate::weak_registry::Entry>,
     ticket: u64,
     relocations: VecDeque<(MetadataRef, usize)>,
     relocation_scan_done: bool,
@@ -677,6 +681,8 @@ impl Default for Cycle {
             epoch: 0,
             started: None,
             reference_stage: 0,
+            late_reference_turn: false,
+            retry_reference: None,
             ticket: 0,
             relocations: VecDeque::new(),
             relocation_scan_done: false,
@@ -2050,7 +2056,24 @@ impl GarbageCollector {
         let address = slot.target.load(Ordering::Acquire);
         let metadata = self.weak_target_metadata(slot, address);
         let young = metadata.as_ref().is_some_and(|m| self.is_young_metadata(m));
-        self.weak_slots.insert(&self.next_weak_id, slot, young);
+        let id = self.weak_slots.insert(&self.next_weak_id, slot, young);
+        // A retaining clone inherits its source's birth exemption and drops its
+        // owner. That can create an eligible reference behind an active cursor.
+        if matches!(
+            slot.kind,
+            crate::ReferenceKind::Final | crate::ReferenceKind::PhantomRetained
+        ) {
+            for (i, domain) in self.domains.iter().enumerate() {
+                if (i != 0 || young)
+                    && slot.birth_stamp(i).load(Ordering::Relaxed)
+                        != domain.epoch.load(Ordering::Acquire)
+                {
+                    domain
+                        .late_references
+                        .offer_if_eligible(domain.weak_phase(), id, slot);
+                }
+            }
+        }
         if self.old_collection_active()
             && let Some(metadata) = metadata
         {
@@ -5035,8 +5058,16 @@ impl GarbageCollector {
                                 break;
                             };
                             if empty {
+                                // A clone can still enter the previous reference stage while
+                                // its graph work is draining. Process those exact slots before
+                                // advancing the logical retention floor.
+                                let previous_stage = self.domain().weak_phase();
+                                let revisit =
+                                    self.domain().late_references.has_work(previous_stage);
                                 let stage = if cycle.kind == CollectionKind::Old {
                                     5
+                                } else if revisit {
+                                    previous_stage
                                 } else {
                                     cycle.reference_stage.clamp(1, 5)
                                 };
@@ -5046,17 +5077,13 @@ impl GarbageCollector {
                                 self.domain().mark_queue.finish_strong_births();
                                 self.domain().trace_ready.store(false, Ordering::Release);
                                 self.domain().marking.store(false, Ordering::Release);
-                                if cycle.kind == CollectionKind::Old || cycle.reference_stage >= 5 {
+                                if stage >= 5 {
                                     self.domain().weak_phase.store(5, Ordering::Release);
                                     cycle.phase = Phase::Sweep;
                                 } else {
-                                    if cycle.reference_stage == 0 {
-                                        cycle.reference_stage = 1;
-                                    }
-                                    self.domain()
-                                        .weak_phase
-                                        .store(cycle.reference_stage, Ordering::Release);
-                                    cycle.cursor = 0;
+                                    cycle.reference_stage = stage;
+                                    self.domain().weak_phase.store(stage, Ordering::Release);
+                                    cycle.cursor = if revisit { usize::MAX } else { 0 };
                                     cycle.phase = Phase::References;
                                 }
                             }
@@ -5085,6 +5112,15 @@ impl GarbageCollector {
                             let Some(observation) = self.observe_phase() else {
                                 break;
                             };
+                            // Sample after observing the clock. A registration between
+                            // the empty scan and this observation may already have finished.
+                            if self
+                                .domain()
+                                .late_references
+                                .has_work(cycle.reference_stage)
+                            {
+                                continue;
+                            }
                             if self.contexts.pending.load(Ordering::Acquire) != 0
                                 || self.closure_in_flight() != 0
                             {

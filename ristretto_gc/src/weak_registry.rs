@@ -6,6 +6,55 @@ use arc_swap::ArcSwap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 
+pub(crate) type Entry = (usize, Weak<WeakSlot>);
+
+/// Only clones which become eligible during their own retaining stage need
+/// this queue. An exhausted numeric range never has to be scanned again.
+#[derive(Debug, Default)]
+pub(crate) struct LateReferences {
+    finals: once_cell::race::OnceBox<crate::publication_queue::Queue<Entry>>,
+    phantoms: once_cell::race::OnceBox<crate::publication_queue::Queue<Entry>>,
+}
+
+impl LateReferences {
+    pub(crate) fn offer_if_eligible(&self, stage: usize, id: usize, slot: &Arc<WeakSlot>) {
+        let lane = match (slot.kind, stage) {
+            (crate::ReferenceKind::Final, 2) => &self.finals,
+            (crate::ReferenceKind::PhantomRetained, 3) => &self.phantoms,
+            _ => return,
+        };
+        lane.get_or_init(|| Box::new(crate::publication_queue::Queue::new()))
+            .push((id, Arc::downgrade(slot)));
+    }
+
+    fn queue(&self, stage: usize) -> Option<&crate::publication_queue::Queue<Entry>> {
+        match stage {
+            2 => self.finals.get(),
+            3 => self.phantoms.get(),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn has_work(&self, stage: usize) -> bool {
+        self.queue(stage).is_some_and(|queue| !queue.is_empty())
+    }
+
+    pub(crate) fn next(&self, stage: usize, retry: &mut Option<Entry>) -> Option<Entry> {
+        let Some(queue) = self.queue(stage) else {
+            return retry.take();
+        };
+        let Some(next) = queue.pop() else {
+            return retry.take();
+        };
+        // A parked decision cannot monopolize late work. Allocate a new tail
+        // node only when there is actually another entry to service.
+        if let Some(blocked) = retry.take() {
+            queue.push(blocked);
+        }
+        Some(next)
+    }
+}
+
 #[derive(Debug, Default)]
 struct Indexes {
     full: Directory<Weak<WeakSlot>>,
@@ -20,7 +69,7 @@ impl WeakRegistry {
         clippy::expect_used,
         reason = "an unused nonzero usize ID proves there is space in both directories"
     )]
-    pub(crate) fn insert(&self, next_id: &AtomicUsize, slot: &Arc<WeakSlot>, young: bool) {
+    pub(crate) fn insert(&self, next_id: &AtomicUsize, slot: &Arc<WeakSlot>, young: bool) -> usize {
         let weak = Arc::downgrade(slot);
         let mut id = next_id.fetch_add(1, Ordering::Relaxed);
         loop {
@@ -47,7 +96,7 @@ impl WeakRegistry {
                 },
             });
             if Arc::ptr_eq(&self.0.compare_and_swap(&current, proposed), &current) {
-                return;
+                return id;
             }
         }
     }

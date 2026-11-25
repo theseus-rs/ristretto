@@ -398,10 +398,6 @@ impl GarbageCollector {
         }
         true
     }
-    #[expect(
-        clippy::too_many_lines,
-        reason = "keep one conditional-slot decision and its lock scope together"
-    )]
     pub(super) fn reference_unit(&self, cycle: &mut Cycle, counters: &mut WorkCounters) -> Unit {
         let Some(_publication) = self.try_publication_write() else {
             return Unit::Busy;
@@ -412,14 +408,46 @@ impl GarbageCollector {
         if self.contexts.pending.load(Ordering::Acquire) != 0 {
             return Unit::Busy;
         }
-        let index = self.domain_index();
+        let late = &self.domain().late_references;
         let young = cycle.kind == CollectionKind::Young;
-        let Some((id, entry)) = self.weak_slots.next(young, cycle.cursor) else {
+        // Alternate so repeated late registrations cannot starve the range scan.
+        cycle.late_reference_turn = !cycle.late_reference_turn;
+        let mut take_late = || late.next(cycle.reference_stage, &mut cycle.retry_reference);
+        let next = if cycle.late_reference_turn {
+            take_late().map(|e| (e, true))
+        } else {
+            None
+        }
+        .or_else(|| {
+            self.weak_slots
+                .next(young, cycle.cursor)
+                .map(|e| (e, false))
+        })
+        .or_else(|| take_late().map(|e| (e, true)));
+        let Some(((id, entry), extra)) = next else {
             return Unit::Boundary;
         };
-        let Some(slot) = entry.upgrade() else {
+        let result = self.decide_reference(cycle, counters, id, &entry);
+        if matches!(result, Unit::Busy) {
+            if extra {
+                cycle.retry_reference = Some((id, entry));
+            }
+        } else if !extra {
             cycle.cursor = id;
-            self.weak_slots.prune(id, &entry, false);
+        }
+        result
+    }
+
+    fn decide_reference(
+        &self,
+        cycle: &mut Cycle,
+        counters: &mut WorkCounters,
+        id: usize,
+        entry: &std::sync::Weak<crate::weak::WeakSlot>,
+    ) -> Unit {
+        let index = self.domain_index();
+        let Some(slot) = entry.upgrade() else {
+            self.weak_slots.prune(id, entry, false);
             return Unit::Progress;
         };
         // The private publisher will sample both domains again if this scan
@@ -433,7 +461,6 @@ impl GarbageCollector {
             // precede the slot lock: owner binding itself can be waiting for it.
             // If construction finishes now, normal root deletion barriers keep
             // this snapshot safe; the reference remains indexed for a later pass.
-            cycle.cursor = id;
             return Unit::Progress;
         }
         let Some(_decision) = slot.try_decision() else {
@@ -443,15 +470,13 @@ impl GarbageCollector {
             // Construction roots retain eligible referents and their graphs.
             // Leave the slot indexed for a later cycle, without holding this
             // cycle open for a hook that may be suspended indefinitely.
-            cycle.cursor = id;
             return Unit::Progress;
         }
-        cycle.cursor = id;
         counters.references += 1;
         let address = slot.target.load(Ordering::Acquire);
         let pending = slot.pending.load(Ordering::Acquire);
         if address == 0 && !pending {
-            self.weak_slots.prune(id, &entry, false);
+            self.weak_slots.prune(id, entry, false);
             return Unit::Progress;
         }
         // Reading an owning descriptor grants no access to its payload. A
@@ -462,7 +487,7 @@ impl GarbageCollector {
             .lookup(address)
             .filter(|m| m.id == slot.target_identity);
         if !pending && target.as_ref().is_none_or(|m| !self.is_young_metadata(m)) {
-            self.weak_slots.prune(id, &entry, true);
+            self.weak_slots.prune(id, entry, true);
         }
         let owner = slot.owner.load(Ordering::Acquire);
         if cycle.reference_stage == 4 {
