@@ -1467,6 +1467,25 @@ impl Thread {
                 .method(class_name, method_name, method_descriptor)
                 .copied(),
         };
+        #[cfg(feature = "experimental-canonical-runtime")]
+        if method.is_native()
+            && let Some(binding) = vm.canonical_native.get()
+            && binding.matches(&class, &method)
+        {
+            let mut arguments = parameters.into_parameters(caller)?;
+            if arguments.len() != 1 {
+                return Err(InternalError(
+                    "canonical native binding expects one int".into(),
+                ));
+            }
+            let argument = arguments.pop_int()?;
+            let result = binding.invoke(vm.garbage_collector(), argument).await;
+            drop(monitor_guard);
+            return match result {
+                Ok(value) => Ok(DispatchResult::Completed(Some(Value::Int(value)))),
+                Err(error) => Err(crate::canonical::native::java_error(self, error).await),
+            };
+        }
         let jit_method = if rust_method.is_none() {
             if let Some(compiler) = vm.compiler() {
                 compiler.compile(&class, &method).await?

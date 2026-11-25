@@ -89,6 +89,8 @@ pub struct VM {
     compiler: Option<Compiler>,
     /// Metadata shared by JIT runtime contexts in this VM.
     jit_runtime: SharedRuntime,
+    #[cfg(feature = "experimental-canonical-runtime")]
+    pub(crate) canonical_native: std::sync::OnceLock<Arc<crate::canonical::native::Binding>>,
     /// Counter for generating unique hidden class name suffixes
     hidden_class_counter: AtomicU64,
     /// Per-VM native memory manager.
@@ -213,6 +215,8 @@ impl VM {
                 method_registry,
                 compiler,
                 jit_runtime: SharedRuntime::new(),
+                #[cfg(feature = "experimental-canonical-runtime")]
+                canonical_native: std::sync::OnceLock::new(),
                 hidden_class_counter: AtomicU64::new(1),
                 next_thread_id: AtomicU64::new(1),
                 next_nio_fd: AtomicI32::new(ristretto_types::FIRST_NIO_FD),
@@ -849,6 +853,43 @@ impl VM {
             return Err(InternalError("Primordial thread not found".into()));
         };
         Ok(thread_handle.thread.clone())
+    }
+
+    /// Bind an application-declared static native `(I)I` method to a verified
+    /// canonical entry on this VM's collector. The target and companions form
+    /// a closed class set. Each call owns a fresh catalog, so classes with
+    /// static fields or class initializers are excluded.
+    ///
+    /// # Errors
+    /// Reports class loading, signature, admission and duplicate-binding errors.
+    #[cfg(feature = "experimental-canonical-runtime")]
+    pub async fn bind_canonical_native(
+        &self,
+        bridge_class: &str,
+        bridge_method: &str,
+        target_class: &str,
+        target_method: &str,
+        companions: &[String],
+    ) -> Result<()> {
+        run_local(async {
+            let thread = self.primordial_thread().await?;
+            let binding = crate::canonical::native::Binding::prepare(
+                &thread,
+                self.method_registry(),
+                bridge_class,
+                bridge_method,
+                target_class,
+                target_method,
+                companions,
+            )
+            .await?;
+            self.canonical_native.set(Arc::new(binding)).map_err(|_| {
+                crate::Error::ConfigurationError(
+                    "a canonical native method is already bound".into(),
+                )
+            })
+        })
+        .await
     }
 
     /// Load a class (e.g. "java.lang.Object").

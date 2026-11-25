@@ -57,10 +57,28 @@ ordinary VM roots. Successful session completion checks its own catalog refund.
 cleanup authority: an ordinary rooted value or a second session can remain live
 after this session completes.
 
-The remaining launcher boundary is explicit class loading/admission and calling
-this API on the launched VM. The ordinary CLI does not automatically dispatch
-arbitrary methods into this tier. There is no fallback from rejected bytecode,
-ordinary/canonical reference conversion, shared static registry across sessions,
-or unrestricted Java support. `tests/canonical_vm_session.rs` exercises the actual
-VM method, both native tiers, same-collector owners, ordinary Java arrays,
-cancellation and shared payload limits; portable session/drain tests run on WASI.
+## Application native methods
+
+`VM::bind_canonical_native` loads and links a declared static native `(I)I`
+application method, its target, and a caller-supplied set of companion classes.
+The VM verifies the target before installing the binding. Ordinary native dispatch
+compares the actual declaring class and method identities. A VM accepts one binding.
+
+Each invocation passes an integer to the canonical interpreter and returns an
+integer. Its catalog has 128 object slots, 128 root permits, one mutator and one
+helper, with up to eight edges per object. The interpreter uses `Limits::default()`.
+The VM heap supplies the payload budget. The per-call lifetime admits classes
+without static fields or class initializers. Managed references stay within
+the execution tier that owns them.
+
+On native hosts a Tokio blocking-pool worker owns the local execution future.
+Dropping the Java call signals that worker to drop the future and its roots at
+its next suspension. WASI executes the future on the VM's local scheduler.
+Known Java null, array and cast faults reach the caller as the corresponding
+Java throwable. Heap exhaustion uses the VM's ordinary out-of-memory path.
+A native caller receives a RuntimeException for an embedding limit or protocol
+failure. The host controls scheduling and worker-pool capacity.
+
+The session tests exercise both native tiers, same-collector ownership,
+ordinary Java arrays, cancellation, and shared payload limits. Portable session
+and drain tests run on WASI.

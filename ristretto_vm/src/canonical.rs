@@ -4,6 +4,8 @@
 mod heap;
 mod integer;
 mod layout;
+#[path = "canonical_native.rs"]
+pub(crate) mod native;
 mod objects;
 #[path = "canonical_statics.rs"]
 mod statics;
