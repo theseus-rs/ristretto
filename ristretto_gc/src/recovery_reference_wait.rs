@@ -1,5 +1,5 @@
 //! One cancellable registration per pending Java Reference Handler wait.
-use super::{AtomicBool, Context, GarbageCollector, Ordering, Poll, Recovery, lock};
+use super::{Context, GarbageCollector, Poll, Recovery, lock};
 
 // The address of this non-zero-sized, mutably borrowed token identifies the wait.
 // The async frame keeps the token alive across registration, polls and removal.
@@ -64,12 +64,9 @@ impl Recovery {
         .await;
     }
 
-    pub(crate) fn references_ready(&self, pending_notify: &AtomicBool) {
+    pub(crate) fn references_ready(&self) {
         let mut waiters = lock(&self.waiters);
-        // A notifier paused before acquiring the registry leaves the published
-        // notice available to every other helper. Claim it within the same
-        // critical section that makes the waiting handlers deliverable.
-        if !pending_notify.swap(false, Ordering::AcqRel) {
+        if waiters.references.is_empty() {
             return;
         }
         let mut waiting = std::mem::take(&mut waiters.references);
