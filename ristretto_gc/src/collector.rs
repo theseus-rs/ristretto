@@ -3037,7 +3037,9 @@ impl GarbageCollector {
     /// The exact removal intent must already be visible to every root scanner.
     fn deletion_covered(&self, address: usize, removal_pending: impl FnOnce() -> bool) -> bool {
         let observation = self.phase_clock.indexed_root();
-        let covered = matches!(observation, publication_state::Birth::Idle)
+        // Retirement ignores all deletion shades. If a new domain starts
+        // after this sample, its root scan still races the exact removal intent.
+        let covered = observation.deletion_closed()
             || self.objects.lookup(address).is_some_and(|metadata| {
                 if self.typed_root_covered(observation, &metadata) {
                     return true;

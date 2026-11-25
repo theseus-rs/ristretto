@@ -59,6 +59,18 @@ pub(crate) enum Birth {
     Epochs(Snapshot),
 }
 
+impl Birth {
+    /// Deletion has no tracing effect once every active domain has entered retirement.
+    pub(crate) fn deletion_closed(&self) -> bool {
+        match self {
+            Self::Idle => true,
+            Self::Inline(snapshot) | Self::Epochs(snapshot) => {
+                (0..2).all(|i| snapshot.stage(i).is_none_or(|stage| stage == 5))
+            }
+        }
+    }
+}
+
 impl Clock {
     pub(crate) fn new(limit: u64) -> Self {
         assert!(limit != 0 && limit & LOW_MASK == 0);

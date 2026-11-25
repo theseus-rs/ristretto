@@ -1197,3 +1197,20 @@ fn a_reused_root_slot_cannot_authorize_deletion_debt_for_its_replacement() {
         assert_eq!(slot.scan(), Some(11));
     });
 }
+
+#[test]
+fn deletion_requires_trace_while_either_domain_still_processes_references() {
+    loom::model(|| {
+        let clock = Clock::new(256 * REVISION);
+        for young in [0, 3, 5, 9, 13, 17, 21] {
+            for full in [0, 3, 5, 9, 13, 17, 21] {
+                assert!(clock.transition(clock.observe().unwrap(), 0, young));
+                assert!(clock.transition(clock.observe().unwrap(), 1, full));
+                assert_eq!(
+                    clock.indexed_root().deletion_closed(),
+                    (young == 0 || young == 21) && (full == 0 || full == 21)
+                );
+            }
+        }
+    });
+}
