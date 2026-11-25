@@ -262,7 +262,7 @@ mod native {
     }
 
     struct HeldClear {
-        entered: Option<mpsc::Sender<()>>,
+        entered: Option<mpsc::Sender<Option<usize>>>,
         release: Mutex<mpsc::Receiver<()>>,
         drops: Arc<AtomicUsize>,
     }
@@ -271,7 +271,9 @@ mod native {
         fn trace(&self, _: &GarbageCollector) {}
         fn clear_step(&mut self, _: usize, _: usize) -> TraceProgress {
             if let Some(entered) = self.entered.take() {
-                entered.send(()).expect("callback entered");
+                entered
+                    .send(WORKER.get().map(|(_, index)| index))
+                    .expect("callback entered");
                 lock(&self.release)
                     .recv_timeout(Duration::from_secs(10))
                     .expect("release callback");
@@ -321,6 +323,53 @@ mod native {
             drop((recovered, first, root));
             gc.stop()?;
             assert!(weak.upgrade().is_none());
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn adaptive_peer_completes_a_fresh_ticket_while_worker_zero_is_parked() -> Result<()> {
+        for counted in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .threads(2)
+                    .adaptive_workers(true)
+                    .diagnostics(true)
+                    .concurrent_publication(counted)
+                    .incremental_step_size(1)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let drops = Arc::new(AtomicUsize::new(0));
+            let (entered, parked) = mpsc::channel();
+            let (release, resume) = mpsc::channel();
+            drop(Gc::try_new(
+                &gc,
+                HeldClear {
+                    entered: Some(entered),
+                    release: Mutex::new(resume),
+                    drops: drops.clone(),
+                },
+            )?);
+            let callback_worker = gc.pacing.as_ref().unwrap().with_sampling_frozen(|| {
+                gc.start();
+                gc.collect();
+                parked.recv_timeout(Duration::from_secs(3))
+            });
+            let ticket = gc.request_full_cycle();
+            let start = std::time::Instant::now();
+            while gc.completed_full_ticket() < ticket && start.elapsed() < Duration::from_secs(3) {
+                thread::sleep(Duration::from_millis(1));
+            }
+            let completed = gc.completed_full_ticket() >= ticket;
+            let still_parked = drops.load(Ordering::Relaxed) == 0;
+            release.send(()).expect("resume callback");
+            gc.stop()?;
+            assert_eq!(callback_worker.unwrap(), Some(0));
+            assert!(completed, "standby failed to complete the full collection");
+            assert!(still_parked);
+            assert_eq!(drops.load(Ordering::Relaxed), 1);
             assert_eq!(gc.managed_bytes(), 0);
         }
         Ok(())
