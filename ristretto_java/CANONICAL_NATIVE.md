@@ -13,6 +13,8 @@ The target must be an admitted `static int method(int)`. Repeat
 may use dots or slashes; nested-class names retain `$`. Method descriptors are
 fixed to `(I)I` and are not part of the option syntax. The VM validates the
 actual declarations and target bytecode before invoking the ordinary main.
+A synchronized bridge holds its Java monitor through worker cleanup. Cancelling
+a native call while it is still queued releases the monitor immediately.
 
 This is an explicit boundary into the restricted canonical interpreter. JVM
 bootstrap, the main class, argument processing, stdout, ordinary class

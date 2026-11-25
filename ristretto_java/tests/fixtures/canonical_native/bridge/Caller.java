@@ -3,7 +3,7 @@ package bridge;
 /** Ordinary launcher entry. Only enter(int) is explicitly bound. */
 public final class Caller {
     static { System.setProperty("canonical.bridge.bootstrap", "ordinary"); }
-    private static native int enter(int value);
+    private static synchronized native int enter(int value);
     private native int instance(int value);
     private static native long wrong(long value);
     private static int ordinary(int value) { return value; }
