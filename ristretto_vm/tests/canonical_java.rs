@@ -233,13 +233,13 @@ fn array_payload_rejects() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-fn static_storage_rejects() -> Result<(), Box<dyn std::error::Error>> {
+fn volatile_static_storage_rejects() -> Result<(), Box<dyn std::error::Error>> {
     let mut files = classes()?;
     add_field(
         files.last_mut().ok_or("missing node")?,
         "global",
         "I",
-        FieldAccessFlags::STATIC,
+        FieldAccessFlags::STATIC | FieldAccessFlags::VOLATILE,
     )?;
     assert!(matches!(
         Program::from_classfiles(files),

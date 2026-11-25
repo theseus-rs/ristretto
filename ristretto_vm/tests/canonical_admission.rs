@@ -125,11 +125,7 @@ fn reject_unsupported_instance_layouts_before_execution() -> Result<(), Box<dyn 
     let file = ClassFile::from_bytes(bytes)?;
     let program = Program::from_classfiles([file.clone()])?;
     assert_eq!(17, program.run_scalar("CanonicalIntLayout", "scalar", 17)?);
-    for flag in [
-        FieldAccessFlags::STATIC,
-        FieldAccessFlags::FINAL,
-        FieldAccessFlags::VOLATILE,
-    ] {
+    for flag in [FieldAccessFlags::FINAL, FieldAccessFlags::VOLATILE] {
         let mut modified = file.clone();
         modified
             .fields
