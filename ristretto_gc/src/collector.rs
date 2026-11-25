@@ -3347,7 +3347,9 @@ impl GarbageCollector {
     /// gc.remove_root(&**root);
     /// ```
     pub unsafe fn remove_root<T: Trace>(&self, root: &T) {
-        let _publication = self.allocation_guard();
+        // The caller independently protects the payload. Each deletion validates
+        // its exact registration and publishes its own barrier; enumeration
+        // needs no heap-wide admission across unrelated slots and contexts.
         let ptr = std::ptr::from_ref(root).cast::<()>();
         if let Some(roots) = self.scanned_slots() {
             for record in roots.matching_overflow(ptr as usize) {
@@ -3369,6 +3371,8 @@ impl GarbageCollector {
             }
         });
         let ids = self.roots.matching(ptr as usize);
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        publication_tests::pause_after_revocation_scan();
         for id in ids {
             self.remove_tree_root(id);
         }
