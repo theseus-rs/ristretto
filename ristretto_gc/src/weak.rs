@@ -146,8 +146,8 @@ impl<T: Trace + 'static> GcWeak<T> {
         });
         // Allocation may stall. Sample birth epochs only after admission, before
         // this initialized slot is registered or exposed to another thread.
-        let _publication = gc.as_ref().map(|gc| gc.allocation_guard());
         if let Some(gc) = &gc {
+            let publication = gc.root_publication_guard();
             for (stamp, epoch) in slot.born_after.iter().zip(gc.weak_birth_epochs()) {
                 stamp.store(epoch, Ordering::Relaxed);
             }
@@ -155,7 +155,7 @@ impl<T: Trace + 'static> GcWeak<T> {
             if owner != 0 {
                 crate::construction::protect_reference_owner(gc, &slot);
             }
-            gc.register_weak(&slot);
+            publication.register_weak(&slot);
         }
         Self {
             collector,
@@ -235,7 +235,7 @@ impl<T> Clone for GcWeak<T> {
             born_after: std::array::from_fn(|_| AtomicU64::new(0)),
         });
         if let Some(gc) = self.collector.upgrade() {
-            let (_publication, _decision) = self.slot.admitted_decision(&gc);
+            let (publication, _decision) = self.slot.admitted_decision(&gc);
             let address = self.slot.target.load(Ordering::Acquire);
             if !gc.weak_is_cleared(&self.slot, address) {
                 slot.target.store(address, Ordering::Relaxed);
@@ -250,7 +250,7 @@ impl<T> Clone for GcWeak<T> {
                     destination.store(epoch, Ordering::Relaxed);
                 }
             }
-            gc.register_weak(&slot);
+            publication.register_weak(&slot);
         }
         Self {
             collector: self.collector.clone(),

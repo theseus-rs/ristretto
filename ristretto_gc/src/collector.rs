@@ -175,10 +175,14 @@ impl RootPublication<'_> {
         std::ptr::eq(self.collector, collector)
     }
 
-    /// Reuses this collector's admission through validation and root insertion.
-    pub(crate) fn add_owned_root<T: Trace>(
+    pub(crate) fn register_weak(&self, slot: &Arc<crate::weak::WeakSlot>) {
+        self.collector.register_weak(slot);
+    }
+
+    /// Retain the descriptor already validated under this same admission.
+    pub(crate) fn add_conditional_root(
         &self,
-        root: &Gc<T>,
+        metadata: &MetadataRef,
         reservation: &mut RootReservation<'_>,
     ) -> crate::roots::Registration {
         let _measurement = self
@@ -186,7 +190,18 @@ impl RootPublication<'_> {
             .diagnostics
             .root_acquire
             .measure(self.collector.diagnostics_enabled());
-        self.collector.commit_owned_root(root, reservation)
+        assert!(
+            reservation.protects(self.collector, metadata.ptr().0),
+            "foreign root reservation"
+        );
+        let registration = self.collector.install_root_registration(reservation);
+        // Both domains clamp strong discovery to their own reference stage.
+        let _retention = TraceRetention::enter(self.collector, Retention::Strong);
+        for index in 0..2 {
+            let _context = Context::enter(self.collector, index);
+            self.collector.shade_known(metadata);
+        }
+        registration
     }
 }
 
@@ -950,10 +965,10 @@ impl GarbageCollector {
     }
 
     pub(crate) fn identity_for_address(&self, address: usize) -> Option<crate::ObjectId> {
-        self.objects
-            .lock(address)
-            .get(&address)
-            .map(|metadata| metadata.id)
+        (address != 0)
+            .then(|| self.objects.lookup(address))
+            .flatten()
+            .map(|m| m.id)
     }
     pub(crate) fn allocation_guard(&self) -> Publication<'_> {
         if let Some(clock) = &self.publication_clock {
@@ -1463,16 +1478,12 @@ impl GarbageCollector {
         address: usize,
         retaining: bool,
         expected: Option<crate::ObjectId>,
-    ) -> Option<(crate::ObjectId, *const T)> {
-        self.objects
-            .lock(address)
-            .get(&address)
-            .filter(|metadata| {
-                metadata.is_type::<T>()
-                    && expected.is_none_or(|id| metadata.id == id)
-                    && self.can_root(metadata, retaining)
-            })
-            .map(|metadata| (metadata.id, metadata.trace.ptr.cast::<T>()))
+    ) -> Option<MetadataRef> {
+        self.objects.lookup(address).filter(|metadata| {
+            metadata.is_type::<T>()
+                && expected.is_none_or(|id| metadata.id == id)
+                && self.can_root(metadata, retaining)
+        })
     }
 
     fn can_root(&self, metadata: &ObjectMetadata, retaining: bool) -> bool {
@@ -1508,11 +1519,21 @@ impl GarbageCollector {
         self.objects.lock(address).get(&address).cloned()
     }
 
-    fn weak_target_is_registered(&self, slot: &crate::weak::WeakSlot, address: usize) -> bool {
+    fn weak_target_metadata(
+        &self,
+        slot: &crate::weak::WeakSlot,
+        address: usize,
+    ) -> Option<MetadataRef> {
+        if address == 0 {
+            return None;
+        }
         self.objects
-            .lock(address)
-            .get(&address)
-            .is_some_and(|metadata| metadata.id == slot.target_identity)
+            .lookup(address)
+            .filter(|metadata| metadata.id == slot.target_identity)
+    }
+
+    fn weak_target_is_registered(&self, slot: &crate::weak::WeakSlot, address: usize) -> bool {
+        self.weak_target_metadata(slot, address).is_some()
     }
 
     pub(crate) fn snapshot_edge(&self, address: usize) {
@@ -2026,8 +2047,7 @@ impl GarbageCollector {
         }
     }
 
-    pub(crate) fn register_weak(&self, slot: &Arc<crate::weak::WeakSlot>) {
-        let _publication = self.allocation_guard();
+    fn register_weak(&self, slot: &Arc<crate::weak::WeakSlot>) {
         let mut slots = lock(&self.weak_slots);
         let id = loop {
             let id = self.next_weak_id.fetch_add(1, Ordering::Relaxed);
@@ -2038,12 +2058,14 @@ impl GarbageCollector {
         slots.insert(id, Arc::downgrade(slot));
         drop(slots);
         let address = slot.target.load(Ordering::Acquire);
-        if self.old_collection_active() && self.weak_target_is_registered(slot, address) {
-            let _context = Context::enter(self, 1);
-            self.shade(address);
-        }
-        if self.is_young_allocation(slot.target.load(Ordering::Acquire)) {
-            lock(&self.young_weak_slots).insert(id, Arc::downgrade(slot));
+        if let Some(metadata) = self.weak_target_metadata(slot, address) {
+            if self.old_collection_active() {
+                let _context = Context::enter(self, 1);
+                self.shade_known(&metadata);
+            }
+            if self.is_young_metadata(&metadata) {
+                lock(&self.young_weak_slots).insert(id, Arc::downgrade(slot));
+            }
         }
     }
 
@@ -2117,12 +2139,7 @@ impl GarbageCollector {
     }
 
     pub(crate) fn weak_is_cleared(&self, slot: &crate::weak::WeakSlot, address: usize) -> bool {
-        let metadata = self
-            .objects
-            .lock(address)
-            .get(&address)
-            .filter(|metadata| metadata.id == slot.target_identity)
-            .cloned();
+        let metadata = self.weak_target_metadata(slot, address);
         let Some(metadata) = metadata else {
             return true;
         };

@@ -845,7 +845,7 @@ impl<T> Gc<T> {
         if !reservation.protects(collector, address_usize) {
             return Err(Error::InvalidPointer("foreign root reservation".into()));
         }
-        let (id, ptr) = collector
+        let metadata = collector
             .resolve_address::<T>(address_usize, retaining, expected)
             .ok_or_else(|| {
                 Error::InvalidPointer(
@@ -854,12 +854,12 @@ impl<T> Gc<T> {
             })?;
         // SAFETY: the matching typed descriptor supplies the original allocation
         // pointer, and publication admission protects it through root installation.
-        let mut gc = unsafe { Self::from_raw(ptr)? };
-        gc.id = id;
+        let mut gc = unsafe { Self::from_raw(metadata.trace.ptr.cast::<T>())? };
+        gc.id = metadata.id;
         let registration = OwnedRoot {
             collector: collector.clone(),
-            id: publication.add_owned_root(&gc, reservation),
-            target: id,
+            id: publication.add_conditional_root(&metadata, reservation),
+            target: metadata.id,
         };
         Ok(PreparedRoot {
             ptr: gc.ptr,

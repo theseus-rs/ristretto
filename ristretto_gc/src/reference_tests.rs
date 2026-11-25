@@ -345,6 +345,60 @@ fn reference_decision_finishes_while_target_shard_is_parked() -> Result<()> {
     Ok(())
 }
 
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn host_weak_registration_clone_and_upgrade_progress_with_parked_object_shard() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for active in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let original = Gc::try_new(&gc, 913_u64)?;
+            if active {
+                gc.collect();
+                assert!((0..128).any(|_| {
+                    gc.step();
+                    gc.domains[1].active() && gc.domains[1].weak_phase() == 0
+                }));
+            }
+            let held = gc.objects.lock(original.as_ptr().addr());
+            let (done, received) = mpsc::channel();
+            let finished = thread::scope(|scope| {
+                let target = &original;
+                let work = scope.spawn(move || {
+                    let weak = GcWeak::new(target, ReferenceKind::Weak, 0);
+                    let copy = weak.clone();
+                    let result = copy.upgrade().expect("strong target still live");
+                    done.send(()).unwrap();
+                    (weak, copy, result)
+                });
+                let finished = received.recv_timeout(Duration::from_secs(2));
+                drop(held);
+                (finished, work.join().unwrap())
+            });
+            let (finished, (weak, copy, result)) = finished;
+            assert!(
+                finished.is_ok(),
+                "weak publication blocked on the object shard"
+            );
+            assert_eq!(result.identity(), original.identity());
+            assert_eq!(*result, 913);
+            drop((original, result));
+            gc.collect_full()?;
+            gc.collect_full()?;
+            assert!(weak.upgrade().is_none() && copy.upgrade().is_none());
+        }
+    }
+    Ok(())
+}
+
 #[test]
 fn direct_trace_during_final_processing_is_immediately_visible() -> Result<()> {
     for counted in [false, true] {
