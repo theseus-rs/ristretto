@@ -2915,38 +2915,53 @@ impl GarbageCollector {
                 self.remove_overflow_root::<ADOPT>(&context.roots, record);
             }
             crate::roots::Registration::Slot(root) => {
-                let publication = self.allocation_guard();
-                let cleanup = if let Some(address) = root.take_address() {
-                    if ADOPT {
-                        crate::construction::retain(self, address);
-                    }
-                    self.barrier(address, false);
-                    root.release()
-                } else {
-                    false
-                };
-                drop(publication);
-                if cleanup && let Some(roots) = self.scanned_slots() {
+                if self.remove_paged_root::<ADOPT>(root)
+                    && let Some(roots) = self.scanned_slots()
+                {
                     roots.finish_removal(root);
                 }
             }
             crate::roots::Registration::Context(context, root) => {
-                let publication = self.allocation_guard();
-                let cleanup = if let Some(address) = root.take_address() {
-                    if ADOPT {
-                        crate::construction::retain(self, address);
-                    }
-                    self.barrier(address, false);
-                    root.release()
-                } else {
-                    false
-                };
-                drop(publication);
-                if cleanup {
+                if self.remove_paged_root::<ADOPT>(root) {
                     context.roots.finish_removal(root);
                 }
             }
         }
+    }
+
+    fn remove_paged_root<const ADOPT: bool>(&self, root: &crate::roots::SlotRoot) -> bool {
+        if !ADOPT
+            && let Some(address) = root.begin_removal()
+            && self.deletion_covered(address)
+            && root.finish_removal()
+        {
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            publication_tests::record_covered_removal();
+            return root.release();
+        }
+        let _publication = self.allocation_guard();
+        if let Some(address) = root.take_address() {
+            if ADOPT {
+                crate::construction::retain(self, address);
+            }
+            self.barrier(address, false);
+            root.release()
+        } else {
+            false
+        }
+    }
+
+    /// The exact removal intent must already be visible to every root scanner.
+    fn deletion_covered(&self, address: usize) -> bool {
+        let observation = self.phase_clock.indexed_root();
+        let covered = matches!(observation, publication_state::Birth::Idle)
+            || self
+                .objects
+                .lookup(address)
+                .is_some_and(|m| self.typed_root_covered(observation, &m));
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        publication_tests::pause_after_drop_coverage();
+        covered
     }
 
     fn remove_overflow_root<const ADOPT: bool>(
@@ -2954,23 +2969,15 @@ impl GarbageCollector {
         roots: &crate::roots::RootSlots,
         record: &Arc<crate::roots::Record>,
     ) {
-        if !ADOPT && let Some(address) = record.begin_typed_removal() {
-            // Install the intent before the clock sample. A later root scan must
-            // veto the intent to return the address. No other writer can rearm it.
-            let observation = self.phase_clock.indexed_root();
-            let covered = matches!(observation, publication_state::Birth::Idle)
-                || self
-                    .objects
-                    .lookup(address)
-                    .is_some_and(|m| self.typed_root_covered(observation, &m));
+        if !ADOPT
+            && let Some(address) = record.begin_typed_removal()
+            && self.deletion_covered(address)
+            && record.finish_typed_removal()
+        {
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
-            publication_tests::pause_after_drop_coverage();
-            if covered && record.finish_typed_removal() {
-                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
-                publication_tests::record_covered_removal();
-                roots.finish_overflow(record);
-                return;
-            }
+            publication_tests::record_covered_removal();
+            roots.finish_overflow(record);
+            return;
         }
         let publication = self.allocation_guard();
         if let Some(address) = record.take_address() {

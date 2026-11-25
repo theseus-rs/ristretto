@@ -311,6 +311,16 @@ impl SlotRoot {
     }
 
     #[expect(clippy::indexing_slicing, reason = "private slot index is bounded")]
+    pub(crate) fn begin_removal(&self) -> Option<usize> {
+        self.page.slots[self.slot()].begin_removal(self.slot_and_generation.get() >> SLOT_BITS)
+    }
+
+    #[expect(clippy::indexing_slicing, reason = "private slot index is bounded")]
+    pub(crate) fn finish_removal(&self) -> bool {
+        self.page.slots[self.slot()].finish_removal(self.slot_and_generation.get() >> SLOT_BITS)
+    }
+
+    #[expect(clippy::indexing_slicing, reason = "private slot index is bounded")]
     pub(crate) fn take_address(&self) -> Option<usize> {
         self.page.slots[self.slot()].take(self.slot_and_generation.get() >> SLOT_BITS)
     }
@@ -721,8 +731,11 @@ impl RootSlots {
             let remaining = page.occupied.load(Ordering::Acquire) & mask;
             if remaining != 0 {
                 let slot = remaining.trailing_zeros() as usize;
+                let Some(address) = page.slots[slot].scan() else {
+                    cursor.slot = slot;
+                    return Scan::Advance;
+                };
                 cursor.slot = slot + 1;
-                let address = scan_address(&page.slots[slot].address);
                 // A concurrent removal can clear the address after the bitmap
                 // read. Its deletion barrier preserves the active snapshot.
                 return if address == 0 {
