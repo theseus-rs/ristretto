@@ -5,7 +5,6 @@ use crate::work::{MarkItem, MarkQueues};
 use crate::{Finalize, Gc, GcRootGuard, Result};
 use portable_atomic::AtomicU64;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
-use std::ops::Bound::{Excluded, Unbounded};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex, RwLock, Weak};
 #[cfg(not(target_family = "wasm"))]
@@ -790,8 +789,7 @@ pub struct GarbageCollector {
     edge_certificate_pause: Mutex<Option<ClaimPause>>,
     relocation_claims: Option<Box<RwLock<()>>>,
     next_domain: AtomicUsize,
-    weak_slots: Mutex<BTreeMap<usize, Weak<crate::weak::WeakSlot>>>,
-    young_weak_slots: Mutex<BTreeMap<usize, Weak<crate::weak::WeakSlot>>>,
+    weak_slots: crate::weak_registry::WeakRegistry,
     next_weak_id: AtomicUsize,
     pending_references: Mutex<VecDeque<(crate::ObjectId, crate::roots::TreeRoot)>>,
     pending_notify: AtomicBool,
@@ -1699,8 +1697,7 @@ impl GarbageCollector {
                 #[cfg(test)]
                 barrier_prepare_pause: Mutex::new(None),
                 next_domain: AtomicUsize::new(0),
-                weak_slots: Mutex::new(BTreeMap::new()),
-                young_weak_slots: Mutex::new(BTreeMap::new()),
+                weak_slots: crate::weak_registry::WeakRegistry::default(),
                 next_weak_id: AtomicUsize::new(1),
                 pending_references: Mutex::new(VecDeque::new()),
                 pending_notify: AtomicBool::new(false),
@@ -2048,24 +2045,15 @@ impl GarbageCollector {
     }
 
     fn register_weak(&self, slot: &Arc<crate::weak::WeakSlot>) {
-        let mut slots = lock(&self.weak_slots);
-        let id = loop {
-            let id = self.next_weak_id.fetch_add(1, Ordering::Relaxed);
-            if id != 0 && !slots.contains_key(&id) {
-                break id;
-            }
-        };
-        slots.insert(id, Arc::downgrade(slot));
-        drop(slots);
         let address = slot.target.load(Ordering::Acquire);
-        if let Some(metadata) = self.weak_target_metadata(slot, address) {
-            if self.old_collection_active() {
-                let _context = Context::enter(self, 1);
-                self.shade_known(&metadata);
-            }
-            if self.is_young_metadata(&metadata) {
-                lock(&self.young_weak_slots).insert(id, Arc::downgrade(slot));
-            }
+        let metadata = self.weak_target_metadata(slot, address);
+        let young = metadata.as_ref().is_some_and(|m| self.is_young_metadata(m));
+        self.weak_slots.insert(&self.next_weak_id, slot, young);
+        if self.old_collection_active()
+            && let Some(metadata) = metadata
+        {
+            let _context = Context::enter(self, 1);
+            self.shade_known(&metadata);
         }
     }
 

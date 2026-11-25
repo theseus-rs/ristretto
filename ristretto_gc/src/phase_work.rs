@@ -1,7 +1,7 @@
 //! Bounded per-domain work; only global phase transitions need the coordinator.
 use super::{
-    CollectionKind, Context, Cycle, Excluded, GarbageCollector, MetadataRef, Ordering, Phase,
-    ReclaimTask, TraceRetention, Unbounded, WorkCounters, lock, now,
+    CollectionKind, Context, Cycle, GarbageCollector, MetadataRef, Ordering, Phase, ReclaimTask,
+    TraceRetention, WorkCounters, now,
 };
 
 type WhiteRun<'a> = (
@@ -275,13 +275,9 @@ impl GarbageCollector {
                 }
             },
             Phase::ResetReferences => {
-                let next = lock(&self.weak_slots)
-                    .range((Excluded(cycle.cursor), Unbounded))
-                    .next()
-                    .map(|(id, slot)| (*id, slot.upgrade()));
-                if let Some((id, slot)) = next {
+                if let Some((id, entry)) = self.weak_slots.next(false, cycle.cursor) {
                     cycle.cursor = id;
-                    if let Some(slot) = slot {
+                    if let Some(slot) = entry.upgrade() {
                         slot.birth_stamp(index).store(0, Ordering::Release);
                     }
                 } else {
@@ -415,22 +411,13 @@ impl GarbageCollector {
             return Unit::Busy;
         }
         let index = self.domain_index();
-        let slots = if cycle.kind == CollectionKind::Young {
-            &self.young_weak_slots
-        } else {
-            &self.weak_slots
-        };
-        let next = lock(slots)
-            .range((Excluded(cycle.cursor), Unbounded))
-            .next()
-            .map(|(id, slot)| (*id, slot.upgrade()));
-        let Some((id, slot)) = next else {
+        let young = cycle.kind == CollectionKind::Young;
+        let Some((id, entry)) = self.weak_slots.next(young, cycle.cursor) else {
             return Unit::Boundary;
         };
-        let Some(slot) = slot else {
+        let Some(slot) = entry.upgrade() else {
             cycle.cursor = id;
-            lock(&self.weak_slots).remove(&id);
-            lock(&self.young_weak_slots).remove(&id);
+            self.weak_slots.prune(id, &entry, false);
             return Unit::Progress;
         };
         if slot.unpublished_owners.load(Ordering::Acquire) != 0 {
@@ -456,8 +443,7 @@ impl GarbageCollector {
         let address = slot.target.load(Ordering::Acquire);
         let pending = slot.pending.load(Ordering::Acquire);
         if address == 0 && !pending {
-            lock(&self.young_weak_slots).remove(&id);
-            lock(&self.weak_slots).remove(&id);
+            self.weak_slots.prune(id, &entry, false);
             return Unit::Progress;
         }
         // Reading an owning descriptor grants no access to its payload. A
@@ -468,7 +454,7 @@ impl GarbageCollector {
             .lookup(address)
             .filter(|m| m.id == slot.target_identity);
         if !pending && target.as_ref().is_none_or(|m| !self.is_young_metadata(m)) {
-            lock(&self.young_weak_slots).remove(&id);
+            self.weak_slots.prune(id, &entry, true);
         }
         let owner = slot.owner.load(Ordering::Acquire);
         if cycle.reference_stage == 4 {

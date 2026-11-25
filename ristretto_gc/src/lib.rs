@@ -78,6 +78,7 @@ pub mod service_recorder;
 pub mod sync;
 mod trace_owner;
 mod weak;
+mod weak_registry;
 mod work;
 
 pub use buffer::HeapBuffer;

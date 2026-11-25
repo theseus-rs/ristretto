@@ -5,8 +5,8 @@
 //! conditional referents as snapshot roots. It never processes reference slots or
 //! completes a full-collection ticket. New young allocations remain collectible.
 use super::{
-    Context, Cycle, Excluded, GarbageCollector, MetadataRef, ObjectMetadata, Ordering, Phase,
-    Retention, TraceProgress, TraceRetention, Unbounded, lock,
+    Context, Cycle, GarbageCollector, MetadataRef, ObjectMetadata, Ordering, Phase, Retention,
+    TraceProgress, TraceRetention,
 };
 
 impl GarbageCollector {
@@ -139,11 +139,7 @@ impl GarbageCollector {
     /// the same old root under admission, so enumeration may safely finish.
     pub(super) fn old_reference_root_unit(&self, cycle: &mut Cycle) {
         let _admission = self.allocation_guard();
-        let next = lock(&self.weak_slots)
-            .range((Excluded(cycle.cursor), Unbounded))
-            .next()
-            .map(|(id, slot)| (*id, slot.upgrade()));
-        let Some((id, slot)) = next else {
+        let Some((id, entry)) = self.weak_slots.next(false, cycle.cursor) else {
             cycle.cursor = 0;
             cycle.phase = if self.configuration.root_storage == crate::RootStorage::Contexts
                 || self.configuration.local_allocation_buffers
@@ -156,7 +152,7 @@ impl GarbageCollector {
             };
             return;
         };
-        if let Some(slot) = slot {
+        if let Some(slot) = entry.upgrade() {
             let Some(_decision) = slot.try_decision() else {
                 return;
             };
