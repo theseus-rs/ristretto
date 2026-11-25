@@ -703,7 +703,7 @@ pub struct GarbageCollector {
     pacing: Option<crate::pacing::Controller>,
     pub(crate) diagnostics: Arc<crate::diagnostics::Counters>,
     pub(crate) recovery: crate::recovery::Recovery,
-    roots: Mutex<crate::roots::TreeRoots>,
+    roots: crate::roots::TreeRoots,
     #[cfg(test)]
     tree_root_insert_probe: Mutex<Option<fn(&GarbageCollector)>>,
     pub(crate) contexts: crate::context::Registry,
@@ -1632,7 +1632,7 @@ impl GarbageCollector {
                 leaves_marked_at_birth: AtomicUsize::new(0),
                 diagnostics: Arc::new(crate::diagnostics::Counters::default()),
                 recovery: crate::recovery::Recovery::default(),
-                roots: Mutex::new(crate::roots::TreeRoots::default()),
+                roots: crate::roots::TreeRoots::default(),
                 #[cfg(test)]
                 tree_root_insert_probe: Mutex::new(None),
                 contexts: crate::context::Registry::default(),
@@ -2791,7 +2791,7 @@ impl GarbageCollector {
             crate::roots::RootSlots::statistics,
         );
         result.merge(self.contexts.statistics().1);
-        result.compatibility_roots = lock(&self.roots).len();
+        result.compatibility_roots = self.roots.len();
         result
     }
 
@@ -3007,11 +3007,10 @@ impl GarbageCollector {
                 .root_registrations
                 .fetch_add(1, Ordering::Relaxed);
         }
-        let mut roots = lock(&self.roots);
         if owned {
-            roots.insert(&self.next_root_id, address)
+            self.roots.insert(&self.next_root_id, address)
         } else {
-            roots.insert_manual(&self.next_root_id, address)
+            self.roots.insert_manual(&self.next_root_id, address)
         }
     }
 
@@ -3089,7 +3088,7 @@ impl GarbageCollector {
         generation: Option<std::num::NonZeroU64>,
     ) {
         let _publication = self.allocation_guard();
-        let removed = lock(&self.roots).remove(id, generation);
+        let removed = self.roots.remove(id, generation);
         if let Some(address) = removed {
             if ADOPT {
                 crate::construction::retain(self, address);
@@ -3142,7 +3141,7 @@ impl GarbageCollector {
                 self.remove_owned_root(&crate::roots::Registration::Context(context.clone(), id));
             }
         });
-        let ids = lock(&self.roots).matching(ptr as usize);
+        let ids = self.roots.matching(ptr as usize);
         for id in ids {
             self.remove_tree_root(id);
         }
@@ -6514,3 +6513,7 @@ mod initial_root_tests;
 #[cfg(test)]
 #[path = "private_allocation_tests.rs"]
 mod private_allocation_tests;
+
+#[cfg(test)]
+#[path = "tree_root_progress_tests.rs"]
+mod tree_root_progress_tests;

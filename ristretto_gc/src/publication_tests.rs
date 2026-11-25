@@ -186,16 +186,22 @@ fn a_revoked_tree_guard_cannot_remove_a_registration_after_numeric_id_wrap() -> 
                 .build(),
         );
         let original = Gc::try_new(&gc, 7_u64)?;
-        let revoked = gc.next_root_id.load(Ordering::Relaxed) - 1;
+        let revoked = gc.roots.matching(original.as_ptr().addr())[0];
+        let padding = Gc::try_new(&gc, 99_u64)?;
         // SAFETY: no collection runs before the replacement registration below;
         // the stale guard is subsequently dropped without accessing its payload.
         unsafe { gc.remove_root(&**original) };
         // No collection occurs while this allocation is temporarily unrooted.
         // Crossing usize::MAX reproduces the same wrap on native and wasm32.
         gc.next_root_id.store(usize::MAX, Ordering::Relaxed);
-        let padding = Gc::try_new(&gc, 99_u64)?;
+        let manual = gc.add_root(&padding);
+        assert_eq!(manual, usize::MAX);
+        assert_eq!(gc.next_root_id.load(Ordering::Relaxed), 0);
+        gc.remove_root_by_id(manual);
         let replacement = gc.create_root_guard(original.clone_gc());
-        assert_eq!(gc.next_root_id.load(Ordering::Relaxed), revoked + 1);
+        let reused = gc.roots.matching(original.as_ptr().addr())[0];
+        assert_eq!(reused.id, revoked.id);
+        assert_ne!(reused.generation, revoked.generation);
         drop(original);
         assert_eq!(
             gc.root_statistics().compatibility_roots,

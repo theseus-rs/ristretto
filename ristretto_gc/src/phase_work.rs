@@ -297,22 +297,19 @@ impl GarbageCollector {
                     Some(crate::roots::Scan::Done) | None => cycle.phase = Phase::Roots,
                 }
             }
-            Phase::Roots => {
-                let Some(roots) = super::try_lock(&self.roots) else {
-                    return false;
-                };
-                let next = roots.next(cycle.cursor);
-                drop(roots);
-                if let Some((id, address)) = next {
+            Phase::Roots => match self.roots.scan(cycle.cursor) {
+                crate::roots::TreeScan::Root(id, address) => {
                     if self.try_shade(address).is_none() {
                         return false;
                     }
                     cycle.cursor = id;
-                } else {
+                }
+                crate::roots::TreeScan::Advance(id) => cycle.cursor = id,
+                crate::roots::TreeScan::Done => {
                     cycle.cursor = 0;
                     cycle.phase = Phase::CrossRoots;
                 }
-            }
+            },
             Phase::CrossRoots => {
                 let other = self.domain_at(1 - index);
                 let next = if other.active() && cycle.kind != CollectionKind::Old {

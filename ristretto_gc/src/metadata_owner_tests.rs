@@ -48,7 +48,6 @@ fn callback_locks_available(collector: &Weak<GarbageCollector>) -> bool {
     };
     // The fixture fixes metadata_shards=1; this probes every configured bucket.
     gc.objects.try_lock_bucket(0).is_some()
-        && gc.roots.try_lock().is_ok()
         && gc
             .domains
             .iter()
