@@ -391,6 +391,33 @@ mod tests {
     }
 
     #[test]
+    fn small_page_reuses_high_words_and_refunds_the_entire_page() {
+        let budget = crate::region::Budget::new(4096);
+        let pool = SmallAllocations::new(budget.clone());
+        let layout = Layout::new::<u64>();
+        let mut slots: Vec<_> = (0..512)
+            .map(|_| Some(pool.allocate(layout).expect("multiword slot")))
+            .collect();
+        assert!(pool.allocate(layout).is_none());
+        for index in [63, 64, 127, 511] {
+            let slot = slots.get_mut(index).expect("known slot");
+            let owner = slot.take().expect("occupied");
+            let address = owner.ptr::<u64>();
+            drop(owner);
+            let replacement = pool.allocate(layout).expect("only free slot");
+            assert_eq!(replacement.ptr::<u64>(), address);
+            *slot = Some(replacement);
+        }
+        let cached = pool.pages[0].lock().unwrap().clone();
+        let last = slots.pop().unwrap();
+        drop(slots);
+        assert!(budget.reserve(4096, false).is_err());
+        drop(last);
+        assert!(cached.upgrade().is_none());
+        assert!(budget.reserve(4096, false).is_ok());
+    }
+
+    #[test]
     fn small_page_busy_cache_does_not_block_exact_allocation_fallback() {
         let pool = SmallAllocations::new(crate::region::Budget::new(512));
         let layout = Layout::new::<u64>();
