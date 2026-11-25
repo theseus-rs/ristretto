@@ -1,5 +1,5 @@
 use super::Error;
-use super::objects::array_kind;
+use super::objects::{LinkedMembers, array_kind};
 use super::primitive_array::Kind;
 use super::reference_array::Component;
 use super::statics::StaticLayout;
@@ -71,7 +71,7 @@ pub(super) struct Layout {
     fields: HashMap<(JavaString, JavaString), Field>,
     pub(super) references: usize,
     pub(super) statics: StaticLayout,
-    pub(super) casts: HashMap<u16, ReferenceType>,
+    pub(super) linked: LinkedMembers,
 }
 
 impl Layout {
@@ -128,7 +128,7 @@ impl Layout {
         Ok(Self {
             class,
             fields,
-            casts: HashMap::new(),
+            linked: LinkedMembers::default(),
             references,
             statics,
         })
