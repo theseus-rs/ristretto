@@ -349,6 +349,30 @@ impl MarkQueues {
         }
     }
 
+    /// The iterator changes mark state only after the whole batch can be
+    /// appended. A failed try-lock or capacity check leaves every edge untouched.
+    pub(crate) fn try_append_fresh<'a>(
+        &self,
+        local: usize,
+        limit: usize,
+        edges: impl Iterator<Item = &'a MetadataRef>,
+    ) -> bool {
+        let local = local % self.queues.len();
+        let Ok(mut queue) = self.queues[local].queue.try_lock() else {
+            return false;
+        };
+        if local != 0 && queue.len().saturating_add(limit) > LOCAL_LIMIT {
+            return false;
+        }
+        for metadata in edges {
+            queue.push_fresh(metadata.clone());
+        }
+        self.queues[local]
+            .queued
+            .store(queue.len(), Ordering::Release);
+        true
+    }
+
     fn try_push_any(&self, local: usize, item: MarkItem) -> Result<(), MarkItem> {
         let local = local % self.queues.len();
         let mut item = match self.try_push(local, item) {

@@ -1032,6 +1032,20 @@ unsafe impl<T: Trace> Trace for Gc<T> {
             self.root();
         }
     }
+    fn trace_slice(items: &[Self], collector: &GarbageCollector) {
+        for group in items.chunks(8) {
+            let descriptors = group.iter().map(|item| match &item.owner {
+                Owner::Traced(metadata) => Some(metadata),
+                _ => None,
+            });
+            if !collector.try_mark_mature_slice(group.len(), descriptors) {
+                for item in group {
+                    item.trace(collector);
+                }
+            }
+        }
+    }
+
     fn trace(&self, collector: &GarbageCollector) {
         if let Owner::Traced(metadata) = &self.owner {
             collector.mark_traced_edge(metadata);

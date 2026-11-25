@@ -222,13 +222,17 @@ thread_local! {
     static CONTEXT: std::cell::Cell<Option<(usize, usize)>> = const { std::cell::Cell::new(None) };
     static WORKER: std::cell::Cell<Option<(usize, usize)>> = const { std::cell::Cell::new(None) };
     static SCAN_YOUNG: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
-    static TRACE_RETENTION: std::cell::Cell<Option<(usize, Retention)>> = const { std::cell::Cell::new(None) };
+    static TRACE_RETENTION: std::cell::Cell<Option<(usize, Retention, bool)>> = const { std::cell::Cell::new(None) };
 }
 
-struct TraceRetention(Option<(usize, Retention)>);
+struct TraceRetention(Option<(usize, Retention, bool)>);
 impl TraceRetention {
     fn enter(gc: &GarbageCollector, strength: Retention) -> Self {
-        Self(TRACE_RETENTION.replace(Some((std::ptr::from_ref(gc) as usize, strength))))
+        Self(TRACE_RETENTION.replace(Some((std::ptr::from_ref(gc) as usize, strength, false))))
+    }
+
+    fn callback(gc: &GarbageCollector, strength: Retention) -> Self {
+        Self(TRACE_RETENTION.replace(Some((std::ptr::from_ref(gc) as usize, strength, true))))
     }
 }
 impl Drop for TraceRetention {
@@ -495,6 +499,17 @@ pub unsafe trait Trace {
 
     /// Visit outgoing references using `Gc::trace`.
     fn trace(&self, collector: &GarbageCollector);
+
+    /// Visits consecutive elements, with the same edge and retention obligations
+    /// as calling each element's trace hook in order.
+    fn trace_slice(items: &[Self], collector: &GarbageCollector)
+    where
+        Self: Sized,
+    {
+        for item in items {
+            item.trace(collector);
+        }
+    }
 
     /// Visit a bounded part of an object. Custom implementations default to one whole scan.
     fn trace_step(
@@ -2997,8 +3012,8 @@ impl GarbageCollector {
     fn trace_retention(&self) -> Retention {
         let inherited = TRACE_RETENTION
             .get()
-            .filter(|(gc, _)| *gc == std::ptr::from_ref(self) as usize)
-            .map_or(Retention::Strong, |(_, strength)| strength);
+            .filter(|(gc, _, _)| *gc == std::ptr::from_ref(self) as usize)
+            .map_or(Retention::Strong, |(_, strength, _)| strength);
         inherited.max(Retention::at_phase(self.domain().weak_phase()))
     }
 
@@ -3642,6 +3657,43 @@ impl GarbageCollector {
         if std::ptr::eq(metadata.collector.as_ptr(), self) && metadata.birth.is_live() {
             self.shade_known(metadata);
         }
+    }
+
+    /// Called only with a bounded slice of exact handles. A reserved full scan
+    /// pins its epoch. Mature targets have no young-domain marking obligation.
+    pub(crate) fn try_mark_mature_slice<'a>(
+        &self,
+        count: usize,
+        edges: impl Iterator<Item = Option<&'a MetadataRef>> + Clone,
+    ) -> bool {
+        let Some((owner, retention, true)) = TRACE_RETENTION.get() else {
+            return false;
+        };
+        if owner != std::ptr::from_ref(self) as usize || self.domain_index() != 1 {
+            return false;
+        }
+        let full = &self.domains[1];
+        let phase = full.weak_phase();
+        if phase >= 5 || !full.active() {
+            return false;
+        }
+        let mature = self.configuration.promotion_age.max(1);
+        if !edges.clone().all(|entry| {
+            entry.is_some_and(|m| {
+                std::ptr::eq(m.collector.as_ptr(), self) && m.age.load(Ordering::Acquire) >= mature
+            })
+        }) {
+            return false;
+        }
+        let epoch = full.epoch.load(Ordering::Acquire);
+        let strength = retention.max(Retention::at_phase(phase));
+        full.mark_queue.try_append_fresh(
+            self.local_queue(),
+            count,
+            edges
+                .flatten()
+                .filter(|m| m.birth.is_live() && m.mark(1, epoch, strength)),
+        )
     }
 
     pub(crate) fn mark_object(&self, ptr: SafePtr) {
@@ -4326,7 +4378,7 @@ impl GarbageCollector {
                 continue;
             }
             SCAN_YOUNG.set(task.has_young);
-            let _retention = TraceRetention::enter(self, task.retention);
+            let _retention = TraceRetention::callback(self, task.retention);
             task.progress =
                 ObjectMetadata::trace_step(&task.metadata, self, task.offset, task.budget);
             task.has_young = SCAN_YOUNG.get();
@@ -5211,9 +5263,7 @@ unsafe impl<T: Trace> Trace for Vec<T> {
         }
         let end = offset.saturating_add(budget.max(1)).min(self.len());
         if let Some(items) = self.get(offset..end) {
-            for item in items {
-                item.trace(collector);
-            }
+            T::trace_slice(items, collector);
         }
         if end == self.len() {
             TraceProgress::Complete
