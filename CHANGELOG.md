@@ -7,6 +7,295 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_javac` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.35.0...ristretto_javac-v0.36.0) - 2026-11-25
+
+### Other
+- upgrade to Rust 1.100.0
+
+## `ristretto_java` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/v0.35.0...v0.36.0) - 2026-11-25
+
+### Added
+- suspend primitive array operations into host requests
+- register certified GC payloads behind typed canonical roots
+- suspend static field access for native class initialization
+- suspend checked casts through the owning runtime
+- suspend reference array allocation and access requests
+- admit numeric ldc constants in request-only methods
+- suspend object allocation and instance field requests
+- suspend native callers for typed invocation requests
+- publish live roots for resumable reference frames
+- add opt-in resumable scalar activations
+- drive native class initialization on shared canonical heaps
+- execute native checked casts with owning reference results
+- execute native reference-array requests with owning handoff
+- execute native primitive-array requests with typed roots
+- run the graph oracle through the native compiled tier
+- execute canonical object and field requests in native frames
+- drive canonical native calls with bounded activation frames
+- publish managed roots when native activations suspend
+- retain independently owned roots in bounded frame tables
+- validate and execute checked casts on graph references
+- own reference array pages and checked element edges
+- calculate bounded reference-array page layouts
+- execute primitive arrays and conversions on the managed heap
+- implement bounded primitive array storage
+- initialize canonical classes with heap-scoped owner handoff
+- retain canonical static fields on their Java heap
+- reuse canonical heaps across independent Java entries
+- run the Java object-cycle oracle with bounded calls
+- retain independent roots for Java instance edges
+- construct and access Java instances on the incremental heap
+- admit bounded integer instance layouts
+- execute typed primitive conversions and wide locals
+- run bounded integer loops in restricted scalar entries
+- verify closed classes before restricted scalar execution
+
+### Fixed
+- require explicit member access verification
+- restrict type-checking fallback to class file version 50
+- preserve Java type identity during bytecode verification
+- preserve live heap usage across garbage collections
+- unwrap LazyInitializingVarHandle for static field access
+- provide GC collection counters for GarbageCollectorMXBean
+- provide conservative memory usage for MemoryMXBean
+- exercise JIT stack limits on Windows and under emulation
+- preserve Java reference categories through control flow
+- discover reachable blocks with a worklist
+- check backend frame size before native entry
+- keep distinct SSA locals for reused Java slots
+- validate arguments before entering generated code
+- *(jit)* narrow integer returns by method descriptor
+- *(jit)* saturate Java floating-point integer conversions
+- reject native initialization before its driver is connected
+- preserve Java initialization failures from array and cast faults
+- bound recursive Java calls without growing the executor stack
+- reject scalar-only instructions at owning call boundaries
+- use a supported Java 8 stack size on Apple Silicon
+
+### Other
+- upgrade to Rust 1.100.0
+- expose the incremental canonical graph runtime and cycle reclamation
+- acquire independently rooted canonical children
+- replace canonical graph edges with coupled barriers
+- construct bounded canonical source-edge inventories incrementally
+- name JIT and GC constants and separate function definitions
+- incrementally reclaim unrooted canonical leaves
+- connect bounded edge requests and stable source reads
+- charge bounded edge creation ownership and inventory
+- traverse complete source ranges before ticket acknowledgement
+- preserve exact-generation strong edge transactions
+- couple paired target and edge effects before certification
+- add exact edge inventory backing and fixed source geometry
+- expose bounded root maintenance requests
+- dispatch guarded phase commands through bounded participants
+- preserve root barriers and bounded scan custody
+- couple guarded tracing work and phase transitions
+- retain the rooted allocation transaction in one participant
+- bound root token admission and participant custody
+- couple root visibility to object publication (C08 prerequisite)
+- reserve unique canonical root backing (C08 prerequisite)
+- keep object request custody through cancellation (C07b)
+- finish selected object publication through helpers (C07a)
+- retain immutable catalog publication proposals (C07 prerequisite)
+- retain resumable private record creation (C07 prerequisite)
+- bound canonical participants and reserve backing budgets (C06)
+- require an opt-in typed certificate for canonical payloads
+- reserve typed canonical catalog backing (C06 prerequisite)
+- add retained catalog links and expiring vacancy hints (C06 prerequisite)
+- own private payload storage through publication or cancellation
+- add checked catalog phase and trace values (C06 prerequisite)
+- conditionally replace retained pool links (C05)
+- reserve managed payload credit before allocation
+- add generation-checked canonical slot pool (C04)
+- Merge branch 'main' into fix-lazy-initializing-var-handle
+- Merge pull request #1049 from icefery/fix/gc-collection-counters
+- Merge pull request #1051 from theseus-rs/fix-memory-usage-live-accounting
+- Merge pull request #1045 from theseus-rs/fix-verifier-member-access-checks
+- Merge pull request #1043 from theseus-rs/fix-verifier-java-type-identity
+- reduce MethodHandle and VarHandle dispatch overhead
+- match helper probe bytecode-offset arguments
+- sample bounded native and WASI heaps alongside G1 and ZGC
+- replay typed initializer failures through native contexts
+- verify compiled scalar conversion and narrow return boundaries
+- retain array types through persistent static references
+- prelink immutable Java allocation, field and call targets
+- retain a Java reference returned after unlinking its edge
+- capture paired finite G1 and ZGC ring samples
+- add a reproducible Java object-cycle oracle
+
+## `ristretto_resolver` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_resolver-v0.35.0...ristretto_resolver-v0.36.0) - 2026-11-25
+
+### Other
+- upgrade to Rust 1.100.0
+
+## `ristretto_vm` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.35.0...ristretto_vm-v0.36.0) - 2026-11-25
+
+### Added
+- drive native class initialization on shared canonical heaps
+- execute native checked casts with owning reference results
+- execute native reference-array requests with owning handoff
+- execute native primitive-array requests with typed roots
+- run the graph oracle through the native compiled tier
+- execute canonical object and field requests in native frames
+- drive canonical native calls with bounded activation frames
+- publish managed roots when native activations suspend
+- retain independently owned roots in bounded frame tables
+- validate and execute checked casts on graph references
+- own reference array pages and checked element edges
+- calculate bounded reference-array page layouts
+- execute primitive arrays and conversions on the managed heap
+- implement bounded primitive array storage
+- initialize canonical classes with heap-scoped owner handoff
+- retain canonical static fields on their Java heap
+- reuse canonical heaps across independent Java entries
+- run the Java object-cycle oracle with bounded calls
+- retain independent roots for Java instance edges
+- construct and access Java instances on the incremental heap
+- suspend primitive array operations into host requests
+- admit bounded integer instance layouts
+- execute typed primitive conversions and wide locals
+- run bounded integer loops in restricted scalar entries
+- verify closed classes before restricted scalar execution
+
+### Fixed
+- reject native initialization before its driver is connected
+- preserve Java initialization failures from array and cast faults
+- bound recursive Java calls without growing the executor stack
+- reject scalar-only instructions at owning call boundaries
+- use a supported Java 8 stack size on Apple Silicon
+- require explicit member access verification
+- preserve Java type identity during bytecode verification
+
+### Other
+- sample bounded native and WASI heaps alongside G1 and ZGC
+- replay typed initializer failures through native contexts
+- verify compiled scalar conversion and narrow return boundaries
+- retain array types through persistent static references
+- prelink immutable Java allocation, field and call targets
+- retain a Java reference returned after unlinking its edge
+- upgrade to Rust 1.100.0
+- capture paired finite G1 and ZGC ring samples
+- add a reproducible Java object-cycle oracle
+
+## `ristretto_intrinsics` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.35.0...ristretto_intrinsics-v0.36.0) - 2026-11-25
+
+### Fixed
+- unwrap LazyInitializingVarHandle for static field access
+- preserve live heap usage across garbage collections
+- require explicit member access verification
+- provide GC collection counters for GarbageCollectorMXBean
+- provide conservative memory usage for MemoryMXBean
+- preserve Java type identity during bytecode verification
+
+### Other
+- Merge branch 'main' into fix-lazy-initializing-var-handle
+- upgrade to Rust 1.100.0
+- Merge pull request #1049 from icefery/fix/gc-collection-counters
+- Merge pull request #1051 from theseus-rs/fix-memory-usage-live-accounting
+- Merge pull request #1045 from theseus-rs/fix-verifier-member-access-checks
+- Merge pull request #1043 from theseus-rs/fix-verifier-java-type-identity
+- reduce MethodHandle and VarHandle dispatch overhead
+
+## `ristretto_types` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.35.0...ristretto_types-v0.36.0) - 2026-11-25
+
+### Fixed
+- preserve Java type identity during bytecode verification
+
+### Other
+- upgrade to Rust 1.100.0
+
+## `ristretto_jit` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.35.0...ristretto_jit-v0.36.0) - 2026-11-25
+
+### Added
+- suspend static field access for native class initialization
+- suspend checked casts through the owning runtime
+- suspend reference array allocation and access requests
+- suspend primitive array operations into host requests
+- admit numeric ldc constants in request-only methods
+- suspend object allocation and instance field requests
+- suspend native callers for typed invocation requests
+- publish live roots for resumable reference frames
+- add opt-in resumable scalar activations
+
+### Fixed
+- exercise JIT stack limits on Windows and under emulation
+- preserve Java reference categories through control flow
+- discover reachable blocks with a worklist
+- check backend frame size before native entry
+- keep distinct SSA locals for reused Java slots
+- validate arguments before entering generated code
+- *(jit)* narrow integer returns by method descriptor
+- *(jit)* saturate Java floating-point integer conversions
+
+### Other
+- name JIT and GC constants and separate function definitions
+- match helper probe bytecode-offset arguments
+
+## `ristretto_macros` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.35.0...ristretto_macros-v0.36.0) - 2026-11-25
+
+### Fixed
+- preserve Java type identity during bytecode verification
+
+## `ristretto_classloader` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.35.0...ristretto_classloader-v0.36.0) - 2026-11-25
+
+### Fixed
+- require explicit member access verification
+
+## `ristretto_gc` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.35.0...ristretto_gc-v0.36.0) - 2026-11-25
+
+### Added
+- suspend primitive array operations into host requests
+- register certified GC payloads behind typed canonical roots
+
+### Fixed
+- preserve live heap usage across garbage collections
+
+### Other
+- expose the incremental canonical graph runtime and cycle reclamation
+- acquire independently rooted canonical children
+- replace canonical graph edges with coupled barriers
+- construct bounded canonical source-edge inventories incrementally
+- name JIT and GC constants and separate function definitions
+- incrementally reclaim unrooted canonical leaves
+- connect bounded edge requests and stable source reads
+- charge bounded edge creation ownership and inventory
+- traverse complete source ranges before ticket acknowledgement
+- preserve exact-generation strong edge transactions
+- couple paired target and edge effects before certification
+- add exact edge inventory backing and fixed source geometry
+- expose bounded root maintenance requests
+- dispatch guarded phase commands through bounded participants
+- preserve root barriers and bounded scan custody
+- couple guarded tracing work and phase transitions
+- retain the rooted allocation transaction in one participant
+- bound root token admission and participant custody
+- couple root visibility to object publication (C08 prerequisite)
+- reserve unique canonical root backing (C08 prerequisite)
+- keep object request custody through cancellation (C07b)
+- finish selected object publication through helpers (C07a)
+- retain immutable catalog publication proposals (C07 prerequisite)
+- retain resumable private record creation (C07 prerequisite)
+- bound canonical participants and reserve backing budgets (C06)
+- require an opt-in typed certificate for canonical payloads
+- reserve typed canonical catalog backing (C06 prerequisite)
+- add retained catalog links and expiring vacancy hints (C06 prerequisite)
+- upgrade to Rust 1.100.0
+- own private payload storage through publication or cancellation
+- add checked catalog phase and trace values (C06 prerequisite)
+- conditionally replace retained pool links (C05)
+- reserve managed payload credit before allocation
+- add generation-checked canonical slot pool (C04)
+
+## `ristretto_classfile` - [0.36.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.35.0...ristretto_classfile-v0.36.0) - 2026-11-25
+
+### Fixed
+- require explicit member access verification
+- restrict type-checking fallback to class file version 50
+- preserve Java type identity during bytecode verification
+
+### Other
+- upgrade to Rust 1.100.0
+
 ## `ristretto_javac` - [0.35.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.34.0...ristretto_javac-v0.35.0) - 2026-11-05
 
 ### Other
