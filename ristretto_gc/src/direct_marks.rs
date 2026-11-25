@@ -46,6 +46,8 @@ impl DirectMarks {
             {
                 prior.clone()
             } else {
+                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                concurrent_test::after_epoch_check();
                 Some(replacement.clone())
             }
         });
@@ -73,5 +75,52 @@ mod tests {
         marks.publish(1, &second, Retention::Final, &queues);
         marks.publish(1, &second, Retention::Phantom, &queues);
         assert_eq!(marks.get(1, 4, &queues), Some(Retention::Final));
+    }
+}
+
+#[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+mod concurrent_test {
+    use super::*;
+    use std::cell::RefCell;
+    use std::sync::mpsc::{self, Receiver, Sender};
+    use std::time::Duration;
+
+    thread_local! {
+        static PAUSE: RefCell<Option<(Sender<()>, Receiver<()>)>> = const { RefCell::new(None) };
+    }
+
+    pub(super) fn after_epoch_check() {
+        if let Some((entered, resume)) = PAUSE.take() {
+            assert!(entered.send(()).is_ok(), "notify paused publisher");
+            assert!(
+                resume.recv_timeout(Duration::from_secs(5)).is_ok(),
+                "resume publisher"
+            );
+        }
+    }
+
+    #[test]
+    fn parked_slot_writer_revalidates_after_a_same_number_replacement() {
+        let queues = MarkQueues::new(0, 1);
+        let marks = DirectMarks::default();
+        queues.open_graph_inbox(4, false);
+        let first = queues.birth_epoch().unwrap();
+        let (entered, parked) = mpsc::channel();
+        let (release, resume) = mpsc::channel();
+        std::thread::scope(|scope| {
+            let (marks, queues) = (&marks, &queues);
+            let worker = scope.spawn(move || {
+                PAUSE.set(Some((entered, resume)));
+                marks.publish(1, &first, Retention::Strong, queues);
+            });
+            parked.recv_timeout(Duration::from_secs(5)).unwrap();
+            queues.close_graph_inbox();
+            queues.open_graph_inbox(4, false);
+            let second = queues.birth_epoch().unwrap();
+            marks.publish(1, &second, Retention::Final, queues);
+            release.send(()).unwrap();
+            worker.join().unwrap();
+            assert_eq!(marks.get(1, 4, queues), Some(Retention::Final));
+        });
     }
 }
