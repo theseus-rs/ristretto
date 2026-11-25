@@ -188,12 +188,26 @@ fn main() -> Result<()> {
         0
     };
     let mut elapsed_ns = 0;
-    for _ in 0..cycles {
+    for cycle in 1..=cycles {
         for _ in 0..garbage {
             drop(Gc::try_new(&gc, 17_u64)?);
         }
         let start = Instant::now();
         collect()?;
+        if garbage != 0 {
+            // A worker may finish a retired payload after the full-cycle
+            // ticket. Include that work and its accounting in this cycle.
+            let target = before.objects_swept + cycle * garbage;
+            while gc.statistics()?.objects_swept < target {
+                assert!(
+                    start.elapsed() < std::time::Duration::from_secs(10),
+                    "reclamation deadline"
+                );
+                gc.step();
+                #[cfg(not(target_family = "wasm"))]
+                std::thread::yield_now();
+            }
+        }
         elapsed_ns += start.elapsed().as_nanos();
     }
     let after = gc.statistics()?;
