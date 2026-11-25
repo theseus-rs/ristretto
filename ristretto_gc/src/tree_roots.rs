@@ -6,7 +6,7 @@ use arc_swap::ArcSwap;
 use portable_atomic::AtomicU64;
 use std::num::NonZeroU64;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 
 const PAGE_BITS: usize = 5;
 const SLOTS: usize = 1 << PAGE_BITS;
@@ -89,6 +89,9 @@ impl Pages {
 #[derive(Debug, Default)]
 pub(crate) struct TreeRoots {
     pages: ArcSwap<Pages>,
+    // The lowest numeric page usually contains all short-lived roots. Install
+    // its directory membership first, then cache that permanent identity.
+    first: OnceLock<Arc<Page>>,
     cache: BackingCache,
     generation: AtomicU64,
     // A hint only. Occupancy and the checked generation decide whether a
@@ -147,16 +150,37 @@ impl TreeRoots {
             .expect("nonzero tree root generation");
         if owned {
             let id = self.last_owned_vacancy.load(Ordering::Relaxed);
-            if id != 0 {
-                let view = self.pages.load();
-                let slot = id & (SLOTS - 1);
-                if let Some(page) = view.get((id >> PAGE_BITS) as u64)
-                    && page.occupied.claim(1 << slot) == Claim::Reserved
-                {
+            if id != 0
+                && let Some(root) = self.with_page((id >> PAGE_BITS) as u64, |page| {
+                    let base = id & !(SLOTS - 1);
+                    let slot = id & (SLOTS - 1);
+                    let slot = match page.occupied.claim(1 << slot) {
+                        Claim::Reserved => slot,
+                        Claim::InUse => {
+                            // Reuse another issued position on the hinted page. A
+                            // racing claimant just sends this insertion to the cursor.
+                            let issued =
+                                next.load(Ordering::Relaxed).saturating_sub(base).min(SLOTS);
+                            let available = ((1u64 << issued) - 1)
+                                & !page.occupied.slots()
+                                & !u64::from(base == 0);
+                            let bit = available.isolate_lowest_one();
+                            if bit == 0 || page.occupied.claim(bit) != Claim::Reserved {
+                                return None;
+                            }
+                            bit.trailing_zeros() as usize
+                        }
+                        Claim::Sealed => return None,
+                    };
                     self.live.fetch_add(1, Ordering::Relaxed);
                     page.slots[slot].publish(generation, address);
-                    return TreeRoot { id, generation };
-                }
+                    Some(TreeRoot {
+                        id: base | slot,
+                        generation,
+                    })
+                })
+            {
+                return root;
             }
         }
         loop {
@@ -186,6 +210,15 @@ impl TreeRoots {
         }
     }
 
+    fn with_page<T>(&self, key: u64, visit: impl FnOnce(&Arc<Page>) -> Option<T>) -> Option<T> {
+        if key == 0
+            && let Some(page) = self.first.get()
+        {
+            return visit(page);
+        }
+        visit(self.pages.load().get(key)?)
+    }
+
     #[expect(
         clippy::expect_used,
         reason = "at most one page per machine-word ID prefix"
@@ -196,27 +229,30 @@ impl TreeRoots {
         let mut older = view.older.remove(key).0;
         let previous = view.recent.as_ref().filter(|(old, _)| *old != key);
         if let Some((old, page)) = previous
-            && !page.occupied.seal_empty()
-            && !page.occupied.is_sealed()
+            && (*old == 0 || (!page.occupied.seal_empty() && !page.occupied.is_sealed()))
         {
             older = older
                 .insert(*old, page.clone())
                 .expect("finite page directory")
                 .0;
         }
+        let fresh = Arc::new(Page::new(&self.cache));
         let proposed = Arc::new(Pages {
             older,
-            recent: Some((key, Arc::new(Page::new(&self.cache)))),
+            recent: Some((key, fresh.clone())),
         });
-        if Arc::ptr_eq(&self.pages.compare_and_swap(view, proposed), view)
-            && let Some((old, page)) = previous
-        {
-            self.retire_empty(*old, page);
+        if Arc::ptr_eq(&self.pages.compare_and_swap(view, proposed), view) {
+            if key == 0 {
+                let _ = self.first.set(fresh);
+            }
+            if let Some((old, page)) = previous {
+                self.retire_empty(*old, page);
+            }
         }
     }
 
     fn retire_empty(&self, key: u64, page: &Arc<Page>) {
-        if !page.occupied.seal_empty() && !page.occupied.is_sealed() {
+        if key == 0 || (!page.occupied.seal_empty() && !page.occupied.is_sealed()) {
             return;
         }
         loop {
@@ -240,18 +276,18 @@ impl TreeRoots {
 
     pub(crate) fn remove(&self, id: usize, expected: Option<NonZeroU64>) -> Option<usize> {
         let key = (id >> PAGE_BITS) as u64;
-        let view = self.pages.load();
-        let page = view.get(key)?;
-        let slot = id & (SLOTS - 1);
-        let address = page.slots[slot].remove(expected)?;
-        self.live.fetch_sub(1, Ordering::Relaxed);
-        let bit = 1u64 << slot;
-        if page.occupied.release(bit) && !self.pages.load().is_recent(key) {
-            self.retire_empty(key, page);
-        } else if expected.is_some_and(|generation| generation.get() & OWNED_TREE_ROOT != 0) {
-            self.last_owned_vacancy.store(id, Ordering::Relaxed);
-        }
-        Some(address)
+        self.with_page(key, |page| {
+            let slot = id & (SLOTS - 1);
+            let address = page.slots[slot].remove(expected)?;
+            self.live.fetch_sub(1, Ordering::Relaxed);
+            let bit = 1u64 << slot;
+            if page.occupied.release(bit) && key != 0 && !self.pages.load().is_recent(key) {
+                self.retire_empty(key, page);
+            } else if expected.is_some_and(|generation| generation.get() & OWNED_TREE_ROOT != 0) {
+                self.last_owned_vacancy.store(id, Ordering::Relaxed);
+            }
+            Some(address)
+        })
     }
 
     /// Inspect at most one page per collector work unit. Re-reading a numeric
@@ -316,6 +352,31 @@ mod tests {
     use super::*;
 
     #[test]
+    fn bursts_reuse_owned_holes_while_a_manual_root_remains_live() {
+        let roots = TreeRoots::default();
+        let next = AtomicUsize::new(1);
+        let manual = roots.insert_manual(&next, 99);
+        for batch in 0..16 {
+            let registrations: Vec<_> = (1..=12)
+                .map(|address| roots.insert(&next, address))
+                .collect();
+            assert_eq!(next.load(Ordering::Relaxed), 14, "batch {batch}");
+            for (i, registration) in registrations.into_iter().enumerate() {
+                assert_eq!(
+                    roots.remove(registration.id, Some(registration.generation)),
+                    Some(i + 1)
+                );
+                assert!(
+                    roots
+                        .remove(registration.id, Some(registration.generation))
+                        .is_none()
+                );
+            }
+        }
+        assert_eq!(roots.remove(manual.id, None), Some(99));
+    }
+
+    #[test]
     fn owned_roots_reuse_a_vacancy_without_rewinding_manual_ids() {
         let roots = TreeRoots::default();
         let next = AtomicUsize::new(1);
@@ -368,14 +429,45 @@ mod tests {
     }
 
     #[test]
-    fn vacated_page_identity_cannot_unlink_an_id_reused_by_a_new_page() {
+    fn a_parked_first_page_is_still_scannable_after_installing_later_pages() {
         let roots = TreeRoots::default();
         let next = AtomicUsize::new(1);
-        let first = roots.insert(&next, 10);
+        let original = roots.insert(&next, 11);
+        let view = roots.pages.load_full();
+        let first = view.get(0).unwrap();
         next.store(SLOTS, Ordering::Relaxed);
+        let another = roots.insert_manual(&next, 22);
+        assert_eq!(
+            roots.remove(original.id, Some(original.generation)),
+            Some(11)
+        );
+        let replacement = roots.insert(&next, 33);
+        assert_eq!(replacement.id, original.id);
+        assert_ne!(replacement.generation, original.generation);
+        assert!(Arc::ptr_eq(roots.first.get().unwrap(), first));
+        assert!(Arc::ptr_eq(roots.pages.load().get(0).unwrap(), first));
+        assert_eq!(roots.scan(0), TreeScan::Root(replacement.id, 33));
+        assert!(
+            roots
+                .remove(original.id, Some(original.generation))
+                .is_none()
+        );
+        assert_eq!(roots.remove(another.id, None), Some(22));
+        assert_eq!(
+            roots.remove(replacement.id, Some(replacement.generation)),
+            Some(33)
+        );
+    }
+
+    #[test]
+    fn vacated_page_identity_cannot_unlink_an_id_reused_by_a_new_page() {
+        let roots = TreeRoots::default();
+        let next = AtomicUsize::new(SLOTS + 1);
+        let first = roots.insert(&next, 10);
+        next.store(2 * SLOTS, Ordering::Relaxed);
         let later = roots.insert(&next, 20);
         let view = roots.pages.load_full();
-        let retired = view.get(0).unwrap();
+        let retired = view.get(1).unwrap();
         assert_eq!(roots.remove(first.id, Some(first.generation)), Some(10));
         assert_eq!(retired.occupied.claim(2), Claim::Sealed);
         next.store(first.id, Ordering::Relaxed);
@@ -383,12 +475,12 @@ mod tests {
         assert_eq!(first.id, reused.id);
         assert_ne!(first.generation, reused.generation);
         assert_eq!(roots.remove(first.id, Some(first.generation)), None);
-        assert_eq!(roots.scan(0), TreeScan::Root(reused.id, 30));
+        assert_eq!(roots.scan(SLOTS), TreeScan::Root(reused.id, 30));
         assert_eq!(roots.remove(later.id, Some(later.generation)), Some(20));
         assert_eq!(roots.remove(reused.id, Some(reused.generation)), Some(30));
         assert_eq!(roots.len(), 0);
         assert_eq!(roots.pages.load().older.len(), 0);
-        assert!(roots.pages.load().is_recent(0));
+        assert!(roots.pages.load().is_recent(1));
         assert_eq!(retired.occupied.slots(), 0);
     }
 }
