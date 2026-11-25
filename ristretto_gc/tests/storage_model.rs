@@ -129,3 +129,49 @@ fn arming_after_accounting_publishes_exactly_one_deferred_task() {
         assert!(!charged.load(Ordering::Acquire));
     });
 }
+
+#[test]
+fn scanner_and_ordinary_reader_transfer_the_last_retired_borrow_once() {
+    loom::model(|| {
+        let state = Arc::new(storage_state::StorageState::default());
+        assert!(state.acquire_scan().is_ok());
+        assert_eq!(state.acquire_scan(), Err(storage_state::ScanDenied::Busy));
+        assert!(state.acquire());
+        let scanner = {
+            let state = state.clone();
+            thread::spawn(move || state.release_scan())
+        };
+        let reader = {
+            let state = state.clone();
+            thread::spawn(move || state.release())
+        };
+        let notified = state.retire() || state.arm_notification();
+        assert_eq!(
+            state.acquire_scan(),
+            Err(storage_state::ScanDenied::Retired)
+        );
+        assert!(!state.acquire());
+        let notifications = [notified, scanner.join().unwrap(), reader.join().unwrap()];
+        assert_eq!(notifications.into_iter().filter(|value| *value).count(), 1);
+        assert!(state.ready());
+        assert!(state.destroy());
+        assert!(state.destroyed());
+        assert!(!state.destroy());
+    });
+}
+
+#[test]
+fn unique_destruction_requires_retired_ready_storage_and_claims_it_once() {
+    loom::model(|| {
+        let mut state = storage_state::StorageState::default();
+        assert!(!state.destroy_unique());
+        assert!(state.acquire_scan().is_ok());
+        assert!(!state.retire());
+        assert!(!state.destroy_unique());
+        assert!(!state.release_scan());
+        assert!(state.destroy_unique());
+        assert!(state.destroyed());
+        assert!(!state.destroy_unique());
+        assert!(!state.destroy());
+    });
+}
