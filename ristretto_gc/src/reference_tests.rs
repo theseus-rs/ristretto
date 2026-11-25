@@ -1053,3 +1053,60 @@ fn idle_host_clone_does_not_use_the_previous_legacy_retirement_flag() -> Result<
     );
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn suspended_clone_cannot_carry_a_birth_stamp_across_epoch_reuse() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let target = Gc::try_new(&gc, 43_u64)?;
+        let final_ref = GcWeak::new(&target, ReferenceKind::Final, 0);
+        gc.collect();
+        at_reference_stage(&gc, 1, 2);
+        let source = GcWeak::new(&target, ReferenceKind::Weak, 0);
+        let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+        assert_eq!(epoch, crate::metadata::EPOCH_STRIDE);
+        assert_eq!(source.slot.birth_stamp(1).load(Ordering::Acquire), epoch);
+        let (entered, parked) = mpsc::channel();
+        let (resume, release) = mpsc::channel();
+        thread::scope(|scope| {
+            let borrowed = &source;
+            let worker = scope.spawn(move || {
+                WEAK_ACTIVATION_PAUSE.set(Some(ClaimPause {
+                    entered,
+                    resume: release,
+                }));
+                borrowed.clone()
+            });
+            parked
+                .recv_timeout(Duration::from_secs(3))
+                .expect("clone owns first epoch sample");
+            finish(&gc);
+            drop(target);
+            gc.domains[1].epoch.store(u64::MAX - 3, Ordering::Release);
+            gc.collect();
+            at_reference_stage(&gc, 1, 2);
+            assert_eq!(gc.domains[1].epoch.load(Ordering::Acquire), epoch);
+            let resurrected = final_ref.upgrade().expect("final target");
+            let fresh = GcWeak::new(&resurrected, ReferenceKind::Weak, 0);
+            resume.send(()).expect("resume clone after numeric reuse");
+            let stale = worker.join().expect("clone completed");
+            assert!(source.upgrade().is_none() && stale.upgrade().is_none());
+            assert_eq!(
+                fresh.clone().upgrade().expect("new exemption").identity(),
+                resurrected.identity()
+            );
+            finish(&gc);
+        });
+    }
+    Ok(())
+}
