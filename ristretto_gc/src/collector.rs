@@ -2082,13 +2082,6 @@ impl GarbageCollector {
         })
     }
 
-    fn reference_live_in_cycle(&self, address: usize, kind: crate::ReferenceKind) -> bool {
-        self.objects
-            .lock(address)
-            .get(&address)
-            .is_some_and(|metadata| self.reference_metadata_live(metadata, kind))
-    }
-
     fn reference_metadata_live(
         &self,
         metadata: &ObjectMetadata,

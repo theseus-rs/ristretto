@@ -455,12 +455,20 @@ impl GarbageCollector {
         counters.references += 1;
         let address = slot.target.load(Ordering::Acquire);
         let pending = slot.pending.load(Ordering::Acquire);
-        if !pending && !self.is_young_allocation(address) {
-            lock(&self.young_weak_slots).remove(&id);
-        }
         if address == 0 && !pending {
+            lock(&self.young_weak_slots).remove(&id);
             lock(&self.weak_slots).remove(&id);
             return Unit::Progress;
+        }
+        // Reading an owning descriptor grants no access to its payload. A
+        // parked object-shard holder cannot stall the weak/soft decision while
+        // the coordinator owns publication. An address replacement is a miss.
+        let target = self
+            .objects
+            .lookup(address)
+            .filter(|m| m.id == slot.target_identity);
+        if !pending && target.as_ref().is_none_or(|m| !self.is_young_metadata(m)) {
+            lock(&self.young_weak_slots).remove(&id);
         }
         let owner = slot.owner.load(Ordering::Acquire);
         if cycle.reference_stage == 4 {
@@ -502,8 +510,9 @@ impl GarbageCollector {
         };
         if relevant
             && slot.birth_stamp(index).load(Ordering::Acquire) != cycle.epoch
-            && (!self.weak_target_is_registered(&slot, address)
-                || !self.reference_live_in_cycle(address, slot.kind)
+            && (target
+                .as_ref()
+                .is_none_or(|m| !self.reference_metadata_live(m, slot.kind))
                 || cycle.phantom_retained.contains(&address))
         {
             if matches!(

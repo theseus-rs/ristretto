@@ -289,6 +289,52 @@ fn finish(gc: &GarbageCollector) {
     panic!("cycle did not finish");
 }
 
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn reference_decision_finishes_while_target_shard_is_parked() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for keep in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let target = Gc::try_new(&gc, 17_u64)?;
+            let address = target.as_ptr().addr();
+            let weak = GcWeak::new(&target, ReferenceKind::Weak, 0);
+            let survivor = keep.then(|| target.rooted_clone());
+            drop(target);
+            gc.collect();
+            at_reference_stage(&gc, 1, 1);
+            let held = gc.objects.lock(address);
+            let (done, received) = mpsc::channel();
+            let finished = thread::scope(|scope| {
+                let heap = &gc;
+                scope.spawn(move || {
+                    heap.step();
+                    done.send(()).unwrap();
+                });
+                let result = received.recv_timeout(Duration::from_secs(2));
+                drop(held);
+                result
+            });
+            assert!(
+                finished.is_ok(),
+                "object shard stalled the reference decision"
+            );
+            assert_eq!(weak.slot.target.load(Ordering::Acquire) != 0, keep);
+            finish(&gc);
+            assert_eq!(weak.upgrade().as_deref(), survivor.as_deref());
+        }
+    }
+    Ok(())
+}
+
 #[test]
 fn direct_trace_during_final_processing_is_immediately_visible() -> Result<()> {
     for counted in [false, true] {
