@@ -147,6 +147,10 @@ mod tests {
     use crate::{GarbageCollector, Gc};
 
     #[test]
+    #[expect(
+        clippy::panic_in_result_fn,
+        reason = "assert reference-count ownership"
+    )]
     fn arc_swap_reader_owns_retired_metadata_until_it_releases_its_guard() -> crate::Result<()> {
         let gc = GarbageCollector::new();
         let root = Gc::try_new(&gc, 7_u64)?.into_rooted();
