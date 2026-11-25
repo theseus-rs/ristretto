@@ -1,0 +1,11 @@
+# Complete collection with numeric root pages and retirement-stage deletion
+
+The smallest paired median speedup over f1daebeb was 3.064× on native and 3.907× on WASI. The smallest per-condition 95% lower bounds were 2.950× and 3.837× respectively. The previous campaign, on the source before these two changes, had all 36 lower bounds above 3×. [Previous campaign](../strong-deletion-collection/README.md)
+
+Each condition used 24 randomized fresh-process pairs, for 1,728 processes overall. Each process timed 16 complete mark-and-reclaim cycles on a 4,095-node tree, wide graph or mixed workload and checked retained values and physical refunds. The candidate collector and fixture match eaff58f2. The control and candidate share the integrated build manifests. Seed 70139 determines the schedule. Confidence intervals resample pairs within each condition without a multiple-comparison adjustment. [Process data](processes.csv) · [Paired estimates](summary.json) · [Build provenance](provenance.json) · [Native figure](native.svg) · [WASI figure](wasm.svg)
+
+## Numeric-root operations
+
+Two independent single-mutator screens used four workloads, both publication policies and both diagnostics modes, with 12 process pairs per cell on each target. Both compare the original c0dcda69 registry against the paged registry. The first screen records the source hashes of an intermediate build. The final screen uses de24cf83. Native paired operation-time ratios in the final screen ranged from 0.975 to 1.011 and WASI from 0.920 to 1.005 (after/before). The intervals include parity in many cases. An earlier construction-only design increased allocator calls by about 2%; the final count screen found a maximum median increase below 0.27%, with three independent pairs per count cell. Raw counts include allocations inside the guest for WASI. [Operation timings](root-operations.csv) · [Allocation counts](allocation-counts.csv) · [Intervals](root-screen-summary.json) · [Commands and hashes](root-screen-provenance.json)
+
+A parked directory-reader test verifies unrelated physical reclamation under both publication policies. A second test holds a root-removal intent across retirement and the start of a fresh cycle. Application-wide pause bounds, matched Java throughput and sustained-load outcomes require separate measurements.
