@@ -1,0 +1,4641 @@
+{
+  "schema": 2,
+  "source": "449a2ee81c5dfe06b674f6165bc9372994b510bb",
+  "workload": "large",
+  "steps": 257,
+  "expected": -678999774,
+  "warmup": 8,
+  "samples": 48,
+  "forks": 3,
+  "arrival": "one call begins after the previous call returns",
+  "jdk": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+  "wasmtime": "wasmtime 50.0.1 (c307ec81d 2026-10-29)",
+  "artifact_sha256": {
+    "native": "28fb5685b0dbcfa4a1a9164bd74682e14396e5b80d2fc67dd6245692ef319ade",
+    "wasi": "45d0366650acc54e32667ed121530ebbcd07062fe25c8bb915178791ad2ac9aa",
+    "wasmtime": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8",
+    "compiled": "28fb5685b0dbcfa4a1a9164bd74682e14396e5b80d2fc67dd6245692ef319ade"
+  },
+  "class_sha256": {
+    "CanonicalRingWorkload.class": "5c90bf6123523c2dbc90b90738bf77824bb0c7966da549e6ca4f10c6c66eb5ed",
+    "CanonicalRingWorkload$Node.class": "0491e29f63841d6844a5c02678ea35659563fbb989c1d6ad21b0085a071898ec"
+  },
+  "resource_limits": {
+    "cgroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/run-p2135657-i18956307.scope",
+    "memory_max_bytes": 1073741824,
+    "cpu_quota": 2.0,
+    "affinity": [
+      8,
+      10
+    ]
+  },
+  "host": {
+    "system": "Linux",
+    "kernel": "7.0.0-38-generic",
+    "architecture": "x86_64",
+    "cpu_model": "13th Gen Intel(R) Core(TM) i7-13700T",
+    "topology": [
+      {
+        "cpu": 8,
+        "package": 0,
+        "core": 16
+      },
+      {
+        "cpu": 10,
+        "package": 0,
+        "core": 20
+      }
+    ]
+  },
+  "started_utc": "2026-11-21T18:26:40.365506+00:00",
+  "finished_utc": "2026-11-21T18:27:15.804294+00:00",
+  "processes": [
+    {
+      "fork": 0,
+      "collector": "G1",
+      "beans": [
+        "G1 Young Generation",
+        "G1 Concurrent GC",
+        "G1 Old Generation"
+      ],
+      "flags": [
+        "-Xms64m",
+        "-Xmx64m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+UseG1GC"
+      ],
+      "process_ns": 61110297,
+      "batch_ns": 21006501,
+      "collection_changes": {
+        "G1 Young Generation": {
+          "collections": 3,
+          "collection_time_ms": 2
+        },
+        "G1 Concurrent GC": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "G1 Old Generation": {
+          "collections": 0,
+          "collection_time_ms": 0
+        }
+      },
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 10073102
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 118176
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 121995
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 116937
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 116587
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 117200
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 134222
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 123063
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 198330
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 463436
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 457933
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 398033
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 478365
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 403906
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 555628
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 400896
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 865626
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76343
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73416
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70048
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73254
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 63648
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57410
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57013
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71223
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 149008
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 161423
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 96881
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 97467
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 96659
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 96884
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 103385
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 104844
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 104644
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 336115
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 427192
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 485923
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 436150
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 472248
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 1407078
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 84213
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 87403
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 101038
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 100847
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 93886
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 91374
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 88764
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 91822
+        }
+      ],
+      "tier": "G1"
+    },
+    {
+      "fork": 0,
+      "collector": "ZGC",
+      "beans": [
+        "ZGC Minor Cycles",
+        "ZGC Minor Pauses",
+        "ZGC Major Cycles",
+        "ZGC Major Pauses"
+      ],
+      "flags": [
+        "-Xms64m",
+        "-Xmx64m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+UseZGC"
+      ],
+      "process_ns": 72208140,
+      "batch_ns": 13236247,
+      "collection_changes": {
+        "ZGC Minor Cycles": {
+          "collections": 4,
+          "collection_time_ms": 5
+        },
+        "ZGC Minor Pauses": {
+          "collections": 12,
+          "collection_time_ms": 0
+        },
+        "ZGC Major Cycles": {
+          "collections": 3,
+          "collection_time_ms": 9
+        },
+        "ZGC Major Pauses": {
+          "collections": 11,
+          "collection_time_ms": 0
+        }
+      },
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 557766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 443134
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 443589
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 512110
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 444673
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 96730
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 981282
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 112012
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 485230
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 458960
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 446326
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74391
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 104911
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 77865
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 80851
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 77874
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 191262
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 108773
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 178862
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 115703
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 400102
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 360165
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 91687
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 178752
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 767573
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 251508
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 83597
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72224
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73610
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 2985879
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 228335
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 90794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 78052
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 63252
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61298
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71247
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75420
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 84493
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 90795
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 181886
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 243996
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 141318
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60336
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 209891
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73530
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 68133
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73833
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76504
+        }
+      ],
+      "tier": "ZGC"
+    },
+    {
+      "process_ns": 2998697215,
+      "batch_ns": 2538945232,
+      "command": [
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring/release/examples/canonical_ring_samples",
+        "interpreted"
+      ],
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58917604,
+          "allocations": 770,
+          "helper_polls": 223738,
+          "released_objects": 669
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62100148,
+          "allocations": 770,
+          "helper_polls": 235448,
+          "released_objects": 815
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49359787,
+          "allocations": 770,
+          "helper_polls": 183742,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49738141,
+          "allocations": 770,
+          "helper_polls": 185338,
+          "released_objects": 787
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 52523715,
+          "allocations": 770,
+          "helper_polls": 197290,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59586832,
+          "allocations": 770,
+          "helper_polls": 224031,
+          "released_objects": 763
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49992435,
+          "allocations": 770,
+          "helper_polls": 186762,
+          "released_objects": 748
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49549169,
+          "allocations": 770,
+          "helper_polls": 181986,
+          "released_objects": 770
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47153752,
+          "allocations": 770,
+          "helper_polls": 168636,
+          "released_objects": 822
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 54108980,
+          "allocations": 770,
+          "helper_polls": 181363,
+          "released_objects": 704
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 46265602,
+          "allocations": 770,
+          "helper_polls": 169845,
+          "released_objects": 836
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48636634,
+          "allocations": 770,
+          "helper_polls": 180401,
+          "released_objects": 702
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48320389,
+          "allocations": 770,
+          "helper_polls": 179402,
+          "released_objects": 804
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 45455173,
+          "allocations": 770,
+          "helper_polls": 170301,
+          "released_objects": 802
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 51938940,
+          "allocations": 770,
+          "helper_polls": 195002,
+          "released_objects": 710
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 46130140,
+          "allocations": 770,
+          "helper_polls": 172596,
+          "released_objects": 832
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49019242,
+          "allocations": 770,
+          "helper_polls": 183819,
+          "released_objects": 784
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 52954291,
+          "allocations": 770,
+          "helper_polls": 196863,
+          "released_objects": 740
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 66676623,
+          "allocations": 770,
+          "helper_polls": 237297,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61476210,
+          "allocations": 770,
+          "helper_polls": 230254,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61938565,
+          "allocations": 770,
+          "helper_polls": 230446,
+          "released_objects": 790
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62946607,
+          "allocations": 770,
+          "helper_polls": 237562,
+          "released_objects": 716
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61904472,
+          "allocations": 770,
+          "helper_polls": 234210,
+          "released_objects": 812
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 51384274,
+          "allocations": 770,
+          "helper_polls": 194877,
+          "released_objects": 756
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 46789470,
+          "allocations": 770,
+          "helper_polls": 177274,
+          "released_objects": 778
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47781037,
+          "allocations": 770,
+          "helper_polls": 176887,
+          "released_objects": 803
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48557181,
+          "allocations": 770,
+          "helper_polls": 183070,
+          "released_objects": 759
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59931707,
+          "allocations": 770,
+          "helper_polls": 225798,
+          "released_objects": 754
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 51014662,
+          "allocations": 770,
+          "helper_polls": 188688,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49459375,
+          "allocations": 770,
+          "helper_polls": 182277,
+          "released_objects": 771
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49168525,
+          "allocations": 770,
+          "helper_polls": 185512,
+          "released_objects": 793
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59909451,
+          "allocations": 770,
+          "helper_polls": 227156,
+          "released_objects": 766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60587152,
+          "allocations": 770,
+          "helper_polls": 228866,
+          "released_objects": 755
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47661622,
+          "allocations": 770,
+          "helper_polls": 180867,
+          "released_objects": 752
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47635205,
+          "allocations": 770,
+          "helper_polls": 174633,
+          "released_objects": 791
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49565851,
+          "allocations": 770,
+          "helper_polls": 186713,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 51695586,
+          "allocations": 770,
+          "helper_polls": 191938,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 50667622,
+          "allocations": 770,
+          "helper_polls": 191263,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47228445,
+          "allocations": 770,
+          "helper_polls": 170793,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47510668,
+          "allocations": 770,
+          "helper_polls": 169911,
+          "released_objects": 774
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 52804596,
+          "allocations": 770,
+          "helper_polls": 180548,
+          "released_objects": 712
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 63231169,
+          "allocations": 770,
+          "helper_polls": 237752,
+          "released_objects": 834
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 52223389,
+          "allocations": 770,
+          "helper_polls": 195453,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 52949346,
+          "allocations": 770,
+          "helper_polls": 200994,
+          "released_objects": 699
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 63957016,
+          "allocations": 770,
+          "helper_polls": 239282,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48372068,
+          "allocations": 770,
+          "helper_polls": 177550,
+          "released_objects": 792
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 45997654,
+          "allocations": 770,
+          "helper_polls": 171770,
+          "released_objects": 805
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56163714,
+          "allocations": 770,
+          "helper_polls": 200361,
+          "released_objects": 695
+        }
+      ],
+      "objects": 520,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 969617,
+      "final_drain_polls": 50153,
+      "released_in_final_drain": 437,
+      "cleanup_verified": true,
+      "fork": 0,
+      "tier": "native-interpreted"
+    },
+    {
+      "process_ns": 4694740581,
+      "batch_ns": 3962441552,
+      "command": [
+        "/tmp/ristretto-gc-tools/wasmtime-v50.0.1-x86_64-linux/wasmtime",
+        "run",
+        "-W",
+        "max-wasm-stack=8388608",
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring-wasi/wasm32-wasip2/release/examples/canonical_ring_samples.wasm",
+        "interpreted"
+      ],
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 93083604,
+          "allocations": 770,
+          "helper_polls": 223738,
+          "released_objects": 669
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 96911481,
+          "allocations": 770,
+          "helper_polls": 235448,
+          "released_objects": 815
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 77592819,
+          "allocations": 770,
+          "helper_polls": 183742,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76239969,
+          "allocations": 770,
+          "helper_polls": 185338,
+          "released_objects": 787
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 81375781,
+          "allocations": 770,
+          "helper_polls": 197290,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 92812483,
+          "allocations": 770,
+          "helper_polls": 224031,
+          "released_objects": 763
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 77027414,
+          "allocations": 770,
+          "helper_polls": 186762,
+          "released_objects": 748
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74930388,
+          "allocations": 770,
+          "helper_polls": 181986,
+          "released_objects": 770
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70159122,
+          "allocations": 770,
+          "helper_polls": 168636,
+          "released_objects": 822
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74941780,
+          "allocations": 770,
+          "helper_polls": 181363,
+          "released_objects": 704
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 69677575,
+          "allocations": 770,
+          "helper_polls": 169845,
+          "released_objects": 836
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74203635,
+          "allocations": 770,
+          "helper_polls": 180401,
+          "released_objects": 702
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73478836,
+          "allocations": 770,
+          "helper_polls": 179402,
+          "released_objects": 804
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70305543,
+          "allocations": 770,
+          "helper_polls": 170301,
+          "released_objects": 802
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 80495701,
+          "allocations": 770,
+          "helper_polls": 195002,
+          "released_objects": 710
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74557837,
+          "allocations": 770,
+          "helper_polls": 172596,
+          "released_objects": 832
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 78036520,
+          "allocations": 770,
+          "helper_polls": 183819,
+          "released_objects": 784
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 82994388,
+          "allocations": 770,
+          "helper_polls": 196863,
+          "released_objects": 740
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 100123717,
+          "allocations": 770,
+          "helper_polls": 237297,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 97283048,
+          "allocations": 770,
+          "helper_polls": 230254,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 95975400,
+          "allocations": 770,
+          "helper_polls": 230446,
+          "released_objects": 790
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 97767304,
+          "allocations": 770,
+          "helper_polls": 237562,
+          "released_objects": 716
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 96635773,
+          "allocations": 770,
+          "helper_polls": 234210,
+          "released_objects": 812
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 80138254,
+          "allocations": 770,
+          "helper_polls": 194877,
+          "released_objects": 756
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72552469,
+          "allocations": 770,
+          "helper_polls": 177274,
+          "released_objects": 778
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73435885,
+          "allocations": 770,
+          "helper_polls": 176887,
+          "released_objects": 803
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75986782,
+          "allocations": 770,
+          "helper_polls": 183070,
+          "released_objects": 759
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 95571168,
+          "allocations": 770,
+          "helper_polls": 225798,
+          "released_objects": 754
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 79068873,
+          "allocations": 770,
+          "helper_polls": 188688,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76326179,
+          "allocations": 770,
+          "helper_polls": 182277,
+          "released_objects": 771
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 78603096,
+          "allocations": 770,
+          "helper_polls": 185512,
+          "released_objects": 793
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 95330557,
+          "allocations": 770,
+          "helper_polls": 227156,
+          "released_objects": 766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 97023213,
+          "allocations": 770,
+          "helper_polls": 228866,
+          "released_objects": 755
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73989321,
+          "allocations": 770,
+          "helper_polls": 180867,
+          "released_objects": 752
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72123253,
+          "allocations": 770,
+          "helper_polls": 174633,
+          "released_objects": 791
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76555009,
+          "allocations": 770,
+          "helper_polls": 186713,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 78793616,
+          "allocations": 770,
+          "helper_polls": 191938,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 79450442,
+          "allocations": 770,
+          "helper_polls": 191263,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72022490,
+          "allocations": 770,
+          "helper_polls": 170793,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72586225,
+          "allocations": 770,
+          "helper_polls": 169911,
+          "released_objects": 774
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 77870465,
+          "allocations": 770,
+          "helper_polls": 180548,
+          "released_objects": 712
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 103387982,
+          "allocations": 770,
+          "helper_polls": 237752,
+          "released_objects": 834
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 85008343,
+          "allocations": 770,
+          "helper_polls": 195453,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 86041556,
+          "allocations": 770,
+          "helper_polls": 200994,
+          "released_objects": 699
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 106552214,
+          "allocations": 770,
+          "helper_polls": 239282,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 77685523,
+          "allocations": 770,
+          "helper_polls": 177550,
+          "released_objects": 792
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 79967519,
+          "allocations": 770,
+          "helper_polls": 171770,
+          "released_objects": 805
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 89750861,
+          "allocations": 770,
+          "helper_polls": 200361,
+          "released_objects": 695
+        }
+      ],
+      "objects": 520,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 966121,
+      "final_drain_polls": 50153,
+      "released_in_final_drain": 437,
+      "cleanup_verified": true,
+      "fork": 0,
+      "tier": "wasi-interpreted"
+    },
+    {
+      "process_ns": 3605643093,
+      "batch_ns": 3056437475,
+      "command": [
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring/release/examples/canonical_ring_samples",
+        "compiled"
+      ],
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 65280782,
+          "allocations": 770,
+          "helper_polls": 203809,
+          "released_objects": 722
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73442361,
+          "allocations": 770,
+          "helper_polls": 236051,
+          "released_objects": 766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 55799563,
+          "allocations": 770,
+          "helper_polls": 168986,
+          "released_objects": 760
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59102268,
+          "allocations": 770,
+          "helper_polls": 179159,
+          "released_objects": 823
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 69842568,
+          "allocations": 770,
+          "helper_polls": 221794,
+          "released_objects": 715
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 54123484,
+          "allocations": 770,
+          "helper_polls": 160560,
+          "released_objects": 762
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72097847,
+          "allocations": 770,
+          "helper_polls": 231321,
+          "released_objects": 814
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71681547,
+          "allocations": 770,
+          "helper_polls": 231275,
+          "released_objects": 724
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60146964,
+          "allocations": 770,
+          "helper_polls": 182922,
+          "released_objects": 764
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58016731,
+          "allocations": 770,
+          "helper_polls": 175440,
+          "released_objects": 760
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56246071,
+          "allocations": 770,
+          "helper_polls": 168442,
+          "released_objects": 885
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 69890653,
+          "allocations": 770,
+          "helper_polls": 216734,
+          "released_objects": 689
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58728614,
+          "allocations": 770,
+          "helper_polls": 176017,
+          "released_objects": 766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57581196,
+          "allocations": 770,
+          "helper_polls": 173471,
+          "released_objects": 754
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73562909,
+          "allocations": 770,
+          "helper_polls": 235847,
+          "released_objects": 842
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61450479,
+          "allocations": 770,
+          "helper_polls": 188345,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 68111775,
+          "allocations": 770,
+          "helper_polls": 213609,
+          "released_objects": 670
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59840328,
+          "allocations": 770,
+          "helper_polls": 183917,
+          "released_objects": 780
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72848991,
+          "allocations": 770,
+          "helper_polls": 234542,
+          "released_objects": 724
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70095204,
+          "allocations": 770,
+          "helper_polls": 224638,
+          "released_objects": 810
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57156644,
+          "allocations": 770,
+          "helper_polls": 173714,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58617463,
+          "allocations": 770,
+          "helper_polls": 177220,
+          "released_objects": 770
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58198885,
+          "allocations": 770,
+          "helper_polls": 176418,
+          "released_objects": 760
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 53996599,
+          "allocations": 770,
+          "helper_polls": 162686,
+          "released_objects": 828
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58597256,
+          "allocations": 770,
+          "helper_polls": 179531,
+          "released_objects": 705
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 69370712,
+          "allocations": 770,
+          "helper_polls": 217906,
+          "released_objects": 787
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72169818,
+          "allocations": 770,
+          "helper_polls": 231971,
+          "released_objects": 753
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71006987,
+          "allocations": 770,
+          "helper_polls": 220503,
+          "released_objects": 775
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57823171,
+          "allocations": 770,
+          "helper_polls": 176635,
+          "released_objects": 764
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72701182,
+          "allocations": 770,
+          "helper_polls": 232790,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 55377219,
+          "allocations": 770,
+          "helper_polls": 166706,
+          "released_objects": 738
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74176255,
+          "allocations": 770,
+          "helper_polls": 237247,
+          "released_objects": 796
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 67711770,
+          "allocations": 770,
+          "helper_polls": 214340,
+          "released_objects": 814
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60134335,
+          "allocations": 770,
+          "helper_polls": 180330,
+          "released_objects": 701
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 69891297,
+          "allocations": 770,
+          "helper_polls": 218419,
+          "released_objects": 799
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56664490,
+          "allocations": 770,
+          "helper_polls": 170881,
+          "released_objects": 730
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70896800,
+          "allocations": 770,
+          "helper_polls": 226189,
+          "released_objects": 816
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56621634,
+          "allocations": 770,
+          "helper_polls": 171297,
+          "released_objects": 810
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61037442,
+          "allocations": 770,
+          "helper_polls": 187496,
+          "released_objects": 724
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56290139,
+          "allocations": 770,
+          "helper_polls": 170659,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 55419214,
+          "allocations": 770,
+          "helper_polls": 162382,
+          "released_objects": 816
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60920057,
+          "allocations": 770,
+          "helper_polls": 175663,
+          "released_objects": 858
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75915896,
+          "allocations": 770,
+          "helper_polls": 223860,
+          "released_objects": 660
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58328858,
+          "allocations": 770,
+          "helper_polls": 166912,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75419605,
+          "allocations": 770,
+          "helper_polls": 233077,
+          "released_objects": 805
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62324437,
+          "allocations": 770,
+          "helper_polls": 191577,
+          "released_objects": 814
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 65041836,
+          "allocations": 770,
+          "helper_polls": 200759,
+          "released_objects": 698
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56735901,
+          "allocations": 770,
+          "helper_polls": 166716,
+          "released_objects": 855
+        }
+      ],
+      "objects": 520,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 756233,
+      "final_drain_polls": 41507,
+      "released_in_final_drain": 341,
+      "cleanup_verified": true,
+      "fork": 0,
+      "tier": "native-compiled"
+    },
+    {
+      "process_ns": 2956181367,
+      "batch_ns": 2504649478,
+      "command": [
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring/release/examples/canonical_ring_samples",
+        "interpreted"
+      ],
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58772766,
+          "allocations": 770,
+          "helper_polls": 223738,
+          "released_objects": 669
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62133805,
+          "allocations": 770,
+          "helper_polls": 235448,
+          "released_objects": 815
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48480372,
+          "allocations": 770,
+          "helper_polls": 183742,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49577739,
+          "allocations": 770,
+          "helper_polls": 185338,
+          "released_objects": 787
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 52038497,
+          "allocations": 770,
+          "helper_polls": 197290,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58798135,
+          "allocations": 770,
+          "helper_polls": 224031,
+          "released_objects": 763
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49184783,
+          "allocations": 770,
+          "helper_polls": 186762,
+          "released_objects": 748
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48187788,
+          "allocations": 770,
+          "helper_polls": 181986,
+          "released_objects": 770
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 44532360,
+          "allocations": 770,
+          "helper_polls": 168636,
+          "released_objects": 822
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48173794,
+          "allocations": 770,
+          "helper_polls": 181363,
+          "released_objects": 704
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 44854300,
+          "allocations": 770,
+          "helper_polls": 169845,
+          "released_objects": 836
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47610046,
+          "allocations": 770,
+          "helper_polls": 180401,
+          "released_objects": 702
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47954643,
+          "allocations": 770,
+          "helper_polls": 179402,
+          "released_objects": 804
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 45568529,
+          "allocations": 770,
+          "helper_polls": 170301,
+          "released_objects": 802
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 53374012,
+          "allocations": 770,
+          "helper_polls": 195002,
+          "released_objects": 710
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 46804897,
+          "allocations": 770,
+          "helper_polls": 172596,
+          "released_objects": 832
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 53586991,
+          "allocations": 770,
+          "helper_polls": 183819,
+          "released_objects": 784
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 51842721,
+          "allocations": 770,
+          "helper_polls": 196863,
+          "released_objects": 740
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62419662,
+          "allocations": 770,
+          "helper_polls": 237297,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60794723,
+          "allocations": 770,
+          "helper_polls": 230254,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60616155,
+          "allocations": 770,
+          "helper_polls": 230446,
+          "released_objects": 790
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62333750,
+          "allocations": 770,
+          "helper_polls": 237562,
+          "released_objects": 716
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61943205,
+          "allocations": 770,
+          "helper_polls": 234210,
+          "released_objects": 812
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 52478297,
+          "allocations": 770,
+          "helper_polls": 194877,
+          "released_objects": 756
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48338842,
+          "allocations": 770,
+          "helper_polls": 177274,
+          "released_objects": 778
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47358366,
+          "allocations": 770,
+          "helper_polls": 176887,
+          "released_objects": 803
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48180819,
+          "allocations": 770,
+          "helper_polls": 183070,
+          "released_objects": 759
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59536325,
+          "allocations": 770,
+          "helper_polls": 225798,
+          "released_objects": 754
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 50207616,
+          "allocations": 770,
+          "helper_polls": 188688,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48711410,
+          "allocations": 770,
+          "helper_polls": 182277,
+          "released_objects": 771
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49317649,
+          "allocations": 770,
+          "helper_polls": 185512,
+          "released_objects": 793
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59582376,
+          "allocations": 770,
+          "helper_polls": 227156,
+          "released_objects": 766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60631816,
+          "allocations": 770,
+          "helper_polls": 228866,
+          "released_objects": 755
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47563344,
+          "allocations": 770,
+          "helper_polls": 180867,
+          "released_objects": 752
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 46173961,
+          "allocations": 770,
+          "helper_polls": 174633,
+          "released_objects": 791
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49356623,
+          "allocations": 770,
+          "helper_polls": 186713,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 50977949,
+          "allocations": 770,
+          "helper_polls": 191938,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 50259757,
+          "allocations": 770,
+          "helper_polls": 191263,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 45192409,
+          "allocations": 770,
+          "helper_polls": 170793,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 44859688,
+          "allocations": 770,
+          "helper_polls": 169911,
+          "released_objects": 774
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48620924,
+          "allocations": 770,
+          "helper_polls": 180548,
+          "released_objects": 712
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62911305,
+          "allocations": 770,
+          "helper_polls": 237752,
+          "released_objects": 834
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 52668116,
+          "allocations": 770,
+          "helper_polls": 195453,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 52807542,
+          "allocations": 770,
+          "helper_polls": 200994,
+          "released_objects": 699
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 63039751,
+          "allocations": 770,
+          "helper_polls": 239282,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47256185,
+          "allocations": 770,
+          "helper_polls": 177550,
+          "released_objects": 792
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 45941609,
+          "allocations": 770,
+          "helper_polls": 171770,
+          "released_objects": 805
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 53087920,
+          "allocations": 770,
+          "helper_polls": 200361,
+          "released_objects": 695
+        }
+      ],
+      "objects": 520,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 969617,
+      "final_drain_polls": 50153,
+      "released_in_final_drain": 437,
+      "cleanup_verified": true,
+      "fork": 1,
+      "tier": "native-interpreted"
+    },
+    {
+      "process_ns": 4671089001,
+      "batch_ns": 3954841408,
+      "command": [
+        "/tmp/ristretto-gc-tools/wasmtime-v50.0.1-x86_64-linux/wasmtime",
+        "run",
+        "-W",
+        "max-wasm-stack=8388608",
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring-wasi/wasm32-wasip2/release/examples/canonical_ring_samples.wasm",
+        "interpreted"
+      ],
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 103224039,
+          "allocations": 770,
+          "helper_polls": 223738,
+          "released_objects": 669
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 102613837,
+          "allocations": 770,
+          "helper_polls": 235448,
+          "released_objects": 815
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 78984094,
+          "allocations": 770,
+          "helper_polls": 183742,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 80183591,
+          "allocations": 770,
+          "helper_polls": 185338,
+          "released_objects": 787
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 85134336,
+          "allocations": 770,
+          "helper_polls": 197290,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 94179230,
+          "allocations": 770,
+          "helper_polls": 224031,
+          "released_objects": 763
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 79467711,
+          "allocations": 770,
+          "helper_polls": 186762,
+          "released_objects": 748
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76829609,
+          "allocations": 770,
+          "helper_polls": 181986,
+          "released_objects": 770
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70590969,
+          "allocations": 770,
+          "helper_polls": 168636,
+          "released_objects": 822
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75677120,
+          "allocations": 770,
+          "helper_polls": 181363,
+          "released_objects": 704
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70802929,
+          "allocations": 770,
+          "helper_polls": 169845,
+          "released_objects": 836
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75446444,
+          "allocations": 770,
+          "helper_polls": 180401,
+          "released_objects": 702
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76116564,
+          "allocations": 770,
+          "helper_polls": 179402,
+          "released_objects": 804
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71196034,
+          "allocations": 770,
+          "helper_polls": 170301,
+          "released_objects": 802
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 81221842,
+          "allocations": 770,
+          "helper_polls": 195002,
+          "released_objects": 710
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71999986,
+          "allocations": 770,
+          "helper_polls": 172596,
+          "released_objects": 832
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76978702,
+          "allocations": 770,
+          "helper_polls": 183819,
+          "released_objects": 784
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 82042579,
+          "allocations": 770,
+          "helper_polls": 196863,
+          "released_objects": 740
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 98613013,
+          "allocations": 770,
+          "helper_polls": 237297,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 95577913,
+          "allocations": 770,
+          "helper_polls": 230254,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 98214163,
+          "allocations": 770,
+          "helper_polls": 230446,
+          "released_objects": 790
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 98743389,
+          "allocations": 770,
+          "helper_polls": 237562,
+          "released_objects": 716
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 97577408,
+          "allocations": 770,
+          "helper_polls": 234210,
+          "released_objects": 812
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 81620937,
+          "allocations": 770,
+          "helper_polls": 194877,
+          "released_objects": 756
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73704871,
+          "allocations": 770,
+          "helper_polls": 177274,
+          "released_objects": 778
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73394602,
+          "allocations": 770,
+          "helper_polls": 176887,
+          "released_objects": 803
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75761308,
+          "allocations": 770,
+          "helper_polls": 183070,
+          "released_objects": 759
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 93556572,
+          "allocations": 770,
+          "helper_polls": 225798,
+          "released_objects": 754
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 78111095,
+          "allocations": 770,
+          "helper_polls": 188688,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74714655,
+          "allocations": 770,
+          "helper_polls": 182277,
+          "released_objects": 771
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 77297697,
+          "allocations": 770,
+          "helper_polls": 185512,
+          "released_objects": 793
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 96273801,
+          "allocations": 770,
+          "helper_polls": 227156,
+          "released_objects": 766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 94723643,
+          "allocations": 770,
+          "helper_polls": 228866,
+          "released_objects": 755
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74320323,
+          "allocations": 770,
+          "helper_polls": 180867,
+          "released_objects": 752
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72496961,
+          "allocations": 770,
+          "helper_polls": 174633,
+          "released_objects": 791
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 77122741,
+          "allocations": 770,
+          "helper_polls": 186713,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 83606613,
+          "allocations": 770,
+          "helper_polls": 191938,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 80273633,
+          "allocations": 770,
+          "helper_polls": 191263,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70198881,
+          "allocations": 770,
+          "helper_polls": 170793,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 69739172,
+          "allocations": 770,
+          "helper_polls": 169911,
+          "released_objects": 774
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74722382,
+          "allocations": 770,
+          "helper_polls": 180548,
+          "released_objects": 712
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 98529470,
+          "allocations": 770,
+          "helper_polls": 237752,
+          "released_objects": 834
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 80512751,
+          "allocations": 770,
+          "helper_polls": 195453,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 83005735,
+          "allocations": 770,
+          "helper_polls": 200994,
+          "released_objects": 699
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 99238857,
+          "allocations": 770,
+          "helper_polls": 239282,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73648929,
+          "allocations": 770,
+          "helper_polls": 177550,
+          "released_objects": 792
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72991307,
+          "allocations": 770,
+          "helper_polls": 171770,
+          "released_objects": 805
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 83849063,
+          "allocations": 770,
+          "helper_polls": 200361,
+          "released_objects": 695
+        }
+      ],
+      "objects": 520,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 966121,
+      "final_drain_polls": 50153,
+      "released_in_final_drain": 437,
+      "cleanup_verified": true,
+      "fork": 1,
+      "tier": "wasi-interpreted"
+    },
+    {
+      "process_ns": 3607170348,
+      "batch_ns": 3049615208,
+      "command": [
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring/release/examples/canonical_ring_samples",
+        "compiled"
+      ],
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 66803815,
+          "allocations": 770,
+          "helper_polls": 203809,
+          "released_objects": 722
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74622467,
+          "allocations": 770,
+          "helper_polls": 236051,
+          "released_objects": 766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57260579,
+          "allocations": 770,
+          "helper_polls": 168986,
+          "released_objects": 760
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58662013,
+          "allocations": 770,
+          "helper_polls": 179159,
+          "released_objects": 823
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70301449,
+          "allocations": 770,
+          "helper_polls": 221794,
+          "released_objects": 715
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 53582218,
+          "allocations": 770,
+          "helper_polls": 160560,
+          "released_objects": 762
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72527525,
+          "allocations": 770,
+          "helper_polls": 231321,
+          "released_objects": 814
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72944681,
+          "allocations": 770,
+          "helper_polls": 231275,
+          "released_objects": 724
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59890613,
+          "allocations": 770,
+          "helper_polls": 182922,
+          "released_objects": 764
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57728175,
+          "allocations": 770,
+          "helper_polls": 175440,
+          "released_objects": 760
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 55995013,
+          "allocations": 770,
+          "helper_polls": 168442,
+          "released_objects": 885
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 68182133,
+          "allocations": 770,
+          "helper_polls": 216734,
+          "released_objects": 689
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57749618,
+          "allocations": 770,
+          "helper_polls": 176017,
+          "released_objects": 766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57304108,
+          "allocations": 770,
+          "helper_polls": 173471,
+          "released_objects": 754
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73759400,
+          "allocations": 770,
+          "helper_polls": 235847,
+          "released_objects": 842
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61883515,
+          "allocations": 770,
+          "helper_polls": 188345,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 67439348,
+          "allocations": 770,
+          "helper_polls": 213609,
+          "released_objects": 670
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60229881,
+          "allocations": 770,
+          "helper_polls": 183917,
+          "released_objects": 780
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72945355,
+          "allocations": 770,
+          "helper_polls": 234542,
+          "released_objects": 724
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70045326,
+          "allocations": 770,
+          "helper_polls": 224638,
+          "released_objects": 810
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57289637,
+          "allocations": 770,
+          "helper_polls": 173714,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58220026,
+          "allocations": 770,
+          "helper_polls": 177220,
+          "released_objects": 770
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58148133,
+          "allocations": 770,
+          "helper_polls": 176418,
+          "released_objects": 760
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56642571,
+          "allocations": 770,
+          "helper_polls": 162686,
+          "released_objects": 828
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59297852,
+          "allocations": 770,
+          "helper_polls": 179531,
+          "released_objects": 705
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 69303132,
+          "allocations": 770,
+          "helper_polls": 217906,
+          "released_objects": 787
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72371746,
+          "allocations": 770,
+          "helper_polls": 231971,
+          "released_objects": 753
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 68904083,
+          "allocations": 770,
+          "helper_polls": 220503,
+          "released_objects": 775
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58084307,
+          "allocations": 770,
+          "helper_polls": 176635,
+          "released_objects": 764
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72575351,
+          "allocations": 770,
+          "helper_polls": 232790,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 54852495,
+          "allocations": 770,
+          "helper_polls": 166706,
+          "released_objects": 738
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73560876,
+          "allocations": 770,
+          "helper_polls": 237247,
+          "released_objects": 796
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 67714777,
+          "allocations": 770,
+          "helper_polls": 214340,
+          "released_objects": 814
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58460540,
+          "allocations": 770,
+          "helper_polls": 180330,
+          "released_objects": 701
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 68810659,
+          "allocations": 770,
+          "helper_polls": 218419,
+          "released_objects": 799
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56159515,
+          "allocations": 770,
+          "helper_polls": 170881,
+          "released_objects": 730
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71149339,
+          "allocations": 770,
+          "helper_polls": 226189,
+          "released_objects": 816
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56851764,
+          "allocations": 770,
+          "helper_polls": 171297,
+          "released_objects": 810
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60394207,
+          "allocations": 770,
+          "helper_polls": 187496,
+          "released_objects": 724
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57609420,
+          "allocations": 770,
+          "helper_polls": 170659,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 54157408,
+          "allocations": 770,
+          "helper_polls": 162382,
+          "released_objects": 816
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58136941,
+          "allocations": 770,
+          "helper_polls": 175663,
+          "released_objects": 858
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71017966,
+          "allocations": 770,
+          "helper_polls": 223860,
+          "released_objects": 660
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 55323761,
+          "allocations": 770,
+          "helper_polls": 166912,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73286721,
+          "allocations": 770,
+          "helper_polls": 233077,
+          "released_objects": 805
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 63105233,
+          "allocations": 770,
+          "helper_polls": 191577,
+          "released_objects": 814
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70341601,
+          "allocations": 770,
+          "helper_polls": 200759,
+          "released_objects": 698
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57985436,
+          "allocations": 770,
+          "helper_polls": 166716,
+          "released_objects": 855
+        }
+      ],
+      "objects": 520,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 756233,
+      "final_drain_polls": 41507,
+      "released_in_final_drain": 341,
+      "cleanup_verified": true,
+      "fork": 1,
+      "tier": "native-compiled"
+    },
+    {
+      "fork": 1,
+      "collector": "ZGC",
+      "beans": [
+        "ZGC Minor Cycles",
+        "ZGC Minor Pauses",
+        "ZGC Major Cycles",
+        "ZGC Major Pauses"
+      ],
+      "flags": [
+        "-Xms64m",
+        "-Xmx64m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+UseZGC"
+      ],
+      "process_ns": 67935195,
+      "batch_ns": 11599698,
+      "collection_changes": {
+        "ZGC Minor Cycles": {
+          "collections": 3,
+          "collection_time_ms": 1
+        },
+        "ZGC Minor Pauses": {
+          "collections": 9,
+          "collection_time_ms": 0
+        },
+        "ZGC Major Cycles": {
+          "collections": 3,
+          "collection_time_ms": 10
+        },
+        "ZGC Major Pauses": {
+          "collections": 12,
+          "collection_time_ms": 0
+        }
+      },
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 256824
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 734907
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 550672
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 518710
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 618186
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 528828
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 101398
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 127340
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 136219
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 137592
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 338176
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 401736
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 254670
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 442737
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 681645
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 459413
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 139761
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 105792
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 66170
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 160927
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 234339
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 145231
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 63057
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 184626
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76923
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60103
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62460
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71616
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62603
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 98802
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 105706
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 108175
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 113616
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 98399
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 554323
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 193797
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 111070
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 246360
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 452090
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 433603
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 676898
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 224228
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73983
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75793
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75320
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75241
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76891
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 78014
+        }
+      ],
+      "tier": "ZGC"
+    },
+    {
+      "fork": 1,
+      "collector": "G1",
+      "beans": [
+        "G1 Young Generation",
+        "G1 Concurrent GC",
+        "G1 Old Generation"
+      ],
+      "flags": [
+        "-Xms64m",
+        "-Xmx64m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+UseG1GC"
+      ],
+      "process_ns": 47328251,
+      "batch_ns": 11272746,
+      "collection_changes": {
+        "G1 Young Generation": {
+          "collections": 3,
+          "collection_time_ms": 1
+        },
+        "G1 Concurrent GC": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "G1 Old Generation": {
+          "collections": 0,
+          "collection_time_ms": 0
+        }
+      },
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 751595
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 140903
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 135832
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 135833
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 133000
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 139942
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 160942
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 135341
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 221404
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 497344
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 450658
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 404115
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 454242
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 396157
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 414187
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 397781
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 1259973
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 81107
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 68723
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76578
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 68461
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72575
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61212
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 54398
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72030
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 147840
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 156277
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 94867
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 92578
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 97165
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 101632
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 99199
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 93623
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 82163
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 286979
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 404875
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 410085
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 421217
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 430393
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 798631
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 85948
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 85940
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 104202
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 108698
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 100634
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 92487
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 93201
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 93762
+        }
+      ],
+      "tier": "G1"
+    },
+    {
+      "process_ns": 4602046090,
+      "batch_ns": 3888082364,
+      "command": [
+        "/tmp/ristretto-gc-tools/wasmtime-v50.0.1-x86_64-linux/wasmtime",
+        "run",
+        "-W",
+        "max-wasm-stack=8388608",
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring-wasi/wasm32-wasip2/release/examples/canonical_ring_samples.wasm",
+        "interpreted"
+      ],
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 91406694,
+          "allocations": 770,
+          "helper_polls": 223738,
+          "released_objects": 669
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 97749501,
+          "allocations": 770,
+          "helper_polls": 235448,
+          "released_objects": 815
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75980451,
+          "allocations": 770,
+          "helper_polls": 183742,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75401335,
+          "allocations": 770,
+          "helper_polls": 185338,
+          "released_objects": 787
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 79945062,
+          "allocations": 770,
+          "helper_polls": 197290,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 91222309,
+          "allocations": 770,
+          "helper_polls": 224031,
+          "released_objects": 763
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75988207,
+          "allocations": 770,
+          "helper_polls": 186762,
+          "released_objects": 748
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74822358,
+          "allocations": 770,
+          "helper_polls": 181986,
+          "released_objects": 770
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 68182664,
+          "allocations": 770,
+          "helper_polls": 168636,
+          "released_objects": 822
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73517106,
+          "allocations": 770,
+          "helper_polls": 181363,
+          "released_objects": 704
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 68607520,
+          "allocations": 770,
+          "helper_polls": 169845,
+          "released_objects": 836
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72661247,
+          "allocations": 770,
+          "helper_polls": 180401,
+          "released_objects": 702
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72781872,
+          "allocations": 770,
+          "helper_polls": 179402,
+          "released_objects": 804
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 69063267,
+          "allocations": 770,
+          "helper_polls": 170301,
+          "released_objects": 802
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 79847184,
+          "allocations": 770,
+          "helper_polls": 195002,
+          "released_objects": 710
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71717693,
+          "allocations": 770,
+          "helper_polls": 172596,
+          "released_objects": 832
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75497572,
+          "allocations": 770,
+          "helper_polls": 183819,
+          "released_objects": 784
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 80679008,
+          "allocations": 770,
+          "helper_polls": 196863,
+          "released_objects": 740
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 96955968,
+          "allocations": 770,
+          "helper_polls": 237297,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 93809192,
+          "allocations": 770,
+          "helper_polls": 230254,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 93680573,
+          "allocations": 770,
+          "helper_polls": 230446,
+          "released_objects": 790
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 96954869,
+          "allocations": 770,
+          "helper_polls": 237562,
+          "released_objects": 716
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 95397001,
+          "allocations": 770,
+          "helper_polls": 234210,
+          "released_objects": 812
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 79051035,
+          "allocations": 770,
+          "helper_polls": 194877,
+          "released_objects": 756
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71804376,
+          "allocations": 770,
+          "helper_polls": 177274,
+          "released_objects": 778
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71930328,
+          "allocations": 770,
+          "helper_polls": 176887,
+          "released_objects": 803
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75315287,
+          "allocations": 770,
+          "helper_polls": 183070,
+          "released_objects": 759
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 93150780,
+          "allocations": 770,
+          "helper_polls": 225798,
+          "released_objects": 754
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76106781,
+          "allocations": 770,
+          "helper_polls": 188688,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73650233,
+          "allocations": 770,
+          "helper_polls": 182277,
+          "released_objects": 771
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74848106,
+          "allocations": 770,
+          "helper_polls": 185512,
+          "released_objects": 793
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 92046768,
+          "allocations": 770,
+          "helper_polls": 227156,
+          "released_objects": 766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 92813636,
+          "allocations": 770,
+          "helper_polls": 228866,
+          "released_objects": 755
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72408239,
+          "allocations": 770,
+          "helper_polls": 180867,
+          "released_objects": 752
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70176062,
+          "allocations": 770,
+          "helper_polls": 174633,
+          "released_objects": 791
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75290891,
+          "allocations": 770,
+          "helper_polls": 186713,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 78421436,
+          "allocations": 770,
+          "helper_polls": 191938,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 78749063,
+          "allocations": 770,
+          "helper_polls": 191263,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70819573,
+          "allocations": 770,
+          "helper_polls": 170793,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72205051,
+          "allocations": 770,
+          "helper_polls": 169911,
+          "released_objects": 774
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 78258506,
+          "allocations": 770,
+          "helper_polls": 180548,
+          "released_objects": 712
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 102506300,
+          "allocations": 770,
+          "helper_polls": 237752,
+          "released_objects": 834
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 82970146,
+          "allocations": 770,
+          "helper_polls": 195453,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 85975653,
+          "allocations": 770,
+          "helper_polls": 200994,
+          "released_objects": 699
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 102377433,
+          "allocations": 770,
+          "helper_polls": 239282,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 78763337,
+          "allocations": 770,
+          "helper_polls": 177550,
+          "released_objects": 792
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 77892917,
+          "allocations": 770,
+          "helper_polls": 171770,
+          "released_objects": 805
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 88672382,
+          "allocations": 770,
+          "helper_polls": 200361,
+          "released_objects": 695
+        }
+      ],
+      "objects": 520,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 966121,
+      "final_drain_polls": 50153,
+      "released_in_final_drain": 437,
+      "cleanup_verified": true,
+      "fork": 2,
+      "tier": "wasi-interpreted"
+    },
+    {
+      "process_ns": 3632566874,
+      "batch_ns": 3088604417,
+      "command": [
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring/release/examples/canonical_ring_samples",
+        "compiled"
+      ],
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 66042518,
+          "allocations": 770,
+          "helper_polls": 203809,
+          "released_objects": 722
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73838694,
+          "allocations": 770,
+          "helper_polls": 236051,
+          "released_objects": 766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56116114,
+          "allocations": 770,
+          "helper_polls": 168986,
+          "released_objects": 760
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58943140,
+          "allocations": 770,
+          "helper_polls": 179159,
+          "released_objects": 823
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70131684,
+          "allocations": 770,
+          "helper_polls": 221794,
+          "released_objects": 715
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 53680276,
+          "allocations": 770,
+          "helper_polls": 160560,
+          "released_objects": 762
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72833922,
+          "allocations": 770,
+          "helper_polls": 231321,
+          "released_objects": 814
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72493614,
+          "allocations": 770,
+          "helper_polls": 231275,
+          "released_objects": 724
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60512820,
+          "allocations": 770,
+          "helper_polls": 182922,
+          "released_objects": 764
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58308112,
+          "allocations": 770,
+          "helper_polls": 175440,
+          "released_objects": 760
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56063292,
+          "allocations": 770,
+          "helper_polls": 168442,
+          "released_objects": 885
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70682475,
+          "allocations": 770,
+          "helper_polls": 216734,
+          "released_objects": 689
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59593711,
+          "allocations": 770,
+          "helper_polls": 176017,
+          "released_objects": 766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57348804,
+          "allocations": 770,
+          "helper_polls": 173471,
+          "released_objects": 754
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74897658,
+          "allocations": 770,
+          "helper_polls": 235847,
+          "released_objects": 842
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62218991,
+          "allocations": 770,
+          "helper_polls": 188345,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 68000904,
+          "allocations": 770,
+          "helper_polls": 213609,
+          "released_objects": 670
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60700654,
+          "allocations": 770,
+          "helper_polls": 183917,
+          "released_objects": 780
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73453658,
+          "allocations": 770,
+          "helper_polls": 234542,
+          "released_objects": 724
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70393804,
+          "allocations": 770,
+          "helper_polls": 224638,
+          "released_objects": 810
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57701858,
+          "allocations": 770,
+          "helper_polls": 173714,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58182054,
+          "allocations": 770,
+          "helper_polls": 177220,
+          "released_objects": 770
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58375815,
+          "allocations": 770,
+          "helper_polls": 176418,
+          "released_objects": 760
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 54495688,
+          "allocations": 770,
+          "helper_polls": 162686,
+          "released_objects": 828
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59006359,
+          "allocations": 770,
+          "helper_polls": 179531,
+          "released_objects": 705
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 69777120,
+          "allocations": 770,
+          "helper_polls": 217906,
+          "released_objects": 787
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72328960,
+          "allocations": 770,
+          "helper_polls": 231971,
+          "released_objects": 753
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71343950,
+          "allocations": 770,
+          "helper_polls": 220503,
+          "released_objects": 775
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61244975,
+          "allocations": 770,
+          "helper_polls": 176635,
+          "released_objects": 764
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 73474770,
+          "allocations": 770,
+          "helper_polls": 232790,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 55811555,
+          "allocations": 770,
+          "helper_polls": 166706,
+          "released_objects": 738
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75394824,
+          "allocations": 770,
+          "helper_polls": 237247,
+          "released_objects": 796
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 68057120,
+          "allocations": 770,
+          "helper_polls": 214340,
+          "released_objects": 814
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59467480,
+          "allocations": 770,
+          "helper_polls": 180330,
+          "released_objects": 701
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 69761441,
+          "allocations": 770,
+          "helper_polls": 218419,
+          "released_objects": 799
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57383958,
+          "allocations": 770,
+          "helper_polls": 170881,
+          "released_objects": 730
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71612170,
+          "allocations": 770,
+          "helper_polls": 226189,
+          "released_objects": 816
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56990189,
+          "allocations": 770,
+          "helper_polls": 171297,
+          "released_objects": 810
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60628320,
+          "allocations": 770,
+          "helper_polls": 187496,
+          "released_objects": 724
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58270636,
+          "allocations": 770,
+          "helper_polls": 170659,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 57325056,
+          "allocations": 770,
+          "helper_polls": 162382,
+          "released_objects": 816
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60712995,
+          "allocations": 770,
+          "helper_polls": 175663,
+          "released_objects": 858
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 79782512,
+          "allocations": 770,
+          "helper_polls": 223860,
+          "released_objects": 660
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60490567,
+          "allocations": 770,
+          "helper_polls": 166912,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75816377,
+          "allocations": 770,
+          "helper_polls": 233077,
+          "released_objects": 805
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 65315714,
+          "allocations": 770,
+          "helper_polls": 191577,
+          "released_objects": 814
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 65353560,
+          "allocations": 770,
+          "helper_polls": 200759,
+          "released_objects": 698
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58242341,
+          "allocations": 770,
+          "helper_polls": 166716,
+          "released_objects": 855
+        }
+      ],
+      "objects": 520,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 756233,
+      "final_drain_polls": 41507,
+      "released_in_final_drain": 341,
+      "cleanup_verified": true,
+      "fork": 2,
+      "tier": "native-compiled"
+    },
+    {
+      "fork": 2,
+      "collector": "G1",
+      "beans": [
+        "G1 Young Generation",
+        "G1 Concurrent GC",
+        "G1 Old Generation"
+      ],
+      "flags": [
+        "-Xms64m",
+        "-Xmx64m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+UseG1GC"
+      ],
+      "process_ns": 55050440,
+      "batch_ns": 11490087,
+      "collection_changes": {
+        "G1 Young Generation": {
+          "collections": 3,
+          "collection_time_ms": 1
+        },
+        "G1 Concurrent GC": {
+          "collections": 0,
+          "collection_time_ms": 0
+        },
+        "G1 Old Generation": {
+          "collections": 0,
+          "collection_time_ms": 0
+        }
+      },
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 778184
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 118354
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 116544
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 121409
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 134657
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 119502
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 121720
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 118774
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 339957
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 412321
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 386651
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 392067
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 395507
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 627616
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 377948
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 423096
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 829209
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 70178
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 65029
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74323
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75667
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 66451
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 64602
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71352
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 83038
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 158683
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 169150
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 98167
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 99493
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 92464
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 99071
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 107275
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 102262
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 96343
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 299766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 415871
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 409359
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 457906
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 376579
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 1468535
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 86475
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 82683
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 81921
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 102514
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 75363
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72606
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 71629
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 76960
+        }
+      ],
+      "tier": "G1"
+    },
+    {
+      "fork": 2,
+      "collector": "ZGC",
+      "beans": [
+        "ZGC Minor Cycles",
+        "ZGC Minor Pauses",
+        "ZGC Major Cycles",
+        "ZGC Major Pauses"
+      ],
+      "flags": [
+        "-Xms64m",
+        "-Xmx64m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+UseZGC"
+      ],
+      "process_ns": 61042076,
+      "batch_ns": 9678478,
+      "collection_changes": {
+        "ZGC Minor Cycles": {
+          "collections": 3,
+          "collection_time_ms": 1
+        },
+        "ZGC Minor Pauses": {
+          "collections": 9,
+          "collection_time_ms": 0
+        },
+        "ZGC Major Cycles": {
+          "collections": 3,
+          "collection_time_ms": 10
+        },
+        "ZGC Major Pauses": {
+          "collections": 12,
+          "collection_time_ms": 0
+        }
+      },
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 205879
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 592540
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 409811
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 418769
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 489239
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 469331
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 145310
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 104780
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 122426
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 109392
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 213503
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 368149
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 168347
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 497360
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 571523
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 525660
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 111099
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 72063
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 89179
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59760
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61214
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 79835
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 181537
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 234979
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 64907
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 56128
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 53068
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 53581
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 53338
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 67160
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 65153
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 100097
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 100332
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 114190
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 95107
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 195647
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 973182
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 428843
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 104147
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 69093
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60040
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59843
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60237
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 84478
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 150877
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 74407
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 224651
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 63277
+        }
+      ],
+      "tier": "ZGC"
+    },
+    {
+      "process_ns": 2969835287,
+      "batch_ns": 2518075036,
+      "command": [
+        "/home/brianheineman/development/ristretto-gc-builds/preview-mr-ring/release/examples/canonical_ring_samples",
+        "interpreted"
+      ],
+      "samples": [
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59351525,
+          "allocations": 770,
+          "helper_polls": 223738,
+          "released_objects": 669
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62227930,
+          "allocations": 770,
+          "helper_polls": 235448,
+          "released_objects": 815
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48626369,
+          "allocations": 770,
+          "helper_polls": 183742,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 50881009,
+          "allocations": 770,
+          "helper_polls": 185338,
+          "released_objects": 787
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 58021834,
+          "allocations": 770,
+          "helper_polls": 197290,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60298330,
+          "allocations": 770,
+          "helper_polls": 224031,
+          "released_objects": 763
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 49788153,
+          "allocations": 770,
+          "helper_polls": 186762,
+          "released_objects": 748
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47909989,
+          "allocations": 770,
+          "helper_polls": 181986,
+          "released_objects": 770
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 44929649,
+          "allocations": 770,
+          "helper_polls": 168636,
+          "released_objects": 822
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48710021,
+          "allocations": 770,
+          "helper_polls": 181363,
+          "released_objects": 704
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 45355205,
+          "allocations": 770,
+          "helper_polls": 169845,
+          "released_objects": 836
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47897574,
+          "allocations": 770,
+          "helper_polls": 180401,
+          "released_objects": 702
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48263062,
+          "allocations": 770,
+          "helper_polls": 179402,
+          "released_objects": 804
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 46639242,
+          "allocations": 770,
+          "helper_polls": 170301,
+          "released_objects": 802
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 54825872,
+          "allocations": 770,
+          "helper_polls": 195002,
+          "released_objects": 710
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 46389569,
+          "allocations": 770,
+          "helper_polls": 172596,
+          "released_objects": 832
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48962743,
+          "allocations": 770,
+          "helper_polls": 183819,
+          "released_objects": 784
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 52674806,
+          "allocations": 770,
+          "helper_polls": 196863,
+          "released_objects": 740
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62522452,
+          "allocations": 770,
+          "helper_polls": 237297,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 60959874,
+          "allocations": 770,
+          "helper_polls": 230254,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62346978,
+          "allocations": 770,
+          "helper_polls": 230446,
+          "released_objects": 790
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 62277823,
+          "allocations": 770,
+          "helper_polls": 237562,
+          "released_objects": 716
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61721672,
+          "allocations": 770,
+          "helper_polls": 234210,
+          "released_objects": 812
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 51644164,
+          "allocations": 770,
+          "helper_polls": 194877,
+          "released_objects": 756
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 46848127,
+          "allocations": 770,
+          "helper_polls": 177274,
+          "released_objects": 778
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47242673,
+          "allocations": 770,
+          "helper_polls": 176887,
+          "released_objects": 803
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48347046,
+          "allocations": 770,
+          "helper_polls": 183070,
+          "released_objects": 759
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59480487,
+          "allocations": 770,
+          "helper_polls": 225798,
+          "released_objects": 754
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 50222726,
+          "allocations": 770,
+          "helper_polls": 188688,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48705051,
+          "allocations": 770,
+          "helper_polls": 182277,
+          "released_objects": 771
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48837533,
+          "allocations": 770,
+          "helper_polls": 185512,
+          "released_objects": 793
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 59680052,
+          "allocations": 770,
+          "helper_polls": 227156,
+          "released_objects": 766
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 61071717,
+          "allocations": 770,
+          "helper_polls": 228866,
+          "released_objects": 755
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47921545,
+          "allocations": 770,
+          "helper_polls": 180867,
+          "released_objects": 752
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 46494901,
+          "allocations": 770,
+          "helper_polls": 174633,
+          "released_objects": 791
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 50354506,
+          "allocations": 770,
+          "helper_polls": 186713,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 51059458,
+          "allocations": 770,
+          "helper_polls": 191938,
+          "released_objects": 772
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 50522448,
+          "allocations": 770,
+          "helper_polls": 191263,
+          "released_objects": 744
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 45245077,
+          "allocations": 770,
+          "helper_polls": 170793,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 46353756,
+          "allocations": 770,
+          "helper_polls": 169911,
+          "released_objects": 774
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 48129861,
+          "allocations": 770,
+          "helper_polls": 180548,
+          "released_objects": 712
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 63433861,
+          "allocations": 770,
+          "helper_polls": 237752,
+          "released_objects": 834
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 51944637,
+          "allocations": 770,
+          "helper_polls": 195453,
+          "released_objects": 767
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 53769362,
+          "allocations": 770,
+          "helper_polls": 200994,
+          "released_objects": 699
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 63033930,
+          "allocations": 770,
+          "helper_polls": 239282,
+          "released_objects": 794
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 47208024,
+          "allocations": 770,
+          "helper_polls": 177550,
+          "released_objects": 792
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 45652523,
+          "allocations": 770,
+          "helper_polls": 171770,
+          "released_objects": 805
+        },
+        {
+          "checksum": -678999774,
+          "elapsed_ns": 53285407,
+          "allocations": 770,
+          "helper_polls": 200361,
+          "released_objects": 695
+        }
+      ],
+      "objects": 520,
+      "roots": 128,
+      "edges_per_object": 3,
+      "payload_limit_bytes": 67108864,
+      "payload_bytes_before_drain": 969617,
+      "final_drain_polls": 50153,
+      "released_in_final_drain": 437,
+      "cleanup_verified": true,
+      "fork": 2,
+      "tier": "native-interpreted"
+    }
+  ]
+}

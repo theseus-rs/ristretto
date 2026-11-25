@@ -61,15 +61,33 @@ def expected(workload, steps):
 
 
 def fork_rows(capture):
-    if capture["schema"] != 1:
+    schema = capture["schema"]
+    if schema not in (1, 2):
         raise ValueError("unsupported capture format")
     checksum = expected(capture["workload"], capture["steps"])
     if capture["expected"] != checksum:
         raise ValueError("capture checksum differs from the integer model")
+    tiers = ["G1", "ZGC"]
+    if schema == 2:
+        artifacts = capture["artifact_sha256"]
+        required = {"native", "wasi", "wasmtime"}
+        if set(artifacts) not in (required, required | {"compiled"}):
+            raise ValueError("missing runtime artifact identities")
+        if set(capture["class_sha256"]) != {"CanonicalRingWorkload.class", "CanonicalRingWorkload$Node.class"}:
+            raise ValueError("missing workload class identities")
+        if len(capture["source"]) != 40 or set(capture["source"]) - set("0123456789abcdef"):
+            raise ValueError("invalid source identity")
+        identities = [*artifacts.values(), *capture["class_sha256"].values()]
+        if not identities or any(len(h) != 64 or set(h) - set("0123456789abcdef") for h in identities):
+            raise ValueError("invalid SHA-256 digest")
+        tiers.append("native-interpreted")
+        if "compiled" in artifacts:
+            tiers.append("native-compiled")
+        tiers.append("wasi-interpreted")
     forks = {}
     count = None
     for process in capture["processes"]:
-        fork, name = process["fork"], process["collector"]
+        fork, name = process["fork"], process["collector" if schema == 1 else "tier"]
         if not isinstance(fork, int) or isinstance(fork, bool) or fork < 0:
             raise ValueError("invalid fork index")
         if not isinstance(name, str) or not name.strip():
@@ -77,6 +95,13 @@ def fork_rows(capture):
         by_collector = forks.setdefault(fork, {})
         if name in by_collector:
             raise ValueError(f"duplicate process for fork {fork}, collector {name}")
+        if schema == 2:
+            if name not in tiers:
+                raise ValueError("unrecognized comparison tier")
+            if name not in ("G1", "ZGC") and not process["cleanup_verified"]:
+                raise ValueError("incomplete Ristretto heap cleanup")
+            if len(process["samples"]) != capture["samples"]:
+                raise ValueError("incomplete sampling plan")
         samples = process["samples"]
         if not samples or (count is not None and len(samples) != count):
             raise ValueError("inconsistent sample count")
@@ -95,14 +120,16 @@ def fork_rows(capture):
         raise ValueError("empty capture")
     if sorted(forks) != list(range(len(forks))):
         raise ValueError("fork indices must be consecutive starting at zero")
-    collectors = sorted(forks[0])
+    if schema == 2 and (len(forks) != capture["forks"] or set(forks[0]) != set(tiers)):
+        raise ValueError("incomplete paired fork plan")
+    collectors = tiers if schema == 2 else sorted(forks[0])
     for fork, processes in forks.items():
         if processes.keys() != forks[0].keys():
             raise ValueError(f"collector set differs at fork {fork}")
     return [forks[fork][name] for fork in range(len(forks)) for name in collectors]
 
 
-def render_svg(capture, rows):
+def render_svg(capture, rows, rates=False):
     collectors = sorted({row.collector for row in rows})
     indices = {name: index for index, name in enumerate(collectors)}
     fork_count = max(row.fork for row in rows) + 1
@@ -125,25 +152,38 @@ def render_svg(capture, rows):
             transform=f"translate({x:.3f} {y:.3f})", stroke="white", stroke_width=0.8)
 
     title = f"{capture['workload']} ring · {capture['steps']} steps per call"
+    if rates:
+        title = "Timed batch · after warmup"
     add("title").text = title
     add("rect", width="100%", height="100%", fill="white")
     add("text", x=left, y=24, font_size=18).text = title
-    add("text", x=left, y=45).text = "Markers show medians. Bars span the 25th to 75th percentiles."
+    add("text", x=left, y=45).text = (
+        "Completed calls divided by the measured batch duration." if rates
+        else "Markers show medians. Bars span the 25th to 75th percentiles."
+    )
 
     peak = max(row.p75_call_us for row in rows)
-    magnitude = 10 ** math.floor(math.log10(peak / 4))
-    step = next(mult * magnitude for mult in (1, 2, 5, 10) if mult * magnitude >= peak / 4)
-    ticks = math.ceil(peak / step)
+    if capture["schema"] == 2:
+        low = math.floor(math.log10(min(row.p25_call_us for row in rows)))
+        high = max(low + 1, math.ceil(math.log10(peak)))
+        values = [10 ** exponent for exponent in range(low, high + 1)]
 
-    def y(value):
-        return round(bottom - height * value / (ticks * step), 3)
+        def y(value):
+            return round(bottom - height * (math.log10(value) - low) / (high - low), 3)
+    else:
+        magnitude = 10 ** math.floor(math.log10(peak / 4))
+        step = next(mult * magnitude for mult in (1, 2, 5, 10) if mult * magnitude >= peak / 4)
+        ticks = math.ceil(peak / step)
+        values = [tick * step for tick in range(ticks + 1)]
 
-    for tick in range(ticks + 1):
-        value = tick * step
+        def y(value):
+            return round(bottom - height * value / (ticks * step), 3)
+
+    for value in values:
         add("line", x1=left, x2=right, y1=y(value), y2=y(value), stroke="#ddd")
         add("text", x=left - 9, y=y(value) + 4, text_anchor="end").text = f"{value:g}"
     add("text", transform=f"translate(18 {top + height / 2}) rotate(-90)",
-        text_anchor="middle").text = "Workload-call time (µs)"
+        text_anchor="middle").text = "Completed calls per second" if rates else "Workload-call time (µs)"
     spacing = width / fork_count
     for fork in range(fork_count):
         add("text", x=left + (fork + 0.5) * spacing, y=bottom + 18,
@@ -159,6 +199,10 @@ def render_svg(capture, rows):
         group = add("g")
         add("title", group).text = (f"Fork {row.fork + 1}, {row.collector}: median {row.median_call_us:g} µs, "
                                     f"IQR {row.p25_call_us:g}–{row.p75_call_us:g} µs")
+        if rates:
+            group[0].text = f"Fork {row.fork + 1}, {row.collector}: {row.median_call_us:g} calls/s"
+            marker(group, index, x, y(row.median_call_us))
+            continue
         add("line", group, x1=x, x2=x, y1=y(row.p25_call_us), y2=y(row.p75_call_us),
             stroke=COLORS[index % len(COLORS)], stroke_opacity=0.55, stroke_width=3, stroke_linecap="round")
         for bound in (row.p25_call_us, row.p75_call_us):
@@ -172,7 +216,7 @@ def render_svg(capture, rows):
     return ET.tostring(svg, encoding="unicode") + "\n"
 
 
-def write_outputs(csv_path, figure_path, rows, svg, overwrite):
+def write_outputs(csv_path, figure_path, headings, rows, svg, overwrite):
     # Finish both files before publishing either. Reserve new names exclusively.
     with ExitStack() as temps, ExitStack() as rollback:
         staged = {}
@@ -181,7 +225,7 @@ def write_outputs(csv_path, figure_path, rows, svg, overwrite):
             staged[path] = Path(directory) / "new"
         with staged[csv_path].open("w", newline="", encoding="utf-8") as stream:
             writer = csv.writer(stream)
-            writer.writerow(ForkRow._fields)
+            writer.writerow(headings)
             writer.writerows(rows)
         with staged[figure_path].open("w", newline="\n", encoding="utf-8") as stream:
             stream.write(svg)
@@ -219,7 +263,33 @@ def main():
     try:
         capture = json.loads(args.capture.read_text(encoding="utf-8"))
         rows = fork_rows(capture)
-        write_outputs(args.csv, args.figure, rows, render_svg(capture, rows), args.overwrite)
+        headings = list(ForkRow._fields)
+        table = rows
+        if capture["schema"] == 2:
+            headings = ["fork", "tier", "median_call_us"]
+            table = [row[:3] for row in rows]
+        svg = render_svg(capture, rows)
+        if all("batch_ns" in process for process in capture["processes"]):
+            rates = {}
+            for process in capture["processes"]:
+                duration = process["batch_ns"]
+                if not 0 < sum(s["elapsed_ns"] for s in process["samples"]) <= duration <= process["process_ns"]:
+                    raise ValueError("invalid measured process interval")
+                name = process["tier" if capture["schema"] == 2 else "collector"]
+                rates[process["fork"], name] = len(process["samples"]) * 1e9 / duration
+            headings.append("batch_calls_per_second")
+            table = [(*record, rates[row.fork, row.collector]) for record, row in zip(table, rows)]
+            rate_rows = [ForkRow(row.fork, row.collector, *([rates[row.fork, row.collector]] * 3))
+                         for row in rows]
+            ET.register_namespace("", "http://www.w3.org/2000/svg")
+            latency, rate = ET.fromstring(svg), ET.fromstring(render_svg(capture, rate_rows, rates=True))
+            width, height = int(latency.get("width")), int(latency.get("height"))
+            rate.set("x", str(width))
+            figure = ET.Element("{http://www.w3.org/2000/svg}svg",
+                                width=str(width * 2), height=str(height), viewBox=f"0 0 {width * 2} {height}")
+            figure.extend((latency, rate))
+            svg = ET.tostring(figure, encoding="unicode") + "\n"
+        write_outputs(args.csv, args.figure, headings, table, svg, args.overwrite)
     except (OSError, ValueError) as error:
         parser.error(str(error))
 
