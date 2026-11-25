@@ -151,3 +151,36 @@ async fn class_constant_access_is_checked_for_casts_and_allocations()
     }
     Ok(())
 }
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_casts_match_hotspot_and_preserve_reference_identity()
+-> Result<(), Box<dyn std::error::Error>> {
+    let program = program()?;
+    let compiled = program.compile()?;
+    let mut rows = 0;
+    for line in include_str!("fixtures/canonical/cast-oracle.tsv").lines() {
+        let mut fields = line.split('\t');
+        let method = fields.next().ok_or("method")?;
+        let argument = fields.next().ok_or("argument")?.parse()?;
+        let expected = fields.next().ok_or("expected")?;
+        let result = compiled
+            .run(
+                "CanonicalCastWorkload",
+                method,
+                argument,
+                configuration(),
+                ristretto_vm::canonical::CompiledLimits::default(),
+            )
+            .await;
+        println!("native {method}({argument}) -> {result:?}");
+        if let Ok(report) = &result {
+            assert_eq!(report.compiled_entries, report.calls);
+            assert!(report.compiled_entries > 0);
+        }
+        check(result, expected)?;
+        rows += 1;
+    }
+    assert_eq!(rows, 85);
+    Ok(())
+}

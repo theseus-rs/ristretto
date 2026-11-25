@@ -157,3 +157,77 @@ async fn cancel_live(
     assert_eq!(budget.used(), 0);
     Ok(())
 }
+
+#[tokio::test]
+async fn cancelling_native_cast_result_releases_its_single_registered_root() -> Result<(), Error> {
+    let classes: [&[u8]; 3] = [
+        include_bytes!("../../tests/fixtures/canonical/CanonicalCastWorkload.class"),
+        include_bytes!("../../tests/fixtures/canonical/CanonicalCastWorkload$Node.class"),
+        include_bytes!("../../tests/fixtures/canonical/CanonicalCastWorkload$Other.class"),
+    ];
+    let program = Program::from_classfiles(
+        classes
+            .map(ClassFile::from_bytes)
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?,
+    )?;
+    let compiled = program.compile()?;
+    let configuration = Configuration {
+        objects: 4,
+        roots: 1,
+        mutators: 1,
+        helpers: 1,
+        edges_per_object: 8,
+    };
+    let budget = Budget::new(configuration.charged_bytes()?);
+    let collector = GarbageCollector::new();
+    let runtime = Runtime::new(&collector, configuration, &budget)?;
+    let table = Rc::new(RefCell::new(Table::new(
+        configuration.objects,
+        64,
+        compiled.roots_per_frame,
+    )?));
+    let mut execution = CompiledExecution {
+        compiled: &compiled,
+        execution: Execution {
+            program: &program,
+            mutator: runtime.mutator()?,
+            helper: runtime.helper()?,
+            runtime: &runtime,
+            limits: CompiledLimits::default().execution_limits(),
+            report: Report::default(),
+            statics: crate::canonical::statics::States::default(),
+        },
+        table: table.clone(),
+        slice_limit: 100_000,
+    };
+    let node = program.class_index("CanonicalCastWorkload$Node")?;
+    let root = execution.execution.allocate_object(node).await?;
+    let class = program.class_index("CanonicalCastWorkload")?;
+    let method = program.layout(class)?.class.try_get_method(
+        "castNode",
+        "(Ljava/lang/Object;)LCanonicalCastWorkload$Node;",
+    )?;
+    let mut future = Box::pin(execution.call(class, method, vec![Value::Reference(Some(root))], 0));
+    let mut context = std::task::Context::from_waker(Waker::noop());
+    for _ in 0..64 {
+        assert!(matches!(future.as_mut().poll(&mut context), Poll::Pending));
+        if table.borrow().live_objects() == 1 {
+            break;
+        }
+    }
+    assert_eq!(table.borrow().live_objects(), 1);
+    {
+        let table_guard = table.borrow_mut();
+        drop(future);
+        assert_eq!(table_guard.live_objects(), 0);
+    }
+    assert_eq!(execution.execution.report.native_slices, 1);
+    execution.execution.cleanup(&collector).await?;
+    assert_eq!(collector.managed_bytes(), 0);
+    drop(execution);
+    drop(table);
+    drop(runtime);
+    assert_eq!(budget.used(), 0);
+    Ok(())
+}

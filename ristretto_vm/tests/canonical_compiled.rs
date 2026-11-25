@@ -199,15 +199,24 @@ async fn native_java_depth_uses_bounded_heap_frames_instead_of_recursive_host_po
     Ok(())
 }
 
-#[test]
-fn compiler_intersection_rejects_casts_before_any_native_entry()
+#[tokio::test]
+async fn primitive_array_cast_mismatch_returns_a_java_fault()
 -> Result<(), Box<dyn std::error::Error>> {
     let program = Program::from_classfiles([ClassFile::from_bytes(include_bytes!(
         "fixtures/canonical_rejected/CanonicalPrimitiveArrayTypeFailure.class"
     ))?])?;
+    let compiled = program.compile()?;
     assert!(matches!(
-        program.compile(),
-        Err(Error::Jit(ristretto_jit::Error::UnsupportedMethod(_)))
+        compiled
+            .run(
+                "CanonicalPrimitiveArrayTypeFailure",
+                "run",
+                0,
+                configuration(),
+                CompiledLimits::default()
+            )
+            .await,
+        Err(Error::TypeFault("ClassCastException"))
     ));
     Ok(())
 }
