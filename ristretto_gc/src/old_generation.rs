@@ -157,9 +157,9 @@ impl GarbageCollector {
                 return;
             };
             let address = slot.target.load(Ordering::Acquire);
-            if self.weak_target_is_registered(&slot, address) {
+            if let Some(metadata) = self.weak_target_metadata(&slot, address) {
                 let _retention = TraceRetention::enter(self, Retention::Strong);
-                self.shade(address);
+                self.shade_known(&metadata);
             }
         }
         cycle.cursor = id;

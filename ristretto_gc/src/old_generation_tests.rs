@@ -489,3 +489,44 @@ fn precise_full_handoff_does_not_inherit_the_conservative_young_snapshot() -> Re
     }
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn old_reference_shade_completes_with_target_shard_parked() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(config(counted));
+        let target = Gc::try_new(&gc, 47_u64)?;
+        let metadata = gc.objects.lookup(target.as_ptr().addr()).unwrap();
+        let weak = crate::GcWeak::new(&target, crate::ReferenceKind::Weak, 0);
+        gc.collect_full()?;
+        drop(target);
+        gc.collect_old();
+        assert!((0..4096).any(|_| {
+            gc.step();
+            lock(&gc.domains[1].cycle).phase == Phase::OldReferences
+        }));
+        let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+        assert!(!metadata.marked(1, epoch));
+        let held = gc.objects.lock(metadata.ptr().0);
+        let (done, finished) = mpsc::channel();
+        let progress = thread::scope(|scope| {
+            let heap = &gc;
+            scope.spawn(move || {
+                heap.step();
+                done.send(()).unwrap();
+            });
+            let result = finished.recv_timeout(Duration::from_secs(2));
+            drop(held);
+            result
+        });
+        assert!(progress.is_ok(), "old-only shade waited on target shard");
+        assert!(metadata.marked(1, epoch));
+        assert!((0..4096).any(|_| gc.step()));
+        assert_eq!(*weak.upgrade().unwrap(), 47);
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+    }
+    Ok(())
+}

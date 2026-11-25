@@ -1548,10 +1548,6 @@ impl GarbageCollector {
             .filter(|metadata| metadata.id == slot.target_identity)
     }
 
-    fn weak_target_is_registered(&self, slot: &crate::weak::WeakSlot, address: usize) -> bool {
-        self.weak_target_metadata(slot, address).is_some()
-    }
-
     pub(crate) fn snapshot_edge(&self, address: usize) {
         if self.domains.iter().any(Domain::marking) {
             self.edge_barrier(address);
