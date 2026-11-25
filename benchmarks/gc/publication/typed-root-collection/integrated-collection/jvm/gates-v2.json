@@ -1,0 +1,408 @@
+{
+  "policy_version": 2,
+  "policy_id": "native-stw-v2",
+  "historical_only": false,
+  "policy_sha256": null,
+  "short_comparison_gate": false,
+  "qualification": false,
+  "candidate": "ristretto-candidate",
+  "pause_limit_ns_exclusive": 1000000,
+  "results": [
+    {
+      "workload": "allocation",
+      "rate": 0,
+      "peer": "g1",
+      "metric": "throughput",
+      "role": "diagnostic",
+      "candidate_peer_ratio": null,
+      "unavailable_reason": "incomplete process pairs"
+    },
+    {
+      "workload": "allocation",
+      "rate": 0,
+      "peer": "zgc",
+      "metric": "throughput",
+      "role": "diagnostic",
+      "candidate_peer_ratio": null,
+      "unavailable_reason": "incomplete process pairs"
+    },
+    {
+      "workload": "allocation",
+      "rate": 1000,
+      "peer": "g1",
+      "metric": "p999",
+      "role": "diagnostic",
+      "candidate_peer_ratio": null,
+      "unavailable_reason": "incomplete process pairs"
+    },
+    {
+      "workload": "allocation",
+      "rate": 1000,
+      "peer": "g1",
+      "metric": "p9999",
+      "role": "diagnostic",
+      "candidate_peer_ratio": null,
+      "unavailable_reason": "incomplete process pairs"
+    },
+    {
+      "workload": "allocation",
+      "rate": 1000,
+      "peer": "zgc",
+      "metric": "p999",
+      "role": "diagnostic",
+      "candidate_peer_ratio": null,
+      "unavailable_reason": "incomplete process pairs"
+    },
+    {
+      "workload": "allocation",
+      "rate": 1000,
+      "peer": "zgc",
+      "metric": "p9999",
+      "role": "diagnostic",
+      "candidate_peer_ratio": null,
+      "unavailable_reason": "incomplete process pairs"
+    },
+    {
+      "workload": "roots",
+      "rate": 0,
+      "peer": "g1",
+      "metric": "throughput",
+      "role": "diagnostic",
+      "candidate_peer_ratio": null,
+      "unavailable_reason": "incomplete process pairs"
+    },
+    {
+      "workload": "roots",
+      "rate": 0,
+      "peer": "zgc",
+      "metric": "throughput",
+      "role": "diagnostic",
+      "candidate_peer_ratio": null,
+      "unavailable_reason": "incomplete process pairs"
+    },
+    {
+      "workload": "roots",
+      "rate": 1000,
+      "peer": "g1",
+      "metric": "p999",
+      "role": "diagnostic",
+      "candidate_peer_ratio": null,
+      "unavailable_reason": "incomplete process pairs"
+    },
+    {
+      "workload": "roots",
+      "rate": 1000,
+      "peer": "g1",
+      "metric": "p9999",
+      "role": "diagnostic",
+      "candidate_peer_ratio": null,
+      "unavailable_reason": "incomplete process pairs"
+    },
+    {
+      "workload": "roots",
+      "rate": 1000,
+      "peer": "zgc",
+      "metric": "p999",
+      "role": "diagnostic",
+      "candidate_peer_ratio": null,
+      "unavailable_reason": "incomplete process pairs"
+    },
+    {
+      "workload": "roots",
+      "rate": 1000,
+      "peer": "zgc",
+      "metric": "p9999",
+      "role": "diagnostic",
+      "candidate_peer_ratio": null,
+      "unavailable_reason": "incomplete process pairs"
+    }
+  ],
+  "processes": [
+    {
+      "directory": "run-0001-zgc-roots-1000",
+      "runtime": "zgc",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0002-ristretto-candidate-roots-1000",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0004-g1-roots-1000",
+      "runtime": "g1",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0005-ristretto-candidate-allocation-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0006-g1-allocation-0",
+      "runtime": "g1",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0008-zgc-allocation-0",
+      "runtime": "zgc",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0011-ristretto-candidate-allocation-1000",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0012-zgc-allocation-1000",
+      "runtime": "zgc",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0013-g1-allocation-1000",
+      "runtime": "g1",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0015-zgc-roots-0",
+      "runtime": "zgc",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0016-g1-roots-0",
+      "runtime": "g1",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0019-ristretto-candidate-roots-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0020-ristretto-candidate-allocation-1000",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0021-g1-allocation-1000",
+      "runtime": "g1",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0023-zgc-allocation-1000",
+      "runtime": "zgc",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0025-ristretto-candidate-roots-1000",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0028-zgc-roots-1000",
+      "runtime": "zgc",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0029-g1-roots-1000",
+      "runtime": "g1",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0030-ristretto-candidate-allocation-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0031-zgc-allocation-0",
+      "runtime": "zgc",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0033-g1-allocation-0",
+      "runtime": "g1",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0035-g1-roots-0",
+      "runtime": "g1",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0036-ristretto-candidate-roots-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0038-zgc-roots-0",
+      "runtime": "zgc",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0040-g1-allocation-1000",
+      "runtime": "g1",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0041-zgc-allocation-1000",
+      "runtime": "zgc",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0042-ristretto-candidate-allocation-1000",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0046-ristretto-candidate-allocation-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0048-g1-allocation-0",
+      "runtime": "g1",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0049-zgc-allocation-0",
+      "runtime": "zgc",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0050-g1-roots-1000",
+      "runtime": "g1",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0052-zgc-roots-1000",
+      "runtime": "zgc",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0054-ristretto-candidate-roots-1000",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "fewer than one million completions for extreme-tail claims"
+    },
+    {
+      "directory": "run-0056-ristretto-candidate-roots-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0057-zgc-roots-0",
+      "runtime": "zgc",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    },
+    {
+      "directory": "run-0059-g1-roots-0",
+      "runtime": "g1",
+      "pass": false,
+      "error": "no enforced CPU/RSS ceiling"
+    }
+  ],
+  "failures": [
+    "no predeclared acceptance policy v2; historical data is not reclassified",
+    "run-0001-zgc-roots-1000: fewer than one million completions for extreme-tail claims",
+    "run-0002-ristretto-candidate-roots-1000: fewer than one million completions for extreme-tail claims",
+    "run-0004-g1-roots-1000: fewer than one million completions for extreme-tail claims",
+    "run-0005-ristretto-candidate-allocation-0: no enforced CPU/RSS ceiling",
+    "run-0006-g1-allocation-0: no enforced CPU/RSS ceiling",
+    "run-0008-zgc-allocation-0: no enforced CPU/RSS ceiling",
+    "run-0011-ristretto-candidate-allocation-1000: fewer than one million completions for extreme-tail claims",
+    "run-0012-zgc-allocation-1000: fewer than one million completions for extreme-tail claims",
+    "run-0013-g1-allocation-1000: fewer than one million completions for extreme-tail claims",
+    "run-0015-zgc-roots-0: no enforced CPU/RSS ceiling",
+    "run-0016-g1-roots-0: no enforced CPU/RSS ceiling",
+    "run-0019-ristretto-candidate-roots-0: no enforced CPU/RSS ceiling",
+    "run-0020-ristretto-candidate-allocation-1000: fewer than one million completions for extreme-tail claims",
+    "run-0021-g1-allocation-1000: fewer than one million completions for extreme-tail claims",
+    "run-0023-zgc-allocation-1000: fewer than one million completions for extreme-tail claims",
+    "run-0025-ristretto-candidate-roots-1000: fewer than one million completions for extreme-tail claims",
+    "run-0028-zgc-roots-1000: fewer than one million completions for extreme-tail claims",
+    "run-0029-g1-roots-1000: fewer than one million completions for extreme-tail claims",
+    "run-0030-ristretto-candidate-allocation-0: no enforced CPU/RSS ceiling",
+    "run-0031-zgc-allocation-0: no enforced CPU/RSS ceiling",
+    "run-0033-g1-allocation-0: no enforced CPU/RSS ceiling",
+    "run-0035-g1-roots-0: no enforced CPU/RSS ceiling",
+    "run-0036-ristretto-candidate-roots-0: no enforced CPU/RSS ceiling",
+    "run-0038-zgc-roots-0: no enforced CPU/RSS ceiling",
+    "run-0040-g1-allocation-1000: fewer than one million completions for extreme-tail claims",
+    "run-0041-zgc-allocation-1000: fewer than one million completions for extreme-tail claims",
+    "run-0042-ristretto-candidate-allocation-1000: fewer than one million completions for extreme-tail claims",
+    "run-0046-ristretto-candidate-allocation-0: no enforced CPU/RSS ceiling",
+    "run-0048-g1-allocation-0: no enforced CPU/RSS ceiling",
+    "run-0049-zgc-allocation-0: no enforced CPU/RSS ceiling",
+    "run-0050-g1-roots-1000: fewer than one million completions for extreme-tail claims",
+    "run-0052-zgc-roots-1000: fewer than one million completions for extreme-tail claims",
+    "run-0054-ristretto-candidate-roots-1000: fewer than one million completions for extreme-tail claims",
+    "run-0056-ristretto-candidate-roots-0: no enforced CPU/RSS ceiling",
+    "run-0057-zgc-roots-0: no enforced CPU/RSS ceiling",
+    "run-0059-g1-roots-0: no enforced CPU/RSS ceiling",
+    "a single equal enforced resource policy is required",
+    "allocation/0/g1: need at least five complete independent process pairs",
+    "allocation/0/zgc: need at least five complete independent process pairs",
+    "allocation/1000/g1: need at least five complete independent process pairs",
+    "allocation/1000/zgc: need at least five complete independent process pairs",
+    "roots/0/g1: need at least five complete independent process pairs",
+    "roots/0/zgc: need at least five complete independent process pairs",
+    "roots/1000/g1: need at least five complete independent process pairs",
+    "roots/1000/zgc: need at least five complete independent process pairs"
+  ],
+  "remaining_gates": [
+    "validated warmup, compilation stability and recorder overhead",
+    "calibrated sustainable capacity and declared operating envelope",
+    "bounded backlog and live/retired/RSS memory time series",
+    "forced stalled-publisher/callback progress and coordination qualification",
+    "three paired one-hour trials and a separate 24-hour candidate trial",
+    "Wasm host-turn and browser qualification"
+  ],
+  "evaluated_utc": "2026-11-25T19:15:00.687716+00:00",
+  "evaluator_sha256": {
+    "qualify.py": "220636eed5c61f316cefcc9b1bfccd452137703c0690d9751e77811a0acbabf2",
+    "qualify_legacy.py": "1558a7819717bc6d8034535ee1208377d449c5aa9143c7aeffdd5fea934ff2b0",
+    "acceptance.py": "aa12cd10fdcef98f4636dee9ba2f7baabcd8ca63cb2caa36f13e7566b24d0e69",
+    "report.py": "bbea2c2ef483b338c3ca075d0e255efef3f51940fc248650714117b415c552ec",
+    "mechanisms.py": "0e868aaeefed62e0835fe96de386ebf0613e92ea932870d02ced4b85cec05430"
+  },
+  "input_sha256": {
+    "metadata.json": "911f542332e4bbe70a4e8be2d27fb8418a81bf334a1b4e57474da4782696984d",
+    "raw.jsonl": "b754c98396a4884bcfa31723afa00e41ee6b4fb5677309dd270dadec17706e06",
+    "integrity.json": "2de94f3ba65d949cf814ca2abbe58117df0148c486b55bbd204acb8bb74ac092",
+    "schedule.json": "0bcb72cb4a360ceafe7f9b83ba777c8c1a16fbe0b41539d8c0cf6c55c42a5724"
+  }
+}

@@ -1,0 +1,308 @@
+{
+  "integrated": {
+    "native": {
+      "cpus": [
+        4,
+        6,
+        8
+      ],
+      "nodes": 4095,
+      "cycles": 16,
+      "seed": 7281,
+      "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "repeats": 24,
+      "argv0": "mark_cycles",
+      "harness_sha256": "721d9e36875fa0309c57c0b7e4b2f2d94e79984eceeebf3c95d7e7eb63d4bda7",
+      "builds": {
+        "before": {
+          "source_revision": "f1daebeb",
+          "binary_sha256": "844228aabef911e99f21392858bf654d731b8d6cf9af45f2c47a437cf05085af",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "target": "native",
+          "profile_sha256": "29bf18fb4566aacb0a376c7b00398f7ef30b69c277cf7d01eb136c4d319d54d3",
+          "dependencies_sha256": "b35438e0440644fe40dd9b29c60b51793d04f91aeab6ca4045212bd0a1f4b137",
+          "build_command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--release",
+            "-p",
+            "ristretto_gc",
+            "--example",
+            "mark_cycles"
+          ],
+          "features": []
+        },
+        "after": {
+          "source_revision": "0abf26fb81796d37f3200192e8aba2dec68324e2",
+          "binary_sha256": "f1bf4c5c04b8169836ee955a01c88a92f58bcd1605e2eaceafcb7358b5c552fb",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "target": "native",
+          "profile_sha256": "29bf18fb4566aacb0a376c7b00398f7ef30b69c277cf7d01eb136c4d319d54d3",
+          "dependencies_sha256": "b35438e0440644fe40dd9b29c60b51793d04f91aeab6ca4045212bd0a1f4b137",
+          "build_command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--release",
+            "-p",
+            "ristretto_gc",
+            "--example",
+            "mark_cycles"
+          ],
+          "features": []
+        }
+      },
+      "different_collector_sources": {
+        "ristretto_gc/src/barrier_progress_tests.rs": [
+          "e9ee03ed652bc4e8d5fc706e69903d468ac99f2acce2aee26cf8c0057d622b0c",
+          "0bc4409647ba24d2196b3badea49590f21cbd7795123194ee99b124e78f2c01a"
+        ],
+        "ristretto_gc/src/birth_visibility.rs": [
+          "50eb2ad7e1b262bef27d0218a395541e5274797277cb40e97c988148e9bff50c",
+          "642634681576da99dddb368de979b74d419ed31f31ff7900a6631f81b6bf88f1"
+        ],
+        "ristretto_gc/src/collector.rs": [
+          "4507a0f7841419a9f5bed8ffa08bf209860e1cd2033751b2be9601003b2ecc0a",
+          "b3e94089ad0894d1aa8cf7341d75ef17a96c1018ef659d7e9f66881ad62aac5e"
+        ],
+        "ristretto_gc/src/gc.rs": [
+          "694b181808865fa781c76b8969a9b0dcdbf59478ceb10f451acb1720e8546dec",
+          "4e20f118bda81d7aa06217951a1198605645e39455e3dcce390eddb0e386341e"
+        ],
+        "ristretto_gc/src/generation_tests.rs": [
+          "1fc58832f49f5223080af238c17aa367fbe9c58d725174bb323b964cfd174f2c",
+          "6cc3eef41dedf813f82f7c110ac9c94c31caf74b2934d336beca4d1e5ab09eff"
+        ],
+        "ristretto_gc/src/index.rs": [
+          "532b19a183ec8d8c9c97a1f6182d010746c21001a8fb67ea4a68023ad58bf97a",
+          "5d6520a2e9d7668b84100d3ce58728c9c969b107a3ac7b1cbdbe4d3af5690811"
+        ],
+        "ristretto_gc/src/metadata.rs": [
+          "87a44d85d4669e2bee69d1e84781474e72e10cc769795eed67ee61e3c489331e",
+          "13315b254e3aedfb965288c93385ffa278912647fd95d6b693475463e889538a"
+        ],
+        "ristretto_gc/src/metadata_owner_tests.rs": [
+          "da8c9e5746140f46b48a21ff36f486f582fa11febd03a8212a94fba52b34eedd",
+          "cea86707f8b464c24abc6cacc65a33e7733acd68d5cba17fb4be2b5d0e5adb3a"
+        ],
+        "ristretto_gc/src/nursery.rs": [
+          "66ea8d6dc508cb60cc711537fe2470b5e5e9452ca19ebf4787522f3d69b2ffbf",
+          "f559797aa364c1ea920143f024fea77cd9626d1aabd304fd8900925763d6fec8"
+        ],
+        "ristretto_gc/src/old_generation.rs": [
+          "d4758652bdcde7ffea6aa548747eb1ee7ad08a42902ba47862622cc9bae2cc11",
+          "2ee72b6231294e05eb24be693ec62647dacd2c2623b843816e8bb31fa64e3b63"
+        ],
+        "ristretto_gc/src/phase_tests.rs": [
+          "cb0a631ac85baa1bdfc636b89c9233a6285f7f71e34ba5a19d1191ad2cd73806",
+          "d4130366263866d7d5829935f6009f772654e099e136c2e31a9a981c647257ef"
+        ],
+        "ristretto_gc/src/phase_work.rs": [
+          "9956a1ed79b075d2d9cd3bdb4951bcfa46d7b555ae7be4d503178481521186fd",
+          "0a39c404605ac318d76208ae87257407cb7ce19cdcca72ef63818a747306b3fc"
+        ],
+        "ristretto_gc/src/publication_owner.rs": [
+          "c1be81457871ee3894190c15e4cc031ae4b2638ff4ce37bca54b966a3f82b4b6",
+          "ffd712cccf4c1e01626c8518681b4d193be7ba5afb52f564e51dc8d84e48e021"
+        ],
+        "ristretto_gc/src/publication_state.rs": [
+          "e99e100d9078ab2ccbc72cdb11f91d2dcabf38afdd6886ab4e3d04821d37baec",
+          "67f0c8d980cc60a7c6409e2ffef06b0f2fe1a2a62935d75114a81787444bb7ee"
+        ],
+        "ristretto_gc/src/publication_tests.rs": [
+          "babbb6a88516ed3833aca07d2efad3986de9bb65fa7d533ed5c291d2b4c797a8",
+          "6eb21cd86360cda2b4ad914d270d25e1e9335cddb64f23b5fc87fb1a1d4943af"
+        ],
+        "ristretto_gc/src/root_attempt_state.rs": [
+          null,
+          "ed85dbbd8982be846a156c2ec187d0ea028893cb7b07397e4502805d6a24c450"
+        ],
+        "ristretto_gc/src/root_overflow.rs": [
+          "5a28ba0862b113e4812c9ea3e0c6c7c6bf664e80b740b86a9e76ebee32164216",
+          "5701e84421661d1e719c6e0ce794a470080843fe596d6741bbd0f4290f41956e"
+        ],
+        "ristretto_gc/src/root_slot_state.rs": [
+          "fbdf19550e52d34a75bd2c658566dddcd10f6d46f5285c241f55ce6e32223f26",
+          "5e559b820fda5847a6395cb1fdb7b244cb54c79405252e26e0c9978292197fd2"
+        ],
+        "ristretto_gc/src/roots.rs": [
+          "beb0e6571dd28252de1aa5affb965f0a05271b26ac5ac529a2e87f51f3044afb",
+          "c633f913e5487b35cac4fa36611017bc465a860b84212c71ed257418c6298fa6"
+        ],
+        "ristretto_gc/src/storage_state.rs": [
+          "7fa1674e949e8644f8a56f2976e41e83618d65f76b5f900eb5e382771a33c5f5",
+          "8047720b2c5efa3121571dd9d16d5567e9d440a22e477d34141e2555be95f373"
+        ],
+        "ristretto_gc/src/work.rs": [
+          "23d78530f3d4275e072b19abf07ccbeb01ba0ac14508735823245123b721ed43",
+          "578c12384c1af45b6d033967fea96e1023cf371752ae44687c7e8642ee1e44b8"
+        ]
+      },
+      "shared_manifests_and_fixture": {
+        "Cargo.toml": "29bf18fb4566aacb0a376c7b00398f7ef30b69c277cf7d01eb136c4d319d54d3",
+        "Cargo.lock": "b35438e0440644fe40dd9b29c60b51793d04f91aeab6ca4045212bd0a1f4b137",
+        "rust-toolchain.toml": "f76901e0078329724b4d7bc5993c267efc553a044299204fc472a8964ebfe309",
+        "ristretto_gc/Cargo.toml": "4c837df9b7a6a4d19b9730f26f174e7d2017bf3bccb8f0628cf1db1baf9dcc93",
+        "ristretto_gc/examples/mark_cycles.rs": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab"
+      }
+    },
+    "wasm": {
+      "cpus": [
+        10
+      ],
+      "nodes": 4095,
+      "cycles": 16,
+      "seed": 7281,
+      "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "repeats": 24,
+      "argv0": "mark_cycles",
+      "harness_sha256": "721d9e36875fa0309c57c0b7e4b2f2d94e79984eceeebf3c95d7e7eb63d4bda7",
+      "builds": {
+        "before": {
+          "source_revision": "f1daebeb",
+          "binary_sha256": "30d022b6a49ad2c0d8f117e4135d05c28332e702a5ba343d39c587dd4766c05b",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "target": "wasm",
+          "profile_sha256": "29bf18fb4566aacb0a376c7b00398f7ef30b69c277cf7d01eb136c4d319d54d3",
+          "dependencies_sha256": "b35438e0440644fe40dd9b29c60b51793d04f91aeab6ca4045212bd0a1f4b137",
+          "build_command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--release",
+            "-p",
+            "ristretto_gc",
+            "--example",
+            "mark_cycles",
+            "--target",
+            "wasm32-wasip2"
+          ],
+          "features": []
+        },
+        "after": {
+          "source_revision": "0abf26fb81796d37f3200192e8aba2dec68324e2",
+          "binary_sha256": "926497a4fcc7ed936d342435213563c79fee13309ed3507c935c8332a0c82d6a",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "target": "wasm",
+          "profile_sha256": "29bf18fb4566aacb0a376c7b00398f7ef30b69c277cf7d01eb136c4d319d54d3",
+          "dependencies_sha256": "b35438e0440644fe40dd9b29c60b51793d04f91aeab6ca4045212bd0a1f4b137",
+          "build_command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--release",
+            "-p",
+            "ristretto_gc",
+            "--example",
+            "mark_cycles",
+            "--target",
+            "wasm32-wasip2"
+          ],
+          "features": []
+        }
+      },
+      "different_collector_sources": {
+        "ristretto_gc/src/barrier_progress_tests.rs": [
+          "e9ee03ed652bc4e8d5fc706e69903d468ac99f2acce2aee26cf8c0057d622b0c",
+          "0bc4409647ba24d2196b3badea49590f21cbd7795123194ee99b124e78f2c01a"
+        ],
+        "ristretto_gc/src/birth_visibility.rs": [
+          "50eb2ad7e1b262bef27d0218a395541e5274797277cb40e97c988148e9bff50c",
+          "642634681576da99dddb368de979b74d419ed31f31ff7900a6631f81b6bf88f1"
+        ],
+        "ristretto_gc/src/collector.rs": [
+          "4507a0f7841419a9f5bed8ffa08bf209860e1cd2033751b2be9601003b2ecc0a",
+          "b3e94089ad0894d1aa8cf7341d75ef17a96c1018ef659d7e9f66881ad62aac5e"
+        ],
+        "ristretto_gc/src/gc.rs": [
+          "694b181808865fa781c76b8969a9b0dcdbf59478ceb10f451acb1720e8546dec",
+          "4e20f118bda81d7aa06217951a1198605645e39455e3dcce390eddb0e386341e"
+        ],
+        "ristretto_gc/src/generation_tests.rs": [
+          "1fc58832f49f5223080af238c17aa367fbe9c58d725174bb323b964cfd174f2c",
+          "6cc3eef41dedf813f82f7c110ac9c94c31caf74b2934d336beca4d1e5ab09eff"
+        ],
+        "ristretto_gc/src/index.rs": [
+          "532b19a183ec8d8c9c97a1f6182d010746c21001a8fb67ea4a68023ad58bf97a",
+          "5d6520a2e9d7668b84100d3ce58728c9c969b107a3ac7b1cbdbe4d3af5690811"
+        ],
+        "ristretto_gc/src/metadata.rs": [
+          "87a44d85d4669e2bee69d1e84781474e72e10cc769795eed67ee61e3c489331e",
+          "13315b254e3aedfb965288c93385ffa278912647fd95d6b693475463e889538a"
+        ],
+        "ristretto_gc/src/metadata_owner_tests.rs": [
+          "da8c9e5746140f46b48a21ff36f486f582fa11febd03a8212a94fba52b34eedd",
+          "cea86707f8b464c24abc6cacc65a33e7733acd68d5cba17fb4be2b5d0e5adb3a"
+        ],
+        "ristretto_gc/src/nursery.rs": [
+          "66ea8d6dc508cb60cc711537fe2470b5e5e9452ca19ebf4787522f3d69b2ffbf",
+          "f559797aa364c1ea920143f024fea77cd9626d1aabd304fd8900925763d6fec8"
+        ],
+        "ristretto_gc/src/old_generation.rs": [
+          "d4758652bdcde7ffea6aa548747eb1ee7ad08a42902ba47862622cc9bae2cc11",
+          "2ee72b6231294e05eb24be693ec62647dacd2c2623b843816e8bb31fa64e3b63"
+        ],
+        "ristretto_gc/src/phase_tests.rs": [
+          "cb0a631ac85baa1bdfc636b89c9233a6285f7f71e34ba5a19d1191ad2cd73806",
+          "d4130366263866d7d5829935f6009f772654e099e136c2e31a9a981c647257ef"
+        ],
+        "ristretto_gc/src/phase_work.rs": [
+          "9956a1ed79b075d2d9cd3bdb4951bcfa46d7b555ae7be4d503178481521186fd",
+          "0a39c404605ac318d76208ae87257407cb7ce19cdcca72ef63818a747306b3fc"
+        ],
+        "ristretto_gc/src/publication_owner.rs": [
+          "c1be81457871ee3894190c15e4cc031ae4b2638ff4ce37bca54b966a3f82b4b6",
+          "ffd712cccf4c1e01626c8518681b4d193be7ba5afb52f564e51dc8d84e48e021"
+        ],
+        "ristretto_gc/src/publication_state.rs": [
+          "e99e100d9078ab2ccbc72cdb11f91d2dcabf38afdd6886ab4e3d04821d37baec",
+          "67f0c8d980cc60a7c6409e2ffef06b0f2fe1a2a62935d75114a81787444bb7ee"
+        ],
+        "ristretto_gc/src/publication_tests.rs": [
+          "babbb6a88516ed3833aca07d2efad3986de9bb65fa7d533ed5c291d2b4c797a8",
+          "6eb21cd86360cda2b4ad914d270d25e1e9335cddb64f23b5fc87fb1a1d4943af"
+        ],
+        "ristretto_gc/src/root_attempt_state.rs": [
+          null,
+          "ed85dbbd8982be846a156c2ec187d0ea028893cb7b07397e4502805d6a24c450"
+        ],
+        "ristretto_gc/src/root_overflow.rs": [
+          "5a28ba0862b113e4812c9ea3e0c6c7c6bf664e80b740b86a9e76ebee32164216",
+          "5701e84421661d1e719c6e0ce794a470080843fe596d6741bbd0f4290f41956e"
+        ],
+        "ristretto_gc/src/root_slot_state.rs": [
+          "fbdf19550e52d34a75bd2c658566dddcd10f6d46f5285c241f55ce6e32223f26",
+          "5e559b820fda5847a6395cb1fdb7b244cb54c79405252e26e0c9978292197fd2"
+        ],
+        "ristretto_gc/src/roots.rs": [
+          "beb0e6571dd28252de1aa5affb965f0a05271b26ac5ac529a2e87f51f3044afb",
+          "c633f913e5487b35cac4fa36611017bc465a860b84212c71ed257418c6298fa6"
+        ],
+        "ristretto_gc/src/storage_state.rs": [
+          "7fa1674e949e8644f8a56f2976e41e83618d65f76b5f900eb5e382771a33c5f5",
+          "8047720b2c5efa3121571dd9d16d5567e9d440a22e477d34141e2555be95f373"
+        ],
+        "ristretto_gc/src/work.rs": [
+          "23d78530f3d4275e072b19abf07ccbeb01ba0ac14508735823245123b721ed43",
+          "578c12384c1af45b6d033967fea96e1023cf371752ae44687c7e8642ee1e44b8"
+        ]
+      },
+      "wasmtime": {
+        "version": "wasmtime 50.0.1 (c307ec81d 2026-10-29)",
+        "sha256": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8"
+      },
+      "shared_manifests_and_fixture": {
+        "Cargo.toml": "29bf18fb4566aacb0a376c7b00398f7ef30b69c277cf7d01eb136c4d319d54d3",
+        "Cargo.lock": "b35438e0440644fe40dd9b29c60b51793d04f91aeab6ca4045212bd0a1f4b137",
+        "rust-toolchain.toml": "f76901e0078329724b4d7bc5993c267efc553a044299204fc472a8964ebfe309",
+        "ristretto_gc/Cargo.toml": "4c837df9b7a6a4d19b9730f26f174e7d2017bf3bccb8f0628cf1db1baf9dcc93",
+        "ristretto_gc/examples/mark_cycles.rs": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab"
+      }
+    }
+  }
+}
