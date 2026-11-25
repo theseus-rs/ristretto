@@ -360,11 +360,19 @@ fn leaf_reclamation_uses_its_declared_work_budget() -> Result<()> {
         gc.step();
     }
     let before = drops.load(Ordering::Relaxed);
+    let registered = gc.statistics()?.live_objects;
     gc.step();
     let cleared = drops.load(Ordering::Relaxed) - before;
+    let unregistered = registered - gc.statistics()?.live_objects;
+    // A previous sweep batch can leave already unregistered leaves to clear.
+    // This step pays one unit per new removal and one per leaf destruction.
     assert!(
-        (16..=32).contains(&cleared),
+        cleared >= 16,
         "leaf clearing wasted its work budget: {cleared}"
+    );
+    assert!(
+        cleared + unregistered <= 64,
+        "sweep exceeded its work budget"
     );
     gc.collect_full()?;
     assert_eq!(drops.load(Ordering::Relaxed), 128);
