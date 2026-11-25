@@ -743,6 +743,23 @@ mod tests {
     }
 
     #[test]
+    fn packed_keys_preserve_exact_addresses_and_the_scan_sentinel() {
+        let span = PAGE_SIZE * 8;
+        for shards in [1_usize, 2, 4, 8, 16] {
+            let bits = shards.ilog2();
+            for base in [0, span, 1 << 20, usize::MAX & !(span - 1)] {
+                for offset in 0..span {
+                    let address = base | offset;
+                    let shard = address_bucket(address) & (shards - 1);
+                    let key = packed_key(address, bits);
+                    assert_eq!(unpack_key(key, shard, bits), address);
+                    assert!(key != 0 || address == 0);
+                }
+            }
+        }
+    }
+
+    #[test]
     fn sweep_batches_stop_at_budget_young_and_white_entries() {
         use crate::{GarbageCollector, Gc};
         let gc = GarbageCollector::new();
