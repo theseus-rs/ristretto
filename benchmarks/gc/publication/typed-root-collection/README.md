@@ -51,3 +51,5 @@ python3 "$scripts/mark_cycles.py" --before-build "$run/before-wasm.json" --after
   --output "$run/results-wasm" --cpus 10 --workers 0 --wasmtime "$(command -v wasmtime)" \
   --shapes tree wide mixed --nodes 4095 --cycles 16 --repeats 12 --seed 7281 --plot
 ```
+
+The subsequent full-collection measurements cover bounded retirements and contended claims. [Results and graphs](collection-throughput/README.md)
