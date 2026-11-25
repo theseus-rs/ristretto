@@ -3726,7 +3726,7 @@ impl GarbageCollector {
         // Drop the storage even if other owners still hold inert metadata. Its
         // own refund guard also runs if reporting a destructor panic unwinds.
         let destruction = catch_unwind(AssertUnwindSafe(|| {
-            ObjectMetadata::destroy_retired(metadata, self)
+            ObjectMetadata::destroy_retired(metadata, self);
         }));
         self.retired_bytes
             .fetch_sub(metadata.size(), Ordering::AcqRel);
