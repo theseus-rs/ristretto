@@ -8,7 +8,7 @@ use once_cell::race::OnceBox;
 use std::sync::{Arc, Weak};
 
 struct Entry {
-    epoch: Weak<BirthEpoch>,
+    epoch: Weak<()>,
     strength: Retention,
 }
 
@@ -20,8 +20,7 @@ impl DirectMarks {
         let entry = self.0.get()?.get(index)?.load();
         let entry = entry.as_ref()?;
         let epoch = queues.birth_epoch()?;
-        (epoch.number == number && std::ptr::eq(entry.epoch.as_ptr(), Arc::as_ptr(&epoch)))
-            .then_some(entry.strength)
+        (epoch.number == number && epoch.matches_witness(&entry.epoch)).then_some(entry.strength)
     }
 
     pub(crate) fn publish(
@@ -34,7 +33,7 @@ impl DirectMarks {
         let slots = self.0.get_or_init(Box::default);
         let Some(slot) = slots.get(index) else { return };
         let replacement = Arc::new(Entry {
-            epoch: Arc::downgrade(epoch),
+            epoch: epoch.direct_witness(),
             strength,
         });
         // Validate the epoch after loading the prior slot on every CAS retry.
