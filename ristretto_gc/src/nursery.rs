@@ -29,6 +29,20 @@ fn address_of(key: usize) -> usize {
     (key & !(PAGE_SIZE * 8 - 1)) | ((key & PAGE_MASK) << 3) | ((key / PAGE_SIZE) & 7)
 }
 
+// The shard index already encodes the low hash bits of the address. Omit
+// those bits from its page key so all shards fill their pages densely.
+fn packed_key(address: usize, bits: u32) -> usize {
+    let packed = ((address >> bits) & !15) | (address & 15);
+    position(packed) + usize::from(bits != 0)
+}
+
+fn unpack_key(key: usize, shard: usize, bits: u32) -> usize {
+    let packed = address_of(key - usize::from(bits != 0));
+    let address = ((packed & !15) << bits) | (packed & 15);
+    let mask = (1 << bits) - 1;
+    address | (((shard ^ address_bucket(address)) & mask) << 4)
+}
+
 type Pages<T> = ArcSwap<Directory<Arc<T>>>;
 type Cell = ArcSwapAny<Option<MetadataRef>>;
 
@@ -37,17 +51,19 @@ struct Head {
     pages: Pages<Page>,
     young: Pages<Bitmap>,
     indexed: AtomicUsize,
+    shard: usize,
 }
 
 pub(crate) struct Sealed {
-    address: usize,
+    key: usize,
+    shard: usize,
     objects: Option<Arc<Page>>,
     young: Option<Arc<Bitmap>>,
 }
 
 impl Sealed {
     fn unlink(&self, head: &Head) {
-        let base = (position(self.address) & !PAGE_MASK) as u64;
+        let base = (self.key & !PAGE_MASK) as u64;
         if let Some(page) = &self.objects {
             unlink(&head.pages, base, page);
         }
@@ -270,7 +286,8 @@ impl Slot<'_> {
         }
         let last = self.page.occupied.remove(self.key & PAGE_MASK);
         let sealed = (last || young.is_some()).then(|| Sealed {
-            address: address_of(self.key),
+            key: self.key,
+            shard: self.head.shard,
             objects: last.then(|| self.page.clone()),
             young,
         });
@@ -307,9 +324,11 @@ impl Membership<'_> {
     }
 
     pub(crate) fn promote(&self) -> Option<Sealed> {
-        let page = self.slot.as_ref()?.clear_young()?;
+        let slot = self.slot.as_ref()?;
+        let page = slot.clear_young()?;
         Some(Sealed {
-            address: self.address,
+            key: slot.key,
+            shard: slot.head.shard,
             objects: None,
             young: Some(page),
         })
@@ -345,6 +364,7 @@ impl YoungCursor {
 #[derive(Debug)]
 pub(crate) struct Objects {
     guards: Shards<()>,
+    shard_bits: u32,
     pages: Box<[Head]>,
 }
 
@@ -360,7 +380,13 @@ impl Objects {
     pub(crate) fn new(count: usize) -> Self {
         Self {
             guards: Shards::new(count),
-            pages: (0..shard_count(count)).map(|_| Head::default()).collect(),
+            shard_bits: shard_count(count).ilog2(),
+            pages: (0..shard_count(count))
+                .map(|shard| Head {
+                    shard,
+                    ..Head::default()
+                })
+                .collect(),
         }
     }
 
@@ -370,7 +396,7 @@ impl Objects {
 
     pub(crate) fn reserve(&self, address: usize) -> Option<Slot<'_>> {
         let head = self.head(address);
-        let key = position(address);
+        let key = packed_key(address, self.shard_bits);
         let page = reserve(&head.pages, key, Page::new)?;
         Some(Slot {
             head,
@@ -389,7 +415,7 @@ impl Objects {
 
     /// An owning snapshot of the exact cell. It grants no graph or payload access.
     pub(crate) fn lookup(&self, address: usize) -> Option<MetadataRef> {
-        let key = position(address);
+        let key = packed_key(address, self.shard_bits);
         let pages = self.head(address).pages.load();
         let page = pages.get((key & !PAGE_MASK) as u64)?;
         page.entry(key)?.load_full().filter(|m| m.birth.visible())
@@ -397,7 +423,7 @@ impl Objects {
 
     fn membership<'a>(&'a self, address: usize, guard: MutexGuard<'a, ()>) -> Membership<'a> {
         let head = self.head(address);
-        let key = position(address);
+        let key = packed_key(address, self.shard_bits);
         let pages = head.pages.load();
         let slot = pages.get((key & !PAGE_MASK) as u64).map(|page| Slot {
             head,
@@ -452,7 +478,10 @@ impl Objects {
                     .and_then(Option::as_ref)
                     .filter(|m| m.birth.visible())
                 {
-                    Scan::Entry(address_of(key), read(metadata, &page, key, cursor))
+                    Scan::Entry(
+                        unpack_key(key, cursor.shard, self.shard_bits),
+                        read(metadata, &page, key, cursor),
+                    )
                 } else {
                     Scan::Advance
                 }
@@ -520,7 +549,9 @@ impl Objects {
             &mut young.page,
             observed,
         ) {
-            Scan::Entry(key, _) => Scan::Entry(address_of(key), ()),
+            Scan::Entry(key, _) => {
+                Scan::Entry(unpack_key(key, young.position.shard, self.shard_bits), ())
+            }
             Scan::Advance => Scan::Advance,
             Scan::Busy => Scan::Busy,
             Scan::Done => Scan::Done,
@@ -583,7 +614,7 @@ impl Objects {
     }
 
     pub(crate) fn unlink(&self, sealed: &Sealed) {
-        sealed.unlink(self.head(sealed.address));
+        sealed.unlink(&self.pages[sealed.shard]);
     }
 
     pub(crate) fn for_each(&self, mut visit: impl FnMut(&MetadataRef)) {
@@ -624,7 +655,7 @@ impl Objects {
 
     #[cfg(test)]
     pub(crate) fn contains_young(&self, address: usize) -> bool {
-        let key = position(address);
+        let key = packed_key(address, self.shard_bits);
         self.head(address)
             .young
             .load()
