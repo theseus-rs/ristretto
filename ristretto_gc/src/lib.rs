@@ -38,6 +38,8 @@ mod private_allocation;
 mod root_guard;
 pub mod sync;
 
+#[cfg(feature = "experimental-canonical-runtime")]
+pub use canonical_adapter::api as canonical;
 pub use canonical_payload::CanonicalPayload;
 pub use collector::{GarbageCollector, HeapOwner, Trace};
 pub use config::{Configuration, ConfigurationBuilder, Statistics};
