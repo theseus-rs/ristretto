@@ -23,7 +23,7 @@ use ristretto_classfile::{
     ClassAccessFlags, ClassFile, FieldAccessFlags, JavaStr, JavaString, MethodAccessFlags,
 };
 use ristretto_classloader::{Class, Method};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// A format, verifier or capability failure.
 #[derive(Debug, thiserror::Error)]
@@ -101,7 +101,39 @@ impl Program {
             verify_class(class.class_file(), &program, &VerifierConfig::strict())
                 .map_err(|error| Error::Invalid(error.to_string()))?;
         }
+        program.admit_called_targets()?;
         Ok(program)
+    }
+
+    // Scalar entry methods have a wider instruction set than owning object
+    // frames. Validate every called target once, without recursively following
+    // calls, so admission cannot authorize an unsupported nested dispatch path.
+    fn admit_called_targets(&self) -> Result<(), Error> {
+        let mut checked = HashSet::new();
+        for (owner, layout) in self.classes.iter().enumerate() {
+            for method in layout.class.methods() {
+                for instruction in method.code() {
+                    let (Instruction::Invokestatic(index) | Instruction::Invokespecial(index)) =
+                        instruction
+                    else {
+                        continue;
+                    };
+                    let (class, name, descriptor) = self.member(owner, *index, false)?;
+                    if class == "java/lang/Object" {
+                        continue;
+                    }
+                    let class = self.class_index(&class)?;
+                    if checked.insert((class, name.clone(), descriptor.clone())) {
+                        let target = self
+                            .layout(class)?
+                            .class
+                            .try_get_method(&name, &descriptor)?;
+                        self.admit_object_method(class, &target)?;
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     fn admit_method(&self, owner: usize, class: &Class, method: &Method) -> Result<(), Error> {
@@ -184,6 +216,11 @@ impl Program {
         argument: i32,
         limit: usize,
     ) -> Result<ScalarValue, Error> {
+        if self.layout(self.class_index(class)?)?.statics.needed() {
+            return Err(Error::Unsupported(
+                "class initialization requires a heap entry".into(),
+            ));
+        }
         let name = JavaString::from(class);
         let owner = self
             .names
