@@ -1,5 +1,7 @@
 # Full collection time after typed-root, marking and sweep changes
 
+The fifth campaign includes strong-stage root deletion. Its smallest paired medians and lower 95% bounds were 3.062× and 3.025× on native, and 3.898× and 3.874× on WASI. [Measurements and graphs](strong-deletion-collection/README.md)
+
 The fourth campaign covers paged and one-shot root deletion, allocator refund delivery and physical retirement accounting. Its smallest paired median speedups were 3.043× on native and 3.861× on WASI. [Full results and uncertainty](progress-collection/README.md)
 
 The subsequent sparse bitmap experiment reached 2.13× on cooperative native. [Follow-up measurements](sparse-words/README.md)
