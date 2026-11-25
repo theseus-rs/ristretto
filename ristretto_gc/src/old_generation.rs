@@ -52,11 +52,9 @@ impl GarbageCollector {
     /// can still hold a young graph after its owner is mutated. Preserve that graph
     /// for subsequent young snapshots, without putting young objects on the old
     /// tracing queue. Owning-root changes alone do not retain post-snapshot births.
-    pub(super) fn retain_old_callback_edge(&self, address: usize) {
-        if !self.old_collection_active() || self.domains[1].weak_phase() != 0 {
-            return;
-        }
-        if let Some(metadata) = self.objects.lock(address).get(&address)
+    pub(super) fn retain_old_callback_edge(&self, metadata: &MetadataRef) {
+        if self.old_collection_active()
+            && self.domains[1].weak_phase() == 0
             && metadata.age.load(Ordering::Acquire) < self.configuration.promotion_age.max(1)
             && !self.logically_retired(metadata)
         {

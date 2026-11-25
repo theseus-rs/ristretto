@@ -4077,12 +4077,20 @@ impl GarbageCollector {
         }
         // With independent young closure, each actual cross-domain publication
         // carries admission; the old callback itself does not park young GC.
-        let _admission =
-            (self.configuration.old_collection_interval != 0).then(|| self.allocation_guard());
-        if self.domain_index() == 1 && self.old_collection_active() {
-            self.retain_old_callback_edge(ptr.0);
+        if self.configuration.old_collection_interval == 0 {
+            self.shade(ptr.0);
+            return;
         }
-        self.shade(ptr.0);
+        let _admission = self.allocation_guard();
+        if self.domain().active()
+            && let Some(metadata) = self.objects.lookup(ptr.0)
+            && (identity.to_i64() == 0 || metadata.id == identity)
+        {
+            if self.domain_index() == 1 {
+                self.retain_old_callback_edge(&metadata);
+            }
+            self.shade_known(&metadata);
+        }
     }
 
     fn defer_retirement(&self, metadata: MetadataRef) {

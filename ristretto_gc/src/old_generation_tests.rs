@@ -530,3 +530,133 @@ fn old_reference_shade_completes_with_target_shard_parked() -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one forced trace, handoff and promotion schedule"
+)]
+fn old_callback_retains_a_young_edge_while_its_object_shard_is_parked() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    struct Child(Arc<AtomicUsize>);
+    // SAFETY: this fixture has no outgoing managed references.
+    unsafe impl Trace for Child {
+        fn trace(&self, gc: &GarbageCollector) {
+            if gc.domain_index() == 1 && gc.old_collection_active() {
+                self.0.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+    }
+
+    struct Parent {
+        edge: Mutex<Option<Gc<Child>>>,
+        ready: mpsc::Sender<()>,
+        resume: Mutex<Option<mpsc::Receiver<()>>>,
+        traced: mpsc::Sender<()>,
+        edge_done: Arc<AtomicBool>,
+    }
+
+    // SAFETY: the only outgoing edge is traced under its mutation lock.
+    unsafe impl Trace for Parent {
+        fn trace(&self, gc: &GarbageCollector) {
+            if gc.domain_index() == 1
+                && gc.old_collection_active()
+                && let Some(resume) = lock(&self.resume).take()
+            {
+                self.ready.send(()).expect("old callback");
+                resume.recv().expect("allow edge publication");
+                lock(&self.edge).trace(gc);
+                self.edge_done.store(true, Ordering::Release);
+                self.traced.send(()).expect("edge published");
+            } else {
+                lock(&self.edge).trace(gc);
+            }
+        }
+    }
+
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(config(counted));
+        let (ready, started) = mpsc::channel();
+        let (go, resume) = mpsc::channel();
+        let (traced, published) = mpsc::channel();
+        let edge_done = Arc::new(AtomicBool::new(false));
+        let parent = Gc::try_new(
+            &gc,
+            Parent {
+                edge: Mutex::new(None),
+                ready,
+                resume: Mutex::new(Some(resume)),
+                traced,
+                edge_done: edge_done.clone(),
+            },
+        )?;
+        gc.collect_full()?;
+        generation_tests::finish_young(&gc)?;
+        gc.collect_old();
+        assert!((0..4096).any(|_| {
+            gc.coordinated_step(false);
+            lock(&gc.domains[1].cycle).phase == Phase::Mark
+        }));
+        let scans = Arc::new(AtomicUsize::new(0));
+        let mut child = Gc::try_new(&gc, Child(scans.clone()))?.into_rooted();
+        let address = child.as_ptr() as usize;
+        let metadata = gc.objects.lookup(address).expect("post-snapshot child");
+        // SAFETY: the fixture holds the old cycle at Mark while installing and
+        // remembering its edge. The owning parent remains live throughout.
+        unsafe { child.unroot() };
+        *lock(&parent.edge) = Some(child);
+        gc.remember(&parent);
+        let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+        assert_eq!(metadata.old_birth.load(Ordering::Acquire), epoch);
+        assert_eq!(metadata.retention(1, epoch), None);
+
+        {
+            let _context = Context::enter(&gc, 1);
+            gc.mark_object(SafePtr(address), parent.identity());
+            assert_eq!(
+                metadata.retention(1, epoch),
+                None,
+                "mismatched identity shaded a birth"
+            );
+        }
+        let stop = edge_done;
+        let heap = gc.clone();
+        let worker = thread::spawn(move || {
+            for _ in 0..4096 {
+                heap.step();
+                if stop.load(Ordering::Acquire) {
+                    break;
+                }
+            }
+        });
+        started
+            .recv_timeout(Duration::from_secs(5))
+            .expect("old trace entered");
+        let shard = gc.objects.lock(address);
+        go.send(()).expect("resume trace");
+        let progressed = published.recv_timeout(Duration::from_secs(3)).is_ok();
+        let strength = metadata.retention(1, epoch);
+        drop(shard);
+        worker.join().expect("join old marker");
+        assert!(progressed, "old trace waited for its target's object shard");
+        assert_eq!(strength, Some(Retention::Strong));
+
+        assert_eq!(scans.load(Ordering::Relaxed), 0);
+        let old_cycle = lock(&gc.domains[1].cycle);
+        generation_tests::finish_young(&gc)?;
+        assert!(!gc.is_young_allocation(address));
+        drop(old_cycle);
+        assert!((0..4096).any(|_| gc.step()));
+        assert!(
+            scans.load(Ordering::Relaxed) > 0,
+            "promotion failed to publish old traversal"
+        );
+        drop(parent);
+        gc.collect_full()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
