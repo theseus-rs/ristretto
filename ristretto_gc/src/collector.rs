@@ -3407,22 +3407,21 @@ impl GarbageCollector {
         version: usize,
         has_young: bool,
     ) {
-        // Fresh leaves usually have no remembered entry.
-        if has_young
-            || !self.remembered.may_contain(address)
-            || !self.remembered.lock(address).contains(&address)
-        {
+        // Pruning is optional. Keep the entry if either shard is busy, so a
+        // suspended shard owner cannot strand an in-flight mark task.
+        if has_young || !self.remembered.may_contain(address) {
             return;
         }
-        // Mutation versions advance under this same object shard. Keep the shard
-        // through removal so a writer cannot increment/reinsert between the check
-        // and pruning. A delayed buffered notification can only reinsert afterward.
-        // This local ordering replaces the heap-wide publication writer.
-        let objects = self.objects.lock(address);
+        let Some(objects) = self.objects.try_lock(address) else {
+            return;
+        };
+        // A writer increments the mutation version under this same object
+        // shard. Keep it through removal so we cannot discard a newer edge.
         if objects.get(&address).is_some_and(|metadata| {
             metadata.id == identity && metadata.mutation.load(Ordering::Acquire) == version
-        }) {
-            self.remembered.lock(address).remove(address);
+        }) && let Some(mut remembered) = self.remembered.try_lock(address)
+        {
+            remembered.remove(address);
         }
     }
 
@@ -6559,6 +6558,43 @@ mod tests {
         assert!(gc.remembered.lock(address).contains(&address));
         drop(root);
         gc.stop()?;
+        Ok(())
+    }
+
+    #[cfg(all(not(target_family = "wasm"), not(miri)))]
+    #[test]
+    fn optional_pruning_defers_while_either_required_shard_is_parked() -> Result<()> {
+        use std::sync::mpsc;
+        let gc = GarbageCollector::new();
+        let root = Gc::try_new(&gc, 42_u64)?;
+        let address = root.as_ptr().addr();
+        let id = root.identity();
+        gc.remember(&root);
+        let version = gc
+            .objects
+            .lookup(address)
+            .unwrap()
+            .mutation
+            .load(Ordering::Acquire);
+        for object_shard in [false, true] {
+            let objects = object_shard.then(|| gc.objects.lock(address));
+            let remembered = (!object_shard).then(|| gc.remembered.lock(address));
+            let (done, result) = mpsc::channel();
+            let completed = thread::scope(|scope| {
+                let heap = &gc;
+                scope.spawn(move || {
+                    heap.prune_remembered(address, id, version, false);
+                    done.send(()).unwrap();
+                });
+                let completed = result.recv_timeout(std::time::Duration::from_secs(2));
+                drop((objects, remembered));
+                completed
+            });
+            assert!(completed.is_ok(), "optional pruning waited on a shard");
+            assert!(gc.remembered.lock(address).contains(&address));
+        }
+        gc.prune_remembered(address, id, version, false);
+        assert!(!gc.remembered.lock(address).contains(&address));
         Ok(())
     }
 
