@@ -4604,6 +4604,11 @@ impl GarbageCollector {
                             };
                             cycle = lock(&self.domain().cycle);
                             self.publish_mark_batch(tasks, &mut counters);
+                            // Another worker can close the epoch as soon as the last
+                            // reservation is released. Publish completed mark work first.
+                            if counters.marked != 0 {
+                                counters.flush(&mut lock(&self.statistics));
+                            }
                             self.domain().in_flight.fetch_sub(count, Ordering::AcqRel);
                             if stalled {
                                 break;
