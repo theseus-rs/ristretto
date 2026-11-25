@@ -86,5 +86,16 @@ jobs:
       # Check packaging and publish order; compilation is covered by the check job.
       - name: Check crate publishing
         run: cargo publish --workspace --dry-run --no-verify --locked
-      - name: Build the packaged opt-in collector
-        run: cargo package --locked -p ristretto_gc --features experimental-canonical-runtime
+      - name: Build the packaged native preview features
+        run: |
+          python3 .github/scripts/check-packaged-features.py \
+            ristretto_gc/experimental-canonical-runtime \
+            ristretto_vm/experimental-canonical-jit \
+            ristretto_jit/experimental-reference-dispatch
+      - name: Install WASI target
+        run: rustup target add wasm32-wasip2
+      - name: Build the packaged WASI interpreter features
+        run: |
+          python3 .github/scripts/check-packaged-features.py --target wasm32-wasip2 \
+            ristretto_gc/experimental-canonical-runtime \
+            ristretto_vm/experimental-canonical-runtime
