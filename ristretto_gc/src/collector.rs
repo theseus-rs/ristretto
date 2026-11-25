@@ -2082,10 +2082,8 @@ impl GarbageCollector {
         let identity = slot.owner_identity()?;
         let address = slot.owner.load(Ordering::Acquire);
         self.objects
-            .lock(address)
-            .get(&address)
+            .lookup(address)
             .filter(|metadata| metadata.id == identity)
-            .cloned()
     }
 
     fn logically_retired(&self, metadata: &ObjectMetadata) -> bool {
