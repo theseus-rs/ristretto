@@ -1317,3 +1317,51 @@ fn retaining_decision_cannot_mark_a_replacement_at_the_target_address() -> Resul
     }
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn queue_delivery_completes_while_live_owner_shard_is_parked() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for kind in [ReferenceKind::Weak, ReferenceKind::Phantom] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let owner = Gc::try_new(&gc, 21_u64)?;
+            let target = Gc::try_new(&gc, 13_u64)?;
+            let reference = GcWeak::new(&target, kind, owner.as_ptr().addr());
+            drop(target);
+            gc.collect();
+            at_reference_stage(&gc, 1, 4);
+            assert!(reference.slot.pending.load(Ordering::Acquire));
+            let held = gc.objects.lock(owner.as_ptr().addr());
+            let (done, finished) = mpsc::channel();
+            let progress = thread::scope(|scope| {
+                let heap = &gc;
+                scope.spawn(move || {
+                    heap.step();
+                    done.send(()).unwrap();
+                });
+                let result = finished.recv_timeout(Duration::from_secs(2));
+                drop(held);
+                result
+            });
+            assert!(progress.is_ok(), "queue delivery waited for owner shard");
+            assert!(gc.has_pending_references());
+            let delivered = gc
+                .take_pending_reference::<u64>()?
+                .expect("queued live owner");
+            assert_eq!(delivered.identity(), owner.identity());
+            assert!(gc.take_pending_reference::<u64>()?.is_none());
+            finish(&gc);
+            assert!(reference.upgrade().is_none());
+        }
+    }
+    Ok(())
+}
