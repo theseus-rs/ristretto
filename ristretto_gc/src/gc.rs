@@ -45,7 +45,7 @@ pub(crate) struct OwnedRoot {
 impl Drop for OwnedRoot {
     fn drop(&mut self) {
         if !crate::construction::defer_owned(&self.collector, &self.id) {
-            self.collector.remove_owned_root(&self.id);
+            self.collector.remove_detached_root(&self.id);
         }
     }
 }

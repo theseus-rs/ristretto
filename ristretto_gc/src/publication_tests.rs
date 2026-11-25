@@ -632,7 +632,19 @@ thread_local! {
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 thread_local! {
+    static COVERED_REMOVAL: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static DROP_COVERAGE_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static TYPED_PROPOSALS_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn record_covered_removal() {
+    COVERED_REMOVAL.set(true);
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn pause_after_drop_coverage() {
+    wait_for_constructor_resume(DROP_COVERAGE_PAUSE.take());
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
@@ -890,6 +902,140 @@ fn a_parked_root_of_an_unvisited_child_never_holds_capped_recovery() -> Result<(
             ] {
                 run_parked_root_schedule(counted, storage, committed, keep_parent, source)?;
             }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    reason = "bounded inter-thread test schedule"
+)]
+fn typed_root_drop_orders_both_winners_against_a_new_full_cycle() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for scan_first in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .allocation_threshold(usize::MAX)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .build(),
+            );
+            let child = Gc::try_new(&gc, 17_u64)?;
+            let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+            let addr = parent.as_ptr().addr();
+            let handle = parent.as_handle_i64();
+            let roots = gc
+                .typed_slots
+                .get_or_init(|| Box::new(crate::roots::RootSlots::default()));
+            let record = roots.prepare_typed_attempt(addr);
+            assert!(record.commit_typed());
+            drop(parent);
+            let (entered, paused) = mpsc::channel();
+            let (resume, wait) = mpsc::channel();
+            let peer = gc.clone();
+            let registration = crate::roots::Registration::Overflow(record.clone());
+            let remover = thread::spawn(move || {
+                DROP_COVERAGE_PAUSE.set(Some(ClaimPause {
+                    entered,
+                    resume: wait,
+                }));
+                peer.remove_detached_root(&registration);
+            });
+            paused
+                .recv_timeout(Duration::from_secs(5))
+                .expect("removal certified");
+            let ticket = gc.request_full_cycle();
+            // A one-unit step starts the epoch before the overflow scanner can visit.
+            gc.step();
+            assert_ne!(lock(&gc.domains[1].cycle).phase, Phase::Idle);
+            if scan_first {
+                assert!((0..8192).any(|_| {
+                    gc.step();
+                    gc.completed_full_ticket() >= ticket
+                }));
+            }
+            resume.send(()).expect("resume removal");
+            remover.join().expect("remover");
+            assert!((0..8192).any(|_| {
+                gc.step();
+                gc.completed_full_ticket() >= ticket
+            }));
+            let result = Gc::<Vec<Gc<u64>>>::from_handle_rooted(&gc, handle);
+            if scan_first {
+                assert_eq!(result?.first().map(|child| **child), Some(17));
+            } else {
+                assert!(
+                    result.is_err(),
+                    "a root deleted before its scan retained garbage"
+                );
+            }
+            // A compatibility caller can still be holding the old directory view.
+            gc.remove_owned_root(&crate::roots::Registration::Overflow(record));
+            gc.stop()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn covered_active_typed_drop_preserves_outstanding_child_traversal() -> Result<()> {
+    for counted in [false, true] {
+        for bind_epochs in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .incremental_step_size(1)
+                    .allocation_threshold(usize::MAX)
+                    .max_pause_time_us(0)
+                    .build(),
+            );
+            let child = Gc::try_new(&gc, 17_u64)?;
+            let child_handle = child.as_handle_i64();
+            let child_metadata = gc.objects.lookup(child.as_ptr().addr()).unwrap();
+            let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+            let address = parent.as_ptr().addr();
+            let meta = gc.objects.lookup(address).unwrap();
+            let slots = gc
+                .typed_slots
+                .get_or_init(|| Box::new(crate::roots::RootSlots::default()));
+            let record = slots.prepare_typed_attempt(address);
+            assert!(record.commit_typed());
+            drop(parent);
+            if bind_epochs {
+                gc.phase_clock.disable_certification();
+            }
+            let ticket = gc.request_full_cycle();
+            assert!((0..4096).any(|_| {
+                gc.step();
+                let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+                meta.retention(1, epoch) == Some(Retention::Strong)
+                    && !child_metadata.marked(1, epoch)
+            }));
+            COVERED_REMOVAL.set(false);
+            gc.remove_detached_root(&crate::roots::Registration::Overflow(record));
+            assert!(
+                COVERED_REMOVAL.take(),
+                "active strong coverage should bypass admission"
+            );
+            assert!((0..8192).any(|_| {
+                gc.step();
+                gc.completed_full_ticket() >= ticket
+            }));
+            let child = Gc::<u64>::from_handle_rooted(&gc, child_handle)?;
+            assert_eq!(*child, 17);
+            drop(child);
+            gc.collect_full()?;
+            assert!(Gc::<u64>::from_handle_rooted(&gc, child_handle).is_err());
+            gc.stop()?;
+            assert_eq!(gc.managed_bytes(), 0);
         }
     }
     Ok(())

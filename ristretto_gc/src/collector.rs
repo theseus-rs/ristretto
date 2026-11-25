@@ -2954,6 +2954,24 @@ impl GarbageCollector {
         roots: &crate::roots::RootSlots,
         record: &Arc<crate::roots::Record>,
     ) {
+        if !ADOPT && let Some(address) = record.begin_typed_removal() {
+            // Install the intent before the clock sample. A later root scan must
+            // veto the intent to return the address. No other writer can rearm it.
+            let observation = self.phase_clock.indexed_root();
+            let covered = matches!(observation, publication_state::Birth::Idle)
+                || self
+                    .objects
+                    .lookup(address)
+                    .is_some_and(|m| self.typed_root_covered(observation, &m));
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            publication_tests::pause_after_drop_coverage();
+            if covered && record.finish_typed_removal() {
+                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                publication_tests::record_covered_removal();
+                roots.finish_overflow(record);
+                return;
+            }
+        }
         let publication = self.allocation_guard();
         if let Some(address) = record.take_address() {
             if ADOPT {

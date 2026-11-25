@@ -41,6 +41,17 @@ impl Record {
             .is_some_and(|(_, decision)| decision.owes_trace())
     }
 
+    pub(crate) fn begin_typed_removal(&self) -> Option<usize> {
+        let (address, decision) = self.typed.as_ref()?;
+        decision.begin_removal().then_some(*address)
+    }
+
+    pub(crate) fn finish_typed_removal(&self) -> bool {
+        self.typed
+            .as_ref()
+            .is_some_and(|(_, decision)| decision.finish_removal())
+    }
+
     fn visible_address(&self) -> usize {
         self.typed.as_ref().map_or_else(
             || self.address.load(Ordering::Acquire),
