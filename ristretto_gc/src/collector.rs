@@ -2700,6 +2700,16 @@ impl GarbageCollector {
         })
     }
 
+    // A shared ticket can already be in sweep when observation starts. Before
+    // declaring exhaustion require a full snapshot requested after registration.
+    fn request_space_cycle(&self, consecutive_empty: usize) -> u64 {
+        if consecutive_empty == 0 {
+            self.request_recovery_cycle()
+        } else {
+            self.request_full_cycle()
+        }
+    }
+
     /// Reserve as soon as reclamation makes room, without awaiting the rest of a cycle.
     /// Failed races for headroom do not spend the two completed-cycle recovery budget.
     pub(crate) async fn reserve_bytes_async(
@@ -2727,7 +2737,7 @@ impl GarbageCollector {
                 return Ok(reservation);
             }
             let opportunity = self.recovery.observe_space(size)?;
-            let ticket = self.request_recovery_cycle();
+            let ticket = self.request_space_cycle(empty_cycles);
             let mut observed_space = false;
             loop {
                 observed_space |=
@@ -2736,9 +2746,11 @@ impl GarbageCollector {
                     return Ok(reservation);
                 }
                 if self.completed_full_ticket() >= ticket {
-                    if !observed_space {
-                        empty_cycles += 1;
-                    }
+                    empty_cycles = if observed_space || opportunity.was_offered() {
+                        0
+                    } else {
+                        empty_cycles + 1
+                    };
                     break;
                 }
                 // Another allocator took the advertised space. Re-register for
@@ -2749,7 +2761,7 @@ impl GarbageCollector {
     }
 
     /// Checks headroom before publication, assisting one batch at a time until
-    /// space is available or two cycles complete without offering enough space.
+    /// space is available or two consecutive cycles complete without offering enough space.
     /// A caller holding a managed guard can use available space but cannot assist.
     /// # Errors
     /// Returns a collection error, or `OutOfMemory` if the live heap cannot accommodate the request.
@@ -2768,7 +2780,7 @@ impl GarbageCollector {
                 .measure(self.diagnostics_enabled());
             let needed = size.saturating_sub(self.context_credit(size));
             let opportunity = self.recovery.observe_space(needed)?;
-            let ticket = self.request_recovery_cycle();
+            let ticket = self.request_space_cycle(empty_cycles);
             loop {
                 if size <= self.context_headroom(size) {
                     return Ok(());
@@ -2778,14 +2790,16 @@ impl GarbageCollector {
                 }
                 self.step();
             }
-            if !opportunity.was_offered() {
-                empty_cycles += 1;
-            }
+            empty_cycles = if opportunity.was_offered() {
+                0
+            } else {
+                empty_cycles + 1
+            };
         }
         Err(crate::Error::OutOfMemory)
     }
 
-    /// Checks headroom, returning as soon as enough space is available. At most two
+    /// Checks headroom, returning as soon as enough space is available. At most two consecutive
     /// recovery cycles without an observed or offered opportunity complete before failure.
     /// This is an advisory check, not a reservation; publication must still reserve
     /// its bytes atomically. No collection work runs while holding managed guards.
@@ -2812,10 +2826,14 @@ impl GarbageCollector {
                 return Ok(());
             }
             let opportunity = self.recovery.observe_space(size)?;
-            let ticket = self.request_recovery_cycle();
-            if !crate::recovery::CollectionWait::for_space(self, ticket, &opportunity).await? {
-                empty_cycles += 1;
-            }
+            let ticket = self.request_space_cycle(empty_cycles);
+            let offered =
+                crate::recovery::CollectionWait::for_space(self, ticket, &opportunity).await?;
+            empty_cycles = if offered || opportunity.was_offered() {
+                0
+            } else {
+                empty_cycles + 1
+            };
         }
     }
 
@@ -5841,7 +5859,7 @@ mod tests {
         gc.reserve_allocation(8)?;
         let mut allocation = std::pin::pin!(gc.reserve_bytes_async(8));
         let mut context = Context::from_waker(Waker::noop());
-        for _ in 0..3 {
+        for offer in [false, true, false, true, true] {
             for _ in 0..8 {
                 assert!(allocation.as_mut().poll(&mut context).is_pending());
                 if gc.recovery.waiter_count() == 1 {
@@ -5849,10 +5867,12 @@ mod tests {
                 }
             }
             assert_eq!(gc.recovery.waiter_count(), 1);
-            gc.cancel_allocation(8);
-            gc.recovery.notify_progress(&gc); // Enough headroom was offered to this waiter.
-            assert_eq!(gc.recovery.waiter_count(), 0);
-            gc.reserve_allocation(8)?; // Another allocator wins before the waiter is polled.
+            if offer {
+                gc.cancel_allocation(8);
+                gc.recovery.notify_progress(&gc); // Enough headroom was offered to this waiter.
+                assert_eq!(gc.recovery.waiter_count(), 0);
+                gc.reserve_allocation(8)?; // Another allocator wins before the waiter is polled.
+            }
             gc.collect_full()?;
             assert!(allocation.as_mut().poll(&mut context).is_pending());
         }
