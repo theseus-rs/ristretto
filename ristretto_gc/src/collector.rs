@@ -54,6 +54,8 @@ mod pause_recorder_tests;
 #[path = "phase_work.rs"]
 mod phase_work;
 use phase_work::Unit;
+#[path = "external_trace.rs"]
+mod external_trace;
 
 #[path = "old_generation.rs"]
 mod old_generation;
@@ -1376,13 +1378,13 @@ impl GarbageCollector {
                 continue;
             }
             let exempt = epoch.old_only && young;
-            let marked = metadata.marked(index, epoch.number);
+            let marked = self.visible_mark(metadata, index, epoch.number);
             if stage != 0 && !exempt && !marked {
                 eligible = false;
                 break;
             }
             let strength = Retention::at_phase(stage);
-            let retention = metadata.retention(index, epoch.number);
+            let retention = self.visible_retention(metadata, index, epoch.number);
             if stage < 5
                 && retention.is_none_or(|previous| previous > strength)
                 && !(exempt && marked && retention.is_none())
@@ -1437,8 +1439,11 @@ impl GarbageCollector {
         let covered = epochs.iter().enumerate().all(|(i, epoch)| {
             snapshot.stage(i).is_none()
                 || ((!bind_epochs || epoch.is_some())
-                    && metadata.retention(i, self.domain_at(i).epoch.load(Ordering::Acquire))
-                        == Some(Retention::Strong))
+                    && self.visible_retention(
+                        metadata,
+                        i,
+                        self.domain_at(i).epoch.load(Ordering::Acquire),
+                    ) == Some(Retention::Strong))
         });
         covered
             && if bind_epochs {
@@ -1478,7 +1483,7 @@ impl GarbageCollector {
                 || (index == 0
                     && metadata.age.load(Ordering::Acquire)
                         >= self.configuration.promotion_age.max(1))
-                || metadata.marked(index, domain.epoch.load(Ordering::Acquire))
+                || self.visible_mark(metadata, index, domain.epoch.load(Ordering::Acquire))
                 || (retaining && phase < 5)
         })
     }
@@ -2068,7 +2073,8 @@ impl GarbageCollector {
             if self.configuration.overlapping_generations && self.logically_retired(&metadata) {
                 return false;
             }
-            metadata.marked(
+            self.visible_mark(
+                &metadata,
                 self.domain_index(),
                 self.domain().epoch.load(Ordering::Acquire),
             ) || ((self.domain_index() == 0)
@@ -2098,6 +2104,21 @@ impl GarbageCollector {
                 self.domain().epoch.load(Ordering::Acquire),
                 final_retention,
             )
+            || metadata
+                .direct_marks
+                .get(
+                    self.domain_index(),
+                    self.domain().epoch.load(Ordering::Acquire),
+                    &self.domain().mark_queue,
+                )
+                .is_some_and(|strength| {
+                    strength
+                        <= if final_retention {
+                            Retention::Final
+                        } else {
+                            Retention::Strong
+                        }
+                })
             || (self.domain_index() == 0
                 && metadata.age.load(Ordering::Acquire) >= self.configuration.promotion_age.max(1))
     }
@@ -3944,7 +3965,11 @@ impl GarbageCollector {
     /// it before address reuse. Each trace callback still acquires a storage lease.
     pub(crate) fn mark_traced_edge(&self, metadata: &MetadataRef) {
         if std::ptr::eq(metadata.collector.as_ptr(), self) && metadata.birth.is_live() {
-            self.shade_known(metadata);
+            if self.trace_needs_epoch_proposal() {
+                self.publish_external_trace(metadata);
+            } else {
+                self.shade_known(metadata);
+            }
         }
     }
 
@@ -3980,7 +4005,16 @@ impl GarbageCollector {
             })
     }
 
-    pub(crate) fn mark_object(&self, ptr: SafePtr) {
+    pub(crate) fn mark_object(&self, ptr: SafePtr, identity: crate::ObjectId) {
+        if self.trace_needs_epoch_proposal() {
+            if self.domain().active()
+                && let Some(metadata) = self.objects.lookup(ptr.0)
+                && (identity.to_i64() == 0 || metadata.id == identity)
+            {
+                self.publish_external_trace(&metadata);
+            }
+            return;
+        }
         // With independent young closure, each actual cross-domain publication
         // carries admission; the old callback itself does not park young GC.
         let _admission =
@@ -4238,9 +4272,9 @@ impl GarbageCollector {
                 .version
                 .unwrap_or_else(|| item.metadata.mutation.load(Ordering::Acquire));
             *task = Some(MarkTask {
-                retention: item
-                    .metadata
-                    .retention(
+                retention: self
+                    .visible_retention(
+                        &item.metadata,
                         self.domain_index(),
                         self.domain().epoch.load(Ordering::Acquire),
                     )

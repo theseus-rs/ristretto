@@ -290,6 +290,39 @@ fn finish(gc: &GarbageCollector) {
 }
 
 #[test]
+fn direct_trace_during_final_processing_is_immediately_visible() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let target = Gc::try_new(&gc, 17_u64)?;
+        let child = Gc::try_new(&gc, 42_u64)?;
+        let owned = GcWeak::new(&target, ReferenceKind::Final, child.as_ptr().addr());
+        let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+        let outer = GcWeak::new(&parent, ReferenceKind::Final, 0);
+        drop((target, parent));
+        gc.collect();
+        at_reference_stage(&gc, 1, 2);
+        let parent = outer.upgrade().expect("final-retained parent");
+        let edge = parent.first().unwrap();
+        let handle = edge.as_handle_i64();
+        assert!(Gc::<u64>::from_handle_rooted(&gc, handle).is_err());
+        edge.trace(&gc);
+        let restored = Gc::<u64>::from_handle_rooted(&gc, handle)?;
+        assert_eq!(*restored, 42);
+        finish(&gc);
+        assert!(owned.slot.activated.load(Ordering::Acquire));
+        assert_eq!(*owned.upgrade().expect("final referent"), 17);
+    }
+    Ok(())
+}
+
+#[test]
 fn young_final_retention_must_not_become_strong_in_an_old_snapshot() -> Result<()> {
     struct Hold(Arc<AtomicBool>);
     // SAFETY: this fixture contains no outgoing GC references.

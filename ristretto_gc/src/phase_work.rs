@@ -353,8 +353,11 @@ impl GarbageCollector {
                         .cloned();
                     drop(objects);
                     if let Some(metadata) = metadata
-                        && let Some(retention) =
-                            metadata.retention(1 - index, other.epoch.load(Ordering::Acquire))
+                        && let Some(retention) = self.visible_retention(
+                            &metadata,
+                            1 - index,
+                            other.epoch.load(Ordering::Acquire),
+                        )
                     {
                         let _retention = TraceRetention::enter(self, retention);
                         self.shade_known(&metadata);

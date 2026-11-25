@@ -640,6 +640,7 @@ thread_local! {
 thread_local! {
     static COVERED_REMOVAL: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     static DROP_COVERAGE_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+    static EXTERNAL_TRACE_EPOCH: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static TYPED_PROPOSALS_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
 }
 
@@ -651,6 +652,11 @@ pub(super) fn record_covered_removal() {
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 pub(super) fn pause_after_drop_coverage() {
     wait_for_constructor_resume(DROP_COVERAGE_PAUSE.take());
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn pause_after_external_trace_epoch() {
+    wait_for_constructor_resume(EXTERNAL_TRACE_EPOCH.take());
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
@@ -3726,4 +3732,101 @@ fn all_slot_writers_parked_cooperatively() {
             gc.stop().unwrap();
         }
     }
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn parked_external_trace_cannot_rewind_a_later_full_epoch() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for rooted in [false, true] {
+            for (conservative, same_stage) in
+                [(false, false), (true, false), (false, true), (true, true)]
+            {
+                let gc = GarbageCollector::with_config(
+                    Configuration::builder()
+                        .allocation_threshold(usize::MAX)
+                        .incremental_step_size(1)
+                        .max_pause_time_us(0)
+                        .root_storage(crate::RootStorage::Slots)
+                        .concurrent_publication(counted)
+                        .build(),
+                );
+                let leaf = Gc::try_new(&gc, 17_u64)?;
+                let leaf_meta = gc.objects.lookup(leaf.as_ptr().addr()).unwrap();
+                let child = Gc::try_new(&gc, vec![leaf.into_rooted()])?;
+                let child_meta = gc.objects.lookup(child.as_ptr().addr()).unwrap();
+                let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+                let extra = rooted.then(|| parent[0].rooted_clone());
+                if conservative {
+                    gc.phase_clock.disable_certification();
+                }
+                let first = gc.request_full_cycle();
+                assert!((0..1024).any(|_| {
+                    gc.step();
+                    gc.domains[1].active()
+                        && !child_meta.marked(1, gc.domains[1].epoch.load(Ordering::Acquire))
+                }));
+                let (entered, parked) = mpsc::channel();
+                let (resume, receiver) = mpsc::channel();
+                thread::scope(|scope| {
+                    let edge = extra.as_ref().unwrap_or(&parent[0]);
+                    let heap = &gc;
+                    let worker = scope.spawn(move || {
+                        EXTERNAL_TRACE_EPOCH.set(Some(ClaimPause {
+                            entered,
+                            resume: receiver,
+                        }));
+                        edge.trace(heap);
+                    });
+                    parked
+                        .recv_timeout(Duration::from_secs(5))
+                        .expect("direct trace sampled E1");
+                    assert!((0..8192).any(|_| {
+                        gc.step();
+                        gc.domains[1].completed_ticket.load(Ordering::Acquire) >= first
+                    }));
+                    gc.collect();
+                    assert!((0..8192).any(|_| {
+                        gc.step();
+                        if same_stage {
+                            gc.domains[1].active() && gc.domains[1].weak_phase() == 0
+                        } else {
+                            lock(&gc.domains[1].cycle).phase == Phase::Sweep
+                        }
+                    }));
+                    let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+                    if same_stage {
+                        assert!(
+                            !child_meta.marked(1, epoch),
+                            "normal E2 root work is pending"
+                        );
+                    } else {
+                        assert_eq!(child_meta.retention(1, epoch), Some(Retention::Strong));
+                    }
+                    resume.send(()).unwrap();
+                    worker.join().unwrap();
+                    if same_stage {
+                        assert_eq!(
+                            child_meta
+                                .direct_marks
+                                .get(1, epoch, &gc.domains[1].mark_queue),
+                            Some(Retention::Strong),
+                            "matching flags must publish to the actual new epoch"
+                        );
+                        assert!((0..8192).any(|_| gc.step()));
+                    }
+                    assert_eq!(child_meta.retention(1, epoch), Some(Retention::Strong));
+                    assert_eq!(leaf_meta.retention(1, epoch), Some(Retention::Strong));
+                    assert_eq!(*parent[0][0], 17);
+                });
+                drop((extra, parent));
+                gc.collect_full()?;
+                gc.collect_full()?;
+                assert_eq!(gc.statistics()?.bytes_managed, 0);
+            }
+        }
+    }
+    Ok(())
 }

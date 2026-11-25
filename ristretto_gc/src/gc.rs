@@ -1067,7 +1067,7 @@ unsafe impl<T: Trace> Trace for Gc<T> {
         // Mark this object as reachable in the object registry
         let ptr = SafePtr::from_ptr(self.ptr.as_ptr().cast::<u8>());
 
-        collector.mark_object(ptr);
+        collector.mark_object(ptr, self.id);
     }
 }
 

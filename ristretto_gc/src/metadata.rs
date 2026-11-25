@@ -78,11 +78,15 @@ struct Kind {
     finalizer: Option<FinalizerFn>,
 }
 
+#[path = "direct_marks.rs"]
+mod direct_marks;
+
 /// Metadata for tracking garbage-collected objects
 ///
 /// This struct contains the pointer to the object, its size, manages the marked state, provides
 /// type-safe dropping functionality, and supports finalizers.
 pub(crate) struct ObjectMetadata {
+    pub(crate) direct_marks: direct_marks::DirectMarks,
     pub(crate) id: crate::ObjectId,
     size: usize,
     logical_size: usize,
@@ -262,6 +266,7 @@ impl ObjectMetadata {
             },
             finalized: AtomicBool::new(false),
             trace,
+            direct_marks: Default::default(),
             epochs: std::array::from_fn(|_| MarkWord::default()),
             age: AtomicUsize::new(0),
             old_birth: AtomicU64::new(0),
