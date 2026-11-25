@@ -4,7 +4,7 @@
 use super::{Cursor, Scan, Shards, address_bucket, shard_count};
 use crate::metadata::MetadataRef;
 use crate::publication_directory::Directory;
-use arc_swap::{ArcSwap, ArcSwapAny};
+use arc_swap::ArcSwap;
 use once_cell::race::OnceBox;
 use portable_atomic::AtomicU64;
 use std::ops::Deref;
@@ -44,7 +44,9 @@ fn unpack_key(key: usize, shard: usize, bits: u32) -> usize {
 }
 
 type Pages<T> = ArcSwap<Directory<Arc<T>>>;
-type Cell = ArcSwapAny<Option<MetadataRef>>;
+#[path = "address_cell.rs"]
+mod address_cell;
+use address_cell::Cell;
 
 #[derive(Debug, Default)]
 struct Head {
@@ -506,7 +508,7 @@ impl Objects {
     fn scan_page<'a, R>(
         &'a self,
         cursor: &mut Cursor,
-        read: impl FnOnce(&MetadataRef, Arc<Page>, usize, &mut Cursor, MutexGuard<'a, ()>) -> R,
+        read: impl FnOnce(&MetadataRef, &Arc<Page>, usize, &mut Cursor, MutexGuard<'a, ()>) -> R,
     ) -> Scan<R> {
         if !cursor.begin(self.pages.len()) {
             return Scan::Done;
@@ -525,7 +527,7 @@ impl Objects {
                 {
                     Scan::Entry(
                         unpack_key(key, cursor.shard, self.shard_bits),
-                        read(metadata, page, key, cursor, guard),
+                        read(metadata, &page, key, cursor, guard),
                     )
                 } else {
                     Scan::Advance
@@ -558,7 +560,7 @@ impl Objects {
                     address: unpack_key(key, cursor.shard, self.shard_bits),
                     slot: Some(Slot {
                         head: &self.pages[cursor.shard],
-                        page,
+                        page: page.clone(),
                         key,
                         reserved: false,
                     }),
