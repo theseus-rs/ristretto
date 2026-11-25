@@ -1,0 +1,373 @@
+{
+  "policy_version": 2,
+  "policy_id": "native-stw-v2",
+  "historical_only": false,
+  "policy_sha256": null,
+  "short_comparison_gate": false,
+  "qualification": false,
+  "candidate": "ristretto-candidate",
+  "pause_limit_ns_exclusive": 1000000,
+  "results": [
+    {
+      "workload": "allocation",
+      "rate": 0,
+      "peer": "g1",
+      "metric": "throughput",
+      "role": "diagnostic",
+      "candidate_peer_ratio": {
+        "median": 0.004482032606597223,
+        "low": 0.0034070585928675096,
+        "high": 0.0062973353375373,
+        "pairs": 5
+      }
+    },
+    {
+      "workload": "allocation",
+      "rate": 0,
+      "peer": "zgc",
+      "metric": "throughput",
+      "role": "diagnostic",
+      "candidate_peer_ratio": {
+        "median": 0.003634849571800864,
+        "low": 0.0017752465346537144,
+        "high": 0.003778567759757537,
+        "pairs": 5
+      }
+    },
+    {
+      "workload": "mixed",
+      "rate": 0,
+      "peer": "g1",
+      "metric": "throughput",
+      "role": "diagnostic",
+      "candidate_peer_ratio": {
+        "median": 0.010171122538674708,
+        "low": 0.005867396737097236,
+        "high": 0.01463533158517941,
+        "pairs": 5
+      }
+    },
+    {
+      "workload": "mixed",
+      "rate": 0,
+      "peer": "zgc",
+      "metric": "throughput",
+      "role": "diagnostic",
+      "candidate_peer_ratio": {
+        "median": 0.006656164599885946,
+        "low": 0.004617778010567245,
+        "high": 0.007684359944996669,
+        "pairs": 5
+      }
+    },
+    {
+      "workload": "roots",
+      "rate": 0,
+      "peer": "g1",
+      "metric": "throughput",
+      "role": "diagnostic",
+      "candidate_peer_ratio": {
+        "median": 0.0005641570132033754,
+        "low": 0.0005462290404762764,
+        "high": 0.0006642207405841716,
+        "pairs": 5
+      }
+    },
+    {
+      "workload": "roots",
+      "rate": 0,
+      "peer": "zgc",
+      "metric": "throughput",
+      "role": "diagnostic",
+      "candidate_peer_ratio": {
+        "median": 0.0005469821508325869,
+        "low": 0.0005166128138536562,
+        "high": 0.0006082868393171667,
+        "pairs": 5
+      }
+    }
+  ],
+  "processes": [
+    {
+      "directory": "run-0000-zgc-mixed-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0005-g1-mixed-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0006-ristretto-candidate-mixed-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0007-g1-roots-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0010-ristretto-candidate-roots-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0011-zgc-roots-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0024-zgc-allocation-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0025-g1-allocation-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0027-ristretto-candidate-allocation-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0028-g1-mixed-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0033-ristretto-candidate-mixed-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0034-zgc-mixed-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0035-g1-allocation-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0038-zgc-allocation-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0041-ristretto-candidate-allocation-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0043-zgc-roots-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0046-ristretto-candidate-roots-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0047-g1-roots-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0057-g1-allocation-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0060-zgc-allocation-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0062-ristretto-candidate-allocation-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0066-zgc-roots-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0067-ristretto-candidate-roots-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0069-g1-roots-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0078-ristretto-candidate-mixed-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0082-zgc-mixed-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0083-g1-mixed-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0086-g1-mixed-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0088-ristretto-candidate-mixed-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0090-zgc-mixed-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0091-g1-roots-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0095-ristretto-candidate-roots-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0097-zgc-roots-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0105-g1-allocation-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0106-ristretto-candidate-allocation-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0108-zgc-allocation-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0121-g1-allocation-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0123-zgc-allocation-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0125-ristretto-candidate-allocation-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0127-g1-mixed-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0128-ristretto-candidate-mixed-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0129-zgc-mixed-0",
+      "runtime": "zgc",
+      "pass": true
+    },
+    {
+      "directory": "run-0134-g1-roots-0",
+      "runtime": "g1",
+      "pass": true
+    },
+    {
+      "directory": "run-0137-ristretto-candidate-roots-0",
+      "runtime": "ristretto-candidate",
+      "pass": false,
+      "error": "candidate lacks a frozen current acceptance policy"
+    },
+    {
+      "directory": "run-0139-zgc-roots-0",
+      "runtime": "zgc",
+      "pass": true
+    }
+  ],
+  "failures": [
+    "no predeclared acceptance policy v2; historical data is not reclassified",
+    "need primary workloads, saturation and common fixed offered rates",
+    "run-0006-ristretto-candidate-mixed-0: candidate lacks a frozen current acceptance policy",
+    "run-0010-ristretto-candidate-roots-0: candidate lacks a frozen current acceptance policy",
+    "run-0027-ristretto-candidate-allocation-0: candidate lacks a frozen current acceptance policy",
+    "run-0033-ristretto-candidate-mixed-0: candidate lacks a frozen current acceptance policy",
+    "run-0041-ristretto-candidate-allocation-0: candidate lacks a frozen current acceptance policy",
+    "run-0046-ristretto-candidate-roots-0: candidate lacks a frozen current acceptance policy",
+    "run-0062-ristretto-candidate-allocation-0: candidate lacks a frozen current acceptance policy",
+    "run-0067-ristretto-candidate-roots-0: candidate lacks a frozen current acceptance policy",
+    "run-0078-ristretto-candidate-mixed-0: candidate lacks a frozen current acceptance policy",
+    "run-0088-ristretto-candidate-mixed-0: candidate lacks a frozen current acceptance policy",
+    "run-0095-ristretto-candidate-roots-0: candidate lacks a frozen current acceptance policy",
+    "run-0106-ristretto-candidate-allocation-0: candidate lacks a frozen current acceptance policy",
+    "run-0125-ristretto-candidate-allocation-0: candidate lacks a frozen current acceptance policy",
+    "run-0128-ristretto-candidate-mixed-0: candidate lacks a frozen current acceptance policy",
+    "run-0137-ristretto-candidate-roots-0: candidate lacks a frozen current acceptance policy"
+  ],
+  "remaining_gates": [
+    "validated warmup, compilation stability and recorder overhead",
+    "calibrated sustainable capacity and declared operating envelope",
+    "bounded backlog and live/retired/RSS memory time series",
+    "forced stalled-publisher/callback progress and coordination qualification",
+    "three paired one-hour trials and a separate 24-hour candidate trial",
+    "Wasm host-turn and browser qualification"
+  ],
+  "evaluated_utc": "2026-11-25T19:44:25.691873+00:00",
+  "evaluator_sha256": {
+    "qualify.py": "220636eed5c61f316cefcc9b1bfccd452137703c0690d9751e77811a0acbabf2",
+    "qualify_legacy.py": "1558a7819717bc6d8034535ee1208377d449c5aa9143c7aeffdd5fea934ff2b0",
+    "acceptance.py": "aa12cd10fdcef98f4636dee9ba2f7baabcd8ca63cb2caa36f13e7566b24d0e69",
+    "report.py": "bbea2c2ef483b338c3ca075d0e255efef3f51940fc248650714117b415c552ec",
+    "mechanisms.py": "0e868aaeefed62e0835fe96de386ebf0613e92ea932870d02ced4b85cec05430"
+  },
+  "input_sha256": {
+    "metadata.json": "094898617ef896d4578183a8166115b77d434b4d63ad6c51b6040cb043f8f268",
+    "raw.jsonl": "b3a870df0c78a6905424e7396422b857be8e8d4525abd4e6d9fd2dfa24ca426d",
+    "integrity.json": "2de94f3ba65d949cf814ca2abbe58117df0148c486b55bbd204acb8bb74ac092",
+    "schedule.json": "61edcb177d9beb01176000ac802265f628b17537d83dd40b5a6a47e298a34e82"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "git_head": "5dd5448001c5c40f882e7d5d51595c870132169e",
+  "created_utc": "2026-11-25T19:31:54Z",
+  "java": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+  "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)",
+  "wasmtime": "wasmtime 50.0.1 (c307ec81d 2026-10-29)",
+  "artifacts_sha256": {
+    "classes/GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "classes/GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "classes/GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "classes/GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "classes/GcBench.class": "b4532f8c7186f8505ba38d1edc05d7ee072eec67b490d7382d173cd8a3b4144a",
+    "gc_compare": "cdc24e0203ee0c81d7554882bef7aa564f696bad5f9030997694ee69bbd883d5",
+    "gc_compare.wasm": "cc4935c127cb36e93ef2492fec8c709c54bf11b2e96d3256509f0dbcef0685eb"
+  },
+  "options": {
+    "jdk": "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+    "ristretto": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/jvm-frozen/gc_compare",
+    "ristretto_before": null,
+    "wasm": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/jvm-frozen/gc_compare.wasm",
+    "wasm_before": null,
+    "wasmtime": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/collection-typed-v2/qualified/results-wasm/wasmtime",
+    "runtimes": [
+      "ristretto-candidate",
+      "ristretto-candidate-jit",
+      "g1-int",
+      "zgc-int",
+      "g1",
+      "zgc",
+      "wasm-candidate"
+    ],
+    "workloads": [
+      "control",
+      "allocation",
+      "roots",
+      "mixed"
+    ],
+    "rates": [
+      0
+    ],
+    "seconds": 3,
+    "warmup": 1,
+    "repeats": 5,
+    "heap_mib": 64,
+    "workers": 0,
+    "cpus": [
+      4,
+      6
+    ],
+    "cgroup_parent": "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/ristretto-gc-screen-251125.service",
+    "rss_mib": 512,
+    "cpu_quota": 2.0,
+    "timeout": 150,
+    "seed": 251126,
+    "output": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/equal-budget-screen",
+    "pause_recording": false,
+    "pause_capacity": 65536,
+    "acceptance_policy": null
+  },
+  "source_archive_sha256": "d76f478624c6a3a81e216aeb21456a3d7ceb2664a92ccd6107a9bd929e3d4ee7",
+  "raw_sha256": "b3a870df0c78a6905424e7396422b857be8e8d4525abd4e6d9fd2dfa24ca426d"
+}

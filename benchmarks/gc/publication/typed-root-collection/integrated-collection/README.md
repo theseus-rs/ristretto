@@ -23,3 +23,21 @@ A separate screen ran the integrated Java VM, the WASI VM, and HotSpot with G1 a
 At 1,000 scheduled allocation operations/s, all runtimes sustained the offered rate. Median arrival p99.9 was 43 µs for the native Ristretto interpreter, 3 µs for G1 and 3,232 µs for ZGC. The short runs had too few completions at that rate to support an extreme-tail claim. The v2 qualifier rejected this screen. It used CPU affinity without enforced CPU and RSS ceilings, three forks and no predeclared acceptance policy. It leaves the sustained-load and zero-pause release gates open. [Detailed comparison](jvm/REPORT.md) · [Gate results](jvm/gates-v2.json)
 
 [Native throughput](jvm/native-throughput.svg) · [Native latency](jvm/native-latency.svg) · [WASI throughput](jvm/wasm-throughput.svg) · [WASI latency](jvm/wasm-latency.svg) · [Process measurements](jvm/processes.csv) · [Grouped measurements](jvm/summary.json) · [JVM build and run provenance](jvm/provenance.json)
+
+## Equal-budget saturation and execution coverage
+
+A second whole-JVM screen ran 140 fresh processes across four workloads and seven runtime modes. Each of five forks per condition ran on CPUs 4 and 6 with a two-CPU quota, a 512 MiB process-memory ceiling, swap disabled and a 64 MiB managed heap. Every fork completed. The run includes HotSpot with compilation disabled to examine how much of the roots gap persists when both VMs interpret bytecode. [Full results](equal-budget/REPORT.md) · [Process data and actual resource use](equal-budget/processes.csv) · [Run provenance](equal-budget/provenance.json)
+
+| Roots workload | Median ops/s |
+|---|---:|
+| Native Ristretto, interpreter | 7,805 |
+| Native Ristretto, JIT enabled | 7,402 |
+| Ristretto, WASI | 7,244 |
+| G1, interpreter | 1,312,180 |
+| ZGC, interpreter | 1,249,344 |
+| G1, default HotSpot JIT | 14,211,810 |
+| ZGC, default HotSpot JIT | 13,969,653 |
+
+Separate instrumented forks recorded zero compiled entries into the benchmark operation method for the allocation and roots runs with Ristretto's JIT enabled. The production compiler reported an unsupported instruction. The end-to-end data still leave a roughly 160–168× throughput gap between the two HotSpot interpreters and the Ristretto interpreter on roots. The experiment does not assign that residual to a GC function. [Invocation counts and eligibility](equal-budget/execution-coverage.json)
+
+These are saturation results. Scheduled arrival tails, complete pause coverage and sustained qualification remain open. [Qualification decision](equal-budget/gates-v2.json) · [Native throughput](equal-budget/native-throughput.svg) · [Native service latency](equal-budget/native-latency.svg) · [WASI throughput](equal-budget/wasm-throughput.svg)

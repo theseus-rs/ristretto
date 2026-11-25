@@ -1,0 +1,2561 @@
+{
+  "schema": 1,
+  "qualification": false,
+  "aggregation": "median and range of per-process metrics; quantiles are not pooled",
+  "groups": [
+    {
+      "runtime": "g1",
+      "workload": "allocation",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 16730820.95454599,
+          "min": 11192925.64824973,
+          "max": 23481802.58418133
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p9999_us": {
+          "median": 2,
+          "min": 1,
+          "max": 4
+        },
+        "service_max_us": {
+          "median": 5001.131,
+          "min": 788.734,
+          "max": 9083.736
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p9999_us": {
+          "median": 2,
+          "min": 1,
+          "max": 4
+        },
+        "response_max_us": {
+          "median": 5001.131,
+          "min": 788.734,
+          "max": 9083.736
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 50192468,
+          "min": 33579049,
+          "max": 70445953
+        },
+        "process_peak_rss_mib": {
+          "median": 80.7265625,
+          "min": 79.9375,
+          "max": 81.90234375
+        },
+        "process_cpu_s": {
+          "median": 4.07,
+          "min": 3.99,
+          "max": 4.109999999999999
+        }
+      }
+    },
+    {
+      "runtime": "g1",
+      "workload": "control",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 0,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 29697713.247462124,
+          "min": 11608773.464887593,
+          "max": 32700021.756368924
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p9999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_max_us": {
+          "median": 351.178,
+          "min": 324.02,
+          "max": 596.572
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p9999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_max_us": {
+          "median": 351.178,
+          "min": 324.02,
+          "max": 596.572
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 89093698,
+          "min": 34826708,
+          "max": 98100506
+        },
+        "process_peak_rss_mib": {
+          "median": 40.79296875,
+          "min": 40.64453125,
+          "max": 40.890625
+        },
+        "process_cpu_s": {
+          "median": 4.05,
+          "min": 4.04,
+          "max": 4.12
+        }
+      }
+    },
+    {
+      "runtime": "g1",
+      "workload": "mixed",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 8249821.946848265,
+          "min": 4024488.8302722294,
+          "max": 9280570.783001518
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 2,
+          "min": 1,
+          "max": 2
+        },
+        "service_p9999_us": {
+          "median": 66,
+          "min": 58,
+          "max": 89
+        },
+        "service_max_us": {
+          "median": 5638.316,
+          "min": 3351.245,
+          "max": 16840.372
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 2,
+          "min": 1,
+          "max": 2
+        },
+        "response_p9999_us": {
+          "median": 66,
+          "min": 58,
+          "max": 89
+        },
+        "response_max_us": {
+          "median": 5638.316,
+          "min": 3351.245,
+          "max": 16840.372
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 24749688,
+          "min": 12073468,
+          "max": 27842016
+        },
+        "process_peak_rss_mib": {
+          "median": 93.96875,
+          "min": 92.14453125,
+          "max": 94.30859375
+        },
+        "process_cpu_s": {
+          "median": 4.17,
+          "min": 3.95,
+          "max": 4.24
+        }
+      }
+    },
+    {
+      "runtime": "g1",
+      "workload": "roots",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 14211809.53582646,
+          "min": 4729164.052953898,
+          "max": 14342438.520344589
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p9999_us": {
+          "median": 5,
+          "min": 2,
+          "max": 6
+        },
+        "service_max_us": {
+          "median": 6414.13,
+          "min": 3452.574,
+          "max": 10516.21
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p9999_us": {
+          "median": 5,
+          "min": 2,
+          "max": 6
+        },
+        "response_max_us": {
+          "median": 6414.13,
+          "min": 3452.574,
+          "max": 10516.21
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 42635713,
+          "min": 14193537,
+          "max": 43027860
+        },
+        "process_peak_rss_mib": {
+          "median": 81.45703125,
+          "min": 81.1328125,
+          "max": 82.91796875
+        },
+        "process_cpu_s": {
+          "median": 4.2700000000000005,
+          "min": 4.07,
+          "max": 4.28
+        }
+      }
+    },
+    {
+      "runtime": "g1-int",
+      "workload": "allocation",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 3314297.79845601,
+          "min": 2197676.707956422,
+          "max": 3669855.0878161048
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 2
+        },
+        "service_p9999_us": {
+          "median": 4,
+          "min": 3,
+          "max": 10
+        },
+        "service_max_us": {
+          "median": 5029.093,
+          "min": 1365.229,
+          "max": 9350.268
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 2
+        },
+        "response_p9999_us": {
+          "median": 4,
+          "min": 3,
+          "max": 10
+        },
+        "response_max_us": {
+          "median": 5029.093,
+          "min": 1365.229,
+          "max": 9350.268
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 9942910,
+          "min": 6593044,
+          "max": 11009587
+        },
+        "process_peak_rss_mib": {
+          "median": 75.32421875,
+          "min": 74.5859375,
+          "max": 75.72265625
+        },
+        "process_cpu_s": {
+          "median": 4.02,
+          "min": 4.01,
+          "max": 4.03
+        }
+      }
+    },
+    {
+      "runtime": "g1-int",
+      "workload": "control",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 0,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 4346391.988150769,
+          "min": 1797272.1567080214,
+          "max": 4887556.345456985
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p9999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 5
+        },
+        "service_max_us": {
+          "median": 340.755,
+          "min": 69.111,
+          "max": 584.245
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p9999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 5
+        },
+        "response_max_us": {
+          "median": 340.755,
+          "min": 69.111,
+          "max": 584.245
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 13039200,
+          "min": 5391835,
+          "max": 14662703
+        },
+        "process_peak_rss_mib": {
+          "median": 35.9296875,
+          "min": 35.5859375,
+          "max": 35.98828125
+        },
+        "process_cpu_s": {
+          "median": 4.02,
+          "min": 4.01,
+          "max": 4.029999999999999
+        }
+      }
+    },
+    {
+      "runtime": "g1-int",
+      "workload": "mixed",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 2132612.997547255,
+          "min": 1727193.5271745306,
+          "max": 2871090.2419333044
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 2,
+          "min": 1,
+          "max": 4
+        },
+        "service_p9999_us": {
+          "median": 71,
+          "min": 62,
+          "max": 79
+        },
+        "service_max_us": {
+          "median": 3530.517,
+          "min": 2001.414,
+          "max": 5594.684
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 2,
+          "min": 1,
+          "max": 4
+        },
+        "response_p9999_us": {
+          "median": 71,
+          "min": 62,
+          "max": 79
+        },
+        "response_max_us": {
+          "median": 3530.517,
+          "min": 2001.414,
+          "max": 5594.684
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 6397953,
+          "min": 5181592,
+          "max": 8613286
+        },
+        "process_peak_rss_mib": {
+          "median": 88.14453125,
+          "min": 87.3515625,
+          "max": 88.48828125
+        },
+        "process_cpu_s": {
+          "median": 4.05,
+          "min": 4.04,
+          "max": 4.09
+        }
+      }
+    },
+    {
+      "runtime": "g1-int",
+      "workload": "roots",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 1312180.329713029,
+          "min": 463302.4504077375,
+          "max": 1342366.6548854539
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 2
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 3
+        },
+        "service_p999_us": {
+          "median": 3,
+          "min": 2,
+          "max": 6
+        },
+        "service_p9999_us": {
+          "median": 14,
+          "min": 5,
+          "max": 25
+        },
+        "service_max_us": {
+          "median": 2084.4,
+          "min": 1326.319,
+          "max": 3796.4
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 2
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 3
+        },
+        "response_p999_us": {
+          "median": 3,
+          "min": 2,
+          "max": 6
+        },
+        "response_p9999_us": {
+          "median": 14,
+          "min": 5,
+          "max": 25
+        },
+        "response_max_us": {
+          "median": 2084.4,
+          "min": 1326.319,
+          "max": 3796.4
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 3936549,
+          "min": 1389912,
+          "max": 4027107
+        },
+        "process_peak_rss_mib": {
+          "median": 74.7890625,
+          "min": 74.625,
+          "max": 74.92578125
+        },
+        "process_cpu_s": {
+          "median": 4.04,
+          "min": 4.029999999999999,
+          "max": 4.05
+        }
+      }
+    },
+    {
+      "runtime": "ristretto-candidate",
+      "workload": "allocation",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": false,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 97266.90594254862,
+          "min": 38134.953509196384,
+          "max": 103429.38761417888
+        },
+        "service_p50_us": {
+          "median": 6,
+          "min": 5,
+          "max": 16
+        },
+        "service_p99_us": {
+          "median": 22,
+          "min": 17,
+          "max": 108
+        },
+        "service_p999_us": {
+          "median": 110,
+          "min": 109,
+          "max": 124
+        },
+        "service_p9999_us": {
+          "median": 210,
+          "min": 120,
+          "max": 332
+        },
+        "service_max_us": {
+          "median": 105919.967,
+          "min": 104185.455,
+          "max": 231301.353
+        },
+        "response_p50_us": {
+          "median": 6,
+          "min": 5,
+          "max": 16
+        },
+        "response_p99_us": {
+          "median": 22,
+          "min": 17,
+          "max": 108
+        },
+        "response_p999_us": {
+          "median": 110,
+          "min": 109,
+          "max": 124
+        },
+        "response_p9999_us": {
+          "median": 210,
+          "min": 120,
+          "max": 332
+        },
+        "response_max_us": {
+          "median": 105919.967,
+          "min": 104185.455,
+          "max": 231301.353
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 291802,
+          "min": 114406,
+          "max": 310289
+        },
+        "process_peak_rss_mib": {
+          "median": 224.36328125,
+          "min": 219.38671875,
+          "max": 226.515625
+        },
+        "process_cpu_s": {
+          "median": 4.75,
+          "min": 4.63,
+          "max": 5.340000000000001
+        }
+      }
+    },
+    {
+      "runtime": "ristretto-candidate",
+      "workload": "control",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": false,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 399804.96043236385,
+          "min": 176869.13752712903,
+          "max": 455897.41438879276
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 2
+        },
+        "service_p99_us": {
+          "median": 2,
+          "min": 1,
+          "max": 3
+        },
+        "service_p999_us": {
+          "median": 2,
+          "min": 2,
+          "max": 8
+        },
+        "service_p9999_us": {
+          "median": 4,
+          "min": 4,
+          "max": 16
+        },
+        "service_max_us": {
+          "median": 332.316,
+          "min": 123.365,
+          "max": 336.102
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 2
+        },
+        "response_p99_us": {
+          "median": 2,
+          "min": 1,
+          "max": 3
+        },
+        "response_p999_us": {
+          "median": 2,
+          "min": 2,
+          "max": 8
+        },
+        "response_p9999_us": {
+          "median": 4,
+          "min": 4,
+          "max": 16
+        },
+        "response_max_us": {
+          "median": 332.316,
+          "min": 123.365,
+          "max": 336.102
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 1199420,
+          "min": 530610,
+          "max": 1367697
+        },
+        "process_peak_rss_mib": {
+          "median": 65.22265625,
+          "min": 64.859375,
+          "max": 65.328125
+        },
+        "process_cpu_s": {
+          "median": 4.17,
+          "min": 4.17,
+          "max": 4.220000000000001
+        }
+      }
+    },
+    {
+      "runtime": "ristretto-candidate",
+      "workload": "mixed",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": false,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 58899.728491884896,
+          "min": 51854.386618409335,
+          "max": 94393.82266275273
+        },
+        "service_p50_us": {
+          "median": 9,
+          "min": 6,
+          "max": 10
+        },
+        "service_p99_us": {
+          "median": 17,
+          "min": 11,
+          "max": 21
+        },
+        "service_p999_us": {
+          "median": 113,
+          "min": 32,
+          "max": 115
+        },
+        "service_p9999_us": {
+          "median": 11520,
+          "min": 5504,
+          "max": 15104
+        },
+        "service_max_us": {
+          "median": 60813.156,
+          "min": 45330.338,
+          "max": 108561.975
+        },
+        "response_p50_us": {
+          "median": 9,
+          "min": 6,
+          "max": 10
+        },
+        "response_p99_us": {
+          "median": 17,
+          "min": 11,
+          "max": 21
+        },
+        "response_p999_us": {
+          "median": 113,
+          "min": 32,
+          "max": 115
+        },
+        "response_p9999_us": {
+          "median": 11520,
+          "min": 5504,
+          "max": 15104
+        },
+        "response_max_us": {
+          "median": 60813.156,
+          "min": 45330.338,
+          "max": 108561.975
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 176700,
+          "min": 155564,
+          "max": 283183
+        },
+        "process_peak_rss_mib": {
+          "median": 163.77734375,
+          "min": 161.94921875,
+          "max": 170.71875
+        },
+        "process_cpu_s": {
+          "median": 4.46,
+          "min": 4.34,
+          "max": 4.5600000000000005
+        }
+      }
+    },
+    {
+      "runtime": "ristretto-candidate",
+      "workload": "roots",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": false,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 7805.09650957004,
+          "min": 3141.20884959708,
+          "max": 8116.547916159621
+        },
+        "service_p50_us": {
+          "median": 69,
+          "min": 66,
+          "max": 193
+        },
+        "service_p99_us": {
+          "median": 587,
+          "min": 584,
+          "max": 1792
+        },
+        "service_p999_us": {
+          "median": 1712,
+          "min": 1408,
+          "max": 6208
+        },
+        "service_p9999_us": {
+          "median": 35328,
+          "min": 5184,
+          "max": 74752
+        },
+        "service_max_us": {
+          "median": 441541.209,
+          "min": 428353.488,
+          "max": 909287.931
+        },
+        "response_p50_us": {
+          "median": 69,
+          "min": 66,
+          "max": 193
+        },
+        "response_p99_us": {
+          "median": 587,
+          "min": 584,
+          "max": 1792
+        },
+        "response_p999_us": {
+          "median": 1712,
+          "min": 1408,
+          "max": 6208
+        },
+        "response_p9999_us": {
+          "median": 35328,
+          "min": 5184,
+          "max": 74752
+        },
+        "response_max_us": {
+          "median": 441541.209,
+          "min": 428353.488,
+          "max": 909287.931
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 23417,
+          "min": 12126,
+          "max": 24350
+        },
+        "process_peak_rss_mib": {
+          "median": 332.74609375,
+          "min": 302.6875,
+          "max": 334.77734375
+        },
+        "process_cpu_s": {
+          "median": 5.83,
+          "min": 5.739999999999999,
+          "max": 7.0
+        }
+      }
+    },
+    {
+      "runtime": "ristretto-candidate-jit",
+      "workload": "allocation",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": false,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 87343.33170498958,
+          "min": 39771.2905629173,
+          "max": 95029.93395419756
+        },
+        "service_p50_us": {
+          "median": 6,
+          "min": 6,
+          "max": 15
+        },
+        "service_p99_us": {
+          "median": 107,
+          "min": 19,
+          "max": 121
+        },
+        "service_p999_us": {
+          "median": 111,
+          "min": 110,
+          "max": 134
+        },
+        "service_p9999_us": {
+          "median": 210,
+          "min": 125,
+          "max": 741
+        },
+        "service_max_us": {
+          "median": 102302.45,
+          "min": 77612.489,
+          "max": 154978.615
+        },
+        "response_p50_us": {
+          "median": 6,
+          "min": 6,
+          "max": 15
+        },
+        "response_p99_us": {
+          "median": 107,
+          "min": 19,
+          "max": 121
+        },
+        "response_p999_us": {
+          "median": 111,
+          "min": 110,
+          "max": 134
+        },
+        "response_p9999_us": {
+          "median": 210,
+          "min": 125,
+          "max": 741
+        },
+        "response_max_us": {
+          "median": 102302.45,
+          "min": 77612.489,
+          "max": 154978.615
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 262031,
+          "min": 120743,
+          "max": 285091
+        },
+        "process_peak_rss_mib": {
+          "median": 229.65234375,
+          "min": 211.26171875,
+          "max": 231.8828125
+        },
+        "process_cpu_s": {
+          "median": 4.78,
+          "min": 4.73,
+          "max": 5.12
+        }
+      }
+    },
+    {
+      "runtime": "ristretto-candidate-jit",
+      "workload": "control",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": false,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 316904.3480832682,
+          "min": 219114.18092644386,
+          "max": 332492.99755181896
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 2
+        },
+        "service_p999_us": {
+          "median": 2,
+          "min": 2,
+          "max": 4
+        },
+        "service_p9999_us": {
+          "median": 5,
+          "min": 4,
+          "max": 9
+        },
+        "service_max_us": {
+          "median": 408.716,
+          "min": 322.888,
+          "max": 583.892
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 2
+        },
+        "response_p999_us": {
+          "median": 2,
+          "min": 2,
+          "max": 4
+        },
+        "response_p9999_us": {
+          "median": 5,
+          "min": 4,
+          "max": 9
+        },
+        "response_max_us": {
+          "median": 408.716,
+          "min": 322.888,
+          "max": 583.892
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 950718,
+          "min": 657347,
+          "max": 997484
+        },
+        "process_peak_rss_mib": {
+          "median": 69.7734375,
+          "min": 69.59375,
+          "max": 70.22265625
+        },
+        "process_cpu_s": {
+          "median": 4.220000000000001,
+          "min": 4.199999999999999,
+          "max": 4.39
+        }
+      }
+    },
+    {
+      "runtime": "ristretto-candidate-jit",
+      "workload": "mixed",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": false,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 43520.8705904233,
+          "min": 30030.974744440464,
+          "max": 82834.34214932557
+        },
+        "service_p50_us": {
+          "median": 12,
+          "min": 6,
+          "max": 17
+        },
+        "service_p99_us": {
+          "median": 19,
+          "min": 12,
+          "max": 24
+        },
+        "service_p999_us": {
+          "median": 56,
+          "min": 31,
+          "max": 122
+        },
+        "service_p9999_us": {
+          "median": 15872,
+          "min": 8576,
+          "max": 18176
+        },
+        "service_max_us": {
+          "median": 81807.576,
+          "min": 52915.551,
+          "max": 101954.835
+        },
+        "response_p50_us": {
+          "median": 12,
+          "min": 6,
+          "max": 17
+        },
+        "response_p99_us": {
+          "median": 19,
+          "min": 12,
+          "max": 24
+        },
+        "response_p999_us": {
+          "median": 56,
+          "min": 31,
+          "max": 122
+        },
+        "response_p9999_us": {
+          "median": 15872,
+          "min": 8576,
+          "max": 18176
+        },
+        "response_max_us": {
+          "median": 81807.576,
+          "min": 52915.551,
+          "max": 101954.835
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 130564,
+          "min": 90113,
+          "max": 248504
+        },
+        "process_peak_rss_mib": {
+          "median": 167.1796875,
+          "min": 163.03125,
+          "max": 173.734375
+        },
+        "process_cpu_s": {
+          "median": 4.7,
+          "min": 4.39,
+          "max": 4.880000000000001
+        }
+      }
+    },
+    {
+      "runtime": "ristretto-candidate-jit",
+      "workload": "roots",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": false,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 7401.664893152849,
+          "min": 3895.436273685217,
+          "max": 7675.782258526078
+        },
+        "service_p50_us": {
+          "median": 73,
+          "min": 70,
+          "max": 204
+        },
+        "service_p99_us": {
+          "median": 690,
+          "min": 611,
+          "max": 1920
+        },
+        "service_p999_us": {
+          "median": 2208,
+          "min": 1920,
+          "max": 6912
+        },
+        "service_p9999_us": {
+          "median": 36352,
+          "min": 9344,
+          "max": 39424
+        },
+        "service_max_us": {
+          "median": 397347.699,
+          "min": 71871.953,
+          "max": 412229.287
+        },
+        "response_p50_us": {
+          "median": 73,
+          "min": 70,
+          "max": 204
+        },
+        "response_p99_us": {
+          "median": 690,
+          "min": 611,
+          "max": 1920
+        },
+        "response_p999_us": {
+          "median": 2208,
+          "min": 1920,
+          "max": 6912
+        },
+        "response_p9999_us": {
+          "median": 36352,
+          "min": 9344,
+          "max": 39424
+        },
+        "response_max_us": {
+          "median": 397347.699,
+          "min": 71871.953,
+          "max": 412229.287
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 22212,
+          "min": 11687,
+          "max": 23028
+        },
+        "process_peak_rss_mib": {
+          "median": 331.97265625,
+          "min": 305.734375,
+          "max": 333.90625
+        },
+        "process_cpu_s": {
+          "median": 5.88,
+          "min": 5.84,
+          "max": 7.140000000000001
+        }
+      }
+    },
+    {
+      "runtime": "wasm-candidate",
+      "workload": "allocation",
+      "rate": 0,
+      "target": "wasm",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": false,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 62716.42545929435,
+          "min": 44142.654480729165,
+          "max": 74247.42771369514
+        },
+        "service_p50_us": {
+          "median": 9,
+          "min": 7,
+          "max": 11
+        },
+        "service_p99_us": {
+          "median": 109,
+          "min": 108,
+          "max": 113
+        },
+        "service_p999_us": {
+          "median": 113,
+          "min": 111,
+          "max": 121
+        },
+        "service_p9999_us": {
+          "median": 213,
+          "min": 211,
+          "max": 222
+        },
+        "service_max_us": {
+          "median": 358.888,
+          "min": 329.065,
+          "max": 608.241
+        },
+        "response_p50_us": {
+          "median": 9,
+          "min": 7,
+          "max": 11
+        },
+        "response_p99_us": {
+          "median": 109,
+          "min": 108,
+          "max": 113
+        },
+        "response_p999_us": {
+          "median": 113,
+          "min": 111,
+          "max": 121
+        },
+        "response_p9999_us": {
+          "median": 213,
+          "min": 211,
+          "max": 222
+        },
+        "response_max_us": {
+          "median": 358.888,
+          "min": 329.065,
+          "max": 608.241
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 188150,
+          "min": 132429,
+          "max": 222743
+        },
+        "process_peak_rss_mib": {
+          "median": 94.52734375,
+          "min": 93.99609375,
+          "max": 95.90625
+        },
+        "process_cpu_s": {
+          "median": 8.94,
+          "min": 8.22,
+          "max": 12.600000000000001
+        }
+      }
+    },
+    {
+      "runtime": "wasm-candidate",
+      "workload": "control",
+      "rate": 0,
+      "target": "wasm",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": false,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 131571.89534835884,
+          "min": 112888.25226584641,
+          "max": 146203.7451931953
+        },
+        "service_p50_us": {
+          "median": 2,
+          "min": 2,
+          "max": 3
+        },
+        "service_p99_us": {
+          "median": 4,
+          "min": 3,
+          "max": 4
+        },
+        "service_p999_us": {
+          "median": 5,
+          "min": 4,
+          "max": 6
+        },
+        "service_p9999_us": {
+          "median": 10,
+          "min": 6,
+          "max": 13
+        },
+        "service_max_us": {
+          "median": 532.101,
+          "min": 30.815,
+          "max": 712.09
+        },
+        "response_p50_us": {
+          "median": 2,
+          "min": 2,
+          "max": 3
+        },
+        "response_p99_us": {
+          "median": 4,
+          "min": 3,
+          "max": 4
+        },
+        "response_p999_us": {
+          "median": 5,
+          "min": 4,
+          "max": 6
+        },
+        "response_p9999_us": {
+          "median": 10,
+          "min": 6,
+          "max": 13
+        },
+        "response_max_us": {
+          "median": 532.101,
+          "min": 30.815,
+          "max": 712.09
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 394718,
+          "min": 338667,
+          "max": 438614
+        },
+        "process_peak_rss_mib": {
+          "median": 74.40625,
+          "min": 73.125,
+          "max": 75.01953125
+        },
+        "process_cpu_s": {
+          "median": 8.44,
+          "min": 8.02,
+          "max": 9.49
+        }
+      }
+    },
+    {
+      "runtime": "wasm-candidate",
+      "workload": "mixed",
+      "rate": 0,
+      "target": "wasm",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": false,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 38763.311375075704,
+          "min": 18975.137421364503,
+          "max": 68782.06169004437
+        },
+        "service_p50_us": {
+          "median": 12,
+          "min": 7,
+          "max": 27
+        },
+        "service_p99_us": {
+          "median": 118,
+          "min": 109,
+          "max": 141
+        },
+        "service_p999_us": {
+          "median": 129,
+          "min": 114,
+          "max": 253
+        },
+        "service_p9999_us": {
+          "median": 443,
+          "min": 214,
+          "max": 926
+        },
+        "service_max_us": {
+          "median": 809.078,
+          "min": 412.664,
+          "max": 3254.892
+        },
+        "response_p50_us": {
+          "median": 12,
+          "min": 7,
+          "max": 27
+        },
+        "response_p99_us": {
+          "median": 118,
+          "min": 109,
+          "max": 141
+        },
+        "response_p999_us": {
+          "median": 129,
+          "min": 114,
+          "max": 253
+        },
+        "response_p9999_us": {
+          "median": 443,
+          "min": 214,
+          "max": 926
+        },
+        "response_max_us": {
+          "median": 809.078,
+          "min": 412.664,
+          "max": 3254.892
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 116291,
+          "min": 56926,
+          "max": 206347
+        },
+        "process_peak_rss_mib": {
+          "median": 97.55859375,
+          "min": 96.140625,
+          "max": 100.09765625
+        },
+        "process_cpu_s": {
+          "median": 9.44,
+          "min": 8.06,
+          "max": 13.58
+        }
+      }
+    },
+    {
+      "runtime": "wasm-candidate",
+      "workload": "roots",
+      "rate": 0,
+      "target": "wasm",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": false,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 7243.5192891558,
+          "min": 3256.272137125636,
+          "max": 7306.96820738133
+        },
+        "service_p50_us": {
+          "median": 65,
+          "min": 60,
+          "max": 159
+        },
+        "service_p99_us": {
+          "median": 1696,
+          "min": 1696,
+          "max": 1872
+        },
+        "service_p999_us": {
+          "median": 1808,
+          "min": 1792,
+          "max": 1984
+        },
+        "service_p9999_us": {
+          "median": 1936,
+          "min": 1824,
+          "max": 2080
+        },
+        "service_max_us": {
+          "median": 1955.422,
+          "min": 1812.314,
+          "max": 2310.019
+        },
+        "response_p50_us": {
+          "median": 65,
+          "min": 60,
+          "max": 159
+        },
+        "response_p99_us": {
+          "median": 1696,
+          "min": 1696,
+          "max": 1872
+        },
+        "response_p999_us": {
+          "median": 1808,
+          "min": 1792,
+          "max": 1984
+        },
+        "response_p9999_us": {
+          "median": 1936,
+          "min": 1824,
+          "max": 2080
+        },
+        "response_max_us": {
+          "median": 1955.422,
+          "min": 1812.314,
+          "max": 2310.019
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 21737,
+          "min": 9769,
+          "max": 21921
+        },
+        "process_peak_rss_mib": {
+          "median": 249.609375,
+          "min": 216.56640625,
+          "max": 256.44140625
+        },
+        "process_cpu_s": {
+          "median": 8.84,
+          "min": 8.29,
+          "max": 14.7
+        }
+      }
+    },
+    {
+      "runtime": "zgc",
+      "workload": "allocation",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 25741739.232113186,
+          "min": 20797784.714447007,
+          "max": 28542721.17670106
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p9999_us": {
+          "median": 3,
+          "min": 2,
+          "max": 3
+        },
+        "service_max_us": {
+          "median": 3643.67,
+          "min": 1789.242,
+          "max": 11315.82
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p9999_us": {
+          "median": 3,
+          "min": 2,
+          "max": 3
+        },
+        "response_max_us": {
+          "median": 3643.67,
+          "min": 1789.242,
+          "max": 11315.82
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 77225990,
+          "min": 62394084,
+          "max": 85628719
+        },
+        "process_peak_rss_mib": {
+          "median": 107.33203125,
+          "min": 106.72265625,
+          "max": 107.5
+        },
+        "process_cpu_s": {
+          "median": 4.300000000000001,
+          "min": 4.26,
+          "max": 4.32
+        }
+      }
+    },
+    {
+      "runtime": "zgc",
+      "workload": "control",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 0,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 31938638.36595016,
+          "min": 11946021.513556056,
+          "max": 32357837.8078463
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p9999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_max_us": {
+          "median": 588.709,
+          "min": 335.299,
+          "max": 3012.461
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p9999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_max_us": {
+          "median": 588.709,
+          "min": 335.299,
+          "max": 3012.461
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 95816270,
+          "min": 35838070,
+          "max": 97074077
+        },
+        "process_peak_rss_mib": {
+          "median": 41.99609375,
+          "min": 41.85546875,
+          "max": 42.26953125
+        },
+        "process_cpu_s": {
+          "median": 4.08,
+          "min": 4.06,
+          "max": 4.109999999999999
+        }
+      }
+    },
+    {
+      "runtime": "zgc",
+      "workload": "mixed",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 11196262.95905481,
+          "min": 7124229.7898022635,
+          "max": 12283888.747847255
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 2,
+          "min": 2,
+          "max": 2
+        },
+        "service_p9999_us": {
+          "median": 39,
+          "min": 38,
+          "max": 76
+        },
+        "service_max_us": {
+          "median": 6595.058,
+          "min": 3557.149,
+          "max": 12605.939
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 2,
+          "min": 2,
+          "max": 2
+        },
+        "response_p9999_us": {
+          "median": 39,
+          "min": 38,
+          "max": 76
+        },
+        "response_max_us": {
+          "median": 6595.058,
+          "min": 3557.149,
+          "max": 12605.939
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 33589068,
+          "min": 21372929,
+          "max": 36851965
+        },
+        "process_peak_rss_mib": {
+          "median": 107.87890625,
+          "min": 107.6875,
+          "max": 108.015625
+        },
+        "process_cpu_s": {
+          "median": 4.71,
+          "min": 4.6499999999999995,
+          "max": 4.84
+        }
+      }
+    },
+    {
+      "runtime": "zgc",
+      "workload": "roots",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 13969653.189031737,
+          "min": 6080392.830687526,
+          "max": 15123147.623682886
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 2
+        },
+        "service_p9999_us": {
+          "median": 5,
+          "min": 4,
+          "max": 23
+        },
+        "service_max_us": {
+          "median": 1526.45,
+          "min": 451.249,
+          "max": 4261.395
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 2
+        },
+        "response_p9999_us": {
+          "median": 5,
+          "min": 4,
+          "max": 23
+        },
+        "response_max_us": {
+          "median": 1526.45,
+          "min": 451.249,
+          "max": 4261.395
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 41909193,
+          "min": 18241180,
+          "max": 45369778
+        },
+        "process_peak_rss_mib": {
+          "median": 106.15234375,
+          "min": 93.69140625,
+          "max": 108.21484375
+        },
+        "process_cpu_s": {
+          "median": 5.36,
+          "min": 5.32,
+          "max": 6.29
+        }
+      }
+    },
+    {
+      "runtime": "zgc-int",
+      "workload": "allocation",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 3286899.276099714,
+          "min": 2697823.151721218,
+          "max": 3559730.052688229
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p9999_us": {
+          "median": 3,
+          "min": 3,
+          "max": 5
+        },
+        "service_max_us": {
+          "median": 337.885,
+          "min": 324.446,
+          "max": 804.299
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p9999_us": {
+          "median": 3,
+          "min": 3,
+          "max": 5
+        },
+        "response_max_us": {
+          "median": 337.885,
+          "min": 324.446,
+          "max": 804.299
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 9860718,
+          "min": 8093488,
+          "max": 10679210
+        },
+        "process_peak_rss_mib": {
+          "median": 98.90625,
+          "min": 98.84765625,
+          "max": 101.14453125
+        },
+        "process_cpu_s": {
+          "median": 4.13,
+          "min": 4.11,
+          "max": 4.140000000000001
+        }
+      }
+    },
+    {
+      "runtime": "zgc-int",
+      "workload": "control",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 0,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 3763846.3753074803,
+          "min": 1717374.8769861052,
+          "max": 4693047.5189875
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p9999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 5
+        },
+        "service_max_us": {
+          "median": 340.036,
+          "min": 50.996,
+          "max": 589.526
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p9999_us": {
+          "median": 1,
+          "min": 1,
+          "max": 5
+        },
+        "response_max_us": {
+          "median": 340.036,
+          "min": 50.996,
+          "max": 589.526
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 11291563,
+          "min": 5152143,
+          "max": 14079175
+        },
+        "process_peak_rss_mib": {
+          "median": 36.609375,
+          "min": 36.19140625,
+          "max": 36.62109375
+        },
+        "process_cpu_s": {
+          "median": 4.039999999999999,
+          "min": 4.039999999999999,
+          "max": 4.07
+        }
+      }
+    },
+    {
+      "runtime": "zgc-int",
+      "workload": "mixed",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 2062837.1438697658,
+          "min": 934513.5242091892,
+          "max": 2881267.20550461
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "service_p999_us": {
+          "median": 3,
+          "min": 2,
+          "max": 7
+        },
+        "service_p9999_us": {
+          "median": 76,
+          "min": 65,
+          "max": 308
+        },
+        "service_max_us": {
+          "median": 765.069,
+          "min": 388.146,
+          "max": 6892.398
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 1
+        },
+        "response_p999_us": {
+          "median": 3,
+          "min": 2,
+          "max": 7
+        },
+        "response_p9999_us": {
+          "median": 76,
+          "min": 65,
+          "max": 308
+        },
+        "response_max_us": {
+          "median": 765.069,
+          "min": 388.146,
+          "max": 6892.398
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 6188523,
+          "min": 2803550,
+          "max": 8643815
+        },
+        "process_peak_rss_mib": {
+          "median": 100.9609375,
+          "min": 98.93359375,
+          "max": 100.984375
+        },
+        "process_cpu_s": {
+          "median": 4.18,
+          "min": 3.9299999999999997,
+          "max": 4.33
+        }
+      }
+    },
+    {
+      "runtime": "zgc-int",
+      "workload": "roots",
+      "rate": 0,
+      "target": "native",
+      "runs": 5,
+      "runs_with_process_gc": 5,
+      "tail_samples_sufficient": true,
+      "metrics": {
+        "throughput_ops_s": {
+          "median": 1249344.299508926,
+          "min": 447441.8340940615,
+          "max": 1279123.7224240575
+        },
+        "service_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 2
+        },
+        "service_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 3
+        },
+        "service_p999_us": {
+          "median": 4,
+          "min": 3,
+          "max": 7
+        },
+        "service_p9999_us": {
+          "median": 22,
+          "min": 8,
+          "max": 25
+        },
+        "service_max_us": {
+          "median": 579.915,
+          "min": 425.776,
+          "max": 4816.957
+        },
+        "response_p50_us": {
+          "median": 1,
+          "min": 1,
+          "max": 2
+        },
+        "response_p99_us": {
+          "median": 1,
+          "min": 1,
+          "max": 3
+        },
+        "response_p999_us": {
+          "median": 4,
+          "min": 3,
+          "max": 7
+        },
+        "response_p9999_us": {
+          "median": 22,
+          "min": 8,
+          "max": 25
+        },
+        "response_max_us": {
+          "median": 579.915,
+          "min": 425.776,
+          "max": 4816.957
+        },
+        "unfinished": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "peak_backlog": {
+          "median": 0,
+          "min": 0,
+          "max": 0
+        },
+        "completed": {
+          "median": 3748042,
+          "min": 1342331,
+          "max": 3837400
+        },
+        "process_peak_rss_mib": {
+          "median": 99.3359375,
+          "min": 95.625,
+          "max": 101.15234375
+        },
+        "process_cpu_s": {
+          "median": 4.16,
+          "min": 4.05,
+          "max": 4.17
+        }
+      }
+    }
+  ],
+  "failures": [],
+  "diagnostics": [],
+  "schedule_complete": true,
+  "integrity": {
+    "inputs_unchanged": true
+  }
+}
