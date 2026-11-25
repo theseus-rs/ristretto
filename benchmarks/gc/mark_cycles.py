@@ -10,7 +10,7 @@ import shutil
 import statistics
 import subprocess
 
-from mechanisms import paired_interval, sha256
+from paired_measurement import paired_interval, sha256
 
 INVOCATION_NAME = 'mark_cycles'
 
@@ -58,6 +58,8 @@ def validate_builds(builds):
             raise ValueError(f'build {field} differs or is missing')
     if a['target'] not in ['native', 'wasm']:
         raise ValueError('unknown build target')
+    if a.get('source_sha256') != b.get('source_sha256') and a.get('binary_sha256') == b.get('binary_sha256'):
+        raise ValueError('different sources produced identical timed binaries; verify independent target directories')
     for build in builds.values():
         if not build.get('source_sha256') or sha256(Path(build['binary'])) != build['binary_sha256']:
             raise ValueError('unrecorded source or changed binary')
