@@ -5,7 +5,10 @@ use portable_atomic::AtomicU64;
 use std::alloc::{Layout, alloc, dealloc};
 use std::marker::PhantomData;
 use std::ptr::NonNull;
-use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
+use std::sync::atomic::{
+    AtomicUsize,
+    Ordering::{Acquire, Relaxed, Release},
+};
 use std::sync::{Arc, Mutex, Weak};
 
 pub(crate) const CHUNK: usize = 16 * 1024;
@@ -126,21 +129,36 @@ impl SmallAllocations {
             if page.stride != stride {
                 return None;
             }
-            let bits = page.free.load(Relaxed);
-            if bits != 0 {
-                // A concurrent claim can take the observed slot. Fall back to
-                // exact backing without replacing a partially occupied page.
-                return page.claim(bits);
+            match page.claim() {
+                Ok(storage) => return Some(storage),
+                Err(SlotMiss::Busy) => return None,
+                Err(SlotMiss::Full) => {}
             }
         }
-        let page_layout = Layout::from_size_align(stride.checked_mul(64)?, 64).ok()?;
-        let credit = self.budget.reserve(page_layout.size(), false).ok()?;
-        let backing = RawAllocation::new(page_layout).ok()?;
+        // Aim for one 4 KiB backing block for the smallest classes. A small
+        // remaining arena budget can still admit the original 64-slot page.
+        let preferred = if class < 4 {
+            (4096 / stride).clamp(64, 512) / 64
+        } else {
+            1
+        };
+        let (words, layout, credit) = [preferred, 1].into_iter().find_map(|words| {
+            let layout = Layout::from_size_align(stride.checked_mul(64 * words)?, 64).ok()?;
+            self.budget
+                .reserve(layout.size(), false)
+                .ok()
+                .map(|credit| (words, layout, credit))
+        })?;
+        let backing = RawAllocation::new(layout).ok()?;
         let page = Arc::new(SmallPage {
             backing,
             _credit: credit,
             stride,
-            free: AtomicU64::new(u64::MAX ^ 1),
+            words,
+            current: AtomicUsize::new(0),
+            free: std::array::from_fn(|i| {
+                AtomicU64::new(if i == 0 { u64::MAX ^ 1 } else { u64::MAX })
+            }),
         });
         let mut head = pages.try_lock().ok()?;
         if head.strong_count() != 0
@@ -163,18 +181,35 @@ pub(crate) struct SmallPage {
     backing: RawAllocation,
     _credit: crate::region::BackingCredit,
     stride: usize,
-    free: AtomicU64,
+    words: usize,
+    current: AtomicUsize,
+    free: [AtomicU64; 8],
+}
+
+enum SlotMiss {
+    Full,
+    Busy,
 }
 
 impl SmallPage {
-    fn claim(self: &Arc<Self>, bits: u64) -> Option<Storage> {
-        let index = bits.trailing_zeros();
-        // A failed claim can use a different page or exact global backing.
-        // Acquire pairs with the previous owner's release after destruction.
-        self.free
-            .compare_exchange(bits, bits & (bits - 1), Acquire, Relaxed)
-            .ok()?;
-        Some(Storage::Small(self.clone(), index))
+    fn claim(self: &Arc<Self>) -> std::result::Result<Storage, SlotMiss> {
+        let start = self.current.load(Relaxed);
+        for n in 0..self.words {
+            let word = (start + n) & (self.words - 1);
+            let free = self.free.get(word).ok_or(SlotMiss::Full)?;
+            let bits = free.load(Relaxed);
+            if bits == 0 {
+                continue;
+            }
+            let offset = bits.trailing_zeros() as usize;
+            free.compare_exchange(bits, bits & (bits - 1), Acquire, Relaxed)
+                .map_err(|_| SlotMiss::Busy)?;
+            if n != 0 {
+                self.current.store(word, Relaxed);
+            }
+            return Ok(Storage::Small(self.clone(), word * 64 + offset));
+        }
+        Err(SlotMiss::Full)
     }
 }
 
@@ -210,7 +245,7 @@ impl Drop for RawAllocation {
 /// Storage owns the entire allocation, including padding and the trailing ZST marker.
 pub(crate) enum Storage {
     Global(RawAllocation),
-    Small(Arc<SmallPage>, u32),
+    Small(Arc<SmallPage>, usize),
     Region(Block),
 }
 
@@ -226,7 +261,7 @@ impl Storage {
                 .backing
                 .ptr
                 .as_ptr()
-                .wrapping_add(*index as usize * page.stride)
+                .wrapping_add(*index * page.stride)
                 .cast(),
             Self::Region(block) => block.ptr(),
         }
@@ -234,10 +269,15 @@ impl Storage {
 }
 
 impl Drop for Storage {
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "only a successful claim in this word can construct this slot index"
+    )]
     fn drop(&mut self) {
         if let Self::Small(page, index) = self {
-            let bit = 1 << *index;
-            let previous = page.free.fetch_or(bit, Release);
+            let bit = 1 << (*index % 64);
+            let word = &page.free[*index / 64];
+            let previous = word.fetch_or(bit, Release);
             debug_assert_eq!(previous & bit, 0, "double slot return");
         }
     }
