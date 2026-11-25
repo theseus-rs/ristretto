@@ -196,3 +196,82 @@ async fn static_arrays_retain_their_actual_element_type_across_entries() -> Resu
     assert!(heap.cleanup_polls > 0);
     Ok(())
 }
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_persistent_static_entries_match_the_hotspot_sequence()
+-> Result<(), Box<dyn std::error::Error>> {
+    let program = program()?;
+    let compiled = program.compile()?;
+    let result = program
+        .with_heap(config(), 1024 * 1024, 1_000_000, async |heap| {
+            let mut thread =
+                compiled.attach(heap, ristretto_vm::canonical::CompiledLimits::default())?;
+            let mut allocated = 0;
+            let mut released = 0;
+            for row in include_str!("fixtures/canonical/static-fields-oracle.txt").lines() {
+                let columns: Vec<_> = row.split_whitespace().collect();
+                let [method, argument, expected] = columns.as_slice() else {
+                    return Err(Error::Boundary("oracle row"));
+                };
+                let parse = |text: &str| {
+                    text.parse::<i32>()
+                        .map_err(|e| Error::Invalid(e.to_string()))
+                };
+                let invocation = thread.invoke(CLASS, method, parse(argument)?).await?;
+                assert_eq!(invocation.result, parse(expected)?, "{row}");
+                allocated += invocation.allocations;
+                released += invocation.released_objects;
+            }
+            assert_eq!(allocated, 20);
+            Ok((allocated, released))
+        })
+        .await?;
+    assert_eq!(
+        result.value.0,
+        result.value.1 + result.released_during_cleanup
+    );
+    Ok(())
+}
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_static_arrays_retain_their_actual_element_type_across_entries() -> Result<(), Error>
+{
+    let program = Program::from_classfiles([ClassFile::from_bytes(include_bytes!(
+        "fixtures/canonical/CanonicalStaticArrays.class"
+    ))?])?;
+    let configuration = Configuration {
+        objects: 16,
+        roots: 32,
+        mutators: 1,
+        helpers: 1,
+        edges_per_object: 8,
+    };
+    let compiled = program.compile()?;
+    let heap = program
+        .with_heap(configuration, 8 * 1024 * 1024, 100_000, async |heap| {
+            let mut thread =
+                compiled.attach(heap, ristretto_vm::canonical::CompiledLimits::default())?;
+            for value in [37, -11] {
+                assert_eq!(
+                    thread
+                        .invoke("CanonicalStaticArrays", "store", value)
+                        .await?
+                        .result,
+                    value
+                );
+                assert_eq!(
+                    thread
+                        .invoke("CanonicalStaticArrays", "unlink", 0)
+                        .await?
+                        .result,
+                    value
+                );
+            }
+            Ok(())
+        })
+        .await?;
+    assert!(heap.cleanup_polls > 0);
+    Ok(())
+}

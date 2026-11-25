@@ -351,3 +351,249 @@ async fn separate_native_executors_wait_for_one_logical_initializer_owner() -> R
         .await?;
     Ok(())
 }
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_initialization_recursion_and_java_errors_match_hotspot() -> Result<(), Error> {
+    let program = program()?;
+    let compiled = program.compile()?;
+    program.with_heap(config(), 1024 * 1024, 1_000_000, async |heap| {
+        let mut thread = compiled.attach(heap, ristretto_vm::canonical::CompiledLimits::default())?;
+        for row in include_str!("fixtures/canonical/initialization-oracle.txt").lines() {
+            let columns: Vec<_> = row.split_whitespace().collect();
+            let [method, argument, expected] = columns.as_slice() else { return Err(Error::Boundary("oracle row")); };
+            let argument = argument.parse().map_err(|_| Error::Boundary("oracle argument"))?;
+            let outcome = if *method == "entry" { thread.invoke(ENTRY, "run", argument).await }
+                else { thread.invoke(CLASS, method, argument).await };
+            if let Ok(expected) = expected.parse::<i32>() {
+                let outcome = outcome?;
+                assert_eq!(outcome.result, expected, "{row}");
+                if *method == "slow" { assert_eq!(outcome.class_initializer_calls, usize::from(argument == 4)); }
+                if *method == "cycleA" { assert_eq!(outcome.initialized_classes, 2); }
+            } else {
+                let Err(Error::Initialization { kind, cause }) = outcome else { return Err(Error::Boundary("missing Java initialization fault")); };
+                assert_eq!(kind, *expected, "{row}");
+                if kind == "ExceptionInInitializerError" {
+                    assert!(matches!(cause.as_deref(), Some(Error::Invalid(name)) if name == "NullPointerException"));
+                } else { assert!(cause.is_none()); }
+            }
+        }
+        Ok(())
+    }).await?;
+    Ok(())
+}
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_parked_initializer_keeps_a_waiting_static_value_alive_during_other_gc_work()
+-> Result<(), Error> {
+    let program = program()?;
+    let compiled = program.compile()?;
+    program
+        .with_heap(config(), 1024 * 1024, 1_000_000, async |heap| {
+            let mut owner =
+                compiled.attach(heap, ristretto_vm::canonical::CompiledLimits::default())?;
+            let mut waiter =
+                compiled.attach(heap, ristretto_vm::canonical::CompiledLimits::default())?;
+            let mut other =
+                compiled.attach(heap, ristretto_vm::canonical::CompiledLimits::default())?;
+            let mut initialization = Box::pin(owner.invoke(CLASS, "slow", 4));
+            for _ in 0..120 {
+                assert!(
+                    initialization
+                        .as_mut()
+                        .poll(&mut Context::from_waker(Waker::noop()))
+                        .is_pending()
+                );
+            }
+            let before = heap.managed_bytes();
+            assert!(before > 0);
+            let mut waiting = Box::pin(waiter.invoke(CLASS, "storeSlow", 31));
+            for _ in 0..300 {
+                assert!(
+                    waiting
+                        .as_mut()
+                        .poll(&mut Context::from_waker(Waker::noop()))
+                        .is_pending()
+                );
+            }
+            assert!(heap.managed_bytes() > before);
+            let start = other.primary_cycles()?;
+            let mut released = 0;
+            for _ in 0..16 {
+                let churn = other.invoke(CLASS, "churn", 8).await?;
+                assert_eq!(churn.result, 28);
+                released += churn.released_objects;
+            }
+            assert!(released >= 128 - config().objects);
+            assert!(other.primary_cycles()?.lower > start.upper);
+            let initialized = initialization.await?;
+            assert_eq!(
+                (initialized.result, initialized.class_initializer_calls),
+                (2_096_149, 1)
+            );
+            let stored = waiting.await?;
+            assert_eq!((stored.result, stored.class_initializer_calls), (31, 0));
+            assert!(stored.class_initialization_waits > 0);
+            assert_eq!(other.invoke(CLASS, "returned", 0).await?.result, 31);
+            Ok(())
+        })
+        .await?;
+    Ok(())
+}
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_cancelled_initializer_wakes_waiter_and_only_poisons_its_own_class()
+-> Result<(), Error> {
+    let program = program()?;
+    let compiled = program.compile()?;
+    program
+        .with_heap(config(), 1024 * 1024, 1_000_000, async |heap| {
+            let mut owner =
+                compiled.attach(heap, ristretto_vm::canonical::CompiledLimits::default())?;
+            let mut waiter =
+                compiled.attach(heap, ristretto_vm::canonical::CompiledLimits::default())?;
+            let mut initialization = Box::pin(owner.invoke(CLASS, "slow", 4));
+            for _ in 0..120 {
+                assert!(
+                    initialization
+                        .as_mut()
+                        .poll(&mut Context::from_waker(Waker::noop()))
+                        .is_pending()
+                );
+            }
+            let wake = Arc::new(WakeCount::default());
+            let waker = Waker::from(wake.clone());
+            let mut waiting = Box::pin(waiter.invoke(CLASS, "storeSlow", 31));
+            for _ in 0..300 {
+                assert!(
+                    waiting
+                        .as_mut()
+                        .poll(&mut Context::from_waker(&waker))
+                        .is_pending()
+                );
+            }
+            let before = wake.0.load(Ordering::Relaxed);
+            drop(initialization);
+            assert!(wake.0.load(Ordering::Relaxed) > before);
+            assert!(matches!(
+                waiting.await,
+                Err(Error::Boundary(
+                    "class initialization was aborted by embedding"
+                ))
+            ));
+            assert!(matches!(
+                owner.invoke(CLASS, "slow", 0).await,
+                Err(Error::Boundary(_))
+            ));
+            assert_eq!(waiter.invoke(CLASS, "cycleA", 0).await?.result, 3);
+            Ok(())
+        })
+        .await?;
+    Ok(())
+}
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_dropping_a_waiter_does_not_poison_the_initializer_owner() -> Result<(), Error> {
+    let program = program()?;
+    let compiled = program.compile()?;
+    program
+        .with_heap(config(), 1024 * 1024, 1_000_000, async |heap| {
+            let mut owner =
+                compiled.attach(heap, ristretto_vm::canonical::CompiledLimits::default())?;
+            let mut waiter =
+                compiled.attach(heap, ristretto_vm::canonical::CompiledLimits::default())?;
+            let mut initialization = Box::pin(owner.invoke(CLASS, "slow", 4));
+            for _ in 0..120 {
+                assert!(
+                    initialization
+                        .as_mut()
+                        .poll(&mut Context::from_waker(Waker::noop()))
+                        .is_pending()
+                );
+            }
+            let mut waiting = Box::pin(waiter.invoke(CLASS, "storeSlow", 31));
+            for _ in 0..300 {
+                assert!(
+                    waiting
+                        .as_mut()
+                        .poll(&mut Context::from_waker(Waker::noop()))
+                        .is_pending()
+                );
+            }
+            drop(waiting);
+            assert_eq!(initialization.await?.result, 2_096_149);
+            let result = waiter.invoke(CLASS, "storeSlow", 42).await?;
+            assert_eq!((result.result, result.class_initializer_calls), (42, 0));
+            Ok(())
+        })
+        .await?;
+    Ok(())
+}
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_entry_initialization_counts_actual_entries_and_shares_the_slice_limit()
+-> Result<(), Error> {
+    use ristretto_vm::canonical::CompiledLimits;
+    let program = program()?;
+    let compiled = program.compile()?;
+    let single = Configuration {
+        mutators: 1,
+        helpers: 1,
+        ..config()
+    };
+    let report = compiled
+        .run(ENTRY, "identity", 4, single, CompiledLimits::default())
+        .await?;
+    assert_eq!(
+        (
+            report.result,
+            report.calls,
+            report.compiled_entries,
+            report.class_initializer_calls
+        ),
+        (4, 3, 3, 1)
+    );
+    assert_eq!(
+        (
+            report.entry_initialization.calls,
+            report.entry_initialization.allocations
+        ),
+        (2, 1)
+    );
+    assert!(!report.instruction_count_available);
+    assert!(matches!(
+        compiled
+            .run(
+                ENTRY,
+                "identity",
+                4,
+                single,
+                CompiledLimits {
+                    native_slices: 1,
+                    ..CompiledLimits::default()
+                }
+            )
+            .await,
+        Err(Error::Limit("native slice"))
+    ));
+    assert!(matches!(
+        compiled
+            .run(
+                ENTRY,
+                "identity",
+                4,
+                single,
+                CompiledLimits {
+                    frames: 1,
+                    ..CompiledLimits::default()
+                }
+            )
+            .await,
+        Err(Error::Limit("frame"))
+    ));
+    Ok(())
+}
