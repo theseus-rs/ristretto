@@ -218,9 +218,24 @@ impl RootProposal {
 pub(crate) struct BirthEpoch {
     pub(crate) number: u64,
     pub(crate) old_only: bool,
+    direct_identity: OnceBox<Arc<()>>,
     roots: OnceBox<graph_birth_queue::Queue<RootProposal>>,
     inbox: OnceBox<graph_birth_queue::Queue<GraphBirth>>,
     strong_closed: AtomicBool,
+}
+
+impl BirthEpoch {
+    // An obsolete descriptor witness retains only the small token's control
+    // block. It can never retain the mark queue or its descriptor graph.
+    pub(crate) fn direct_witness(&self) -> std::sync::Weak<()> {
+        Arc::downgrade(self.direct_identity.get_or_init(|| Box::new(Arc::new(()))))
+    }
+
+    pub(crate) fn matches_witness(&self, witness: &std::sync::Weak<()>) -> bool {
+        self.direct_identity
+            .get()
+            .is_some_and(|token| std::ptr::eq(Arc::as_ptr(token), witness.as_ptr()))
+    }
 }
 
 #[derive(Debug)]
@@ -287,6 +302,7 @@ impl MarkQueues {
         self.graph_inbox.store(Some(Arc::new(BirthEpoch {
             number,
             old_only,
+            direct_identity: OnceBox::new(),
             roots: OnceBox::new(),
             inbox: OnceBox::new(),
             strong_closed: AtomicBool::new(false),
