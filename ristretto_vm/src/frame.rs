@@ -450,6 +450,10 @@ impl Frame {
         let boundary = if matches!(boundary, BatchExit::Yield) {
             // This opcode already consumed budget before yielding. Resume through the same
             // loop for exactly one instruction without charging or logging it again.
+            // Cooperative hosts drive queued collection work at the unlocked
+            // instruction boundary before handing the task back to the executor.
+            #[cfg(target_family = "wasm")]
+            self.thread()?.vm()?.garbage_collector().step();
             tokio::task::yield_now().await;
             let thread = self.thread()?;
             self.execute_sync_instructions::<false, false>(
@@ -1491,6 +1495,11 @@ impl Frame {
                             result => break 'batch Ok(BatchExit::Complete(result)),
                         }
                     }
+                    #[cfg(target_family = "wasm")]
+                    Instruction::Newarray(_) => {
+                        break 'batch Ok(BatchExit::Async(instruction.clone()));
+                    }
+                    #[cfg(not(target_family = "wasm"))]
                     Instruction::Newarray(array_type) => match newarray(self, stack, array_type) {
                         Ok(()) => cursor += 1,
                         Err(error) => break 'batch Ok(BatchExit::Fault(error)),
@@ -1764,6 +1773,16 @@ impl Frame {
             }
             Instruction::Invokedynamic(index) => invokedynamic(self, stack, *index).await,
             Instruction::New(index) => new(self, stack, *index).await,
+            #[cfg(target_family = "wasm")]
+            Instruction::Newarray(array_type) => {
+                newarray(self, stack, array_type)?;
+                // The newly allocated array is now rooted on the operand stack.
+                // The frame lock has been released for this instruction boundary.
+                if !ristretto_gc::cell::has_guards() {
+                    self.thread()?.vm()?.garbage_collector().step();
+                }
+                Ok(ExecutionResult::Continue)
+            }
             Instruction::Anewarray(index) => anewarray(self, stack, *index).await,
             Instruction::Athrow => athrow(stack).map(|()| ExecutionResult::Continue),
             Instruction::Checkcast(index) => checkcast(self, stack, *index).await,
