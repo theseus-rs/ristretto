@@ -1,4 +1,4 @@
-use super::{Error, Result};
+use super::Error;
 use ristretto_classfile::{ClassFile, FieldAccessFlags, JavaString};
 use ristretto_classloader::Class;
 use std::collections::HashMap;
@@ -14,7 +14,7 @@ pub(super) struct Layout {
 }
 
 impl Layout {
-    pub(super) fn new(file: ClassFile<'static>) -> Result<Self> {
+    pub(super) fn new(file: ClassFile<'static>) -> Result<Self, Error> {
         let mut integer_slots = HashMap::new();
         for (slot, field) in file.fields.iter().enumerate() {
             let name = file.constant_pool.try_get_utf8(field.name_index)?;
@@ -37,7 +37,6 @@ impl Layout {
         })
     }
 
-    #[cfg(test)]
     pub(super) fn slot(&self, name: &ristretto_classfile::JavaStr) -> Option<usize> {
         self.integer_slots.get(name).copied()
     }
@@ -49,7 +48,7 @@ mod tests {
     use ristretto_classfile::JavaStr;
 
     #[test]
-    fn integer_slots_follow_classfile_order() -> Result<()> {
+    fn integer_slots_follow_classfile_order() -> Result<(), Error> {
         let file = ClassFile::from_bytes(include_bytes!(
             "../../tests/fixtures/canonical/CanonicalIntLayout.class"
         ))?;

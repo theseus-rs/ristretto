@@ -1,5 +1,5 @@
 //! Primitive JVM values used by the closed canonical execution tier.
-use super::{Error, Result, ScalarValue, load, pop, store};
+use super::{Error, ScalarValue, load, pop, store};
 use ristretto_classfile::{BaseType, Constant, ConstantPool, FieldType, attributes::Instruction};
 
 /// JVMS ireturn narrows before handing the result to the caller, even when the
@@ -22,7 +22,11 @@ pub(super) fn normalize_return(value: ScalarValue, field: &FieldType) -> ScalarV
     }
 }
 
-pub(super) fn constant(pool: &ConstantPool<'_>, index: u16, wide: bool) -> Result<ScalarValue> {
+pub(super) fn constant(
+    pool: &ConstantPool<'_>,
+    index: u16,
+    wide: bool,
+) -> Result<ScalarValue, Error> {
     match (pool.try_get(index)?, wide) {
         (Constant::Integer(value), false) => Ok(ScalarValue::Int(*value)),
         (Constant::Float(value), false) => Ok(ScalarValue::Float(*value)),
@@ -126,7 +130,7 @@ pub(super) fn execute(
     instruction: &Instruction,
     locals: &mut [Option<ScalarValue>],
     stack: &mut Vec<ScalarValue>,
-) -> Result<()> {
+) -> Result<(), Error> {
     let value = match instruction {
         Instruction::Lconst_0 => ScalarValue::Long(0),
         Instruction::Lconst_1 => ScalarValue::Long(1),

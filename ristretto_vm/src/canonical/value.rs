@@ -1,4 +1,4 @@
-use super::{Error, Result};
+use super::Error;
 
 /// JVM computational value of a restricted primitive entry.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -13,28 +13,28 @@ impl ScalarValue {
     fn wide(self) -> bool {
         matches!(self, Self::Double(_) | Self::Long(_))
     }
-    pub(super) fn int(self) -> Result<i32> {
+    pub(super) fn int(self) -> Result<i32, Error> {
         if let Self::Int(n) = self {
             Ok(n)
         } else {
             Err(Error::Invalid("expected int".into()))
         }
     }
-    pub(super) fn long(self) -> Result<i64> {
+    pub(super) fn long(self) -> Result<i64, Error> {
         if let Self::Long(n) = self {
             Ok(n)
         } else {
             Err(Error::Invalid("expected long".into()))
         }
     }
-    pub(super) fn float(self) -> Result<f32> {
+    pub(super) fn float(self) -> Result<f32, Error> {
         if let Self::Float(n) = self {
             Ok(n)
         } else {
             Err(Error::Invalid("expected float".into()))
         }
     }
-    pub(super) fn double(self) -> Result<f64> {
+    pub(super) fn double(self) -> Result<f64, Error> {
         if let Self::Double(n) = self {
             Ok(n)
         } else {
@@ -43,7 +43,7 @@ impl ScalarValue {
     }
 }
 
-pub(super) fn pop(stack: &mut Vec<ScalarValue>) -> Result<ScalarValue> {
+pub(super) fn pop(stack: &mut Vec<ScalarValue>) -> Result<ScalarValue, Error> {
     stack
         .pop()
         .ok_or_else(|| Error::Invalid("stack underflow".into()))
@@ -53,7 +53,7 @@ pub(super) fn load(
     locals: &[Option<ScalarValue>],
     stack: &mut Vec<ScalarValue>,
     index: usize,
-) -> Result<()> {
+) -> Result<(), Error> {
     let value = locals
         .get(index)
         .copied()
@@ -67,7 +67,7 @@ pub(super) fn store(
     locals: &mut [Option<ScalarValue>],
     stack: &mut Vec<ScalarValue>,
     index: usize,
-) -> Result<()> {
+) -> Result<(), Error> {
     let value = pop(stack)?;
     let invalid = || Error::Invalid("local index".into());
     if index > 0

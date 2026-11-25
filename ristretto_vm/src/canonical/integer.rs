@@ -1,6 +1,6 @@
 //! Integer execution for verified scalar entries.
 
-use super::{Error, Result, ScalarValue, load, pop, scalar, store};
+use super::{Error, ScalarValue, load, pop, scalar, store};
 use ristretto_classfile::ConstantPool;
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::Method;
@@ -110,13 +110,22 @@ pub(super) fn run(
     pool: &ConstantPool<'_>,
     argument: i32,
     limit: usize,
-) -> Result<ScalarValue> {
+) -> Result<ScalarValue, Error> {
+    run_counted(method, pool, argument, limit).map(|(value, _)| value)
+}
+
+pub(super) fn run_counted(
+    method: &Method,
+    pool: &ConstantPool<'_>,
+    argument: i32,
+    limit: usize,
+) -> Result<(ScalarValue, usize), Error> {
     let mut locals = vec![None; method.max_locals()];
     let mut stack = Vec::with_capacity(method.max_stack());
     let mut pc = 0;
     let invalid = || Error::Invalid(method.signature());
     *locals.first_mut().ok_or_else(invalid)? = Some(ScalarValue::Int(argument));
-    for _ in 0..limit {
+    for count in 0..limit {
         let op = method.code().get(pc).ok_or_else(invalid)?;
         let mut jump = false;
         match Operation::decode(op) {
@@ -150,9 +159,12 @@ pub(super) fn run(
             }
             Some(Operation::Jump) => jump = true,
             Some(Operation::Return) => {
-                return Ok(scalar::normalize_return(
-                    pop(&mut stack)?,
-                    method.return_type().ok_or_else(invalid)?,
+                return Ok((
+                    scalar::normalize_return(
+                        pop(&mut stack)?,
+                        method.return_type().ok_or_else(invalid)?,
+                    ),
+                    count + 1,
                 ));
             }
             None => match op {
