@@ -1,0 +1,42 @@
+[
+  {
+    "workload": "allocation",
+    "tier": "Interpreter",
+    "pairs": 12,
+    "before": 96652.32074006578,
+    "after": 99818.94970602612,
+    "median_ratio": 1.0000807134249887,
+    "low": 0.9840122297798333,
+    "high": 1.0691780419775476
+  },
+  {
+    "workload": "allocation",
+    "tier": "JIT enabled",
+    "pairs": 12,
+    "before": 92071.65428012615,
+    "after": 93881.97664591335,
+    "median_ratio": 0.9995130031442486,
+    "low": 0.9289691009159899,
+    "high": 1.0490829943144608
+  },
+  {
+    "workload": "roots",
+    "tier": "Interpreter",
+    "pairs": 12,
+    "before": 7433.602474792107,
+    "after": 7669.168309079758,
+    "median_ratio": 1.0411898762741973,
+    "low": 0.9547209936436388,
+    "high": 1.1758163327756845
+  },
+  {
+    "workload": "roots",
+    "tier": "JIT enabled",
+    "pairs": 12,
+    "before": 6723.578132523851,
+    "after": 6881.20010759025,
+    "median_ratio": 1.0237325913760866,
+    "low": 1.0066769637928235,
+    "high": 1.055134460589119
+  }
+]
