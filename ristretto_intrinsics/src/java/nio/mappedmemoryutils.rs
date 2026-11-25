@@ -53,11 +53,11 @@ pub async fn force_0<T: Thread + 'static>(
     let offset_in_region = u64::try_from(clamped_start - base)?;
     let file_position = region.position + offset_in_region;
     let bytes = vm.native_memory().read_bytes(clamped_start, clamped_len);
-    let fd = region.fd;
-    if let Err(e) = managed_files::write_at(vm.file_handles(), fd, &bytes, file_position).await {
+
+    if let Err(e) = regions.write_back(base, &bytes, file_position).await {
         return Err(IoException(format!("force0: {e}")).into());
     }
-    if let Err(e) = managed_files::sync_data(vm.file_handles(), fd).await {
+    if let Err(e) = managed_files::sync_data(&regions.backing_files, base).await {
         return Err(IoException(format!("force0: {e}")).into());
     }
     Ok(None)

@@ -289,7 +289,7 @@ impl Object {
         value: Value,
     ) -> Result<()> {
         let (index, field, _value) = self.field_value(class, key)?;
-        field.check_value(&value)?;
+        let value = field.checked_value(value)?;
         if let Some(element) = self.values.get_mut(index) {
             *element = value;
             Ok(())

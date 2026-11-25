@@ -1,27 +1,28 @@
 use crate::bounds;
-use crate::java::lang::class::{get_class, get_class_name};
+use crate::java::lang::class::{get_class, get_class_name, get_class_no_init};
 use crate::jdk::internal::misc::r#unsafe::STATIC_FIELD_OFFSET_MASK;
 use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classfile::VersionSpecification::{
     Any, Between, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
-use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
     CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, Constant, ConstantPool, FieldAccessFlags, FieldType,
     JAVA_8, JAVA_11, JAVA_17, JavaStr, MethodAccessFlags, ReferenceKind,
 };
-use ristretto_classloader::Error::IllegalAccessError;
 use ristretto_classloader::{
     Class, Method, MethodResolutionError, Reference, ResolvedMethod, Value,
 };
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
-use ristretto_types::JavaError::{NoSuchFieldError, NoSuchMethodError};
+use ristretto_types::JavaError::{
+    IllegalAccessError, IncompatibleClassChangeError, NoSuchFieldError, NoSuchMethodError,
+};
 use ristretto_types::Parameters;
 use ristretto_types::Thread;
 use ristretto_types::VM;
+use ristretto_types::method_resolution::are_nestmates;
 use ristretto_types::{Error, JavaObject, Result};
 use std::sync::Arc;
 
@@ -979,6 +980,42 @@ fn init_from_field<T: Thread + 'static>(
     Ok(())
 }
 
+fn member_field_type(mirror: &Value) -> Result<Option<FieldType>> {
+    if mirror.is_null() {
+        return Ok(None);
+    }
+    let descriptor = if mirror.as_object_ref()?.class().name() == "java/lang/String" {
+        mirror.as_string()?
+    } else {
+        Class::convert_to_descriptor(&get_class_name(&*mirror.as_object_ref()?)?)
+    };
+    Ok(Some(FieldType::parse(&descriptor)?))
+}
+
+pub(super) async fn member_field_offset<T: Thread + 'static>(
+    thread: &T,
+    member: &Value,
+) -> Result<i64> {
+    let (owner, name, ty) = {
+        let member = member.as_object_ref()?;
+        let index = member.value("vmindex")?;
+        if !index.is_null() {
+            return Ok(index.as_i64()?);
+        }
+        (
+            member.value("clazz")?,
+            member.value("name")?.as_string()?,
+            member.value("type")?,
+        )
+    };
+    // Members created by reflection or enumeration can lack a cached offset.
+    let class = get_class_no_init(thread, &owner).await?;
+    let (declaring, field) = class
+        .resolve_field(&name, member_field_type(&ty)?.as_ref())?
+        .ok_or(NoSuchFieldError(name))?;
+    Ok(i64::try_from(declaring.field_storage_slot(&field)?)?)
+}
+
 #[intrinsic_method(
     "java/lang/invoke/MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J",
     Any
@@ -988,15 +1025,7 @@ pub async fn object_field_offset<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let member_name = parameters.pop()?;
-    let (class_object, field_name) = {
-        let member_name = member_name.as_object_ref()?;
-        let class_object = member_name.value("clazz")?;
-        let field_name = member_name.value("name")?.as_string()?;
-        (class_object, field_name)
-    };
-    let class = get_class(&thread, &class_object).await?;
-    let offset = class.object_field_offset(&field_name)?;
-    let offset = i64::try_from(offset)?;
+    let offset = member_field_offset(&*thread, &member_name).await?;
     Ok(Some(Value::Long(offset)))
 }
 
@@ -1343,7 +1372,7 @@ pub async fn resolve<T: Thread + 'static>(
     // Per JVM spec §5.4.3, member resolution should only load and link the class,
     // NOT initialize it. Class initialization (§5.5) only occurs on active use
     // (e.g., new, getstatic, invokestatic), not during resolution.
-    let class = crate::java::lang::class::get_class_no_init(&*thread, &class_object).await?;
+    let class = get_class_no_init(&*thread, &class_object).await?;
     let member_name_flags = MemberNameFlags::from_bits_truncate(flags);
 
     if member_name_flags.contains(MemberNameFlags::IS_METHOD)
@@ -1482,7 +1511,7 @@ async fn resolve_method<T: Thread + 'static>(
         _ => {
             match class.resolve_method(&method_name, &method_descriptor) {
                 Ok(target) => (target.declaring_class, target.method, false),
-                Err(_)
+                Err(error)
                     if method_name.starts_with("lambda$") && class.name() == "java/lang/Object" =>
                 {
                     // For lambda methods on Object, the MemberName.clazz was incorrectly set.
@@ -1507,14 +1536,10 @@ async fn resolve_method<T: Thread + 'static>(
                         // which already have appropriate access, so skip access check
                         (found_class, found_method, true)
                     } else {
-                        let missing =
-                            [class.name(), ".", &method_name, &method_descriptor].concat();
-                        let message = ["Lambda method not found: ", &missing].concat();
-                        let error = InternalError(message);
-                        return resolution_failure(speculative_resolve, error);
+                        return resolution_failure(speculative_resolve, error.into());
                     }
                 }
-                Err(_) if class.name() == "java/lang/Object" => {
+                Err(error) if class.name() == "java/lang/Object" => {
                     // For non-lambda methods on Object (like interface methods),
                     // search for the method in interfaces based on parameter types.
                     // This handles cases like Collection.stream() invoked via method handles.
@@ -1546,11 +1571,7 @@ async fn resolve_method<T: Thread + 'static>(
                         }
                         (found_class, found_method, false)
                     } else {
-                        let missing =
-                            [class.name(), ".", &method_name, &method_descriptor].concat();
-                        let message = ["Interface method not found: ", &missing].concat();
-                        let error = InternalError(message);
-                        return resolution_failure(speculative_resolve, error);
+                        return resolution_failure(speculative_resolve, error.into());
                     }
                 }
                 Err(_) => {
@@ -1566,11 +1587,13 @@ async fn resolve_method<T: Thread + 'static>(
     let method_access_flags = method.access_flags();
     if !is_lambda_method
         && !check_method_access(
+            thread,
             caller,
             &resolved_class,
             *method_access_flags,
             lookup_mode_flags,
-        )?
+        )
+        .await?
     {
         return if speculative_resolve {
             // If speculative, return None (fail silently)
@@ -1594,6 +1617,35 @@ async fn resolve_method<T: Thread + 'static>(
             )
             .into())
         };
+    }
+
+    // VarForm probes static access-mode implementations. An inherited signature-polymorphic
+    // VarHandle instance method cannot satisfy that lookup.
+    if reference_kind == ReferenceKind::InvokeStatic && !method.is_static() {
+        let error = IncompatibleClassChangeError(format!(
+            "Expected static method {}.{method_name}{method_descriptor}",
+            class.name()
+        ));
+        return resolution_failure(speculative_resolve, error.into());
+    }
+
+    if let Some(caller) = caller
+        && !lookup_mode_flags.contains(LookupModeFlags::TRUSTED)
+        && let (Some(source), Some(target)) =
+            (caller.class_loader()?, resolved_class.class_loader()?)
+        && !Arc::ptr_eq(&source, &target)
+    {
+        for ty in method.parameters().iter().chain(method.return_type()) {
+            let mut component = ty;
+            while let FieldType::Array(inner) = component {
+                component = inner;
+            }
+            if let FieldType::Object(name) = component
+                && let Err(error) = source.constrain(&target, name)
+            {
+                return resolution_failure(speculative_resolve, error.into());
+            }
+        }
     }
 
     let modifiers = i32::from(method_access_flags.bits());
@@ -1649,20 +1701,24 @@ async fn resolve_field<T: Thread + 'static>(
     flags: i32,
     class: &Arc<Class>,
 ) -> Result<Option<Value>> {
-    let _reference_kind = get_reference_kind(flags)?;
+    let reference_kind = get_reference_kind(flags)?;
     let field_name = name.as_string()?;
-    let field = match class.declared_field(&field_name) {
-        Ok(field) => field,
-        Err(ristretto_classloader::Error::FieldNotFound { .. }) => {
-            // A missing field is a linkage error; the JDK turns it into NoSuchFieldException.
-            let missing = [class.name(), ".", &field_name].concat();
-            let error = NoSuchFieldError(missing);
-            return resolution_failure(speculative_resolve, error.into());
-        }
-        Err(error) => return Err(error.into()),
+    let mirror = member_self.as_object_ref()?.value("type")?;
+    let field_type = member_field_type(&mirror)?;
+    let Some((declaring, field)) = class.resolve_field(&field_name, field_type.as_ref())? else {
+        let missing = [class.name(), ".", &field_name].concat();
+        return resolution_failure(speculative_resolve, NoSuchFieldError(missing).into());
     };
     let field_access_flags = field.access_flags();
-    if !check_field_access(caller, class, *field_access_flags, lookup_mode_flags)? {
+    if !check_field_access(
+        thread,
+        caller,
+        &declaring,
+        *field_access_flags,
+        lookup_mode_flags,
+    )
+    .await?
+    {
         return if speculative_resolve {
             Ok(None)
         } else {
@@ -1675,7 +1731,7 @@ async fn resolve_field<T: Thread + 'static>(
                         "inaccessible"
                     },
                     ": ",
-                    class.name(),
+                    declaring.name(),
                     ".",
                     &field_name,
                 ]
@@ -1684,16 +1740,26 @@ async fn resolve_field<T: Thread + 'static>(
             .into())
         };
     }
-    let modifiers = i32::from(field_access_flags.bits());
-    let flags = flags | modifiers;
+    // Lookup.checkField checks the requested kind against the resolved modifiers. The JDK
+    // also uses getField to discover static fields when constructing a direct handle.
+    let is_static = field_access_flags.contains(FieldAccessFlags::STATIC);
+    let kind = match reference_kind {
+        ReferenceKind::GetField | ReferenceKind::GetStatic if is_static => ReferenceKind::GetStatic,
+        ReferenceKind::GetField | ReferenceKind::GetStatic => ReferenceKind::GetField,
+        ReferenceKind::PutField | ReferenceKind::PutStatic if is_static => ReferenceKind::PutStatic,
+        ReferenceKind::PutField | ReferenceKind::PutStatic => ReferenceKind::PutField,
+        kind => kind,
+    };
+    let shift = MemberNameFlags::REFERENCE_KIND_SHIFT.bits();
+    let flags = (flags & !(MemberNameFlags::REFERENCE_KIND_MASK.bits() << shift))
+        | (i32::from(kind.kind()) << shift)
+        | i32::from(field_access_flags.bits());
     {
-        let field_offset = if field_access_flags.contains(FieldAccessFlags::STATIC) {
-            class.field_offset(&field_name)?
-        } else {
-            class.object_field_offset(&field_name)?
-        };
+        let field_offset = declaring.field_storage_slot(&field)?;
         let vmindex = (i64::try_from(field_offset)?).to_object(thread).await?;
+        let mirror = declaring.to_object(thread).await?;
         let mut member_self = member_self.as_object_mut()?;
+        member_self.set_value("clazz", mirror)?;
         member_self.set_value("flags", Value::from(flags))?;
         member_self.set_value("vmindex", vmindex)?;
     }
@@ -1710,49 +1776,6 @@ fn get_reference_kind(flags: i32) -> Result<ReferenceKind> {
     ReferenceKind::try_from(reference_kind).map_err(Into::into)
 }
 
-/// Returns the nest host class for a given class.
-///
-/// If the class has a `NestHost` attribute, returns the nest host class. Otherwise, the class is its
-/// own nest host.
-fn get_nest_host(class: &Arc<Class>) -> Arc<Class> {
-    let class_file = class.class_file();
-    for attribute in &class_file.attributes {
-        if let Attribute::NestHost {
-            name_index: _,
-            host_class_index,
-        } = attribute
-        {
-            // Try to get the host class name from constant pool
-            if let Ok(host_class_name) = class_file.constant_pool.try_get_class(*host_class_index) {
-                // For now, just check the name; proper implementation would load the class. If the
-                // name matches, return the class itself as a simplification
-                if host_class_name == class.name() {
-                    return Arc::clone(class);
-                }
-            }
-        }
-    }
-    // Class is its own nest host
-    Arc::clone(class)
-}
-
-/// Checks if two classes are nestmates (share the same nest host).
-///
-/// In Java 11+, nestmates can access each other's private members.
-fn are_nestmates(class1: &Arc<Class>, class2: &Arc<Class>) -> bool {
-    // Same class is always a nestmate of itself
-    if Arc::ptr_eq(class1, class2) {
-        return true;
-    }
-
-    // Check if classes share the same nest host
-    let host1 = get_nest_host(class1);
-    let host2 = get_nest_host(class2);
-
-    // Compare by class name since we might not have the same Arc instance
-    host1.name() == host2.name()
-}
-
 /// Returns true if `caller` is permitted to access a method of `declaring` with the given access
 /// flags.
 ///
@@ -1762,7 +1785,8 @@ fn are_nestmates(class1: &Arc<Class>, class2: &Arc<Class>) -> bool {
 /// # References
 ///
 /// - [JLS §6.6](https://docs.oracle.com/javase/specs/jls/se25/html/jls-6.html#jls-6.6)
-pub fn check_method_access(
+pub async fn check_method_access<T: Thread>(
+    thread: &T,
     caller: Option<&Arc<Class>>,
     declaring: &Arc<Class>,
     method_access_flags: MethodAccessFlags,
@@ -1787,7 +1811,8 @@ pub fn check_method_access(
             return Ok(true);
         }
         // Check nestmate access (Java 11+ feature)
-        if lookup_mode_flags.contains(LookupModeFlags::PRIVATE) && are_nestmates(caller, declaring)
+        if lookup_mode_flags.contains(LookupModeFlags::PRIVATE)
+            && are_nestmates(thread, caller, declaring).await?
         {
             return Ok(true);
         }
@@ -1796,7 +1821,7 @@ pub fn check_method_access(
 
     // 3. PROTECTED: accessible to subclasses (and package; Java's rules)
     if method_access_flags.contains(MethodAccessFlags::PROTECTED) {
-        if caller.package() == declaring.package() || caller.is_subclass_of(declaring)? {
+        if caller.same_runtime_package(declaring)? || caller.is_subclass_of(declaring)? {
             return Ok(true);
         }
         return Ok(false);
@@ -1804,7 +1829,7 @@ pub fn check_method_access(
 
     // 4. PACKAGE-PRIVATE (default): accessible to same-package classes only
     // If not public/private/protected, then it's package-private
-    if caller.package() == declaring.package() {
+    if caller.same_runtime_package(declaring)? {
         return Ok(true);
     }
 
@@ -1821,8 +1846,8 @@ pub fn check_method_access(
 /// # References
 ///
 /// - [JLS §6.6](https://docs.oracle.com/javase/specs/jls/se25/html/jls-6.html#jls-6.6)
-#[expect(clippy::needless_pass_by_value)]
-pub fn check_field_access(
+pub async fn check_field_access<T: Thread>(
+    thread: &T,
     caller: Option<Arc<Class>>,
     declaring: &Arc<Class>,
     field_access_flags: FieldAccessFlags,
@@ -1847,7 +1872,8 @@ pub fn check_field_access(
             return Ok(true);
         }
         // Check nestmate access (Java 11+ feature)
-        if lookup_mode_flags.contains(LookupModeFlags::PRIVATE) && are_nestmates(caller, declaring)
+        if lookup_mode_flags.contains(LookupModeFlags::PRIVATE)
+            && are_nestmates(thread, caller, declaring).await?
         {
             return Ok(true);
         }
@@ -1856,7 +1882,7 @@ pub fn check_field_access(
 
     // 3. PROTECTED: accessible to subclasses (and package; Java's rules)
     if field_access_flags.contains(FieldAccessFlags::PROTECTED) {
-        if caller.package() == declaring.package() || caller.is_subclass_of(declaring)? {
+        if caller.same_runtime_package(declaring)? || caller.is_subclass_of(declaring)? {
             return Ok(true);
         }
         return Ok(false);
@@ -1864,7 +1890,7 @@ pub fn check_field_access(
 
     // 4. PACKAGE-PRIVATE (default): accessible to same-package classes only
     // If not public/private/protected, then it's package-private
-    if caller.package() == declaring.package() {
+    if caller.same_runtime_package(declaring)? {
         return Ok(true);
     }
 
@@ -1918,7 +1944,8 @@ pub async fn resolve_1<T: Thread + 'static>(
     let lookup_mode = if caller.is_none() {
         LookupModeFlags::TRUSTED
     } else {
-        LookupModeFlags::empty()
+        // The Java lookup applies its own modes. Native resolution checks the caller's nest.
+        LookupModeFlags::PRIVATE
     };
     resolve(
         thread,
@@ -2011,15 +2038,7 @@ pub async fn static_field_offset<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let member_name = parameters.pop()?;
-    let (class_object, field_name) = {
-        let member_name = member_name.as_object_ref()?;
-        let class_object = member_name.value("clazz")?;
-        let field_name = member_name.value("name")?.as_string()?;
-        (class_object, field_name)
-    };
-    let class = get_class(&thread, &class_object).await?;
-    let offset = class.field_offset(&field_name)?;
-    let offset = i64::try_from(offset)?;
+    let offset = member_field_offset(&*thread, &member_name).await?;
     // Mark this as a static field offset by setting the high bit
     let offset = offset | STATIC_FIELD_OFFSET_MASK;
     Ok(Some(Value::Long(offset)))
@@ -2407,7 +2426,7 @@ mod tests {
         ));
         let result = static_field_offset(thread, parameters).await?;
         // The offset has the STATIC_FIELD_OFFSET_MASK set to indicate it's a static field
-        assert_eq!(Some(Value::Long(2 | STATIC_FIELD_OFFSET_MASK)), result);
+        assert_eq!(Some(Value::Long(1 | STATIC_FIELD_OFFSET_MASK)), result);
         Ok(())
     }
 

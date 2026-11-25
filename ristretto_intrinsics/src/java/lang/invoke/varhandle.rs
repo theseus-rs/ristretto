@@ -1,14 +1,20 @@
 use crate::bounds;
+use crate::java::lang::class::get_class_name;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::Error::InternalError;
+use ristretto_types::Error::{InternalError, PoisonedLock};
+use ristretto_types::JavaError::ClassCastException;
+use ristretto_types::JavaError::{
+    ArrayIndexOutOfBoundsException, ArrayStoreException, NullPointerException,
+    WrongMethodTypeException,
+};
 use ristretto_types::Thread;
-use ristretto_types::{Parameters, Result};
+use ristretto_types::method_resolution::receiver_class;
+use ristretto_types::{Assignable, Parameters, Result, VM};
 use std::sync::Arc;
-use tracing::debug;
 
 /// Access mode categories for `VarHandle` operations.
 #[derive(Debug, Clone, Copy)]
@@ -88,8 +94,9 @@ fn classify_var_handle(var_handle: &Value) -> Option<VarHandleStorage> {
 ///
 /// Since Java 22, a `VarHandle` for a static field created before its declaring class is
 /// initialized (e.g. in that class's own static initializer) is a `LazyInitializingVarHandle`,
-/// which initializes the class on first use and delegates to its `target`. The static field
-/// dispatch initializes the class itself (via `get_class`), so the target can be used directly.
+/// which initializes the class on first use and delegates to its `target`. Native static
+/// dispatch initializes the class via `get_class`. JDK access methods receive the original
+/// wrapper so their call to `target()` initializes the class before any value cast.
 fn lazy_initializing_target(var_handle: &Value) -> Result<Option<Value>> {
     let Ok(object) = var_handle.as_object_ref() else {
         return Ok(None);
@@ -124,564 +131,570 @@ fn apply_numeric_result(old: &Value, result: i64) -> Result<Value> {
     }
 }
 
-/// Read a field value from a target object `Value` at the given offset.
-fn read_field_by_offset(target: &Value, offset: usize) -> Result<Value> {
-    let obj = target.as_object_ref()?;
-    Ok(obj.value(offset)?)
-}
+/// A mode yields a return value and, when the operation succeeds, a new storage value.
+impl AccessMode {
+    fn read_only(self) -> bool {
+        matches!(
+            self,
+            Self::Get | Self::GetVolatile | Self::GetAcquire | Self::GetOpaque
+        )
+    }
 
-/// Write a field value to a target object `Value` at the given offset.
-fn write_field_by_offset(target: &Value, offset: usize, value: Value) -> Result<()> {
-    let mut object = target.as_object_mut()?;
-    Ok(object.set_value(offset, value)?)
-}
+    fn update(self, current: Value, operands: &[Value]) -> Result<(Option<Value>, Option<Value>)> {
+        let rhs = operands
+            .last()
+            .ok_or_else(|| InternalError("Missing VarHandle operand".into()))?;
+        let replacement = match self {
+            Self::Set | Self::SetVolatile | Self::SetOpaque | Self::SetRelease => {
+                return Ok((None, Some(rhs.clone())));
+            }
+            Self::CompareAndSet
+            | Self::WeakCompareAndSet
+            | Self::WeakCompareAndSetAcquire
+            | Self::WeakCompareAndSetRelease
+            | Self::WeakCompareAndSetPlain
+            | Self::CompareAndExchange
+            | Self::CompareAndExchangeAcquire
+            | Self::CompareAndExchangeRelease => {
+                let expected = bounds::index(operands, 0, "VarHandle expected value")?;
+                let matches = values_equal(&current, expected);
+                let result = if matches!(
+                    self,
+                    Self::CompareAndExchange
+                        | Self::CompareAndExchangeAcquire
+                        | Self::CompareAndExchangeRelease
+                ) {
+                    current
+                } else {
+                    Value::from(matches)
+                };
+                return Ok((Some(result), matches.then(|| rhs.clone())));
+            }
+            Self::GetAndSet | Self::GetAndSetAcquire | Self::GetAndSetRelease => rhs.clone(),
+            Self::GetAndAdd | Self::GetAndAddAcquire | Self::GetAndAddRelease => {
+                match (&current, rhs) {
+                    (Value::Float(a), Value::Float(b)) => Value::Float(a + b),
+                    (Value::Double(a), Value::Double(b)) => Value::Double(a + b),
+                    _ => apply_numeric_result(
+                        &current,
+                        value_to_i64(&current)?.wrapping_add(value_to_i64(rhs)?),
+                    )?,
+                }
+            }
+            Self::GetAndBitwiseOr | Self::GetAndBitwiseOrAcquire | Self::GetAndBitwiseOrRelease => {
+                apply_numeric_result(&current, value_to_i64(&current)? | value_to_i64(rhs)?)?
+            }
+            Self::GetAndBitwiseAnd
+            | Self::GetAndBitwiseAndAcquire
+            | Self::GetAndBitwiseAndRelease => {
+                apply_numeric_result(&current, value_to_i64(&current)? & value_to_i64(rhs)?)?
+            }
+            Self::GetAndBitwiseXor
+            | Self::GetAndBitwiseXorAcquire
+            | Self::GetAndBitwiseXorRelease => {
+                apply_numeric_result(&current, value_to_i64(&current)? ^ value_to_i64(rhs)?)?
+            }
+            _ => return Ok((Some(current), None)),
+        };
+        Ok((Some(current), Some(replacement)))
+    }
 
-/// Directly implements `VarHandle` access modes by inspecting the `VarHandle`'s fields
-/// structurally and performing field access without going through the JDK's
-/// `MethodHandle`/`LambdaForm` chain.
-#[async_method]
-async fn invoke_var_handle_access_mode<T: Thread + 'static>(
-    thread: &Arc<T>,
-    parameters: Parameters,
-    access_mode: AccessMode,
-) -> Result<Option<Value>> {
-    let all_params = parameters.into_vec();
-    let (var_handle, remaining_args) = all_params.split_first().ok_or_else(|| {
-        InternalError("VarHandle access mode requires at least the VarHandle".to_string())
-    })?;
-    let lazy_target = lazy_initializing_target(var_handle)?;
-    let var_handle = lazy_target.as_ref().unwrap_or(var_handle);
-    let storage = classify_var_handle(var_handle);
-
-    debug!(
-        "VarHandle access: storage={:?}, mode={:?}, args={}",
-        storage,
-        access_mode,
-        remaining_args.len()
-    );
-
-    match storage {
-        Some(VarHandleStorage::FieldInstance { field_offset }) => {
-            dispatch_field_instance(access_mode, field_offset, remaining_args)
+    /// Resolve mode support before adapting arguments. A direct update also uses
+    /// the returned member to preserve the access method's coordinate checks.
+    async fn resolve_member<T: Thread + 'static>(
+        self,
+        thread: &T,
+        handle: &Value,
+        storage: Option<&VarHandleStorage>,
+        adapting: bool,
+    ) -> Result<Option<Value>> {
+        if storage.is_none() && adapting {
+            thread
+                .try_invoke(
+                    "java/lang/invoke/VarHandle",
+                    "getMethodHandle(I)Ljava/lang/invoke/MethodHandle;",
+                    &[handle.clone(), Value::Int(self as i32)],
+                )
+                .await?;
+        } else if storage.is_some() && !self.read_only() {
+            let form = handle.as_object_ref()?.value("vform")?;
+            return thread
+                .try_invoke(
+                    "java/lang/invoke/VarForm",
+                    "getMemberName(I)Ljava/lang/invoke/MemberName;",
+                    &[form, Value::Int(self as i32)],
+                )
+                .await
+                .map(Some);
         }
-        Some(VarHandleStorage::FieldStatic { field_offset }) => {
-            let base_object = {
-                let vh_ref = var_handle.as_object_ref()?;
-                vh_ref.value("base")?
-            };
-            dispatch_field_static(
-                thread,
-                access_mode,
-                field_offset,
-                &base_object,
-                remaining_args,
+        Ok(None)
+    }
+
+    async fn java_value<T: Thread + 'static>(self, thread: &T) -> Result<Value> {
+        let class = thread
+            .class("java/lang/invoke/VarHandle$AccessMode")
+            .await?;
+        let values = class.static_value("$VALUES")?;
+        let array = values.as_reference()?;
+        let (_, elements) = array.as_class_vec_ref()?;
+        Ok(bounds::index(elements, self as usize, "VarHandle access mode")?.clone())
+    }
+}
+
+fn wrapper(primitive: &str) -> Option<(&'static str, char)> {
+    Some(match primitive {
+        "boolean" => ("Boolean", 'Z'),
+        "byte" => ("Byte", 'B'),
+        "char" => ("Character", 'C'),
+        "short" => ("Short", 'S'),
+        "int" => ("Integer", 'I'),
+        "long" => ("Long", 'J'),
+        "float" => ("Float", 'F'),
+        "double" => ("Double", 'D'),
+        _ => return None,
+    })
+}
+
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "JVM widening rounds to the target precision"
+)]
+fn widen_primitive(value: Value, target: &str) -> Result<Value> {
+    match (value, target) {
+        (Value::Int(n), "byte" | "short" | "char" | "int" | "boolean") => Ok(Value::Int(n)),
+        (Value::Int(n), "long") => Ok(Value::Long(i64::from(n))),
+        (Value::Int(n), "float") => Ok(Value::Float(n as f32)),
+        (Value::Int(n), "double") => Ok(Value::Double(f64::from(n))),
+        (Value::Long(n), "float") => Ok(Value::Float(n as f32)),
+        (Value::Long(n), "double") => Ok(Value::Double(n as f64)),
+        (Value::Float(n), "double") => Ok(Value::Double(f64::from(n))),
+        (value, _) => Err(InternalError(format!(
+            "Invalid widening from {value} to {target}"
+        ))),
+    }
+}
+
+async fn adapt_value<T: Thread + 'static>(
+    thread: &T,
+    source: &Value,
+    target: &Value,
+    value: Option<Value>,
+) -> Result<Option<Value>> {
+    if values_equal(source, target) {
+        return Ok(value);
+    }
+    let source_name = get_class_name(&*source.as_object_ref()?)?;
+    let target_name = get_class_name(&*target.as_object_ref()?)?;
+    if target_name == "void" {
+        return Ok(None);
+    }
+    let Some(mut value) = value else {
+        return Ok(Some(match target_name.as_str() {
+            "float" => Value::Float(0.0),
+            "double" => Value::Double(0.0),
+            "long" => Value::Long(0),
+            name if wrapper(name).is_some() => Value::Int(0),
+            _ => Value::Object(None),
+        }));
+    };
+    if let Some((name, descriptor)) = wrapper(&source_name) {
+        if wrapper(&target_name).is_some() {
+            // MethodType.isConvertibleTo already checked the Java widening rules.
+            return Ok(Some(widen_primitive(value, &target_name)?));
+        }
+        value = thread
+            .try_invoke(
+                &format!("java/lang/{name}"),
+                &format!("valueOf({descriptor})Ljava/lang/{name};"),
+                &[value],
+            )
+            .await?;
+    }
+    if let Some((name, descriptor)) = wrapper(&target_name) {
+        let value = thread
+            .try_invoke(
+                "sun/invoke/util/ValueConversions",
+                &format!("unbox{name}(Ljava/lang/Object;Z){descriptor}"),
+                &[value, Value::from(false)],
+            )
+            .await?;
+        return Ok(Some(value));
+    }
+    if !value.is_null() {
+        let source = receiver_class(thread, &value).await?;
+        let target = crate::java::lang::class::get_class_no_init(thread, target).await?;
+        if !target.is_assignable_from(thread, &source).await? {
+            return Err(ClassCastException {
+                source_class_name: source.name().replace('/', "."),
+                target_class_name: target.name().replace('/', "."),
+            }
+            .into());
+        }
+    }
+    Ok(Some(value))
+}
+
+fn signature(method_type: &Value) -> Result<(Vec<Value>, Value)> {
+    let object = method_type.as_object_ref()?;
+    let params = object.value("ptypes")?;
+    let array = params.as_reference()?;
+    Ok((array.as_class_vec_ref()?.1.to_vec(), object.value("rtype")?))
+}
+
+// Use the JDK atomic accessor for subword operands. Verified bytecode can pass any JVM int,
+// and the accessor narrows the expected value, replacement and witness at different stages.
+fn has_subword_operand(method_type: &Value) -> Result<bool> {
+    let parameters = method_type.as_object_ref()?.value("ptypes")?;
+    let parameters = parameters.as_reference()?;
+    let (_, types) = parameters.as_class_vec_ref()?;
+    let value_type = types
+        .last()
+        .ok_or_else(|| InternalError("Missing atomic operand type".into()))?;
+    Ok(matches!(
+        get_class_name(&*value_type.as_object_ref()?)?.as_str(),
+        "boolean" | "byte" | "short" | "char"
+    ))
+}
+
+/// Direct access methods erase reference types but retain each primitive type.
+fn same_erasure(first: &Value, second: &Value) -> Result<bool> {
+    if values_equal(first, second) {
+        return Ok(true);
+    }
+    let is_reference = |mirror: &Value| -> Result<bool> {
+        let name = get_class_name(&*mirror.as_object_ref()?)?;
+        Ok(name != "void" && wrapper(&name).is_none())
+    };
+    Ok(is_reference(first)? && is_reference(second)?)
+}
+
+fn same_parameter_erasure(sources: &[Value], targets: &[Value]) -> Result<bool> {
+    for (source, target) in sources.iter().zip(targets) {
+        if !same_erasure(source, target)? {
+            return Ok(false);
+        }
+    }
+    Ok(sources.len() == targets.len())
+}
+
+/// Convert operands before accessing storage. When several conversions are needed,
+/// an asType adapter on an argument collector runs the filters in JDK order.
+async fn adapt_operands<T: Thread + 'static>(
+    thread: &Arc<T>,
+    site: &Value,
+    sources: &[Value],
+    target_type: &Value,
+    targets: &[Value],
+    operands: &mut [Value],
+) -> Result<()> {
+    let mut conversions = operands
+        .iter_mut()
+        .zip(sources)
+        .zip(targets)
+        .filter(|((_, source), target)| !values_equal(source, target));
+    let Some(((operand, source), target)) = conversions.next() else {
+        return Ok(());
+    };
+    if conversions.next().is_none() {
+        *operand = adapt_value(&**thread, source, target, Some(operand.clone()))
+            .await?
+            .ok_or_else(|| InternalError("Void argument".into()))?;
+        return Ok(());
+    }
+    let collector = thread
+        .try_invoke(
+            "java/lang/invoke/MethodHandleImpl",
+            "varargsArray(I)Ljava/lang/invoke/MethodHandle;",
+            &[Value::Int(i32::try_from(operands.len())?)],
+        )
+        .await?;
+    let array_class = collector
+        .as_object_ref()?
+        .value("type")?
+        .as_object_ref()?
+        .value("rtype")?;
+    let collector_type = async |ty: &Value| {
+        thread
+            .try_invoke(
+                "java/lang/invoke/MethodType",
+                "changeReturnType(Ljava/lang/Class;)Ljava/lang/invoke/MethodType;",
+                &[ty.clone(), array_class.clone()],
             )
             .await
-        }
-        Some(VarHandleStorage::Array) => dispatch_array(access_mode, remaining_args),
-        None => {
-            debug!("VarHandle: unrecognized structure, using the access method handle",);
-            invoke_via_method_handle(thread, all_params, access_mode).await
-        }
+    };
+    let collector = thread
+        .try_invoke(
+            "java/lang/invoke/MethodHandle",
+            "asType(Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
+            &[collector, collector_type(target_type).await?],
+        )
+        .await?;
+    let mut invocation = Parameters::default();
+    invocation.push(collector);
+    for arg in operands.iter() {
+        invocation.push(arg.clone());
     }
-}
-
-/// Dispatch a `VarHandle` access mode on an instance field.
-#[expect(clippy::too_many_lines)]
-fn dispatch_field_instance(
-    access_mode: AccessMode,
-    offset: usize,
-    args: &[Value],
-) -> Result<Option<Value>> {
-    match access_mode {
-        AccessMode::Get
-        | AccessMode::GetVolatile
-        | AccessMode::GetAcquire
-        | AccessMode::GetOpaque => {
-            let target = args
-                .first()
-                .ok_or_else(|| InternalError("VarHandle.get: missing target object".into()))?;
-            let value = read_field_by_offset(target, offset)?;
-            Ok(Some(value))
-        }
-        AccessMode::Set
-        | AccessMode::SetVolatile
-        | AccessMode::SetRelease
-        | AccessMode::SetOpaque => {
-            let target = args
-                .first()
-                .ok_or_else(|| InternalError("VarHandle.set: missing target object".into()))?;
-            let new_value = args
-                .get(1)
-                .ok_or_else(|| InternalError("VarHandle.set: missing value".into()))?;
-            write_field_by_offset(target, offset, new_value.clone())?;
-            Ok(None)
-        }
-        AccessMode::CompareAndSet
-        | AccessMode::WeakCompareAndSet
-        | AccessMode::WeakCompareAndSetPlain
-        | AccessMode::WeakCompareAndSetAcquire
-        | AccessMode::WeakCompareAndSetRelease => {
-            let target = args
-                .first()
-                .ok_or_else(|| InternalError("VarHandle.CAS: missing target".into()))?;
-            let expected = args
-                .get(1)
-                .ok_or_else(|| InternalError("VarHandle.CAS: missing expected".into()))?;
-            let new_value = args
-                .get(2)
-                .ok_or_else(|| InternalError("VarHandle.CAS: missing new value".into()))?;
-            // Hold a single write lock for the entire read-check-write to ensure atomicity
-            let mut object = target.as_object_mut()?;
-            let current = object.value(offset)?;
-            if values_equal(&current, expected) {
-                object.set_value(offset, new_value.clone())?;
-                Ok(Some(Value::Int(1)))
-            } else {
-                Ok(Some(Value::Int(0)))
-            }
-        }
-        AccessMode::CompareAndExchange
-        | AccessMode::CompareAndExchangeAcquire
-        | AccessMode::CompareAndExchangeRelease => {
-            let target = args
-                .first()
-                .ok_or_else(|| InternalError("VarHandle.CAE: missing target".into()))?;
-            let expected = args
-                .get(1)
-                .ok_or_else(|| InternalError("VarHandle.CAE: missing expected".into()))?;
-            let new_val = args
-                .get(2)
-                .ok_or_else(|| InternalError("VarHandle.CAE: missing new value".into()))?;
-            let mut object = target.as_object_mut()?;
-            let current = object.value(offset)?;
-            if values_equal(&current, expected) {
-                object.set_value(offset, new_val.clone())?;
-            }
-            Ok(Some(current))
-        }
-        AccessMode::GetAndSet | AccessMode::GetAndSetAcquire | AccessMode::GetAndSetRelease => {
-            let target = args
-                .first()
-                .ok_or_else(|| InternalError("VarHandle.getAndSet: missing target".into()))?;
-            let new_value = args
-                .get(1)
-                .ok_or_else(|| InternalError("VarHandle.getAndSet: missing new value".into()))?;
-            let mut object = target.as_object_mut()?;
-            let old = object.value(offset)?;
-            object.set_value(offset, new_value.clone())?;
-            Ok(Some(old))
-        }
-        AccessMode::GetAndAdd | AccessMode::GetAndAddAcquire | AccessMode::GetAndAddRelease => {
-            let target = args
-                .first()
-                .ok_or_else(|| InternalError("VarHandle.getAndAdd: missing target".into()))?;
-            let delta = args
-                .get(1)
-                .ok_or_else(|| InternalError("VarHandle.getAndAdd: missing delta".into()))?;
-            let mut object = target.as_object_mut()?;
-            let old = object.value(offset)?;
-            let old_i64 = value_to_i64(&old)?;
-            let delta_i64 = value_to_i64(delta)?;
-            let new_value = apply_numeric_result(&old, old_i64.wrapping_add(delta_i64))?;
-            object.set_value(offset, new_value)?;
-            Ok(Some(old))
-        }
-        AccessMode::GetAndBitwiseOr
-        | AccessMode::GetAndBitwiseOrAcquire
-        | AccessMode::GetAndBitwiseOrRelease => {
-            let target = args
-                .first()
-                .ok_or_else(|| InternalError("VarHandle.getAndBitwiseOr: missing target".into()))?;
-            let mask = args
-                .get(1)
-                .ok_or_else(|| InternalError("VarHandle.getAndBitwiseOr: missing mask".into()))?;
-            let mut object = target.as_object_mut()?;
-            let old = object.value(offset)?;
-            let old_i64 = value_to_i64(&old)?;
-            let mask_i64 = value_to_i64(mask)?;
-            let new_value = apply_numeric_result(&old, old_i64 | mask_i64)?;
-            object.set_value(offset, new_value)?;
-            Ok(Some(old))
-        }
-        AccessMode::GetAndBitwiseAnd
-        | AccessMode::GetAndBitwiseAndAcquire
-        | AccessMode::GetAndBitwiseAndRelease => {
-            let target = args.first().ok_or_else(|| {
-                InternalError("VarHandle.getAndBitwiseAnd: missing target".into())
-            })?;
-            let mask = args
-                .get(1)
-                .ok_or_else(|| InternalError("VarHandle.getAndBitwiseAnd: missing mask".into()))?;
-            let mut object = target.as_object_mut()?;
-            let old = object.value(offset)?;
-            let old_i64 = value_to_i64(&old)?;
-            let mask_i64 = value_to_i64(mask)?;
-            let new_value = apply_numeric_result(&old, old_i64 & mask_i64)?;
-            object.set_value(offset, new_value)?;
-            Ok(Some(old))
-        }
-        AccessMode::GetAndBitwiseXor
-        | AccessMode::GetAndBitwiseXorAcquire
-        | AccessMode::GetAndBitwiseXorRelease => {
-            let target = args.first().ok_or_else(|| {
-                InternalError("VarHandle.getAndBitwiseXor: missing target".into())
-            })?;
-            let mask = args
-                .get(1)
-                .ok_or_else(|| InternalError("VarHandle.getAndBitwiseXor: missing mask".into()))?;
-            let mut object = target.as_object_mut()?;
-            let old = object.value(offset)?;
-            let old_i64 = value_to_i64(&old)?;
-            let mask_i64 = value_to_i64(mask)?;
-            let new_value = apply_numeric_result(&old, old_i64 ^ mask_i64)?;
-            object.set_value(offset, new_value)?;
-            Ok(Some(old))
-        }
-    }
-}
-
-/// Dispatch a `VarHandle` access mode on a static field.
-#[async_method]
-#[expect(clippy::too_many_lines)]
-async fn dispatch_field_static<T: Thread + 'static>(
-    thread: &Arc<T>,
-    access_mode: AccessMode,
-    offset: usize,
-    base_object: &Value,
-    args: &[Value],
-) -> Result<Option<Value>> {
-    let class = crate::java::lang::class::get_class(&**thread, base_object).await?;
-    let field_name = class.field_name(offset)?;
-
-    match access_mode {
-        AccessMode::Get
-        | AccessMode::GetVolatile
-        | AccessMode::GetAcquire
-        | AccessMode::GetOpaque => {
-            let value = class.static_value(&field_name)?;
-            Ok(Some(value))
-        }
-        AccessMode::Set
-        | AccessMode::SetVolatile
-        | AccessMode::SetRelease
-        | AccessMode::SetOpaque => {
-            let new_value = args
-                .first()
-                .ok_or_else(|| InternalError("VarHandle static set: missing value".into()))?;
-            class.set_static_value(&field_name, new_value.clone())?;
-            Ok(None)
-        }
-        AccessMode::CompareAndSet
-        | AccessMode::WeakCompareAndSet
-        | AccessMode::WeakCompareAndSetPlain
-        | AccessMode::WeakCompareAndSetAcquire
-        | AccessMode::WeakCompareAndSetRelease => {
-            let expected = args
-                .first()
-                .ok_or_else(|| InternalError("VarHandle static CAS: missing expected".into()))?;
-            let new_value = args
-                .get(1)
-                .ok_or_else(|| InternalError("VarHandle static CAS: missing new value".into()))?;
-            let current = class.static_value(&field_name)?;
-            if values_equal(&current, expected) {
-                class.set_static_value(&field_name, new_value.clone())?;
-                Ok(Some(Value::Int(1)))
-            } else {
-                Ok(Some(Value::Int(0)))
-            }
-        }
-        AccessMode::CompareAndExchange
-        | AccessMode::CompareAndExchangeAcquire
-        | AccessMode::CompareAndExchangeRelease => {
-            let expected = args
-                .first()
-                .ok_or_else(|| InternalError("VarHandle static CAE: missing expected".into()))?;
-            let new_value = args
-                .get(1)
-                .ok_or_else(|| InternalError("VarHandle static CAE: missing new value".into()))?;
-            let current = class.static_value(&field_name)?;
-            if values_equal(&current, expected) {
-                class.set_static_value(&field_name, new_value.clone())?;
-            }
-            Ok(Some(current))
-        }
-        AccessMode::GetAndSet | AccessMode::GetAndSetAcquire | AccessMode::GetAndSetRelease => {
-            let new_value = args.first().ok_or_else(|| {
-                InternalError("VarHandle static getAndSet: missing new value".into())
-            })?;
-            let old = class.static_value(&field_name)?;
-            class.set_static_value(&field_name, new_value.clone())?;
-            Ok(Some(old))
-        }
-        AccessMode::GetAndAdd | AccessMode::GetAndAddAcquire | AccessMode::GetAndAddRelease => {
-            let delta = args
-                .first()
-                .ok_or_else(|| InternalError("VarHandle static getAndAdd: missing delta".into()))?;
-            let old = class.static_value(&field_name)?;
-            let old_i64 = value_to_i64(&old)?;
-            let delta_i64 = value_to_i64(delta)?;
-            let new_value = apply_numeric_result(&old, old_i64.wrapping_add(delta_i64))?;
-            class.set_static_value(&field_name, new_value)?;
-            Ok(Some(old))
-        }
-        AccessMode::GetAndBitwiseOr
-        | AccessMode::GetAndBitwiseOrAcquire
-        | AccessMode::GetAndBitwiseOrRelease => {
-            let mask = args.first().ok_or_else(|| {
-                InternalError("VarHandle static getAndBitwiseOr: missing mask".into())
-            })?;
-            let old = class.static_value(&field_name)?;
-            let old_i64 = value_to_i64(&old)?;
-            let mask_i64 = value_to_i64(mask)?;
-            let new_value = apply_numeric_result(&old, old_i64 | mask_i64)?;
-            class.set_static_value(&field_name, new_value)?;
-            Ok(Some(old))
-        }
-        AccessMode::GetAndBitwiseAnd
-        | AccessMode::GetAndBitwiseAndAcquire
-        | AccessMode::GetAndBitwiseAndRelease => {
-            let mask = args.first().ok_or_else(|| {
-                InternalError("VarHandle static getAndBitwiseAnd: missing mask".into())
-            })?;
-            let old = class.static_value(&field_name)?;
-            let old_i64 = value_to_i64(&old)?;
-            let mask_i64 = value_to_i64(mask)?;
-            let new_value = apply_numeric_result(&old, old_i64 & mask_i64)?;
-            class.set_static_value(&field_name, new_value)?;
-            Ok(Some(old))
-        }
-        AccessMode::GetAndBitwiseXor
-        | AccessMode::GetAndBitwiseXorAcquire
-        | AccessMode::GetAndBitwiseXorRelease => {
-            let mask = args.first().ok_or_else(|| {
-                InternalError("VarHandle static getAndBitwiseXor: missing mask".into())
-            })?;
-            let old = class.static_value(&field_name)?;
-            let old_i64 = value_to_i64(&old)?;
-            let mask_i64 = value_to_i64(mask)?;
-            let new_value = apply_numeric_result(&old, old_i64 ^ mask_i64)?;
-            class.set_static_value(&field_name, new_value)?;
-            Ok(Some(old))
-        }
-    }
-}
-
-/// Dispatch a `VarHandle` access mode on an array element.
-#[expect(clippy::too_many_lines)]
-fn dispatch_array(access_mode: AccessMode, args: &[Value]) -> Result<Option<Value>> {
-    let target = args
-        .first()
-        .ok_or_else(|| InternalError("VarHandle array: missing array".into()))?;
-    let index = args
-        .get(1)
-        .ok_or_else(|| InternalError("VarHandle array: missing index".into()))?;
-    let idx = usize::try_from(index.as_i32()?).map_err(|e| InternalError(e.to_string()))?;
-
-    match access_mode {
-        AccessMode::Get
-        | AccessMode::GetVolatile
-        | AccessMode::GetAcquire
-        | AccessMode::GetOpaque => read_array_element(target, idx),
-        AccessMode::Set
-        | AccessMode::SetVolatile
-        | AccessMode::SetRelease
-        | AccessMode::SetOpaque => {
-            let new_value = args
-                .get(2)
-                .ok_or_else(|| InternalError("VarHandle array set: missing value".into()))?;
-            write_array_element(target, idx, new_value)?;
-            Ok(None)
-        }
-        AccessMode::CompareAndSet
-        | AccessMode::WeakCompareAndSet
-        | AccessMode::WeakCompareAndSetPlain
-        | AccessMode::WeakCompareAndSetAcquire
-        | AccessMode::WeakCompareAndSetRelease => {
-            let expected = args
-                .get(2)
-                .ok_or_else(|| InternalError("VarHandle array CAS: missing expected".into()))?;
-            let new_value = args
-                .get(3)
-                .ok_or_else(|| InternalError("VarHandle array CAS: missing new value".into()))?;
-            // Hold a single write lock for the entire read-check-write to ensure atomicity
-            let (current, success) = cas_array_element(target, idx, expected, new_value)?;
-            let _ = current;
-            Ok(Some(Value::from(success)))
-        }
-        AccessMode::CompareAndExchange
-        | AccessMode::CompareAndExchangeAcquire
-        | AccessMode::CompareAndExchangeRelease => {
-            let expected = args
-                .get(2)
-                .ok_or_else(|| InternalError("VarHandle array CAE: missing expected".into()))?;
-            let new_value = args
-                .get(3)
-                .ok_or_else(|| InternalError("VarHandle array CAE: missing new value".into()))?;
-            let (current, _success) = cas_array_element(target, idx, expected, new_value)?;
-            Ok(Some(current))
-        }
-        AccessMode::GetAndSet | AccessMode::GetAndSetAcquire | AccessMode::GetAndSetRelease => {
-            let new_value = args.get(2).ok_or_else(|| {
-                InternalError("VarHandle array getAndSet: missing new value".into())
-            })?;
-            let old = atomic_read_write_array(target, idx, |_old| Ok(new_value.clone()))?;
-            Ok(Some(old))
-        }
-        AccessMode::GetAndAdd | AccessMode::GetAndAddAcquire | AccessMode::GetAndAddRelease => {
-            let delta = args
-                .get(2)
-                .ok_or_else(|| InternalError("VarHandle array getAndAdd: missing delta".into()))?;
-            let delta_i64 = value_to_i64(delta)?;
-            let old = atomic_read_write_array(target, idx, |old| {
-                let old_i64 = value_to_i64(old)?;
-                apply_numeric_result(old, old_i64.wrapping_add(delta_i64))
-            })?;
-            Ok(Some(old))
-        }
-        AccessMode::GetAndBitwiseOr
-        | AccessMode::GetAndBitwiseOrAcquire
-        | AccessMode::GetAndBitwiseOrRelease => {
-            let mask = args.get(2).ok_or_else(|| {
-                InternalError("VarHandle array getAndBitwiseOr: missing mask".into())
-            })?;
-            let mask_i64 = value_to_i64(mask)?;
-            let old = atomic_read_write_array(target, idx, |old| {
-                apply_numeric_result(old, value_to_i64(old)? | mask_i64)
-            })?;
-            Ok(Some(old))
-        }
-        AccessMode::GetAndBitwiseAnd
-        | AccessMode::GetAndBitwiseAndAcquire
-        | AccessMode::GetAndBitwiseAndRelease => {
-            let mask = args.get(2).ok_or_else(|| {
-                InternalError("VarHandle array getAndBitwiseAnd: missing mask".into())
-            })?;
-            let mask_i64 = value_to_i64(mask)?;
-            let old = atomic_read_write_array(target, idx, |old| {
-                apply_numeric_result(old, value_to_i64(old)? & mask_i64)
-            })?;
-            Ok(Some(old))
-        }
-        AccessMode::GetAndBitwiseXor
-        | AccessMode::GetAndBitwiseXorAcquire
-        | AccessMode::GetAndBitwiseXorRelease => {
-            let mask = args.get(2).ok_or_else(|| {
-                InternalError("VarHandle array getAndBitwiseXor: missing mask".into())
-            })?;
-            let mask_i64 = value_to_i64(mask)?;
-            let old = atomic_read_write_array(target, idx, |old| {
-                apply_numeric_result(old, value_to_i64(old)? ^ mask_i64)
-            })?;
-            Ok(Some(old))
-        }
-    }
-}
-
-/// Read an element from an array at the given index.
-fn read_array_element(target: &Value, index: usize) -> Result<Option<Value>> {
-    let arr_ref = target.as_reference()?;
-    match &*arr_ref {
-        Reference::IntArray(array) => Ok(array.get(index).map(|v| Value::Int(*v))),
-        Reference::LongArray(array) => Ok(array.get(index).map(|v| Value::Long(*v))),
-        Reference::FloatArray(array) => Ok(array.get(index).map(|v| Value::Float(*v))),
-        Reference::DoubleArray(array) => Ok(array.get(index).map(|v| Value::Double(*v))),
-        Reference::ByteArray(array) => Ok(array.get(index).map(|v| Value::Int(i32::from(*v)))),
-        Reference::CharArray(array) => Ok(array.get(index).map(|v| Value::Int(i32::from(*v)))),
-        Reference::ShortArray(array) => Ok(array.get(index).map(|v| Value::Int(i32::from(*v)))),
-        Reference::Array(object_array) => Ok(object_array.elements.get(index).cloned()),
-        _ => Err(InternalError(
-            "VarHandle array: unsupported array type".into(),
-        )),
-    }
-}
-
-/// Write a value to an array at the given index.
-fn write_array_element(target: &Value, index: usize, new_value: &Value) -> Result<()> {
-    let mut arr_ref = target.as_reference_mut()?;
-    match &mut *arr_ref {
-        Reference::IntArray(array) => {
-            let slot = array
-                .get_mut(index)
-                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
-            *slot = new_value.as_i32()?;
-        }
-        Reference::LongArray(array) => {
-            let slot = array
-                .get_mut(index)
-                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
-            *slot = new_value.as_i64()?;
-        }
-        Reference::FloatArray(array) => {
-            let slot = array
-                .get_mut(index)
-                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
-            *slot = new_value.as_f32()?;
-        }
-        Reference::DoubleArray(array) => {
-            let slot = array
-                .get_mut(index)
-                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
-            *slot = new_value.as_f64()?;
-        }
-        Reference::ByteArray(array) => {
-            let slot = array
-                .get_mut(index)
-                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
-            #[expect(clippy::cast_possible_truncation)]
-            {
-                *slot = new_value.as_i32()? as i8;
-            }
-        }
-        Reference::CharArray(array) => {
-            let slot = array
-                .get_mut(index)
-                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
-            #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            {
-                *slot = new_value.as_i32()? as u16;
-            }
-        }
-        Reference::ShortArray(array) => {
-            let slot = array
-                .get_mut(index)
-                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
-            #[expect(clippy::cast_possible_truncation)]
-            {
-                *slot = new_value.as_i32()? as i16;
-            }
-        }
-        Reference::Array(object_array) => {
-            let slot = object_array
-                .elements
-                .get_mut(index)
-                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
-            *slot = new_value.clone();
-        }
-        _ => {
-            return Err(InternalError(
-                "VarHandle array: unsupported array type for write".into(),
-            ));
-        }
+    invocation.call_site_type = Some(collector_type(site).await?);
+    let collected = super::methodhandle::invoke(thread.clone(), invocation)
+        .await?
+        .ok_or_else(|| InternalError("Argument collector returned void".into()))?;
+    let (_, values) = collected.as_class_vec_ref()?;
+    for ((arg, ty), value) in operands.iter_mut().zip(targets).zip(values.iter()) {
+        *arg = if wrapper(&get_class_name(&*ty.as_object_ref()?)?).is_some() {
+            value.as_object_ref()?.value("value")?
+        } else {
+            value.clone()
+        };
     }
     Ok(())
 }
 
-/// Read the current value from a mutable reference at the given array index.
-fn read_from_ref(reference: &Reference, index: usize) -> Result<Option<Value>> {
-    match reference {
-        Reference::IntArray(array) => Ok(array.get(index).map(|v| Value::Int(*v))),
-        Reference::LongArray(array) => Ok(array.get(index).map(|v| Value::Long(*v))),
-        Reference::FloatArray(array) => Ok(array.get(index).map(|v| Value::Float(*v))),
-        Reference::DoubleArray(array) => Ok(array.get(index).map(|v| Value::Double(*v))),
-        Reference::ByteArray(array) => Ok(array.get(index).map(|v| Value::Int(i32::from(*v)))),
-        Reference::CharArray(array) => Ok(array.get(index).map(|v| Value::Int(i32::from(*v)))),
-        Reference::ShortArray(array) => Ok(array.get(index).map(|v| Value::Int(i32::from(*v)))),
-        Reference::Array(object_array) => Ok(object_array.elements.get(index).cloned()),
-        _ => Err(InternalError(
-            "VarHandle array: unsupported array type".into(),
-        )),
+#[async_method]
+async fn invoke_var_handle_access_mode<T: Thread + 'static>(
+    thread: &Arc<T>,
+    mut parameters: Parameters,
+    mode: AccessMode,
+) -> Result<Option<Value>> {
+    let call_site = parameters.call_site_type.take();
+    let mut args = parameters.into_vec();
+    let original = bounds::index(&args, 0, "VarHandle receiver")?.clone();
+    let handle = lazy_initializing_target(&original)?.unwrap_or_else(|| original.clone());
+    let storage = classify_var_handle(&handle);
+    let mut return_types = None;
+
+    let mode_value = mode.java_value(&**thread).await?;
+    let target_type = thread
+        .try_invoke(
+            "java/lang/invoke/VarHandle",
+            "accessModeType(Ljava/lang/invoke/VarHandle$AccessMode;)Ljava/lang/invoke/MethodType;",
+            &[original.clone(), mode_value.clone()],
+        )
+        .await?;
+    let mismatch = call_site.filter(|site| !values_equal(site, &target_type));
+    if mismatch.is_some()
+        && original
+            .as_object_ref()?
+            .value("exact")
+            .is_ok_and(|v| v.as_bool().unwrap_or(false))
+    {
+        return Err(
+            WrongMethodTypeException("Expected exact VarHandle access mode type".into()).into(),
+        );
     }
+    let direct_member = mode
+        .resolve_member(&**thread, &handle, storage.as_ref(), mismatch.is_some())
+        .await?;
+    if let Some(site) = mismatch {
+        let convertible = thread
+            .try_invoke(
+                "java/lang/invoke/MethodType",
+                "isConvertibleTo(Ljava/lang/invoke/MethodType;)Z",
+                &[target_type.clone(), site.clone()],
+            )
+            .await?;
+        if !convertible.as_bool()? {
+            return Err(
+                WrongMethodTypeException("Cannot adapt VarHandle access mode type".into()).into(),
+            );
+        }
+        let (sources, site_return) = signature(&site)?;
+        let (targets, actual_return) = signature(&target_type)?;
+        // The direct JDK entry checks the receiver, index, and values in the order
+        // required by the access mode. An asType adapter casts arguments earlier.
+        if let Some(member) = &direct_member
+            // Plain array assignment casts the value before checking the destination.
+            && !matches!((&storage, mode), (Some(VarHandleStorage::Array), AccessMode::Set))
+            && let Some(last) = targets.last()
+            && wrapper(&get_class_name(&*last.as_object_ref()?)?).is_none()
+        {
+            let discard = get_class_name(&*site_return.as_object_ref()?)? == "void";
+            if (discard || same_erasure(&site_return, &actual_return)?)
+                && same_parameter_erasure(&sources, &targets)?
+            {
+                // Static accessors call target() on the original lazy wrapper before casting.
+                let result =
+                    super::methodhandle::call_method_handle_target(thread.clone(), member, args)
+                        .await?;
+                return if discard {
+                    Ok(None)
+                } else {
+                    adapt_value(&**thread, &actual_return, &site_return, Some(result)).await
+                };
+            }
+        }
+        let operands = args
+            .get_mut(1..)
+            .ok_or_else(|| InternalError("Missing VarHandle receiver".into()))?;
+        adapt_operands(thread, &site, &sources, &target_type, &targets, operands).await?;
+        return_types = Some((actual_return, site_return));
+    }
+    let result = if let Some(member) = direct_member
+        && mode as i32 >= AccessMode::CompareAndSet as i32
+        && has_subword_operand(&target_type)?
+    {
+        Some(super::methodhandle::call_method_handle_target(thread.clone(), &member, args).await?)
+    } else {
+        let operands = bounds::range_from(&args, 1.., "VarHandle operands")?;
+        match storage {
+            Some(VarHandleStorage::FieldInstance { field_offset }) => {
+                dispatch_field_instance(mode, field_offset, operands)
+            }
+            Some(VarHandleStorage::FieldStatic { field_offset }) => {
+                dispatch_field_static(
+                    &**thread,
+                    mode,
+                    &handle,
+                    field_offset,
+                    operands,
+                    !values_equal(&original, &handle),
+                )
+                .await
+            }
+            Some(VarHandleStorage::Array) => dispatch_array(&**thread, mode, operands).await,
+            None => invoke_via_method_handle(thread, args, mode, mode_value).await,
+        }?
+    };
+    if let Some((source, target)) = return_types {
+        adapt_value(&**thread, &source, &target, result).await
+    } else {
+        Ok(result)
+    }
+}
+
+async fn dispatch_field_static<T: Thread + 'static>(
+    thread: &T,
+    mode: AccessMode,
+    handle: &Value,
+    field_offset: usize,
+    operands: &[Value],
+    initialize: bool,
+) -> Result<Option<Value>> {
+    let base = handle.as_object_ref()?.value("base")?;
+    // Only the lazy wrapper supplies an initialization barrier. Older factories can
+    // initialize a lookup class without initializing the interface declaring the field.
+    let class = if initialize {
+        crate::java::lang::class::get_class(thread, &base).await?
+    } else {
+        crate::java::lang::class::get_class_no_init(thread, &base).await?
+    };
+    let (field, storage) = class.static_field_value(field_offset)?;
+    Ok(if mode.read_only() {
+        Some(
+            storage
+                .read()
+                .map_err(|e| PoisonedLock(e.to_string()))?
+                .clone(),
+        )
+    } else {
+        let mut slot = storage.write().map_err(|e| PoisonedLock(e.to_string()))?;
+        let (result, new) = mode.update(slot.clone(), operands)?;
+        if let Some(value) = new {
+            *slot = field.checked_value(value)?;
+        }
+        result
+    })
+}
+
+fn dispatch_field_instance(
+    mode: AccessMode,
+    offset: usize,
+    args: &[Value],
+) -> Result<Option<Value>> {
+    let (target, operands) = args
+        .split_first()
+        .ok_or_else(|| InternalError("Missing VarHandle receiver".into()))?;
+    if target.is_null() {
+        return Err(NullPointerException(None).into());
+    }
+    if mode.read_only() {
+        return Ok(Some(target.as_object_ref()?.value(offset)?));
+    }
+    let mut object = target.as_object_mut()?;
+    let (result, new) = mode.update(object.value(offset)?, operands)?;
+    if let Some(value) = new {
+        object.set_value(offset, value)?;
+    }
+    Ok(result)
+}
+
+async fn dispatch_array<T: Thread + 'static>(
+    thread: &T,
+    mode: AccessMode,
+    args: &[Value],
+) -> Result<Option<Value>> {
+    let [target, index, operands @ ..] = args else {
+        return Err(InternalError("Missing VarHandle array coordinates".into()));
+    };
+    if target.is_null() {
+        return Err(NullPointerException(None).into());
+    }
+    let index = index.as_i32()?;
+    let read = |array: &Reference| -> Result<Value> {
+        macro_rules! element {
+            ($elements:expr) => {{
+                let elements = &$elements;
+                usize::try_from(index)
+                    .ok()
+                    .and_then(|i| elements.get(i))
+                    .cloned()
+                    .map(Value::from)
+                    .ok_or_else(|| {
+                        ArrayIndexOutOfBoundsException {
+                            index,
+                            length: elements.len(),
+                        }
+                        .into()
+                    })
+            }};
+        }
+        match array {
+            Reference::BooleanArray(a) | Reference::ByteArray(a) => element!(a),
+            Reference::CharArray(a) => element!(a),
+            Reference::ShortArray(a) => element!(a),
+            Reference::IntArray(a) => element!(a),
+            Reference::LongArray(a) => element!(a),
+            Reference::FloatArray(a) => element!(a),
+            Reference::DoubleArray(a) => element!(a),
+            Reference::Array(a) => element!(a.elements),
+            Reference::Object(_) => Err(InternalError("Expected array".into())),
+        }
+    };
+    if mode.read_only() {
+        return Ok(Some(read(&*target.as_reference()?)?));
+    }
+    let array_class = match &*target.as_reference()? {
+        Reference::Array(a) => {
+            if usize::try_from(index).map_or(true, |i| i >= a.elements.len()) {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index,
+                    length: a.elements.len(),
+                }
+                .into());
+            }
+            Some(a.class.clone())
+        }
+        _ => None,
+    };
+    if let Some(class) = array_class
+        && let Some(new) = operands.last().filter(|v| !v.is_null())
+    {
+        let loader = thread.vm()?.class_loader().read().await.clone();
+        let component = loader
+            .array_component_class(&class)
+            .await?
+            .ok_or_else(|| InternalError("Missing array component class".into()))?;
+        let component = thread.resolve_class(&component, false).await?;
+        let source = receiver_class(thread, new).await?;
+        if !component.is_assignable_from(thread, &source).await? {
+            return Err(ArrayStoreException(source.name().to_owned()).into());
+        }
+    }
+    let mut array = target.as_reference_mut()?;
+    let (result, new) = mode.update(read(&array)?, operands)?;
+    if let Some(value) = new {
+        write_to_ref(&mut array, usize::try_from(index)?, &value)?;
+    }
+    Ok(result)
 }
 
 /// Write a value to a mutable reference at the given array index.
@@ -712,6 +725,10 @@ fn write_to_ref(reference: &mut Reference, index: usize, new_value: &Value) -> R
                 .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
             *slot = new_value.as_f64()?;
         }
+        Reference::BooleanArray(array) => {
+            *bounds::index_mut(array, index, "boolean array store")? =
+                (new_value.as_i32()? & 1) as i8;
+        }
         Reference::ByteArray(array) => {
             let slot = array
                 .get_mut(index)
@@ -737,43 +754,13 @@ fn write_to_ref(reference: &mut Reference, index: usize, new_value: &Value) -> R
                 .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
             *slot = new_value.clone();
         }
-        _ => {
+        Reference::Object(_) => {
             return Err(InternalError(
                 "VarHandle array: unsupported array type for write".into(),
             ));
         }
     }
     Ok(())
-}
-
-/// Atomic compare and swap on an array element under a single write lock.
-fn cas_array_element(
-    target: &Value,
-    index: usize,
-    expected: &Value,
-    new_value: &Value,
-) -> Result<(Value, bool)> {
-    let mut array_ref = target.as_reference_mut()?;
-    let current = read_from_ref(&array_ref, index)?
-        .ok_or_else(|| InternalError("VarHandle array CAS: index out of bounds".into()))?;
-    let equal = values_equal(&current, expected);
-    if equal {
-        write_to_ref(&mut array_ref, index, new_value)?;
-    }
-    Ok((current, equal))
-}
-
-/// Atomic read-modify-write on an array element under a single write lock.
-fn atomic_read_write_array<F>(target: &Value, index: usize, compute: F) -> Result<Value>
-where
-    F: FnOnce(&Value) -> Result<Value>,
-{
-    let mut array_ref = target.as_reference_mut()?;
-    let old = read_from_ref(&array_ref, index)?
-        .ok_or_else(|| InternalError("VarHandle array: index out of bounds".into()))?;
-    let new_val = compute(&old)?;
-    write_to_ref(&mut array_ref, index, &new_val)?;
-    Ok(old)
 }
 
 /// Compare two values for equality using their actual `Value` types.
@@ -784,10 +771,7 @@ fn values_equal(a: &Value, b: &Value) -> bool {
         (Value::Float(a_val), Value::Float(b_val)) => a_val.to_bits() == b_val.to_bits(),
         (Value::Double(a_val), Value::Double(b_val)) => a_val.to_bits() == b_val.to_bits(),
         (Value::Object(None), Value::Object(None)) => true,
-        (Value::Object(Some(a_ref)), Value::Object(Some(b_ref))) => std::ptr::eq(
-            std::ptr::from_ref(a_ref.as_ref()).cast::<u8>(),
-            std::ptr::from_ref(b_ref.as_ref()).cast::<u8>(),
-        ),
+        (Value::Object(Some(a_ref)), Value::Object(Some(b_ref))) => a_ref.ptr_eq(b_ref),
         _ => false,
     }
 }
@@ -836,6 +820,7 @@ async fn invoke_via_method_handle<T: Thread + 'static>(
     thread: &Arc<T>,
     all_params: Vec<Value>,
     access_mode: AccessMode,
+    access_mode_value: Value,
 ) -> Result<Option<Value>> {
     let (var_handle, remaining_args) = all_params.split_first().ok_or_else(|| {
         InternalError("VarHandle fallback requires at least the VarHandle".to_string())
@@ -848,32 +833,6 @@ async fn invoke_via_method_handle<T: Thread + 'static>(
     }
     let var_handle = var_handle.clone();
     let remaining_args = remaining_args.to_vec();
-
-    let access_mode_ordinal = access_mode as i32;
-
-    let access_mode_class = thread
-        .class("java/lang/invoke/VarHandle$AccessMode")
-        .await?;
-    let values_method =
-        access_mode_class.try_get_method("values", "()[Ljava/lang/invoke/VarHandle$AccessMode;")?;
-    let values_result = thread
-        .execute(&access_mode_class, &values_method, &[] as &[Value])
-        .await?;
-    let values_array = values_result
-        .ok_or_else(|| InternalError("AccessMode.values() returned null".to_string()))?;
-
-    let access_mode_value = {
-        let values_ref = values_array.as_reference()?;
-        let (_, elements) = values_ref.as_class_vec_ref()?;
-        let ordinal =
-            usize::try_from(access_mode_ordinal).map_err(|e| InternalError(e.to_string()))?;
-        if ordinal >= elements.len() {
-            return Err(InternalError(format!(
-                "AccessMode ordinal {ordinal} out of bounds"
-            )));
-        }
-        bounds::index(elements, ordinal, "VarHandle access mode")?.clone()
-    };
 
     let mh_result = thread
         .invoke(
@@ -1239,6 +1198,25 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn widening_float_return_does_not_allocate_java_objects() -> Result<()> {
+        use ristretto_types::JavaObject;
+
+        let (vm, thread) = crate::test::thread().await?;
+        let source = thread.class("float").await?.to_object(&thread).await?;
+        let target = thread.class("double").await?.to_object(&thread).await?;
+        let collector = vm.garbage_collector();
+        let before = collector.statistics()?.bytes_live;
+        for n in [-0.0_f32, 1.25, f32::MAX, f32::MIN_POSITIVE] {
+            let value = adapt_value(&*thread, &source, &target, Some(Value::Float(n)))
+                .await?
+                .expect("double");
+            assert_eq!(value.as_f64()?.to_bits(), f64::from(n).to_bits());
+        }
+        assert_eq!(collector.statistics()?.bytes_live, before);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_dispatch_field_instance_updates_by_offset() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let target = thread
@@ -1271,7 +1249,7 @@ mod tests {
             &[target.clone(), Value::Int(2)],
         )?;
         assert_eq!(Some(Value::Int(7)), result);
-        assert_eq!(Value::Int(5), read_field_by_offset(&target, offset)?);
+        assert_eq!(Value::Int(5), target.as_object_ref()?.value(offset)?);
         Ok(())
     }
 

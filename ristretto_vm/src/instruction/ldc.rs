@@ -25,7 +25,7 @@ pub(crate) fn ldc_w(
 }
 
 /// Load the constant at the specified index onto the stack.
-/// Returns sync result for Integer/Float, async result for String/Class.
+/// Returns sync result for Integer/Float, async result for String, Class, or a dynamic constant.
 ///
 /// # Errors
 ///
@@ -51,17 +51,18 @@ fn load_constant(frame: &Frame, stack: &mut OperandStack, index: u16) -> Result<
             stack.push(Value::Float(*value))?;
             Ok(InstructionResult::Sync(Continue))
         }
-        Constant::String(_) | Constant::Class(_) => {
-            Ok(InstructionResult::Async(Instruction::Ldc_w(index)))
-        }
+        Constant::String(_)
+        | Constant::Class(_)
+        | Constant::MethodHandle { .. }
+        | Constant::Dynamic { .. } => Ok(InstructionResult::Async(Instruction::Ldc_w(index))),
         constant => Err(InvalidConstant {
-            expected: "integer|float|string|class".to_string(),
+            expected: "integer|float|string|class|method handle|dynamic".to_string(),
             actual: format!("{constant:?}"),
         }),
     }
 }
 
-/// Async path for loading String and Class constants.
+/// Resolve a reference or a dynamically computed constant.
 pub(crate) async fn load_constant_async(
     frame: &Frame,
     stack: &mut OperandStack,
@@ -88,6 +89,23 @@ pub(crate) async fn load_constant_async(
                 .await?;
             class.to_object(&thread).await?
         }
+        Constant::MethodHandle { .. } => {
+            super::resolve_method_handle(&frame.thread()?, frame.class(), index).await?
+        }
+        Constant::Dynamic {
+            name_and_type_index,
+            ..
+        } => {
+            let value =
+                super::resolve_dynamic_constant(&frame.thread()?, frame.class(), index, &[])
+                    .await?;
+            let (_, descriptor) = constant_pool.try_get_name_and_type(*name_and_type_index)?;
+            if constant_pool.try_get_utf8(*descriptor)?.len() == 1 {
+                value.as_object_ref()?.value("value")?
+            } else {
+                value
+            }
+        }
         _ => return Err(InvalidConstantIndex(index)),
     };
     stack.push(value)?;
@@ -100,24 +118,29 @@ pub(crate) async fn load_constant_async(
     reason = "Merge the synchronous fast path into dispatch to avoid per-instruction result copies"
 )]
 #[inline(always)]
-pub(crate) fn ldc2_w(frame: &Frame, stack: &mut OperandStack, index: u16) -> Result<()> {
+pub(crate) fn ldc2_w(
+    frame: &Frame,
+    stack: &mut OperandStack,
+    index: u16,
+) -> Result<InstructionResult> {
     let constant_pool = frame.class().constant_pool();
     let constant = constant_pool
         .get(index)
         .ok_or_else(|| InvalidConstantIndex(index))?;
 
     let value = match constant {
+        Constant::Dynamic { .. } => return Ok(InstructionResult::Async(Instruction::Ldc_w(index))),
         Constant::Long(value) => Value::Long(*value),
         Constant::Double(value) => Value::Double(*value),
         constant => {
             return Err(InvalidConstant {
-                expected: "long|double".to_string(),
+                expected: "long|double|dynamic".to_string(),
                 actual: format!("{constant:?}"),
             });
         }
     };
     stack.push(value)?;
-    Ok(())
+    Ok(InstructionResult::Sync(Continue))
 }
 
 #[cfg(test)]
@@ -252,7 +275,7 @@ mod test {
             Err(InvalidConstant {
                 expected,
                 actual
-            }) if expected == "integer|float|string|class" && actual == "Long(42)"
+            }) if expected == "integer|float|string|class|method handle|dynamic" && actual == "Long(42)"
         ));
         Ok(())
     }
@@ -304,7 +327,7 @@ mod test {
             Err(InvalidConstant {
                 expected,
                 actual
-            }) if expected == "long|double" && actual == "Integer(42)"
+            }) if expected == "long|double|dynamic" && actual == "Integer(42)"
         ));
 
         Ok(())

@@ -6,8 +6,12 @@
 //! file's bytes into it, and registers the (address -> region) entry here. `force0` looks the
 //! region up to write the bytes back to the file and `unmap0` removes the registration.
 
+use crate::sun::nio::fs::managed_files;
 use ahash::AHashMap;
 use ristretto_gc::sync::Mutex;
+use ristretto_types::handles::{FileHandle, HandleManager};
+use ristretto_types::{Result, VM};
+use std::io;
 
 /// The protection / access mode for a memory-mapped region.
 ///
@@ -48,7 +52,7 @@ impl MapMode {
 #[derive(Clone, Debug)]
 pub struct MappedRegion {
     /// Underlying file descriptor (as managed by `vm.file_handles()`).
-    pub fd: i64,
+    pub channel_fd: Option<i64>,
     /// File offset of the start of the mapping (always non-negative).
     pub position: u64,
     /// Size of the mapping in bytes.
@@ -66,25 +70,72 @@ pub struct MappedRegion {
 
 /// Per-VM registry storing all currently-active memory-mapped file regions, keyed by their base
 /// address in `NativeMemory`.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct MappedRegions {
     regions: Mutex<AHashMap<i64, MappedRegion>>,
+    // Mapping addresses are unique for the life of the VM, including after a channel closes.
+    pub(crate) backing_files: HandleManager<i64, FileHandle>,
     /// Reference-counted set of canonicalized file paths that currently have one or more
     /// active mappings. Used (on Windows) to refuse `DeleteFile0` for mapped files.
     mapped_paths: Mutex<AHashMap<String, usize>>,
 }
 
+impl Default for MappedRegions {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MappedRegions {
     #[must_use]
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            regions: Mutex::default(),
+            mapped_paths: Mutex::default(),
+            backing_files: HandleManager::new(),
+        }
     }
 
-    /// Registers a new mapped region. Any existing entry for `address` is overwritten (this
-    /// shouldn't happen in practice because `NativeMemory` allocates monotonically-increasing
-    /// addresses).
-    pub fn insert(&self, address: i64, region: MappedRegion) {
+    /// Publish a mapping after retaining its backing file for writeback.
+    pub(crate) async fn register<V: VM>(
+        &self,
+        vm: &V,
+        address: i64,
+        region: MappedRegion,
+    ) -> Result<()> {
+        if region.mode.is_writable_back_to_file()
+            && let Some(fd) = region.channel_fd
+        {
+            let file = managed_files::clone_file_handle(vm.file_handles(), fd)
+                .await
+                .map_err(|error| {
+                    vm.native_memory().free(address);
+                    ristretto_types::JavaError::IoException(format!("map0: {error}"))
+                })?;
+            if let Err(error) = self.backing_files.insert(address, file).await {
+                vm.native_memory().free(address);
+                return Err(error);
+            }
+        }
+        if let Some(path) = &region.path {
+            self.track_path(path.clone());
+        }
         self.regions.lock().insert(address, region);
+        Ok(())
+    }
+
+    pub(crate) async fn unmap<V: VM>(&self, vm: &V, address: i64, length: i64) {
+        let address = self
+            .find_containing(address, usize::try_from(length).unwrap_or(0))
+            .map_or(address, |(base, _)| base);
+        let removed = self.regions.lock().remove(&address);
+        if let Some(region) = removed {
+            self.backing_files.remove(&address).await;
+            if let Some(path) = region.path {
+                self.release_path(&path);
+            }
+        }
+        vm.native_memory().free(address);
     }
 
     /// Returns a copy of the region metadata for `address`, if any.
@@ -92,52 +143,49 @@ impl MappedRegions {
         self.regions.lock().get(&address).cloned()
     }
 
-    /// Removes and returns the region metadata for `address`, if any.
-    pub fn remove(&self, address: i64) -> Option<MappedRegion> {
-        self.regions.lock().remove(&address)
-    }
-
-    /// Removes all region metadata associated with `fd`.
-    ///
-    /// This is used when the VM closes its managed file descriptor. Ristretto tracks mappings by
-    /// fd number, while the host OS may immediately reuse that same number for an unrelated file.
-    /// Dropping the association on close prevents stale mapped bytes from being flushed into a new
-    /// file that happens to receive the recycled fd.
-    pub fn remove_fd(&self, fd: i64) {
-        let paths = {
-            let mut regions = self.regions.lock();
-            let addresses: Vec<i64> = regions
-                .iter()
-                .filter_map(|(address, region)| (region.fd == fd).then_some(*address))
-                .collect();
-            addresses
-                .into_iter()
-                .filter_map(|address| regions.remove(&address).and_then(|region| region.path))
-                .collect::<Vec<_>>()
-        };
-        for path in paths {
-            self.release_path(&path);
-        }
-    }
-
-    /// Returns the region whose mapping overlaps with `[address, address+length)` if any.
-    ///
-    /// JDK aligns the address passed to `force0`/`unmap0` down to the OS page size and rounds
-    /// the length up, so the address may fall *before* the region base. We accept any region
-    /// whose extent overlaps the requested range; callers are responsible for clamping their
-    /// operations to the actual region bounds.
-    pub fn find_containing(&self, address: i64, length: usize) -> Option<(i64, MappedRegion)> {
-        let regions = self.regions.lock();
-        let length_i64 = i64::try_from(length).ok()?;
-        let req_end = address.saturating_add(length_i64);
-        for (&base, region) in regions.iter() {
-            let region_len_i64 = i64::try_from(region.length).ok()?;
-            let region_end = base.saturating_add(region_len_i64);
-            if req_end > base && address < region_end {
-                return Some((base, region.clone()));
+    /// Detach a closed descriptor. A live buffer retains its backing file until unmap.
+    pub fn detach_fd(&self, fd: i64) {
+        for region in self.regions.lock().values_mut() {
+            if region.channel_fd == Some(fd) {
+                region.channel_fd = None;
             }
         }
-        None
+    }
+
+    /// Locate a JDK mapping request. The JDK may round its start down to an OS page
+    /// boundary, including bytes of an earlier mapping. The end identifies the target.
+    pub fn find_containing(&self, address: i64, length: usize) -> Option<(i64, MappedRegion)> {
+        let end = address.checked_add(i64::try_from(length).ok()?)?;
+        self.regions
+            .lock()
+            .iter()
+            .filter(|(base, region)| {
+                **base < end
+                    && address
+                        < base.saturating_add(i64::try_from(region.length).unwrap_or(i64::MAX))
+            })
+            .max_by_key(|(base, _)| **base)
+            .map(|(&base, region)| (base, region.clone()))
+    }
+
+    /// Write the whole range to the file retained at mapping time, including after channel close.
+    pub(crate) async fn write_back(
+        &self,
+        base: i64,
+        mut bytes: &[u8],
+        mut position: u64,
+    ) -> io::Result<()> {
+        while !bytes.is_empty() {
+            let count = managed_files::write_at(&self.backing_files, base, bytes, position).await?;
+            if count == 0 {
+                return Err(io::ErrorKind::WriteZero.into());
+            }
+            bytes = bytes
+                .get(count..)
+                .ok_or_else(|| io::Error::other("Invalid mapped write count"))?;
+            position += u64::try_from(count).map_err(io::Error::other)?;
+        }
+        Ok(())
     }
 
     #[cfg(test)]
@@ -151,7 +199,7 @@ impl MappedRegions {
         self.regions
             .lock()
             .iter()
-            .filter(|(_, r)| r.fd == fd && r.mode.is_writable_back_to_file())
+            .filter(|(_, r)| r.channel_fd == Some(fd) && r.mode.is_writable_back_to_file())
             .map(|(addr, region)| (*addr, region.clone()))
             .collect()
     }
@@ -210,10 +258,10 @@ mod tests {
     #[test]
     fn test_insert_get_remove() {
         let regions = MappedRegions::new();
-        regions.insert(
+        regions.regions.lock().insert(
             0x1000,
             MappedRegion {
-                fd: 5,
+                channel_fd: Some(5),
                 position: 0,
                 length: 64,
                 mode: MapMode::ReadWrite,
@@ -223,19 +271,20 @@ mod tests {
         );
         assert_eq!(regions.len(), 1);
         let r = regions.get(0x1000).expect("present");
-        assert_eq!(r.fd, 5);
-        let r2 = regions.remove(0x1000).expect("present");
-        assert_eq!(r2.fd, 5);
+        assert_eq!(r.channel_fd, Some(5));
+        regions.detach_fd(5);
+        let r2 = regions.regions.lock().remove(&0x1000).expect("present");
+        assert_eq!(r2.channel_fd, None);
         assert_eq!(regions.len(), 0);
     }
 
     #[test]
     fn test_find_containing() {
         let regions = MappedRegions::new();
-        regions.insert(
+        regions.regions.lock().insert(
             0x1000,
             MappedRegion {
-                fd: 1,
+                channel_fd: Some(1),
                 position: 0,
                 length: 100,
                 mode: MapMode::ReadWrite,
@@ -253,6 +302,14 @@ mod tests {
             .find_containing(0x0F00, 0x200)
             .expect("overlap-left");
         assert_eq!(base, 0x1000);
+        let adjacent = regions.get(0x1000).expect("first region");
+        regions.regions.lock().insert(0x10100, adjacent);
+        assert_eq!(
+            regions
+                .find_containing(0x1000, 0xf104)
+                .map(|(base, _)| base),
+            Some(0x10100)
+        );
         assert!(regions.find_containing(0x2000, 1).is_none());
         assert!(regions.find_containing(0x0F00, 0x100).is_none());
     }

@@ -199,6 +199,7 @@ impl FrameState {
 #[derive(Debug, PartialEq)]
 pub(crate) enum CallParameters {
     Owned(Vec<Value>),
+    Polymorphic(Vec<Value>, Value),
     Stack(usize),
 }
 
@@ -211,7 +212,7 @@ impl From<Vec<Value>> for CallParameters {
 impl CallParameters {
     pub(crate) fn as_slice<'a>(&'a self, caller: Option<&'a FrameState>) -> Result<&'a [Value]> {
         match self {
-            Self::Owned(values) => Ok(values),
+            Self::Owned(values) | Self::Polymorphic(values, _) => Ok(values),
             Self::Stack(count) => Self::caller(caller)?.stack.last_values(*count),
         }
     }
@@ -222,7 +223,7 @@ impl CallParameters {
 
     pub(crate) fn into_values(self, caller: Option<&mut FrameState>) -> Result<Vec<Value>> {
         match self {
-            Self::Owned(values) => Ok(values),
+            Self::Owned(values) | Self::Polymorphic(values, _) => Ok(values),
             Self::Stack(count) => {
                 let caller = caller.ok_or_else(|| {
                     InternalError("Missing caller for stack arguments".to_owned())
@@ -239,6 +240,11 @@ impl CallParameters {
     ) -> Result<crate::Parameters> {
         match self {
             Self::Owned(values) => Ok(crate::Parameters::new(values)),
+            Self::Polymorphic(values, method_type) => {
+                let mut parameters = crate::Parameters::new(values);
+                parameters.call_site_type = Some(method_type);
+                Ok(parameters)
+            }
             Self::Stack(count) => {
                 let caller = caller.ok_or_else(|| {
                     InternalError("Missing caller for stack arguments".to_owned())
@@ -257,7 +263,9 @@ impl CallParameters {
         caller: Option<&mut FrameState>,
     ) -> Result<()> {
         match self {
-            Self::Owned(values) => state.reset(class, method, values),
+            Self::Owned(values) | Self::Polymorphic(values, _) => {
+                state.reset(class, method, values)
+            }
             Self::Stack(count) => {
                 let caller = caller.ok_or_else(|| {
                     InternalError("Missing caller for stack arguments".to_owned())
@@ -674,7 +682,10 @@ impl Frame {
                         }
                     }
                     Instruction::Ldc2_w(index) => match ldc2_w(self, stack, *index) {
-                        Ok(()) => cursor += 1,
+                        Ok(InstructionResult::Sync(_)) => cursor += 1,
+                        Ok(InstructionResult::Async(instruction)) => {
+                            break 'batch Ok(BatchExit::Async(instruction));
+                        }
                         Err(error) => break 'batch Ok(BatchExit::Fault(error)),
                     },
                     Instruction::Iload(index) => match iload(locals, stack, *index) {

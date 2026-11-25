@@ -314,6 +314,10 @@ async fn load_class_for_name<T: Thread + 'static>(
     // Record loading before initialization: even a failed initializer does
     // not undo successful resolution through this initiating loader.
     if let Some(class) = &result {
+        let definition = get_class_no_init(&**thread, class).await?;
+        ClassRegistry::loader(&**thread, &loader)
+            .await?
+            .record_initiated(&definition)?;
         registry.register_initiated_class(vm.garbage_collector(), &loader, name, class);
     }
     Ok(result)
@@ -746,12 +750,7 @@ pub async fn get_declared_fields_0<T: Thread + 'static>(
             .await?;
         let field_type = field_type_class.to_object(&thread).await?;
         let modifiers = Value::Int(i32::from(access_flags.bits()));
-        let slot = if access_flags.contains(FieldAccessFlags::STATIC) {
-            class.field_offset(field.name())?
-        } else {
-            class.object_field_offset(field.name())?
-        };
-        let slot = Value::Int(i32::try_from(slot)?);
+        let slot = Value::Int(i32::from(field.offset()));
 
         let mut field_signature = Value::Object(None);
         let mut annotations = Value::Object(None);
@@ -1200,6 +1199,9 @@ pub async fn get_nest_host_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
     let class = get_class_no_init(&thread, &object).await?;
+    if let Some(host) = class.dynamic_nest_host() {
+        return Ok(Some(host.to_object(&thread).await?));
+    }
     let class_file = class.class_file();
     for attribute in &class_file.attributes {
         if let Attribute::NestHost {

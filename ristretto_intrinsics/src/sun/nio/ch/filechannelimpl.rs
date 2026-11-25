@@ -10,7 +10,7 @@ use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError::{IllegalArgumentException, IoException, OutOfMemoryError};
 use ristretto_types::Thread;
 use ristretto_types::VM;
-use ristretto_types::{Parameters, Result};
+use ristretto_types::{NativeMemory, Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/FileChannelImpl.initIDs()J", LessThanOrEqual(JAVA_17))]
@@ -18,7 +18,7 @@ pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Long(0)))
+    Ok(Some(Value::Long(NativeMemory::PAGE_ALIGNMENT)))
 }
 
 /// Maps `length` bytes from the file (starting at `position`) into a freshly-allocated
@@ -69,17 +69,20 @@ async fn do_map<V: VM>(vm: &Arc<V>, fd: i64, prot: i32, position: i64, length: i
     }
 
     let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
-    regions.insert(
-        address,
-        MappedRegion {
-            fd,
-            position: position_u64,
-            length: length_usize,
-            mode,
-            file_key: None,
-            path: None,
-        },
-    );
+    regions
+        .register(
+            &**vm,
+            address,
+            MappedRegion {
+                channel_fd: Some(fd),
+                position: position_u64,
+                length: length_usize,
+                mode,
+                file_key: None,
+                path: None,
+            },
+        )
+        .await?;
 
     Ok(address)
 }
@@ -174,7 +177,7 @@ pub async fn transfer_to_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/FileChannelImpl.unmap0(JJ)I", LessThanOrEqual(JAVA_17))]
-pub fn unmap_0<T: Thread + 'static>(
+pub async fn unmap_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -182,14 +185,7 @@ pub fn unmap_0<T: Thread + 'static>(
     let address = parameters.pop_long()?;
     let vm = thread.vm()?;
     let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
-    let length_usize = usize::try_from(length.max(0)).unwrap_or(0);
-    let base = regions
-        .find_containing(address, length_usize)
-        .map_or(address, |(base, _)| {
-            regions.remove(base);
-            base
-        });
-    vm.native_memory().free(base);
+    regions.unmap(&*vm, address, length).await;
     Ok(Some(Value::Int(0)))
 }
 
@@ -233,7 +229,7 @@ mod tests {
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let result = init_ids(thread, Parameters::default())?;
-        assert_eq!(result, Some(Value::Long(0)));
+        assert_eq!(result, Some(Value::Long(NativeMemory::PAGE_ALIGNMENT)));
         Ok(())
     }
 
@@ -257,7 +253,7 @@ mod tests {
         // Verify it was registered.
         let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
         let region = regions.get(address).expect("registered");
-        assert_eq!(region.fd, fd);
+        assert_eq!(region.channel_fd, Some(fd));
         assert_eq!(region.length, 10);
         // Now unmap.
         let mut params = Parameters::default();
@@ -268,7 +264,7 @@ mod tests {
         let weak = Arc::downgrade(&vm);
         let thread = ristretto_vm::Thread::new(&weak, 99);
         let _ = thread2;
-        unmap_0(thread, params)?;
+        unmap_0(thread, params).await?;
         let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
         assert!(regions.get(address).is_none());
         Ok(())
@@ -334,7 +330,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push_long(0xdead_beef);
         params.push_long(16);
-        let result = unmap_0(thread, params)?;
+        let result = unmap_0(thread, params).await?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }

@@ -11,6 +11,7 @@ use crate::jit_runtime_helpers::SharedRuntime;
 use crate::method_ref_cache::MethodRefCache;
 use crate::module_system::ModuleSystem;
 use crate::monitor::MonitorRegistry;
+use crate::reference_cache::ReferenceCache;
 use crate::string_pool::StringPool;
 use crate::thread::Thread;
 use crate::{Configuration, ConfigurationBuilder, Result, startup_trace};
@@ -36,7 +37,7 @@ use std::fmt::Debug;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicI32, Ordering};
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, OnceLock, Weak};
 use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, warn};
 
@@ -112,6 +113,7 @@ pub struct VM {
     string_pool: StringPool,
     /// Call site cache for caching resolved call sites.
     call_site_cache: CallSiteCache,
+    pub(crate) resolved_constants: ReferenceCache<OnceLock<Result<Value, Value>>>,
     /// Method reference cache for caching resolved method references with access checks.
     method_ref_cache: MethodRefCache,
     /// Field reference cache for caching resolved field references.
@@ -225,6 +227,7 @@ impl VM {
                 member_handles: HandleManager::new(),
                 string_pool: StringPool::new(),
                 call_site_cache: CallSiteCache::new(),
+                resolved_constants: ReferenceCache::new(),
                 method_ref_cache: MethodRefCache::new(),
                 field_ref_cache: FieldRefCache::new(),
                 monitor_registry: MonitorRegistry::new(),
@@ -817,16 +820,18 @@ impl VM {
 
             new_thread.set_value("holder", field_holder)?;
             new_thread.set_value("interrupted", Value::Int(0))?;
-
-            // Initialize interruptLock which is used by NIO's blockedOn()
-            // (normally set by field initializer in <init>, but we skip <init>)
-            let object_class = thread.class("java.lang.Object").await?;
-            let interrupt_lock = Object::new(object_class)?;
-            new_thread.set_value(
-                "interruptLock",
-                Value::from_object(&self.garbage_collector, interrupt_lock),
-            )?;
         }
+        // Thread's constructor normally creates the monitor used by NIO's blockedOn().
+        let lock_field = if java_version <= &JAVA_17 {
+            "blockerLock"
+        } else {
+            "interruptLock"
+        };
+        let monitor = Object::new(thread.class("java.lang.Object").await?)?;
+        new_thread.set_value(
+            lock_field,
+            Value::from_object(&self.garbage_collector, monitor),
+        )?;
 
         thread
             .set_java_object(Value::from_object(&self.garbage_collector, new_thread))

@@ -3,12 +3,12 @@ use crate::JavaError::{
     AbstractMethodError, IllegalAccessError, IncompatibleClassChangeError, NullPointerException,
 };
 use crate::Result;
-use crate::assignable::Assignable;
 use crate::frame::{ExecutionResult, Frame, MethodCall};
 use crate::instruction::{receiver_class, resolve_method_ref};
 use crate::method_ref_cache::{InvokeKind, ReceiverTarget};
 use crate::operand_stack::OperandStack;
 use ristretto_classloader::{ResolvedMethod, Value};
+use ristretto_types::Assignable;
 
 /// Invokeinterface instruction implementation.
 ///
@@ -53,7 +53,7 @@ pub(crate) async fn invokeinterface(
     // Check object implements interface
     if !resolution
         .referenced_class
-        .is_assignable_from(&thread, &object_class)
+        .is_assignable_from(thread.as_ref(), &object_class)
         .await?
     {
         return Err(IncompatibleClassChangeError(

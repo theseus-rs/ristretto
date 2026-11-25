@@ -2,10 +2,11 @@ use crate::java::lang::class;
 use ristretto_classfile::MethodAccessFlags;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
-use ristretto_classloader::{Class, ResolvedMethod, Value};
+use ristretto_classloader::{Class, POLYMORPHIC_METHODS, Reference, ResolvedMethod, Value};
 use ristretto_macros::intrinsic_method;
-use ristretto_types::{Parameters, Result};
-use ristretto_types::{Thread, method_resolution};
+use ristretto_types::{
+    Assignable, Error, JavaError, Parameters, Result, Thread, VM, method_resolution,
+};
 use std::sync::Arc;
 
 /// Invoke the target after Method.invoke has checked access and setAccessible permissions.
@@ -18,7 +19,12 @@ pub async fn invoke_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let mut arguments: Vec<Value> = parameters.pop()?.try_into()?;
+    let args = parameters.pop()?;
+    let mut arguments: Vec<Value> = if args.is_null() {
+        Vec::new()
+    } else {
+        args.try_into()?
+    };
     let object = parameters.pop()?;
     let method = parameters.pop()?;
     let (name, class_object, parameter_types, return_type, modifiers) = {
@@ -56,9 +62,33 @@ pub async fn invoke_0<T: Thread + 'static>(
         resolved
     } else {
         if object.is_null() {
-            return Err(ristretto_types::JavaError::NullPointerException(None).into());
+            return Err(JavaError::NullPointerException(None).into());
         }
         let receiver_class = method_resolution::receiver_class(thread.as_ref(), &object).await?;
+        if !resolved
+            .declaring_class
+            .is_assignable_from(thread.as_ref(), &receiver_class)
+            .await?
+        {
+            return Err(JavaError::IllegalArgumentException(
+                "object is not an instance of declaring class".to_string(),
+            )
+            .into());
+        }
+        let owner = resolved.declaring_class.name();
+        if (owner == "java/lang/invoke/VarHandle"
+            || matches!(name.as_str(), "invoke" | "invokeExact"))
+            && POLYMORPHIC_METHODS.contains_key(&(owner, name.as_str()))
+        {
+            return invoke_polymorphic_placeholder(
+                thread.as_ref(),
+                owner,
+                &name,
+                return_type_class.name(),
+                &arguments,
+            )
+            .await;
+        }
         arguments.insert(0, object);
         receiver_class.select_concrete_method(&resolved)?
     };
@@ -73,6 +103,55 @@ pub async fn invoke_0<T: Thread + 'static>(
     } else {
         Ok(result)
     }
+}
+
+async fn invoke_polymorphic_placeholder<T: Thread + 'static>(
+    thread: &T,
+    owner: &str,
+    name: &str,
+    return_type: &str,
+    arguments: &[Value],
+) -> Result<Option<Value>> {
+    // Reflection invokes the declared Object[] placeholder without a typed call site.
+    let [argument] = arguments else {
+        return Err(
+            JavaError::IllegalArgumentException("wrong number of arguments".to_string()).into(),
+        );
+    };
+    if !argument.is_null() && !matches!(&*argument.as_reference()?, Reference::Array(_)) {
+        return Err(
+            JavaError::IllegalArgumentException("argument type mismatch".to_string()).into(),
+        );
+    }
+    let (cause, message) = if owner == "java/lang/invoke/MethodHandle" {
+        (
+            "java/lang/UnsupportedOperationException",
+            format!("MethodHandle.{name} cannot be invoked reflectively"),
+        )
+    } else if thread.vm()?.java_major_version() >= 24 {
+        (
+            "java/lang/UnsupportedOperationException",
+            "VarHandle access mode methods cannot be invoked reflectively".to_string(),
+        )
+    } else {
+        let ty = return_type.replace('/', ".");
+        (
+            "java/lang/UnsatisfiedLinkError",
+            format!("'{ty} java.lang.invoke.VarHandle.{name}(java.lang.Object[])'"),
+        )
+    };
+    let message = thread.intern_string(&message).await?;
+    let cause = thread
+        .object(cause, "Ljava/lang/String;", &[message])
+        .await?;
+    let wrapper = thread
+        .object(
+            "java/lang/reflect/InvocationTargetException",
+            "Ljava/lang/Throwable;",
+            &[cause],
+        )
+        .await?;
+    Err(Error::Throwable(wrapper))
 }
 
 #[cfg(test)]

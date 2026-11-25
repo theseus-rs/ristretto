@@ -266,6 +266,14 @@ mod tests {
         ];
 
         if version_major >= JAVA_11.java() {
+            // Unsafe's Java implementations round field offsets to machine words. Ristretto
+            // resolves these two exchanges against the addressed storage slot instead.
+            required_methods.extend([
+                "jdk/internal/misc/Unsafe.compareAndExchangeByte(Ljava/lang/Object;JBB)B"
+                    .to_string(),
+                "jdk/internal/misc/Unsafe.compareAndExchangeShort(Ljava/lang/Object;JSS)S"
+                    .to_string(),
+            ]);
             required_methods.push(
                 "jdk/internal/loader/BootLoader.findResourceAsStream(Ljava/lang/String;Ljava/lang/String;)Ljava/io/InputStream;"
                     .to_string(),

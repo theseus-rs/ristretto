@@ -1,0 +1,452 @@
+# Each case expands to one row per JDK and combination of its axis values.
+version = 1
+suite = "method/varhandle"
+inventory = true
+
+[spec]
+vh = "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/invoke/VarHandle.html"
+lookup = "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/invoke/MethodHandles.Lookup.html"
+mh = "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/invoke/MethodHandles.html"
+desc = "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/invoke/VarHandle.VarHandleDesc.html"
+bootstrap = "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/invoke/ConstantBootstraps.html"
+segment = "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/foreign/MemorySegment.html"
+layout = "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/foreign/MemoryLayout.html"
+value = "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/foreign/ValueLayout.html"
+mapping = "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/nio/channels/FileChannel.MapMode.html"
+poly = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.9.3"
+constraint = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.4"
+field = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.2"
+method = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.3"
+mh_resolution = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.5"
+dynamic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.6"
+access = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.4"
+init = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5"
+ldc = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc"
+invokevirtual = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual"
+jmm = "https://docs.oracle.com/javase/specs/jls/se25/html/jls-17.html#jls-17.4"
+
+[sets]
+lts = ["11", "17", "21", "25"]
+exact = ["17", "21", "25"]
+primitives = ["boolean", "byte", "short", "char", "int", "long", "float", "double"]
+fields = ["$primitives", "String"]
+views = ["short", "char", "int", "long", "float", "double"]
+scalars = ["$primitives", "address"]
+read = ["get", "getOpaque", "getAcquire", "getVolatile"]
+write = ["set", "setOpaque", "setRelease", "setVolatile"]
+cas = ["compareAndSet", "weakCompareAndSet", "weakCompareAndSetPlain", "weakCompareAndSetAcquire", "weakCompareAndSetRelease"]
+exchange = ["compareAndExchange", "compareAndExchangeAcquire", "compareAndExchangeRelease"]
+swap = ["getAndSet", "getAndSetAcquire", "getAndSetRelease"]
+add = ["getAndAdd", "getAndAddAcquire", "getAndAddRelease"]
+bit = ["getAndBitwiseOr", "getAndBitwiseOrAcquire", "getAndBitwiseOrRelease",
+       "getAndBitwiseAnd", "getAndBitwiseAndAcquire", "getAndBitwiseAndRelease",
+       "getAndBitwiseXor", "getAndBitwiseXorAcquire", "getAndBitwiseXorRelease"]
+arithmetic_bit = ["$add", "$bit"]
+updates = ["$cas", "$exchange", "$swap", "$arithmetic_bit"]
+mutations = ["$write", "$updates"]
+modes = ["$read", "$mutations"]
+nonplain = ["getOpaque", "getAcquire", "getVolatile", "setOpaque", "setRelease", "setVolatile", "$updates"]
+
+# Match all three signature-polymorphic switches used by the executable mode matrix.
+[[enumeration]]
+set = "modes"
+source = "access_modes/ModeCalls.java"
+pattern = '\bhandle\.(\w+)\('
+
+# Successful access outcomes shared by the storage and invocation matrices.
+[[rules.mode_outcomes]]
+when = { mode = "$write" }
+expect = "Store the operand and return void"
+[[rules.mode_outcomes]]
+when = { mode = "$cas" }
+expect = "Mismatch returns false without mutation. A match installs the new value and returns true, allowing spurious failure for weak CAS"
+[[rules.mode_outcomes]]
+when = { mode = "$exchange" }
+expect = "Return the old value on match and mismatch. Replace only on match"
+[[rules.mode_outcomes]]
+when = { mode = "$swap" }
+expect = "Return the old value and store the operand"
+[[rules.mode_outcomes]]
+when = { mode = "$add" }
+expect = "Return the old value and store the sum in the carrier type"
+[[rules.mode_outcomes]]
+when = { mode = "$bit" }
+expect = "Return the old value and store the bitwise AND, OR or XOR selected by the mode"
+
+[[case]]
+id = "VH.FIELD_ARRAY.MODES"
+spec = ["vh", "lookup", "mh"]
+fixture = "access_modes"
+evidence = ["Test.java#main", "Test.java#verify"]
+java = "$lts"
+axes = { storage = ["instance", "static", "array"], carrier = "$fields", mode = "$modes", route = ["direct", "toMethodHandle", "findVirtual", "varHandleInvoker", "varHandleExactInvoker"] }
+rules = "mode_outcomes"
+expect = "Return the stored value. Backing storage is unchanged"
+[[case.override]]
+when = { carrier = ["boolean", "String"], mode = "$add" }
+expect = "UnsupportedOperationException. Original storage is preserved"
+[[case.override]]
+when = { carrier = ["String", "float", "double"], mode = "$bit" }
+expect = "UnsupportedOperationException. Original storage is preserved"
+
+[[case]]
+id = "VH.FINAL.MODES"
+spec = ["vh", "lookup"]
+fixture = "access_modes"
+evidence = ["Test.java#main", "Test.java#verify"]
+java = "$lts"
+axes = { storage = ["final-instance", "final-static"], carrier = "$fields", mode = "$modes", route = ["direct", "toMethodHandle", "findVirtual", "varHandleInvoker", "varHandleExactInvoker"] }
+expect = "Return the stored value. Backing storage is unchanged"
+[[case.override]]
+when = { mode = "$mutations" }
+expect = "UnsupportedOperationException. Original storage is preserved"
+
+[[case]]
+id = "VH.BYTE_VIEW.MODES"
+spec = ["mh", "vh"]
+fixture = "view_modes"
+evidence = ["Test.java#exerciseViews", "Test.java#exercise"]
+java = "$lts"
+axes = { storage = ["byte-array", "heap-buffer", "direct-buffer"], carrier = "$views", mode = "$modes", order = ["LE", "BE"], offset = ["aligned", "misaligned"], route = ["direct", "toMethodHandle"] }
+rules = "mode_outcomes"
+expect = "Return the stored value. Backing storage is unchanged"
+[[case.override]]
+when = { java = "25", storage = "byte-array", mode = "$nonplain" }
+expect = "UnsupportedOperationException. Original storage is preserved"
+[[case.override]]
+when = { carrier = ["short", "char"], mode = "$updates" }
+expect = "UnsupportedOperationException. Original storage is preserved"
+[[case.override]]
+when = { carrier = ["float", "double"], mode = "$arithmetic_bit" }
+expect = "UnsupportedOperationException. Original storage is preserved"
+[[case.override]]
+when = { java = "25", storage = "heap-buffer", mode = "$nonplain" }
+expect = "IllegalStateException for the misaligned nonplain operation. Bytes are preserved"
+[[case.override]]
+when = { offset = "misaligned", mode = "$nonplain" }
+expect = "IllegalStateException for the misaligned nonplain operation. Bytes are preserved"
+
+[[case]]
+id = "VH.SEGMENT.MODES"
+spec = ["value", "layout", "segment"]
+fixture = "segment_carriers"
+evidence = ["Test.java#allModes", "Test.java#encode"]
+java = ["25"]
+axes = { storage = ["heap-segment", "native-segment"], carrier = "$scalars", mode = "$modes", order = ["LE", "BE"], alignment = "natural", route = "toMethodHandle" }
+rules = "mode_outcomes"
+expect = "Return the stored value. Backing storage is unchanged"
+[[case.override]]
+when = { carrier = ["boolean", "byte", "char", "short"], mode = "$updates" }
+expect = "UnsupportedOperationException. Original storage is preserved"
+[[case.override]]
+when = { carrier = ["float", "double"], mode = "$arithmetic_bit" }
+expect = "UnsupportedOperationException. Original storage is preserved"
+
+[[case]]
+id = "VH.SEGMENT.UNALIGNED"
+spec = ["value", "layout"]
+fixture = "segment_carriers"
+evidence = ["Test.java#allModes", "Test.java#encode"]
+java = ["25"]
+axes = { storage = ["heap-segment", "native-segment"], carrier = ["short", "char", "int", "long", "float", "double", "address"], mode = "$modes", order = ["LE", "BE"], alignment = "one-byte" }
+expect = "Return the stored value. Backing storage is unchanged"
+[[case.override]]
+when = { mode = "$nonplain" }
+expect = "UnsupportedOperationException. Original storage is preserved"
+[[case.override]]
+when = { mode = "set" }
+expect = "Store at the selected offset. Preserve adjacent bytes"
+
+[[case]]
+id = "VH.INVOKERS.MODES"
+spec = ["mh", "poly", "method"]
+fixture = "invocation"
+evidence = ["Test.java#allInvokerModes", "Test.java#bind"]
+java = "$lts"
+axes = { storage = "instance", carrier = "int", mode = "$modes", route = ["toMethodHandle", "findVirtual", "varHandleInvoker", "varHandleExactInvoker"] }
+rules = "mode_outcomes"
+expect = "Return the stored value. Backing storage is unchanged"
+
+[[case]]
+id = "VH.INVOKERS.TYPES"
+spec = ["mh", "mh_resolution"]
+fixture = "invocation"
+evidence = ["Test.java#allInvokerModes", "Test.java#bind", "Test.java#arrayInvokers"]
+java = "$lts"
+expect = "The revealed unbound type matches the descriptor. Adapting get widens int to long, exact invoker rejects it. Final SET throws. Array exchange returns the old long"
+
+[[case]]
+id = "VH.EXACT.PRIMITIVES"
+spec = ["vh", "poly", "invokevirtual"]
+fixture = "exact_primitives"
+evidence = ["Test.java#main", "Test.java#checkBoolean", "Test.java#checkByte", "Test.java#checkShort", "Test.java#checkChar", "Test.java#checkInt", "Test.java#checkLong", "Test.java#checkFloat", "Test.java#checkDouble"]
+java = "$exact"
+axes = { storage = ["instance", "static", "array"], carrier = "$primitives", route = "direct-exact" }
+expect = "Typed writes and reads agree with their Java backing storage. Changing exactly one descriptor component throws WrongMethodTypeException"
+
+[[case]]
+id = "VH.EXACT.BUFFER"
+spec = ["vh", "mh"]
+fixture = "exact_primitives"
+evidence = ["Test.java#exactBuffer"]
+java = "$exact"
+expect = "Exact int read/write succeeds. A long offset in the descriptor throws WrongMethodTypeException"
+
+[[case]]
+id = "VH.EXACT.SEGMENT"
+spec = ["vh", "layout"]
+fixture = "segment_modes"
+evidence = ["Test.java#exactSegment"]
+java = ["25"]
+expect = "Exact double read/write agrees with segment contents. A float operand throws WrongMethodTypeException"
+
+[[case]]
+id = "VH.EXACT.ADAPT"
+spec = ["vh", "poly"]
+fixture = "exact_invocation"
+evidence = ["Test.java#main", "Test.java#sharedCallSites", "Test.java#adaptingInvoker", "Test.java#genericField"]
+java = "$exact"
+expect = "Reapplying the current behavior preserves identity. Exact mismatches reject boxing, widening and discarded results. Ordinary invocation adapts and shares storage"
+
+[[case]]
+id = "VH.BYTECODE.PRIMITIVES"
+spec = ["poly", "invokevirtual", "vh"]
+fixture = "primitive_call_sites"
+evidence = ["Test.java#main"]
+java = "$lts"
+expect = "Primitive descriptors for all modes return the expected value and update the addressed slot. Long and floating conversions preserve Java rounding and signed zero"
+
+[[case]]
+id = "VH.SEGMENT.SCALARS"
+spec = ["value", "segment"]
+fixture = "segment_modes"
+evidence = ["Test.java#wordModes", "Test.java#scalar", "Test.java#floatingComparisons", "Test.java#addresses", "Test.java#signedHeapByte"]
+java = ["25"]
+expect = "Check neighboring bytes, raw NaN witnesses, signed byte widening and address equality across segment aliases"
+
+[[case]]
+id = "VH.LAYOUT.PATHS"
+spec = ["layout"]
+fixture = "indirect"
+evidence = ["Test.java#pathsAndBounds"]
+java = ["25"]
+expect = "Fixed and reverse sequence paths select the same element. Indexed union views alias. Pointer replacement retargets access. Dereference without target layout is rejected"
+
+[[case]]
+id = "VH.LAYOUT.BOUNDS"
+spec = ["segment", "layout"]
+fixture = "indirect"
+evidence = ["Test.java#atomicRestrictions", "Test.java#nativeSegments"]
+java = ["25"]
+expect = "Read-only and confined atomic updates reject access. A zero-length slice rejects a word. Scaling Long.MAX_VALUE overflows. Closed access fails and rejected live writes preserve the value"
+
+[[case]]
+id = "VH.LAYOUT.SHARED"
+spec = ["layout", "segment"]
+fixture = "indirect"
+evidence = ["Test.java#sharedLayout", "Test.java#closeDuringAccess", "Test.java#closedBufferView"]
+java = ["25"]
+expect = "Opposite-endian aliased updates sum correctly. Closing an arena invalidates its segment and byte-buffer view"
+
+[[case]]
+id = "VH.LAYOUT.STRIDE"
+spec = ["layout", "value"]
+fixture = "segment_modes"
+evidence = ["Test.java#stridedPath", "Test.java#unaligned"]
+java = ["25"]
+expect = "Strided index selects the expected element and rejects the end index. One-byte alignment permits unaligned plain access"
+
+[[case]]
+id = "VH.MAPPED.MODES"
+spec = ["mh", "mapping"]
+fixture = "mapped_view"
+evidence = ["Test.java#main", "Test.java#mappingModes"]
+java = "$lts"
+expect = "READ_WRITE persists through force. READ_ONLY rejects CAS. PRIVATE changes its duplicate while the file retains its bytes"
+
+[[case]]
+id = "VH.VIEW.RECEIVERS"
+spec = ["mh"]
+fixture = "views"
+evidence = ["Test.java#slicedBuffers", "Test.java#receiverIdentity", "Test.java#errors"]
+java = "$lts"
+expect = "Slices honor base offset, limit, handle byte order and read-only state. Alternating handles preserve distinct behavior at the same call site"
+
+[[case]]
+id = "VH.ADAPTER.COMPOSITION"
+spec = ["mh"]
+fixture = "adapters"
+evidence = ["Test.java#main", "Test.java#contextualFilters", "Test.java#duplicateCoordinate", "Test.java#filteredFieldModes"]
+java = ["25"]
+expect = "Value and coordinate filters compose. Read-only support is preserved. Binding, checked filter declarations and invalid positions/types reject as specified"
+
+[[case]]
+id = "VH.ADAPTER.CAS"
+spec = ["vh", "mh"]
+fixture = "adapters"
+evidence = ["Test.java#filteredCas"]
+java = ["25"]
+expect = "Exact mismatch runs zero filters. Matching and mismatching CAS convert both operands and leave the boolean result unfiltered"
+
+[[case]]
+id = "VH.FACTORY.METADATA"
+spec = ["vh", "mh"]
+fixture = "factory_arguments"
+evidence = ["Test.java#main"]
+java = "$lts"
+expect = "Mode names round-trip. Coordinate types are immutable. Null modes and invalid factory arguments throw"
+
+[[case]]
+id = "VH.REFLECTION"
+spec = ["poly", "mh"]
+fixture = "reflective_invocation"
+evidence = ["Test.java#main"]
+java = "$lts"
+expect = "Typed getter, setter and CAS method references access the array. Unreflected and reflective placeholder invocations follow the matching JDK"
+
+[[case]]
+id = "VH.LOOKUP.ACCESS"
+spec = ["lookup", "access", "field"]
+fixture = "lookup"
+evidence = ["Test.java#main"]
+java = "$lts"
+expect = "Private and static lookups enforce member kind and visibility, including after setAccessible"
+
+[[case]]
+id = "VH.LOOKUP.MODULE"
+spec = ["lookup", "access", "mh"]
+fixture = "module_lookup"
+evidence = ["Test.java#main"]
+java = "$lts"
+expect = "The class and its array belong to the defining loader's named module. A sibling loader has a distinct module. The exported package permits public field access. privateLookupIn fails before the qualified open and succeeds afterward"
+
+[[case]]
+id = "VH.LOOKUP.LOADER"
+spec = ["constraint", "lookup"]
+fixture = "loader_identity"
+evidence = ["Test.java#main", "Test.java#typedAccess"]
+java = "$lts"
+expect = "Cross-loader values and receivers are rejected. Exact descriptors distinguish identically named classes"
+
+[[case]]
+id = "VH.INIT.INHERITED"
+spec = ["lookup", "init", "field"]
+fixture = "static_initializer"
+evidence = ["Test.java#inheritedStatics"]
+java = "$lts"
+expect = "Only Parent and Contract initialize. The interface field first reads 2 and the inherited field update uses the parent static slot"
+[[case.override]]
+when = { java = ["11", "17", "21"] }
+expect = "OpenJDK initializes Parent, Child and Impl. The first interface read returns 0. Explicit initialization of Contract then exposes 2"
+
+[[case]]
+id = "VH.INIT.FIRST_USE"
+spec = ["lookup", "init"]
+fixture = "static_initializer"
+evidence = ["Test.java#main", "Test.java#readBroken"]
+java = "$lts"
+expect = "First update sees the initialized value once. Failed initialization throws ExceptionInInitializerError followed by NoClassDefFoundError"
+
+[[case]]
+id = "VH.INIT.METADATA"
+spec = ["vh", "lookup", "init"]
+fixture = "lazy_metadata"
+evidence = ["Test.java#main"]
+java = ["25"]
+expect = "Querying and binding preserve initializer count zero. First invocation reads 41 and initializes exactly once"
+
+[[case]]
+id = "VH.BOOTSTRAPS"
+spec = ["bootstrap", "access"]
+fixture = "constants"
+evidence = ["Test.java#main"]
+java = "$lts"
+expect = "The private field produces IllegalAccessException via lookup and IllegalAccessError via bootstrap. Valid bootstraps address their original storage"
+
+[[case]]
+id = "VH.CONSTANT.DESC"
+spec = ["desc", "vh"]
+fixture = "constant_descriptors"
+evidence = ["Test.java#main", "Test.java#hiddenField", "Test.java#resolve"]
+java = "$exact"
+expect = "Nominal field and array descriptors resolve. Array descriptor varType is the component. Hidden-field and view descriptions are empty"
+
+[[case]]
+id = "JVMS.LDC.VARHANDLE"
+spec = ["ldc", "dynamic"]
+fixture = "constant_linkage_11"
+evidence = ["Test.java#main", "Test.java#reader"]
+java = "$lts"
+expect = "A version-55 dynamic constant preserves handle identity and storage. Repeated missing-field linkage fails with one bootstrap invocation for that entry"
+
+[[case]]
+id = "JVMS.RESOLUTION.VARHANDLE"
+spec = ["method", "field", "mh_resolution", "dynamic", "invokevirtual"]
+fixture = "constant_linkage"
+evidence = ["Test.java#main", "Test.java#fixedResultDescriptors", "Test.java#missingCallSiteType", "Test.java#duplicateFieldNames"]
+java = ["25"]
+expect = "Invalid symbolic results fail linkage, missing types resolve before a null receiver check, and same-name fields retain independent descriptor-specific storage"
+
+[[case]]
+id = "JVMS.INVOKEVIRTUAL.SUBWORD"
+spec = ["poly", "invokevirtual"]
+fixture = "constant_linkage"
+evidence = ["Test.java#booleanStores", "SubwordAtomics.java#check"]
+java = ["25"]
+expect = "Bytecode operands outside Java source ranges produce reference-JDK narrowing, CAS results and witnesses"
+
+[[case]]
+id = "VH.ORDER.OPAQUE"
+spec = ["vh", "jmm"]
+fixture = "ordering"
+evidence = ["Test.java#opaqueOrdering"]
+java = "$lts"
+expect = "A sampled long is a complete written pattern. Single-writer opaque observations of an increasing sequence never decrease"
+
+[[case]]
+id = "VH.ORDER.ATOMIC"
+spec = ["vh", "jmm"]
+fixture = "ordering"
+evidence = ["Test.java#aliasedBitwiseUpdates", "Test.java#contention", "Test.java#adjacentElements"]
+java = "$lts"
+expect = "Concurrent disjoint bits survive through both handles. Increment witnesses are unique and adjacent subword updates are preserved"
+
+[[case]]
+id = "VH.ORDER.PUBLICATION"
+spec = ["vh", "jmm"]
+fixture = "ordering"
+evidence = ["Test.java#volatileStoreLoad", "Test.java#publication", "Test.java#fieldPublication", "Test.java#fencedPublication"]
+java = "$lts"
+expect = "Volatile store/load forbids both-zero. Published payloads are visible across release/acquire, volatile, and fenced handoffs"
+
+[[case]]
+id = "VH.FIELD.INSTANCE"
+spec = ["lookup", "vh"]
+fixture = "instance_field_access"
+evidence = ["Test.java#main"]
+java = "$lts"
+expect = "Hidden fields are independent. Reference comparisons use identity and floating comparisons preserve raw NaN and signed-zero distinctions"
+
+[[case]]
+id = "VH.FIELD.STATIC"
+spec = ["lookup", "vh"]
+fixture = "static_field_access"
+evidence = ["Test.java#main", "Test.java#subwordExchanges"]
+java = "$lts"
+expect = "Static subword exchanges preserve neighboring fields. Reference casts and final-field writes reject as expected. CAS counters agree"
+
+[[case]]
+id = "VH.ARRAY.STORES"
+spec = ["mh", "vh"]
+fixture = "array_element_access"
+evidence = ["Test.java#main", "Test.java#subWordExchanges"]
+java = "$lts"
+expect = "Covariant array stores and invalid coordinates raise their expected exceptions. Subword and floating witnesses agree with backing elements"
+
+[[case]]
+id = "VH.ARRAY.MULTIDIM"
+spec = ["mh", "vh"]
+fixture = "multidimensional_array"
+evidence = ["Test.java#main"]
+java = "$lts"
+expect = "Row CAS compares array identity and getAndSet replaces exactly the selected row"

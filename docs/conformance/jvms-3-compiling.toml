@@ -1,0 +1,187 @@
+# Java SE 25 JVMS, chapter 3.
+version = 1
+suite = "."
+
+[spec]
+s3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html"
+s3_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.1"
+s3_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.2"
+s3_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.3"
+s3_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.4"
+s3_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.5"
+s3_6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.6"
+s3_7 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.7"
+s3_8 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.8"
+s3_9 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.9"
+s3_10 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.10"
+s3_11 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.11"
+s3_12 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.12"
+s3_13 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.13"
+s3_14 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.14"
+s3_15 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.15"
+s3_16 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-3.html#jvms-3.16"
+
+# Informative text and overviews. Related behavioral cases appear under their own sections.
+[context]
+s3 = "Compilation examples illustrate permitted translations of Java source."
+s3_1 = "Legend for the example disassemblies. Other compiler translations are permitted."
+
+# Published source anchors beneath each section, in document order. Append a suffix to
+# the section fragment (jvms-N for a chapter) to locate the original clause, rule or table.
+[anchors]
+s3 = ["-100", "-110"]
+s3_1 = ["-100", "-110", "-120", "-130", "-140", "-200", "-210", "-300"]
+s3_2 = [
+  "-100", "-110", "-120", "-200", "-210", "-220", "-230", "-240", "-250", "-260", "-300", "-310",
+  "-400", "-410", "-420", "-430", "-440", "-450", "-500", "-510", "-520", "-530", "-540", "-550"
+]
+s3_3 = ["-100", "-110", "-120", "-130"]
+s3_4 = ["-100", "-110", "-120", "-130", "-140"]
+s3_5 = [
+  "-100", "-110", "-120", "-130", "-200", "-210", "-300", "-310", "-320", "-330", "-340", "-350"
+]
+s3_6 = ["-100", "-110", "-120", "-200", "-210", "-220"]
+s3_7 = [
+  "-100", "-110", "-120", "-130", "-140", "-150", "-200", "-210", "-220", "-300", "-320", "-330",
+  "-400"
+]
+s3_8 = ["-100", "-110", "-200", "-210", "-300", "-310", "-320"]
+s3_9 = ["-100", "-110", "-200", "-210", "-300", "-310", "-320", "-330"]
+s3_10 = ["-100", "-110", "-200", "-300", "-310", "-320"]
+s3_11 = ["-100", "-110", "-120"]
+s3_12 = [
+  "-100", "-110", "-200", "-210", "-220", "-230", "-240", "-250", "-300", "-310", "-320", "-400",
+  "-410", "-420", "-430", "-440"
+]
+s3_13 = ["-100", "-200", "-210", "-220", "-230", "-240", "-300", "-310", "-320", "-330", "-340"]
+s3_14 = ["-100", "-200", "-300", "-310", "-320"]
+s3_15 = ["-100", "-200", "-200-A", "-200-B", "-200-C", "-200-D", "-200-E", "-200-F", "-200-G"]
+s3_16 = ["-100", "-110", "-200", "-300", "-310", "-320"]
+
+[[case]]
+id = "JVMS.3.2"
+spec = ["s3_2"]
+java = "default"
+fixture = "branch/goto"
+evidence = ["Test.java#main"]
+expect = "The loop's result reflects the executed initializations, updates and branch decisions."
+
+[[case]]
+id = "JVMS.3.3"
+spec = ["s3_3"]
+java = "default"
+fixture = "math/double"
+evidence = ["Test.java#testDoubleMul"]
+expect = """
+Evaluating a double multiplication expression yields the product for the supplied operands."""
+
+[[case]]
+id = "JVMS.3.4"
+spec = ["s3_4"]
+java = "default"
+fixture = "primitive/integer"
+evidence = ["Test.java#main"]
+expect = "The program can load and print the signed extrema of int."
+
+[[case]]
+id = "JVMS.3.5"
+spec = ["s3_5"]
+java = "default"
+fixture = "branch/if_icmplt"
+evidence = ["Test.java#main"]
+expect = "Comparison of signed int values chooses the corresponding Java branch."
+
+[[case]]
+id = "JVMS.3.6"
+spec = ["s3_6"]
+java = "default"
+fixture = "method/parameters_returns"
+evidence = ["Test.java#primitiveParameters"]
+expect = "The callee observes arguments in declared order, including the two-slot double parameter."
+
+[[case]]
+id = "JVMS.3.7"
+spec = ["s3_7"]
+java = "default"
+fixture = "method/invocation_dispatch"
+evidence = ["Test.java#testMethodDispatch"]
+expect = """
+Calls through a parent reference reach an overriding method when the receiver has the derived \
+class."""
+
+[[case]]
+id = "JVMS.3.8"
+spec = ["s3_8"]
+java = "default"
+fixture = "object/creation"
+evidence = ["Test.java#main"]
+expect = "An allocated and initialized instance is available to the subsequent Java code."
+
+[[case]]
+id = "JVMS.3.9"
+spec = ["s3_9"]
+java = "default"
+fixture = "array/int"
+evidence = ["Test.java#main"]
+expect = """
+An indexed assignment updates the selected element and invalid indices throw \
+ArrayIndexOutOfBoundsException."""
+
+[[case]]
+id = "JVMS.3.10"
+spec = ["s3_10"]
+java = "default"
+fixture = "branch/lookupswitch"
+evidence = ["Test.java#testSparseSwitchValue"]
+expect = "Sparse switch keys select their associated cases and a missing key selects default."
+
+[[case]]
+id = "JVMS.3.11"
+spec = ["s3_11"]
+java = "25"
+status = "planned"
+expect = """
+A compiled field post-increment expression yields the old value while storing the incremented \
+value."""
+
+[[case]]
+id = "JVMS.3.12"
+spec = ["s3_12"]
+java = "default"
+fixture = "method/exceptions"
+evidence = ["Test.java#handleExceptions"]
+expect = "An exception from the protected region transfers to a handler compatible with its class."
+
+[[case]]
+id = "JVMS.3.13"
+spec = ["s3_13"]
+java = "default"
+fixture = "method/exceptions"
+evidence = ["Test.java#methodWithFinally"]
+expect = "The finally action runs when control leaves the protected statement."
+
+[[case]]
+id = "JVMS.3.14"
+spec = ["s3_14"]
+java = "default"
+fixture = "thread/interrupt_complex"
+evidence = ["Test.java#testInterruptDuringWait"]
+expect = """
+The compiled synchronized block acquires the chosen lock and releases it when the block \
+completes."""
+
+[[case]]
+id = "JVMS.3.15"
+spec = ["s3_15"]
+java = "default"
+fixture = "annotation/retention_policies"
+evidence = ["Test.java#main"]
+expect = "Runtime-retained declaration annotations can be discovered by reflection."
+
+[[case]]
+id = "JVMS.3.16"
+spec = ["s3_16"]
+java = "default"
+fixture = "module/metadata"
+evidence = ["Test.java#testModulePackages"]
+expect = "The module descriptor exposes the module's declared package information."

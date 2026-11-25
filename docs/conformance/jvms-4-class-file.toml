@@ -1,0 +1,3348 @@
+# Java SE 25 JVMS, chapter 4.
+version = 1
+suite = "."
+
+[spec]
+s4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html"
+s4_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1"
+s4_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.2"
+s4_2_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.2.1"
+s4_2_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.2.2"
+s4_2_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.2.3"
+s4_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.3"
+s4_3_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.3.1"
+s4_3_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.3.2"
+s4_3_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.3.3"
+s4_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4"
+s4_4_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.1"
+s4_4_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.2"
+s4_4_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.3"
+s4_4_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.4"
+s4_4_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.5"
+s4_4_6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.6"
+s4_4_7 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7"
+s4_4_8 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.8"
+s4_4_9 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.9"
+s4_4_10 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.10"
+s4_4_11 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.11"
+s4_4_12 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.12"
+s4_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.5"
+s4_6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.6"
+s4_7 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7"
+s4_7_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.1"
+s4_7_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.2"
+s4_7_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.3"
+s4_7_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.4"
+s4_7_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.5"
+s4_7_6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.6"
+s4_7_7 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.7"
+s4_7_8 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.8"
+s4_7_9 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.9"
+s4_7_9_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.9.1"
+s4_7_10 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.10"
+s4_7_11 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.11"
+s4_7_12 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.12"
+s4_7_13 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.13"
+s4_7_14 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.14"
+s4_7_15 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.15"
+s4_7_16 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.16"
+s4_7_16_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.16.1"
+s4_7_17 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.17"
+s4_7_18 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.18"
+s4_7_19 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.19"
+s4_7_20 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20"
+s4_7_20_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20.1"
+s4_7_20_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20.2"
+s4_7_21 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.21"
+s4_7_22 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.22"
+s4_7_23 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.23"
+s4_7_24 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.24"
+s4_7_25 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.25"
+s4_7_26 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.26"
+s4_7_27 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.27"
+s4_7_28 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.28"
+s4_7_29 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.29"
+s4_7_30 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.30"
+s4_7_31 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.31"
+s4_8 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.8"
+s4_9 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.9"
+s4_9_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.9.1"
+s4_9_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.9.2"
+s4_10 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10"
+s4_10_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1"
+s4_10_1_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.1"
+s4_10_1_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.2"
+s4_10_1_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.3"
+s4_10_1_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.4"
+s4_10_1_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.5"
+s4_10_1_6 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.6"
+s4_10_1_7 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.7"
+s4_10_1_8 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.8"
+s4_10_1_9 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9"
+s4_10_1_9_aaload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.aaload"
+s4_10_1_9_aastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.aastore"
+s4_10_1_9_aconst_null = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.aconst_null"
+s4_10_1_9_aload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.aload"
+s4_10_1_9_anewarray = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.anewarray"
+s4_10_1_9_areturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.areturn"
+s4_10_1_9_arraylength = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.arraylength"
+s4_10_1_9_astore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.astore"
+s4_10_1_9_athrow = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.athrow"
+s4_10_1_9_baload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.baload"
+s4_10_1_9_bastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.bastore"
+s4_10_1_9_bipush = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.bipush"
+s4_10_1_9_caload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.caload"
+s4_10_1_9_castore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.castore"
+s4_10_1_9_checkcast = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.checkcast"
+s4_10_1_9_d2f = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.d2f"
+s4_10_1_9_dadd = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dadd"
+s4_10_1_9_daload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.daload"
+s4_10_1_9_dastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dastore"
+s4_10_1_9_dcmp_op = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dcmp_op"
+s4_10_1_9_dconst_d = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dconst_d"
+s4_10_1_9_ddiv = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.ddiv"
+s4_10_1_9_dload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dload"
+s4_10_1_9_dmul = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dmul"
+s4_10_1_9_dneg = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dneg"
+s4_10_1_9_drem = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.drem"
+s4_10_1_9_dreturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dreturn"
+s4_10_1_9_dstore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dstore"
+s4_10_1_9_dsub = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dsub"
+s4_10_1_9_dup = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dup"
+s4_10_1_9_dup_x1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dup_x1"
+s4_10_1_9_dup_x2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dup_x2"
+s4_10_1_9_dup2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dup2"
+s4_10_1_9_dup2_x1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dup2_x1"
+s4_10_1_9_dup2_x2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.dup2_x2"
+s4_10_1_9_f2d = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.f2d"
+s4_10_1_9_fadd = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.fadd"
+s4_10_1_9_faload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.faload"
+s4_10_1_9_fastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.fastore"
+s4_10_1_9_fcmp_op = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.fcmp_op"
+s4_10_1_9_fconst_f = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.fconst_f"
+s4_10_1_9_fdiv = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.fdiv"
+s4_10_1_9_fload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.fload"
+s4_10_1_9_fmul = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.fmul"
+s4_10_1_9_fneg = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.fneg"
+s4_10_1_9_frem = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.frem"
+s4_10_1_9_freturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.freturn"
+s4_10_1_9_fstore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.fstore"
+s4_10_1_9_fsub = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.fsub"
+s4_10_1_9_getfield = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.getfield"
+s4_10_1_9_getstatic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.getstatic"
+s4_10_1_9_goto = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.goto"
+s4_10_1_9_i2b = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.i2b"
+s4_10_1_9_iadd = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.iadd"
+s4_10_1_9_iaload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.iaload"
+s4_10_1_9_iand = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.iand"
+s4_10_1_9_iastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.iastore"
+s4_10_1_9_iconst_i = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.iconst_i"
+s4_10_1_9_idiv = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.idiv"
+s4_10_1_9_if_acmp_cond = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.if_acmp_cond"
+s4_10_1_9_if_icmp_cond = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.if_icmp_cond"
+s4_10_1_9_if_cond = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.if_cond"
+s4_10_1_9_ifnonnull = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.ifnonnull"
+s4_10_1_9_iinc = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.iinc"
+s4_10_1_9_iload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.iload"
+s4_10_1_9_imul = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.imul"
+s4_10_1_9_ineg = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.ineg"
+s4_10_1_9_instanceof = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.instanceof"
+s4_10_1_9_invokedynamic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.invokedynamic"
+s4_10_1_9_invokeinterface = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.invokeinterface"
+s4_10_1_9_invokespecial = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.invokespecial"
+s4_10_1_9_invokestatic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.invokestatic"
+s4_10_1_9_invokevirtual = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.invokevirtual"
+s4_10_1_9_ior = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.ior"
+s4_10_1_9_ireturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.ireturn"
+s4_10_1_9_ishl = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.ishl"
+s4_10_1_9_istore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.istore"
+s4_10_1_9_isub = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.isub"
+s4_10_1_9_l2d = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.l2d"
+s4_10_1_9_ladd = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.ladd"
+s4_10_1_9_laload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.laload"
+s4_10_1_9_land = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.land"
+s4_10_1_9_lastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.lastore"
+s4_10_1_9_lcmp = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.lcmp"
+s4_10_1_9_lconst_l = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.lconst_l"
+s4_10_1_9_ldc = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.ldc"
+s4_10_1_9_ldiv = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.ldiv"
+s4_10_1_9_lload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.lload"
+s4_10_1_9_lmul = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.lmul"
+s4_10_1_9_lneg = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.lneg"
+s4_10_1_9_lookupswitch = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.lookupswitch"
+s4_10_1_9_lor = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.lor"
+s4_10_1_9_lreturn = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.lreturn"
+s4_10_1_9_lshl = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.lshl"
+s4_10_1_9_lstore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.lstore"
+s4_10_1_9_lsub = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.lsub"
+s4_10_1_9_monitorenter = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.monitorenter"
+s4_10_1_9_multianewarray = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.multianewarray"
+s4_10_1_9_new = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.new"
+s4_10_1_9_newarray = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.newarray"
+s4_10_1_9_nop = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.nop"
+s4_10_1_9_pop = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.pop"
+s4_10_1_9_putfield = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.putfield"
+s4_10_1_9_putstatic = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.putstatic"
+s4_10_1_9_return = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.return"
+s4_10_1_9_saload = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.saload"
+s4_10_1_9_sastore = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.sastore"
+s4_10_1_9_sipush = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.sipush"
+s4_10_1_9_swap = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.swap"
+s4_10_1_9_tableswitch = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.tableswitch"
+s4_10_1_9_wide = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.9.wide"
+s4_10_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.2"
+s4_10_2_1 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.2.1"
+s4_10_2_2 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.2.2"
+s4_10_2_3 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.2.3"
+s4_10_2_4 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.2.4"
+s4_10_2_5 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.2.5"
+s4_11 = "https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.11"
+
+# Informative text and overviews. Related behavioral cases appear under their own sections.
+[context]
+s4 = "Class-file grammar, checks and limits."
+s4_2 = "Naming conventions are specified separately for classes, members, packages and modules."
+s4_3 = "Descriptor grammar for fields and methods."
+s4_3_1 = "How to read the grammar productions."
+
+# Published source anchors beneath each section, in document order. Append a suffix to
+# the section fragment (jvms-N for a chapter) to locate the original clause, rule or table.
+[anchors]
+s4 = ["-100", "-110", "-120", "-130", "-140", "-200"]
+s4_1 = [
+  "-100", "-110", "-200", "-200-A", "-200-B", "-200-B.1", "-200-B.2", "-200-B.3", "-200-B.4",
+  "-200-B.5", "-200-B.6", "-200-C", "-200-D", "-200-D.1", "-200-E", "-200-E.1", "-200-E.2",
+  "-200-E.3", "-200-E.4", "-200-E.5", "-200-E.6", "-200-E.7", "-200-E.8", "-200-E.9", "-200-E.10",
+  "-200-F", "-200-G", "-200-G.1", "-200-G.2", "-200-H", "-200-I", "-200-J", "-200-K", "-200-L",
+  "-200-M", "-200-M.1", "-200-N", "-200-O", "-200-O.1", "-200-O.2", "-200-O.3", "-300", "-300-A",
+  "-300-B", "-300-C", "-300-D"
+]
+s4_2_1 = ["-100", "-200"]
+s4_2_2 = ["-100", "-200"]
+s4_3 = ["-100"]
+s4_3_1 = ["-100", "-110", "-120"]
+s4_3_2 = ["-100", "-110", "-130", "-135", "-140", "-150", "-200"]
+s4_3_3 = ["-100", "-110", "-120", "-130", "-200", "-210"]
+s4_4 = ["-100", "-110", "-120", "-130", "-140", "-200", "-210", "-300", "-310"]
+s4_4_1 = ["-100", "-110", "-200", "-200-A", "-200-B", "-300", "-310"]
+s4_4_2 = [
+  "-100", "-110", "-200", "-200-A", "-200-A.1", "-200-A.2", "-200-B", "-200-B.1", "-200-B.2",
+  "-200-B.3", "-200-C", "-200-C.1", "-200-C.2"
+]
+s4_4_3 = ["-100", "-110", "-200", "-200-A", "-200-B"]
+s4_4_4 = [
+  "-100", "-110", "-200", "-200-A", "-200-A.1", "-200-B", "-200-B.1", "-200-B.2", "-200-B.2-A",
+  "-200-B.2-B", "-200-B.2-C", "-200-B.2-D", "-200-B.2-D.1", "-200-B.3"
+]
+s4_4_5 = [
+  "-100", "-110", "-120", "-200", "-200-A", "-200-A.1", "-200-B", "-200-B.1", "-200-B.2",
+  "-200-B.3", "-200-B.4", "-200-B.5", "-200-B.6", "-200-B.6-A", "-200-B.6-B", "-200-B.6-C",
+  "-200-B.6-D", "-200-B.6-D.1", "-200-B.7"
+]
+s4_4_6 = ["-100", "-110", "-200", "-200-A", "-200-B", "-200-C"]
+s4_4_7 = [
+  "-100", "-110", "-200", "-200-A", "-200-B", "-200-C", "-200-C.1", "-200-C.2", "-300", "-300-A",
+  "-300-A.1", "-300-A.2", "-300-B", "-300-B.1", "-300-B.2", "-300-B.3", "-300-C", "-300-C.1",
+  "-300-C.2", "-300-C.3", "-300-D", "-300-D.1", "-300-D.2", "-300-D.3", "-400", "-500"
+]
+s4_4_8 = [
+  "-100", "-110", "-200", "-200-A", "-200-B", "-200-C", "-200-C-A", "-200-C-B", "-200-C-C",
+  "-200-C-D", "-200-C.1", "-200-C.2"
+]
+s4_4_9 = ["-100", "-110", "-200", "-200-A", "-200-B"]
+s4_4_10 = [
+  "-100", "-100-A", "-100-B", "-110", "-200", "-200-A", "-200-A.1", "-200-B", "-200-C",
+  "-200-C.1", "-200-C.2"
+]
+s4_4_11 = ["-100", "-110", "-200", "-200-A", "-200-B", "-300"]
+s4_4_12 = ["-100", "-110", "-200", "-200-A", "-200-B", "-300"]
+s4_5 = [
+  "-100", "-110", "-120", "-130", "-200", "-200-A", "-200-A.1", "-200-A.2", "-200-A.3",
+  "-200-A.4", "-200-A.5", "-200-A.6", "-200-B", "-200-C", "-200-D", "-200-E", "-200-E.1",
+  "-200-E.2", "-200-E.3", "-200-E.4"
+]
+s4_6 = [
+  "-100", "-110", "-120", "-130", "-200", "-200-A", "-200-A.1", "-200-A.1.1", "-200-A.2",
+  "-200-A.3", "-200-A.4", "-200-A.5", "-200-A.6", "-200-A.7", "-200-A.8", "-200-A.9", "-200-A.10",
+  "-200-A.11", "-200-B", "-200-C", "-200-C-A", "-200-C-B", "-200-D", "-200-E", "-200-E.1",
+  "-200-E.2", "-200-E.3", "-200-E.4"
+]
+s4_7 = [
+  "-100", "-110", "-120", "-130", "-200", "-200-A", "-200-B", "-200-C", "-210", "-220", "-230",
+  "-230-A", "-230-A-A", "-230-A-B", "-230-A-C", "-230-A-D", "-230-A-E", "-230-A-F", "-230-A-G",
+  "-230-A.1", "-230-B", "-230-B-A", "-230-B-B", "-230-B-C", "-230-B-D", "-230-B-E", "-230-B-F",
+  "-230-B-G", "-230-B-H", "-230-B-I", "-230-B-J", "-230-B.1", "-230-C", "-230-C-A", "-230-C-B",
+  "-230-C-C", "-230-C-D", "-230-C-E", "-230-C-F", "-230-C-G", "-230-C-H", "-230-C-I", "-230-C-J",
+  "-230-C-K", "-230-C-L", "-230-C-M", "-230-C.1", "-300", "-310", "-320", "-320.1"
+]
+s4_7_1 = ["-100", "-110", "-120", "-130", "-140"]
+s4_7_2 = [
+  "-100", "-100-A", "-100-B", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C",
+  "-300-C.1"
+]
+s4_7_3 = [
+  "-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D", "-300-D.1",
+  "-300-E", "-300-E.1", "-300-F", "-300-F.1", "-300-F.2", "-300-G", "-300-H", "-300-H.1",
+  "-300-H.1-A", "-300-H.1-A.1", "-300-H.1-B", "-300-H.1-C", "-300-H.1-C.1", "-300-I", "-300-J",
+  "-300-J.1", "-300-J.2", "-300-J.3", "-300-J.4"
+]
+s4_7_4 = [
+  "-100", "-110", "-120", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D", "-400",
+  "-410", "-420", "-430", "-500", "-510", "-520", "-520-A", "-520-A.1", "-520-B", "-520-B.1",
+  "-520-C", "-520-C.1", "-520-D", "-520-D.1", "-520-E", "-520-E.1", "-520-F", "-520-F.1",
+  "-520-G", "-520-G.1", "-530", "-530-A", "-530-A.1", "-530-B", "-530-B.1", "-530-C", "-530-C-A",
+  "-530-C-A-A", "-530-C-A-B", "-530-C-B", "-530-C-B-A", "-530-C-B-B", "-600", "-610", "-620",
+  "-620-A", "-620-A.1", "-620-B", "-620-B.1", "-620-C", "-620-D", "-620-D.1", "-620-E",
+  "-620-E.1", "-620-E.2", "-620-E.3", "-620-F", "-620-F.1", "-620-G", "-620-G.1", "-620-G.2",
+  "-620-G.2-A", "-620-G.2-B", "-620-G.3", "-620-H", "-620-H.1", "-620-H.2", "-620-H.2-A",
+  "-620-H.2-B", "-620-H.3", "-620-H.4", "-620-H.4-A", "-620-H.4-B", "-620-H.5"
+]
+s4_7_5 = ["-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D"]
+s4_7_6 = [
+  "-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D", "-300-D.1",
+  "-300-D.1-A", "-300-D.1-B", "-300-D.1-B.1", "-300-D.1-C", "-300-D.1-C.1", "-300-D.1-D",
+  "-300-D.1-D.1", "-300-D.1-D.2", "-300-D.2"
+]
+s4_7_7 = [
+  "-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D", "-300-D.1"
+]
+s4_7_8 = ["-100", "-100-A", "-100-B", "-100-C", "-200", "-210", "-300", "-300-A", "-300-B"]
+s4_7_9 = ["-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C"]
+s4_7_9_1 = [
+  "-100", "-110", "-110-A", "-110-B", "-110-B.1", "-110-C", "-200", "-200-A", "-200-B", "-210",
+  "-300", "-300-A", "-300-A.1", "-300-B", "-300-B.1", "-300-B.2", "-300-B.3", "-300-B.4", "-400",
+  "-410", "-500", "-510", "-600", "-610"
+]
+s4_7_10 = ["-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C"]
+s4_7_11 = ["-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C"]
+s4_7_12 = [
+  "-100", "-110", "-120", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D",
+  "-300-D-A", "-300-D-B"
+]
+s4_7_13 = [
+  "-100", "-110", "-120", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D",
+  "-300-D-A", "-300-D-A.1", "-300-D-A.2", "-300-D-B", "-300-D-C", "-300-D-D", "-300-D-D.1"
+]
+s4_7_14 = [
+  "-100", "-110", "-120", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D",
+  "-300-D-A", "-300-D-A.1", "-300-D-A.2", "-300-D-B", "-300-D-C", "-300-D-D", "-300-D-D.1"
+]
+s4_7_15 = ["-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B"]
+s4_7_16 = [
+  "-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D", "-300-D.1",
+  "-300-D.2", "-300-D.2-A", "-300-D.2-B", "-300-D.2-C", "-300-D.2-C-A", "-300-D.2-C-B"
+]
+s4_7_16_1 = [
+  "-100", "-110", "-120", "-130", "-200", "-200-A", "-200-A.1", "-200-B", "-200-B.1",
+  "-200-B.1-A", "-200-B.1-B", "-200-C", "-200-C.1", "-200-C.1-A", "-200-C.1-B", "-200-C.1-C",
+  "-200-D", "-200-D.1", "-200-E", "-200-E.1", "-200-E.1-A", "-200-E.1-B"
+]
+s4_7_17 = ["-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D"]
+s4_7_18 = [
+  "-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D", "-300-D-A",
+  "-300-D-B", "-300-D.1"
+]
+s4_7_19 = [
+  "-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D", "-300-D-A",
+  "-300-D-B", "-300-D.1"
+]
+s4_7_20 = [
+  "-100", "-110", "-120", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D",
+  "-300-D.1", "-300-D.2", "-300-D.3", "-300-D.3-A", "-300-D.3-A.1", "-300-D.3-A.2", "-300-D.3-B",
+  "-300-D.3-B.1", "-300-D.3-C", "-300-D.3-C.1", "-300-D.3-D", "-400", "-410", "-420"
+]
+s4_7_20_1 = [
+  "-100", "-100-A", "-100-A.1", "-100-A.2", "-100-B", "-100-B.1", "-100-B.2", "-100-B.3",
+  "-100-C", "-100-C.1", "-100-C.2", "-100-C.3", "-100-D", "-100-D.1", "-100-E", "-100-E.1",
+  "-100-E.2", "-100-F", "-100-F.1", "-100-F.2", "-100-G", "-100-G.1", "-100-G.2", "-100-G.2-A",
+  "-100-G.2-B", "-100-G.2-B.1", "-100-H", "-100-H.1", "-100-H.2", "-100-I", "-100-I.1",
+  "-100-I.2", "-100-J", "-100-J.1", "-100-J.2", "-100-J.3", "-100-J.4"
+]
+s4_7_20_2 = [
+  "-100", "-100-A", "-100-B", "-100-C", "-200", "-210", "-220", "-220-A", "-220-B", "-220-C",
+  "-220-C-A", "-220-B-A.1", "-220-C-B", "-220-C-B.1"
+]
+s4_7_21 = ["-100", "-110", "-120", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D"]
+s4_7_22 = ["-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C"]
+s4_7_23 = [
+  "-100", "-110", "-120", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D",
+  "-300-D.1", "-300-D.1-A", "-300-D.1-B", "-300-D.1-C"
+]
+s4_7_24 = [
+  "-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D", "-300-D-A",
+  "-300-D-A.1", "-300-D-A.2", "-300-D-B", "-300-D-B-A", "-300-D-B-B", "-300-D-B-C"
+]
+s4_7_25 = [
+  "-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D", "-300-D-A",
+  "-300-D-B", "-300-D-C", "-300-E", "-300-D-F", "-300-D-F.1", "-300-D-F.2", "-300-D-G",
+  "-300-D-G-A", "-300-D-G-A.1", "-300-D-G-B", "-300-D-G-B-A", "-300-D-G-B-B", "-300-D-G-B-C",
+  "-300-D-G-B-D", "-300-D-G-C", "-300-D-G.1", "-300-D-G.1-A", "-300-D-G.1-B", "-300-D-G.1-C",
+  "-300-D-H", "-300-D-I", "-300-D-I.1", "-300-D-I.1-A", "-300-D-I.1-A.1", "-300-D-I.1-B",
+  "-300-D-I.1-B-A", "-300-D-I.1-B-B", "-300-D-I.1-C", "-300-D-I.1-C.1", "-300-D-I.1-C.2",
+  "-300-D-I.1-D", "-300-D-I.1-D.1", "-300-D-J", "-300-D-J.1", "-300-D-K", "-300-D-K.1",
+  "-300-D-K.1-A", "-300-D-K.1-A.1", "-300-D-K.1-B", "-300-D-K.1-B-A", "-300-D-K.1-B-B",
+  "-300-D-K.1-C", "-300-D-K.1-C.1", "-300-D-K.1-C.2", "-300-D-K.1-D", "-300-D-K.1-D.1",
+  "-300-D-L", "-300-D-M", "-300-D-M.1", "-300-D-N", "-300-D-O", "-300-D-O.1", "-300-D-O.1-A",
+  "-300-D-O.1-A.1", "-300-D-O.1-B", "-300-D-O.1-B.1", "-300-D-O.1-C", "-300-D-O.1-C.1"
+]
+s4_7_26 = [
+  "-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D", "-300-D.1"
+]
+s4_7_27 = ["-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C"]
+s4_7_28 = ["-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C"]
+s4_7_29 = ["-100", "-110", "-120", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D"]
+s4_7_30 = [
+  "-100", "-110", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D", "-300-D.1",
+  "-300-D.2", "-300-D.2-A", "-300-D.2-B", "-300-D.2-C", "-200-D.2-D", "-200-D.2-D.1",
+  "-200-D.2-D.2", "-200-D.2-D.3", "-200-D.2-D.4"
+]
+s4_7_31 = ["-100", "-110", "-120", "-200", "-210", "-300", "-300-A", "-300-B", "-300-C", "-300-D"]
+s4_8 = ["-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100-E", "-100-E.1", "-110"]
+s4_9 = ["-100"]
+s4_9_1 = [
+  "-100", "-110", "-110-B", "-110-B.1", "-110-C", "-110-D", "-110-D.1", "-110-E", "-120",
+  "-120-A", "-120-A.1", "-120-B", "-120-B.1", "-120-B.2", "-120-C", "-120-C.1", "-120-C.2",
+  "-120-D", "-120-D-A", "-120-D-B", "-120-E", "-120-E-A", "-120-E-B", "-120-E.1", "-120-F",
+  "-120-G", "-120-H", "-120-I", "-120-I.1", "-120-I.2", "-120-J", "-120-J.1", "-120-K",
+  "-120-K.1", "-120-L", "-120-M", "-120-N", "-120-O", "-120-O.1", "-120-P", "-120-Q", "-120-Q.1",
+  "-120-R", "-120-R.1", "-120-S", "-120-S.1"
+]
+s4_9_2 = [
+  "-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100-E", "-100-F", "-100-G", "-100-G-A",
+  "-100-G-B", "-100-G-C", "-100-G-D", "-100-G-E", "-100-G.1", "-100-G.1-A", "-100-G.1-B",
+  "-100-G.1-C", "-100-G.2", "-100-H", "-100-H.1", "-100-I", "-100-K", "-100-L", "-100-M",
+  "-100-N", "-100-N-A", "-100-N-B", "-100-N-C", "-100-N-D", "-100-O", "-100-P", "-100-P-A",
+  "-100-P-B", "-100-P-C", "-100-Q", "-100-Q.1", "-100-R", "-100-R.1", "-100-S", "-100-S.1",
+  "-100-T", "-100-U", "-100-V", "-100-W", "-100-X", "-100-X.1"
+]
+s4_10 = [
+  "-100", "-110", "-120", "-120-A", "-120-B", "-120-C", "-200", "-200-A", "-200-B", "-200-B.1"
+]
+s4_10_1 = [
+  "-100", "-110", "-120", "-200", "-210", "-300", "-310", "-400", "-400-A", "-400-B", "-400-C",
+  "-400-D", "-400-E", "-400-F"
+]
+s4_10_1_1 = [
+  "-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100-E", "-100-F", "-100-G", "-100-H",
+  "-100-I", "-100-J", "-100-K", "-100-L", "-100-M", "-100-N", "-100-N.1", "-100-O", "-100-O.1",
+  "-100-P", "-100-P.1", "-100-Q", "-110", "-200", "-300", "-400"
+]
+s4_10_1_2 = [
+  "-100", "-110", "-110-A", "-110-B", "-110-C", "-110-D", "-110-D-A", "-110-D-B", "-110-D-C",
+  "-110-D-D", "-110-D-E", "-120", "-120-A", "-120-B", "-120-C"
+]
+s4_10_1_3 = [
+  "-100", "-110", "-120", "-130", "-130-A", "-130-A.1", "-130-A.2", "-130-A.3", "-130-B",
+  "-130-B.1", "-130-C", "-130-C.1", "-130-D", "-130-D.1", "-130-E", "-130-E.1", "-130-F",
+  "-130-F.1", "-130-G", "-130-G.1", "-130-H", "-130-H.1", "-130-I", "-130-I.1", "-130-J",
+  "-130-J.1", "-130-K", "-130-K.1", "-130-L", "-130-L.1", "-130-M", "-130-M.1"
+]
+s4_10_1_4 = [
+  "-100", "-110", "-120", "-120-A", "-130", "-120-B", "-200", "-210", "-220", "-220-A",
+  "-220-A.1", "-220-B", "-220-B.1", "-220-C", "-220-C.1", "-300", "-400", "-410", "-420", "-430",
+  "-440", "-500", "-510", "-520", "-530", "-600", "-610"
+]
+s4_10_1_7 = ["-100", "-110", "-200", "-210", "-220"]
+s4_10_1_8 = [
+  "-100", "-110", "-110-A", "-110-A.P", "-110-B", "-110-B.P", "-110-C", "-110-C.P", "-110-D",
+  "-110-D.P", "-120", "-120.P"
+]
+s4_10_1_9 = [
+  "-100", "-100-A", "-100-B", "-100-B.1", "-200", "-300", "-300-A", "-300-B", "-300-C", "-300-D",
+  "-300-E", "-310"
+]
+s4_10_1_9_aaload = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_aastore = ["-100", "-100.P"]
+s4_10_1_9_aconst_null = ["-100", "-100.P"]
+s4_10_1_9_aload = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_anewarray = ["-100", "-100.P"]
+s4_10_1_9_areturn = ["-100", "-100.P"]
+s4_10_1_9_arraylength = ["-100", "-100.P"]
+s4_10_1_9_astore = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_athrow = ["-100", "-100.P"]
+s4_10_1_9_baload = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_bastore = ["-100", "-100.P"]
+s4_10_1_9_bipush = ["-100", "-100.P"]
+s4_10_1_9_caload = ["-100", "-100.P"]
+s4_10_1_9_castore = ["-100", "-100.P"]
+s4_10_1_9_checkcast = ["-100", "-100.P"]
+s4_10_1_9_d2f = ["-100", "-100.P", "-200", "-200.P", "-300", "-300.P"]
+s4_10_1_9_dadd = ["-100", "-100.P"]
+s4_10_1_9_daload = ["-100", "-100.P"]
+s4_10_1_9_dastore = ["-100", "-100.P"]
+s4_10_1_9_dcmp_op = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_dconst_d = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_ddiv = ["-100", "-100.P"]
+s4_10_1_9_dload = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_dmul = ["-100", "-100.P"]
+s4_10_1_9_dneg = ["-100", "-100.P"]
+s4_10_1_9_drem = ["-100", "-100.P"]
+s4_10_1_9_dreturn = ["-100", "-100.P"]
+s4_10_1_9_dstore = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_dsub = ["-100", "-100.P"]
+s4_10_1_9_dup = ["-100", "-100.P"]
+s4_10_1_9_dup_x1 = ["-100", "-100.P"]
+s4_10_1_9_dup_x2 = ["-100", "-100.P", "-110", "-110.P", "-120", "-120.P", "-130", "-130.P"]
+s4_10_1_9_dup2 = ["-100", "-100.P", "-110", "-110.P", "-120", "-120.P", "-130", "-130.P"]
+s4_10_1_9_dup2_x1 = ["-100", "-100.P", "-110", "-110.P", "-120", "-120.P", "-130", "-130.P"]
+s4_10_1_9_dup2_x2 = [
+  "-100", "-100.P", "-110", "-110-A", "-110-B", "-110-C", "-110-D", "-110.P", "-120", "-120.P",
+  "-130", "-130.P", "-140", "-140.P", "-150", "-150.P"
+]
+s4_10_1_9_f2d = ["-100", "-100.P", "-200", "-200.P", "-300", "-300.P"]
+s4_10_1_9_fadd = ["-100", "-100.P"]
+s4_10_1_9_faload = ["-100", "-100.P"]
+s4_10_1_9_fastore = ["-100", "-100.P"]
+s4_10_1_9_fcmp_op = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_fconst_f = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_fdiv = ["-100", "-100.P"]
+s4_10_1_9_fload = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_fmul = ["-100", "-100.P"]
+s4_10_1_9_fneg = ["-100", "-100.P"]
+s4_10_1_9_frem = ["-100", "-100.P"]
+s4_10_1_9_freturn = ["-100", "-100.P"]
+s4_10_1_9_fstore = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_fsub = ["-100", "-100.P"]
+s4_10_1_9_getfield = ["-100", "-100.P"]
+s4_10_1_9_getstatic = ["-100", "-100.P"]
+s4_10_1_9_goto = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_i2b = [
+  "-100", "-100.P", "-200", "-200.P", "-300", "-300.P", "-400", "-400.P", "-500", "-500.P",
+  "-600", "-600.P"
+]
+s4_10_1_9_iadd = ["-100", "-100.P"]
+s4_10_1_9_iaload = ["-100", "-100.P"]
+s4_10_1_9_iand = ["-100", "-100.P"]
+s4_10_1_9_iastore = ["-100", "-100.P"]
+s4_10_1_9_iconst_i = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_idiv = ["-100", "-100.P"]
+s4_10_1_9_if_acmp_cond = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_if_icmp_cond = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_if_cond = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_ifnonnull = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_iinc = ["-100", "-100.P"]
+s4_10_1_9_iload = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_imul = ["-100", "-100.P"]
+s4_10_1_9_ineg = ["-100", "-100.P"]
+s4_10_1_9_instanceof = ["-100", "-100.P"]
+s4_10_1_9_invokedynamic = ["-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100.P"]
+s4_10_1_9_invokeinterface = [
+  "-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100-E", "-100.P", "-110", "-110.P"
+]
+s4_10_1_9_invokespecial = [
+  "-100", "-100-A", "-100-B", "-100-B-A", "-100-B-B", "-100-B-C", "-100-B-D", "-100.P", "-100-C",
+  "-100-C-A", "-100-C-B", "-100-C-C", "-100-C-D", "-100-C-E", "-100.P.1", "-100-D", "-100-D-A",
+  "-100-D-B", "-100-D-C", "-100-D-D", "-100-D-E", "-100-D-F", "-100.P.2"
+]
+s4_10_1_9_invokestatic = ["-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100.P"]
+s4_10_1_9_invokevirtual = ["-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100-E", "-100.P"]
+s4_10_1_9_ior = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_ireturn = ["-100", "-100.P"]
+s4_10_1_9_ishl = ["-100", "-100.P", "-200", "-200.P", "-300", "-300.P"]
+s4_10_1_9_istore = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_isub = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_l2d = ["-100", "-100.P", "-200", "-200.P", "-300", "-300.P"]
+s4_10_1_9_ladd = ["-100", "-100.P"]
+s4_10_1_9_laload = ["-100", "-100.P"]
+s4_10_1_9_land = ["-100", "-100.P"]
+s4_10_1_9_lastore = ["-100", "-100.P"]
+s4_10_1_9_lcmp = ["-100", "-100.P"]
+s4_10_1_9_lconst_l = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_ldc = ["-100", "-100.P", "-200", "-200.P", "-300", "-300.P"]
+s4_10_1_9_ldiv = ["-100", "-100.P"]
+s4_10_1_9_lload = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_lmul = ["-100", "-100.P"]
+s4_10_1_9_lneg = ["-100", "-100.P"]
+s4_10_1_9_lookupswitch = ["-100", "-100.P"]
+s4_10_1_9_lor = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_lreturn = ["-100", "-100.P"]
+s4_10_1_9_lshl = ["-100", "-100.P", "-200", "-200.P", "-300", "-300.P"]
+s4_10_1_9_lstore = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_lsub = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_monitorenter = ["-100", "-100.P", "-200", "-200.P"]
+s4_10_1_9_multianewarray = ["-100", "-100.P", "-110", "-110.P"]
+s4_10_1_9_new = ["-100", "-100.P"]
+s4_10_1_9_newarray = ["-100", "-100.P", "-110", "-110.P"]
+s4_10_1_9_nop = ["-100", "-100.P"]
+s4_10_1_9_pop = [
+  "-100", "-100.P", "-200", "-200.P", "-210", "-210.P", "-220", "-220.P", "-230", "-230.P"
+]
+s4_10_1_9_putfield = [
+  "-100", "-100-A", "-100-B", "-100-B-A", "-100-B-B", "-100.P", "-100-C", "-100-C-A", "-100.P.1"
+]
+s4_10_1_9_putstatic = ["-100", "-100.P"]
+s4_10_1_9_return = ["-100", "-100-A", "-100-B", "-100.P"]
+s4_10_1_9_saload = ["-100", "-100.P"]
+s4_10_1_9_sastore = ["-100", "-100.P"]
+s4_10_1_9_sipush = ["-100", "-100.P"]
+s4_10_1_9_swap = ["-100", "-100.P"]
+s4_10_1_9_tableswitch = ["-100", "-100.P"]
+s4_10_1_9_wide = ["-100", "-100.P"]
+s4_10_2 = ["-100"]
+s4_10_2_1 = ["-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100-E", "-110"]
+s4_10_2_2 = [
+  "-100", "-100-A", "-100-B", "-100-C", "-100-D", "-100-E", "-100-F", "-100-G", "-200", "-210",
+  "-220", "-220-A", "-220-B", "-220-B-A", "-220-B-B", "-220-B-C", "-220-B-D", "-220-C",
+  "-220-C-A", "-220-C-B", "-220-C-C", "-220-D", "-220-D-A", "-220-D-B", "-220-D.1", "-220-D.1-A",
+  "-220-D.1-B", "-220-E", "-300", "-320", "-400", "-500"
+]
+s4_10_2_3 = ["-100", "-110", "-120", "-130", "-140"]
+s4_10_2_4 = ["-100", "-110", "-120", "-130", "-140", "-150", "-160", "-170"]
+s4_10_2_5 = [
+  "-100", "-110", "-110-A", "-110-B", "-110-C", "-120", "-120-A", "-120-B", "-120-C", "-200",
+  "-200-A", "-200-B", "-200-C", "-210", "-220", "-220-A", "-220-B", "-220-C", "-220-D",
+  "-220-D-1", "-220-D-2"
+]
+s4_11 = [
+  "-100", "-100-A", "-100-B", "-100-B.1", "-100-C", "-100-C.1", "-100-D", "-100-E", "-100-E.1",
+  "-100-F", "-100-F.1", "-100-G", "-100-G.1", "-100-H", "-100-H.1", "-100-I"
+]
+
+# Full fragments for the separately named descriptor and signature grammar productions.
+[productions]
+s4_3_2 = [
+  "jvms-FieldDescriptor", "jvms-FieldType", "jvms-BaseType", "jvms-ClassType", "jvms-ArrayType",
+  "jvms-ComponentType"
+]
+s4_3_3 = [
+  "jvms-MethodDescriptor", "jvms-ParameterDescriptor", "jvms-ReturnDescriptor",
+  "jvms-VoidDescriptor"
+]
+s4_7_9_1 = [
+  "jvms-JavaTypeSignature", "jvms-ReferenceTypeSignature", "jvms-ClassTypeSignature",
+  "jvms-PackageSpecifier", "jvms-SimpleClassTypeSignature", "jvms-TypeArguments",
+  "jvms-TypeArgument", "jvms-WildcardIndicator", "jvms-ClassTypeSignatureSuffix",
+  "jvms-TypeVariableSignature", "jvms-ArrayTypeSignature", "jvms-ClassSignature",
+  "jvms-TypeParameters", "jvms-TypeParameter", "jvms-ClassBound", "jvms-InterfaceBound",
+  "jvms-SuperclassSignature", "jvms-SuperinterfaceSignature", "jvms-MethodSignature",
+  "jvms-Result", "jvms-ThrowsSignature", "jvms-FieldSignature"
+]
+
+[[case]]
+id = "JVMS.4.1"
+spec = ["s4_1"]
+java = "25"
+status = "planned"
+expect = """
+An otherwise valid class with magic other than CAFEBABE is rejected with ClassFormatError."""
+
+[[case]]
+id = "JVMS.4.1.VERSION"
+spec = ["s4_1"]
+java = "25"
+status = "planned"
+expect = """
+Java 25 rejects a class whose major version is greater than 69 with \
+UnsupportedClassVersionError."""
+
+[[case]]
+id = "JVMS.4.1.SUPER"
+spec = ["s4_1"]
+java = "25"
+status = "planned"
+expect = """
+For an ordinary class other than Object, super_class must identify a nonzero CONSTANT_Class \
+entry."""
+
+[[case]]
+id = "JVMS.4.1.FLAGS"
+spec = ["s4_1"]
+java = "25"
+status = "planned"
+expect = "A class cannot be both final and abstract. Reject a class file that sets both flags."
+
+[[case]]
+id = "JVMS.4.1.MODULE_INFO"
+spec = ["s4_1"]
+java = "25"
+status = "planned"
+expect = """
+ACC_MODULE denotes a module descriptor with the required name, zero superclass and no fields or \
+methods."""
+
+[[case]]
+id = "JVMS.4.1.MINOR"
+spec = ["s4_1"]
+java = "25"
+status = "planned"
+expect = "For major versions 56 through 69, reject a minor version other than zero or 65535."
+
+[[case]]
+id = "JVMS.4.1.INTERFACE"
+spec = ["s4_1"]
+java = "25"
+status = "planned"
+expect = "An interface identifies Object as its superclass and carries the abstract flag."
+
+[[case]]
+id = "JVMS.4.1.ACCESS_FLAGS"
+spec = ["s4_1"]
+java = "25"
+status = "planned"
+expect = "A final class cannot declare a PermittedSubclasses attribute."
+
+[[case]]
+id = "JVMS.4.2.1"
+spec = ["s4_2_1"]
+java = "25"
+status = "planned"
+expect = """
+A class constant for a non-array type uses slash-separated internal names. Reject a dotted \
+binary name in its place."""
+
+[[case]]
+id = "JVMS.4.2.2"
+spec = ["s4_2_2"]
+java = "25"
+status = "planned"
+expect = """
+Reject a field name containing a forbidden separator or an ordinary method name containing an \
+angle bracket."""
+
+[[case]]
+id = "JVMS.4.2.3"
+spec = ["s4_2_3"]
+java = "25"
+status = "planned"
+expect = """
+Read a package name in internal form and interpret the specified escaping in a module name."""
+
+[[case]]
+id = "JVMS.4.3.2"
+spec = ["s4_3_2"]
+java = "25"
+status = "planned"
+expect = "Parse the element type and rank of an array descriptor and reject an array of void."
+
+[[case]]
+id = "JVMS.4.3.3"
+spec = ["s4_3_3"]
+java = "25"
+status = "planned"
+expect = """
+Reject a method descriptor containing void as a parameter or extra characters after its return \
+descriptor."""
+
+[[case]]
+id = "JVMS.4.4"
+spec = ["s4_4"]
+java = "25"
+status = "planned"
+expect = """
+Reject a reference to an unusable pool slot, an out-of-range index or an unrecognized constant \
+tag."""
+
+[[case]]
+id = "JVMS.4.4.1"
+spec = ["s4_4_1"]
+java = "25"
+status = "planned"
+expect = """
+The name index of a class constant must designate a UTF-8 entry naming a class, interface or \
+array type."""
+
+[[case]]
+id = "JVMS.4.4.2"
+spec = ["s4_4_2"]
+java = "25"
+status = "planned"
+expect = """
+A symbolic field or method reference must point to a class entry and a NameAndType entry of the \
+appropriate descriptor kind."""
+
+[[case]]
+id = "JVMS.4.4.3"
+spec = ["s4_4_3"]
+java = "25"
+status = "planned"
+expect = """
+The string index must identify a UTF-8 constant. Loading a valid string constant returns its \
+interned String."""
+
+[[case]]
+id = "JVMS.4.4.4"
+spec = ["s4_4_4"]
+java = "25"
+status = "planned"
+expect = "An integer or float constant uses one pool slot and preserves the encoded 32-bit value."
+
+[[case]]
+id = "JVMS.4.4.5"
+spec = ["s4_4_5"]
+java = "25"
+status = "planned"
+expect = """
+A long or double constant occupies two pool slots. The following slot is unavailable for another \
+constant."""
+
+[[case]]
+id = "JVMS.4.4.6"
+spec = ["s4_4_6"]
+java = "25"
+status = "planned"
+expect = """
+A NameAndType has UTF-8 name and descriptor indices. Reject a field descriptor where a method \
+descriptor is required."""
+
+[[case]]
+id = "JVMS.4.4.7"
+spec = ["s4_4_7"]
+java = "25"
+status = "planned"
+expect = """
+Decode modified UTF-8 with the two-byte encoding of NUL and paired surrogate encodings for \
+supplementary characters."""
+
+[[case]]
+id = "JVMS.4.4.7.MALFORMED"
+spec = ["s4_4_7"]
+java = "25"
+status = "planned"
+expect = "Reject zero bytes and four-byte standard UTF-8 sequences in a CONSTANT_Utf8 payload."
+
+[[case]]
+id = "JVMS.4.4.8"
+spec = ["s4_4_8"]
+java = "25"
+status = "planned"
+expect = """
+Reject an incompatible combination of reference_kind and target constant tag in a method-handle \
+entry."""
+
+[[case]]
+id = "JVMS.4.4.8.CONSTRUCTOR"
+spec = ["s4_4_8"]
+java = "25"
+status = "planned"
+expect = """
+REF_newInvokeSpecial designates a constructor. Other invocation handle kinds cannot target \
+<init> or <clinit>."""
+
+[[case]]
+id = "JVMS.4.4.9"
+spec = ["s4_4_9"]
+java = "25"
+status = "planned"
+expect = """
+A method-type entry points to a UTF-8 method descriptor. A field descriptor is invalid there."""
+
+[[case]]
+id = "JVMS.4.4.10"
+spec = ["s4_4_10"]
+java = "25"
+status = "planned"
+expect = """
+A dynamic constant has a field descriptor and an invocation constant has a method descriptor. \
+Both select a bootstrap table entry."""
+
+[[case]]
+id = "JVMS.4.4.10.BOOTSTRAP_INDEX"
+spec = ["s4_4_10"]
+java = "25"
+status = "planned"
+expect = "A bootstrap_method_attr_index must be below the BootstrapMethods entry count."
+
+[[case]]
+id = "JVMS.4.4.11"
+spec = ["s4_4_11"]
+java = "25"
+status = "planned"
+expect = "A module constant is legal in a module descriptor and its name index must point to UTF-8."
+
+[[case]]
+id = "JVMS.4.4.12"
+spec = ["s4_4_12"]
+java = "25"
+status = "planned"
+expect = """
+A package constant is legal in a module descriptor and identifies a UTF-8 package name in \
+internal form."""
+
+[[case]]
+id = "JVMS.4.5"
+spec = ["s4_5"]
+java = "25"
+status = "planned"
+expect = """
+Reject duplicate field declarations with the same name and descriptor. Fields may share a name \
+if their descriptors differ."""
+
+[[case]]
+id = "JVMS.4.5.FLAGS"
+spec = ["s4_5"]
+java = "25"
+status = "planned"
+expect = "Reject fields that are both final and volatile."
+
+[[case]]
+id = "JVMS.4.6"
+spec = ["s4_6"]
+java = "25"
+status = "planned"
+expect = """
+Reject duplicate method declarations with the same name and descriptor, including their return \
+type."""
+
+[[case]]
+id = "JVMS.4.6.CODE"
+spec = ["s4_6"]
+java = "25"
+status = "planned"
+expect = """
+An abstract or native method has no Code attribute. A concrete non-native method requires \
+exactly one."""
+
+[[case]]
+id = "JVMS.4.7"
+spec = ["s4_7"]
+java = "25"
+status = "planned"
+expect = """
+Consume an attribute's declared byte length in its enclosing structure. Reject truncated or \
+inconsistent lengths."""
+
+[[case]]
+id = "JVMS.4.7.1"
+spec = ["s4_7_1"]
+java = "25"
+status = "planned"
+expect = """
+An unrecognized attribute with a valid length can be skipped without changing execution of the \
+class."""
+
+[[case]]
+id = "JVMS.4.7.2"
+spec = ["s4_7_2"]
+java = "25"
+status = "planned"
+expect = """
+During initialization a static constant field takes the compatible constant-pool value before \
+the class initializer runs."""
+
+[[case]]
+id = "JVMS.4.7.2.INSTANCE"
+spec = ["s4_7_2"]
+java = "25"
+status = "planned"
+expect = """
+A ConstantValue attribute on a non-static field does not assign an initial instance value."""
+
+[[case]]
+id = "JVMS.4.7.3"
+spec = ["s4_7_3"]
+java = "25"
+status = "planned"
+expect = """
+Code contains the method bytecode, frame bounds and exception table. Reject a handler outside \
+the code array."""
+
+[[case]]
+id = "JVMS.4.7.3.HANDLER"
+spec = ["s4_7_3"]
+java = "25"
+status = "planned"
+expect = """
+A nonzero catch_type names a Throwable subtype. A zero catch_type catches every exception in the \
+range."""
+
+[[case]]
+id = "JVMS.4.7.4"
+spec = ["s4_7_4"]
+java = "25"
+status = "planned"
+expect = """
+Frame offsets accumulate from offset_delta. Each declared frame must agree with the incoming \
+verifier state."""
+
+[[case]]
+id = "JVMS.4.7.4.UNINITIALIZED"
+spec = ["s4_7_4"]
+java = "25"
+status = "planned"
+expect = """
+An uninitialized verification entry refers to the offset of the new instruction that produced \
+the object."""
+
+[[case]]
+id = "JVMS.4.7.5"
+spec = ["s4_7_5"]
+java = "25"
+status = "planned"
+expect = """
+The Exceptions attribute contains class indices for the method's declared exception types."""
+
+[[case]]
+id = "JVMS.4.7.6"
+spec = ["s4_7_6"]
+java = "default"
+fixture = "reflection/nested"
+evidence = ["Test.java#main"]
+expect = """
+Reflection identifies the declaring class of the nested member classes described in the fixture."""
+
+[[case]]
+id = "JVMS.4.7.6.ENCLOSING"
+spec = ["s4_7_6"]
+java = "25"
+status = "planned"
+expect = """
+Read the outer class, simple inner name and access flags independently for each InnerClasses \
+entry."""
+
+[[case]]
+id = "JVMS.4.7.7"
+spec = ["s4_7_7"]
+java = "default"
+fixture = "reflection/nested"
+evidence = ["Test.java#main"]
+expect = "A local class declared in a method reports that method as its enclosing method."
+
+[[case]]
+id = "JVMS.4.7.8"
+spec = ["s4_7_8"]
+java = "25"
+status = "planned"
+expect = """
+A zero-length Synthetic attribute marks a compiler-generated member. Its payload cannot contain \
+extra bytes."""
+
+[[case]]
+id = "JVMS.4.7.9"
+spec = ["s4_7_9"]
+java = "default"
+fixture = "reflection/generics"
+evidence = ["Test.java#main"]
+expect = """
+Generic reflection reads type arguments and type variables from signatures independently of \
+erasure."""
+
+[[case]]
+id = "JVMS.4.7.9.ERASURE"
+spec = ["s4_7_9"]
+java = "25"
+status = "planned"
+expect = """
+Signatures carry generic metadata. Ordinary method resolution uses the erased name and \
+descriptor."""
+
+[[case]]
+id = "JVMS.4.7.9.1"
+spec = ["s4_7_9_1"]
+java = "25"
+status = "planned"
+expect = """
+Parse nested parameterized class types, type variables, wildcard bounds and array signatures \
+with the signature grammar."""
+
+[[case]]
+id = "JVMS.4.7.10"
+spec = ["s4_7_10"]
+java = "default"
+fixture = "exceptions/stack_trace_class_info"
+evidence = ["Test.java#testStackTraceHasFileName"]
+expect = "The fixture's stack trace identifies the source file recorded for the executing class."
+
+[[case]]
+id = "JVMS.4.7.11"
+spec = ["s4_7_11"]
+java = "25"
+status = "planned"
+expect = """
+A SourceDebugExtension carries its modified UTF-8 payload independently of the UTF-8 \
+constant-pool length limit."""
+
+[[case]]
+id = "JVMS.4.7.12"
+spec = ["s4_7_12"]
+java = "default"
+fixture = "exceptions/stack_trace_class_info"
+evidence = ["Test.java#testStackTraceHasLineNumber"]
+expect = """
+Bytecode locations with line information report the associated source line in the fixture's \
+stack trace."""
+
+[[case]]
+id = "JVMS.4.7.13"
+spec = ["s4_7_13"]
+java = "25"
+status = "planned"
+expect = """
+A LocalVariableTable entry describes a local slot and descriptor over its declared bytecode \
+interval."""
+
+[[case]]
+id = "JVMS.4.7.14"
+spec = ["s4_7_14"]
+java = "25"
+status = "planned"
+expect = """
+A LocalVariableTypeTable entry supplies the generic signature of a local variable over the \
+matching scope and slot."""
+
+[[case]]
+id = "JVMS.4.7.15"
+spec = ["s4_7_15"]
+java = "25"
+status = "planned"
+expect = "A well-formed Deprecated marker has a zero-length payload and does not change execution."
+
+[[case]]
+id = "JVMS.4.7.16"
+spec = ["s4_7_16"]
+java = "default"
+fixture = "annotation/retention_policies"
+evidence = ["Test.java#main"]
+expect = "A runtime-visible declaration annotation can be read on the annotated class and method."
+
+[[case]]
+id = "JVMS.4.7.16.1"
+spec = ["s4_7_16_1"]
+java = "default"
+fixture = "annotation/element_types"
+evidence = ["Test.java#main"]
+expect = """
+Annotation element values retain their declared primitive, string, class, enum, nested \
+annotation or array form."""
+
+[[case]]
+id = "JVMS.4.7.17"
+spec = ["s4_7_17"]
+java = "default"
+fixture = "annotation/retention_policies"
+evidence = ["Test.java#main"]
+expect = """
+In the default reflection configuration the CLASS-retained declaration annotation is absent."""
+
+[[case]]
+id = "JVMS.4.7.18"
+spec = ["s4_7_18"]
+java = "default"
+fixture = "reflection/parameters"
+evidence = ["Test.java#main"]
+expect = "The runtime-visible annotation on a method parameter is observable on that parameter."
+
+[[case]]
+id = "JVMS.4.7.19"
+spec = ["s4_7_19"]
+java = "25"
+status = "planned"
+expect = """
+In the default reflection configuration a parameter annotation stored solely in \
+RuntimeInvisibleParameterAnnotations is absent."""
+
+[[case]]
+id = "JVMS.4.7.20"
+spec = ["s4_7_20"]
+java = "25"
+status = "planned"
+expect = """
+A runtime-visible type annotation retains its target and location within the annotated type."""
+
+[[case]]
+id = "JVMS.4.7.20.1"
+spec = ["s4_7_20_1"]
+java = "25"
+status = "planned"
+expect = """
+Decode target_info according to target_type and reject a target kind that is illegal at the \
+attribute's location."""
+
+[[case]]
+id = "JVMS.4.7.20.2"
+spec = ["s4_7_20_2"]
+java = "25"
+status = "planned"
+expect = """
+An array element, nested type, wildcard bound and type argument select distinct locations in a \
+type path."""
+
+[[case]]
+id = "JVMS.4.7.20.2.TYPE_ARGUMENT"
+spec = ["s4_7_20_2"]
+java = "25"
+status = "planned"
+expect = """
+For a type-path step selecting a type argument, use the supplied argument index. Other defined \
+step kinds require index zero."""
+
+[[case]]
+id = "JVMS.4.7.21"
+spec = ["s4_7_21"]
+java = "25"
+status = "planned"
+expect = """
+By default an invisible type-use annotation is unavailable through the reflection \
+type-annotation interface."""
+
+[[case]]
+id = "JVMS.4.7.22"
+spec = ["s4_7_22"]
+java = "default"
+fixture = "annotation/values"
+evidence = ["Test.java#main"]
+expect = """
+An annotation use that omits an element obtains the default recorded by the annotation \
+interface."""
+
+[[case]]
+id = "JVMS.4.7.23"
+spec = ["s4_7_23"]
+java = "25"
+fixture = "method/dynamic_bootstrap_arguments"
+evidence = ["Test.java#main"]
+expect = """
+The bootstrap receives the static arguments referenced by the selected bootstrap table entry in \
+order."""
+
+[[case]]
+id = "JVMS.4.7.23.REQUIRED"
+spec = ["s4_7_23"]
+java = "25"
+status = "planned"
+expect = """
+A class containing a dynamic or invocation constant requires exactly one BootstrapMethods \
+attribute."""
+
+[[case]]
+id = "JVMS.4.7.24"
+spec = ["s4_7_24"]
+java = "25"
+status = "planned"
+expect = """
+Decode optional parameter names and access flags from MethodParameters. A zero name index \
+signifies an unnamed parameter."""
+
+[[case]]
+id = "JVMS.4.7.25"
+spec = ["s4_7_25"]
+java = "25"
+status = "planned"
+expect = """
+An ACC_MODULE class contains one Module attribute describing its name, flags, version and \
+directives."""
+
+[[case]]
+id = "JVMS.4.7.25.REQUIRES"
+spec = ["s4_7_25"]
+java = "default"
+fixture = "module/dependencies"
+evidence = ["Test.java#testModuleRequires"]
+expect = "Reading a module descriptor preserves the names and flags of its direct requirements."
+
+[[case]]
+id = "JVMS.4.7.25.DIRECTIVES"
+spec = ["s4_7_25"]
+java = "25"
+status = "planned"
+expect = """
+The exports, opens, uses and provides tables retain their distinct package, target module and \
+service class indices."""
+
+[[case]]
+id = "JVMS.4.7.26"
+spec = ["s4_7_26"]
+java = "25"
+status = "planned"
+expect = """
+The optional ModulePackages attribute lists packages via CONSTANT_Package entries and occurs at \
+most once."""
+
+[[case]]
+id = "JVMS.4.7.26.PACKAGES"
+spec = ["s4_7_26"]
+java = "25"
+status = "planned"
+expect = """
+An entry in a ModulePackages list must reference a package constant rather than a class \
+constant."""
+
+[[case]]
+id = "JVMS.4.7.27"
+spec = ["s4_7_27"]
+java = "25"
+status = "planned"
+expect = """
+A ModuleMainClass attribute in module-info names the application entry class via a \
+CONSTANT_Class entry."""
+
+[[case]]
+id = "JVMS.4.7.28"
+spec = ["s4_7_28"]
+java = "25"
+status = "planned"
+expect = """
+A member's claimed nest host must acknowledge the member before the nest grants private access."""
+
+[[case]]
+id = "JVMS.4.7.28.EXCLUSIVE"
+spec = ["s4_7_28"]
+java = "25"
+status = "planned"
+expect = "Reject a class file declaring both NestHost and NestMembers."
+
+[[case]]
+id = "JVMS.4.7.29"
+spec = ["s4_7_29"]
+java = "25"
+status = "planned"
+expect = """
+Reject a nest membership claim across run-time packages even if the proposed host lists the \
+member."""
+
+[[case]]
+id = "JVMS.4.7.30"
+spec = ["s4_7_30"]
+java = "default"
+fixture = "record/reflection"
+evidence = ["Test.java#testRecordComponents"]
+expect = """
+Reflection reports record components in declaration order with their declared names and types."""
+
+[[case]]
+id = "JVMS.4.7.30.NESTED_ATTRIBUTES"
+spec = ["s4_7_30"]
+java = "25"
+status = "planned"
+expect = """
+Each record component has its own name, field descriptor and attributes, including its generic \
+signature if present."""
+
+[[case]]
+id = "JVMS.4.7.31"
+spec = ["s4_7_31"]
+java = "25"
+status = "planned"
+expect = "A class outside the permitted subclass list cannot directly extend the sealed class."
+
+[[case]]
+id = "JVMS.4.7.31.ACCESS"
+spec = ["s4_7_31"]
+java = "25"
+status = "planned"
+expect = """
+A permitted direct subclass must share the run-time module of its sealed parent. A non-public \
+subclass must also share its run-time package."""
+
+[[case]]
+id = "JVMS.4.8"
+spec = ["s4_8"]
+java = "25"
+status = "planned"
+expect = """
+Reject truncated class-file structures and trailing bytes after the final class attribute."""
+
+[[case]]
+id = "JVMS.4.8.DEFERRED"
+spec = ["s4_8"]
+java = "25"
+status = "planned"
+expect = """
+A structurally valid reference to a missing method can pass format checking and fail later at \
+resolution."""
+
+[[case]]
+id = "JVMS.4.9"
+spec = ["s4_9"]
+java = "25"
+status = "planned"
+expect = """
+A malformed method whose branch targets the middle of an operand is rejected before it can \
+execute."""
+
+[[case]]
+id = "JVMS.4.9.1"
+spec = ["s4_9_1"]
+java = "25"
+status = "planned"
+expect = """
+Every branch and switch offset must identify the beginning of an instruction in the same method."""
+
+[[case]]
+id = "JVMS.4.9.1.WIDE"
+spec = ["s4_9_1"]
+java = "25"
+status = "planned"
+expect = "A branch cannot target the embedded opcode modified by a wide prefix."
+
+[[case]]
+id = "JVMS.4.9.1.LEGACY"
+spec = ["s4_9_1"]
+java = "25"
+status = "planned"
+expect = "Code in class-file versions 51.0 and later cannot contain jsr, jsr_w or ret."
+
+[[case]]
+id = "JVMS.4.9.1.SWITCH_RANGE"
+spec = ["s4_9_1"]
+java = "25"
+status = "planned"
+expect = "Reject a tableswitch with high below low or a payload inconsistent with its entry count."
+
+[[case]]
+id = "JVMS.4.9.1.SWITCH_KEYS"
+spec = ["s4_9_1"]
+java = "25"
+status = "planned"
+expect = """
+Reject a lookupswitch with a negative pair count or match keys that do not increase strictly."""
+
+[[case]]
+id = "JVMS.4.9.1.INVOKEINTERFACE"
+spec = ["s4_9_1"]
+java = "25"
+status = "planned"
+expect = """
+Reject invokeinterface when its count disagrees with descriptor slot usage including the \
+receiver, or when its trailing byte is nonzero."""
+
+[[case]]
+id = "JVMS.4.9.1.INVOKEDYNAMIC"
+spec = ["s4_9_1"]
+java = "25"
+status = "planned"
+expect = """
+Reject invokedynamic when either of the two operand bytes following the pool index is nonzero."""
+
+[[case]]
+id = "JVMS.4.9.1.CONSTRUCTORS"
+spec = ["s4_9_1"]
+java = "25"
+status = "planned"
+expect = "Only invokespecial can name <init>. A method invocation must not directly name <clinit>."
+
+[[case]]
+id = "JVMS.4.9.1.ATYPE"
+spec = ["s4_9_1"]
+java = "25"
+status = "planned"
+expect = "Only the defined primitive atype codes can be operands of newarray."
+
+[[case]]
+id = "JVMS.4.9.1.LOCAL_LIMIT"
+spec = ["s4_9_1"]
+java = "25"
+status = "planned"
+expect = """
+The largest legal local index for a two-slot load or store is max_locals minus two, including \
+wide forms."""
+
+[[case]]
+id = "JVMS.4.9.2"
+spec = ["s4_9_2"]
+java = "25"
+status = "planned"
+expect = "Reject an execution path that falls through the end of the method's code array."
+
+[[case]]
+id = "JVMS.4.9.2.STACK"
+spec = ["s4_9_2"]
+java = "25"
+status = "planned"
+expect = """
+Each reachable instruction has enough correctly typed operands and its result fits within \
+max_stack."""
+
+[[case]]
+id = "JVMS.4.9.2.UNINITIALIZED"
+spec = ["s4_9_2"]
+java = "25"
+status = "planned"
+expect = """
+Do not allow an uninitialized object to be returned, passed as an ordinary method argument or \
+used for a virtual call."""
+
+[[case]]
+id = "JVMS.4.9.2.SUBROUTINE"
+spec = ["s4_9_2"]
+java = "25"
+status = "planned"
+expect = """
+A legacy subroutine cannot recursively jsr to itself while it remains on the subroutine call \
+chain."""
+
+[[case]]
+id = "JVMS.4.10"
+spec = ["s4_10"]
+java = "25"
+status = "planned"
+expect = """
+A verification failure prevents execution of the invalid method and is reported as VerifyError."""
+
+[[case]]
+id = "JVMS.4.10.1"
+spec = ["s4_10_1"]
+java = "25"
+status = "planned"
+expect = """
+For class-file version 51.0 or later, an inconsistent stack-map frame causes verification to \
+fail."""
+
+[[case]]
+id = "JVMS.4.10.1.1"
+spec = ["s4_10_1_1"]
+java = "25"
+status = "planned"
+expect = """
+Verifier queries distinguish the defining loader of a class from other loaders that know its \
+binary name."""
+
+[[case]]
+id = "JVMS.4.10.1.2"
+spec = ["s4_10_1_2"]
+java = "25"
+status = "planned"
+expect = """
+Verifier reference types incorporate loading identity. Null is assignable to reference types and \
+not to an int."""
+
+[[case]]
+id = "JVMS.4.10.1.2.TWO_SLOTS"
+spec = ["s4_10_1_2"]
+java = "25"
+status = "planned"
+expect = """
+Category-2 values occupy two locations in a verification frame. Two category-1 values cannot \
+substitute for one category-2 value."""
+
+[[case]]
+id = "JVMS.4.10.1.3"
+spec = ["s4_10_1_3"]
+java = "25"
+status = "planned"
+expect = """
+Instruction boundaries and absolute target positions in the verifier's instruction stream agree \
+with the encoded offsets."""
+
+[[case]]
+id = "JVMS.4.10.1.4"
+spec = ["s4_10_1_4"]
+java = "25"
+status = "planned"
+expect = """
+At a control-flow join, the incoming locals and stack must be assignable to the declared \
+stack-map frame."""
+
+[[case]]
+id = "JVMS.4.10.1.4.HANDLER"
+spec = ["s4_10_1_4"]
+java = "25"
+status = "planned"
+expect = """
+An exceptional successor discards the current operand stack and receives the exception \
+reference."""
+
+[[case]]
+id = "JVMS.4.10.1.5"
+spec = ["s4_10_1_5"]
+java = "25"
+status = "planned"
+expect = """
+The initial frame accounts for the receiver on instance methods and reserves two slots per long \
+or double parameter."""
+
+[[case]]
+id = "JVMS.4.10.1.6"
+spec = ["s4_10_1_6"]
+java = "25"
+status = "planned"
+expect = """
+An exception handler starts with the caught exception as its single stack item and compatible \
+locals."""
+
+[[case]]
+id = "JVMS.4.10.1.7"
+spec = ["s4_10_1_7"]
+java = "25"
+status = "planned"
+expect = """
+Reading an unset or incompatibly typed local fails verification. A valid store establishes the \
+new local type."""
+
+[[case]]
+id = "JVMS.4.10.1.8"
+spec = ["s4_10_1_8"]
+java = "25"
+status = "planned"
+expect = """
+For a cross-package protected instance member accessed from a subclass, the verifier constrains \
+the receiver to that subclass or a subtype."""
+
+[[case]]
+id = "JVMS.4.10.1.9"
+spec = ["s4_10_1_9"]
+java = "25"
+status = "planned"
+expect = """
+Verification applies the instruction's type transition to every reachable instruction, including \
+handler entries."""
+
+[[case]]
+id = "JVMS.4.10.1.9.INIT_ALIAS"
+spec = ["s4_10_1_9"]
+java = "25"
+status = "planned"
+expect = """
+After a valid constructor call, all aliases of the same uninitialized verification type in the \
+frame become initialized."""
+
+[[case]]
+id = "JVMS.4.VERIFY.AALOAD"
+spec = ["s4_10_1_9_aaload"]
+java = "25"
+status = "planned"
+axes = { opcode = "aaload" }
+expect = """
+Consume a reference array (or null) and an int index. Push the reference component type, or null \
+for the null array type."""
+
+[[case]]
+id = "JVMS.4.VERIFY.AASTORE"
+spec = ["s4_10_1_9_aastore"]
+java = "25"
+status = "planned"
+axes = { opcode = "aastore" }
+expect = "Consume a reference array (or null), an int index and a reference operand."
+
+[[case]]
+id = "JVMS.4.VERIFY.ACONST_NULL"
+spec = ["s4_10_1_9_aconst_null"]
+java = "25"
+status = "planned"
+axes = { opcode = "aconst_null" }
+expect = "Push the verification type null."
+
+[[case]]
+id = "JVMS.4.VERIFY.ALOAD"
+spec = ["s4_10_1_9_aload"]
+java = "25"
+status = "planned"
+axes = { opcode = "aload" }
+expect = "Require a usable reference in the indexed local and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.ALOAD_0"
+spec = ["s4_10_1_9_aload"]
+java = "25"
+status = "planned"
+axes = { opcode = "aload_0" }
+expect = "Require a usable reference in local 0 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.ALOAD_1"
+spec = ["s4_10_1_9_aload"]
+java = "25"
+status = "planned"
+axes = { opcode = "aload_1" }
+expect = "Require a usable reference in local 1 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.ALOAD_2"
+spec = ["s4_10_1_9_aload"]
+java = "25"
+status = "planned"
+axes = { opcode = "aload_2" }
+expect = "Require a usable reference in local 2 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.ALOAD_3"
+spec = ["s4_10_1_9_aload"]
+java = "25"
+status = "planned"
+axes = { opcode = "aload_3" }
+expect = "Require a usable reference in local 3 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.ANEWARRAY"
+spec = ["s4_10_1_9_anewarray"]
+java = "25"
+status = "planned"
+axes = { opcode = "anewarray" }
+expect = "Pop int and push an array type with the referenced component type."
+
+[[case]]
+id = "JVMS.4.VERIFY.ARETURN"
+spec = ["s4_10_1_9_areturn"]
+java = "25"
+status = "planned"
+axes = { opcode = "areturn" }
+expect = """
+Require a reference result compatible with the declared return descriptor and terminate this \
+frame’s normal control flow."""
+
+[[case]]
+id = "JVMS.4.VERIFY.ARRAYLENGTH"
+spec = ["s4_10_1_9_arraylength"]
+java = "25"
+status = "planned"
+axes = { opcode = "arraylength" }
+expect = "Consume an array reference or null and produce int."
+
+[[case]]
+id = "JVMS.4.VERIFY.ASTORE"
+spec = ["s4_10_1_9_astore"]
+java = "25"
+status = "planned"
+axes = { opcode = "astore" }
+expect = """
+Pop a reference-compatible local-store operand, retaining its verification type in the indexed \
+local."""
+
+[[case]]
+id = "JVMS.4.VERIFY.ASTORE_0"
+spec = ["s4_10_1_9_astore"]
+java = "25"
+status = "planned"
+axes = { opcode = "astore_0" }
+expect = """
+Pop a reference-compatible local-store operand, retaining its verification type in local 0."""
+
+[[case]]
+id = "JVMS.4.VERIFY.ASTORE_1"
+spec = ["s4_10_1_9_astore"]
+java = "25"
+status = "planned"
+axes = { opcode = "astore_1" }
+expect = """
+Pop a reference-compatible local-store operand, retaining its verification type in local 1."""
+
+[[case]]
+id = "JVMS.4.VERIFY.ASTORE_2"
+spec = ["s4_10_1_9_astore"]
+java = "25"
+status = "planned"
+axes = { opcode = "astore_2" }
+expect = """
+Pop a reference-compatible local-store operand, retaining its verification type in local 2."""
+
+[[case]]
+id = "JVMS.4.VERIFY.ASTORE_3"
+spec = ["s4_10_1_9_astore"]
+java = "25"
+status = "planned"
+axes = { opcode = "astore_3" }
+expect = """
+Pop a reference-compatible local-store operand, retaining its verification type in local 3."""
+
+[[case]]
+id = "JVMS.4.VERIFY.ATHROW"
+spec = ["s4_10_1_9_athrow"]
+java = "25"
+status = "planned"
+axes = { opcode = "athrow" }
+expect = "Require an operand assignable to Throwable. This instruction has no normal successor."
+
+[[case]]
+id = "JVMS.4.VERIFY.BALOAD"
+spec = ["s4_10_1_9_baload"]
+java = "25"
+status = "planned"
+axes = { opcode = "baload" }
+expect = "Consume byte[] or boolean[] (or null) and an int index. Push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.BASTORE"
+spec = ["s4_10_1_9_bastore"]
+java = "25"
+status = "planned"
+axes = { opcode = "bastore" }
+expect = "Consume byte[] or boolean[] (or null), an int index and a int operand."
+
+[[case]]
+id = "JVMS.4.VERIFY.BIPUSH"
+spec = ["s4_10_1_9_bipush"]
+java = "25"
+status = "planned"
+axes = { opcode = "bipush" }
+expect = "Push int regardless of the sign of the immediate."
+
+[[case]]
+id = "JVMS.4.VERIFY.CALOAD"
+spec = ["s4_10_1_9_caload"]
+java = "25"
+status = "planned"
+axes = { opcode = "caload" }
+expect = "Consume char[] (or null) and an int index. Push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.CASTORE"
+spec = ["s4_10_1_9_castore"]
+java = "25"
+status = "planned"
+axes = { opcode = "castore" }
+expect = "Consume char[] (or null), an int index and a int operand."
+
+[[case]]
+id = "JVMS.4.VERIFY.CHECKCAST"
+spec = ["s4_10_1_9_checkcast"]
+java = "25"
+status = "planned"
+axes = { opcode = "checkcast" }
+expect = """
+Pop a reference and push the target reference type, permitting a run-time check to decide \
+assignability."""
+
+[[case]]
+id = "JVMS.4.VERIFY.D2I"
+spec = ["s4_10_1_9_d2f"]
+java = "25"
+status = "planned"
+axes = { opcode = "d2i" }
+expect = "Pop double and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.D2L"
+spec = ["s4_10_1_9_d2f"]
+java = "25"
+status = "planned"
+axes = { opcode = "d2l" }
+expect = "Pop double and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.D2F"
+spec = ["s4_10_1_9_d2f"]
+java = "25"
+status = "planned"
+axes = { opcode = "d2f" }
+expect = "Pop double and push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.DADD"
+spec = ["s4_10_1_9_dadd"]
+java = "25"
+status = "planned"
+axes = { opcode = "dadd" }
+expect = "Consume two double operands and push double."
+
+[[case]]
+id = "JVMS.4.VERIFY.DALOAD"
+spec = ["s4_10_1_9_daload"]
+java = "25"
+status = "planned"
+axes = { opcode = "daload" }
+expect = "Consume double[] (or null) and an int index. Push double."
+
+[[case]]
+id = "JVMS.4.VERIFY.DASTORE"
+spec = ["s4_10_1_9_dastore"]
+java = "25"
+status = "planned"
+axes = { opcode = "dastore" }
+expect = "Consume double[] (or null), an int index and a double operand."
+
+[[case]]
+id = "JVMS.4.VERIFY.DCMPL"
+spec = ["s4_10_1_9_dcmp_op"]
+java = "25"
+status = "planned"
+axes = { opcode = "dcmpl" }
+expect = "Pop two double operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.DCMPG"
+spec = ["s4_10_1_9_dcmp_op"]
+java = "25"
+status = "planned"
+axes = { opcode = "dcmpg" }
+expect = "Pop two double operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.DCONST_0"
+spec = ["s4_10_1_9_dconst_d"]
+java = "25"
+status = "planned"
+axes = { opcode = "dconst_0" }
+expect = "Push double."
+
+[[case]]
+id = "JVMS.4.VERIFY.DCONST_1"
+spec = ["s4_10_1_9_dconst_d"]
+java = "25"
+status = "planned"
+axes = { opcode = "dconst_1" }
+expect = "Push double."
+
+[[case]]
+id = "JVMS.4.VERIFY.DDIV"
+spec = ["s4_10_1_9_ddiv"]
+java = "25"
+status = "planned"
+axes = { opcode = "ddiv" }
+expect = "Consume two double operands and push double."
+
+[[case]]
+id = "JVMS.4.VERIFY.DLOAD"
+spec = ["s4_10_1_9_dload"]
+java = "25"
+status = "planned"
+axes = { opcode = "dload" }
+expect = "Require a usable double in the indexed local and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.DLOAD_0"
+spec = ["s4_10_1_9_dload"]
+java = "25"
+status = "planned"
+axes = { opcode = "dload_0" }
+expect = "Require a usable double in local 0 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.DLOAD_1"
+spec = ["s4_10_1_9_dload"]
+java = "25"
+status = "planned"
+axes = { opcode = "dload_1" }
+expect = "Require a usable double in local 1 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.DLOAD_2"
+spec = ["s4_10_1_9_dload"]
+java = "25"
+status = "planned"
+axes = { opcode = "dload_2" }
+expect = "Require a usable double in local 2 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.DLOAD_3"
+spec = ["s4_10_1_9_dload"]
+java = "25"
+status = "planned"
+axes = { opcode = "dload_3" }
+expect = "Require a usable double in local 3 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.DMUL"
+spec = ["s4_10_1_9_dmul"]
+java = "25"
+status = "planned"
+axes = { opcode = "dmul" }
+expect = "Consume two double operands and push double."
+
+[[case]]
+id = "JVMS.4.VERIFY.DNEG"
+spec = ["s4_10_1_9_dneg"]
+java = "25"
+status = "planned"
+axes = { opcode = "dneg" }
+expect = "Consume one double operand and push double."
+
+[[case]]
+id = "JVMS.4.VERIFY.DREM"
+spec = ["s4_10_1_9_drem"]
+java = "25"
+status = "planned"
+axes = { opcode = "drem" }
+expect = "Consume two double operands and push double."
+
+[[case]]
+id = "JVMS.4.VERIFY.DRETURN"
+spec = ["s4_10_1_9_dreturn"]
+java = "25"
+status = "planned"
+axes = { opcode = "dreturn" }
+expect = """
+Require a double result compatible with the declared return descriptor and terminate this \
+frame’s normal control flow."""
+
+[[case]]
+id = "JVMS.4.VERIFY.DSTORE"
+spec = ["s4_10_1_9_dstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "dstore" }
+expect = """
+Require a double operand and record its type in the indexed local and reserve the following \
+slot."""
+
+[[case]]
+id = "JVMS.4.VERIFY.DSTORE_0"
+spec = ["s4_10_1_9_dstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "dstore_0" }
+expect = "Require a double operand and record its type in local 0 and reserve the following slot."
+
+[[case]]
+id = "JVMS.4.VERIFY.DSTORE_1"
+spec = ["s4_10_1_9_dstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "dstore_1" }
+expect = "Require a double operand and record its type in local 1 and reserve the following slot."
+
+[[case]]
+id = "JVMS.4.VERIFY.DSTORE_2"
+spec = ["s4_10_1_9_dstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "dstore_2" }
+expect = "Require a double operand and record its type in local 2 and reserve the following slot."
+
+[[case]]
+id = "JVMS.4.VERIFY.DSTORE_3"
+spec = ["s4_10_1_9_dstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "dstore_3" }
+expect = "Require a double operand and record its type in local 3 and reserve the following slot."
+
+[[case]]
+id = "JVMS.4.VERIFY.DSUB"
+spec = ["s4_10_1_9_dsub"]
+java = "25"
+status = "planned"
+axes = { opcode = "dsub" }
+expect = "Consume two double operands and push double."
+
+[[case]]
+id = "JVMS.4.VERIFY.DUP"
+spec = ["s4_10_1_9_dup"]
+java = "25"
+status = "planned"
+axes = { opcode = "dup" }
+expect = """
+Accept exactly these shapes at the top of the stack in bottom-to-top order. Legal shapes are 1. \
+Reject an operand split across a category-2 value."""
+
+[[case]]
+id = "JVMS.4.VERIFY.DUP_X1"
+spec = ["s4_10_1_9_dup_x1"]
+java = "25"
+status = "planned"
+axes = { opcode = "dup_x1" }
+expect = """
+Accept exactly these shapes at the top of the stack in bottom-to-top order. Legal shapes are 11. \
+Reject an operand split across a category-2 value."""
+
+[[case]]
+id = "JVMS.4.VERIFY.DUP_X2"
+spec = ["s4_10_1_9_dup_x2"]
+java = "25"
+status = "planned"
+axes = { opcode = "dup_x2" }
+expect = """
+Accept exactly these shapes at the top of the stack in bottom-to-top order. Legal shapes are \
+111, 21. Reject an operand split across a category-2 value."""
+
+[[case]]
+id = "JVMS.4.VERIFY.DUP2"
+spec = ["s4_10_1_9_dup2"]
+java = "25"
+status = "planned"
+axes = { opcode = "dup2" }
+expect = """
+Accept exactly these shapes at the top of the stack in bottom-to-top order. Legal shapes are 11, \
+2. Reject an operand split across a category-2 value."""
+
+[[case]]
+id = "JVMS.4.VERIFY.DUP2_X1"
+spec = ["s4_10_1_9_dup2_x1"]
+java = "25"
+status = "planned"
+axes = { opcode = "dup2_x1" }
+expect = """
+Accept exactly these shapes at the top of the stack in bottom-to-top order. Legal shapes are \
+111, 12. Reject an operand split across a category-2 value."""
+
+[[case]]
+id = "JVMS.4.VERIFY.DUP2_X2"
+spec = ["s4_10_1_9_dup2_x2"]
+java = "25"
+status = "planned"
+axes = { opcode = "dup2_x2" }
+expect = """
+Accept exactly these shapes at the top of the stack in bottom-to-top order. Legal shapes are \
+1111, 112, 211, 22. Reject an operand split across a category-2 value."""
+
+[[case]]
+id = "JVMS.4.VERIFY.F2I"
+spec = ["s4_10_1_9_f2d"]
+java = "25"
+status = "planned"
+axes = { opcode = "f2i" }
+expect = "Pop float and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.F2L"
+spec = ["s4_10_1_9_f2d"]
+java = "25"
+status = "planned"
+axes = { opcode = "f2l" }
+expect = "Pop float and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.F2D"
+spec = ["s4_10_1_9_f2d"]
+java = "25"
+status = "planned"
+axes = { opcode = "f2d" }
+expect = "Pop float and push double."
+
+[[case]]
+id = "JVMS.4.VERIFY.FADD"
+spec = ["s4_10_1_9_fadd"]
+java = "25"
+status = "planned"
+axes = { opcode = "fadd" }
+expect = "Consume two float operands and push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.FALOAD"
+spec = ["s4_10_1_9_faload"]
+java = "25"
+status = "planned"
+axes = { opcode = "faload" }
+expect = "Consume float[] (or null) and an int index. Push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.FASTORE"
+spec = ["s4_10_1_9_fastore"]
+java = "25"
+status = "planned"
+axes = { opcode = "fastore" }
+expect = "Consume float[] (or null), an int index and a float operand."
+
+[[case]]
+id = "JVMS.4.VERIFY.FCMPL"
+spec = ["s4_10_1_9_fcmp_op"]
+java = "25"
+status = "planned"
+axes = { opcode = "fcmpl" }
+expect = "Pop two float operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.FCMPG"
+spec = ["s4_10_1_9_fcmp_op"]
+java = "25"
+status = "planned"
+axes = { opcode = "fcmpg" }
+expect = "Pop two float operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.FCONST_0"
+spec = ["s4_10_1_9_fconst_f"]
+java = "25"
+status = "planned"
+axes = { opcode = "fconst_0" }
+expect = "Push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.FCONST_1"
+spec = ["s4_10_1_9_fconst_f"]
+java = "25"
+status = "planned"
+axes = { opcode = "fconst_1" }
+expect = "Push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.FCONST_2"
+spec = ["s4_10_1_9_fconst_f"]
+java = "25"
+status = "planned"
+axes = { opcode = "fconst_2" }
+expect = "Push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.FDIV"
+spec = ["s4_10_1_9_fdiv"]
+java = "25"
+status = "planned"
+axes = { opcode = "fdiv" }
+expect = "Consume two float operands and push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.FLOAD"
+spec = ["s4_10_1_9_fload"]
+java = "25"
+status = "planned"
+axes = { opcode = "fload" }
+expect = "Require a usable float in the indexed local and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.FLOAD_0"
+spec = ["s4_10_1_9_fload"]
+java = "25"
+status = "planned"
+axes = { opcode = "fload_0" }
+expect = "Require a usable float in local 0 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.FLOAD_1"
+spec = ["s4_10_1_9_fload"]
+java = "25"
+status = "planned"
+axes = { opcode = "fload_1" }
+expect = "Require a usable float in local 1 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.FLOAD_2"
+spec = ["s4_10_1_9_fload"]
+java = "25"
+status = "planned"
+axes = { opcode = "fload_2" }
+expect = "Require a usable float in local 2 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.FLOAD_3"
+spec = ["s4_10_1_9_fload"]
+java = "25"
+status = "planned"
+axes = { opcode = "fload_3" }
+expect = "Require a usable float in local 3 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.FMUL"
+spec = ["s4_10_1_9_fmul"]
+java = "25"
+status = "planned"
+axes = { opcode = "fmul" }
+expect = "Consume two float operands and push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.FNEG"
+spec = ["s4_10_1_9_fneg"]
+java = "25"
+status = "planned"
+axes = { opcode = "fneg" }
+expect = "Consume one float operand and push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.FREM"
+spec = ["s4_10_1_9_frem"]
+java = "25"
+status = "planned"
+axes = { opcode = "frem" }
+expect = "Consume two float operands and push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.FRETURN"
+spec = ["s4_10_1_9_freturn"]
+java = "25"
+status = "planned"
+axes = { opcode = "freturn" }
+expect = """
+Require a float result compatible with the declared return descriptor and terminate this frame’s \
+normal control flow."""
+
+[[case]]
+id = "JVMS.4.VERIFY.FSTORE"
+spec = ["s4_10_1_9_fstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "fstore" }
+expect = "Require a float operand and record its type in the indexed local."
+
+[[case]]
+id = "JVMS.4.VERIFY.FSTORE_0"
+spec = ["s4_10_1_9_fstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "fstore_0" }
+expect = "Require a float operand and record its type in local 0."
+
+[[case]]
+id = "JVMS.4.VERIFY.FSTORE_1"
+spec = ["s4_10_1_9_fstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "fstore_1" }
+expect = "Require a float operand and record its type in local 1."
+
+[[case]]
+id = "JVMS.4.VERIFY.FSTORE_2"
+spec = ["s4_10_1_9_fstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "fstore_2" }
+expect = "Require a float operand and record its type in local 2."
+
+[[case]]
+id = "JVMS.4.VERIFY.FSTORE_3"
+spec = ["s4_10_1_9_fstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "fstore_3" }
+expect = "Require a float operand and record its type in local 3."
+
+[[case]]
+id = "JVMS.4.VERIFY.FSUB"
+spec = ["s4_10_1_9_fsub"]
+java = "25"
+status = "planned"
+axes = { opcode = "fsub" }
+expect = "Consume two float operands and push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.GETFIELD"
+spec = ["s4_10_1_9_getfield"]
+java = "25"
+status = "planned"
+axes = { opcode = "getfield" }
+expect = """
+Check the receiver against the field owner and protected access constraints, then push the \
+field’s stack type."""
+
+[[case]]
+id = "JVMS.4.VERIFY.GETSTATIC"
+spec = ["s4_10_1_9_getstatic"]
+java = "25"
+status = "planned"
+axes = { opcode = "getstatic" }
+expect = "Push the computational type derived from the field descriptor."
+
+[[case]]
+id = "JVMS.4.VERIFY.GOTO"
+spec = ["s4_10_1_9_goto"]
+java = "25"
+status = "planned"
+axes = { opcode = "goto" }
+expect = """
+Require the current frame to be assignable to the target frame. There is no fall-through \
+successor."""
+
+[[case]]
+id = "JVMS.4.VERIFY.GOTO_W"
+spec = ["s4_10_1_9_goto"]
+java = "25"
+status = "planned"
+axes = { opcode = "goto_w" }
+expect = """
+Require the current frame to be assignable to the target frame. There is no fall-through \
+successor."""
+
+[[case]]
+id = "JVMS.4.VERIFY.I2L"
+spec = ["s4_10_1_9_i2b"]
+java = "25"
+status = "planned"
+axes = { opcode = "i2l" }
+expect = "Pop int and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.I2F"
+spec = ["s4_10_1_9_i2b"]
+java = "25"
+status = "planned"
+axes = { opcode = "i2f" }
+expect = "Pop int and push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.I2D"
+spec = ["s4_10_1_9_i2b"]
+java = "25"
+status = "planned"
+axes = { opcode = "i2d" }
+expect = "Pop int and push double."
+
+[[case]]
+id = "JVMS.4.VERIFY.I2B"
+spec = ["s4_10_1_9_i2b"]
+java = "25"
+status = "planned"
+axes = { opcode = "i2b" }
+expect = "Pop int and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.I2C"
+spec = ["s4_10_1_9_i2b"]
+java = "25"
+status = "planned"
+axes = { opcode = "i2c" }
+expect = "Pop int and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.I2S"
+spec = ["s4_10_1_9_i2b"]
+java = "25"
+status = "planned"
+axes = { opcode = "i2s" }
+expect = "Pop int and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.IADD"
+spec = ["s4_10_1_9_iadd"]
+java = "25"
+status = "planned"
+axes = { opcode = "iadd" }
+expect = "Consume two int operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.IALOAD"
+spec = ["s4_10_1_9_iaload"]
+java = "25"
+status = "planned"
+axes = { opcode = "iaload" }
+expect = "Consume int[] (or null) and an int index. Push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.IAND"
+spec = ["s4_10_1_9_iand"]
+java = "25"
+status = "planned"
+axes = { opcode = "iand" }
+expect = "Consume two int operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.IASTORE"
+spec = ["s4_10_1_9_iastore"]
+java = "25"
+status = "planned"
+axes = { opcode = "iastore" }
+expect = "Consume int[] (or null), an int index and a int operand."
+
+[[case]]
+id = "JVMS.4.VERIFY.ICONST_M1"
+spec = ["s4_10_1_9_iconst_i"]
+java = "25"
+status = "planned"
+axes = { opcode = "iconst_m1" }
+expect = "Push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.ICONST_0"
+spec = ["s4_10_1_9_iconst_i"]
+java = "25"
+status = "planned"
+axes = { opcode = "iconst_0" }
+expect = "Push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.ICONST_1"
+spec = ["s4_10_1_9_iconst_i"]
+java = "25"
+status = "planned"
+axes = { opcode = "iconst_1" }
+expect = "Push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.ICONST_2"
+spec = ["s4_10_1_9_iconst_i"]
+java = "25"
+status = "planned"
+axes = { opcode = "iconst_2" }
+expect = "Push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.ICONST_3"
+spec = ["s4_10_1_9_iconst_i"]
+java = "25"
+status = "planned"
+axes = { opcode = "iconst_3" }
+expect = "Push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.ICONST_4"
+spec = ["s4_10_1_9_iconst_i"]
+java = "25"
+status = "planned"
+axes = { opcode = "iconst_4" }
+expect = "Push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.ICONST_5"
+spec = ["s4_10_1_9_iconst_i"]
+java = "25"
+status = "planned"
+axes = { opcode = "iconst_5" }
+expect = "Push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.IDIV"
+spec = ["s4_10_1_9_idiv"]
+java = "25"
+status = "planned"
+axes = { opcode = "idiv" }
+expect = "Consume two int operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.IF_ACMPEQ"
+spec = ["s4_10_1_9_if_acmp_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "if_acmpeq" }
+expect = "Pop two reference values and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IF_ACMPNE"
+spec = ["s4_10_1_9_if_acmp_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "if_acmpne" }
+expect = "Pop two reference values and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IF_ICMPEQ"
+spec = ["s4_10_1_9_if_icmp_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "if_icmpeq" }
+expect = "Pop two int values and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IF_ICMPNE"
+spec = ["s4_10_1_9_if_icmp_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "if_icmpne" }
+expect = "Pop two int values and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IF_ICMPLT"
+spec = ["s4_10_1_9_if_icmp_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "if_icmplt" }
+expect = "Pop two int values and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IF_ICMPGE"
+spec = ["s4_10_1_9_if_icmp_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "if_icmpge" }
+expect = "Pop two int values and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IF_ICMPGT"
+spec = ["s4_10_1_9_if_icmp_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "if_icmpgt" }
+expect = "Pop two int values and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IF_ICMPLE"
+spec = ["s4_10_1_9_if_icmp_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "if_icmple" }
+expect = "Pop two int values and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IFEQ"
+spec = ["s4_10_1_9_if_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "ifeq" }
+expect = "Pop one int and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IFNE"
+spec = ["s4_10_1_9_if_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "ifne" }
+expect = "Pop one int and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IFLT"
+spec = ["s4_10_1_9_if_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "iflt" }
+expect = "Pop one int and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IFGE"
+spec = ["s4_10_1_9_if_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "ifge" }
+expect = "Pop one int and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IFGT"
+spec = ["s4_10_1_9_if_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "ifgt" }
+expect = "Pop one int and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IFLE"
+spec = ["s4_10_1_9_if_cond"]
+java = "25"
+status = "planned"
+axes = { opcode = "ifle" }
+expect = "Pop one int and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IFNULL"
+spec = ["s4_10_1_9_ifnonnull"]
+java = "25"
+status = "planned"
+axes = { opcode = "ifnull" }
+expect = "Pop one reference and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IFNONNULL"
+spec = ["s4_10_1_9_ifnonnull"]
+java = "25"
+status = "planned"
+axes = { opcode = "ifnonnull" }
+expect = "Pop one reference and check the branch target frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.IINC"
+spec = ["s4_10_1_9_iinc"]
+java = "25"
+status = "planned"
+axes = { opcode = "iinc" }
+expect = "Require an int local at the selected index and preserve the stack."
+
+[[case]]
+id = "JVMS.4.VERIFY.ILOAD"
+spec = ["s4_10_1_9_iload"]
+java = "25"
+status = "planned"
+axes = { opcode = "iload" }
+expect = "Require a usable int in the indexed local and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.ILOAD_0"
+spec = ["s4_10_1_9_iload"]
+java = "25"
+status = "planned"
+axes = { opcode = "iload_0" }
+expect = "Require a usable int in local 0 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.ILOAD_1"
+spec = ["s4_10_1_9_iload"]
+java = "25"
+status = "planned"
+axes = { opcode = "iload_1" }
+expect = "Require a usable int in local 1 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.ILOAD_2"
+spec = ["s4_10_1_9_iload"]
+java = "25"
+status = "planned"
+axes = { opcode = "iload_2" }
+expect = "Require a usable int in local 2 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.ILOAD_3"
+spec = ["s4_10_1_9_iload"]
+java = "25"
+status = "planned"
+axes = { opcode = "iload_3" }
+expect = "Require a usable int in local 3 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.IMUL"
+spec = ["s4_10_1_9_imul"]
+java = "25"
+status = "planned"
+axes = { opcode = "imul" }
+expect = "Consume two int operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.INEG"
+spec = ["s4_10_1_9_ineg"]
+java = "25"
+status = "planned"
+axes = { opcode = "ineg" }
+expect = "Consume one int operand and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.INSTANCEOF"
+spec = ["s4_10_1_9_instanceof"]
+java = "25"
+status = "planned"
+axes = { opcode = "instanceof" }
+expect = "Pop a reference and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.INVOKEDYNAMIC"
+spec = ["s4_10_1_9_invokedynamic"]
+java = "25"
+status = "planned"
+axes = { opcode = "invokedynamic" }
+expect = """
+Use the call-site descriptor to consume arguments and produce a non-void result. There is no \
+implicit receiver."""
+
+[[case]]
+id = "JVMS.4.VERIFY.INVOKEINTERFACE"
+spec = ["s4_10_1_9_invokeinterface"]
+java = "25"
+status = "planned"
+axes = { opcode = "invokeinterface" }
+expect = """
+Check the reference receiver and descriptor arguments. Push the result type for a non-void \
+method."""
+
+[[case]]
+id = "JVMS.4.VERIFY.INVOKESPECIAL"
+spec = ["s4_10_1_9_invokespecial"]
+java = "25"
+status = "planned"
+axes = { opcode = "invokespecial" }
+expect = """
+Check the receiver and arguments. A legal constructor invocation replaces remaining aliases of \
+the uninitialized receiver with the initialized type."""
+
+[[case]]
+id = "JVMS.4.VERIFY.INVOKESTATIC"
+spec = ["s4_10_1_9_invokestatic"]
+java = "25"
+status = "planned"
+axes = { opcode = "invokestatic" }
+expect = """
+Consume the descriptor arguments without a receiver and push the result type for a non-void \
+method."""
+
+[[case]]
+id = "JVMS.4.VERIFY.INVOKEVIRTUAL"
+spec = ["s4_10_1_9_invokevirtual"]
+java = "25"
+status = "planned"
+axes = { opcode = "invokevirtual" }
+expect = """
+Check the receiver and descriptor arguments, consuming them and pushing the declared result if \
+non-void."""
+
+[[case]]
+id = "JVMS.4.VERIFY.IREM"
+spec = ["s4_10_1_9_ior"]
+java = "25"
+status = "planned"
+axes = { opcode = "irem" }
+expect = "Consume two int operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.IOR"
+spec = ["s4_10_1_9_ior"]
+java = "25"
+status = "planned"
+axes = { opcode = "ior" }
+expect = "Consume two int operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.IRETURN"
+spec = ["s4_10_1_9_ireturn"]
+java = "25"
+status = "planned"
+axes = { opcode = "ireturn" }
+expect = """
+Require a int result compatible with the declared return descriptor and terminate this frame’s \
+normal control flow."""
+
+[[case]]
+id = "JVMS.4.VERIFY.ISHL"
+spec = ["s4_10_1_9_ishl"]
+java = "25"
+status = "planned"
+axes = { opcode = "ishl" }
+expect = "Pop an int shift count above a int value and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.ISHR"
+spec = ["s4_10_1_9_ishl"]
+java = "25"
+status = "planned"
+axes = { opcode = "ishr" }
+expect = "Pop an int shift count above a int value and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.IUSHR"
+spec = ["s4_10_1_9_ishl"]
+java = "25"
+status = "planned"
+axes = { opcode = "iushr" }
+expect = "Pop an int shift count above a int value and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.ISTORE"
+spec = ["s4_10_1_9_istore"]
+java = "25"
+status = "planned"
+axes = { opcode = "istore" }
+expect = "Require a int operand and record its type in the indexed local."
+
+[[case]]
+id = "JVMS.4.VERIFY.ISTORE_0"
+spec = ["s4_10_1_9_istore"]
+java = "25"
+status = "planned"
+axes = { opcode = "istore_0" }
+expect = "Require a int operand and record its type in local 0."
+
+[[case]]
+id = "JVMS.4.VERIFY.ISTORE_1"
+spec = ["s4_10_1_9_istore"]
+java = "25"
+status = "planned"
+axes = { opcode = "istore_1" }
+expect = "Require a int operand and record its type in local 1."
+
+[[case]]
+id = "JVMS.4.VERIFY.ISTORE_2"
+spec = ["s4_10_1_9_istore"]
+java = "25"
+status = "planned"
+axes = { opcode = "istore_2" }
+expect = "Require a int operand and record its type in local 2."
+
+[[case]]
+id = "JVMS.4.VERIFY.ISTORE_3"
+spec = ["s4_10_1_9_istore"]
+java = "25"
+status = "planned"
+axes = { opcode = "istore_3" }
+expect = "Require a int operand and record its type in local 3."
+
+[[case]]
+id = "JVMS.4.VERIFY.ISUB"
+spec = ["s4_10_1_9_isub"]
+java = "25"
+status = "planned"
+axes = { opcode = "isub" }
+expect = "Consume two int operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.IXOR"
+spec = ["s4_10_1_9_isub"]
+java = "25"
+status = "planned"
+axes = { opcode = "ixor" }
+expect = "Consume two int operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.L2I"
+spec = ["s4_10_1_9_l2d"]
+java = "25"
+status = "planned"
+axes = { opcode = "l2i" }
+expect = "Pop long and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.L2F"
+spec = ["s4_10_1_9_l2d"]
+java = "25"
+status = "planned"
+axes = { opcode = "l2f" }
+expect = "Pop long and push float."
+
+[[case]]
+id = "JVMS.4.VERIFY.L2D"
+spec = ["s4_10_1_9_l2d"]
+java = "25"
+status = "planned"
+axes = { opcode = "l2d" }
+expect = "Pop long and push double."
+
+[[case]]
+id = "JVMS.4.VERIFY.LADD"
+spec = ["s4_10_1_9_ladd"]
+java = "25"
+status = "planned"
+axes = { opcode = "ladd" }
+expect = "Consume two long operands and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LALOAD"
+spec = ["s4_10_1_9_laload"]
+java = "25"
+status = "planned"
+axes = { opcode = "laload" }
+expect = "Consume long[] (or null) and an int index. Push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LAND"
+spec = ["s4_10_1_9_land"]
+java = "25"
+status = "planned"
+axes = { opcode = "land" }
+expect = "Consume two long operands and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LASTORE"
+spec = ["s4_10_1_9_lastore"]
+java = "25"
+status = "planned"
+axes = { opcode = "lastore" }
+expect = "Consume long[] (or null), an int index and a long operand."
+
+[[case]]
+id = "JVMS.4.VERIFY.LCMP"
+spec = ["s4_10_1_9_lcmp"]
+java = "25"
+status = "planned"
+axes = { opcode = "lcmp" }
+expect = "Pop two long operands and push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.LCONST_0"
+spec = ["s4_10_1_9_lconst_l"]
+java = "25"
+status = "planned"
+axes = { opcode = "lconst_0" }
+expect = "Push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LCONST_1"
+spec = ["s4_10_1_9_lconst_l"]
+java = "25"
+status = "planned"
+axes = { opcode = "lconst_1" }
+expect = "Push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LDC"
+spec = ["s4_10_1_9_ldc"]
+java = "25"
+status = "planned"
+axes = { opcode = "ldc" }
+expect = """
+Push the type of the indexed constant and reject an operand designating a category-2 constant."""
+
+[[case]]
+id = "JVMS.4.VERIFY.LDC_W"
+spec = ["s4_10_1_9_ldc"]
+java = "25"
+status = "planned"
+axes = { opcode = "ldc_w" }
+expect = """
+Push the type of the indexed constant and reject an operand designating a category-2 constant."""
+
+[[case]]
+id = "JVMS.4.VERIFY.LDC2_W"
+spec = ["s4_10_1_9_ldc"]
+java = "25"
+status = "planned"
+axes = { opcode = "ldc2_w" }
+expect = "Push long or double as specified by the constant, rejecting category-1 entries."
+
+[[case]]
+id = "JVMS.4.VERIFY.LDIV"
+spec = ["s4_10_1_9_ldiv"]
+java = "25"
+status = "planned"
+axes = { opcode = "ldiv" }
+expect = "Consume two long operands and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LLOAD"
+spec = ["s4_10_1_9_lload"]
+java = "25"
+status = "planned"
+axes = { opcode = "lload" }
+expect = "Require a usable long in the indexed local and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.LLOAD_0"
+spec = ["s4_10_1_9_lload"]
+java = "25"
+status = "planned"
+axes = { opcode = "lload_0" }
+expect = "Require a usable long in local 0 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.LLOAD_1"
+spec = ["s4_10_1_9_lload"]
+java = "25"
+status = "planned"
+axes = { opcode = "lload_1" }
+expect = "Require a usable long in local 1 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.LLOAD_2"
+spec = ["s4_10_1_9_lload"]
+java = "25"
+status = "planned"
+axes = { opcode = "lload_2" }
+expect = "Require a usable long in local 2 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.LLOAD_3"
+spec = ["s4_10_1_9_lload"]
+java = "25"
+status = "planned"
+axes = { opcode = "lload_3" }
+expect = "Require a usable long in local 3 and push its verification type."
+
+[[case]]
+id = "JVMS.4.VERIFY.LMUL"
+spec = ["s4_10_1_9_lmul"]
+java = "25"
+status = "planned"
+axes = { opcode = "lmul" }
+expect = "Consume two long operands and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LNEG"
+spec = ["s4_10_1_9_lneg"]
+java = "25"
+status = "planned"
+axes = { opcode = "lneg" }
+expect = "Consume one long operand and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LOOKUPSWITCH"
+spec = ["s4_10_1_9_lookupswitch"]
+java = "25"
+status = "planned"
+axes = { opcode = "lookupswitch" }
+expect = "Pop int and check the resulting frame against each case target and the default target."
+
+[[case]]
+id = "JVMS.4.VERIFY.LREM"
+spec = ["s4_10_1_9_lor"]
+java = "25"
+status = "planned"
+axes = { opcode = "lrem" }
+expect = "Consume two long operands and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LOR"
+spec = ["s4_10_1_9_lor"]
+java = "25"
+status = "planned"
+axes = { opcode = "lor" }
+expect = "Consume two long operands and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LRETURN"
+spec = ["s4_10_1_9_lreturn"]
+java = "25"
+status = "planned"
+axes = { opcode = "lreturn" }
+expect = """
+Require a long result compatible with the declared return descriptor and terminate this frame’s \
+normal control flow."""
+
+[[case]]
+id = "JVMS.4.VERIFY.LSHL"
+spec = ["s4_10_1_9_lshl"]
+java = "25"
+status = "planned"
+axes = { opcode = "lshl" }
+expect = "Pop an int shift count above a long value and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LSHR"
+spec = ["s4_10_1_9_lshl"]
+java = "25"
+status = "planned"
+axes = { opcode = "lshr" }
+expect = "Pop an int shift count above a long value and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LUSHR"
+spec = ["s4_10_1_9_lshl"]
+java = "25"
+status = "planned"
+axes = { opcode = "lushr" }
+expect = "Pop an int shift count above a long value and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LSTORE"
+spec = ["s4_10_1_9_lstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "lstore" }
+expect = """
+Require a long operand and record its type in the indexed local and reserve the following slot."""
+
+[[case]]
+id = "JVMS.4.VERIFY.LSTORE_0"
+spec = ["s4_10_1_9_lstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "lstore_0" }
+expect = "Require a long operand and record its type in local 0 and reserve the following slot."
+
+[[case]]
+id = "JVMS.4.VERIFY.LSTORE_1"
+spec = ["s4_10_1_9_lstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "lstore_1" }
+expect = "Require a long operand and record its type in local 1 and reserve the following slot."
+
+[[case]]
+id = "JVMS.4.VERIFY.LSTORE_2"
+spec = ["s4_10_1_9_lstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "lstore_2" }
+expect = "Require a long operand and record its type in local 2 and reserve the following slot."
+
+[[case]]
+id = "JVMS.4.VERIFY.LSTORE_3"
+spec = ["s4_10_1_9_lstore"]
+java = "25"
+status = "planned"
+axes = { opcode = "lstore_3" }
+expect = "Require a long operand and record its type in local 3 and reserve the following slot."
+
+[[case]]
+id = "JVMS.4.VERIFY.LSUB"
+spec = ["s4_10_1_9_lsub"]
+java = "25"
+status = "planned"
+axes = { opcode = "lsub" }
+expect = "Consume two long operands and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.LXOR"
+spec = ["s4_10_1_9_lsub"]
+java = "25"
+status = "planned"
+axes = { opcode = "lxor" }
+expect = "Consume two long operands and push long."
+
+[[case]]
+id = "JVMS.4.VERIFY.MONITORENTER"
+spec = ["s4_10_1_9_monitorenter"]
+java = "25"
+status = "planned"
+axes = { opcode = "monitorenter" }
+expect = "Consume one reference operand."
+
+[[case]]
+id = "JVMS.4.VERIFY.MONITOREXIT"
+spec = ["s4_10_1_9_monitorenter"]
+java = "25"
+status = "planned"
+axes = { opcode = "monitorexit" }
+expect = "Consume one reference operand."
+
+[[case]]
+id = "JVMS.4.VERIFY.MULTIANEWARRAY"
+spec = ["s4_10_1_9_multianewarray"]
+java = "25"
+status = "planned"
+axes = { opcode = "multianewarray" }
+expect = """
+Require a valid array class, a positive dimensions count within its rank, and one int count per \
+allocated dimension."""
+
+[[case]]
+id = "JVMS.4.VERIFY.NEW"
+spec = ["s4_10_1_9_new"]
+java = "25"
+status = "planned"
+axes = { opcode = "new" }
+expect = """
+Push a fresh uninitialized type identified by the bytecode offset of this new instruction."""
+
+[[case]]
+id = "JVMS.4.VERIFY.NEWARRAY"
+spec = ["s4_10_1_9_newarray"]
+java = "25"
+status = "planned"
+axes = { opcode = "newarray" }
+expect = "Pop int and push an array type whose component is specified by atype."
+
+[[case]]
+id = "JVMS.4.VERIFY.NOP"
+spec = ["s4_10_1_9_nop"]
+java = "25"
+status = "planned"
+axes = { opcode = "nop" }
+expect = "Preserve the incoming frame."
+
+[[case]]
+id = "JVMS.4.VERIFY.POP"
+spec = ["s4_10_1_9_pop"]
+java = "25"
+status = "planned"
+axes = { opcode = "pop" }
+expect = """
+Accept exactly these shapes at the top of the stack in bottom-to-top order. Legal shapes are 1. \
+Reject an operand split across a category-2 value."""
+
+[[case]]
+id = "JVMS.4.VERIFY.POP2"
+spec = ["s4_10_1_9_pop"]
+java = "25"
+status = "planned"
+axes = { opcode = "pop2" }
+expect = """
+Accept exactly these shapes at the top of the stack in bottom-to-top order. Legal shapes are 2, \
+11. Reject an operand split across a category-2 value."""
+
+[[case]]
+id = "JVMS.4.VERIFY.PUTFIELD"
+spec = ["s4_10_1_9_putfield"]
+java = "25"
+status = "planned"
+axes = { opcode = "putfield" }
+expect = """
+Check the value against the field descriptor and the receiver against the owner, including the \
+constructor rule for uninitializedThis."""
+
+[[case]]
+id = "JVMS.4.VERIFY.PUTSTATIC"
+spec = ["s4_10_1_9_putstatic"]
+java = "25"
+status = "planned"
+axes = { opcode = "putstatic" }
+expect = "Pop a value assignable to the computational type derived from the field descriptor."
+
+[[case]]
+id = "JVMS.4.VERIFY.RETURN"
+spec = ["s4_10_1_9_return"]
+java = "25"
+status = "planned"
+axes = { opcode = "return" }
+expect = """
+Require a void return descriptor and check initialization of this in a constructor. There is no \
+normal successor in this frame."""
+
+[[case]]
+id = "JVMS.4.VERIFY.SALOAD"
+spec = ["s4_10_1_9_saload"]
+java = "25"
+status = "planned"
+axes = { opcode = "saload" }
+expect = "Consume short[] (or null) and an int index. Push int."
+
+[[case]]
+id = "JVMS.4.VERIFY.SASTORE"
+spec = ["s4_10_1_9_sastore"]
+java = "25"
+status = "planned"
+axes = { opcode = "sastore" }
+expect = "Consume short[] (or null), an int index and a int operand."
+
+[[case]]
+id = "JVMS.4.VERIFY.SIPUSH"
+spec = ["s4_10_1_9_sipush"]
+java = "25"
+status = "planned"
+axes = { opcode = "sipush" }
+expect = "Push int regardless of the sign of the immediate."
+
+[[case]]
+id = "JVMS.4.VERIFY.SWAP"
+spec = ["s4_10_1_9_swap"]
+java = "25"
+status = "planned"
+axes = { opcode = "swap" }
+expect = """
+Accept exactly these shapes at the top of the stack in bottom-to-top order. Legal shapes are 11. \
+Reject an operand split across a category-2 value."""
+
+[[case]]
+id = "JVMS.4.VERIFY.TABLESWITCH"
+spec = ["s4_10_1_9_tableswitch"]
+java = "25"
+status = "planned"
+axes = { opcode = "tableswitch" }
+expect = "Pop int and check the resulting frame against every table target and the default target."
+
+[[case]]
+id = "JVMS.4.VERIFY.WIDE"
+spec = ["s4_10_1_9_wide"]
+java = "25"
+status = "planned"
+axes = { opcode = "wide" }
+expect = """
+Apply the type rule of the modified instruction with the expanded index and validate both slots \
+for long or double."""
+
+[[case]]
+id = "JVMS.4.10.2"
+spec = ["s4_10_2"]
+java = "25"
+status = "planned"
+expect = """
+Legacy class files below version 50.0 use type inference. For version 50.0 a VM may fall back \
+after type checking fails."""
+
+[[case]]
+id = "JVMS.4.10.2.1"
+spec = ["s4_10_2_1"]
+java = "25"
+status = "planned"
+expect = """
+Legacy verification iterates type information over reachable successors until compatible states \
+stabilize or a constraint fails."""
+
+[[case]]
+id = "JVMS.4.10.2.2"
+spec = ["s4_10_2_2"]
+java = "25"
+status = "planned"
+expect = "Paths with different operand stack heights cannot merge at the same legacy instruction."
+
+[[case]]
+id = "JVMS.4.10.2.3"
+spec = ["s4_10_2_3"]
+java = "25"
+status = "planned"
+expect = """
+Overwriting half of a two-slot long or double local prevents subsequent use of the original \
+value."""
+
+[[case]]
+id = "JVMS.4.10.2.4"
+spec = ["s4_10_2_4"]
+java = "25"
+status = "planned"
+expect = """
+The verifier prevents ordinary use of a newly allocated instance before its initialization \
+method completes."""
+
+[[case]]
+id = "JVMS.4.10.2.5"
+spec = ["s4_10_2_5"]
+java = "25"
+status = "planned"
+expect = """
+A valid legacy finally subroutine returns to its calling site while preserving locals it did not \
+modify."""
+
+[[case]]
+id = "JVMS.4.11"
+spec = ["s4_11"]
+java = "25"
+status = "planned"
+expect = "An array descriptor may have 255 dimensions. A descriptor with 256 dimensions is invalid."
+
+[[case]]
+id = "JVMS.4.11.CODE_LENGTH"
+spec = ["s4_11"]
+java = "25"
+status = "planned"
+expect = "A nonempty method body may reach 65535 bytes but cannot have a code_length of 65536."
+
+[[case]]
+id = "JVMS.4.11.PARAMETERS"
+spec = ["s4_11"]
+java = "25"
+status = "planned"
+expect = """
+A method descriptor's parameter length is at most 255 units including the implicit receiver for \
+an instance invocation."""
+
+[[case]]
+id = "JVMS.4.11.UTF8"
+spec = ["s4_11"]
+java = "25"
+status = "planned"
+expect = """
+The constant pool UTF-8 length counts encoded bytes. A 65535-byte payload fits, even when it \
+contains fewer than 65535 characters."""
+
+[[case]]
+id = "JVMS.4.11.STACK_LOCALS"
+spec = ["s4_11"]
+java = "25"
+status = "planned"
+expect = """
+The declared maxima for stack depth and local count use unsigned 16-bit quantities. Long and \
+double each consume two units."""
+
+[[case]]
+id = "JVMS.4.11.COUNTS"
+spec = ["s4_11"]
+java = "25"
+status = "planned"
+expect = """
+Declared fields, declared methods and direct superinterfaces each have separate unsigned 16-bit \
+counts. Inherited declarations do not consume these entries."""

@@ -61,7 +61,6 @@
     )
 )]
 
-mod assignable;
 mod call_site_cache;
 #[cfg(feature = "experimental-canonical-runtime")]
 pub mod canonical;

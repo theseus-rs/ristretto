@@ -136,6 +136,9 @@ pub enum JavaError {
     /// - [IllegalArgumentException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/IllegalArgumentException.html)
     #[error("{0}")]
     IllegalArgumentException(String),
+    /// A class linkage failure, including a loading constraint violation.
+    #[error("{0}")]
+    LinkageError(String),
     /// `IncompatibleClassChangeError`
     ///
     /// # References
@@ -259,6 +262,9 @@ pub enum JavaError {
     /// `UnknownHostException`
     #[error("{0}")]
     UnknownHostException(String),
+    /// Signature-polymorphic invocation cannot adapt the call site type.
+    #[error("{0}")]
+    WrongMethodTypeException(String),
     /// `VerifyError`
     /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/VerifyError.html>
     #[error("{0}")]
@@ -294,6 +300,7 @@ impl JavaError {
             }
             JavaError::IllegalMonitorStateException(_) => "java.lang.IllegalMonitorStateException",
             JavaError::IllegalArgumentException(_) => "java.lang.IllegalArgumentException",
+            JavaError::LinkageError(_) => "java.lang.LinkageError",
             JavaError::IncompatibleClassChangeError(_) => "java.lang.IncompatibleClassChangeError",
             JavaError::IndexOutOfBoundsException { .. } => "java.lang.IndexOutOfBoundsException",
             JavaError::InterruptedException(_) => "java.lang.InterruptedException",
@@ -318,6 +325,7 @@ impl JavaError {
                 "java.lang.UnsupportedOperationException"
             }
             JavaError::UnknownHostException(_) => "java.net.UnknownHostException",
+            JavaError::WrongMethodTypeException(_) => "java.lang.invoke.WrongMethodTypeException",
             JavaError::VerifyError(_) => "java.lang.VerifyError",
         }
     }

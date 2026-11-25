@@ -1,13 +1,8 @@
-use crate::java::io::filedescriptor::file_descriptor_from_java_object;
-use crate::java::nio::mapped_regions::MappedRegions;
-use crate::sun::nio::fs::managed_files;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::JavaError::IoException;
 use ristretto_types::Thread;
-use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -23,49 +18,11 @@ use std::sync::Arc;
 )]
 pub async fn force_0<T: Thread + 'static>(
     thread: Arc<T>,
-    mut parameters: Parameters,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let length = parameters.pop_long()?;
-    let address = parameters.pop_long()?;
-    let fd_value = parameters.pop()?;
-    let _this = parameters.pop()?;
-
-    if length <= 0 {
-        return Ok(None);
-    }
-    let length_usize = usize::try_from(length)?;
-
-    let vm = thread.vm()?;
-    let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
-    let Some((base, region)) = regions.find_containing(address, length_usize) else {
-        return Ok(None);
-    };
-    if !region.mode.is_writable_back_to_file() {
-        return Ok(None);
-    }
-
-    // JDK passes a page-aligned address that may begin before our region base. Clamp the
-    // write range to the actual region extents.
-    let req_start = address;
-    let req_end = address.saturating_add(i64::try_from(length_usize)?);
-    let region_end = base.saturating_add(i64::try_from(region.length)?);
-    let clamped_start = req_start.max(base);
-    let clamped_end = req_end.min(region_end);
-    if clamped_end <= clamped_start {
-        return Ok(None);
-    }
-    let clamped_len = usize::try_from(clamped_end - clamped_start)?;
-    let offset_in_region = u64::try_from(clamped_start - base)?;
-    let file_position = region.position + offset_in_region;
-    let bytes = vm.native_memory().read_bytes(clamped_start, clamped_len);
-    let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
-    if let Err(e) = managed_files::write_at(vm.file_handles(), fd, &bytes, file_position).await {
-        return Err(IoException(format!("force0: {e}")).into());
-    }
-    if let Err(e) = managed_files::sync_data(vm.file_handles(), fd).await {
-        return Err(IoException(format!("force0: {e}")).into());
-    }
-    Ok(None)
+    // On Unix the JDK can pass an empty FileDescriptor for a mapping. Its registered
+    // region identifies the backing file for both versions of this native method.
+    super::mappedmemoryutils::force_0(thread, parameters).await
 }
 
 /// `MappedByteBuffer.isLoaded0(long address, long length, int pageCount)` (Java <= 11).
@@ -101,9 +58,7 @@ pub fn load_0<T: Thread + 'static>(
 mod tests {
     use super::*;
     #[cfg(not(target_family = "wasm"))]
-    use crate::java::nio::mapped_regions::{MapMode, MappedRegion};
-    #[cfg(not(target_family = "wasm"))]
-    use ristretto_classloader::{Object, Reference};
+    use crate::java::nio::mapped_regions::{MapMode, MappedRegion, MappedRegions};
     #[cfg(not(target_family = "wasm"))]
     use ristretto_types::VM;
     #[cfg(not(target_family = "wasm"))]
@@ -157,26 +112,24 @@ mod tests {
             .expect("native memory allocation");
         vm.native_memory().write_bytes(address, b"abcdef");
         let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
-        regions.insert(
-            address,
-            MappedRegion {
-                fd: i64::from(fd),
-                position: 0,
-                length: 6,
-                mode: MapMode::ReadWrite,
-                file_key: None,
-                path: None,
-            },
-        );
+        regions
+            .register(
+                &*vm,
+                address,
+                MappedRegion {
+                    channel_fd: Some(i64::from(fd)),
+                    position: 0,
+                    length: 6,
+                    mode: MapMode::ReadWrite,
+                    file_key: None,
+                    path: None,
+                },
+            )
+            .await?;
 
-        let class = thread.class("java/io/FileDescriptor").await?;
-        let mut descriptor = Object::new(class)?;
-        descriptor.set_value("fd", Value::Int(fd))?;
-        descriptor.set_value("handle", Value::Long(i64::from(fd)))?;
-        let descriptor = Value::new_object(vm.garbage_collector(), Reference::Object(descriptor));
         let parameters = Parameters::new(vec![
             Value::Object(None),
-            descriptor,
+            Value::Object(None),
             Value::Long(address - 2),
             Value::Long(10),
         ]);

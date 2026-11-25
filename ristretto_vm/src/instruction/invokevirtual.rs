@@ -39,6 +39,16 @@ pub(crate) async fn invokevirtual(
         }
     };
 
+    if let Some(method_type) = &resolution.call_site_type {
+        return Ok(ExecutionResult::Call(MethodCall {
+            intrinsic: crate::frame::IntrinsicBinding::Resolved(resolution.intrinsic),
+            class: resolution.declaring_class.clone(),
+            method: resolution.method.clone(),
+            parameters: crate::frame::CallParameters::Polymorphic(parameters, method_type.clone()),
+            has_return_type: resolution.has_return_type,
+        }));
+    }
+
     // Virtual dispatch: if method is not private, look up in receiver's actual class
     let resolved = ResolvedMethod {
         declaring_class: resolution.declaring_class.clone(),

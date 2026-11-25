@@ -60,6 +60,11 @@ public class Test {
                 || !first.isHidden() || !second.isHidden()) {
             throw new AssertionError("hidden definitions must have unique identities");
         }
+        MethodHandles.Lookup dynamic = lookup.defineHiddenClass(bytes(44), false, MethodHandles.Lookup.ClassOption.NESTMATE);
+        Class<?> nested = dynamic.defineHiddenClass(bytes(55), false, MethodHandles.Lookup.ClassOption.NESTMATE).lookupClass();
+        if (first.getNestHost() != first || dynamic.lookupClass().getNestHost() != Test.class
+                || nested.getNestHost() != Test.class || !nested.isNestmateOf(Test.class))
+            throw new AssertionError("hidden nest host");
         String firstName = first.getName();
         String secondName = second.getName();
         boolean hiddenName = firstName.indexOf("/0x") > 0 && firstName.indexOf("/0x") == firstName.lastIndexOf("/0x")

@@ -13,8 +13,6 @@
 )]
 #![allow(unsafe_code)]
 
-use crate::assignable::Assignable;
-
 use crate::Error::{InternalError, JavaError};
 use crate::JavaError::{
     ArrayIndexOutOfBoundsException, ArrayStoreException, ClassCastException,
@@ -28,6 +26,7 @@ use ristretto_classfile::BaseType;
 use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_gc::sync::{Mutex, RwLock};
 use ristretto_gc::{GarbageCollector, Gc, GcRootGuard};
+use ristretto_types::Assignable;
 use ristretto_types::array::{allocate_array, allocate_primitive_array};
 use std::future::Future;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -1190,7 +1189,7 @@ fn jit_aastore_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32, v
                     let component_class = thread.class(&target_name).await?;
                     let value_class = thread.class(&value_class_name).await?;
                     component_class
-                        .is_assignable_from(&thread, &value_class)
+                        .is_assignable_from(thread.as_ref(), &value_class)
                         .await
                 });
                 match assignable {
@@ -2393,7 +2392,7 @@ fn is_instance_of(
     } else {
         return Ok(false);
     };
-    run_async(async { class.is_assignable_from(thread, &object_class).await })
+    run_async(class.is_assignable_from(thread, &object_class))
 }
 
 extern "C" fn jit_checkcast(

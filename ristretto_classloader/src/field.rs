@@ -147,6 +147,32 @@ impl Field {
         Ok(())
     }
 
+    /// Check the JVM value kind and narrow integer stores to the declared field width.
+    ///
+    /// # Errors
+    /// Returns an error if the value has the wrong JVM representation for this field.
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "JVM field stores narrow integer values to the declared field type"
+    )]
+    pub fn checked_value(&self, value: Value) -> Result<Value> {
+        self.check_value(&value)?;
+        Ok(match (self.field_type(), value) {
+            (FieldType::Base(BaseType::Boolean), Value::Int(value)) => Value::Int(value & 1),
+            (FieldType::Base(BaseType::Byte), Value::Int(value)) => {
+                Value::Int(i32::from(value as i8))
+            }
+            (FieldType::Base(BaseType::Char), Value::Int(value)) => {
+                Value::Int(i32::from(value as u16))
+            }
+            (FieldType::Base(BaseType::Short), Value::Int(value)) => {
+                Value::Int(i32::from(value as i16))
+            }
+            (_, value) => value,
+        })
+    }
+
     /// Get the attributes.
     #[must_use]
     pub fn attributes(&self) -> &Vec<Attribute> {

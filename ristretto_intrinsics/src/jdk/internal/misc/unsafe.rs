@@ -1,11 +1,13 @@
 use crate::bounds;
-use crate::java::lang::class::{get_class, get_class_name};
+use crate::java::lang::class::{get_class, get_class_no_init};
 use crate::java::lang::classloader::defining_class_loader;
+use crate::java::lang::reflect::field::reflected_field;
 use crate::java::lang::thread::{ThreadState, set_thread_status};
 use ristretto_classfile::ClassFile;
 use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan, GreaterThanOrEqual};
-use ristretto_classfile::{BaseType, JAVA_11, JAVA_17};
-use ristretto_classloader::{Class, Object, Reference, Value};
+use ristretto_classfile::{BaseType, FieldAccessFlags, FieldType, JAVA_11, JAVA_17};
+use ristretto_classloader::{Class, Field, Object, Reference, Value};
+#[cfg(test)]
 use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::{InternalError, InvalidOperand};
@@ -122,10 +124,7 @@ pub async fn array_index_scale_0<T: Thread + 'static>(
         "[F" => FLOAT_SIZE,   // float
         "[J" => LONG_SIZE,    // long
         "[D" => DOUBLE_SIZE,  // double
-        _ if class_name.starts_with("[L") => {
-            // object reference; use the address size
-            REFERENCE_SIZE
-        }
+        _ if class_name.starts_with("[L") || class_name.starts_with("[[") => REFERENCE_SIZE,
         _ => {
             return Err(InternalError(
                 ["Unknown array class type '", class_name, "'"].concat(),
@@ -135,63 +134,191 @@ pub async fn array_index_scale_0<T: Thread + 'static>(
     Ok(Some(Value::Int(i32::try_from(scale)?)))
 }
 
+/// Compare raw words at byte offsets in native allocations and primitive arrays.
+fn exchange_bytes<T: Thread + 'static, const N: usize>(
+    thread: &T,
+    base: &Value,
+    offset: i64,
+    expected: [u8; N],
+    replacement: [u8; N],
+) -> Result<Option<[u8; N]>> {
+    if base.is_null() {
+        return Ok(thread
+            .vm()?
+            .native_memory()
+            .compare_exchange(offset, expected, replacement));
+    }
+    let mut reference = base.as_reference_mut()?;
+    let Some(bytes) = reference.as_bytes_mut() else {
+        return Ok(None);
+    };
+    let start = usize::try_from(offset)?;
+    // The JDK exchanges an aligned word even for the final byte or short. Match
+    // its padded word read, and only write the portion backed by this array.
+    let tail = bytes
+        .get_mut(start..)
+        .filter(|tail| !tail.is_empty())
+        .ok_or_else(|| InternalError("Unsafe atomic access outside array".to_owned()))?;
+    let count = N.min(tail.len());
+    let (word, _) = tail.split_at_mut(count);
+    let mut old = [0; N];
+    old.split_at_mut(count).0.copy_from_slice(word);
+    if old == expected {
+        word.copy_from_slice(replacement.split_at(count).0);
+    }
+    Ok(Some(old))
+}
+
+// A floating-point field and the integer word used by Unsafe must have identical bits,
+// including NaN payloads and the sign of zero.
+fn reinterpret_field_word(value: Value, base_type: BaseType) -> Value {
+    match (value, base_type) {
+        (Value::Float(x), BaseType::Int) => Value::Int(i32::from_ne_bytes(x.to_ne_bytes())),
+        (Value::Int(x), BaseType::Float) => Value::Float(f32::from_ne_bytes(x.to_ne_bytes())),
+        (Value::Double(x), BaseType::Long) => Value::Long(i64::from_ne_bytes(x.to_ne_bytes())),
+        (Value::Long(x), BaseType::Double) => Value::Double(f64::from_ne_bytes(x.to_ne_bytes())),
+        (value, _) => value,
+    }
+}
+
+fn checked_field_word(field: &Field, value: Value) -> Result<Value> {
+    let value = match field.field_type() {
+        FieldType::Base(ty) => reinterpret_field_word(value, *ty),
+        _ => value,
+    };
+    Ok(field.checked_value(value)?)
+}
+
+fn store_instance_field_word(object: &mut Object, slot: usize, value: Value) -> Result<()> {
+    let layout = object.class().object_field_layout()?;
+    let field = layout
+        .get(slot)
+        .ok_or_else(|| InternalError(format!("Invalid field slot {slot}")))?;
+    let value = checked_field_word(field, value)?;
+    drop(layout);
+    Ok(object.set_value_at_slot(slot, value)?)
+}
+
+async fn exchange_field_word<T: Thread + 'static>(
+    thread: &T,
+    base: &Value,
+    offset: i64,
+    base_type: BaseType,
+    update: impl FnOnce(&Value) -> Result<Option<Value>>,
+) -> Result<Value> {
+    let index = usize::try_from(offset & !STATIC_FIELD_OFFSET_MASK)?;
+    if offset & STATIC_FIELD_OFFSET_MASK != 0 {
+        let class = get_class_no_init(thread, base).await?;
+        let (field, storage) = class.static_field_value(index)?;
+        let mut slot = storage
+            .write()
+            .map_err(|e| ristretto_types::Error::PoisonedLock(e.to_string()))?;
+        let old = read_field_as(slot.clone(), Some(base_type));
+        if let Some(value) = update(&old)? {
+            *slot = checked_field_word(&field, value)?;
+        }
+        Ok(old)
+    } else {
+        let mut object = base.as_object_mut()?;
+        let old = read_field_as(object.value_at_slot(index)?, Some(base_type));
+        if let Some(value) = update(&old)? {
+            store_instance_field_word(&mut object, index, value)?;
+        }
+        Ok(old)
+    }
+}
+
+// The JDK implements subword exchanges by aligning a byte address down to a word.
+// Field offsets in this VM are storage slots. Keep the slot intact and perform the
+// comparison and write under the same field lock used for full-width exchanges.
+async fn exchange_int_word<T: Thread + 'static, const N: usize>(
+    thread: &T,
+    mut parameters: Parameters,
+    encode: impl Fn(i32) -> [u8; N],
+    decode: impl Fn([u8; N]) -> i32,
+    mask: i32,
+) -> Result<Option<Value>> {
+    let new = parameters.pop_int()?;
+    let expected = parameters.pop_int()?;
+    let offset = parameters.pop_long()?;
+    let base = parameters.pop()?;
+    if N == 2 && offset & 3 == 3 && (base.is_null() || base.as_object_ref().is_err()) {
+        return Err(ristretto_types::JavaError::IllegalArgumentException(
+            "Update spans the word, not supported".into(),
+        )
+        .into());
+    }
+    if let Some(bytes) = exchange_bytes(thread, &base, offset, encode(expected), encode(new))? {
+        return Ok(Some(Value::Int(decode(bytes))));
+    }
+    let witness = if base.is_null() {
+        i32::try_from(offset)?
+    } else {
+        exchange_field_word(thread, &base, offset, BaseType::Int, |old| {
+            let old = old.as_i32()?;
+            Ok(((old & mask) == (expected & mask))
+                .then_some(Value::Int((old & !mask) | (new & mask))))
+        })
+        .await?
+        .as_i32()?
+    };
+    Ok(Some(Value::Int(decode(encode(witness)))))
+}
+
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.compareAndExchangeByte(Ljava/lang/Object;JBB)B",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[expect(clippy::cast_possible_truncation, reason = "Java byte narrowing")]
+pub async fn compare_and_exchange_byte<T: Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    exchange_int_word(
+        &*thread,
+        parameters,
+        |v| (v as i8).to_ne_bytes(),
+        |b| i32::from(i8::from_ne_bytes(b)),
+        0xff,
+    )
+    .await
+}
+
+#[intrinsic_method(
+    "jdk/internal/misc/Unsafe.compareAndExchangeShort(Ljava/lang/Object;JSS)S",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[expect(clippy::cast_possible_truncation, reason = "Java short narrowing")]
+pub async fn compare_and_exchange_short<T: Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    exchange_int_word(
+        &*thread,
+        parameters,
+        |v| (v as i16).to_ne_bytes(),
+        |b| i32::from(i16::from_ne_bytes(b)),
+        0xffff,
+    )
+    .await
+}
+
 #[intrinsic_method(
     "jdk/internal/misc/Unsafe.compareAndExchangeInt(Ljava/lang/Object;JII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
 pub async fn compare_and_exchange_int<T: Thread + 'static>(
     thread: Arc<T>,
-    mut parameters: Parameters,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let new_value = parameters.pop_int()?;
-    let expected_value = parameters.pop_int()?;
-    let mut offset = parameters.pop()?;
-    let Value::Long(ref mut offset) = offset else {
-        return Err(InvalidOperand {
-            expected: "long".to_string(),
-            actual: offset.to_string(),
-        });
-    };
-
-    let value = parameters.pop()?;
-    let current_value = if value.is_object() && !value.is_null() {
-        let offset_long = *offset;
-        if offset_long & STATIC_FIELD_OFFSET_MASK != 0 {
-            let offset = usize::try_from(offset_long & !STATIC_FIELD_OFFSET_MASK)?;
-            let class = get_class(&*thread, &value).await?;
-            let field_name = class.field_name(offset)?;
-            let value_object = class.static_value(&field_name)?;
-            let current_value = if let Value::Object(None) = value_object {
-                0
-            } else {
-                value_object.as_i32()?
-            };
-            if current_value == expected_value {
-                class.set_static_value(&field_name, Value::Int(new_value))?;
-            }
-            current_value
-        } else {
-            let mut object = value.as_object_mut()?;
-            let offset = usize::try_from(offset_long)?;
-            let value_object = object.value(offset)?;
-            let current_value = if let Value::Object(None) = value_object {
-                0
-            } else {
-                value_object.as_i32()?
-            };
-            if current_value == expected_value {
-                object.set_value(offset, Value::Int(new_value))?;
-            }
-            current_value
-        }
-    } else {
-        let current_value = i32::try_from(*offset)?;
-        if current_value == expected_value {
-            *offset = i64::from(new_value);
-        }
-        current_value
-    };
-    Ok(Some(Value::Int(current_value)))
+    exchange_int_word(
+        &*thread,
+        parameters,
+        i32::to_ne_bytes,
+        i32::from_ne_bytes,
+        -1,
+    )
+    .await
 }
 
 #[intrinsic_method(
@@ -202,126 +329,113 @@ pub async fn compare_and_exchange_long<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let new_value = parameters.pop_long()?;
-    let expected_value = parameters.pop_long()?;
-    let mut offset = parameters.pop()?;
-    let Value::Long(ref mut offset) = offset else {
-        return Err(InvalidOperand {
-            expected: "long".to_string(),
-            actual: offset.to_string(),
-        });
-    };
-
-    let value = parameters.pop()?;
-    let current_value = if value.is_object() && !value.is_null() {
-        let offset_long = *offset;
-        if offset_long & STATIC_FIELD_OFFSET_MASK != 0 {
-            let offset = usize::try_from(offset_long & !STATIC_FIELD_OFFSET_MASK)?;
-            let class = get_class(&*thread, &value).await?;
-            let field_name = class.field_name(offset)?;
-            let value_object = class.static_value(&field_name)?;
-            let current_value = if let Value::Object(None) = value_object {
-                0
-            } else {
-                value_object.as_i64()?
-            };
-            if current_value == expected_value {
-                class.set_static_value(&field_name, Value::Long(new_value))?;
-            }
-            current_value
-        } else {
-            let mut object = value.as_object_mut()?;
-            let offset = usize::try_from(offset_long)?;
-            let value_object = object.value(offset)?;
-            let current_value = if let Value::Object(None) = value_object {
-                0
-            } else {
-                value_object.as_i64()?
-            };
-            if current_value == expected_value {
-                object.set_value(offset, Value::Long(new_value))?;
-            }
-            current_value
-        }
+    let new = parameters.pop_long()?;
+    let expected = parameters.pop_long()?;
+    let offset = parameters.pop_long()?;
+    let base = parameters.pop()?;
+    let witness = if let Some(bytes) = exchange_bytes(
+        &*thread,
+        &base,
+        offset,
+        expected.to_ne_bytes(),
+        new.to_ne_bytes(),
+    )? {
+        i64::from_ne_bytes(bytes)
+    } else if base.is_null() {
+        // Match Unsafe reads of an unallocated address.
+        offset
     } else {
-        let current_value = *offset;
-        if current_value == expected_value {
-            *offset = new_value;
-        }
-        current_value
+        exchange_field_word(&*thread, &base, offset, BaseType::Long, |old| {
+            Ok((old.as_i64()? == expected).then_some(Value::Long(new)))
+        })
+        .await?
+        .as_i64()?
     };
-    Ok(Some(Value::Long(current_value)))
+    Ok(Some(Value::Long(witness)))
 }
 
 #[intrinsic_method(
     "jdk/internal/misc/Unsafe.compareAndExchangeObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
     Equal(JAVA_11)
 )]
-pub fn compare_and_exchange_object<T: Thread + 'static>(
+pub async fn compare_and_exchange_object<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    compare_and_exchange_reference(thread, parameters)
+    compare_and_exchange_reference(thread, parameters).await
 }
 
 #[intrinsic_method(
     "jdk/internal/misc/Unsafe.compareAndExchangeReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThan(JAVA_11)
 )]
-pub fn compare_and_exchange_reference<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+pub async fn compare_and_exchange_reference<T: Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let new_value = parameters.pop()?;
-    let expected_value = parameters.pop()?;
+    let (witness, _) = exchange_reference(&*thread, parameters).await?;
+    Ok(Some(witness))
+}
+
+async fn exchange_reference<T: Thread + 'static>(
+    thread: &T,
+    mut parameters: Parameters,
+) -> Result<(Value, bool)> {
+    let replacement = parameters.pop()?;
+    let expected = parameters.pop()?;
     let offset = parameters.pop_long()?;
-    let offset = usize::try_from(offset & !STATIC_FIELD_OFFSET_MASK)?;
-    let object = parameters.pop()?;
-    if object.is_null() {
-        return Err(NullPointerException(Some(
-            "compareAndExchangeReference: Reference cannot be null".to_string(),
-        ))
-        .into());
+    let base = parameters.pop()?;
+    if base.is_null() {
+        return Err(NullPointerException(None).into());
     }
-    let mut object = object.as_reference_mut()?;
-
-    let result = match &mut *object {
-        Reference::Object(object) => {
-            let current_value = object.value(offset)?;
-
-            let equal = match (&current_value, &expected_value) {
-                (Value::Object(Some(r1)), Value::Object(Some(r2))) => Gc::ptr_eq(r1, r2),
-                (Value::Object(None), Value::Object(None)) => true,
-                _ => false,
-            };
-
-            if equal {
-                object.set_value(offset, new_value)?;
-            }
-            current_value
-        }
-        Reference::Array(object_array) => {
-            let offset = offset / REFERENCE_SIZE;
-            let elements = &mut object_array.elements;
-            let Some(element) = elements.get_mut(offset) else {
-                return Err(InternalError("Invalid array index".to_string()));
-            };
-            let current_value = element.clone();
-
-            let equal = match (&current_value, &expected_value) {
-                (Value::Object(Some(r1)), Value::Object(Some(r2))) => Gc::ptr_eq(r1, r2),
-                (Value::Object(None), Value::Object(None)) => true,
-                _ => false,
-            };
-
-            if equal {
-                *element = new_value;
-            }
-            current_value
-        }
-        _ => return Err(InternalError("Invalid reference type".to_string())),
+    let matches = |old: &Value| match (old, &expected) {
+        (Value::Object(Some(a)), Value::Object(Some(b))) => a.ptr_eq(b),
+        (Value::Object(None), Value::Object(None)) => true,
+        _ => false,
     };
-    Ok(Some(result))
+    let slot = usize::try_from(offset & !STATIC_FIELD_OFFSET_MASK)?;
+    if offset & STATIC_FIELD_OFFSET_MASK != 0 {
+        let class = get_class_no_init(thread, &base).await?;
+        let (field, storage) = class.static_field_value(slot)?;
+        let mut storage = storage
+            .write()
+            .map_err(|e| ristretto_types::Error::PoisonedLock(e.to_string()))?;
+        let old = storage.clone();
+        let equal = matches(&old);
+        if equal {
+            *storage = field.checked_value(replacement)?;
+        }
+        return Ok((old, equal));
+    }
+    let mut reference = base.as_reference_mut()?;
+    match &mut *reference {
+        Reference::Object(object) => {
+            let old = object.value(slot)?;
+            let equal = matches(&old);
+            if equal {
+                object.set_value(slot, replacement)?;
+            }
+            Ok((old, equal))
+        }
+        Reference::Array(array) => {
+            let element = array
+                .elements
+                .get_mut(slot / REFERENCE_SIZE)
+                .ok_or_else(|| InternalError("Invalid reference array index".into()))?;
+            if !matches!(replacement, Value::Object(_)) {
+                return Err(InvalidOperand {
+                    expected: "object".into(),
+                    actual: replacement.to_string(),
+                });
+            }
+            if matches(element) {
+                Ok((std::mem::replace(element, replacement), true))
+            } else {
+                Ok((element.clone(), false))
+            }
+        }
+        _ => Err(InternalError("Invalid reference type".into())),
+    }
 }
 
 #[intrinsic_method(
@@ -332,58 +446,11 @@ pub async fn compare_and_set_int<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = parameters.pop_int()?;
-    let expected = parameters.pop_int()?;
-    let mut offset = parameters.pop()?;
-    let Value::Long(ref mut offset) = offset else {
-        return Err(InvalidOperand {
-            expected: "long".to_string(),
-            actual: offset.to_string(),
-        });
-    };
-
-    let value = parameters.pop()?;
-    let result = if value.is_object() && !value.is_null() {
-        let offset_long = *offset;
-        if offset_long & STATIC_FIELD_OFFSET_MASK != 0 {
-            let offset = usize::try_from(offset_long & !STATIC_FIELD_OFFSET_MASK)?;
-            let class = get_class(&*thread, &value).await?;
-            let field_name = class.field_name(offset)?;
-            let value_object = class.static_value(&field_name)?;
-            let value = if let Value::Object(None) = value_object {
-                0
-            } else {
-                value_object.as_i32()?
-            };
-            if value == expected {
-                class.set_static_value(&field_name, Value::Int(x))?;
-                1
-            } else {
-                0
-            }
-        } else {
-            let mut object = value.as_object_mut()?;
-            let offset = usize::try_from(offset_long)?;
-            let value_object = object.value(offset)?;
-            let value = if let Value::Object(None) = value_object {
-                0
-            } else {
-                value_object.as_i32()?
-            };
-            if value == expected {
-                object.set_value(offset, Value::Int(x))?;
-                1
-            } else {
-                0
-            }
-        }
-    } else if i32::try_from(*offset)? == expected {
-        *offset = i64::from(x);
-        1
-    } else {
-        0
-    };
-    Ok(Some(Value::Int(result)))
+    let new = parameters.pop_int()?;
+    let expected = parameters.peek()?.as_i32()?;
+    parameters.push_int(new);
+    let old = compare_and_exchange_int(thread, parameters).await?;
+    Ok(Some(Value::from(old == Some(Value::Int(expected)))))
 }
 
 #[intrinsic_method(
@@ -394,157 +461,34 @@ pub async fn compare_and_set_long<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = parameters.pop_long()?;
-    let expected = parameters.pop_long()?;
-    let mut offset = parameters.pop()?;
-    let Value::Long(ref mut offset) = offset else {
-        return Err(InvalidOperand {
-            expected: "long".to_string(),
-            actual: offset.to_string(),
-        });
-    };
-
-    let value = parameters.pop()?;
-    let result = if value.is_object() && !value.is_null() {
-        let offset_long = *offset;
-        if offset_long & STATIC_FIELD_OFFSET_MASK != 0 {
-            let offset = usize::try_from(offset_long & !STATIC_FIELD_OFFSET_MASK)?;
-            let class = get_class(&*thread, &value).await?;
-            let field_name = class.field_name(offset)?;
-            let value_object = class.static_value(&field_name)?;
-            let value = if let Value::Object(None) = value_object {
-                0
-            } else {
-                value_object.as_i64()?
-            };
-            if value == expected {
-                class.set_static_value(&field_name, Value::Long(x))?;
-                1
-            } else {
-                0
-            }
-        } else {
-            let mut object = value.as_object_mut()?;
-            let offset = usize::try_from(offset_long)?;
-            let value_object = object.value(offset)?;
-            let value = if let Value::Object(None) = value_object {
-                0
-            } else {
-                value_object.as_i64()?
-            };
-            if value == expected {
-                object.set_value(offset, Value::Long(x))?;
-                1
-            } else {
-                0
-            }
-        }
-    } else if *offset == expected {
-        *offset = x;
-        1
-    } else {
-        0
-    };
-    Ok(Some(Value::Int(result)))
+    let new = parameters.pop_long()?;
+    let expected = parameters.peek()?.as_i64()?;
+    parameters.push_long(new);
+    let old = compare_and_exchange_long(thread, parameters).await?;
+    Ok(Some(Value::from(old == Some(Value::Long(expected)))))
 }
 
 #[intrinsic_method(
     "jdk/internal/misc/Unsafe.compareAndSetObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
     Equal(JAVA_11)
 )]
-pub fn compare_and_set_object<T: Thread + 'static>(
+pub async fn compare_and_set_object<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    compare_and_set_reference(thread, parameters)
+    compare_and_set_reference(thread, parameters).await
 }
 
 #[intrinsic_method(
     "jdk/internal/misc/Unsafe.compareAndSetReference(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
     GreaterThan(JAVA_11)
 )]
-pub fn compare_and_set_reference<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+pub async fn compare_and_set_reference<T: Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let x = parameters.pop()?;
-    let expected = parameters.pop()?;
-    let offset = parameters.pop_long()?;
-    let offset = usize::try_from(offset & !STATIC_FIELD_OFFSET_MASK)?;
-    let reference = parameters.pop()?;
-    if reference.is_null() {
-        return Err(NullPointerException(Some(
-            "compareAndSetReference: Reference cannot be null".to_string(),
-        ))
-        .into());
-    }
-    let mut reference = reference.as_reference_mut()?;
-
-    let result = match &mut *reference {
-        Reference::Array(object_array) => {
-            let offset = offset / REFERENCE_SIZE;
-            let elements = &mut object_array.elements;
-            let Some(value) = elements.get_mut(offset) else {
-                return Err(InternalError(
-                    "compareAndSetReference: Invalid reference index".to_string(),
-                ));
-            };
-            let Value::Object(ref expected_reference) = expected else {
-                return Err(InvalidOperand {
-                    expected: "object".to_string(),
-                    actual: expected.to_string(),
-                });
-            };
-
-            let Value::Object(reference) = value else {
-                return Err(InvalidOperand {
-                    expected: "object".to_string(),
-                    actual: value.to_string(),
-                });
-            };
-
-            let equal = match (reference, expected_reference) {
-                (Some(r1), Some(r2)) => Gc::ptr_eq(r1, r2),
-                (None, None) => true,
-                _ => false,
-            };
-
-            if equal {
-                let Value::Object(x_reference) = x else {
-                    return Err(InvalidOperand {
-                        expected: "object".to_string(),
-                        actual: x.to_string(),
-                    });
-                };
-                *value = Value::Object(x_reference);
-                1
-            } else {
-                0
-            }
-        }
-        Reference::Object(object) => {
-            let value = object.value(offset)?;
-            // CAS compares reference identity, never the objects' fields. Structural equality
-            // can recurse through an entire compiler graph and incorrectly accept another object.
-            let equal = match (&value, &expected) {
-                (Value::Object(Some(a)), Value::Object(Some(b))) => Gc::ptr_eq(a, b),
-                (Value::Object(None), Value::Object(None)) => true,
-                _ => false,
-            };
-            if equal {
-                object.set_value(offset, x)?;
-                1
-            } else {
-                0
-            }
-        }
-        _ => {
-            return Err(InternalError(
-                "compareAndSetReference: Invalid reference".to_string(),
-            ));
-        }
-    };
-    Ok(Some(Value::Int(result)))
+    let (_, updated) = exchange_reference(&*thread, parameters).await?;
+    Ok(Some(Value::from(updated)))
 }
 
 #[intrinsic_method(
@@ -963,21 +907,20 @@ pub fn full_fence<T: Thread + 'static>(
     Ok(None)
 }
 
-async fn get_static_field_target<T: Thread + 'static>(
-    thread: &Arc<T>,
-    reference: &Reference,
-    offset: usize,
-) -> Result<(Arc<Class>, String)> {
-    match reference {
-        Reference::Object(object) => {
-            let name = get_class_name(object)?;
-            let class = thread.class(&name).await?;
-            let field_name = class.field_name(offset)?;
-            Ok((class, field_name))
-        }
-        _ => Err(InternalError(
-            "Static field access expects Class object".to_string(),
-        )),
+// A field is a slot, but Unsafe selects the width and signedness of its load independently
+// of the field declaration (for example getShortVolatile on a char field).
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn read_field_as(value: Value, base_type: Option<BaseType>) -> Value {
+    match (value, base_type) {
+        (Value::Int(n), Some(BaseType::Byte)) => Value::from(n as i8),
+        (Value::Int(n), Some(BaseType::Short)) => Value::from(n as i16),
+        (Value::Int(n), Some(BaseType::Char)) => Value::from(n as u16),
+        (Value::Object(None), Some(BaseType::Long)) => Value::Long(0),
+        (Value::Object(None), Some(BaseType::Float)) => Value::Float(0.0),
+        (Value::Object(None), Some(BaseType::Double)) => Value::Double(0.0),
+        (Value::Object(None), Some(_)) => Value::Int(0),
+        (value, Some(ty)) => reinterpret_field_word(value, ty),
+        (value, None) => value,
     }
 }
 
@@ -1039,28 +982,8 @@ async fn get_reference_type<T: Thread + 'static>(
 
     if is_static {
         let mirror = Value::Object(Some(reference.clone()));
-        let class = get_class(&*thread, &mirror).await?;
-        let field_name = class.field_name(offset)?;
-        let value = class.static_value(&field_name)?;
-        match value {
-            Value::Object(None) => {
-                if let Some(base_type) = base_type {
-                    match base_type {
-                        BaseType::Boolean
-                        | BaseType::Byte
-                        | BaseType::Char
-                        | BaseType::Short
-                        | BaseType::Int => Ok(Some(Value::Int(0))),
-                        BaseType::Long => Ok(Some(Value::Long(0))),
-                        BaseType::Float => Ok(Some(Value::Float(0.0))),
-                        BaseType::Double => Ok(Some(Value::Double(0.0))),
-                    }
-                } else {
-                    Ok(Some(value))
-                }
-            }
-            _ => Ok(Some(value)),
-        }
+        let class = get_class_no_init(&*thread, &mirror).await?;
+        Ok(Some(read_field_as(class.static_value(offset)?, base_type)))
     } else {
         let guard = reference.read();
         match &*guard {
@@ -1084,25 +1007,7 @@ async fn get_reference_type<T: Thread + 'static>(
                         class.name()
                     ))
                 })?;
-                match value {
-                    Value::Object(None) => {
-                        if let Some(base_type) = base_type {
-                            match base_type {
-                                BaseType::Boolean
-                                | BaseType::Byte
-                                | BaseType::Char
-                                | BaseType::Short
-                                | BaseType::Int => Ok(Some(Value::Int(0))),
-                                BaseType::Long => Ok(Some(Value::Long(0))),
-                                BaseType::Float => Ok(Some(Value::Float(0.0))),
-                                BaseType::Double => Ok(Some(Value::Double(0.0))),
-                            }
-                        } else {
-                            Ok(Some(value))
-                        }
-                    }
-                    _ => Ok(Some(value)),
-                }
+                Ok(Some(read_field_as(value, base_type)))
             }
             primitive_array => {
                 let Some(array) = primitive_array.as_bytes() else {
@@ -1144,10 +1049,8 @@ async fn get_reference_type<T: Thread + 'static>(
                 buffer_prefix.copy_from_slice(slice_prefix);
 
                 let value = match base_type {
-                    BaseType::Boolean | BaseType::Byte => {
-                        let value = buffer[0];
-                        Value::Int(i32::from(value))
-                    }
+                    BaseType::Boolean => Value::Int(i32::from(buffer[0])),
+                    BaseType::Byte => Value::Int(i32::from(i8::from_ne_bytes([buffer[0]]))),
                     BaseType::Char => {
                         let value = u16::from_ne_bytes([buffer[0], buffer[1]]);
                         Value::Int(i32::from(value))
@@ -1246,9 +1149,12 @@ async fn put_reference_type<T: Thread + 'static>(
 
     if is_static {
         let mirror = Value::Object(Some(reference.clone()));
-        let class = get_class(&*thread, &mirror).await?;
-        let field_name = class.field_name(offset)?;
-        class.set_static_value(&field_name, value)?;
+        let class = get_class_no_init(&*thread, &mirror).await?;
+        let (field, storage) = class.static_field_value(offset)?;
+        let value = checked_field_word(&field, value)?;
+        *storage
+            .write()
+            .map_err(|e| ristretto_types::Error::PoisonedLock(e.to_string()))? = value;
     } else {
         let mut guard = reference.write();
         match &mut *guard {
@@ -1272,7 +1178,7 @@ async fn put_reference_type<T: Thread + 'static>(
             }
             Reference::Object(object) => {
                 let class_name = object.class().name().to_string();
-                object.set_value(offset, value).map_err(|error| {
+                store_instance_field_word(object, offset, value).map_err(|error| {
                     InternalError(format!(
                         "Unsafe put field failed for {class_name} offset {offset}: {error}"
                     ))
@@ -1630,14 +1536,15 @@ pub async fn object_field_offset_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let field = parameters.pop()?;
-    let (class, name) = {
-        let field = field.as_object_ref()?;
-        let class = field.value("clazz")?;
-        let name = field.value("name")?;
-        (class, name)
-    };
-    let parameters = Parameters::new(vec![class, name]);
-    object_field_offset_1(thread, parameters).await
+    let (class, field) = reflected_field(&*thread, &field).await?;
+    if field.access_flags().contains(FieldAccessFlags::STATIC) {
+        return Err(ristretto_types::JavaError::IllegalArgumentException(
+            "Expected an instance field".into(),
+        )
+        .into());
+    }
+    let offset = i64::try_from(class.field_storage_slot(&field)?)?;
+    Ok(Some(Value::Long(offset)))
 }
 
 #[intrinsic_method(
@@ -2022,7 +1929,7 @@ pub async fn should_be_initialized_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let class_object = parameters.pop()?;
-    let class = crate::java::lang::class::get_class_no_init(&*thread, &class_object).await?;
+    let class = get_class_no_init(&*thread, &class_object).await?;
 
     // Returns true if the class has NOT been initialized yet
     let is_initialized = class.is_initialized()?;
@@ -2054,15 +1961,14 @@ pub async fn static_field_offset_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let field = parameters.pop()?;
-    let (class, name) = {
-        let field = field.as_object_ref()?;
-        let class = field.value("clazz")?;
-        let name = field.value("name")?;
-        (class, name)
-    };
-    let field_name = name.as_string()?;
-    let class = get_class(&*thread, &class).await?;
-    let offset = i64::try_from(class.field_offset(&field_name)?)?;
+    let (class, field) = reflected_field(&*thread, &field).await?;
+    if !field.access_flags().contains(FieldAccessFlags::STATIC) {
+        return Err(ristretto_types::JavaError::IllegalArgumentException(
+            "Expected a static field".into(),
+        )
+        .into());
+    }
+    let offset = i64::try_from(class.field_storage_slot(&field)?)?;
     Ok(Some(Value::Long(offset | STATIC_FIELD_OFFSET_MASK)))
 }
 
@@ -2179,7 +2085,7 @@ mod tests {
             Value::Object(None),
         ]);
         assert_eq!(
-            compare_and_set_reference(thread.clone(), parameters)?,
+            compare_and_set_reference(thread.clone(), parameters).await?,
             Some(Value::Int(0))
         );
         let observed = holder.as_object_ref()?.value("value")?;
@@ -2194,7 +2100,7 @@ mod tests {
             Value::Object(None),
         ]);
         assert_eq!(
-            compare_and_set_reference(thread.clone(), parameters)?,
+            compare_and_set_reference(thread.clone(), parameters).await?,
             Some(Value::Int(1))
         );
         assert!(holder.as_object_ref()?.value("value")?.is_null());
@@ -2205,7 +2111,7 @@ mod tests {
             current,
         ]);
         assert_eq!(
-            compare_and_set_reference(thread.clone(), parameters)?,
+            compare_and_set_reference(thread.clone(), parameters).await?,
             Some(Value::Int(1))
         );
         let parameters = Parameters::new(vec![
@@ -2215,7 +2121,7 @@ mod tests {
             Value::Object(None),
         ]);
         assert_eq!(
-            compare_and_set_reference(thread, parameters)?,
+            compare_and_set_reference(thread, parameters).await?,
             Some(Value::Int(0))
         );
         Ok(())
@@ -2312,6 +2218,8 @@ mod tests {
             ("[J", LONG_SIZE),
             ("[D", DOUBLE_SIZE),
             ("[Ljava/lang/Object;", REFERENCE_SIZE),
+            ("[[I", REFERENCE_SIZE),
+            ("[[[Ljava/lang/Object;", REFERENCE_SIZE),
         ];
 
         for (class_name, expected_scale) in tests {
@@ -2374,7 +2282,7 @@ mod tests {
         parameters.push(Value::Object(None)); // expected value
         parameters.push(Value::Object(None)); // new value
         // TODO: verify results
-        let _ = compare_and_exchange_object(thread, parameters);
+        let _ = compare_and_exchange_object(thread, parameters).await;
         Ok(())
     }
 
@@ -2393,7 +2301,7 @@ mod tests {
         parameters.push(Value::Object(None)); // expected value
         parameters.push(Value::Object(None)); // new value
         // TODO: verify results
-        let _ = compare_and_exchange_reference(thread, parameters);
+        let _ = compare_and_exchange_reference(thread, parameters).await;
         Ok(())
     }
 
@@ -2798,14 +2706,26 @@ mod tests {
     #[tokio::test]
     async fn test_static_field_offset_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let field = create_field(&thread).await?;
+        let owner = thread.class("java/lang/Integer").await?;
+        let field = thread
+            .try_invoke(
+                "java/lang/Class",
+                "getDeclaredField(Ljava/lang/String;)Ljava/lang/reflect/Field;",
+                &[
+                    owner.to_object(&thread).await?,
+                    "MAX_VALUE".to_object(&thread).await?,
+                ],
+            )
+            .await?;
+        let expected = i64::try_from(owner.field_storage_slot(&owner.static_field("MAX_VALUE")?)?)?;
+
         let mut parameters = Parameters::default();
         parameters.push(field);
         let value = static_field_offset_0(thread, parameters)
             .await?
             .expect("offset");
         let offset = value.as_i64()?;
-        assert_eq!(offset, STATIC_FIELD_OFFSET_MASK);
+        assert_eq!(offset, STATIC_FIELD_OFFSET_MASK | expected);
         Ok(())
     }
 

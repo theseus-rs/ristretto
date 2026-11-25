@@ -123,46 +123,12 @@ pub async fn resolve_method_ref(
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
     let method_descriptor = method_descriptor.to_str_lossy();
 
-    // Look up the method in the class hierarchy
-    // For interface methods, we allow abstract methods since dispatch happens on the receiver
+    let vm = thread.vm()?;
+    let registry = vm.method_registry();
     let ResolvedMethod {
         declaring_class: resolved_class,
         method,
-    } = if invoke_kind == InvokeKind::Interface {
-        target_class.resolve_interface_method(&method_name, &method_descriptor)?
-    } else {
-        // First try normal method lookup
-        match target_class.resolve_method(&method_name, &method_descriptor) {
-            Ok(result) => result,
-            Err(e) => {
-                // If lookup failed, check if this is a holder class with an intrinsic method
-                // Holder classes have dynamically generated methods provided by the JVM
-                if is_holder_class_for_resolution(&class_name) {
-                    let vm = thread.vm()?;
-                    let registry = vm.method_registry();
-                    if registry
-                        .method(&class_name, &method_name, &method_descriptor)
-                        .is_some()
-                    {
-                        // Create a synthetic native method for the intrinsic
-                        let synthetic_method = create_synthetic_intrinsic_method(
-                            &class_name,
-                            &method_name,
-                            &method_descriptor,
-                        )?;
-                        ResolvedMethod {
-                            declaring_class: target_class.clone(),
-                            method: synthetic_method,
-                        }
-                    } else {
-                        return Err(e.into());
-                    }
-                } else {
-                    return Err(e.into());
-                }
-            }
-        }
-    };
+    } = resolve_symbolic_method(&target_class, &method_name, &method_descriptor, registry)?;
 
     // Validate method properties for the invoke kind
     validate_method_for_invoke(&method, &method_name, &method_descriptor, invoke_kind)?;
@@ -170,20 +136,54 @@ pub async fn resolve_method_ref(
     // Cache the successful resolution
     // For polymorphic methods, we must use the call site descriptor from the constant pool, not the
     // method's declared descriptor, as each call site may have a different signature.
-    let intrinsic = thread
-        .vm()?
-        .method_registry()
+    let intrinsic = registry
         .method(resolved_class.name(), method.name(), method.descriptor())
         .copied();
-    let resolved_ref = Arc::new(ResolvedMethodRef::new(
+    let mut resolved_ref = ResolvedMethodRef::new(
         target_class,
         resolved_class,
         method,
         invoke_kind,
         method_descriptor.to_string(),
         intrinsic,
-    ));
-    Ok(entry.store(resolved_ref))
+    );
+    if invoke_kind == InvokeKind::Virtual
+        && resolved_ref.is_polymorphic
+        && matches!(
+            (
+                resolved_ref.declaring_class.name(),
+                resolved_ref.method.name()
+            ),
+            ("java/lang/invoke/VarHandle", _)
+                | ("java/lang/invoke/MethodHandle", "invoke" | "invokeExact")
+        )
+    {
+        resolved_ref.call_site_type =
+            Some(super::get_method_type(&thread, caller_class, &method_descriptor).await?);
+    }
+    Ok(entry.store(Arc::new(resolved_ref)))
+}
+
+/// Resolve a class or interface member, including VM-provided method-handle holder entries.
+pub(super) fn resolve_symbolic_method(
+    class: &Arc<Class>,
+    name: &str,
+    descriptor: &str,
+    registry: &crate::intrinsic_methods::MethodRegistry,
+) -> Result<ResolvedMethod> {
+    match class.resolve_method(name, descriptor) {
+        Ok(target) => Ok(target),
+        Err(_)
+            if is_holder_class_for_resolution(class.name())
+                && registry.method(class.name(), name, descriptor).is_some() =>
+        {
+            Ok(ResolvedMethod {
+                declaring_class: class.clone(),
+                method: create_synthetic_intrinsic_method(class.name(), name, descriptor)?,
+            })
+        }
+        Err(error) => Err(error.into()),
+    }
 }
 
 /// Validates that the class kind matches the invoke kind.

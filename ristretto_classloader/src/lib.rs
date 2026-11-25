@@ -65,6 +65,7 @@ mod class_path;
 mod class_path_entry;
 mod error;
 mod field;
+mod loading_constraints;
 mod method;
 pub mod module;
 mod object;

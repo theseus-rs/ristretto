@@ -64,7 +64,7 @@ async fn close_internal<T: Thread + 'static>(
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
     if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
-        regions.remove_fd(fd);
+        regions.detach_fd(fd);
     }
     #[cfg(target_os = "windows")]
     mark_closed(vm.as_ref(), fd);
@@ -121,7 +121,7 @@ pub async fn close_int_fd<T: Thread + 'static>(
     let fd = parameters.pop_int()?;
     let vm = thread.vm()?;
     if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
-        regions.remove_fd(i64::from(fd));
+        regions.detach_fd(i64::from(fd));
     }
     managed_files::close(vm.file_handles(), i64::from(fd)).await;
     let _ = super::posix::close_descriptor(&*vm, fd)?;
@@ -178,7 +178,7 @@ pub async fn force_0<T: Thread + 'static>(
     if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
         for (address, region) in regions.writable_entries_for_fd(fd) {
             let bytes = vm.native_memory().read_bytes(address, region.length);
-            let _ = managed_files::write_at(file_handles, fd, &bytes, region.position).await;
+            let _ = regions.write_back(address, &bytes, region.position).await;
         }
     }
     if metadata_only {
@@ -210,7 +210,7 @@ pub async fn force_0_linux<T: Thread + 'static>(
     if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
         for (address, region) in regions.writable_entries_for_fd(fd) {
             let bytes = vm.native_memory().read_bytes(address, region.length);
-            let _ = managed_files::write_at(file_handles, fd, &bytes, region.position).await;
+            let _ = regions.write_back(address, &bytes, region.position).await;
         }
     }
     if metadata_only {
@@ -962,20 +962,20 @@ pub async fn map0<T: Thread + 'static>(
     let mode = MapMode::from_int(prot).unwrap_or(MapMode::ReadOnly);
     let path = path_for_fd(file_handles, fd).await;
     let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
-    if let Some(p) = path.as_ref() {
-        regions.track_path(p.clone());
-    }
-    regions.insert(
-        address,
-        MappedRegion {
-            fd,
-            position,
-            length: len,
-            mode,
-            file_key: None,
-            path,
-        },
-    );
+    regions
+        .register(
+            &*vm,
+            address,
+            MappedRegion {
+                channel_fd: Some(fd),
+                position,
+                length: len,
+                mode,
+                file_key: None,
+                path,
+            },
+        )
+        .await?;
     Ok(Some(Value::Long(address)))
 }
 
@@ -1093,26 +1093,15 @@ pub async fn transfer_from0<T: Thread + 'static>(
     "sun/nio/ch/FileDispatcherImpl.unmap0(JJ)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-pub fn unmap0<T: Thread + 'static>(
+pub async fn unmap0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let len = parameters.pop_long()?;
+    let length = parameters.pop_long()?;
     let address = parameters.pop_long()?;
     let vm = thread.vm()?;
     let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
-    let length_usize = usize::try_from(len.max(0)).unwrap_or(0);
-    let (base, path) = if let Some((base, _region)) = regions.find_containing(address, length_usize)
-    {
-        let removed = regions.remove(base);
-        (base, removed.and_then(|r| r.path))
-    } else {
-        (address, None)
-    };
-    if let Some(path) = path {
-        regions.release_path(&path);
-    }
-    vm.native_memory().free(base);
+    regions.unmap(&*vm, address, length).await;
     Ok(Some(Value::Int(0)))
 }
 
@@ -1487,6 +1476,7 @@ mod tests {
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
         )
+        .await
         .expect("unmap0");
         assert_eq!(result, Some(Value::Int(0)));
     }

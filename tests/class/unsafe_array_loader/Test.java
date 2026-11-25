@@ -10,6 +10,15 @@ import sun.misc.Unsafe;
 
 /** Unsafe definitions with a null loader and their arrays belong to bootstrap. */
 public class Test {
+    static int staticValue = 3;
+    int instanceValue = 7;
+    static int initializations;
+    static class Prepared {
+        static Object value;
+        static double doubleValue;
+        static { initializations++; }
+    }
+    float floatValue;
     static byte[] bytes(String name) throws Exception {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         DataOutputStream out = new DataOutputStream(buffer);
@@ -28,6 +37,53 @@ public class Test {
         Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
         unsafeField.setAccessible(true);
         Unsafe unsafe = (Unsafe) unsafeField.get(null);
+        Field prepared = Prepared.class.getDeclaredField("value");
+        Object base = unsafe.staticFieldBase(prepared);
+        long offset = unsafe.staticFieldOffset(prepared);
+        Object marker = new Object();
+        if (unsafe.getObject(base, offset) != null || initializations != 0)
+            throw new AssertionError("raw read initialized the class");
+        unsafe.putObject(base, offset, marker);
+        if (unsafe.getObject(base, offset) != marker || initializations != 0)
+            throw new AssertionError("raw write initialized the class");
+        unsafe.putObject(base, offset, null);
+        if (initializations != 0 || !unsafe.compareAndSwapObject(base, offset, null, marker)
+                || initializations != 0) throw new AssertionError("raw reference CAS initialized the class");
+        Field doubleField = Prepared.class.getDeclaredField("doubleValue");
+        Object doubleBase = unsafe.staticFieldBase(doubleField);
+        long doubleOffset = unsafe.staticFieldOffset(doubleField);
+        long doubleNaN = 0x7ff8000000000042L;
+        unsafe.putLong(doubleBase, doubleOffset, Long.MIN_VALUE);
+        if (unsafe.compareAndSwapLong(doubleBase, doubleOffset, 0L, doubleNaN)
+                || !unsafe.compareAndSwapLong(doubleBase, doubleOffset, Long.MIN_VALUE, doubleNaN)
+                || Double.doubleToRawLongBits(unsafe.getDouble(doubleBase, doubleOffset)) != doubleNaN
+                || initializations != 0) throw new AssertionError("raw double CAS on prepared field");
+        if (Prepared.value != marker || initializations != 1) throw new AssertionError("prepared field value");
+        Test receiver = new Test();
+        long floatOffset = unsafe.objectFieldOffset(Test.class.getDeclaredField("floatValue"));
+        int floatNaN = 0x7fc00042;
+        unsafe.putInt(receiver, floatOffset, floatNaN);
+        if (Float.floatToRawIntBits(receiver.floatValue) != floatNaN
+                || unsafe.compareAndSwapInt(receiver, floatOffset, floatNaN + 1, 0)
+                || !unsafe.compareAndSwapInt(receiver, floatOffset, floatNaN, Integer.MIN_VALUE)
+                || unsafe.getInt(receiver, floatOffset) != Integer.MIN_VALUE)
+            throw new AssertionError("raw float CAS lost NaN payload or sign of zero");
+        Field statics = Test.class.getDeclaredField("staticValue");
+        Field instance = Test.class.getDeclaredField("instanceValue");
+        try {
+            unsafe.objectFieldOffset(statics);
+            throw new AssertionError("instance offset accepted a static field");
+        } catch (IllegalArgumentException expected) {}
+        try {
+            unsafe.staticFieldOffset(instance);
+            throw new AssertionError("static offset accepted an instance field");
+        } catch (IllegalArgumentException expected) {}
+        if (unsafe.getInt(new Test(), unsafe.objectFieldOffset(instance)) != 7
+                || unsafe.getInt(unsafe.staticFieldBase(statics), unsafe.staticFieldOffset(statics)) != 3) {
+            throw new AssertionError("field offset selected the wrong storage");
+        }
+        // Unsafe reads prepared storage. Initialize Lookup before reading its static singleton.
+        Class.forName(MethodHandles.Lookup.class.getName(), true, null);
         Field lookupField = MethodHandles.Lookup.class.getDeclaredField("IMPL_LOOKUP");
         MethodHandles.Lookup trusted = (MethodHandles.Lookup) unsafe.getObject(
                 unsafe.staticFieldBase(lookupField), unsafe.staticFieldOffset(lookupField));

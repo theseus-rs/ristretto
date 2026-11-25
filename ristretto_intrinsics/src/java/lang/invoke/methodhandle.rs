@@ -31,15 +31,35 @@ pub async fn invoke<T: Thread + 'static>(
 /// already the receiver expected by the entry point; only the direct-member fallback removes it.
 async fn invoke_handle<T: Thread + 'static>(
     thread: Arc<T>,
-    parameters: Parameters,
+    mut parameters: Parameters,
     operation: &str,
 ) -> Result<Option<Value>> {
+    let call_site_type = parameters.call_site_type.take();
     let mut arguments = parameters.into_vec();
+    let handle = arguments
+        .first_mut()
+        .ok_or_else(|| InternalError(format!("{operation} requires a method handle")))?;
+    if let Some(site) = call_site_type {
+        let actual = handle.as_object_ref()?.value("type")?;
+        if !matches!((&actual, &site), (Value::Object(Some(a)), Value::Object(Some(b))) if a.ptr_eq(b))
+        {
+            if operation == "invokeExact" {
+                return Err(ristretto_types::JavaError::WrongMethodTypeException(
+                    "Expected exact MethodHandle type".into(),
+                )
+                .into());
+            }
+            *handle = thread
+                .try_invoke(
+                    "java/lang/invoke/MethodHandle",
+                    "asType(Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
+                    &[handle.clone(), site],
+                )
+                .await?;
+        }
+    }
     let (form, member) = {
-        let method_handle = arguments.first().ok_or_else(|| {
-            InternalError(format!("{operation} requires at least the method handle"))
-        })?;
-        let handle = method_handle.as_object_ref()?;
+        let handle = handle.as_object_ref()?;
         (handle.value("form").ok(), handle.value("member").ok())
     };
 
@@ -563,21 +583,51 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
     let reference_kind_value = u8::try_from(reference_kind_value)?;
     let reference_kind = ReferenceKind::try_from(reference_kind_value)?;
 
-    // Get the descriptor (method signature or field type)
-    // For methods, type is MethodType; for fields, type is Class
+    if matches!(
+        reference_kind,
+        ReferenceKind::GetField
+            | ReferenceKind::PutField
+            | ReferenceKind::GetStatic
+            | ReferenceKind::PutStatic
+    ) {
+        let slot = usize::try_from(
+            super::methodhandlenatives::member_field_offset(&*thread, member).await?,
+        )?;
+        return match reference_kind {
+            ReferenceKind::GetStatic => Ok(target_class.static_value(slot)?),
+            ReferenceKind::PutStatic => {
+                target_class.set_static_value(
+                    slot,
+                    bounds::index(&arguments, 0, "static field value")?.clone(),
+                )?;
+                Ok(Value::Object(None))
+            }
+            _ => {
+                let receiver = bounds::index(&arguments, 0, "field receiver")?;
+                if receiver.is_null() {
+                    return Err(NullPointerException(Some(format!(
+                        "Null receiver for {target_class_name}.{member_name}"
+                    )))
+                    .into());
+                }
+                if reference_kind == ReferenceKind::GetField {
+                    Ok(receiver.as_object_ref()?.value(slot)?)
+                } else {
+                    receiver
+                        .as_object_mut()?
+                        .set_value(slot, bounds::index(&arguments, 1, "field value")?.clone())?;
+                    Ok(Value::Object(None))
+                }
+            }
+        };
+    }
+
     let member_descriptor = if let Ok(ref type_val) = member_type {
         let type_class = get_object_class_name(type_val);
 
         if let Some(class_name) = type_class {
             if class_name == "java/lang/invoke/MethodType" {
                 method_type_descriptor(&thread, type_val).await?
-            } else if class_name == "java/lang/Class" {
-                // It's a field; get the class name and convert to descriptor
-                let type_ref = type_val.as_object_ref()?;
-                let field_type_name = get_class_name(&type_ref)?;
-                // For field access, we just need the field name, not the type descriptor
-                // The type is used to verify the field but we don't need it for GetField
-                ["L", &field_type_name.replace('.', "/"), ";"].concat()
             } else {
                 // Unknown type; try to use descriptor field
                 if let Ok(descriptor) = member_descriptor.and_then(|value| value.as_string()) {
@@ -703,75 +753,9 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
             )
             .await
         }
-        ReferenceKind::GetField => {
-            if arguments.is_empty() {
-                return Err(InternalError(
-                    [
-                        "GetField requires receiver: ",
-                        &target_class_name,
-                        ".",
-                        &member_name,
-                    ]
-                    .concat(),
-                ));
-            }
-            let argument = arguments.remove(0);
-            if argument.is_null() {
-                return Err(NullPointerException(Some(
-                    [
-                        "Cannot get field ",
-                        &target_class_name,
-                        ".",
-                        &member_name,
-                        " from null",
-                    ]
-                    .concat(),
-                ))
-                .into());
-            }
-            let receiver = argument.as_object_ref()?;
-            Ok(receiver.value(&member_name)?)
-        }
-        ReferenceKind::GetStatic => {
-            let value = target_class.static_value(&member_name)?;
-            Ok(value)
-        }
-        ReferenceKind::PutField => {
-            if arguments.is_empty() {
-                return Err(InternalError(
-                    [
-                        "PutField requires receiver: ",
-                        &target_class_name,
-                        ".",
-                        &member_name,
-                    ]
-                    .concat(),
-                ));
-            }
-            let argument = arguments.remove(0);
-            if argument.is_null() {
-                return Err(NullPointerException(Some(
-                    [
-                        "Cannot set field ",
-                        &target_class_name,
-                        ".",
-                        &member_name,
-                        " on null",
-                    ]
-                    .concat(),
-                ))
-                .into());
-            }
-            let mut receiver = argument.as_object_mut()?;
-            let value = arguments.remove(0);
-            receiver.set_value(&member_name, value)?;
-            Ok(Value::Object(None))
-        }
-        ReferenceKind::PutStatic => {
-            let value = arguments.remove(0);
-            target_class.set_static_value(&member_name, value)?;
-            Ok(Value::Object(None))
-        }
+        _ => Err(InternalError(format!(
+            "Unexpected method reference kind {reference_kind}"
+        ))),
     }
 }
 
@@ -1146,6 +1130,10 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
             // Try LambdaForm interpretation; this should handle newInvokeSpecial correctly
             match interpret_lambda_form(thread.clone(), &form, input_args).await {
                 Ok(result) => return Ok(result),
+                Err(
+                    error @ (ristretto_types::Error::Throwable(_)
+                    | ristretto_types::Error::JavaError(_)),
+                ) => return Err(error),
                 Err(e) => {
                     debug!(
                         "newInvokeSpecial: LambdaForm interpretation failed: {:?}",
@@ -1195,7 +1183,10 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
                 // falling through to the fallback path. The fallback can corrupt arguments
                 // by prepending BMH carrier objects as method arguments. Only VM internal
                 // errors should trigger the fallback dispatch.
-                if matches!(e, ristretto_types::Error::Throwable(_)) {
+                if matches!(
+                    e,
+                    ristretto_types::Error::Throwable(_) | ristretto_types::Error::JavaError(_)
+                ) {
                     return Err(e);
                 }
                 // Fall through to direct dispatch for VM internal errors only

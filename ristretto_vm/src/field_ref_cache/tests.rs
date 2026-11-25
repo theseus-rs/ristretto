@@ -3,7 +3,7 @@ use crate::Error::JavaError;
 use crate::JavaError::{NoClassDefFoundError, NullPointerException};
 use crate::instruction::{execute_field, try_field};
 use crate::{OperandStack, Thread};
-use ristretto_classfile::attributes::Instruction;
+use ristretto_classfile::attributes::{Attribute, Instruction};
 use ristretto_classfile::{ClassFile, ConstantPool, JAVA_8, MethodAccessFlags};
 use ristretto_classloader::{ClassLoader, ClassPath};
 

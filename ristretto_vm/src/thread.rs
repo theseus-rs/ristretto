@@ -20,6 +20,8 @@ use ristretto_classloader::{Class, ClassLoaderType, Method, Object, Reference, V
 use ristretto_intrinsics::get_monitor_id;
 use ristretto_macros::async_method;
 use ristretto_types::method_resolution;
+use ristretto_types::native_memory::ScopedAccess;
+use ristretto_types::{Assignable, VM as _};
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, Weak};
@@ -111,6 +113,7 @@ struct StackEntry {
     slots: usize,
     has_return_type: bool,
     monitor: MonitorGuard,
+    _scoped_access: Option<Arc<ScopedAccess>>,
 }
 
 /// A small, bounded cache retains both identities, including synthetic methods and loaders.
@@ -154,6 +157,7 @@ impl JavaStack {
             .compiler()
             .is_some_and(|compiler| !compiler.is_interpreted())
             || call.method.is_native()
+            || call.method.is_scoped_memory_access()
             || call
                 .method
                 .access_flags()
@@ -217,6 +221,7 @@ impl JavaStack {
             slots,
             has_return_type,
             monitor: MonitorGuard::new(None, thread.id),
+            _scoped_access: None,
         });
         Ok(())
     }
@@ -234,6 +239,7 @@ impl JavaStack {
         state: FrameState,
         has_return_type: bool,
         monitor: MonitorGuard,
+        scoped_access: Option<Arc<ScopedAccess>>,
     ) -> Result<()> {
         let slots = frame.stack_slots()?;
         let used_slots = self.checked_used_slots(slots, frame.class(), frame.method())?;
@@ -244,6 +250,7 @@ impl JavaStack {
             slots,
             has_return_type,
             monitor,
+            _scoped_access: scoped_access,
         });
         Ok(())
     }
@@ -287,6 +294,7 @@ impl JavaStack {
             slots: 0,
             has_return_type,
             monitor,
+            _scoped_access: None,
         });
     }
 
@@ -1075,13 +1083,16 @@ impl Thread {
         if let Some(ref value) = result
             && !value.is_null()
         {
+            let class =
+                ristretto_intrinsics::java::lang::class::get_class_no_init(self, value).await?;
+            loader.record_initiated(&class)?;
             registry.register_initiated_class(
                 vm.garbage_collector(),
                 &java_classloader,
                 &dot_name,
                 value,
             );
-            return ristretto_intrinsics::java::lang::class::get_class_no_init(self, value).await;
+            return Ok(class);
         }
 
         Err(ristretto_classloader::Error::ClassNotFound(class_name_str).into())
@@ -1204,7 +1215,6 @@ impl Thread {
     /// Marks a failed initializer and preserves Java's throwable wrapping rules.
     async fn fail_class_initializer(&self, class: &Arc<Class>, error: crate::Error) -> Result<()> {
         use crate::JavaError::ExceptionInInitializerError;
-        use crate::assignable::Assignable;
 
         // Step 8: <clinit> threw, so mark the class as erroneous.
         let error_msg = format!("{error:#}");
@@ -1438,6 +1448,35 @@ impl Thread {
         }
     }
 
+    fn begin_scoped_access(
+        vm: &VM,
+        method: &Method,
+        arguments: &[Value],
+    ) -> Option<Arc<ScopedAccess>> {
+        if !method.is_scoped_memory_access() {
+            return None;
+        }
+        let arguments = arguments.iter().skip(usize::from(!method.is_static()));
+        let sessions = method
+            .parameters()
+            .iter()
+            .zip(arguments)
+            .filter_map(|(ty, arg)| {
+                let (FieldType::Object(name), Value::Object(Some(session))) = (ty, arg) else {
+                    return None;
+                };
+                matches!(
+                    name.as_str(),
+                    Some(
+                        "jdk/internal/misc/ScopedMemoryAccess$Scope"
+                            | "jdk/internal/foreign/MemorySessionImpl"
+                    )
+                )
+                .then(|| session.as_ptr_i64())
+            });
+        vm.native_memory().begin_scoped_access(sessions)
+    }
+
     async fn dispatch_method(
         &self,
         call: MethodCall,
@@ -1455,8 +1494,10 @@ impl Thread {
         let method_descriptor = method.descriptor();
         let vm = self.vm()?;
 
+        let arguments = parameters.as_slice(caller.as_deref())?;
+        let scoped_access = Self::begin_scoped_access(&vm, &method, arguments);
         let sync_monitor = self
-            .acquire_sync_monitor(&class, &method, parameters.as_slice(caller.as_deref())?)
+            .acquire_sync_monitor(&class, &method, arguments)
             .await?;
         let monitor_guard = MonitorGuard::new(sync_monitor, self.id);
 
@@ -1540,7 +1581,7 @@ impl Thread {
         let mut state = stack.take_state();
         parameters.initialize(&mut state, &class, &method, caller)?;
         let frame = stack.take_frame(&self.thread, &class, &method);
-        stack.push(frame, state, has_return_type, monitor_guard)?;
+        stack.push(frame, state, has_return_type, monitor_guard, scoped_access)?;
         Ok(DispatchResult::FramePushed)
     }
 
@@ -2609,6 +2650,7 @@ mod tests {
                 FrameState::default(),
                 false,
                 MonitorGuard::new(Some(monitor.clone()), thread.id()),
+                None,
             )?;
         }
 
@@ -2845,6 +2887,46 @@ mod tests {
         let object = abstract_map.parent()?.expect("AbstractMap parent");
         assert_eq!("java/lang/Object", object.name());
         assert!(object.parent()?.is_none());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_loaded_class_assignability() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let object = thread.class("java.lang.Object").await?;
+        let string = thread.class("java.lang.String").await?;
+        let serializable = thread.class("java.io.Serializable").await?;
+        let int_array = thread.class("[I").await?;
+        let object_array = thread.class("[Ljava/lang/Object;").await?;
+        let string_array = thread.class("[Ljava/lang/String;").await?;
+        let object_matrix = thread.class("[[Ljava/lang/Object;").await?;
+
+        for (target, source, expected) in [
+            (&object, &object, true),
+            (&object, &string, true),
+            (&string, &object, false),
+            (&string, &serializable, false),
+            (&object, &serializable, true),
+            (&object_array, &object, false),
+            (&object, &int_array, true),
+            (&int_array, &int_array, true),
+            (&object, &object_array, true),
+            (&object_array, &object_array, true),
+            (&object_array, &int_array, false),
+            (&int_array, &object_array, false),
+            (&object_array, &string_array, true),
+            (&string_array, &object_array, false),
+            (&object_array, &object_matrix, true),
+            (&object_matrix, &object_array, false),
+        ] {
+            assert_eq!(
+                target.is_assignable_from(thread.as_ref(), source).await?,
+                expected,
+                "{}.isAssignableFrom({})",
+                target.name(),
+                source.name()
+            );
+        }
         Ok(())
     }
 

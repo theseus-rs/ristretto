@@ -7,10 +7,8 @@ use crate::frame::Frame;
 use crate::instruction::method_resolver::check_jpms_access;
 use crate::reference_cache::ReferenceCache;
 use dashmap::DashMap;
-use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
-    BaseType, CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, FieldAccessFlags,
-    FieldType, JAVA_9,
+    CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, FieldAccessFlags, FieldType, JAVA_9,
 };
 use ristretto_classloader::{Class, Field, Object, Value};
 use std::sync::{Arc, OnceLock, RwLock};
@@ -176,7 +174,7 @@ impl ResolvedFieldRef {
 
     pub(crate) fn put(&self, object: &mut Object, value: Value) -> Result<()> {
         let slot = self.instance_slot(object)?;
-        let value = self.checked_value(value)?;
+        let value = self.field.checked_value(value)?;
         Ok(object.set_value_at_slot(slot, value)?)
     }
 
@@ -196,33 +194,11 @@ impl ResolvedFieldRef {
         let FieldStorage::Static(storage) = &self.storage else {
             return Err(InternalError("Expected static field storage".to_owned()));
         };
-        let value = self.checked_value(value)?;
+        let value = self.field.checked_value(value)?;
         *storage
             .write()
             .map_err(|error| PoisonedLock(error.to_string()))? = value;
         Ok(())
-    }
-
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        reason = "JVM field stores narrow integer values to the declared field type"
-    )]
-    fn checked_value(&self, value: Value) -> Result<Value> {
-        self.field.check_value(&value)?;
-        Ok(match (self.field.field_type(), value) {
-            (FieldType::Base(BaseType::Boolean), Value::Int(value)) => Value::Int(value & 1),
-            (FieldType::Base(BaseType::Byte), Value::Int(value)) => {
-                Value::Int(i32::from(value as i8))
-            }
-            (FieldType::Base(BaseType::Char), Value::Int(value)) => {
-                Value::Int(i32::from(value as u16))
-            }
-            (FieldType::Base(BaseType::Short), Value::Int(value)) => {
-                Value::Int(i32::from(value as i16))
-            }
-            (_, value) => value,
-        })
     }
 }
 
@@ -257,22 +233,14 @@ pub(crate) async fn resolve_field_ref(frame: &Frame, index: u16) -> Result<Arc<R
         )
         .into());
     }
-    let (declaring_class, field) = lookup_field(&target, &name, &field_type)?
+    let (declaring_class, field) = target
+        .resolve_field(&name, Some(&field_type))?
         .ok_or_else(|| NoSuchFieldError([target.name(), ".", &name, ":", &descriptor].concat()))?;
     let protected_receiver = check_access(frame, &declaring_class, &field).await?;
+    let slot = declaring_class.field_storage_slot(&field)?;
     let storage = if field.access_flags().contains(FieldAccessFlags::STATIC) {
-        let index = declaring_class
-            .static_fields()
-            .iter()
-            .position(|candidate| Arc::ptr_eq(candidate, &field))
-            .ok_or_else(|| InternalError("Missing resolved static field".to_owned()))?;
-        FieldStorage::Static(declaring_class.static_storage(index)?)
+        FieldStorage::Static(declaring_class.static_storage(slot)?)
     } else {
-        let slot = declaring_class
-            .object_field_layout()?
-            .iter()
-            .position(|candidate| Arc::ptr_eq(candidate, &field))
-            .ok_or_else(|| InternalError("Missing resolved instance field".to_owned()))?;
         FieldStorage::Instance(slot)
     };
     let resolved = Arc::new(ResolvedFieldRef {
@@ -283,28 +251,6 @@ pub(crate) async fn resolve_field_ref(frame: &Frame, index: u16) -> Result<Arc<R
         receivers: ReceiverChecks::default(),
     });
     Ok(entry.get_or_init(|| resolved).clone())
-}
-
-/// Match both name and descriptor, visiting interfaces before the superclass (JVMS 5.4.3.2).
-fn lookup_field(
-    class: &Arc<Class>,
-    name: &str,
-    field_type: &FieldType,
-) -> Result<Option<(Arc<Class>, Arc<Field>)>> {
-    for field in class.declared_fields() {
-        if field.name() == name && field.field_type() == field_type {
-            return Ok(Some((class.clone(), field)));
-        }
-    }
-    for interface in class.interfaces()? {
-        if let Some(found) = lookup_field(&interface, name, field_type)? {
-            return Ok(Some(found));
-        }
-    }
-    if let Some(parent) = class.parent()? {
-        return lookup_field(&parent, name, field_type);
-    }
-    Ok(None)
 }
 
 fn same_runtime_package(first: &Arc<Class>, second: &Arc<Class>) -> Result<bool> {
@@ -348,12 +294,14 @@ async fn check_access(
         return Ok(None);
     }
     if flags.contains(FieldAccessFlags::PRIVATE) {
-        if same_runtime_package(caller, class)? {
-            let caller_host = nest_host(frame, caller).await?;
-            let field_host = nest_host(frame, class).await?;
-            if Arc::ptr_eq(&caller_host, &field_host) {
-                return Ok(None);
-            }
+        if ristretto_types::method_resolution::are_nestmates(
+            frame.thread()?.as_ref(),
+            caller,
+            class,
+        )
+        .await?
+        {
+            return Ok(None);
         }
     } else if same_runtime_package(caller, class)? {
         return Ok(None);
@@ -371,38 +319,6 @@ async fn check_access(
         .concat(),
     )
     .into())
-}
-
-async fn nest_host(frame: &Frame, class: &Arc<Class>) -> Result<Arc<Class>> {
-    for attribute in &class.class_file().attributes {
-        if let Attribute::NestHost {
-            host_class_index, ..
-        } = attribute
-        {
-            let host = frame
-                .thread()?
-                .load_referenced_class(
-                    class,
-                    class.constant_pool().try_get_class(*host_class_index)?,
-                )
-                .await?;
-            if same_runtime_package(class, &host)? {
-                for attribute in &host.class_file().attributes {
-                    if let Attribute::NestMembers { class_indexes, .. } = attribute {
-                        for index in class_indexes {
-                            if host.constant_pool().try_get_class(*index)? == class.java_name() {
-                                return Ok(host);
-                            }
-                        }
-                    }
-                }
-            }
-            return Err(
-                IllegalAccessError(["Invalid nest host for ", class.name()].concat()).into(),
-            );
-        }
-    }
-    Ok(class.clone())
 }
 
 #[cfg(test)]
