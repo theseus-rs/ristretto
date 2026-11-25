@@ -372,7 +372,15 @@ impl PreparedInitialization {
 /// Only admitted Java Exception categories are wrapped. Initialization faults
 /// are already Java Error subclasses and must retain their original cause chain.
 fn initialization_failure(error: Error) -> (Phase, Error) {
-    let exception = matches!(&error, Error::Invalid(name) if name == "NullPointerException");
+    let exception = match &error {
+        Error::Invalid(name) => name == "NullPointerException",
+        Error::ArrayFault(name) => matches!(
+            *name,
+            "NegativeArraySizeException" | "ArrayIndexOutOfBoundsException" | "ArrayStoreException"
+        ),
+        Error::TypeFault(name) => *name == "ClassCastException",
+        _ => false,
+    };
     if exception {
         (
             Phase::JavaFailed,
@@ -696,6 +704,37 @@ mod tests {
     };
     use std::future::Future;
     use std::task::{Context, Waker};
+
+    #[test]
+    fn initialization_failure_keeps_internal_faults_outside_java_wrapping() {
+        for error in [
+            Error::ArrayFault("primitive array type mismatch"),
+            Error::ArrayFault("array type mismatch"),
+            Error::ArrayFault("primitive array value type mismatch"),
+            Error::TypeFault("unrecognized type failure"),
+            Error::Invalid("expected reference".into()),
+            Error::Limit("instructions"),
+            Error::Boundary("cancelled"),
+        ] {
+            let expected = error.to_string();
+            let (phase, actual) = initialization_failure(error);
+            assert_eq!(phase, Phase::EmbeddingAborted);
+            assert_eq!(actual.to_string(), expected);
+        }
+        let original = Error::Initialization {
+            kind: "NoClassDefFoundError",
+            cause: None,
+        };
+        let (phase, actual) = initialization_failure(original);
+        assert_eq!(phase, Phase::JavaFailed);
+        assert!(matches!(
+            actual,
+            Error::Initialization {
+                kind: "NoClassDefFoundError",
+                cause: None
+            }
+        ));
+    }
 
     fn program() -> Result<Program, Error> {
         Program::from_classfiles([

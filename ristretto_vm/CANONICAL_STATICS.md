@@ -72,3 +72,11 @@ and WASI tests also park an initializer, retain a new object's sole owning value
 at a pending `putstatic`, run unrelated collection work, and verify normal or
 cancelled handoff. Native additionally runs the owner and waiter on independent
 OS-thread executors. These are finite correctness tests, not pause measurements.
+
+Java exceptions introduced by array and cast execution are classified explicitly:
+negative array size, bounds, incompatible array store, class cast and null faults
+produce `ExceptionInInitializerError` for the initiating execution. Subsequent
+users receive `NoClassDefFoundError`; nested existing initialization Errors retain
+their cause rather than acquiring another wrapper. Internal type mismatches,
+resource limits and cancellation remain embedding failures. This is a closed
+fault classification, not catch-all conversion of engine errors into Java faults.
