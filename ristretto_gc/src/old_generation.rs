@@ -115,22 +115,7 @@ impl GarbageCollector {
         let budget = (*work + 1).min(32).min(metadata.trace.budget.max(1));
         *work = work.saturating_sub(budget.saturating_sub(1));
         let _retention = TraceRetention::enter(self, Retention::Strong);
-        let progress = if metadata.trace.step_fn.is_none() {
-            TraceProgress::Complete
-        } else if let Some(_lease) = ObjectMetadata::lease(&metadata) {
-            if let Ok(_scan) = metadata.scan.try_lock() {
-                metadata
-                    .trace
-                    .step_fn
-                    .map_or(TraceProgress::Complete, |step| {
-                        step(metadata.trace.ptr, self, offset, budget)
-                    })
-            } else {
-                TraceProgress::Busy
-            }
-        } else {
-            TraceProgress::Complete
-        };
+        let progress = ObjectMetadata::trace_step(&metadata, self, offset, budget);
         match progress {
             TraceProgress::Complete => {
                 if self.diagnostics_enabled() {

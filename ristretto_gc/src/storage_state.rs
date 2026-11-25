@@ -5,7 +5,14 @@ use super::{AtomicUsize, Ordering};
 const RETIRED: usize = 1 << (usize::BITS - 1);
 const DESTROYED: usize = RETIRED | (RETIRED >> 1);
 const NOTIFY: usize = RETIRED >> 2;
-const MAX_READERS: usize = NOTIFY - 1;
+const SCANNING: usize = NOTIFY >> 1;
+const MAX_READERS: usize = SCANNING - 1;
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum ScanDenied {
+    Busy,
+    Retired,
+}
 
 #[derive(Debug, Default)]
 pub(super) struct StorageState(AtomicUsize);
@@ -14,7 +21,7 @@ impl StorageState {
     /// The successful CAS admits a storage borrower, without establishing a root.
     pub(super) fn acquire(&self) -> bool {
         let mut state = self.0.load(Ordering::Acquire);
-        while state < MAX_READERS {
+        while state < RETIRED && state & MAX_READERS != MAX_READERS {
             match self.0.compare_exchange_weak(
                 state,
                 state + 1,
@@ -26,6 +33,32 @@ impl StorageState {
             }
         }
         false
+    }
+
+    /// A scanner borrows storage and excludes other graph scans in one CAS.
+    pub(super) fn acquire_scan(&self) -> Result<(), ScanDenied> {
+        let mut state = self.0.load(Ordering::Acquire);
+        loop {
+            if state >= RETIRED {
+                return Err(ScanDenied::Retired);
+            }
+            if state & SCANNING != 0 {
+                return Err(ScanDenied::Busy);
+            }
+            match self.0.compare_exchange_weak(
+                state,
+                state | SCANNING,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => return Ok(()),
+                Err(actual) => state = actual,
+            }
+        }
+    }
+
+    pub(super) fn release_scan(&self) -> bool {
+        self.0.fetch_and(!SCANNING, Ordering::AcqRel) == RETIRED | NOTIFY | SCANNING
     }
 
     /// The last borrower owns the notification if the sweeper has armed it.
@@ -42,7 +75,7 @@ impl StorageState {
     /// already left, the sweeper itself must publish the ready task.
     pub(super) fn arm_notification(&self) -> bool {
         let previous = self.0.fetch_or(NOTIFY, Ordering::AcqRel);
-        debug_assert_eq!(previous & !MAX_READERS, RETIRED);
+        debug_assert_eq!(previous & !(MAX_READERS | SCANNING), RETIRED);
         previous == RETIRED
     }
 

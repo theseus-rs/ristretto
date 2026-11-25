@@ -4134,19 +4134,10 @@ impl GarbageCollector {
         {
             return false;
         }
-        let Some(_lease) = ObjectMetadata::lease(metadata) else {
+        // Old-only copying excludes remembered scans on this descriptor.
+        let Ok(_lease) = ObjectMetadata::borrow_callback(metadata, self.old_collection_active())
+        else {
             return false;
-        };
-        // A remembered young scan must not prune this owner's graph while a
-        // copying callback can still borrow outgoing edges. Contention skips
-        // this object; no unrelated publisher or region waits for this lock.
-        let _scan = if self.old_collection_active() {
-            let Ok(scan) = metadata.scan.try_lock() else {
-                return false;
-            };
-            Some(scan)
-        } else {
-            None
         };
         let bytes = self.configuration.relocation_chunk_bytes;
         let limit = metadata
@@ -4327,23 +4318,15 @@ impl GarbageCollector {
             // A declared leaf has no outgoing graph to inspect. Completing its
             // existing claim still performs normal mark/accounting/closure work;
             // it needs neither payload access nor a storage lease or scan lock.
-            let Some(step) = task.metadata.trace.step_fn else {
+            if task.metadata.trace.step_fn.is_none() {
                 task.progress = TraceProgress::Complete;
                 executed += 1;
                 continue;
-            };
+            }
             SCAN_YOUNG.set(task.has_young);
             let _retention = TraceRetention::enter(self, task.retention);
-            task.progress = if let Some(_lease) = ObjectMetadata::lease(&task.metadata) {
-                if let Ok(_scan) = task.metadata.scan.try_lock() {
-                    let trace = &task.metadata.trace;
-                    step(trace.ptr, self, task.offset, task.budget)
-                } else {
-                    TraceProgress::Busy
-                }
-            } else {
-                TraceProgress::Complete
-            };
+            task.progress =
+                ObjectMetadata::trace_step(&task.metadata, self, task.offset, task.budget);
             task.has_young = SCAN_YOUNG.get();
             executed += 1;
             if task.progress == TraceProgress::Busy {

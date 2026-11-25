@@ -23,18 +23,40 @@ pub(crate) use mark_state::{EPOCH_STRIDE, Retention};
 
 /// A storage lease is deliberately separate from logical reachability. It admits
 /// no weak upgrade or root resurrection after the collector's retirement decision.
+#[cfg(test)]
 pub(crate) struct StorageLease(MetadataRef);
 
 /// Conditional references validate object IDs in the registry; they do not need
 /// weak metadata ownership. Internal work and storage leases share one counter.
 pub(crate) type MetadataRef = triomphe::Arc<ObjectMetadata>;
 
+#[cfg(test)]
 impl Drop for StorageLease {
     fn drop(&mut self) {
         if self.0.storage.release()
             && let Some(gc) = self.0.collector.upgrade()
         {
             gc.storage_ready(self.0.clone());
+        }
+    }
+}
+
+/// The task already owns the descriptor. Clone only if the last borrower
+/// must publish a retirement notification to its collector.
+pub(crate) struct CallbackLease<'a> {
+    metadata: &'a MetadataRef,
+    scanner: bool,
+}
+
+impl Drop for CallbackLease<'_> {
+    fn drop(&mut self) {
+        let ready = if self.scanner {
+            self.metadata.storage.release_scan()
+        } else {
+            self.metadata.storage.release()
+        };
+        if ready && let Some(gc) = self.metadata.collector.upgrade() {
+            gc.storage_ready(self.metadata.clone());
         }
     }
 }
@@ -71,7 +93,6 @@ pub(crate) struct ObjectMetadata {
     pub(crate) age: AtomicUsize,
     pub(crate) old_birth: AtomicU64,
     pub(crate) mutation: AtomicUsize,
-    pub(crate) scan: Mutex<()>,
     // Discovery must not turn old descriptor snapshots into managed roots.
     // The matching strong owner lives only in the payload destruction record.
     pub(crate) owner: Option<Weak<dyn crate::HeapOwner>>,
@@ -116,11 +137,45 @@ impl ObjectMetadata {
         self.kind.type_id == std::any::TypeId::of::<T>()
     }
 
+    #[cfg(test)]
     pub(crate) fn lease(metadata: &MetadataRef) -> Option<StorageLease> {
         metadata
             .storage
             .acquire()
             .then(|| StorageLease(metadata.clone()))
+    }
+
+    pub(crate) fn borrow_callback(
+        metadata: &MetadataRef,
+        scanner: bool,
+    ) -> Result<CallbackLease<'_>, crate::TraceProgress> {
+        if scanner {
+            metadata
+                .storage
+                .acquire_scan()
+                .map_err(|failure| match failure {
+                    storage_state::ScanDenied::Busy => crate::TraceProgress::Busy,
+                    storage_state::ScanDenied::Retired => crate::TraceProgress::Complete,
+                })?;
+        } else if !metadata.storage.acquire() {
+            return Err(crate::TraceProgress::Complete);
+        }
+        Ok(CallbackLease { metadata, scanner })
+    }
+
+    pub(crate) fn trace_step(
+        metadata: &MetadataRef,
+        gc: &crate::GarbageCollector,
+        offset: usize,
+        budget: usize,
+    ) -> crate::TraceProgress {
+        let Some(step) = metadata.trace.step_fn else {
+            return crate::TraceProgress::Complete;
+        };
+        match Self::borrow_callback(metadata, true) {
+            Ok(_lease) => step(metadata.trace.ptr, gc, offset, budget),
+            Err(progress) => progress,
+        }
     }
 
     pub(crate) fn retire(&self) -> bool {
@@ -209,7 +264,6 @@ impl ObjectMetadata {
             age: AtomicUsize::new(0),
             old_birth: AtomicU64::new(0),
             mutation: AtomicUsize::new(0),
-            scan: Mutex::new(()),
             owner: discovery,
             collector: Weak::new(),
             storage: storage_state::StorageState::default(),
