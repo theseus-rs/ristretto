@@ -16,6 +16,13 @@ pub(crate) struct Record {
 }
 
 impl Record {
+    pub(crate) fn typed(address: usize) -> Self {
+        Self {
+            typed: Some((address, root_attempt_state::Decision::default())),
+            ..Self::default()
+        }
+    }
+
     #[cfg(test)]
     pub(super) fn publish(&self, address: usize) {
         debug_assert_ne!(address, 0);
@@ -44,6 +51,12 @@ impl Record {
     pub(crate) fn begin_typed_removal(&self) -> Option<usize> {
         let (address, decision) = self.typed.as_ref()?;
         decision.begin_removal().then_some(*address)
+    }
+
+    pub(crate) fn typed_removal_pending(&self) -> bool {
+        self.typed
+            .as_ref()
+            .is_some_and(|(_, decision)| decision.removal_pending())
     }
 
     pub(crate) fn finish_typed_removal(&self) -> bool {
@@ -92,10 +105,7 @@ impl Overflow {
         reason = "each indexed key owns a distinct live allocation"
     )]
     pub(super) fn reserve(&self, typed: Option<usize>) -> Arc<Record> {
-        let record = Arc::new(Record {
-            typed: typed.map(|address| (address, root_attempt_state::Decision::default())),
-            ..Record::default()
-        });
+        let record = Arc::new(typed.map_or_else(Record::default, Record::typed));
         let key = Record::key(&record) as u64;
         self.records.rcu(|current| {
             let empty = Directory::default();

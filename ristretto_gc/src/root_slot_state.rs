@@ -109,6 +109,13 @@ impl Slot {
         (self.generation.load(Ordering::Acquire) == (generation | REMOVING)).then_some(address)
     }
 
+    pub(crate) fn removal_pending(&self, generation: u64) -> bool {
+        let intent = generation | REMOVING;
+        self.generation
+            .compare_exchange(intent, intent, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+    }
+
     pub(crate) fn finish_removal(&self, generation: u64) -> bool {
         if self
             .generation

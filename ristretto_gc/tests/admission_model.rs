@@ -1132,3 +1132,32 @@ fn a_scanner_advances_across_concurrent_reuse_and_rearming() {
         });
     }
 }
+
+#[test]
+fn a_reused_root_slot_cannot_authorize_deletion_debt_for_its_replacement() {
+    // Descriptor identities differ even when the allocator recycles its address.
+    loom::model(|| {
+        let slot = Arc::new(root_slot_state::Slot::default());
+        slot.prepare_generation(1);
+        slot.address.store(11, Ordering::Release);
+        assert_eq!(slot.begin_removal(1), Some(11));
+        let descriptor = Arc::new(AtomicUsize::new(1));
+        let replacement = {
+            let slot = slot.clone();
+            let descriptor = descriptor.clone();
+            thread::spawn(move || {
+                assert_eq!(slot.take(1), Some(11));
+                descriptor.store(2, Ordering::Release);
+                slot.prepare_generation(2);
+                slot.address.store(11, Ordering::Release);
+            })
+        };
+        let proposed = descriptor.load(Ordering::Acquire);
+        if slot.removal_pending(1) {
+            assert_eq!(proposed, 1);
+        }
+        replacement.join().unwrap();
+        assert!(!slot.removal_pending(1));
+        assert_eq!(slot.scan(), Some(11));
+    });
+}

@@ -57,6 +57,12 @@ impl Decision {
             .is_ok()
     }
 
+    pub(crate) fn removal_pending(&self) -> bool {
+        self.0
+            .compare_exchange(REMOVING, REMOVING, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+    }
+
     pub(crate) fn finish_removal(&self) -> bool {
         self.0
             .compare_exchange(REMOVING, RELEASED, Ordering::AcqRel, Ordering::Acquire)
