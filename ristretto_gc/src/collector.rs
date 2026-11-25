@@ -55,6 +55,8 @@ mod phase_work;
 use phase_work::Unit;
 #[path = "external_trace.rs"]
 mod external_trace;
+#[path = "weak_publication.rs"]
+mod weak_publication;
 
 #[path = "old_generation.rs"]
 mod old_generation;

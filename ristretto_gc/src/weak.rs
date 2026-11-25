@@ -22,6 +22,7 @@ pub enum ReferenceKind {
 
 #[derive(Debug)]
 pub(crate) struct WeakSlot {
+    visibility: Option<crate::metadata::BirthVisibility>,
     decision: Mutex<()>,
     #[cfg(test)]
     pub(crate) decision_waiters: AtomicUsize,
@@ -42,6 +43,12 @@ pub(crate) struct WeakSlot {
 }
 
 impl WeakSlot {
+    pub(crate) fn visible(&self) -> bool {
+        self.visibility
+            .as_ref()
+            .is_none_or(crate::metadata::BirthVisibility::visible)
+    }
+
     /// Never sleep on a slot while excluding a collector phase boundary. Keep
     /// the ordinary admission-before-slot order: after contention, release both
     /// and retry instead of holding the slot while waiting for the legacy gate.
@@ -130,7 +137,12 @@ impl<T: Trace + 'static> GcWeak<T> {
     pub fn new(target: &Gc<T>, kind: ReferenceKind, owner: usize) -> Self {
         let collector = target.collector();
         let gc = collector.upgrade();
+        let visibility = gc
+            .as_ref()
+            .is_some_and(|gc| gc.can_publish_host_weak(kind, owner))
+            .then(crate::metadata::BirthVisibility::default);
         let slot = Arc::new(WeakSlot {
+            visibility,
             decision: Mutex::new(()),
             #[cfg(test)]
             decision_waiters: AtomicUsize::new(0),
@@ -144,18 +156,20 @@ impl<T: Trace + 'static> GcWeak<T> {
             pending: AtomicBool::new(false),
             born_after: std::array::from_fn(|_| AtomicU64::new(0)),
         });
-        // Allocation may stall. Sample birth epochs only after admission, before
-        // this initialized slot is registered or exposed to another thread.
         if let Some(gc) = &gc {
-            let publication = gc.root_publication_guard();
-            for (stamp, epoch) in slot.born_after.iter().zip(gc.weak_birth_epochs()) {
-                stamp.store(epoch, Ordering::Relaxed);
+            if let Some(visibility) = &slot.visibility {
+                gc.publish_host_weak(&slot, visibility);
+            } else {
+                let publication = gc.root_publication_guard();
+                for (stamp, epoch) in slot.born_after.iter().zip(gc.weak_birth_epochs()) {
+                    stamp.store(epoch, Ordering::Relaxed);
+                }
+                slot.bind_owner(gc.identity_for_address(owner));
+                if owner != 0 {
+                    crate::construction::protect_reference_owner(gc, &slot);
+                }
+                publication.register_weak(&slot);
             }
-            slot.bind_owner(gc.identity_for_address(owner));
-            if owner != 0 {
-                crate::construction::protect_reference_owner(gc, &slot);
-            }
-            publication.register_weak(&slot);
         }
         Self {
             collector,
@@ -221,6 +235,7 @@ impl<T> Clone for GcWeak<T> {
         // Reserve independent slot storage before admission or the source slot's
         // decision lock. No target/birth decision is copied until both are held.
         let slot = Arc::new(WeakSlot {
+            visibility: None,
             decision: Mutex::new(()),
             #[cfg(test)]
             decision_waiters: AtomicUsize::new(0),

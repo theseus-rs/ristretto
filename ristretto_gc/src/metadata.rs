@@ -12,6 +12,7 @@ use tracing::warn;
 
 #[path = "birth_visibility.rs"]
 mod birth_visibility;
+pub(crate) use birth_visibility::BirthVisibility;
 
 #[path = "storage_state.rs"]
 mod storage_state;
@@ -90,7 +91,7 @@ pub(crate) struct ObjectMetadata {
     pub(crate) id: crate::ObjectId,
     size: usize,
     logical_size: usize,
-    pub(crate) birth: birth_visibility::BirthVisibility,
+    pub(crate) birth: BirthVisibility,
     drop_fn: Mutex<DropFn>,
     kind: &'static Kind,
     finalized: AtomicBool,
@@ -256,7 +257,7 @@ impl ObjectMetadata {
             id,
             size,
             logical_size: size - crate::gc::Allocation::<T>::layout().size() + size_of::<T>(),
-            birth: birth_visibility::BirthVisibility::default(),
+            birth: BirthVisibility::default(),
             drop_fn: Mutex::new(drop_fn),
             kind: &const {
                 Kind {

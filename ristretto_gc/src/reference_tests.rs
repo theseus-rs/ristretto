@@ -839,3 +839,95 @@ fn dropping_or_repolling_a_reference_wait_releases_its_executor_waker() {
     drop(future);
     assert!(current.upgrade().is_none());
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+thread_local! {
+    static WEAK_ACTIVATION_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn pause_before_host_weak_activation() {
+    if let Some(pause) = WEAK_ACTIVATION_PAUSE.take() {
+        pause.entered.send(()).expect("parked weak publisher");
+        pause
+            .resume
+            .recv_timeout(std::time::Duration::from_secs(15))
+            .expect("resume weak publisher");
+    }
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn suspended_host_weak_activation_allows_capped_allocation_and_full_tickets() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    let bytes = Gc::allocation_size(&913_u64)?;
+    for counted in [false, true] {
+        for kind in [ReferenceKind::Soft, ReferenceKind::Weak] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .allocation_threshold(usize::MAX)
+                    .max_heap_bytes(2 * bytes)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .build(),
+            );
+            let target = Gc::try_new(&gc, 913_u64)?;
+            drop(Gc::try_new(&gc, 77_u64)?);
+            gc.collect();
+            at_reference_stage(&gc, 1, 1);
+            let (entered, parked) = mpsc::channel();
+            let (resume, release) = mpsc::channel();
+            let (done, completed) = mpsc::channel();
+            let weak = thread::scope(|scope| -> Result<_> {
+                let root = &target;
+                let publisher = scope.spawn(move || {
+                    WEAK_ACTIVATION_PAUSE.set(Some(ClaimPause {
+                        entered,
+                        resume: release,
+                    }));
+                    GcWeak::new(root, kind, 0)
+                });
+                parked
+                    .recv_timeout(Duration::from_secs(3))
+                    .expect("parked before activation");
+                let heap = &gc;
+                let peer = scope.spawn(move || -> Result<()> {
+                    use std::future::Future;
+                    use std::task::{Context as TaskContext, Poll, Waker};
+                    let mut request = std::pin::pin!(Gc::try_new_async(heap, 88_u64));
+                    let mut context = TaskContext::from_waker(Waker::noop());
+                    let extra = (0..1024)
+                        .find_map(|_| match request.as_mut().poll(&mut context) {
+                            Poll::Ready(result) => Some(result),
+                            Poll::Pending => None,
+                        })
+                        .expect("capped allocation exceeded its poll budget")?;
+                    drop(extra);
+                    for _ in 0..2 {
+                        heap.collect_full()?;
+                    }
+                    assert_eq!(heap.managed_bytes(), bytes);
+                    done.send(()).expect("peer completed");
+                    Ok(())
+                });
+                let progress = completed.recv_timeout(Duration::from_secs(3));
+                resume.send(()).expect("resume");
+                peer.join().expect("peer")?;
+                assert!(progress.is_ok(), "publisher held collection open");
+                Ok(publisher.join().expect("publisher"))
+            })?;
+            assert_eq!(weak.slot.birth_stamp(1).load(Ordering::Acquire), 0);
+            assert_eq!(
+                weak.upgrade().expect("exact retained target").identity(),
+                target.identity()
+            );
+            drop(target);
+            gc.collect_full()?;
+            assert!(weak.upgrade().is_none());
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}

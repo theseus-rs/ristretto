@@ -277,7 +277,9 @@ impl GarbageCollector {
             Phase::ResetReferences => {
                 if let Some((id, entry)) = self.weak_slots.next(false, cycle.cursor) {
                     cycle.cursor = id;
-                    if let Some(slot) = entry.upgrade() {
+                    if let Some(slot) = entry.upgrade()
+                        && slot.visible()
+                    {
                         slot.birth_stamp(index).store(0, Ordering::Release);
                     }
                 } else {
@@ -420,6 +422,12 @@ impl GarbageCollector {
             self.weak_slots.prune(id, &entry, false);
             return Unit::Progress;
         };
+        // The private publisher will sample both domains again if this scan
+        // passes it. Keep both entries and leave its birth stamps untouched.
+        if !slot.visible() {
+            cycle.cursor = id;
+            return Unit::Progress;
+        }
         if slot.unpublished_owners.load(Ordering::Acquire) != 0 {
             // Eligible graphs already have construction roots. This check must
             // precede the slot lock: owner binding itself can be waiting for it.
