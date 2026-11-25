@@ -1,0 +1,111 @@
+diff --git a/ristretto_classloader/src/class.rs b/ristretto_classloader/src/class.rs
+index 37fabd6e..44fdec15 100644
+--- a/ristretto_classloader/src/class.rs
++++ b/ristretto_classloader/src/class.rs
+@@ -14 +14 @@ use std::hash::Hash;
+-use std::sync::atomic::{AtomicBool, Ordering};
++use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+@@ -312,0 +313,2 @@ pub struct Class {
++    /// Finalizer classification after linking: unknown (0), base (1), override (2).
++    finalizer_classification: AtomicU8,
+@@ -483,0 +486 @@ impl Class {
++            finalizer_classification: AtomicU8::new(0),
+diff --git a/ristretto_classloader/src/class/method_resolution.rs b/ristretto_classloader/src/class/method_resolution.rs
+index cb880ff6..ed61837b 100644
+--- a/ristretto_classloader/src/class/method_resolution.rs
++++ b/ristretto_classloader/src/class/method_resolution.rs
+@@ -89,0 +90,26 @@ impl Class {
++    /// Whether finalizer registration must run for an instance of this class.
++    /// A linked hierarchy cannot change its parent or declaring methods. Before
++    /// linking, or when resolution fails, later calls resolve the method again.
++    #[must_use]
++    pub fn overrides_finalizer(self: &Arc<Self>) -> bool {
++        use std::sync::atomic::Ordering;
++        match self.finalizer_classification.load(Ordering::Relaxed) {
++            1 => return false,
++            2 => return true,
++            _ => {}
++        }
++        // Sample linking before resolution. A partial hierarchy can still change.
++        let linked = self.is_linked();
++        let Ok(method) = self.resolve_method("finalize", "()V") else {
++            return false;
++        };
++        let overridden = method.declaring_class.name() != "java/lang/Object";
++        if linked {
++            // Competing classifiers compute the same immutable boolean. This
++            // atomic publishes no pointers and does not guard any other state.
++            self.finalizer_classification
++                .store(if overridden { 2 } else { 1 }, Ordering::Relaxed);
++        }
++        overridden
++    }
++
+@@ -526,0 +553,58 @@ mod tests {
++    fn finalizer_class(
++        name: &str,
++        parent: Option<&str>,
++        declares: bool,
++    ) -> crate::Result<Arc<Class>> {
++        let mut constant_pool = ConstantPool::new();
++        let this_class = constant_pool.add_class(name)?;
++        let super_class = match parent {
++            Some(name) => constant_pool.add_class(name)?,
++            None => 0,
++        };
++        let methods = if declares {
++            vec![ristretto_classfile::Method {
++                name_index: constant_pool.add_utf8("finalize")?,
++                descriptor_index: constant_pool.add_utf8("()V")?,
++                access_flags: MethodAccessFlags::PROTECTED,
++                ..Default::default()
++            }]
++        } else {
++            Vec::new()
++        };
++        Class::from(
++            None,
++            ClassFile {
++                version: JAVA_8,
++                this_class,
++                super_class,
++                constant_pool,
++                methods,
++                ..Default::default()
++            },
++        )
++    }
++
++    #[test]
++    fn finalizer_classification_waits_for_an_immutable_hierarchy() -> crate::Result<()> {
++        let base = finalizer_class("java/lang/Object", None, true)?;
++        base.finalize_field_layout()?;
++        assert!(!base.overrides_finalizer());
++        let owner = finalizer_class("Finalizing", Some(base.name()), true)?;
++        owner.set_parent(Some(base.clone()))?;
++        owner.finalize_field_layout()?;
++        assert!(owner.overrides_finalizer());
++        let inherited = finalizer_class("Leaf", Some(owner.name()), false)?;
++        assert!(!inherited.overrides_finalizer());
++        inherited.set_parent(Some(base.clone()))?;
++        assert!(!inherited.overrides_finalizer());
++        inherited.set_parent(Some(owner))?;
++        inherited.finalize_field_layout()?;
++        assert!(inherited.overrides_finalizer());
++        assert!(inherited.overrides_finalizer());
++        let plain = finalizer_class("Leaf", Some(base.name()), false)?;
++        plain.set_parent(Some(base))?;
++        plain.finalize_field_layout()?;
++        assert!(!plain.overrides_finalizer());
++        Ok(())
++    }
++
+diff --git a/ristretto_intrinsics/src/java/lang/object.rs b/ristretto_intrinsics/src/java/lang/object.rs
+index 743dedfa..3595ab78 100644
+--- a/ristretto_intrinsics/src/java/lang/object.rs
++++ b/ristretto_intrinsics/src/java/lang/object.rs
+@@ -32,3 +32 @@ async fn register_finalizer<T: Thread + 'static>(thread: &Arc<T>, value: &Value)
+-    if let Ok(method) = class.resolve_method("finalize", "()V")
+-        && method.declaring_class.name() != "java/lang/Object"
+-    {
++    if class.overrides_finalizer() {
