@@ -111,76 +111,120 @@ pub(super) fn run(
     argument: i32,
     limit: usize,
 ) -> Result<ScalarValue, Error> {
-    run_counted(method, pool, argument, limit).map(|(value, _)| value)
+    let mut frame = Frame::new(method, argument)?;
+    frame
+        .advance(method, pool, limit)?
+        .map(|(value, _)| value)
+        .ok_or(Error::Limit("instructions"))
 }
 
-pub(super) fn run_counted(
+pub(super) async fn run_counted(
     method: &Method,
     pool: &ConstantPool<'_>,
     argument: i32,
     limit: usize,
 ) -> Result<(ScalarValue, usize), Error> {
-    let mut locals = vec![None; method.max_locals()];
-    let mut stack = Vec::with_capacity(method.max_stack());
-    let mut pc = 0;
-    let invalid = || Error::Invalid(method.signature());
-    *locals.first_mut().ok_or_else(invalid)? = Some(ScalarValue::Int(argument));
-    for count in 0..limit {
-        let op = method.code().get(pc).ok_or_else(invalid)?;
-        let mut jump = false;
-        match Operation::decode(op) {
-            Some(Operation::Constant(value)) => stack.push(ScalarValue::Int(value)),
-            Some(Operation::Load(index)) => load(&locals, &mut stack, index)?,
-            Some(Operation::Store(index)) => store(&mut locals, &mut stack, index)?,
-            Some(Operation::Increment(index, delta)) => {
-                let slot = locals
-                    .get_mut(index)
-                    .and_then(Option::as_mut)
-                    .ok_or_else(invalid)?;
-                *slot = ScalarValue::Int(slot.int()?.wrapping_add(delta));
-            }
-            Some(Operation::Negate) => {
-                let value = pop(&mut stack)?.int()?.wrapping_neg();
-                stack.push(ScalarValue::Int(value));
-            }
-            Some(operation @ (Operation::Add | Operation::Subtract | Operation::Multiply)) => {
-                let right = pop(&mut stack)?.int()?;
-                let left = pop(&mut stack)?.int()?;
-                stack.push(ScalarValue::Int(match operation {
-                    Operation::Add => left.wrapping_add(right),
-                    Operation::Subtract => left.wrapping_sub(right),
-                    _ => left.wrapping_mul(right),
-                }));
-            }
-            Some(Operation::BranchZero(test)) => jump = test.test(pop(&mut stack)?.int()?, 0),
-            Some(Operation::BranchPair(test)) => {
-                let right = pop(&mut stack)?.int()?;
-                jump = test.test(pop(&mut stack)?.int()?, right);
-            }
-            Some(Operation::Jump) => jump = true,
-            Some(Operation::Return) => {
-                return Ok((
-                    scalar::normalize_return(
-                        pop(&mut stack)?,
-                        method.return_type().ok_or_else(invalid)?,
-                    ),
-                    count + 1,
-                ));
-            }
-            None => match op {
-                Instruction::Ldc(index) => {
-                    stack.push(scalar::constant(pool, u16::from(*index), false)?);
-                }
-                Instruction::Ldc_w(index) => stack.push(scalar::constant(pool, *index, false)?),
-                Instruction::Ldc2_w(index) => stack.push(scalar::constant(pool, *index, true)?),
-                _ => scalar::execute(op, &mut locals, &mut stack)?,
-            },
+    let mut frame = Frame::new(method, argument)?;
+    let mut executed = 0;
+    while executed < limit {
+        // Match the object interpreter's scheduler quantum. Scalar bytecodes
+        // cannot allocate or change roots, so they require no helper visit.
+        let quantum = (limit - executed).min(super::INTERPRETER_QUANTUM);
+        if let Some((result, count)) = frame.advance(method, pool, quantum)? {
+            return Ok((result, executed + count));
         }
-        pc = if jump {
-            method.branch_target_index(pc).ok_or_else(invalid)?
-        } else {
-            pc + 1
-        };
+        executed += quantum;
+        if executed < limit {
+            tokio::task::yield_now().await;
+        }
     }
     Err(Error::Limit("instructions"))
+}
+
+struct Frame {
+    locals: Vec<Option<ScalarValue>>,
+    stack: Vec<ScalarValue>,
+    pc: usize,
+}
+
+impl Frame {
+    fn new(method: &Method, argument: i32) -> Result<Self, Error> {
+        let mut locals = vec![None; method.max_locals()];
+        *locals
+            .first_mut()
+            .ok_or_else(|| Error::Invalid(method.signature()))? = Some(ScalarValue::Int(argument));
+        Ok(Self {
+            locals,
+            stack: Vec::with_capacity(method.max_stack()),
+            pc: 0,
+        })
+    }
+
+    fn advance(
+        &mut self,
+        method: &Method,
+        pool: &ConstantPool<'_>,
+        limit: usize,
+    ) -> Result<Option<(ScalarValue, usize)>, Error> {
+        let Self { locals, stack, pc } = self;
+        let invalid = || Error::Invalid(method.signature());
+        for count in 0..limit {
+            let op = method.code().get(*pc).ok_or_else(invalid)?;
+            let mut jump = false;
+            match Operation::decode(op) {
+                Some(Operation::Constant(value)) => stack.push(ScalarValue::Int(value)),
+                Some(Operation::Load(index)) => load(locals, stack, index)?,
+                Some(Operation::Store(index)) => store(locals, stack, index)?,
+                Some(Operation::Increment(index, delta)) => {
+                    let slot = locals
+                        .get_mut(index)
+                        .and_then(Option::as_mut)
+                        .ok_or_else(invalid)?;
+                    *slot = ScalarValue::Int(slot.int()?.wrapping_add(delta));
+                }
+                Some(Operation::Negate) => {
+                    let value = pop(stack)?.int()?.wrapping_neg();
+                    stack.push(ScalarValue::Int(value));
+                }
+                Some(operation @ (Operation::Add | Operation::Subtract | Operation::Multiply)) => {
+                    let right = pop(stack)?.int()?;
+                    let left = pop(stack)?.int()?;
+                    stack.push(ScalarValue::Int(match operation {
+                        Operation::Add => left.wrapping_add(right),
+                        Operation::Subtract => left.wrapping_sub(right),
+                        _ => left.wrapping_mul(right),
+                    }));
+                }
+                Some(Operation::BranchZero(test)) => jump = test.test(pop(stack)?.int()?, 0),
+                Some(Operation::BranchPair(test)) => {
+                    let right = pop(stack)?.int()?;
+                    jump = test.test(pop(stack)?.int()?, right);
+                }
+                Some(Operation::Jump) => jump = true,
+                Some(Operation::Return) => {
+                    return Ok(Some((
+                        scalar::normalize_return(
+                            pop(stack)?,
+                            method.return_type().ok_or_else(invalid)?,
+                        ),
+                        count + 1,
+                    )));
+                }
+                None => match op {
+                    Instruction::Ldc(index) => {
+                        stack.push(scalar::constant(pool, u16::from(*index), false)?);
+                    }
+                    Instruction::Ldc_w(index) => stack.push(scalar::constant(pool, *index, false)?),
+                    Instruction::Ldc2_w(index) => stack.push(scalar::constant(pool, *index, true)?),
+                    _ => scalar::execute(op, locals, stack)?,
+                },
+            }
+            *pc = if jump {
+                method.branch_target_index(*pc).ok_or_else(invalid)?
+            } else {
+                *pc + 1
+            };
+        }
+        Ok(None)
+    }
 }

@@ -31,6 +31,9 @@ use ristretto_classfile::{
 use ristretto_classloader::{Class, Method};
 use std::collections::{HashMap, HashSet};
 
+/// Number of bytecodes in a cooperative interpreter slice.
+const INTERPRETER_QUANTUM: usize = 64;
+
 /// A format, verifier or capability failure.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

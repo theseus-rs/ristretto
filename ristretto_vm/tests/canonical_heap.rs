@@ -259,3 +259,88 @@ async fn scalar_entries_keep_their_primitive_dispatch_without_allocations() -> R
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn long_scalar_entries_yield_to_a_second_mutator_and_preserve_the_budget() -> Result<(), Error>
+{
+    let class = "CanonicalScalarLoop";
+    let program = Program::from_classfiles([ClassFile::from_bytes(include_bytes!(
+        "fixtures/canonical/CanonicalScalarLoop.class"
+    ))?])?;
+    let rounds = 3_000;
+    let expected = program.run_scalar(class, "calculate", rounds)?;
+    program
+        .with_heap(configuration(), PAYLOAD_LIMIT, DRAIN_LIMIT, async |heap| {
+            let mut first = heap.attach(Limits::default())?;
+            let mut second = heap.attach(Limits::default())?;
+            let mut call = Box::pin(first.invoke(class, "calculate", rounds));
+            assert!(
+                call.as_mut()
+                    .poll(&mut Context::from_waker(Waker::noop()))
+                    .is_pending()
+            );
+            assert_eq!(
+                second.invoke(class, "calculate", 2).await?.result,
+                program.run_scalar(class, "calculate", 2)?
+            );
+            assert_eq!(call.await?.result, expected);
+            drop(second);
+            let mut limited = heap.attach(Limits {
+                instructions: 128,
+                ..Limits::default()
+            })?;
+            assert!(matches!(
+                limited.invoke(class, "calculate", rounds).await,
+                Err(Error::Limit("instructions"))
+            ));
+            assert_eq!(heap.managed_bytes(), 0);
+            Ok(())
+        })
+        .await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn scalar_returns_at_the_exact_budget_across_a_scheduler_yield() -> Result<(), Error> {
+    let class = "CanonicalScalarLoop";
+    let program = Program::from_classfiles([ClassFile::from_bytes(include_bytes!(
+        "fixtures/canonical/CanonicalScalarLoop.class"
+    ))?])?;
+    // javap: four prologue opcodes, eleven per iteration, three exit-test
+    // opcodes and two return opcodes. Five rounds place ireturn at bytecode 64.
+    for rounds in [0_i32, 5, 6, 69] {
+        let instructions = 9 + 11 * usize::try_from(rounds).expect("nonnegative rounds");
+        let expected = (0..rounds).fold(1_i32, |acc, i| acc.wrapping_mul(31).wrapping_sub(i));
+        for limit in [instructions - 1, instructions, instructions + 1] {
+            let synchronous = program.run_scalar_with_limit(class, "calculate", rounds, limit);
+            let result = program
+                .run(
+                    class,
+                    "calculate",
+                    rounds,
+                    Configuration {
+                        mutators: 1,
+                        helpers: 1,
+                        ..configuration()
+                    },
+                    Limits {
+                        instructions: limit,
+                        ..Limits::default()
+                    },
+                )
+                .await;
+            if limit < instructions {
+                assert!(matches!(synchronous, Err(Error::Limit("instructions"))));
+                assert!(matches!(result, Err(Error::Limit("instructions"))));
+            } else {
+                assert_eq!(synchronous?, expected);
+                let report = result?;
+                assert_eq!(
+                    (report.result, report.instructions, report.allocations),
+                    (expected, instructions, 0)
+                );
+            }
+        }
+    }
+    Ok(())
+}

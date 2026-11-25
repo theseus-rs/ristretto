@@ -849,7 +849,8 @@ impl Execution<'_, '_, '_> {
                 .instructions
                 .checked_sub(self.report.instructions)
                 .ok_or(Error::Limit("instruction"))?;
-            let (value, count) = super::integer::run_counted(&method, pool, argument, remaining)?;
+            let (value, count) =
+                super::integer::run_counted(&method, pool, argument, remaining).await?;
             self.report.instructions += count;
             Ok(Some(Value::Int(value.int()?)))
         } else {
@@ -1017,7 +1018,11 @@ impl Execution<'_, '_, '_> {
                 .ok_or_else(|| Error::Invalid("program counter".to_owned()))?;
             self.report.instructions += 1;
             help(&mut self.helper, &mut self.report)?;
-            if self.report.instructions.is_multiple_of(64) {
+            if self
+                .report
+                .instructions
+                .is_multiple_of(super::INTERPRETER_QUANTUM)
+            {
                 tokio::task::yield_now().await;
             }
             match instruction {
