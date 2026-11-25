@@ -1,5 +1,7 @@
 # Full collection time after typed-root, marking and sweep changes
 
+The subsequent sparse bitmap experiment reached 2.13× on cooperative native. [Follow-up measurements](sparse-words/README.md)
+
 The target is a threefold reduction in elapsed time for the same complete collection. The largest diagnostics-off improvement here was 1.83× on native. A native mixed heap with two background workers improved 1.22×. Each entry below is the median paired speedup across fresh processes. Ranges span the two publication policies.
 
 | Collector execution | Live tree | Live wide graph | Tree with fresh garbage |
