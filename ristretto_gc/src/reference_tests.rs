@@ -289,6 +289,149 @@ fn finish(gc: &GarbageCollector) {
     panic!("cycle did not finish");
 }
 
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn reference_decision_finishes_while_target_shard_is_parked() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for (keep, cleared) in [(false, false), (true, false), (true, true)] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let target = Gc::try_new(&gc, 17_u64)?;
+            let address = target.as_ptr().addr();
+            let weak = GcWeak::new(&target, ReferenceKind::Weak, 0);
+            let survivor = keep.then(|| target.rooted_clone());
+            if cleared {
+                weak.clear();
+            }
+            drop(target);
+            gc.collect();
+            at_reference_stage(&gc, 1, 1);
+            let held = gc.objects.lock(if cleared { 0 } else { address });
+            let (done, received) = mpsc::channel();
+            let finished = thread::scope(|scope| {
+                let heap = &gc;
+                scope.spawn(move || {
+                    heap.step();
+                    done.send(()).unwrap();
+                });
+                let result = received.recv_timeout(Duration::from_secs(2));
+                drop(held);
+                result
+            });
+            assert!(
+                finished.is_ok(),
+                "object shard stalled the reference decision"
+            );
+            assert_eq!(
+                weak.slot.target.load(Ordering::Acquire) != 0,
+                keep && !cleared
+            );
+            finish(&gc);
+            assert_eq!(
+                weak.upgrade().as_deref().copied(),
+                (keep && !cleared).then_some(17)
+            );
+            drop(survivor);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn host_weak_registration_clone_and_upgrade_progress_with_parked_object_shard() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for active in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let original = Gc::try_new(&gc, 913_u64)?;
+            if active {
+                gc.collect();
+                assert!((0..128).any(|_| {
+                    gc.step();
+                    gc.domains[1].active() && gc.domains[1].weak_phase() == 0
+                }));
+            }
+            let held = gc.objects.lock(original.as_ptr().addr());
+            let (done, received) = mpsc::channel();
+            let finished = thread::scope(|scope| {
+                let target = &original;
+                let work = scope.spawn(move || {
+                    let weak = GcWeak::new(target, ReferenceKind::Weak, 0);
+                    let copy = weak.clone();
+                    let result = copy.upgrade().expect("strong target still live");
+                    done.send(()).unwrap();
+                    (weak, copy, result)
+                });
+                let finished = received.recv_timeout(Duration::from_secs(2));
+                drop(held);
+                (finished, work.join().unwrap())
+            });
+            let (finished, (weak, copy, result)) = finished;
+            assert!(
+                finished.is_ok(),
+                "weak publication blocked on the object shard"
+            );
+            assert_eq!(result.identity(), original.identity());
+            assert_eq!(*result, 913);
+            drop((original, result));
+            gc.collect_full()?;
+            gc.collect_full()?;
+            assert!(weak.upgrade().is_none() && copy.upgrade().is_none());
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn direct_trace_during_final_processing_is_immediately_visible() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let target = Gc::try_new(&gc, 17_u64)?;
+        let child = Gc::try_new(&gc, 42_u64)?;
+        let owned = GcWeak::new(&target, ReferenceKind::Final, child.as_ptr().addr());
+        let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+        let outer = GcWeak::new(&parent, ReferenceKind::Final, 0);
+        drop((target, parent));
+        gc.collect();
+        at_reference_stage(&gc, 1, 2);
+        let parent = outer.upgrade().expect("final-retained parent");
+        let edge = parent.first().unwrap();
+        let handle = edge.as_handle_i64();
+        assert!(Gc::<u64>::from_handle_rooted(&gc, handle).is_err());
+        edge.trace(&gc);
+        let restored = Gc::<u64>::from_handle_rooted(&gc, handle)?;
+        assert_eq!(*restored, 42);
+        finish(&gc);
+        assert!(owned.slot.activated.load(Ordering::Acquire));
+        assert_eq!(*owned.upgrade().expect("final referent"), 17);
+    }
+    Ok(())
+}
+
 #[test]
 fn young_final_retention_must_not_become_strong_in_an_old_snapshot() -> Result<()> {
     struct Hold(Arc<AtomicBool>);
@@ -695,4 +838,224 @@ fn dropping_or_repolling_a_reference_wait_releases_its_executor_waker() {
     assert!(!current.upgrade().unwrap().0.load(Ordering::Acquire));
     drop(future);
     assert!(current.upgrade().is_none());
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+thread_local! {
+    static WEAK_ACTIVATION_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn pause_before_host_weak_activation() {
+    if let Some(pause) = WEAK_ACTIVATION_PAUSE.take() {
+        pause.entered.send(()).expect("parked weak publisher");
+        pause
+            .resume
+            .recv_timeout(std::time::Duration::from_secs(15))
+            .expect("resume weak publisher");
+    }
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn suspended_host_weak_activation_allows_capped_allocation_and_full_tickets() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    let bytes = Gc::allocation_size(&913_u64)?;
+    for counted in [false, true] {
+        for kind in [ReferenceKind::Soft, ReferenceKind::Weak] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .allocation_threshold(usize::MAX)
+                    .max_heap_bytes(2 * bytes)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .build(),
+            );
+            let target = Gc::try_new(&gc, 913_u64)?;
+            drop(Gc::try_new(&gc, 77_u64)?);
+            gc.collect();
+            at_reference_stage(&gc, 1, 1);
+            let (entered, parked) = mpsc::channel();
+            let (resume, release) = mpsc::channel();
+            let (done, completed) = mpsc::channel();
+            let weak = thread::scope(|scope| -> Result<_> {
+                let root = &target;
+                let publisher = scope.spawn(move || {
+                    WEAK_ACTIVATION_PAUSE.set(Some(ClaimPause {
+                        entered,
+                        resume: release,
+                    }));
+                    GcWeak::new(root, kind, 0)
+                });
+                parked
+                    .recv_timeout(Duration::from_secs(3))
+                    .expect("parked before activation");
+                let heap = &gc;
+                let peer = scope.spawn(move || -> Result<()> {
+                    use std::future::Future;
+                    use std::task::{Context as TaskContext, Poll, Waker};
+                    let mut request = std::pin::pin!(Gc::try_new_async(heap, 88_u64));
+                    let mut context = TaskContext::from_waker(Waker::noop());
+                    let extra = (0..1024)
+                        .find_map(|_| match request.as_mut().poll(&mut context) {
+                            Poll::Ready(result) => Some(result),
+                            Poll::Pending => None,
+                        })
+                        .expect("capped allocation exceeded its poll budget")?;
+                    drop(extra);
+                    for _ in 0..2 {
+                        heap.collect_full()?;
+                    }
+                    assert_eq!(heap.managed_bytes(), bytes);
+                    done.send(()).expect("peer completed");
+                    Ok(())
+                });
+                let progress = completed.recv_timeout(Duration::from_secs(3));
+                resume.send(()).expect("resume");
+                peer.join().expect("peer")?;
+                assert!(progress.is_ok(), "publisher held collection open");
+                Ok(publisher.join().expect("publisher"))
+            })?;
+            assert_eq!(weak.slot.birth_stamp(1).load(Ordering::Acquire), 0);
+            assert_eq!(
+                weak.upgrade().expect("exact retained target").identity(),
+                target.identity()
+            );
+            drop(target);
+            gc.collect_full()?;
+            assert!(weak.upgrade().is_none());
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn final_clone_retains_a_referent_after_the_source_cursor_wraps() -> Result<()> {
+    for counted in [false, true] {
+        for (kind, stage) in [
+            (ReferenceKind::Final, 2),
+            (ReferenceKind::PhantomRetained, 3),
+        ] {
+            for id in [1, usize::MAX] {
+                let gc = GarbageCollector::with_config(
+                    Configuration::builder()
+                        .concurrent_publication(counted)
+                        .incremental_step_size(1)
+                        .max_pause_time_us(0)
+                        .allocation_threshold(usize::MAX)
+                        .build(),
+                );
+                let owner = Gc::try_new(&gc, 0_u64)?;
+                let target = Gc::try_new(&gc, 913_u64)?;
+                gc.next_weak_id.store(id, Ordering::Relaxed);
+                let source = GcWeak::new(&target, kind, owner.as_ptr().addr());
+                drop((target, owner));
+                gc.collect();
+                at_reference_stage(&gc, 1, stage);
+                for _ in 0..64 {
+                    if lock(&gc.domains[1].cycle).cursor == id {
+                        break;
+                    }
+                    gc.step();
+                }
+                assert_eq!(lock(&gc.domains[1].cycle).cursor, id);
+                assert!(!source.slot.activated.load(Ordering::Acquire));
+                let clone = source.clone();
+                finish(&gc);
+                assert_eq!(
+                    *clone
+                        .upgrade()
+                        .expect("host final clone retains the target"),
+                    913
+                );
+                drop((source, clone));
+                gc.collect_full()?;
+                assert_eq!(gc.managed_bytes(), 0);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn final_clone_during_post_reference_mark_is_drained_before_phantom_discovery() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let owner = Gc::try_new(&gc, 17_u64)?;
+        let target = Gc::try_new(&gc, 913_u64)?;
+        let source = GcWeak::new(&target, ReferenceKind::Final, owner.as_ptr().addr());
+        let weak = GcWeak::new(&target, ReferenceKind::Weak, 0);
+        let phantom = GcWeak::new(&target, ReferenceKind::Phantom, 0);
+        drop((owner, target));
+        gc.collect();
+        at_reference_stage(&gc, 1, 2);
+        assert!((0..128).any(|_| {
+            gc.step();
+            let cycle = lock(&gc.domains[1].cycle);
+            cycle.phase == Phase::Mark
+                && cycle.reference_stage == 3
+                && gc.domains[1].weak_phase() == 2
+        }));
+        let clone = source.clone();
+        finish(&gc);
+        assert!(clone.slot.activated.load(Ordering::Acquire));
+        assert_eq!(*clone.upgrade().expect("late final clone"), 913);
+        assert!(weak.upgrade().is_none());
+        // Final discovery precedes the phantom decision at stage three.
+        assert!(phantom.upgrade().is_some());
+        drop((source, clone, phantom, weak));
+        gc.collect_full()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
+
+#[test]
+fn parked_late_decision_allows_the_other_wrapped_slot_to_activate() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let owner = Gc::try_new(&gc, 17_u64)?;
+        let first = Gc::try_new(&gc, 19_u64)?;
+        let second = Gc::try_new(&gc, 23_u64)?;
+        gc.next_weak_id.store(usize::MAX - 1, Ordering::Relaxed);
+        let a = GcWeak::new(&first, ReferenceKind::Final, owner.as_ptr().addr());
+        let b = GcWeak::new(&second, ReferenceKind::Final, owner.as_ptr().addr());
+        drop((owner, first, second));
+        gc.collect();
+        at_reference_stage(&gc, 1, 2);
+        assert!((0..64).any(|_| {
+            gc.step();
+            lock(&gc.domains[1].cycle).cursor == usize::MAX
+        }));
+        let a = a.clone();
+        let b = b.clone();
+        let held = a.slot.decision();
+        assert!((0..32).any(|_| {
+            gc.step();
+            b.slot.activated.load(Ordering::Acquire)
+        }));
+        assert!(!a.slot.activated.load(Ordering::Acquire));
+        drop(held);
+        finish(&gc);
+        assert_eq!(*a.upgrade().expect("first target"), 19);
+        assert_eq!(*b.upgrade().expect("second target"), 23);
+    }
+    Ok(())
 }

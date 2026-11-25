@@ -1,5 +1,4 @@
 use super::*;
-use crate::canonical_catalog as gc_catalog;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 struct Value {
@@ -904,7 +903,7 @@ fn graph_aliases_clone_read_and_drop_concurrently_with_unrelated_reclamation() {
 #[cfg(feature = "experimental-canonical-runtime")]
 #[test]
 fn passive_observation_primary_mapping_is_full_only_checked_and_conservative() {
-    use gc_catalog::{Domain, DomainMode, Phase};
+    use crate::canonical_catalog::{Domain, DomainMode, Phase};
     let phase = |mode, epoch| Phase {
         root_cursors: [0; 2],
         reference_cursors: [0; 2],

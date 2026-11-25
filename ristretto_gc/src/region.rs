@@ -120,7 +120,11 @@ impl Budget {
             peak_used: AtomicUsize::new(0),
         })
     }
-    fn reserve(self: &Arc<Self>, size: usize, relocation: bool) -> Result<BackingCredit> {
+    pub(crate) fn reserve(
+        self: &Arc<Self>,
+        size: usize,
+        relocation: bool,
+    ) -> Result<BackingCredit> {
         let limit = if relocation {
             self.limit
         } else {
@@ -147,7 +151,7 @@ impl Budget {
     }
 }
 #[derive(Debug)]
-struct BackingCredit {
+pub(crate) struct BackingCredit {
     budget: Arc<Budget>,
     size: usize,
     reclamation: bool,

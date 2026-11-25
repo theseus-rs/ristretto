@@ -218,9 +218,24 @@ impl RootProposal {
 pub(crate) struct BirthEpoch {
     pub(crate) number: u64,
     pub(crate) old_only: bool,
+    direct_identity: OnceBox<Arc<()>>,
     roots: OnceBox<graph_birth_queue::Queue<RootProposal>>,
     inbox: OnceBox<graph_birth_queue::Queue<GraphBirth>>,
     strong_closed: AtomicBool,
+}
+
+impl BirthEpoch {
+    // An obsolete descriptor witness retains only the small token's control
+    // block. It can never retain the mark queue or its descriptor graph.
+    pub(crate) fn direct_witness(&self) -> std::sync::Weak<()> {
+        Arc::downgrade(self.direct_identity.get_or_init(|| Box::new(Arc::new(()))))
+    }
+
+    pub(crate) fn matches_witness(&self, witness: &std::sync::Weak<()>) -> bool {
+        self.direct_identity
+            .get()
+            .is_some_and(|token| std::ptr::eq(Arc::as_ptr(token), witness.as_ptr()))
+    }
 }
 
 #[derive(Debug)]
@@ -245,6 +260,7 @@ pub(crate) struct MarkQueues {
     overflow_cursor: AtomicUsize,
 }
 
+#[derive(Default)]
 pub(crate) struct Claim {
     pub(crate) items: [Option<(MarkItem, usize)>; 8],
     pub(crate) stolen: usize,
@@ -286,6 +302,7 @@ impl MarkQueues {
         self.graph_inbox.store(Some(Arc::new(BirthEpoch {
             number,
             old_only,
+            direct_identity: OnceBox::new(),
             roots: OnceBox::new(),
             inbox: OnceBox::new(),
             strong_closed: AtomicBool::new(false),
@@ -359,32 +376,30 @@ impl MarkQueues {
         epoch.roots.get().map(|queue| visit(epoch, queue))
     }
 
-    fn claim_roots(&self, limit: usize, remaining: &mut usize) -> Option<Claim> {
+    fn claim_roots(&self, limit: usize, remaining: &mut usize, claim: &mut Claim) -> bool {
         self.with_roots(|epoch, queue| {
-            Self::claim_proposals(queue, limit, remaining, |item| item.claim(epoch))
-        })?
+            Self::claim_proposals(queue, limit, remaining, claim, |item| item.claim(epoch))
+        })
+        .unwrap_or(false)
     }
 
-    fn claim_graph(&self, limit: usize, remaining: &mut usize) -> Option<Claim> {
+    fn claim_graph(&self, limit: usize, remaining: &mut usize, claim: &mut Claim) -> bool {
         self.with_graph_inbox(|queue| {
-            Self::claim_proposals(queue, limit, remaining, GraphBirth::claim)
-        })?
+            Self::claim_proposals(queue, limit, remaining, claim, GraphBirth::claim)
+        })
+        .unwrap_or(false)
     }
 
     fn claim_proposals<T>(
         queue: &graph_birth_queue::Queue<T>,
         limit: usize,
         remaining: &mut usize,
+        claim: &mut Claim,
         claim_one: impl Fn(T) -> Option<MarkItem>,
-    ) -> Option<Claim> {
+    ) -> bool {
         if *remaining == 0 {
-            return None;
+            return false;
         }
-        let mut claim = Claim {
-            items: std::array::from_fn(|_| None),
-            stolen: 0,
-            misses: 0,
-        };
         let mut live = 0;
         for _ in 0..limit.clamp(1, 8) {
             if *remaining == 0 {
@@ -400,7 +415,7 @@ impl MarkQueues {
                 *remaining -= 1;
             }
         }
-        (live != 0).then_some(claim)
+        live != 0
     }
 
     pub(crate) fn worker_queue(&self, worker: usize) -> usize {
@@ -431,28 +446,47 @@ impl MarkQueues {
         }
     }
 
-    /// The iterator changes mark state only after the whole batch can be
-    /// appended. A failed try-lock or capacity check leaves every edge untouched.
-    pub(crate) fn try_append_fresh<'a>(
+    /// Select a queue before inspecting edges. The callback produces work
+    /// only for fresh marks. A busy or full worker queue can spill the group
+    /// into the injector without repeating each edge's admission checks.
+    pub(crate) fn append_mature<'a>(
         &self,
         local: usize,
         limit: usize,
-        edges: impl Iterator<Item = &'a MetadataRef>,
-    ) -> bool {
+        edges: impl Iterator<Item = Option<&'a MetadataRef>>,
+        mut mark: impl FnMut(&MetadataRef) -> Option<bool>,
+    ) -> usize {
         let local = local % self.queues.len();
-        let Ok(mut queue) = self.queues[local].queue.try_lock() else {
-            return false;
-        };
-        if local != 0 && queue.len().saturating_add(limit) > LOCAL_LIMIT {
-            return false;
+        // A group can use the same destinations as a scalar push. Select the
+        // destination before marking any edge so a failed probe is retryable.
+        let others = (1..self.queues.len())
+            .map(|offset| (local + offset) % self.queues.len())
+            .filter(|&index| index != 0);
+        for source in std::iter::once(local)
+            .chain((local != 0).then_some(0))
+            .chain(others)
+        {
+            let Ok(mut queue) = self.queues[source].queue.try_lock() else {
+                continue;
+            };
+            if source != 0 && queue.len().saturating_add(limit) > LOCAL_LIMIT {
+                continue;
+            }
+            let mut handled = 0;
+            for edge in edges {
+                let Some(metadata) = edge else { break };
+                let Some(fresh) = mark(metadata) else { break };
+                if fresh {
+                    queue.push_fresh(metadata.clone());
+                }
+                handled += 1;
+            }
+            self.queues[source]
+                .queued
+                .store(queue.len(), Ordering::Release);
+            return handled;
         }
-        for metadata in edges {
-            queue.push_fresh(metadata.clone());
-        }
-        self.queues[local]
-            .queued
-            .store(queue.len(), Ordering::Release);
-        true
+        0
     }
 
     fn try_push_any(&self, local: usize, item: MarkItem) -> Result<(), MarkItem> {
@@ -511,9 +545,15 @@ impl MarkQueues {
         Ok(())
     }
 
-    fn claim_fallback(&self, local: usize, limit: usize, remaining: &mut usize) -> Option<Claim> {
+    fn claim_fallback(
+        &self,
+        local: usize,
+        limit: usize,
+        remaining: &mut usize,
+        claim: &mut Claim,
+    ) -> bool {
         if self.birth_pending.load(Ordering::Acquire) == 0 {
-            return Self::claim_linked(&self.fallback, local, limit, remaining);
+            return Self::claim_linked(&self.fallback, local, limit, remaining, claim) != 0;
         }
         // Source zero is ordinary overflow. Rotate across all sources so a
         // permanent stream of births cannot starve ordinary continuations.
@@ -522,18 +562,18 @@ impl MarkQueues {
         for offset in 0..sources {
             let source = (start + offset) % sources;
             if source == 0 {
-                if let Some(claim) = Self::claim_linked(&self.fallback, local, limit, remaining) {
-                    return Some(claim);
+                if Self::claim_linked(&self.fallback, local, limit, remaining, claim) != 0 {
+                    return true;
                 }
             } else if let Some(queue) = self.birth_overflow[source - 1].get()
-                && let Some(claim) = Self::claim_linked(queue, local, limit, remaining)
+                && let count = Self::claim_linked(queue, local, limit, remaining, claim)
+                && count != 0
             {
-                self.birth_pending
-                    .fetch_sub(claim.items.iter().flatten().count(), Ordering::AcqRel);
-                return Some(claim);
+                self.birth_pending.fetch_sub(count, Ordering::AcqRel);
+                return true;
             }
         }
-        None
+        false
     }
 
     fn claim_linked(
@@ -541,15 +581,11 @@ impl MarkQueues {
         local: usize,
         limit: usize,
         remaining: &mut usize,
-    ) -> Option<Claim> {
+        claim: &mut Claim,
+    ) -> usize {
         if queue.pending() == 0 {
-            return None;
+            return 0;
         }
-        let mut claim = Claim {
-            items: std::array::from_fn(|_| None),
-            stolen: 0,
-            misses: 0,
-        };
         let mut count = 0;
         for slot in claim.items.iter_mut().take(limit.clamp(1, 8)) {
             if *remaining == 0 {
@@ -566,35 +602,43 @@ impl MarkQueues {
         if local != 0 {
             claim.stolen = count;
         }
-        (count != 0).then_some(claim)
+        count
     }
 
     /// Probe each queue at most once, claiming a bounded batch from the first
     /// available source. Contention is not evidence that the generation is empty.
+    #[cfg(test)]
     pub(crate) fn claim(&self, local: usize, limit: usize, remaining: &mut usize) -> Claim {
-        let mut result = Claim {
-            items: std::array::from_fn(|_| None),
-            stolen: 0,
-            misses: 0,
-        };
+        let mut claim = Claim::default();
+        self.claim_into(local, limit, remaining, &mut claim);
+        claim
+    }
+
+    pub(crate) fn claim_into(
+        &self,
+        local: usize,
+        limit: usize,
+        remaining: &mut usize,
+        result: &mut Claim,
+    ) {
         let local = local % self.queues.len();
         if self.root_offered.load(Ordering::Acquire)
             && !self.root_turn.fetch_xor(true, Ordering::Relaxed)
-            && let Some(claim) = self.claim_roots(limit, remaining)
+            && self.claim_roots(limit, remaining, result)
         {
-            return claim;
+            return;
         }
         if self.graph_offered.load(Ordering::Acquire)
             && !self.graph_turn.fetch_xor(true, Ordering::Relaxed)
-            && let Some(claim) = self.claim_graph(limit, remaining)
+            && self.claim_graph(limit, remaining, result)
         {
-            return claim;
+            return;
         }
         if (self.fallback.pending() != 0 || self.birth_pending.load(Ordering::Acquire) != 0)
             && !self.fallback_turn.fetch_xor(true, Ordering::Relaxed)
-            && let Some(claim) = self.claim_fallback(local, limit, remaining)
+            && self.claim_fallback(local, limit, remaining, result)
         {
-            return claim;
+            return;
         }
         let start = self.queues[local].victim.load(Ordering::Relaxed) % self.queues.len();
         let sources = std::iter::once(local)
@@ -643,16 +687,14 @@ impl MarkQueues {
                         .victim
                         .store(source + 1, Ordering::Relaxed);
                 }
-                return result;
+                return;
             }
         }
-        if let Some(mut claim) = self.claim_fallback(local, limit, remaining) {
-            claim.misses += result.misses;
-            return claim;
+        if !self.claim_fallback(local, limit, remaining, result)
+            && !self.claim_graph(limit, remaining, result)
+        {
+            self.claim_roots(limit, remaining, result);
         }
-        self.claim_graph(limit, remaining)
-            .or_else(|| self.claim_roots(limit, remaining))
-            .unwrap_or(result)
     }
 
     /// A termination decision additionally excludes publication and new claims,
@@ -816,6 +858,35 @@ mod tests {
             version,
             has_young: true,
         }
+    }
+
+    #[test]
+    fn mature_group_can_use_a_peer_without_consuming_edges_on_failure() {
+        let queues = MarkQueues::new(2, 1);
+        let edges: [_; 8] = std::array::from_fn(|_| item(0, None).metadata);
+        let local = lock(&queues.queues[1].queue);
+        let injector = lock(&queues.queues[0].queue);
+        let peer = lock(&queues.queues[2].queue);
+        assert_eq!(
+            queues.append_mature(1, edges.len(), edges.iter().map(Some), |_| panic!(
+                "no destination"
+            )),
+            0
+        );
+        drop(peer);
+        assert_eq!(
+            queues.append_mature(1, edges.len(), edges.iter().map(Some), |_| Some(true)),
+            edges.len()
+        );
+        let mut peer = lock(&queues.queues[2].queue);
+        for edge in edges {
+            assert_eq!(
+                peer.pop(false).expect("published edge").metadata.id,
+                edge.id
+            );
+        }
+        assert!(peer.pop(false).is_none());
+        drop((injector, local));
     }
 
     #[test]

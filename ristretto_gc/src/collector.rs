@@ -5,7 +5,6 @@ use crate::work::{MarkItem, MarkQueues};
 use crate::{Finalize, Gc, GcRootGuard, Result};
 use portable_atomic::AtomicU64;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
-use std::ops::Bound::{Excluded, Unbounded};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex, RwLock, Weak};
 #[cfg(not(target_family = "wasm"))]
@@ -54,6 +53,10 @@ mod pause_recorder_tests;
 #[path = "phase_work.rs"]
 mod phase_work;
 use phase_work::Unit;
+#[path = "external_trace.rs"]
+mod external_trace;
+#[path = "weak_publication.rs"]
+mod weak_publication;
 
 #[path = "old_generation.rs"]
 mod old_generation;
@@ -173,10 +176,14 @@ impl RootPublication<'_> {
         std::ptr::eq(self.collector, collector)
     }
 
-    /// Reuses this collector's admission through validation and root insertion.
-    pub(crate) fn add_owned_root<T: Trace>(
+    pub(crate) fn register_weak(&self, slot: &Arc<crate::weak::WeakSlot>) {
+        self.collector.register_weak(slot);
+    }
+
+    /// Retain the descriptor already validated under this same admission.
+    pub(crate) fn add_conditional_root(
         &self,
-        root: &Gc<T>,
+        metadata: &MetadataRef,
         reservation: &mut RootReservation<'_>,
     ) -> crate::roots::Registration {
         let _measurement = self
@@ -184,7 +191,18 @@ impl RootPublication<'_> {
             .diagnostics
             .root_acquire
             .measure(self.collector.diagnostics_enabled());
-        self.collector.commit_owned_root(root, reservation)
+        assert!(
+            reservation.protects(self.collector, metadata.ptr().0),
+            "foreign root reservation"
+        );
+        let registration = self.collector.install_root_registration(reservation);
+        // Both domains clamp strong discovery to their own reference stage.
+        let _retention = TraceRetention::enter(self.collector, Retention::Strong);
+        for index in 0..2 {
+            let _context = Context::enter(self.collector, index);
+            self.collector.shade_known(metadata);
+        }
+        registration
     }
 }
 
@@ -266,6 +284,7 @@ struct Domain {
     in_flight: AtomicUsize,
     trace_ready: AtomicBool,
     weak_phase: AtomicUsize,
+    late_references: crate::weak_registry::LateReferences,
     request_ticket: AtomicU64,
     completed_ticket: AtomicU64,
 }
@@ -315,6 +334,7 @@ impl Domain {
             in_flight: AtomicUsize::new(0),
             trace_ready: AtomicBool::new(false),
             weak_phase: AtomicUsize::new(0),
+            late_references: crate::weak_registry::LateReferences::default(),
             request_ticket: AtomicU64::new(0),
             completed_ticket: AtomicU64::new(0),
         }
@@ -627,6 +647,8 @@ struct Cycle {
     epoch: u64,
     started: Option<std::time::Instant>,
     reference_stage: usize,
+    late_reference_turn: bool,
+    retry_reference: Option<crate::weak_registry::Entry>,
     ticket: u64,
     relocations: VecDeque<(MetadataRef, usize)>,
     relocation_scan_done: bool,
@@ -659,6 +681,8 @@ impl Default for Cycle {
             epoch: 0,
             started: None,
             reference_stage: 0,
+            late_reference_turn: false,
+            retry_reference: None,
             ticket: 0,
             relocations: VecDeque::new(),
             relocation_scan_done: false,
@@ -713,6 +737,7 @@ pub struct GarbageCollector {
     configuration: Configuration,
     regions: Option<Arc<crate::region::RegionHeap>>,
     descriptor_regions: Option<Arc<crate::region::RegionHeap>>,
+    small_allocations: crate::allocation::SmallAllocations,
     statistics: Mutex<Statistics>,
     leaves_marked_at_birth: AtomicUsize,
     scheduler: Option<crate::scheduling::Scheduler>,
@@ -772,8 +797,7 @@ pub struct GarbageCollector {
     edge_certificate_pause: Mutex<Option<ClaimPause>>,
     relocation_claims: Option<Box<RwLock<()>>>,
     next_domain: AtomicUsize,
-    weak_slots: Mutex<BTreeMap<usize, Weak<crate::weak::WeakSlot>>>,
-    young_weak_slots: Mutex<BTreeMap<usize, Weak<crate::weak::WeakSlot>>>,
+    weak_slots: crate::weak_registry::WeakRegistry,
     next_weak_id: AtomicUsize,
     pending_references: Mutex<VecDeque<(crate::ObjectId, crate::roots::TreeRoot)>>,
     pending_notify: AtomicBool,
@@ -947,10 +971,10 @@ impl GarbageCollector {
     }
 
     pub(crate) fn identity_for_address(&self, address: usize) -> Option<crate::ObjectId> {
-        self.objects
-            .lock(address)
-            .get(&address)
-            .map(|metadata| metadata.id)
+        (address != 0)
+            .then(|| self.objects.lookup(address))
+            .flatten()
+            .map(|m| m.id)
     }
     pub(crate) fn allocation_guard(&self) -> Publication<'_> {
         if let Some(clock) = &self.publication_clock {
@@ -1375,13 +1399,13 @@ impl GarbageCollector {
                 continue;
             }
             let exempt = epoch.old_only && young;
-            let marked = metadata.marked(index, epoch.number);
+            let marked = self.visible_mark(metadata, index, epoch.number);
             if stage != 0 && !exempt && !marked {
                 eligible = false;
                 break;
             }
             let strength = Retention::at_phase(stage);
-            let retention = metadata.retention(index, epoch.number);
+            let retention = self.visible_retention(metadata, index, epoch.number);
             if stage < 5
                 && retention.is_none_or(|previous| previous > strength)
                 && !(exempt && marked && retention.is_none())
@@ -1436,8 +1460,11 @@ impl GarbageCollector {
         let covered = epochs.iter().enumerate().all(|(i, epoch)| {
             snapshot.stage(i).is_none()
                 || ((!bind_epochs || epoch.is_some())
-                    && metadata.retention(i, self.domain_at(i).epoch.load(Ordering::Acquire))
-                        == Some(Retention::Strong))
+                    && self.visible_retention(
+                        metadata,
+                        i,
+                        self.domain_at(i).epoch.load(Ordering::Acquire),
+                    ) == Some(Retention::Strong))
         });
         covered
             && if bind_epochs {
@@ -1457,16 +1484,12 @@ impl GarbageCollector {
         address: usize,
         retaining: bool,
         expected: Option<crate::ObjectId>,
-    ) -> Option<(crate::ObjectId, *const T)> {
-        self.objects
-            .lock(address)
-            .get(&address)
-            .filter(|metadata| {
-                metadata.is_type::<T>()
-                    && expected.is_none_or(|id| metadata.id == id)
-                    && self.can_root(metadata, retaining)
-            })
-            .map(|metadata| (metadata.id, metadata.trace.ptr.cast::<T>()))
+    ) -> Option<MetadataRef> {
+        self.objects.lookup(address).filter(|metadata| {
+            metadata.is_type::<T>()
+                && expected.is_none_or(|id| metadata.id == id)
+                && self.can_root(metadata, retaining)
+        })
     }
 
     fn can_root(&self, metadata: &ObjectMetadata, retaining: bool) -> bool {
@@ -1477,7 +1500,7 @@ impl GarbageCollector {
                 || (index == 0
                     && metadata.age.load(Ordering::Acquire)
                         >= self.configuration.promotion_age.max(1))
-                || metadata.marked(index, domain.epoch.load(Ordering::Acquire))
+                || self.visible_mark(metadata, index, domain.epoch.load(Ordering::Acquire))
                 || (retaining && phase < 5)
         })
     }
@@ -1502,11 +1525,21 @@ impl GarbageCollector {
         self.objects.lock(address).get(&address).cloned()
     }
 
-    fn weak_target_is_registered(&self, slot: &crate::weak::WeakSlot, address: usize) -> bool {
+    fn weak_target_metadata(
+        &self,
+        slot: &crate::weak::WeakSlot,
+        address: usize,
+    ) -> Option<MetadataRef> {
+        if address == 0 {
+            return None;
+        }
         self.objects
-            .lock(address)
-            .get(&address)
-            .is_some_and(|metadata| metadata.id == slot.target_identity)
+            .lookup(address)
+            .filter(|metadata| metadata.id == slot.target_identity)
+    }
+
+    fn weak_target_is_registered(&self, slot: &crate::weak::WeakSlot, address: usize) -> bool {
+        self.weak_target_metadata(slot, address).is_some()
     }
 
     pub(crate) fn snapshot_edge(&self, address: usize) {
@@ -1581,7 +1614,7 @@ impl GarbageCollector {
                     crate::allocation::CHUNK,
                     configuration.max_heap_bytes,
                     0,
-                    budget,
+                    budget.clone(),
                     false,
                     configuration.region_shards,
                 )
@@ -1590,6 +1623,7 @@ impl GarbageCollector {
                 this: this.clone(),
                 regions,
                 descriptor_regions,
+                small_allocations: crate::allocation::SmallAllocations::new(budget),
                 #[cfg(not(target_family = "wasm"))]
                 pacing: configuration.adaptive_workers.then(|| {
                     crate::pacing::Controller::new(
@@ -1671,8 +1705,7 @@ impl GarbageCollector {
                 #[cfg(test)]
                 barrier_prepare_pause: Mutex::new(None),
                 next_domain: AtomicUsize::new(0),
-                weak_slots: Mutex::new(BTreeMap::new()),
-                young_weak_slots: Mutex::new(BTreeMap::new()),
+                weak_slots: crate::weak_registry::WeakRegistry::default(),
                 next_weak_id: AtomicUsize::new(1),
                 pending_references: Mutex::new(VecDeque::new()),
                 pending_notify: AtomicBool::new(false),
@@ -1713,6 +1746,19 @@ impl GarbageCollector {
         }
         // Pooling is optional: an exhausted/fragmented arena must not make
         // an otherwise valid descriptor allocation fail prematurely.
+        self.default_descriptor(layout)
+    }
+
+    pub(crate) fn default_descriptor(
+        &self,
+        layout: std::alloc::Layout,
+    ) -> Result<crate::allocation::Storage> {
+        if self.regions.is_none()
+            && self.descriptor_regions.is_none()
+            && let Some(storage) = self.small_allocations.allocate(layout)
+        {
+            return Ok(storage);
+        }
         crate::allocation::Storage::global(layout)
     }
 
@@ -1764,7 +1810,11 @@ impl GarbageCollector {
             metadata.relocation =
                 crate::relocation_history::History::new(value, heap).map(Box::new);
         }
-        MetadataRef::new(metadata)
+        MetadataRef::allocate(
+            metadata,
+            (self.regions.is_none() && self.descriptor_regions.is_none())
+                .then_some(&self.small_allocations),
+        )
     }
 
     /// The constructor keeps an owner outside this call so private storage cannot
@@ -2002,24 +2052,33 @@ impl GarbageCollector {
         }
     }
 
-    pub(crate) fn register_weak(&self, slot: &Arc<crate::weak::WeakSlot>) {
-        let _publication = self.allocation_guard();
-        let mut slots = lock(&self.weak_slots);
-        let id = loop {
-            let id = self.next_weak_id.fetch_add(1, Ordering::Relaxed);
-            if id != 0 && !slots.contains_key(&id) {
-                break id;
-            }
-        };
-        slots.insert(id, Arc::downgrade(slot));
-        drop(slots);
+    fn register_weak(&self, slot: &Arc<crate::weak::WeakSlot>) {
         let address = slot.target.load(Ordering::Acquire);
-        if self.old_collection_active() && self.weak_target_is_registered(slot, address) {
-            let _context = Context::enter(self, 1);
-            self.shade(address);
+        let metadata = self.weak_target_metadata(slot, address);
+        let young = metadata.as_ref().is_some_and(|m| self.is_young_metadata(m));
+        let id = self.weak_slots.insert(&self.next_weak_id, slot, young);
+        // A retaining clone inherits its source's birth exemption and drops its
+        // owner. That can create an eligible reference behind an active cursor.
+        if matches!(
+            slot.kind,
+            crate::ReferenceKind::Final | crate::ReferenceKind::PhantomRetained
+        ) {
+            for (i, domain) in self.domains.iter().enumerate() {
+                if (i != 0 || young)
+                    && slot.birth_stamp(i).load(Ordering::Relaxed)
+                        != domain.epoch.load(Ordering::Acquire)
+                {
+                    domain
+                        .late_references
+                        .offer_if_eligible(domain.weak_phase(), id, slot);
+                }
+            }
         }
-        if self.is_young_allocation(slot.target.load(Ordering::Acquire)) {
-            lock(&self.young_weak_slots).insert(id, Arc::downgrade(slot));
+        if self.old_collection_active()
+            && let Some(metadata) = metadata
+        {
+            let _context = Context::enter(self, 1);
+            self.shade_known(&metadata);
         }
     }
 
@@ -2049,19 +2108,13 @@ impl GarbageCollector {
             if self.configuration.overlapping_generations && self.logically_retired(&metadata) {
                 return false;
             }
-            metadata.marked(
+            self.visible_mark(
+                &metadata,
                 self.domain_index(),
                 self.domain().epoch.load(Ordering::Acquire),
             ) || ((self.domain_index() == 0)
                 && metadata.age.load(Ordering::Acquire) >= self.configuration.promotion_age.max(1))
         })
-    }
-
-    fn reference_live_in_cycle(&self, address: usize, kind: crate::ReferenceKind) -> bool {
-        self.objects
-            .lock(address)
-            .get(&address)
-            .is_some_and(|metadata| self.reference_metadata_live(metadata, kind))
     }
 
     fn reference_metadata_live(
@@ -2079,17 +2132,27 @@ impl GarbageCollector {
                 self.domain().epoch.load(Ordering::Acquire),
                 final_retention,
             )
+            || metadata
+                .direct_marks
+                .get(
+                    self.domain_index(),
+                    self.domain().epoch.load(Ordering::Acquire),
+                    &self.domain().mark_queue,
+                )
+                .is_some_and(|strength| {
+                    strength
+                        <= if final_retention {
+                            Retention::Final
+                        } else {
+                            Retention::Strong
+                        }
+                })
             || (self.domain_index() == 0
                 && metadata.age.load(Ordering::Acquire) >= self.configuration.promotion_age.max(1))
     }
 
     pub(crate) fn weak_is_cleared(&self, slot: &crate::weak::WeakSlot, address: usize) -> bool {
-        let metadata = self
-            .objects
-            .lock(address)
-            .get(&address)
-            .filter(|metadata| metadata.id == slot.target_identity)
-            .cloned();
+        let metadata = self.weak_target_metadata(slot, address);
         let Some(metadata) = metadata else {
             return true;
         };
@@ -2316,26 +2379,24 @@ impl GarbageCollector {
         let Some(pacing) = &self.pacing else {
             return true;
         };
-        if index == 0 {
-            pacing.sample(|| {
-                Some(crate::pacing::Demand {
-                    queued: self.domains.iter().try_fold(0, |count, domain| {
-                        domain.mark_queue.queued_sample().map(|queued| {
-                            count
-                                + queued
-                                + domain
-                                    .relocations
-                                    .as_ref()
-                                    .map_or(0, crate::relocation::Queues::len)
-                        })
-                    })?,
-                    debt: self.allocation_debt.load(Ordering::Relaxed),
-                    live: self.managed_budget.used(),
-                    waiters: self.recovery.waiter_count(),
-                })
-            });
-        }
-        let admitted = index < pacing.target();
+        pacing.sample(index, || {
+            Some(crate::pacing::Demand {
+                queued: self.domains.iter().try_fold(0, |count, domain| {
+                    domain.mark_queue.queued_sample().map(|queued| {
+                        count
+                            + queued
+                            + domain
+                                .relocations
+                                .as_ref()
+                                .map_or(0, crate::relocation::Queues::len)
+                    })
+                })?,
+                debt: self.allocation_debt.load(Ordering::Relaxed),
+                live: self.managed_budget.used(),
+                waiters: self.recovery.waiter_count(),
+            })
+        });
+        let admitted = pacing.admits(index);
         if !admitted && self.diagnostics_enabled() {
             self.diagnostics
                 .worker_throttles
@@ -2681,6 +2742,16 @@ impl GarbageCollector {
         })
     }
 
+    // A shared ticket can already be in sweep when observation starts. Before
+    // declaring exhaustion require a full snapshot requested after registration.
+    fn request_space_cycle(&self, consecutive_empty: usize) -> u64 {
+        if consecutive_empty == 0 {
+            self.request_recovery_cycle()
+        } else {
+            self.request_full_cycle()
+        }
+    }
+
     /// Reserve as soon as reclamation makes room, without awaiting the rest of a cycle.
     /// Failed races for headroom do not spend the two completed-cycle recovery budget.
     pub(crate) async fn reserve_bytes_async(
@@ -2708,7 +2779,7 @@ impl GarbageCollector {
                 return Ok(reservation);
             }
             let opportunity = self.recovery.observe_space(size)?;
-            let ticket = self.request_recovery_cycle();
+            let ticket = self.request_space_cycle(empty_cycles);
             let mut observed_space = false;
             loop {
                 observed_space |=
@@ -2717,9 +2788,11 @@ impl GarbageCollector {
                     return Ok(reservation);
                 }
                 if self.completed_full_ticket() >= ticket {
-                    if !observed_space {
-                        empty_cycles += 1;
-                    }
+                    empty_cycles = if observed_space || opportunity.was_offered() {
+                        0
+                    } else {
+                        empty_cycles + 1
+                    };
                     break;
                 }
                 // Another allocator took the advertised space. Re-register for
@@ -2730,7 +2803,7 @@ impl GarbageCollector {
     }
 
     /// Checks headroom before publication, assisting one batch at a time until
-    /// space is available or two cycles complete without offering enough space.
+    /// space is available or two consecutive cycles complete without offering enough space.
     /// A caller holding a managed guard can use available space but cannot assist.
     /// # Errors
     /// Returns a collection error, or `OutOfMemory` if the live heap cannot accommodate the request.
@@ -2749,7 +2822,7 @@ impl GarbageCollector {
                 .measure(self.diagnostics_enabled());
             let needed = size.saturating_sub(self.context_credit(size));
             let opportunity = self.recovery.observe_space(needed)?;
-            let ticket = self.request_recovery_cycle();
+            let ticket = self.request_space_cycle(empty_cycles);
             loop {
                 if size <= self.context_headroom(size) {
                     return Ok(());
@@ -2759,14 +2832,16 @@ impl GarbageCollector {
                 }
                 self.step();
             }
-            if !opportunity.was_offered() {
-                empty_cycles += 1;
-            }
+            empty_cycles = if opportunity.was_offered() {
+                0
+            } else {
+                empty_cycles + 1
+            };
         }
         Err(crate::Error::OutOfMemory)
     }
 
-    /// Checks headroom, returning as soon as enough space is available. At most two
+    /// Checks headroom, returning as soon as enough space is available. At most two consecutive
     /// recovery cycles without an observed or offered opportunity complete before failure.
     /// This is an advisory check, not a reservation; publication must still reserve
     /// its bytes atomically. No collection work runs while holding managed guards.
@@ -2793,10 +2868,14 @@ impl GarbageCollector {
                 return Ok(());
             }
             let opportunity = self.recovery.observe_space(size)?;
-            let ticket = self.request_recovery_cycle();
-            if !crate::recovery::CollectionWait::for_space(self, ticket, &opportunity).await? {
-                empty_cycles += 1;
-            }
+            let ticket = self.request_space_cycle(empty_cycles);
+            let offered =
+                crate::recovery::CollectionWait::for_space(self, ticket, &opportunity).await?;
+            empty_cycles = if offered || opportunity.was_offered() {
+                0
+            } else {
+                empty_cycles + 1
+            };
         }
     }
 
@@ -3356,22 +3435,21 @@ impl GarbageCollector {
         version: usize,
         has_young: bool,
     ) {
-        // Fresh leaves usually have no remembered entry.
-        if has_young
-            || !self.remembered.may_contain(address)
-            || !self.remembered.lock(address).contains(&address)
-        {
+        // Pruning is optional. Keep the entry if either shard is busy, so a
+        // suspended shard owner cannot strand an in-flight mark task.
+        if has_young || !self.remembered.may_contain(address) {
             return;
         }
-        // Mutation versions advance under this same object shard. Keep the shard
-        // through removal so a writer cannot increment/reinsert between the check
-        // and pruning. A delayed buffered notification can only reinsert afterward.
-        // This local ordering replaces the heap-wide publication writer.
-        let objects = self.objects.lock(address);
+        let Some(objects) = self.objects.try_lock(address) else {
+            return;
+        };
+        // A writer increments the mutation version under this same object
+        // shard. Keep it through removal so we cannot discard a newer edge.
         if objects.get(&address).is_some_and(|metadata| {
             metadata.id == identity && metadata.mutation.load(Ordering::Acquire) == version
-        }) {
-            self.remembered.lock(address).remove(address);
+        }) && let Some(mut remembered) = self.remembered.try_lock(address)
+        {
+            remembered.remove(address);
         }
     }
 
@@ -3907,7 +3985,11 @@ impl GarbageCollector {
     /// it before address reuse. Each trace callback still acquires a storage lease.
     pub(crate) fn mark_traced_edge(&self, metadata: &MetadataRef) {
         if std::ptr::eq(metadata.collector.as_ptr(), self) && metadata.birth.is_live() {
-            self.shade_known(metadata);
+            if self.trace_needs_epoch_proposal() {
+                self.publish_external_trace(metadata);
+            } else {
+                self.shade_known(metadata);
+            }
         }
     }
 
@@ -3916,39 +3998,43 @@ impl GarbageCollector {
     pub(crate) fn try_mark_mature_slice<'a>(
         &self,
         count: usize,
-        edges: impl Iterator<Item = Option<&'a MetadataRef>> + Clone,
-    ) -> bool {
+        edges: impl Iterator<Item = Option<&'a MetadataRef>>,
+    ) -> usize {
         let Some((owner, retention, true)) = TRACE_RETENTION.get() else {
-            return false;
+            return 0;
         };
         if owner != std::ptr::from_ref(self) as usize || self.domain_index() != 1 {
-            return false;
+            return 0;
         }
         let full = &self.domains[1];
         let phase = full.weak_phase();
         if phase >= 5 || !full.active() {
-            return false;
+            return 0;
         }
         let mature = self.configuration.promotion_age.max(1);
-        if !edges.clone().all(|entry| {
-            entry.is_some_and(|m| {
-                std::ptr::eq(m.collector.as_ptr(), self) && m.age.load(Ordering::Acquire) >= mature
-            })
-        }) {
-            return false;
-        }
         let epoch = full.epoch.load(Ordering::Acquire);
         let strength = retention.max(Retention::at_phase(phase));
-        full.mark_queue.try_append_fresh(
-            self.local_queue(),
-            count,
-            edges
-                .flatten()
-                .filter(|m| m.birth.is_live() && m.mark(1, epoch, strength)),
-        )
+        full.mark_queue
+            .append_mature(self.local_queue(), count, edges, |m| {
+                if !std::ptr::eq(m.collector.as_ptr(), self)
+                    || m.age.load(Ordering::Acquire) < mature
+                {
+                    return None;
+                }
+                Some(m.birth.is_live() && m.mark(1, epoch, strength))
+            })
     }
 
-    pub(crate) fn mark_object(&self, ptr: SafePtr) {
+    pub(crate) fn mark_object(&self, ptr: SafePtr, identity: crate::ObjectId) {
+        if self.trace_needs_epoch_proposal() {
+            if self.domain().active()
+                && let Some(metadata) = self.objects.lookup(ptr.0)
+                && (identity.to_i64() == 0 || metadata.id == identity)
+            {
+                self.publish_external_trace(&metadata);
+            }
+            return;
+        }
         // With independent young closure, each actual cross-domain publication
         // carries admission; the old callback itself does not park young GC.
         let _admission =
@@ -4161,10 +4247,12 @@ impl GarbageCollector {
     }
 
     fn claim_mark_batch(&self, tasks: &mut [Option<MarkTask>; 8], remaining: &mut usize) -> usize {
-        let claim = self.domain().mark_queue.claim(
+        let mut claim = crate::work::Claim::default();
+        self.domain().mark_queue.claim_into(
             self.local_queue(),
             self.configuration.mark_batch_size,
             remaining,
+            &mut claim,
         );
         #[cfg(test)]
         if claim.items.iter().any(Option::is_some) {
@@ -4186,7 +4274,10 @@ impl GarbageCollector {
                 .fetch_add(claim.misses as u64, Ordering::Relaxed);
         }
         let mut count = 0;
-        for (task, claimed) in tasks.iter_mut().zip(claim.items) {
+        for (task, claimed) in tasks
+            .iter_mut()
+            .zip(claim.items.iter_mut().map(Option::take))
+        {
             let Some((item, budget)) = claimed else {
                 continue;
             };
@@ -4201,9 +4292,9 @@ impl GarbageCollector {
                 .version
                 .unwrap_or_else(|| item.metadata.mutation.load(Ordering::Acquire));
             *task = Some(MarkTask {
-                retention: item
-                    .metadata
-                    .retention(
+                retention: self
+                    .visible_retention(
+                        &item.metadata,
                         self.domain_index(),
                         self.domain().epoch.load(Ordering::Acquire),
                     )
@@ -4220,8 +4311,8 @@ impl GarbageCollector {
         count
     }
 
-    fn publish_mark_batch(&self, tasks: [Option<MarkTask>; 8], counters: &mut WorkCounters) {
-        for task in tasks.into_iter().flatten() {
+    fn publish_mark_batch(&self, tasks: &mut [Option<MarkTask>; 8], counters: &mut WorkCounters) {
+        for task in tasks.iter_mut().filter_map(Option::take) {
             match task.progress {
                 TraceProgress::Complete => {
                     counters.marked += 1;
@@ -4331,7 +4422,7 @@ impl GarbageCollector {
         let mut counters = WorkCounters::default();
         loop {
             let stalled = self.trace_mark_batch(&mut tasks, started);
-            self.publish_mark_batch(tasks, &mut counters);
+            self.publish_mark_batch(&mut tasks, &mut counters);
             if stalled || remaining == 0 {
                 break;
             }
@@ -4915,7 +5006,7 @@ impl GarbageCollector {
                                 Some(lock(&self.coordinator))
                             };
                             cycle = lock(&self.domain().cycle);
-                            self.publish_mark_batch(tasks, &mut counters);
+                            self.publish_mark_batch(&mut tasks, &mut counters);
                             // Another worker can close the epoch as soon as the last
                             // reservation is released. Publish completed mark work first.
                             if counters.marked != 0 {
@@ -4965,8 +5056,16 @@ impl GarbageCollector {
                                 break;
                             };
                             if empty {
+                                // A clone can still enter the previous reference stage while
+                                // its graph work is draining. Process those exact slots before
+                                // advancing the logical retention floor.
+                                let previous_stage = self.domain().weak_phase();
+                                let revisit =
+                                    self.domain().late_references.has_work(previous_stage);
                                 let stage = if cycle.kind == CollectionKind::Old {
                                     5
+                                } else if revisit {
+                                    previous_stage
                                 } else {
                                     cycle.reference_stage.clamp(1, 5)
                                 };
@@ -4976,17 +5075,13 @@ impl GarbageCollector {
                                 self.domain().mark_queue.finish_strong_births();
                                 self.domain().trace_ready.store(false, Ordering::Release);
                                 self.domain().marking.store(false, Ordering::Release);
-                                if cycle.kind == CollectionKind::Old || cycle.reference_stage >= 5 {
+                                if stage >= 5 {
                                     self.domain().weak_phase.store(5, Ordering::Release);
                                     cycle.phase = Phase::Sweep;
                                 } else {
-                                    if cycle.reference_stage == 0 {
-                                        cycle.reference_stage = 1;
-                                    }
-                                    self.domain()
-                                        .weak_phase
-                                        .store(cycle.reference_stage, Ordering::Release);
-                                    cycle.cursor = 0;
+                                    cycle.reference_stage = stage;
+                                    self.domain().weak_phase.store(stage, Ordering::Release);
+                                    cycle.cursor = if revisit { usize::MAX } else { 0 };
                                     cycle.phase = Phase::References;
                                 }
                             }
@@ -5015,6 +5110,15 @@ impl GarbageCollector {
                             let Some(observation) = self.observe_phase() else {
                                 break;
                             };
+                            // Sample after observing the clock. A registration between
+                            // the empty scan and this observation may already have finished.
+                            if self
+                                .domain()
+                                .late_references
+                                .has_work(cycle.reference_stage)
+                            {
+                                continue;
+                            }
                             if self.contexts.pending.load(Ordering::Acquire) != 0
                                 || self.closure_in_flight() != 0
                             {
@@ -5822,7 +5926,7 @@ mod tests {
         gc.reserve_allocation(8)?;
         let mut allocation = std::pin::pin!(gc.reserve_bytes_async(8));
         let mut context = Context::from_waker(Waker::noop());
-        for _ in 0..3 {
+        for offer in [false, true, false, true, true] {
             for _ in 0..8 {
                 assert!(allocation.as_mut().poll(&mut context).is_pending());
                 if gc.recovery.waiter_count() == 1 {
@@ -5830,10 +5934,12 @@ mod tests {
                 }
             }
             assert_eq!(gc.recovery.waiter_count(), 1);
-            gc.cancel_allocation(8);
-            gc.recovery.notify_progress(&gc); // Enough headroom was offered to this waiter.
-            assert_eq!(gc.recovery.waiter_count(), 0);
-            gc.reserve_allocation(8)?; // Another allocator wins before the waiter is polled.
+            if offer {
+                gc.cancel_allocation(8);
+                gc.recovery.notify_progress(&gc); // Enough headroom was offered to this waiter.
+                assert_eq!(gc.recovery.waiter_count(), 0);
+                gc.reserve_allocation(8)?; // Another allocator wins before the waiter is polled.
+            }
             gc.collect_full()?;
             assert!(allocation.as_mut().poll(&mut context).is_pending());
         }
@@ -6211,7 +6317,7 @@ mod tests {
             let version = tasks[0].as_ref().expect("claim").version;
             metadata.mutation.store(version, Ordering::Release);
             gc.remembered.lock(address).insert(address);
-            gc.publish_mark_batch(tasks, &mut WorkCounters::default());
+            gc.publish_mark_batch(&mut tasks, &mut WorkCounters::default());
             assert!(gc.remembered.lock(address).contains(&address));
             if address != replacement_address {
                 gc.objects.replace_for_test(address, None);
@@ -6493,6 +6599,43 @@ mod tests {
         assert!(gc.remembered.lock(address).contains(&address));
         drop(root);
         gc.stop()?;
+        Ok(())
+    }
+
+    #[cfg(all(not(target_family = "wasm"), not(miri)))]
+    #[test]
+    fn optional_pruning_defers_while_either_required_shard_is_parked() -> Result<()> {
+        use std::sync::mpsc;
+        let gc = GarbageCollector::new();
+        let root = Gc::try_new(&gc, 42_u64)?;
+        let address = root.as_ptr().addr();
+        let id = root.identity();
+        gc.remember(&root);
+        let version = gc
+            .objects
+            .lookup(address)
+            .unwrap()
+            .mutation
+            .load(Ordering::Acquire);
+        for object_shard in [false, true] {
+            let objects = object_shard.then(|| gc.objects.lock(address));
+            let remembered = (!object_shard).then(|| gc.remembered.lock(address));
+            let (done, result) = mpsc::channel();
+            let completed = thread::scope(|scope| {
+                let heap = &gc;
+                scope.spawn(move || {
+                    heap.prune_remembered(address, id, version, false);
+                    done.send(()).unwrap();
+                });
+                let completed = result.recv_timeout(std::time::Duration::from_secs(2));
+                drop((objects, remembered));
+                completed
+            });
+            assert!(completed.is_ok(), "optional pruning waited on a shard");
+            assert!(gc.remembered.lock(address).contains(&address));
+        }
+        gc.prune_remembered(address, id, version, false);
+        assert!(!gc.remembered.lock(address).contains(&address));
         Ok(())
     }
 

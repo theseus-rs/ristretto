@@ -350,8 +350,7 @@ impl ErasedHandle<'_> {
         // owner and its graph live throughout cloning. The opaque result exposes
         // payload metadata only with a matching live handle, and final announced
         // cleanup destroys the private payload before releasing child protection.
-        let metadata =
-            unsafe { triomphe::ArcBorrow::from_ptr(self.header.0.descriptor()) }.clone_arc();
+        let metadata = unsafe { super::MetadataRef::clone_from_ptr(self.header.0.descriptor()) };
         PreparedStorage {
             metadata,
             header: self.header.clone(),

@@ -414,3 +414,29 @@ fn old_cadence_retains_precise_full_intervals() -> Result<()> {
     }
     Ok(())
 }
+
+#[test]
+fn reused_small_slot_revokes_the_original_typed_identity() -> Result<()> {
+    for counted in [false, true] {
+        let gc = collector(counted, false);
+        let anchor = Gc::try_new(&gc, 7_u64)?;
+        let original = Gc::try_new(&gc, 11_u64)?.into_rooted();
+        let address = original.as_ptr();
+        let handle = original.as_handle_i64();
+        drop(original);
+        gc.collect_full()?;
+        let replacement = Gc::try_new(&gc, 17_u64)?.into_rooted();
+        assert_eq!(replacement.as_ptr(), address);
+        assert_ne!(replacement.as_handle_i64(), handle);
+        assert!(Gc::<u64>::from_handle_rooted(&gc, handle).is_err());
+        assert!(Gc::<i64>::from_handle_rooted(&gc, replacement.as_handle_i64()).is_err());
+        assert_eq!(
+            *Gc::<u64>::from_handle_rooted(&gc, replacement.as_handle_i64())?,
+            17
+        );
+        drop((replacement, anchor));
+        gc.collect_full()?;
+        assert_eq!(gc.statistics()?.bytes_managed, 0);
+    }
+    Ok(())
+}

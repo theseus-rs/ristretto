@@ -12,6 +12,7 @@ use tracing::warn;
 
 #[path = "birth_visibility.rs"]
 mod birth_visibility;
+pub(crate) use birth_visibility::BirthVisibility;
 
 #[path = "storage_state.rs"]
 mod storage_state;
@@ -28,7 +29,9 @@ pub(crate) struct StorageLease(MetadataRef);
 
 /// Conditional references validate object IDs in the registry; they do not need
 /// weak metadata ownership. Internal work and storage leases share one counter.
-pub(crate) type MetadataRef = triomphe::Arc<ObjectMetadata>;
+#[path = "metadata_ref.rs"]
+mod metadata_ref;
+pub(crate) use metadata_ref::MetadataRef;
 
 #[cfg(test)]
 impl Drop for StorageLease {
@@ -76,15 +79,19 @@ struct Kind {
     finalizer: Option<FinalizerFn>,
 }
 
+#[path = "direct_marks.rs"]
+mod direct_marks;
+
 /// Metadata for tracking garbage-collected objects
 ///
 /// This struct contains the pointer to the object, its size, manages the marked state, provides
 /// type-safe dropping functionality, and supports finalizers.
 pub(crate) struct ObjectMetadata {
+    pub(crate) direct_marks: direct_marks::DirectMarks,
     pub(crate) id: crate::ObjectId,
     size: usize,
     logical_size: usize,
-    pub(crate) birth: birth_visibility::BirthVisibility,
+    pub(crate) birth: BirthVisibility,
     drop_fn: Mutex<DropFn>,
     kind: &'static Kind,
     finalized: AtomicBool,
@@ -250,7 +257,7 @@ impl ObjectMetadata {
             id,
             size,
             logical_size: size - crate::gc::Allocation::<T>::layout().size() + size_of::<T>(),
-            birth: birth_visibility::BirthVisibility::default(),
+            birth: BirthVisibility::default(),
             drop_fn: Mutex::new(drop_fn),
             kind: &const {
                 Kind {
@@ -260,6 +267,7 @@ impl ObjectMetadata {
             },
             finalized: AtomicBool::new(false),
             trace,
+            direct_marks: direct_marks::DirectMarks::default(),
             epochs: std::array::from_fn(|_| MarkWord::default()),
             age: AtomicUsize::new(0),
             old_birth: AtomicU64::new(0),

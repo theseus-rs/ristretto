@@ -128,7 +128,8 @@ impl<T> Gc<T> {
         let reservation = collector
             .reserve_exact_bytes(size)
             .expect("managed heap limit exhausted; use Gc::try_new for fallible allocation");
-        let storage = crate::allocation::Storage::global(Allocation::<T>::layout())
+        let storage = collector
+            .default_descriptor(Allocation::<T>::layout())
             .expect("descriptor allocation failed; use Gc::try_new");
         // SAFETY: storage has the complete descriptor's size and alignment.
         let allocation =
@@ -844,26 +845,21 @@ impl<T> Gc<T> {
         if !reservation.protects(collector, address_usize) {
             return Err(Error::InvalidPointer("foreign root reservation".into()));
         }
-        let (id, ptr) = collector
+        let metadata = collector
             .resolve_address::<T>(address_usize, retaining, expected)
             .ok_or_else(|| {
                 Error::InvalidPointer(
                     "unknown, logically dead, or incorrectly typed allocation".into(),
                 )
             })?;
-        // SAFETY: the matching typed descriptor supplies the original allocation
-        // pointer, and publication admission protects it through root installation.
-        let mut gc = unsafe { Self::from_raw(ptr)? };
-        gc.id = id;
+        let ptr = NonNull::new(metadata.trace.ptr.cast_mut().cast::<T>())
+            .ok_or_else(|| Error::InvalidPointer("null conditional root".into()))?;
         let registration = OwnedRoot {
             collector: collector.clone(),
-            id: publication.add_owned_root(&gc, reservation),
-            target: id,
+            id: publication.add_conditional_root(&metadata, reservation),
+            target: metadata.id,
         };
-        Ok(PreparedRoot {
-            ptr: gc.ptr,
-            registration,
-        })
+        Ok(PreparedRoot { ptr, registration })
     }
 
     /// Add this `Gc` object as a root to the global garbage collector.
@@ -1051,10 +1047,9 @@ unsafe impl<T: Trace> Trace for Gc<T> {
                 Owner::Traced(metadata) => Some(metadata),
                 _ => None,
             });
-            if !collector.try_mark_mature_slice(group.len(), descriptors) {
-                for item in group {
-                    item.trace(collector);
-                }
+            let handled = collector.try_mark_mature_slice(group.len(), descriptors);
+            for item in group.iter().skip(handled) {
+                item.trace(collector);
             }
         }
     }
@@ -1067,7 +1062,7 @@ unsafe impl<T: Trace> Trace for Gc<T> {
         // Mark this object as reachable in the object registry
         let ptr = SafePtr::from_ptr(self.ptr.as_ptr().cast::<u8>());
 
-        collector.mark_object(ptr);
+        collector.mark_object(ptr, self.id);
     }
 }
 

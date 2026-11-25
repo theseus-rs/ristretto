@@ -4,7 +4,7 @@
 use super::{Cursor, Scan, Shards, address_bucket, shard_count};
 use crate::metadata::MetadataRef;
 use crate::publication_directory::Directory;
-use arc_swap::{ArcSwap, ArcSwapAny};
+use arc_swap::ArcSwap;
 use once_cell::race::OnceBox;
 use portable_atomic::AtomicU64;
 use std::ops::Deref;
@@ -44,7 +44,9 @@ fn unpack_key(key: usize, shard: usize, bits: u32) -> usize {
 }
 
 type Pages<T> = ArcSwap<Directory<Arc<T>>>;
-type Cell = ArcSwapAny<Option<MetadataRef>>;
+#[path = "address_cell.rs"]
+mod address_cell;
+use address_cell::Cell;
 
 #[derive(Debug, Default)]
 struct Head {
@@ -370,10 +372,10 @@ impl Membership<'_> {
     // The caller has observed LIVE under the guard. Other live operations on
     // this address are excluded, and a new constructor cannot claim its bit.
     pub(crate) fn retire(
-        self,
+        &mut self,
         cache: &mut YoungRetirement,
     ) -> (Option<MetadataRef>, Option<Sealed>) {
-        if let Some(metadata) = &self.metadata {
+        if let Some(metadata) = self.metadata.take() {
             metadata.birth.retire();
         }
         self.slot
@@ -506,7 +508,7 @@ impl Objects {
     fn scan_page<'a, R>(
         &'a self,
         cursor: &mut Cursor,
-        read: impl FnOnce(&MetadataRef, Arc<Page>, usize, &mut Cursor, MutexGuard<'a, ()>) -> R,
+        read: impl FnOnce(&MetadataRef, &Arc<Page>, usize, &mut Cursor, MutexGuard<'a, ()>) -> R,
     ) -> Scan<R> {
         if !cursor.begin(self.pages.len()) {
             return Scan::Done;
@@ -525,7 +527,7 @@ impl Objects {
                 {
                     Scan::Entry(
                         unpack_key(key, cursor.shard, self.shard_bits),
-                        read(metadata, page, key, cursor, guard),
+                        read(metadata, &page, key, cursor, guard),
                     )
                 } else {
                     Scan::Advance
@@ -558,7 +560,7 @@ impl Objects {
                     address: unpack_key(key, cursor.shard, self.shard_bits),
                     slot: Some(Slot {
                         head: &self.pages[cursor.shard],
-                        page,
+                        page: page.clone(),
                         key,
                         reserved: false,
                     }),
@@ -584,6 +586,30 @@ impl Objects {
             }
             SweepEntry::Survivors(count)
         })
+    }
+
+    /// Reuse the guarded address page for a consecutive white entry. Leave
+    /// the cursor unchanged on a miss so normal scanning handles boundaries,
+    /// new reservations and survivors with the usual rules.
+    pub(crate) fn next_white(
+        &self,
+        member: &mut Membership<'_>,
+        cursor: &mut Cursor,
+        domain: usize,
+        epoch: u64,
+    ) -> Option<usize> {
+        let slot = member.slot.as_mut()?;
+        let offset = slot.page.occupied.next((slot.key & PAGE_MASK) + 1)?;
+        let metadata = slot.page.entry(offset)?.load_full()?;
+        if !metadata.birth.is_live() || metadata.marked(domain, epoch) {
+            return None;
+        }
+        slot.key = (slot.key & !PAGE_MASK) | offset;
+        cursor.selected(slot.key);
+        let address = unpack_key(slot.key, cursor.shard, self.shard_bits);
+        member.address = address;
+        member.metadata = Some(metadata);
+        Some(address)
     }
 
     pub(crate) fn scan_young(&self, cursor: &mut YoungCursor) -> Scan<()> {

@@ -1,8 +1,13 @@
 //! Bounded per-domain work; only global phase transitions need the coordinator.
 use super::{
-    CollectionKind, Context, Cycle, Excluded, GarbageCollector, MetadataRef, Ordering, Phase,
-    ReclaimTask, TraceRetention, Unbounded, WorkCounters, lock, now,
+    CollectionKind, Context, Cycle, GarbageCollector, MetadataRef, Ordering, Phase, ReclaimTask,
+    TraceRetention, WorkCounters, now,
 };
+
+type WhiteRun<'a> = (
+    crate::index::Membership<'a>,
+    crate::index::RememberedGuard<'a>,
+);
 
 pub(super) const SWEEP_BATCH: usize = 16;
 
@@ -270,13 +275,11 @@ impl GarbageCollector {
                 }
             },
             Phase::ResetReferences => {
-                let next = lock(&self.weak_slots)
-                    .range((Excluded(cycle.cursor), Unbounded))
-                    .next()
-                    .map(|(id, slot)| (*id, slot.upgrade()));
-                if let Some((id, slot)) = next {
+                if let Some((id, entry)) = self.weak_slots.next(false, cycle.cursor) {
                     cycle.cursor = id;
-                    if let Some(slot) = slot {
+                    if let Some(slot) = entry.upgrade()
+                        && slot.visible()
+                    {
                         slot.birth_stamp(index).store(0, Ordering::Release);
                     }
                 } else {
@@ -348,8 +351,11 @@ impl GarbageCollector {
                         .cloned();
                     drop(objects);
                     if let Some(metadata) = metadata
-                        && let Some(retention) =
-                            metadata.retention(1 - index, other.epoch.load(Ordering::Acquire))
+                        && let Some(retention) = self.visible_retention(
+                            &metadata,
+                            1 - index,
+                            other.epoch.load(Ordering::Acquire),
+                        )
                     {
                         let _retention = TraceRetention::enter(self, retention);
                         self.shade_known(&metadata);
@@ -392,10 +398,6 @@ impl GarbageCollector {
         }
         true
     }
-    #[expect(
-        clippy::too_many_lines,
-        reason = "keep one conditional-slot decision and its lock scope together"
-    )]
     pub(super) fn reference_unit(&self, cycle: &mut Cycle, counters: &mut WorkCounters) -> Unit {
         let Some(_publication) = self.try_publication_write() else {
             return Unit::Busy;
@@ -406,31 +408,58 @@ impl GarbageCollector {
         if self.contexts.pending.load(Ordering::Acquire) != 0 {
             return Unit::Busy;
         }
-        let index = self.domain_index();
-        let slots = if cycle.kind == CollectionKind::Young {
-            &self.young_weak_slots
+        let late = &self.domain().late_references;
+        let young = cycle.kind == CollectionKind::Young;
+        // Alternate so repeated late registrations cannot starve the range scan.
+        cycle.late_reference_turn = !cycle.late_reference_turn;
+        let mut take_late = || late.next(cycle.reference_stage, &mut cycle.retry_reference);
+        let next = if cycle.late_reference_turn {
+            take_late().map(|e| (e, true))
         } else {
-            &self.weak_slots
-        };
-        let next = lock(slots)
-            .range((Excluded(cycle.cursor), Unbounded))
-            .next()
-            .map(|(id, slot)| (*id, slot.upgrade()));
-        let Some((id, slot)) = next else {
+            None
+        }
+        .or_else(|| {
+            self.weak_slots
+                .next(young, cycle.cursor)
+                .map(|e| (e, false))
+        })
+        .or_else(|| take_late().map(|e| (e, true)));
+        let Some(((id, entry), extra)) = next else {
             return Unit::Boundary;
         };
-        let Some(slot) = slot else {
+        let result = self.decide_reference(cycle, counters, id, &entry);
+        if matches!(result, Unit::Busy) {
+            if extra {
+                cycle.retry_reference = Some((id, entry));
+            }
+        } else if !extra {
             cycle.cursor = id;
-            lock(&self.weak_slots).remove(&id);
-            lock(&self.young_weak_slots).remove(&id);
+        }
+        result
+    }
+
+    fn decide_reference(
+        &self,
+        cycle: &mut Cycle,
+        counters: &mut WorkCounters,
+        id: usize,
+        entry: &std::sync::Weak<crate::weak::WeakSlot>,
+    ) -> Unit {
+        let index = self.domain_index();
+        let Some(slot) = entry.upgrade() else {
+            self.weak_slots.prune(id, entry, false);
             return Unit::Progress;
         };
+        // The private publisher will sample both domains again if this scan
+        // passes it. Keep both entries and leave its birth stamps untouched.
+        if !slot.visible() {
+            return Unit::Progress;
+        }
         if slot.unpublished_owners.load(Ordering::Acquire) != 0 {
             // Eligible graphs already have construction roots. This check must
             // precede the slot lock: owner binding itself can be waiting for it.
             // If construction finishes now, normal root deletion barriers keep
             // this snapshot safe; the reference remains indexed for a later pass.
-            cycle.cursor = id;
             return Unit::Progress;
         }
         let Some(_decision) = slot.try_decision() else {
@@ -440,19 +469,24 @@ impl GarbageCollector {
             // Construction roots retain eligible referents and their graphs.
             // Leave the slot indexed for a later cycle, without holding this
             // cycle open for a hook that may be suspended indefinitely.
-            cycle.cursor = id;
             return Unit::Progress;
         }
-        cycle.cursor = id;
         counters.references += 1;
         let address = slot.target.load(Ordering::Acquire);
         let pending = slot.pending.load(Ordering::Acquire);
-        if !pending && !self.is_young_allocation(address) {
-            lock(&self.young_weak_slots).remove(&id);
-        }
         if address == 0 && !pending {
-            lock(&self.weak_slots).remove(&id);
+            self.weak_slots.prune(id, entry, false);
             return Unit::Progress;
+        }
+        // Reading an owning descriptor grants no access to its payload. A
+        // parked object-shard holder cannot stall the weak/soft decision while
+        // the coordinator owns publication. An address replacement is a miss.
+        let target = self
+            .objects
+            .lookup(address)
+            .filter(|m| m.id == slot.target_identity);
+        if !pending && target.as_ref().is_none_or(|m| !self.is_young_metadata(m)) {
+            self.weak_slots.prune(id, entry, true);
         }
         let owner = slot.owner.load(Ordering::Acquire);
         if cycle.reference_stage == 4 {
@@ -494,8 +528,9 @@ impl GarbageCollector {
         };
         if relevant
             && slot.birth_stamp(index).load(Ordering::Acquire) != cycle.epoch
-            && (!self.weak_target_is_registered(&slot, address)
-                || !self.reference_live_in_cycle(address, slot.kind)
+            && (target
+                .as_ref()
+                .is_none_or(|m| !self.reference_metadata_live(m, slot.kind))
                 || cycle.phantom_retained.contains(&address))
         {
             if matches!(
@@ -545,6 +580,7 @@ impl GarbageCollector {
         } else {
             1
         };
+        let mut run = None;
         for visit in 0..limit {
             if visit != 0 {
                 if *work == 0 {
@@ -552,7 +588,7 @@ impl GarbageCollector {
                 }
                 *work -= 1;
             }
-            match self.sweep_one(cycle, work, counters) {
+            match self.sweep_one(cycle, work, counters, &mut run) {
                 Unit::Progress => {}
                 Unit::Boundary if !cycle.reclaim.is_empty() => return Unit::Progress,
                 next => return next,
@@ -561,23 +597,35 @@ impl GarbageCollector {
         Unit::Progress
     }
 
+    fn check_sweep_mark_work(&self) -> Option<Unit> {
+        match self.domain().mark_queue.try_is_empty() {
+            Some(true) => None,
+            Some(false) => Some(Unit::Boundary),
+            None => Some(Unit::Busy),
+        }
+    }
+
     #[expect(
         clippy::too_many_lines,
         reason = "keep admission and transactional index removal in one scope"
     )]
-    fn sweep_one(&self, cycle: &mut Cycle, work: &mut usize, counters: &mut WorkCounters) -> Unit {
+    fn sweep_one<'gc>(
+        &'gc self,
+        cycle: &mut Cycle,
+        work: &mut usize,
+        counters: &mut WorkCounters,
+        run: &mut Option<WhiteRun<'gc>>,
+    ) -> Unit {
         let index = self.domain_index();
-        let scan_budget = (*work + 1).min(32);
         let mut sealed = SealedPages::default();
         let removed = {
             if self.contexts.pending.load(Ordering::Acquire) != 0 {
                 return Unit::Busy;
             }
-            let Some(empty) = self.domain().mark_queue.try_is_empty() else {
-                return Unit::Busy;
-            };
-            if !empty {
-                return Unit::Boundary;
+            let full_scan =
+                cycle.kind == CollectionKind::Full && !self.configuration.overlapping_generations;
+            if !full_scan && let Some(unit) = self.check_sweep_mark_work() {
+                return unit;
             }
             let retry = |cycle: &mut Cycle| {
                 if cycle.kind == CollectionKind::Young {
@@ -587,7 +635,20 @@ impl GarbageCollector {
                 }
                 Unit::Busy
             };
-            let selected = if cycle.kind == CollectionKind::Young {
+            let mut retained = None;
+            let consecutive = run.take().and_then(|(mut member, remembered)| {
+                let address = self.objects.next_white(
+                    &mut member,
+                    &mut cycle.sweep_object_cursor,
+                    index,
+                    cycle.epoch,
+                )?;
+                retained = Some(remembered);
+                Some((address, member))
+            });
+            let selected = if consecutive.is_some() {
+                consecutive
+            } else if cycle.kind == CollectionKind::Young {
                 match self.objects.scan_young(&mut cycle.sweep_young_cursor) {
                     crate::index::Scan::Entry(address, ()) => {
                         let Some(member) = self.objects.try_lock(address) else {
@@ -604,7 +665,7 @@ impl GarbageCollector {
                 // time limit is active. Otherwise share one admission and
                 // shard lookup across at most the remaining sweep budget.
                 let limit = if self.configuration.max_pause_time_us == 0 {
-                    scan_budget
+                    (*work + 1).min(64)
                 } else {
                     1
                 };
@@ -631,7 +692,13 @@ impl GarbageCollector {
                     crate::index::Scan::Done => None,
                 }
             };
-            let Some((address, objects)) = selected else {
+            if full_scan && let Some(unit) = self.check_sweep_mark_work() {
+                if selected.is_some() {
+                    cycle.sweep_object_cursor.retry_entry();
+                }
+                return unit;
+            }
+            let Some((address, mut objects)) = selected else {
                 #[cfg(feature = "experimental-identity-index")]
                 return if self.identities.cleanup_step(&mut cycle.identity_cleanup) {
                     Unit::Boundary
@@ -682,7 +749,9 @@ impl GarbageCollector {
                     // Registry removal commits only after every shard is held.
                     // In particular, an identity must remain resolvable when a
                     // contended remembered shard defers this retirement.
-                    let Some(mut remembered) = self.remembered.try_lock(address) else {
+                    let Some(mut remembered) =
+                        retained.or_else(|| self.remembered.try_lock(address))
+                    else {
                         return retry(cycle);
                     };
                     #[cfg(feature = "experimental-identity-index")]
@@ -714,6 +783,9 @@ impl GarbageCollector {
                     remembered.remove(address);
                     let (removed, address_page) = objects.retire(&mut cycle.young_retirement);
                     sealed.address = address_page;
+                    if full_scan && sealed.address.is_none() {
+                        *run = Some((objects, remembered));
+                    }
                     removed
                 }
             } else {
@@ -732,6 +804,9 @@ impl GarbageCollector {
                     finalized: false,
                 });
             } else {
+                // Returning the retiring borrow may publish external clearing
+                // work. Do not retain page or remembered guards for that handoff.
+                drop(run.take());
                 self.defer_retirement(metadata);
             }
         }
