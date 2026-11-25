@@ -158,7 +158,7 @@ impl<T: Trace + 'static> GcWeak<T> {
         });
         if let Some(gc) = &gc {
             if let Some(visibility) = &slot.visibility {
-                gc.publish_host_weak(&slot, visibility);
+                gc.publish_host_weak(&slot, visibility, None);
             } else {
                 let publication = gc.root_publication_guard();
                 for (stamp, epoch) in slot.born_after.iter().zip(gc.weak_birth_epochs()) {
@@ -234,13 +234,24 @@ impl<T> Clone for GcWeak<T> {
     fn clone(&self) -> Self {
         // Reserve independent slot storage before admission or the source slot's
         // decision lock. No target/birth decision is copied until both are held.
+        let gc = self.collector.upgrade();
+        let visibility = gc
+            .as_ref()
+            .is_some_and(|gc| {
+                gc.can_publish_host_weak(self.slot.kind, self.slot.owner.load(Ordering::Acquire))
+            })
+            .then(crate::metadata::BirthVisibility::default);
         let slot = Arc::new(WeakSlot {
-            visibility: None,
             decision: Mutex::new(()),
             #[cfg(test)]
             decision_waiters: AtomicUsize::new(0),
             unpublished_owners: AtomicUsize::new(0),
-            target: AtomicUsize::new(0),
+            target: AtomicUsize::new(if visibility.is_some() {
+                self.slot.target.load(Ordering::Acquire)
+            } else {
+                0
+            }),
+            visibility,
             target_identity: self.slot.target_identity,
             owner: AtomicUsize::new(0),
             owner_identity: AtomicU64::new(0),
@@ -249,12 +260,21 @@ impl<T> Clone for GcWeak<T> {
             pending: AtomicBool::new(false),
             born_after: std::array::from_fn(|_| AtomicU64::new(0)),
         });
-        if let Some(gc) = self.collector.upgrade() {
-            let (publication, _decision) = self.slot.admitted_decision(&gc);
+        if let Some(gc) = gc.as_ref()
+            && let Some(visibility) = &slot.visibility
+        {
+            gc.publish_host_weak(&slot, visibility, Some(&self.slot));
+        } else if let Some(gc) = gc.as_ref() {
+            let (publication, _decision) = self.slot.admitted_decision(gc);
             let address = self.slot.target.load(Ordering::Acquire);
-            if !gc.weak_is_cleared(&self.slot, address) {
-                slot.target.store(address, Ordering::Relaxed);
-            }
+            slot.target.store(
+                if gc.weak_is_cleared(&self.slot, address) {
+                    0
+                } else {
+                    address
+                },
+                Ordering::Relaxed,
+            );
             for ((destination, source), epoch) in slot
                 .born_after
                 .iter()
@@ -306,7 +326,7 @@ mod tests {
                 gc.collect_full()?;
                 // This slot is outside the young reference index. Only an
                 // unnecessary global admission could make its waiter stop young GC.
-                let weak = GcWeak::new(&target, ReferenceKind::Weak, 0);
+                let weak = GcWeak::new(&target, ReferenceKind::Weak, target.as_ptr().addr());
                 drop(Gc::try_new(&gc, 99_u64)?);
                 let before = gc.statistics()?.young_collections;
                 let decision = weak.slot.decision();
@@ -381,7 +401,7 @@ mod tests {
                         .build(),
                 );
                 let target = Gc::try_new(&gc, 42_u64)?;
-                let weak = GcWeak::new(&target, ReferenceKind::Weak, 0);
+                let weak = GcWeak::new(&target, ReferenceKind::Weak, target.as_ptr().addr());
                 drop(target);
                 let decision = weak.slot.decision();
                 let (waiting, crossed, cleared) = std::thread::scope(|scope| {
