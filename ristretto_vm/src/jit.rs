@@ -429,11 +429,7 @@ pub(crate) fn execute(
 /// Converts the raw JIT result to a VM value, surfacing any pending exception
 /// stored in the runtime context as `Err(Throwable(..))`.
 ///
-/// Uses `take_pending_exception_into` so the throwable's GC root is held alive across the
-/// `Gc::from_raw_i64` reconstruction and the construction of the `Err(Throwable(..))`
-/// `Value`;only after this function's local exit does the helper release the root, by
-/// which time the returned `Err` already owns a `Value::Object(Some(Gc))` referenced by
-/// the surrounding stack frame.
+/// The pending exception stays rooted through conversion to the owning VM value.
 fn finish_execute(
     runtime_context: &RuntimeContext,
     result: Option<ristretto_jit::Value>,
@@ -441,10 +437,12 @@ fn finish_execute(
     runtime_context.take_pending_exception_into(|pending| {
         if pending != 0 {
             let gc_ref: Gc<ristretto_gc::sync::RwLock<ristretto_classloader::Reference>> =
-                Gc::from_raw_i64(pending)?;
+                Gc::from_handle_rooted(runtime_context.garbage_collector(), pending)?;
             return Err(crate::Error::Throwable(Value::Object(Some(gc_ref))));
         }
-        result.map(|v| convert_to_vm(&v)).transpose()
+        result
+            .map(|v| convert_to_vm(runtime_context.garbage_collector(), &v))
+            .transpose()
     })
 }
 
@@ -471,7 +469,7 @@ fn convert_to_jit(value: &Value) -> Result<ristretto_jit::Value> {
         Value::Float(value) => ristretto_jit::Value::F32(*value),
         Value::Double(value) => ristretto_jit::Value::F64(*value),
         Value::Object(None) => ristretto_jit::Value::Ptr(0),
-        Value::Object(Some(gc_ref)) => ristretto_jit::Value::Ptr(gc_ref.as_ptr_i64()),
+        Value::Object(Some(gc_ref)) => ristretto_jit::Value::Ptr(gc_ref.as_handle_i64()),
         Value::Unused => {
             return Err(InternalError(
                 "Cannot convert Unused value to JIT".to_string(),
@@ -481,13 +479,8 @@ fn convert_to_jit(value: &Value) -> Result<ristretto_jit::Value> {
     Ok(jit_value)
 }
 
-/// Converts a JIT value returned by a compiled function back to a VM value.
-///
-/// # Safety
-///
-/// For `Ptr` values, the raw pointer must still be valid (i.e., the original `Gc` reference
-/// must be kept alive by the caller for the duration of JIT execution).
-fn convert_to_vm(jit_value: &ristretto_jit::Value) -> Result<Value> {
+/// Resolve reference results by stable identity while the invocation still owns its roots.
+fn convert_to_vm(gc: &Arc<GarbageCollector>, jit_value: &ristretto_jit::Value) -> Result<Value> {
     let value = match jit_value {
         ristretto_jit::Value::I32(value) => Value::from(*value),
         ristretto_jit::Value::I64(value) => Value::from(*value),
@@ -495,7 +488,7 @@ fn convert_to_vm(jit_value: &ristretto_jit::Value) -> Result<Value> {
         ristretto_jit::Value::F64(value) => Value::from(*value),
         ristretto_jit::Value::Ptr(0) => Value::Object(None),
         ristretto_jit::Value::Ptr(ptr) => {
-            let gc_ref = Gc::from_raw_i64(*ptr)?;
+            let gc_ref = Gc::from_handle_rooted(gc, *ptr)?;
             Value::Object(Some(gc_ref))
         }
     };
@@ -577,36 +570,55 @@ mod tests {
     #[test]
     fn test_convert_to_vm_i32() {
         let value = ristretto_jit::Value::I32(42);
-        let result = convert_to_vm(&value).unwrap();
+        let result = convert_to_vm(&GarbageCollector::new(), &value).unwrap();
         assert_eq!(result, Value::Int(42));
     }
 
     #[test]
     fn test_convert_to_vm_i64() {
         let value = ristretto_jit::Value::I64(42);
-        let result = convert_to_vm(&value).unwrap();
+        let result = convert_to_vm(&GarbageCollector::new(), &value).unwrap();
         assert_eq!(result, Value::Long(42));
     }
 
     #[test]
     fn test_convert_to_vm_f32() {
         let value = ristretto_jit::Value::F32(42.1);
-        let result = convert_to_vm(&value).unwrap();
+        let result = convert_to_vm(&GarbageCollector::new(), &value).unwrap();
         assert_eq!(result, Value::Float(42.1));
     }
 
     #[test]
     fn test_convert_to_vm_f64() {
         let value = ristretto_jit::Value::F64(42.1);
-        let result = convert_to_vm(&value).unwrap();
+        let result = convert_to_vm(&GarbageCollector::new(), &value).unwrap();
         assert_eq!(result, Value::Double(42.1));
     }
 
     #[test]
     fn test_convert_to_vm_null_ptr() {
         let value = ristretto_jit::Value::Ptr(0);
-        let result = convert_to_vm(&value).unwrap();
+        let result = convert_to_vm(&GarbageCollector::new(), &value).unwrap();
         assert_eq!(result, Value::Object(None));
+    }
+
+    #[test]
+    fn reference_results_hold_an_owner_and_reject_foreign_or_retired_handles() -> Result<()> {
+        let heap = GarbageCollector::new();
+        let root = Gc::try_new(
+            &heap,
+            ristretto_gc::sync::RwLock::new(ristretto_classloader::Reference::from(vec![42_i8])),
+        )?;
+        let encoded = ristretto_jit::Value::Ptr(root.as_handle_i64());
+        assert!(convert_to_vm(&GarbageCollector::new(), &encoded).is_err());
+        let result = convert_to_vm(&heap, &encoded)?;
+        drop(root);
+        heap.collect_full()?;
+        assert_eq!(&*result.as_byte_vec_ref()?, &[42]);
+        drop(result);
+        heap.collect_full()?;
+        assert!(convert_to_vm(&heap, &encoded).is_err());
+        Ok(())
     }
 
     #[test]

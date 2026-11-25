@@ -112,7 +112,7 @@ async fn nested_contexts_and_java_threads_keep_invocation_state_separate() -> Re
     assert!(outer.transient_roots.lock().is_empty());
     collect(gc).await?;
     assert!(matches!(
-        &*Gc::<RwLock<Reference>>::from_raw_i64(array)?.read(),
+        &*Gc::<RwLock<Reference>>::from_handle_rooted(gc, array)?.read(),
         Reference::IntArray(_)
     ));
     drop(inner);
@@ -129,7 +129,7 @@ async fn escaped_sentinel_is_retained_and_never_reused() -> Result<()> {
     let escaped = ctx.sentinel_throwable;
     ctx.set_pending_exception(escaped);
     let value = ctx.take_pending_exception_into(|ptr| {
-        Gc::<RwLock<Reference>>::from_raw_i64(ptr).map(|gc| Value::Object(Some(gc)))
+        Gc::<RwLock<Reference>>::from_handle_rooted(gc, ptr).map(|gc| Value::Object(Some(gc)))
     })?;
     drop(ctx);
     assert!(thread.jit_runtime().sentinels.lock().is_empty());

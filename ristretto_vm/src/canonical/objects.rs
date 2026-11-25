@@ -523,7 +523,7 @@ impl Payload {
     unsafe_code,
     reason = "audited private reference-free canonical Java payload"
 )]
-impl Trace for Payload {
+unsafe impl Trace for Payload {
     fn canonical_payload() -> Option<ristretto_gc::CanonicalPayload<Self>> {
         // SAFETY: every field is primitive storage. Managed edges live in the catalog.
         Some(unsafe { ristretto_gc::CanonicalPayload::new() })
