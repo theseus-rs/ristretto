@@ -33,8 +33,6 @@ pub enum Error {
     Unsupported(String),
     #[error("invalid canonical Java execution: {0}")]
     Invalid(String),
-    #[error("canonical Java boundary: {0}")]
-    Boundary(&'static str),
     #[error("canonical Java initialization {kind}: {cause:?}")]
     Initialization {
         kind: &'static str,
@@ -42,6 +40,12 @@ pub enum Error {
     },
     #[error("canonical Java {0} limit reached")]
     Limit(&'static str),
+    #[error("canonical Java array fault: {0}")]
+    ArrayFault(&'static str),
+    #[error("canonical ownership boundary: {0}")]
+    Boundary(&'static str),
+    #[error(transparent)]
+    Heap(#[from] ristretto_gc::Error),
     #[error(transparent)]
     Collector(#[from] ristretto_gc::canonical::Error),
     #[error(transparent)]
