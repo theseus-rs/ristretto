@@ -3934,8 +3934,6 @@ impl GarbageCollector {
 
     fn defer_retirement(&self, metadata: MetadataRef) {
         self.retired_objects.fetch_add(1, Ordering::AcqRel);
-        self.retired_bytes
-            .fetch_add(metadata.size(), Ordering::AcqRel);
         if metadata.arm_retirement_notification() {
             // The borrower left before arming. This sweep step already drives
             // worker notification after releasing its coordination guards.
@@ -4021,7 +4019,7 @@ impl GarbageCollector {
 
     /// Execute a sweep callback with exclusive descriptor ownership and no cycle,
     /// coordinator, or publication lock. A continuation can return to its original
-    /// sweep only if that exact epoch still owns an empty continuation slot.
+    /// sweep while that exact epoch has space in its bounded continuation queue.
     fn reclaim_swept(
         &self,
         task: ReclaimTask,
@@ -4060,8 +4058,6 @@ impl GarbageCollector {
                 && cycle.phase == Phase::Sweep
                 && cycle.reclaim.len() < phase_work::SWEEP_BATCH
             {
-                self.retired_bytes
-                    .fetch_sub(metadata.size(), Ordering::AcqRel);
                 cycle.reclaim.push_back(ReclaimTask {
                     metadata,
                     offset,
