@@ -32,3 +32,27 @@ fn scanning_and_two_domain_claims_agree_with_commit_even_after_removal() {
         assert!(!attempt.commit());
     });
 }
+
+#[test]
+fn scanner_and_compatibility_take_race_a_certified_drop() {
+    loom::model(|| {
+        let record = Arc::new(Decision::default());
+        assert!(record.commit());
+        assert!(record.begin_removal());
+        let scanner = {
+            let record = record.clone();
+            thread::spawn(move || record.scan())
+        };
+        let compatibility = {
+            let record = record.clone();
+            thread::spawn(move || record.take())
+        };
+        let removed = record.finish_removal();
+        let observed = scanner.join().unwrap();
+        assert!(!(removed && observed));
+        assert_ne!(compatibility.join().unwrap(), removed);
+        assert!(record.owes_trace());
+        assert!(!record.live());
+        assert!(!record.begin_removal());
+    });
+}

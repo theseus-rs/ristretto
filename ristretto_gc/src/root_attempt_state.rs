@@ -5,6 +5,8 @@ const PENDING: u8 = 0;
 const CANCELLED: u8 = 1;
 const COMMITTED: u8 = 2;
 const RELEASED: u8 = 3;
+const REMOVING: u8 = 4;
+const VETOED: u8 = 5;
 
 #[derive(Debug, Default)]
 pub(crate) struct Decision(AtomicU8);
@@ -23,17 +25,55 @@ impl Decision {
     }
 
     pub(crate) fn scan(&self) -> bool {
-        self.cancel_or_observe() == COMMITTED
+        match self.cancel_or_observe() {
+            // A scanner that reports the root defeats an in-progress fast drop.
+            REMOVING => matches!(
+                self.0
+                    .compare_exchange(REMOVING, VETOED, Ordering::AcqRel, Ordering::Acquire),
+                Ok(_) | Err(VETOED)
+            ),
+            COMMITTED | VETOED => true,
+            _ => false,
+        }
     }
+
     pub(crate) fn owes_trace(&self) -> bool {
-        matches!(self.cancel_or_observe(), COMMITTED | RELEASED)
+        matches!(
+            self.cancel_or_observe(),
+            COMMITTED | REMOVING | VETOED | RELEASED
+        )
     }
+
     pub(crate) fn live(&self) -> bool {
-        self.0.load(Ordering::Acquire) == COMMITTED
+        matches!(
+            self.0.load(Ordering::Acquire),
+            COMMITTED | REMOVING | VETOED
+        )
     }
-    pub(crate) fn take(&self) -> bool {
+
+    pub(crate) fn begin_removal(&self) -> bool {
         self.0
-            .compare_exchange(COMMITTED, RELEASED, Ordering::AcqRel, Ordering::Acquire)
+            .compare_exchange(COMMITTED, REMOVING, Ordering::AcqRel, Ordering::Acquire)
             .is_ok()
+    }
+
+    pub(crate) fn finish_removal(&self) -> bool {
+        self.0
+            .compare_exchange(REMOVING, RELEASED, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+    }
+
+    pub(crate) fn take(&self) -> bool {
+        let mut state = self.0.load(Ordering::Acquire);
+        while matches!(state, COMMITTED | REMOVING | VETOED) {
+            match self
+                .0
+                .compare_exchange(state, RELEASED, Ordering::AcqRel, Ordering::Acquire)
+            {
+                Ok(_) => return true,
+                Err(seen) => state = seen,
+            }
+        }
+        false
     }
 }

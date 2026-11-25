@@ -1092,3 +1092,79 @@ fn a_published_bitmap_slot_cannot_be_hidden_by_an_older_word_summary() {
         second.join().unwrap();
     });
 }
+
+#[test]
+fn paged_removal_and_scan_agree_on_the_claimed_generation() {
+    loom::model(|| {
+        let slot = Arc::new(root_slot_state::Slot::default());
+        slot.prepare_generation(1);
+        slot.address.store(11, Ordering::Release);
+        assert_eq!(slot.begin_removal(1), Some(11));
+        let scanner = {
+            let slot = slot.clone();
+            thread::spawn(move || slot.scan())
+        };
+        let deleted = slot.finish_removal(1);
+        let seen = scanner.join().unwrap();
+        assert!(!deleted || seen != Some(11));
+        assert!(deleted || seen == Some(11));
+        if !deleted {
+            assert_eq!(slot.matching_generation(11), Some(1));
+            assert_eq!(slot.take(1), Some(11));
+        }
+        slot.prepare_generation(2);
+        slot.address.store(22, Ordering::Release);
+        assert_eq!(slot.begin_removal(1), None);
+        assert!(!slot.finish_removal(1));
+        assert_eq!(slot.matching_generation(22), Some(2));
+        assert_eq!(slot.scan(), Some(22));
+    });
+}
+
+#[test]
+fn retired_page_intent_cannot_return_a_replacement_address() {
+    loom::model(|| {
+        let slot = Arc::new(root_slot_state::Slot::default());
+        slot.prepare_generation(1);
+        slot.address.store(11, Ordering::Release);
+        let remover = {
+            let slot = slot.clone();
+            thread::spawn(move || slot.begin_removal(1))
+        };
+        assert_eq!(slot.take(1), Some(11));
+        slot.prepare_generation(2);
+        slot.address.store(22, Ordering::Release);
+        assert!(matches!(remover.join().unwrap(), None | Some(11)));
+        assert!(!slot.finish_removal(1));
+        assert_eq!(slot.matching_generation(22), Some(2));
+    });
+}
+
+#[test]
+fn a_scanner_advances_across_concurrent_reuse_and_rearming() {
+    for replacement in [11, 22] {
+        loom::model(move || {
+            let slot = Arc::new(root_slot_state::Slot::default());
+            slot.prepare_generation(1);
+            slot.address.store(11, Ordering::Release);
+            assert_eq!(slot.begin_removal(1), Some(11));
+            let scanner = {
+                let slot = slot.clone();
+                thread::spawn(move || slot.scan())
+            };
+            assert_eq!(slot.take(1), Some(11));
+            slot.prepare_generation(2);
+            root_slot_state::arm_root(&slot.address);
+            let committed = root_slot_state::activate_root(&slot.address, replacement);
+            // No other scanner changes a tag on this generation. Under any
+            // reuse schedule this visit can advance the cursor.
+            let address = scanner
+                .join()
+                .unwrap()
+                .expect("bounded generation turnover");
+            assert!(address == 0 || address == 11 || (committed && address == replacement));
+            assert!(!slot.finish_removal(1));
+            assert_eq!(slot.scan(), Some(if committed { replacement } else { 0 }));
+        });
+    }
+}
