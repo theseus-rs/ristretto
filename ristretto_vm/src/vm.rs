@@ -46,8 +46,11 @@ use tracing::{debug, warn};
 /// which requires an active `LocalSet`. On non-wasi targets this is a
 /// transparent passthrough.
 #[cfg(target_os = "wasi")]
-async fn run_local<F: Future>(future: F) -> F::Output {
-    tokio::task::LocalSet::new().run_until(future).await
+fn run_local<F: Future>(future: F) -> impl Future<Output = F::Output> {
+    // Keep the bootstrap future out of the LocalSet driver's linear-memory
+    // stack frame on WASI, including when the driver is first constructed.
+    let future = Box::pin(future);
+    async move { tokio::task::LocalSet::new().run_until(future).await }
 }
 
 #[cfg(not(target_os = "wasi"))]
