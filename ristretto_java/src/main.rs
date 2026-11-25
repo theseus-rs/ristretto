@@ -10,6 +10,8 @@
 )]
 
 mod argument;
+#[cfg(feature = "experimental-canonical-native")]
+mod canonical_native;
 mod logging;
 mod module;
 mod source;
@@ -69,6 +71,22 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+fn launcher_class_path(value: &std::ffi::OsStr) -> ClassPath {
+    #[cfg(target_os = "wasi")]
+    let entries = {
+        // WASI command arguments are Unicode strings. Its Rust standard library
+        // has no split_paths implementation, even for a single preopened directory.
+        value
+            .to_string_lossy()
+            .split(':')
+            .map(PathBuf::from)
+            .collect::<Vec<_>>()
+    };
+    #[cfg(not(target_os = "wasi"))]
+    let entries = env::split_paths(value).collect::<Vec<_>>();
+    ClassPath::from(&entries)
+}
+
 async fn common_main(mut cli: Arguments) -> Result<()> {
     if cli.help {
         Arguments::command().print_help()?;
@@ -89,9 +107,7 @@ async fn common_main(mut cli: Arguments) -> Result<()> {
     debug!("ristretto/{VERSION}/{OS}/{ARCH}");
     let mut configuration_builder = ConfigurationBuilder::new();
     if let Some(ref class_path) = cli.classpath {
-        let class_paths = env::split_paths(class_path).collect::<Vec<_>>();
-        let class_path = ClassPath::from(&class_paths);
-        configuration_builder = configuration_builder.class_path(class_path);
+        configuration_builder = configuration_builder.class_path(launcher_class_path(class_path));
     }
 
     if let Ok(java_version) = env::var("JAVA_VERSION") {
@@ -157,6 +173,13 @@ async fn common_main(mut cli: Arguments) -> Result<()> {
         }
     };
     startup_trace!("[cli] vm created");
+
+    #[cfg(feature = "experimental-canonical-native")]
+    if let Some(binding) = &cli.canonical_native
+        && let Err(error) = binding.install(&vm, &cli.canonical_classes).await
+    {
+        return process_error(error);
+    }
 
     let parameters = cli.parameters.unwrap_or_default();
     let execution = if let Some(source_file) = source_file {

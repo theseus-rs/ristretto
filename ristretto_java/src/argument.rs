@@ -105,6 +105,25 @@ pub struct Arguments {
     )]
     pub classpath: Option<OsString>,
 
+    #[cfg(feature = "experimental-canonical-native")]
+    #[arg(
+        long = "canonical-native",
+        value_name = "CLASS.METHOD=TARGET.METHOD",
+        help = "bind one declared static native (I)I method to the restricted canonical interpreter"
+    )]
+    pub canonical_native: Option<crate::canonical_native::Binding>,
+
+    #[cfg(feature = "experimental-canonical-native")]
+    #[arg(
+        long = "canonical-class",
+        value_name = "BINARY_NAME",
+        action = ArgAction::Append,
+        requires = "canonical_native",
+        value_parser = crate::canonical_native::class_name,
+        help = "admit a companion class for the canonical target (repeatable)"
+    )]
+    pub canonical_classes: Vec<String>,
+
     #[arg(
         short = 'p',
         long = "module-path",
@@ -322,5 +341,79 @@ mod tests {
             cli.parameters
         );
         Ok(())
+    }
+
+    #[cfg(feature = "experimental-canonical-native")]
+    #[test]
+    fn canonical_binding_preserves_normal_main_and_application_arguments() -> Result<(), clap::Error>
+    {
+        let arguments = [
+            "java",
+            "-Xint",
+            "--canonical-native",
+            "a.Caller.enter=a/Target.run",
+            "--canonical-class",
+            "a.Target$Node",
+            "--canonical-class=a/Other",
+            "-cp",
+            "classes",
+            "a.Caller",
+            "--canonical-native=application-argument",
+            "--canonical-class",
+        ]
+        .map(OsString::from)
+        .to_vec();
+        let cli = Arguments::try_parse_from(Arguments::preprocess_args(arguments))?;
+        assert_eq!(cli.mainclass.as_deref(), Some("a.Caller"));
+        assert_eq!(cli.classpath, Some(OsString::from("classes")));
+        assert!(cli.x_options.interpreted);
+        assert_eq!(
+            cli.canonical_native
+                .as_ref()
+                .map(|b| b.bridge_class.as_str()),
+            Some("a.Caller")
+        );
+        assert_eq!(cli.canonical_classes, vec!["a.Target$Node", "a/Other"]);
+        assert_eq!(
+            cli.parameters,
+            Some(vec![
+                "--canonical-native=application-argument".into(),
+                "--canonical-class".into()
+            ])
+        );
+        Ok(())
+    }
+
+    #[cfg(feature = "experimental-canonical-native")]
+    #[test]
+    fn canonical_options_reject_orphans_and_multiple_bindings() {
+        for arguments in [
+            vec!["java", "--canonical-class", "Target$Node", "Caller"],
+            vec![
+                "java",
+                "--canonical-native",
+                "Caller.enter=Target.run",
+                "--canonical-native",
+                "Other.enter=Target.run",
+                "Caller",
+            ],
+            vec!["java", "--canonical-native", "Caller.enter", "Caller"],
+        ] {
+            assert!(Arguments::try_parse_from(arguments).is_err());
+        }
+    }
+
+    #[cfg(not(feature = "experimental-canonical-native"))]
+    #[test]
+    fn canonical_options_are_unavailable_without_the_feature() {
+        assert!(
+            Arguments::try_parse_from([
+                "java",
+                "--canonical-native",
+                "Caller.enter=Target.run",
+                "Caller"
+            ])
+            .is_err()
+        );
     }
 }
