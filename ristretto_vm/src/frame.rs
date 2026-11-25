@@ -146,6 +146,7 @@ pub struct Frame {
     invalid_program_counter: AtomicUsize,
     method_refs: OnceLock<Arc<ClassReferences<MethodRefEntry>>>,
     field_refs: OnceLock<Arc<ClassReferences<FieldRefEntry>>>,
+    allocation_class: OnceLock<(u16, Arc<Class>)>,
 }
 
 #[derive(Debug)]
@@ -282,6 +283,7 @@ impl Frame {
             invalid_program_counter: AtomicUsize::new(0),
             method_refs: OnceLock::new(),
             field_refs: OnceLock::new(),
+            allocation_class: OnceLock::new(),
         }
     }
 
@@ -290,6 +292,7 @@ impl Frame {
         if !Arc::ptr_eq(&self.class, class) {
             self.method_refs.take();
             self.field_refs.take();
+            self.allocation_class.take();
             self.class = class.clone();
         }
         if !Arc::ptr_eq(&self.method, method) {
@@ -315,6 +318,7 @@ impl Frame {
     pub fn class_mut(&mut self) -> &mut Arc<Class> {
         self.method_refs.take();
         self.field_refs.take();
+        self.allocation_class.take();
         &mut self.class
     }
 
@@ -352,6 +356,24 @@ impl Frame {
             .field_ref_cache()
             .for_class(&self.class);
         Ok(self.field_refs.get_or_init(|| entries))
+    }
+
+    /// The constant-pool index belongs to this frame's exact referring class.
+    /// Cache only completed initialization. A recursive initializer may allocate
+    /// its own class and then fail before other threads may use it.
+    pub(crate) async fn allocation_class(&self, thread: &Thread, index: u16) -> Result<Arc<Class>> {
+        if let Some((cached, class)) = self.allocation_class.get()
+            && *cached == index
+        {
+            return Ok(class.clone());
+        }
+        let name = self.class.constant_pool().try_get_class(index)?;
+        let class = thread.load_referenced_class(&self.class, name).await?;
+        thread.initialize_class(&class).await?;
+        if self.allocation_class.get().is_none() && matches!(class.is_initialized(), Ok(true)) {
+            let _ = self.allocation_class.set((index, class.clone()));
+        }
+        Ok(class)
     }
 
     /// Get the method in this frame.
@@ -2198,6 +2220,68 @@ mod tests {
         let frame = Frame::new(&Arc::downgrade(&thread), &class, &method);
         let result = frame.execute(parameters).await?;
         assert!(matches!(result, Some(Value::Int(3))));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn allocation_class_cache_preserves_failed_recursive_initialization() -> Result<()> {
+        let (_vm, thread, mut frame) = crate::test::frame().await?;
+        let index = Arc::get_mut(frame.class_mut())
+            .expect("private fixture")
+            .constant_pool_mut()
+            .add_class("Minimum")?;
+        let class = thread
+            .load_referenced_class(
+                frame.class(),
+                frame.class().constant_pool().try_get_class(index)?,
+            )
+            .await?;
+        assert!(matches!(
+            class.begin_initialization(thread.id())?,
+            ristretto_classloader::InitializationAction::ShouldInitialize
+        ));
+        assert!(Arc::ptr_eq(
+            &frame.allocation_class(&thread, index).await?,
+            &class
+        ));
+        assert!(frame.allocation_class.get().is_none());
+        class.fail_initialization("fixture initialization failed".into())?;
+        assert!(frame.allocation_class(&thread, index).await.is_err());
+        assert!(frame.allocation_class.get().is_none());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn allocation_class_cache_is_scoped_to_the_referring_pool() -> Result<()> {
+        let (_vm, thread, mut frame) = crate::test::frame().await?;
+        let mut replacement = frame.class().class_file().clone();
+        let pool = Arc::get_mut(frame.class_mut())
+            .expect("private fixture")
+            .constant_pool_mut();
+        let index = pool.add_class("Minimum")?;
+        let other_index = pool.add_class("java/lang/Object")?;
+        let original = frame.allocation_class(&thread, index).await?;
+        assert!(Arc::ptr_eq(
+            &frame.allocation_class(&thread, index).await?,
+            &original
+        ));
+        assert_eq!(
+            frame.allocation_class(&thread, other_index).await?.name(),
+            "java/lang/Object"
+        );
+        assert_eq!(
+            replacement.constant_pool.add_class("java/lang/Object")?,
+            index
+        );
+        let other = Class::from(None, replacement)?;
+        frame.reset(&other, &other.try_get_method("test", "()V")?);
+        assert!(frame.allocation_class.get().is_none());
+        assert_eq!(
+            frame.allocation_class(&thread, index).await?.name(),
+            "java/lang/Object"
+        );
+        let _ = frame.class_mut();
+        assert!(frame.allocation_class.get().is_none());
         Ok(())
     }
 
