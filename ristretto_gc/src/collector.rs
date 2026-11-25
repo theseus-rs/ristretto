@@ -3387,11 +3387,18 @@ impl GarbageCollector {
     }
 
     fn shade_all(&self, address: usize) -> bool {
+        // The caller holds publication admission through both domain barriers.
+        if !self.domains.iter().any(Domain::active) {
+            return false;
+        }
+        let Some(metadata) = self.objects.lookup(address) else {
+            return false;
+        };
         let _retention = TraceRetention::enter(self, Retention::Strong);
         let mut changed = false;
         for index in 0..2 {
             let _context = Context::enter(self, index);
-            changed |= self.shade(address);
+            changed |= self.shade_known(&metadata);
         }
         changed
     }

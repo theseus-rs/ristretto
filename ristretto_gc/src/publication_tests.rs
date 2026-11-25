@@ -3829,3 +3829,68 @@ fn parked_external_trace_cannot_rewind_a_later_full_epoch() -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn last_tree_root_shades_its_graph_while_the_object_shard_is_parked() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    for concurrent in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .root_storage(crate::RootStorage::Tree)
+                .concurrent_publication(concurrent)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let mut graphs = Vec::new();
+        for value in 0..8_u64 {
+            let child = Gc::try_new(&gc, value)?.into_rooted();
+            let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+            let parent = Gc::try_new(&gc, vec![child])?.into_rooted();
+            graphs.push((parent, weak, value));
+        }
+
+        gc.collect();
+        assert!((0..1024).any(|_| {
+            gc.step();
+            lock(&gc.domain_at(1).cycle).phase == Phase::Roots
+        }));
+        let epoch = gc.domain_at(1).epoch.load(Ordering::Acquire);
+        let unvisited = graphs
+            .iter()
+            .position(|(parent, _, _)| {
+                gc.objects
+                    .lookup(parent.as_ptr() as usize)
+                    .is_some_and(|metadata| !metadata.marked(1, epoch))
+            })
+            .expect("unvisited tree root");
+        let (parent, weak, value) = graphs.swap_remove(unvisited);
+        let address = parent.as_ptr() as usize;
+        let metadata = gc.objects.lookup(address).expect("registered owner");
+
+        let shard = gc.objects.lock(address);
+        let (done, completed) = mpsc::channel();
+        let worker = thread::spawn(move || {
+            drop(parent);
+            done.send(()).expect("announce deletion");
+        });
+        let dropped = completed.recv_timeout(Duration::from_secs(3)).is_ok();
+        let strength = metadata.retention(1, epoch);
+        drop(shard);
+        assert!(worker.join().is_ok(), "root deletion panicked");
+        assert!(dropped, "deletion waited for a parked object shard");
+        assert_eq!(strength, Some(Retention::Strong));
+
+        while !gc.step() {}
+        assert_eq!(weak.upgrade().as_deref(), Some(&value));
+        drop(graphs);
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
