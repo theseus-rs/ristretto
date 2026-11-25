@@ -170,6 +170,14 @@ impl<'gc> GraphRuntime<'gc> {
     pub(in crate::canonical_adapter) fn registered(&self) -> (usize, usize) {
         self.catalog.registered()
     }
+
+    pub(in crate::canonical_adapter) fn payload_cells(&self) -> usize {
+        self.catalog.capacities().pools().2
+    }
+
+    pub(in crate::canonical_adapter) fn payload_cell_occupied(&self, index: usize) -> Option<bool> {
+        self.catalog.record_cell_occupied(index)
+    }
 }
 
 pub(in crate::canonical_adapter) struct GraphMutator<'gc> {

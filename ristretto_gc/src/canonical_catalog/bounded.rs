@@ -415,6 +415,10 @@ impl<R: Payload> BoundedCatalog<R> {
         )
     }
 
+    pub(crate) fn record_cell_occupied(&self, index: usize) -> Option<bool> {
+        self.raw.record_cell_occupied(index)
+    }
+
     fn counter(&self, role: Role) -> (&AtomicUsize, usize) {
         match role {
             Role::Mutator => (&self.mutators, self.capacities.mutators),

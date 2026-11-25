@@ -42,7 +42,8 @@ impl Invocation {
     }
 }
 
-/// Successful teardown proves zero managed payload and refunded catalog credit.
+/// Successful teardown proves this session has no retained payload cells and
+/// refunds its catalog credit. Other sessions/ordinary objects may remain live.
 #[derive(Debug)]
 pub struct HeapCompletion<T> {
     pub value: T,
@@ -100,6 +101,54 @@ impl Program {
         cleanup_limit: usize,
         run: impl AsyncFnOnce(&JavaHeap<'p, '_>) -> Result<T, Error>,
     ) -> Result<HeapCompletion<T>, Error> {
+        let collector = GarbageCollector::with_config(ristretto_gc::Configuration {
+            max_heap_bytes: max_payload_bytes,
+            ..Default::default()
+        });
+        let completion = self
+            .with_collector(&collector, configuration, cleanup_limit, run)
+            .await?;
+        // The dedicated API retains its stronger, externally observable invariant.
+        if collector.managed_bytes() != 0 {
+            return Err(Error::Invalid("private heap retained payload bytes".into()));
+        }
+        Ok(completion)
+    }
+
+    /// Run admitted entries using an existing VM's collector and shared heap limit.
+    /// The closure attaches interpreter or compiled contexts to this session.
+    /// Ordinary Java references cannot cross this catalog boundary. The VM's
+    /// collector configuration, ordinary roots and other sessions are preserved.
+    ///
+    /// # Errors
+    /// Reports admission, shared heap quota, execution or bounded cleanup failure.
+    pub async fn with_vm<'p, T>(
+        &'p self,
+        vm: &crate::VM,
+        configuration: Configuration,
+        cleanup_limit: usize,
+        run: impl AsyncFnOnce(&JavaHeap<'p, '_>) -> Result<T, Error>,
+    ) -> Result<HeapCompletion<T>, Error> {
+        self.with_collector(vm.garbage_collector(), configuration, cleanup_limit, run)
+            .await
+    }
+
+    /// Run one canonical session on a supplied collector, sharing its payload limit.
+    /// Each session reserves a separate bounded catalog and static registry. Final
+    /// cleanup checks only this catalog's physical payload cells, never the total
+    /// managed bytes of the collector. The poll limit includes incremental census
+    /// work, and cleanup yields every 64 polls. Outer cancellation drops session
+    /// owners directly; it does not poll or collect unrelated objects in Drop.
+    ///
+    /// # Errors
+    /// Reports configuration, execution, cleanup limit or retained-credit failures.
+    pub async fn with_collector<'p, T>(
+        &'p self,
+        collector: &GarbageCollector,
+        configuration: Configuration,
+        cleanup_limit: usize,
+        run: impl AsyncFnOnce(&JavaHeap<'p, '_>) -> Result<T, Error>,
+    ) -> Result<HeapCompletion<T>, Error> {
         if self.classes.iter().any(|layout| {
             layout.references > configuration.edges_per_object
                 || layout.statics.references > configuration.edges_per_object
@@ -108,15 +157,11 @@ impl Program {
         }
         self.static_capacity(configuration)?;
         let budget = Budget::new(configuration.charged_bytes()?);
-        let collector = GarbageCollector::with_config(ristretto_gc::Configuration {
-            max_heap_bytes: max_payload_bytes,
-            ..Default::default()
-        });
         let mut heap = JavaHeap {
             program: self,
             statics: States::heap(self)?,
-            runtime: Runtime::new(&collector, configuration, &budget)?,
-            collector: &collector,
+            runtime: Runtime::new(collector, configuration, &budget)?,
+            collector,
         };
         let result = run(&heap).await;
         if heap.runtime.registered() != (0, 0) {
@@ -151,7 +196,8 @@ impl<'p, 'gc> JavaHeap<'p, 'gc> {
         })
     }
 
-    /// Logical managed payload bytes across all entries on this heap.
+    /// Collector-wide managed payload bytes, including other sessions and ordinary
+    /// allocations. This diagnostic is never authority for session cleanup.
     #[must_use]
     pub fn managed_bytes(&self) -> usize {
         self.collector.managed_bytes()
@@ -169,23 +215,32 @@ impl<'p, 'gc> JavaHeap<'p, 'gc> {
         })
     }
 
-    async fn drain(&self, limit: usize) -> Result<(usize, usize), Error> {
-        let mut helper = self.runtime.helper()?;
+    async fn drain(&mut self, limit: usize) -> Result<(usize, usize), Error> {
+        // Every VM Payload has a positive reservation. Global zero is therefore
+        // a sufficient empty-session shortcut, preserving scalar-only zero work.
+        // Global nonzero is not a reason to wait: all further checks are local.
+        if self.collector.managed_bytes() == 0 {
+            return Ok((0, 0));
+        }
+        let mut drain = self.runtime.drain()?;
         let mut released = 0;
         let mut polls = 0;
-        while self.managed_bytes() != 0 {
+        loop {
             if polls == limit {
                 return Err(Error::Limit("heap cleanup poll"));
             }
-            if helper.poll()? == Work::ReleasedObjectSlot {
+            let (work, complete) = drain.poll()?;
+            if work == Work::ReleasedObjectSlot {
                 released += 1;
             }
             polls += 1;
+            if complete {
+                return Ok((polls, released));
+            }
             if polls.is_multiple_of(64) {
                 tokio::task::yield_now().await;
             }
         }
-        Ok((polls, released))
     }
 }
 

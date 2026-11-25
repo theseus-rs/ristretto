@@ -611,6 +611,10 @@ impl<R: Record> Catalog<R> {
         self.slots.len()
     }
 
+    pub(crate) fn record_cell_occupied(&self, index: usize) -> Option<bool> {
+        self.cells.slot_occupied(index)
+    }
+
     pub fn generation_exhaustion_observed(&self) -> bool {
         self.edges.as_ref().is_some_and(|edges| {
             edges.slots_pool.generation_exhaustion_observed()

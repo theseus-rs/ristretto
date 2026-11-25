@@ -221,6 +221,69 @@ impl<'gc> Runtime<'gc> {
     pub fn registered(&self) -> (usize, usize) {
         self.0.registered()
     }
+
+    /// Begin exclusive, incremental reclamation of this runtime's payloads.
+    /// All mutators and helpers must have been dropped. The exclusive borrow
+    /// prevents new registration; existing root aliases may still delay completion.
+    /// Other runtimes and ordinary objects on the same collector are independent.
+    ///
+    /// # Errors
+    /// Rejects outstanding participants or unavailable helper registration.
+    pub fn drain(&mut self) -> Result<Drain<'_, 'gc>, Error> {
+        if self.registered() != (0, 0) {
+            return Err(Error::Request(RequestError::Busy));
+        }
+        let helper = self.helper()?;
+        let remaining = self.0.payload_cells();
+        Ok(Drain {
+            runtime: self,
+            helper,
+            slot: 0,
+            remaining,
+        })
+    }
+}
+
+/// Exclusive owner-local drain. It holds one existing helper reservation.
+/// The caller supplies poll/yield limits; dropping it cancels its pending helper
+/// request without polling. It owns no additional heap or catalog allocation.
+pub struct Drain<'a, 'gc> {
+    runtime: &'a mut Runtime<'gc>,
+    helper: Helper<'gc>,
+    slot: usize,
+    remaining: usize,
+}
+
+impl Drain<'_, '_> {
+    /// One helper visit and one numeric physical-cell observation. The boolean
+    /// is true only after a complete pass found no retained payload cells.
+    /// Construction/destruction states count as occupied. This is owner-local
+    /// payload quiescence, not zero collector bytes or refunded catalog storage.
+    ///
+    /// No mutator can register while this guard exists and helpers cannot create
+    /// payload cells, so empty cells cannot become occupied during this pass.
+    /// Existing roots can be dropped concurrently; they cannot create new cells.
+    /// A helper visit may run payload Drop/host deallocation, with no wall-time bound.
+    /// # Errors
+    /// Reports helper errors, invalid census state or polling after completion.
+    pub fn poll(&mut self) -> Result<(Work, bool), Error> {
+        if self.remaining == 0 {
+            return Err(Error::Finished);
+        }
+        let work = self.helper.poll()?;
+        if self
+            .runtime
+            .0
+            .payload_cell_occupied(self.slot)
+            .ok_or(Error::Protocol)?
+        {
+            self.remaining = self.runtime.0.payload_cells();
+        } else {
+            self.remaining -= 1;
+        }
+        self.slot = (self.slot + 1) % self.runtime.0.payload_cells();
+        Ok((work, self.remaining == 0))
+    }
 }
 
 /// An owning alias of one logical root. Copies need no `T: Clone` or new root permit.
@@ -433,6 +496,7 @@ macro_rules! opaque_debug {
     };
 }
 opaque_debug!(Runtime<'gc>);
+opaque_debug!(Drain<'a, 'gc>);
 opaque_debug!(Root<T>);
 opaque_debug!(View<'a, T>);
 opaque_debug!(Mutator<'gc>);
@@ -440,6 +504,10 @@ opaque_debug!(Allocation<'a, 'gc, T>);
 opaque_debug!(Write<'a, 'gc>);
 opaque_debug!(Read<'a, 'gc, T>);
 opaque_debug!(Helper<'gc>);
+
+#[cfg(test)]
+#[path = "canonical_drain_tests.rs"]
+mod drain_tests;
 
 #[cfg(test)]
 mod tests {

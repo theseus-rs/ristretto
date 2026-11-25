@@ -98,6 +98,12 @@ impl<T> Pool<T> {
             .count()
     }
 
+    /// One numeric slot observation, including construction/destruction in progress.
+    /// This neither acquires an owner nor borrows the stored value.
+    pub(crate) fn slot_occupied(&self, index: usize) -> Option<bool> {
+        self.slots.get(index).map(|slot| slot.state.occupied())
+    }
+
     pub fn new(capacity: usize) -> Arc<Self> {
         Self::with_generation_limit(capacity, MAX_GENERATION)
     }
