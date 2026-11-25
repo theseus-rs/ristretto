@@ -30,7 +30,7 @@ enum HeldIndex {
     clippy::too_many_lines,
     reason = "forced index waits across publication/root policies"
 )]
-fn allocation_index_waits_release_admission_and_leave_registration_uncommitted() -> Result<()> {
+fn reserved_address_allows_reclamation_under_held_live_operation_guards() -> Result<()> {
     for concurrent in [false, true] {
         for independent in [false, true] {
             for storage in [
@@ -76,9 +76,15 @@ fn allocation_index_waits_release_admission_and_leave_registration_uncommitted()
                 });
                 let (waiting, observed) = mpsc::channel();
                 *lock(&gc.metadata_registration_observer) = Some(waiting);
+                let (inside, _entered) = mpsc::channel();
+                let (finish, resumed_commit) = mpsc::channel();
                 let worker_gc = gc.clone();
                 let worker_context = context.clone();
                 let constructor = thread::spawn(move || {
+                    publication_tests::INDEX_COMMIT_PAUSE.set(Some(ClaimPause {
+                        entered: inside,
+                        resume: resumed_commit,
+                    }));
                     worker_context.with(|| Gc::try_new(&worker_gc, vec![child]))
                 });
                 preparation
@@ -90,7 +96,7 @@ fn allocation_index_waits_release_admission_and_leave_registration_uncommitted()
                 resume.send(()).expect("resume allocation");
                 let (address, identity) = observed
                     .recv_timeout(Duration::from_secs(5))
-                    .expect("index wait");
+                    .expect("address reservation despite held guards");
                 let bucket = crate::index::address_bucket(address) & 15;
                 let held = all
                     .into_iter()
@@ -100,7 +106,7 @@ fn allocation_index_waits_release_admission_and_leave_registration_uncommitted()
                 let partial_object = gc
                     .objects
                     .try_lock(address)
-                    .map(|objects| objects.contains_key(&address));
+                    .map(|objects| objects.occupied());
                 let partial_identity = gc.identities.get(identity.to_i64().cast_unsigned());
                 let admission_free = gc.publication_clock.as_ref().map_or_else(
                     || gc.publication.try_write().is_some(),
@@ -119,6 +125,7 @@ fn allocation_index_waits_release_admission_and_leave_registration_uncommitted()
                 let progress = completion.recv_timeout(Duration::from_secs(5));
                 // Unblock every participant before reporting a failed schedule.
                 drop(held);
+                finish.send(()).expect("finish installation");
                 collector.join().expect("collector worker");
                 let parent = constructor.join().expect("constructor worker")?;
                 println!(

@@ -230,7 +230,7 @@ fn young_reference_processing_rejects_a_logically_retired_old_owner() -> Result<
                 link.upgrade().is_none(),
                 "retired owner retained a new referent"
             );
-            assert!(gc.objects.lock(address).contains_key(&address));
+            assert!(gc.objects.lock(address).occupied());
         }
         drop(full_cycle);
         release.store(false, Ordering::Release);

@@ -84,17 +84,12 @@ fn registration_rejects_partial_write_sets_without_repairing_them() -> Result<()
             // Controlled corruption models a stopped old multi-index publisher.
             // No collection or payload access occurs until the original complete
             // registry is restored.
-            gc.objects.lock(address).remove(&address);
+            gc.objects.replace_for_test(address, None);
             gc.set_identity_hint(id.to_i64().cast_unsigned(), None);
-            gc.objects
-                .try_membership(address)
-                .expect("sole writer")
-                .split()
-                .1
-                .remove();
+            gc.objects.set_young_for_test(address, false);
             match case {
                 0 => {
-                    gc.objects.lock(address).insert(address, metadata.clone());
+                    gc.objects.replace_for_test(address, Some(metadata.clone()));
                 }
                 1 => {
                     gc.set_identity_hint(
@@ -103,12 +98,7 @@ fn registration_rejects_partial_write_sets_without_repairing_them() -> Result<()
                     );
                 }
                 _ => {
-                    gc.objects
-                        .try_membership(address)
-                        .expect("sole writer")
-                        .split()
-                        .1
-                        .insert();
+                    gc.objects.set_young_for_test(address, true);
                 }
             }
             let before_object = gc.objects.lock(address).get(&address).map(|value| value.id);
@@ -143,14 +133,9 @@ fn registration_rejects_partial_write_sets_without_repairing_them() -> Result<()
                 before_marks
             );
             assert_eq!(gc.statistics()?.bytes_live, before_bytes);
-            gc.objects.lock(address).insert(address, metadata.clone());
+            gc.objects.replace_for_test(address, Some(metadata.clone()));
             gc.set_identity_hint(id.to_i64().cast_unsigned(), Some(address));
-            gc.objects
-                .try_membership(address)
-                .expect("sole writer")
-                .split()
-                .1
-                .insert();
+            gc.objects.set_young_for_test(address, true);
             drop(construction);
             drop(root);
             gc.stop()?;
@@ -161,53 +146,33 @@ fn registration_rejects_partial_write_sets_without_repairing_them() -> Result<()
 }
 
 #[test]
-fn registration_preparation_rolls_back_every_lock_before_waiting() -> Result<()> {
+fn exact_address_reservations_do_not_hold_phase_or_live_operation_guards() {
     for concurrent in [false, true] {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .concurrent_publication(concurrent)
+                .metadata_shards(1)
                 .build(),
         );
-        let address = 0x1000;
-        let id = crate::ObjectId::allocate()?;
-        let before = gc
-            .publication_clock
-            .as_ref()
-            .and_then(|clock| clock.observe());
-        {
-            let _held = gc.objects.lock(address);
-            assert!(gc.objects.try_membership(address).is_none());
-            assert!(gc.publication.try_write().is_some());
-            assert!(
-                gc.publication_clock
-                    .as_ref()
-                    .is_none_or(|clock| clock.active() == 0)
-            );
-            assert_eq!(gc.identities.get(id.to_i64().cast_unsigned()), None);
-        }
-        if let (Some(clock), Some(before)) = (&gc.publication_clock, before) {
-            // A failed counted preparation never admits or stamps. This
-            // observation stays valid across the whole failed acquisition.
-            assert!(clock.transition(before, 0, 0));
-        }
-        let registration = gc.prepare_registration(address, id);
-        assert!(registration.is_empty());
-        assert_eq!(gc.identities.get(id.to_i64().cast_unsigned()), None);
-        assert!(!registration.is_young());
-        if let Some(clock) = &gc.publication_clock {
-            assert_eq!(clock.active(), 0);
-        } else {
-            assert!(gc.publication.try_write().is_some());
-        }
-        drop(registration);
+        let _guard = gc.objects.lock(8);
+        let first = gc.objects.reserve(8).expect("vacant exact slot");
+        assert!(gc.objects.reserve(8).is_none());
+        let second = gc.objects.reserve(16).expect("other slot on same page");
+        second.mark_young();
+        assert!(!gc.objects.contains_young(8));
+        assert!(gc.objects.contains_young(16));
         assert!(gc.publication.try_write().is_some());
         assert!(
             gc.publication_clock
                 .as_ref()
                 .is_none_or(|clock| clock.active() == 0)
         );
+        drop(second);
+        assert!(!gc.objects.contains_young(16));
+        assert!(gc.objects.reserve(8).is_none());
+        drop(first);
+        assert!(gc.objects.reserve(8).is_some());
     }
-    Ok(())
 }
 
 #[test]
@@ -655,12 +620,18 @@ thread_local! {
     static GRAPH_SLOT_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static BEFORE_GRAPH_LINK_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static BIRTH_DECISION_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
-    static INDEX_COMMIT_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+    static YOUNG_SLOT_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+    pub(super) static INDEX_COMMIT_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 pub(super) fn pause_after_registration_indexes() {
     wait_for_constructor_resume(INDEXED_PAUSE.take());
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn pause_after_young_slot() {
+    wait_for_constructor_resume(YOUNG_SLOT_PAUSE.take());
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
@@ -921,10 +892,10 @@ fn a_passed_idle_birth_joins_the_current_epoch_after_two_collections() -> Result
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[test]
 #[expect(clippy::unwrap_in_result, reason = "forced constructor unwind")]
-fn unwinding_a_passed_birth_releases_its_exact_indexes_and_charge() -> Result<()> {
+fn unwinding_partial_and_passed_births_releases_the_exact_indexes_and_charge() -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
-    for counted in [false, true] {
+    for (counted, installed) in [(false, false), (false, true), (true, false), (true, true)] {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .concurrent_publication(counted)
@@ -935,9 +906,16 @@ fn unwinding_a_passed_birth_releases_its_exact_indexes_and_charge() -> Result<()
         let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
         let (entered, parked) = mpsc::channel();
         let (resume, receiver) = mpsc::channel();
+        let (reserved, reservation) = mpsc::channel();
+        *lock(&gc.metadata_registration_observer) = Some(reserved);
         let heap = gc.clone();
         let constructor = thread::spawn(move || {
-            PENDING_BIRTH_PAUSE.set(Some(ClaimPause {
+            let hook = if installed {
+                &PENDING_BIRTH_PAUSE
+            } else {
+                &YOUNG_SLOT_PAUSE
+            };
+            hook.set(Some(ClaimPause {
                 entered,
                 resume: receiver,
             }));
@@ -946,17 +924,11 @@ fn unwinding_a_passed_birth_releases_its_exact_indexes_and_charge() -> Result<()
         parked
             .recv_timeout(Duration::from_secs(5))
             .expect("physical insertion");
-        let (address, id) = gc
-            .objects
-            .iter()
-            .find_map(|shard| {
-                shard
-                    .iter()
-                    .find(|(_, m)| !m.birth.is_live())
-                    .map(|(&address, m)| (address, m.id))
-            })
-            .expect("private descriptor");
-        assert_eq!(gc.address_for_identity(id), Some(address));
+        let (address, id) = reservation
+            .recv_timeout(Duration::from_secs(5))
+            .expect("exact reservation");
+        assert_eq!(gc.address_for_identity(id), installed.then_some(address));
+        assert_eq!(gc.objects.lock(address).occupied(), installed);
         assert!(gc.objects.contains_young(address));
         assert!(gc.metadata_for_address(address).is_none());
         gc.collect_full()?;
@@ -964,7 +936,7 @@ fn unwinding_a_passed_birth_releases_its_exact_indexes_and_charge() -> Result<()
         drop(resume); // Inject an unwind inside the pre-activation hook.
         assert!(constructor.join().is_err());
         assert_eq!(gc.address_for_identity(id), None);
-        assert!(!gc.objects.lock(address).contains_key(&address));
+        assert!(!gc.objects.lock(address).occupied());
         assert!(!gc.objects.contains_young(address));
         gc.collect_full()?;
         assert!(weak.upgrade().is_none());
@@ -1079,9 +1051,12 @@ fn capped_allocation_reclaims_after_registration_indexes_are_released() -> Resul
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[test]
-#[ignore = "integrated alpha gate: reclamation must progress with a parked index publisher"]
 fn capped_allocation_reclaims_inside_registration_commit() -> Result<()> {
-    check_parked_constructor_recovery(None, |_, pause| INDEX_COMMIT_PAUSE.set(Some(pause)))
+    for phase in [None, Some(Phase::Mark), Some(Phase::Sweep)] {
+        check_parked_constructor_recovery(phase, |_, pause| INDEX_COMMIT_PAUSE.set(Some(pause)))?;
+        check_parked_constructor_recovery(phase, |_, pause| YOUNG_SLOT_PAUSE.set(Some(pause)))?;
+    }
+    Ok(())
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]

@@ -36,7 +36,7 @@ once_cell = { workspace = true }
 portable-atomic = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-triomphe = { workspace = true }
+triomphe = { workspace = true, features = ["arc-swap"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 parking_lot = { workspace = true }

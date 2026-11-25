@@ -15,7 +15,7 @@ const RETRIED: u8 = 4;
 pub(crate) struct BirthVisibility(AtomicU8);
 
 impl BirthVisibility {
-    /// The exact address shard serializes installation, and the caller owns
+    /// The exact address reservation serializes installation, and the caller owns
     /// the private payload. A collector cannot retire it before insertion.
     pub(crate) fn index(&self) {
         assert_eq!(

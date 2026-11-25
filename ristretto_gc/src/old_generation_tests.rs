@@ -184,7 +184,7 @@ fn young_handoff_and_promotion_publish_old_edges() -> Result<()> {
             }
         }
         assert_eq!(gc.statistics()?.old_collections, 1);
-        assert!(gc.objects.lock(old_address).contains_key(&old_address));
+        assert!(gc.objects.lock(old_address).occupied());
         assert_eq!(*young.0, 42);
         drop(young);
         gc.stop()?;

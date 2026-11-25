@@ -1,24 +1,23 @@
-//! Readable nursery membership. The object's address shard serializes all writes
-//! to one directory; scanners take an owning view without acquiring that shard.
+//! Exact address reservations and resumable object and nursery scans.
+//! Live root and sweep operations still serialize on the address shard. A
+//! publisher owns only its slot, even while all live-operation guards are held.
 use super::{Cursor, Scan, Shards, address_bucket, shard_count};
 use crate::metadata::MetadataRef;
 use crate::publication_directory::Directory;
-use arc_swap::ArcSwap;
+use arc_swap::{ArcSwap, ArcSwapAny};
 use portable_atomic::AtomicU64;
-use std::collections::BTreeMap;
 use std::ops::Deref;
-#[cfg(test)]
-use std::ops::DerefMut;
-use std::sync::atomic::Ordering::{Acquire, Release};
-use std::sync::{Arc, MutexGuard};
+use std::sync::atomic::{
+    AtomicUsize,
+    Ordering::{AcqRel, Acquire, Relaxed},
+};
+use std::sync::{Arc, MutexGuard, OnceLock};
 
-const WORDS: usize = 8;
-const PAGE_SIZE: usize = WORDS * 64;
+const PAGE_SIZE: usize = 64;
 const PAGE_MASK: usize = PAGE_SIZE - 1;
 
-// Group the eight possible low-bit patterns separately within a 4 KiB range.
-// An aligned nursery uses one 64-byte bitmap. Unaligned byte allocations remain
-// individually representable, without ever interpreting a scan key as a pointer.
+// Group eight-byte aligned addresses while preserving every low-bit pattern.
+// Numeric scan keys never grant permission to dereference an address.
 fn position(address: usize) -> usize {
     (address & !(PAGE_SIZE * 8 - 1)) | ((address & 7) * PAGE_SIZE) | ((address >> 3) & PAGE_MASK)
 }
@@ -27,77 +26,226 @@ fn address_of(key: usize) -> usize {
     (key & !(PAGE_SIZE * 8 - 1)) | ((key & PAGE_MASK) << 3) | ((key / PAGE_SIZE) & 7)
 }
 
+type Pages<T> = ArcSwap<Directory<Arc<T>>>;
+type Cell = ArcSwapAny<Option<MetadataRef>>;
+
+#[derive(Debug, Default)]
+struct Head {
+    pages: Pages<Page>,
+    young: Pages<AtomicU64>,
+    indexed: AtomicUsize,
+}
+
+pub(crate) struct Sealed {
+    address: usize,
+    objects: Option<Arc<Page>>,
+    young: Option<Arc<AtomicU64>>,
+}
+
+impl Sealed {
+    fn unlink(&self, head: &Head) {
+        let base = (position(self.address) & !PAGE_MASK) as u64;
+        if let Some(page) = &self.objects {
+            unlink(&head.pages, base, page);
+        }
+        if let Some(page) = &self.young {
+            unlink(&head.young, base, page);
+        }
+    }
+}
+
+/// The expected owning root and page prevent deletion after either is replaced.
+fn unlink<T>(head: &Pages<T>, base: u64, sealed: &Arc<T>) {
+    loop {
+        let current = head.load();
+        if !current.get(base).is_some_and(|p| Arc::ptr_eq(p, sealed)) {
+            return;
+        }
+        let next = Arc::new(current.remove(base).0);
+        if Arc::ptr_eq(&head.compare_and_swap(&*current, next), &current) {
+            return;
+        }
+    }
+}
+
 #[derive(Debug)]
 struct Page {
-    nonempty: AtomicU64,
-    words: [AtomicU64; WORDS],
+    occupied: AtomicU64,
+    // Only the exact reservation initializes a cell. Scans use get(), so a
+    // stalled initializer cannot hold up a reader or force it to initialize.
+    entries: [OnceLock<Cell>; PAGE_SIZE],
+}
+
+impl Page {
+    fn new(bit: u64) -> Self {
+        Self {
+            occupied: AtomicU64::new(bit),
+            entries: [const { OnceLock::new() }; PAGE_SIZE],
+        }
+    }
+}
+
+trait Occupancy {
+    fn bits(&self) -> &AtomicU64;
+
+    fn next(&self, start: usize) -> Option<usize> {
+        let mask = self.bits().load(Acquire) & (u64::MAX << start);
+        (mask != 0).then(|| mask.trailing_zeros() as usize)
+    }
+}
+
+impl Occupancy for Page {
+    fn bits(&self) -> &AtomicU64 {
+        &self.occupied
+    }
+}
+
+impl Occupancy for AtomicU64 {
+    fn bits(&self) -> &AtomicU64 {
+        self
+    }
+}
+
+/// A zero mask permanently seals the page in this directory. Other slots
+/// remain independently claimable while the winner installs its descriptor.
+fn reserve<T: Occupancy>(head: &Pages<T>, key: usize, create: impl Fn(u64) -> T) -> Option<Arc<T>> {
+    let base = (key & !PAGE_MASK) as u64;
+    let bit = 1 << (key & PAGE_MASK);
+    loop {
+        let current = head.load();
+        if let Some(page) = current.get(base) {
+            match page.bits().fetch_update(AcqRel, Acquire, |mask| {
+                (mask != 0 && mask & bit == 0).then_some(mask | bit)
+            }) {
+                Ok(_) => return Some(page.clone()),
+                Err(0) => {}
+                Err(_) => return None,
+            }
+        }
+        let page = Arc::new(create(bit));
+        let (next, _) = current.insert(base, page.clone())?;
+        if Arc::ptr_eq(&head.compare_and_swap(&*current, Arc::new(next)), &current) {
+            return Some(page);
+        }
+    }
+}
+
+/// Holds one occupied bit. Zero occupancy seals a page permanently. Only the
+/// last remover unlinks it, and an owning comparison protects its replacement.
+pub(crate) struct Slot<'a> {
+    head: &'a Head,
+    page: Arc<Page>,
+    key: usize,
+    pub(crate) reserved: bool,
 }
 
 #[expect(
     clippy::indexing_slicing,
-    reason = "a masked page offset or nonempty word bit selects one of WORDS words"
+    reason = "the low six bits select an exact slot"
 )]
-impl Page {
-    fn new() -> Self {
-        Self {
-            nonempty: AtomicU64::new(0),
-            words: [const { AtomicU64::new(0) }; WORDS],
-        }
+impl Slot<'_> {
+    fn bit(&self) -> u64 {
+        1 << (self.key & PAGE_MASK)
     }
 
-    fn contains(&self, key: usize) -> bool {
-        let offset = key & PAGE_MASK;
-        self.words[offset / 64].load(Acquire) & (1 << (offset % 64)) != 0
+    pub(crate) fn mark_young(&self) {
+        // The address reservation excludes other writers to this young bit.
+        // Directory exhaustion is impossible since each distinct key owns a page.
+        let _ = reserve(&self.head.young, self.key, AtomicU64::new);
     }
 
-    // Only the writer holding the matching object shard changes this page.
-    fn set(&self, key: usize, present: bool) {
-        let offset = key & PAGE_MASK;
-        let index = offset / 64;
-        let bit = 1 << (offset % 64);
-        let word = &self.words[index];
-        let previous = word.load(Acquire);
-        let next = if present {
-            previous | bit
+    fn clear_young(&self) -> Option<Arc<AtomicU64>> {
+        let current = self.head.young.load();
+        let page = current.get((self.key & !PAGE_MASK) as u64)?;
+        (page.fetch_and(!self.bit(), AcqRel) == self.bit()).then(|| page.clone())
+    }
+
+    pub(crate) fn install(&self, metadata: MetadataRef) {
+        let slot = &self.page.entries[self.key & PAGE_MASK];
+        if let Some(entry) = slot.get() {
+            entry.store(Some(metadata));
         } else {
-            previous & !bit
-        };
-        word.store(next, Release);
-        if (previous == 0) != (next == 0) {
-            let mask = self.nonempty.load(Acquire);
-            let bit = 1 << index;
-            self.nonempty
-                .store(if next == 0 { mask & !bit } else { mask | bit }, Release);
+            // This address has one writer. No prior value can have readers
+            // whose ownership needs to be settled by an ArcSwap store.
+            assert!(
+                slot.set(Cell::from(Some(metadata))).is_ok(),
+                "duplicate address initializer"
+            );
         }
+        self.head.indexed.fetch_add(1, Relaxed);
     }
 
-    fn next(&self, start: usize) -> Option<usize> {
-        let first = start / 64;
-        let mut possible = self.nonempty.load(Acquire) & (u64::MAX << first);
-        while possible != 0 {
-            let index = possible.trailing_zeros() as usize;
-            let mut bits = self.words[index].load(Acquire);
-            if index == first {
-                bits &= u64::MAX << (start % 64);
-            }
-            if bits != 0 {
-                return Some(index * 64 + bits.trailing_zeros() as usize);
-            }
-            possible &= possible - 1;
+    fn remove(&self) -> (Option<MetadataRef>, Option<Sealed>) {
+        let young = self.clear_young();
+        let removed = self.page.entries[self.key & PAGE_MASK]
+            .get()
+            .and_then(|entry| entry.swap(None));
+        if removed.is_some() {
+            self.head.indexed.fetch_sub(1, Relaxed);
         }
-        None
+        let last = self.page.occupied.fetch_and(!self.bit(), AcqRel) == self.bit();
+        let sealed = (last || young.is_some()).then(|| Sealed {
+            address: address_of(self.key),
+            objects: last.then(|| self.page.clone()),
+            young,
+        });
+        (removed, sealed)
     }
 }
 
-type Map = BTreeMap<usize, MetadataRef>;
-type Pages = Directory<Arc<Page>>;
+impl Drop for Slot<'_> {
+    fn drop(&mut self) {
+        if self.reserved
+            && let (_, Some(sealed)) = self.remove()
+        {
+            sealed.unlink(self.head);
+        }
+    }
+}
+
+pub(crate) struct Membership<'a> {
+    _guard: MutexGuard<'a, ()>,
+    slot: Option<Slot<'a>>,
+    metadata: Option<MetadataRef>,
+    address: usize,
+}
+
+impl Membership<'_> {
+    #[expect(
+        clippy::trivially_copy_pass_by_ref,
+        reason = "match existing map lookup syntax"
+    )]
+    pub(crate) fn get(&self, address: &usize) -> Option<&MetadataRef> {
+        self.metadata
+            .as_ref()
+            .filter(|m| *address == self.address && m.birth.visible())
+    }
+
+    pub(crate) fn promote(&self) -> Option<Sealed> {
+        let page = self.slot.as_ref()?.clear_young()?;
+        Some(Sealed {
+            address: self.address,
+            objects: None,
+            young: Some(page),
+        })
+    }
+
+    // The caller has observed LIVE under the guard. Other live operations on
+    // this address are excluded, and a new constructor cannot claim its bit.
+    pub(crate) fn retire(self) -> (Option<MetadataRef>, Option<Sealed>) {
+        self.slot.as_ref().map_or((None, None), Slot::remove)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn occupied(&self) -> bool {
+        self.metadata.is_some()
+    }
+}
 
 #[derive(Debug, Default)]
 pub(crate) struct YoungCursor {
     position: Cursor,
-    // A retained page contains numeric membership hints only. Probe a fresh
-    // directory when it runs out, including when the page key was reused.
-    page: Option<(usize, usize, Arc<Page>)>,
+    page: Option<(usize, usize, Arc<AtomicU64>)>,
 }
 
 impl YoungCursor {
@@ -106,179 +254,71 @@ impl YoungCursor {
     }
 }
 
-#[derive(Debug, Default)]
-pub(crate) struct ObjectMap {
-    objects: Map,
-    // The shard lock protects the writer's reference to the published directory.
-    // Only a page appearing or disappearing needs to publish a new root.
-    pages: Arc<Pages>,
-    last: Option<(u64, Arc<Page>)>,
-}
-
-impl ObjectMap {
-    // Match BTreeMap lookup syntax so all descriptor lookups share this check.
-    #[expect(
-        clippy::trivially_copy_pass_by_ref,
-        reason = "the shard exposes the existing map lookup interface"
-    )]
-    pub(crate) fn get(&self, address: &usize) -> Option<&MetadataRef> {
-        self.objects
-            .get(address)
-            .filter(|metadata| metadata.birth.visible())
-    }
-
-    pub(crate) fn len(&self) -> usize {
-        self.objects.len()
-    }
-
-    pub(crate) fn live_values(&self) -> impl Iterator<Item = &MetadataRef> {
-        self.objects
-            .values()
-            .filter(|metadata| metadata.birth.is_live())
-    }
-}
-
-#[cfg(test)]
-impl Deref for ObjectMap {
-    type Target = Map;
-    fn deref(&self) -> &Map {
-        &self.objects
-    }
-}
-#[cfg(test)]
-impl DerefMut for ObjectMap {
-    fn deref_mut(&mut self) -> &mut Map {
-        &mut self.objects
-    }
-}
-
 #[derive(Debug)]
 pub(crate) struct Objects {
-    descriptors: Shards<ObjectMap>,
-    nursery: Box<[ArcSwap<Pages>]>,
+    guards: Shards<()>,
+    pages: Box<[Head]>,
 }
 
 impl Deref for Objects {
-    type Target = Shards<ObjectMap>;
+    type Target = Shards<()>;
     fn deref(&self) -> &Self::Target {
-        &self.descriptors
+        &self.guards
     }
 }
 
-/// An exact address write permit. There is no independently held young writer.
-pub(crate) struct Membership<'a> {
-    objects: MutexGuard<'a, ObjectMap>,
-    pages: &'a ArcSwap<Pages>,
-    key: usize,
-}
-
-#[cfg(test)]
-impl Deref for Membership<'_> {
-    type Target = Map;
-    fn deref(&self) -> &Self::Target {
-        &self.objects
-    }
-}
-impl Membership<'_> {
-    pub(crate) fn is_young(&self) -> bool {
-        let base = (self.key & !PAGE_MASK) as u64;
-        self.objects
-            .last
-            .as_ref()
-            .filter(|(key, _)| *key == base)
-            .map(|(_, page)| page)
-            .or_else(|| self.objects.pages.get(base))
-            .is_some_and(|p| p.contains(self.key))
-    }
-
-    pub(crate) fn split(&mut self) -> (&mut Map, YoungWriter<'_>) {
-        let ObjectMap {
-            objects,
-            pages,
-            last,
-        } = &mut *self.objects;
-        (
-            objects,
-            YoungWriter {
-                current: pages,
-                last,
-                published: self.pages,
-                key: self.key,
-            },
-        )
-    }
-}
-
-pub(crate) struct YoungWriter<'a> {
-    current: &'a mut Arc<Pages>,
-    last: &'a mut Option<(u64, Arc<Page>)>,
-    published: &'a ArcSwap<Pages>,
-    key: usize,
-}
-
-impl YoungWriter<'_> {
-    fn replace(&mut self, pages: Pages) {
-        let pages = Arc::new(pages);
-        self.published.store(pages.clone());
-        *self.current = pages;
-    }
-
-    #[expect(
-        clippy::expect_used,
-        reason = "page keys cannot exhaust usize address-space capacity"
-    )]
-    pub(crate) fn insert(&mut self) {
-        let base = (self.key & !PAGE_MASK) as u64;
-        if let Some((key, page)) = &*self.last
-            && *key == base
-        {
-            page.set(self.key, true);
-            return;
-        }
-        let page = if let Some(page) = self.current.get(base) {
-            page.set(self.key, true);
-            page.clone()
-        } else {
-            let page = Arc::new(Page::new());
-            page.set(self.key, true);
-            let (updated, _) = self
-                .current
-                .insert(base, page.clone())
-                .expect("address page capacity");
-            self.replace(updated);
-            page
-        };
-        *self.last = Some((base, page));
-    }
-
-    pub(crate) fn remove(&mut self) {
-        let base = (self.key & !PAGE_MASK) as u64;
-        if self.last.as_ref().is_none_or(|(key, _)| *key != base) {
-            *self.last = self.current.get(base).map(|p| (base, p.clone()));
-        }
-        let Some((_, page)) = self.last.as_ref() else {
-            return;
-        };
-        page.set(self.key, false);
-        if page.nonempty.load(Acquire) == 0 {
-            *self.last = None;
-            self.replace(self.current.remove(base).0);
-        }
-    }
-}
-
-#[expect(
-    clippy::indexing_slicing,
-    reason = "normalized shard counts bound cursor and bucket indices"
-)]
+#[expect(clippy::indexing_slicing, reason = "shard and page offsets are masked")]
 impl Objects {
     pub(crate) fn new(count: usize) -> Self {
         Self {
-            descriptors: Shards::new(count),
-            nursery: (0..shard_count(count))
-                .map(|_| ArcSwap::from_pointee(Pages::default()))
-                .collect(),
+            guards: Shards::new(count),
+            pages: (0..shard_count(count)).map(|_| Head::default()).collect(),
         }
+    }
+
+    fn head(&self, address: usize) -> &Head {
+        &self.pages[address_bucket(address) & (self.pages.len() - 1)]
+    }
+
+    pub(crate) fn reserve(&self, address: usize) -> Option<Slot<'_>> {
+        let head = self.head(address);
+        let key = position(address);
+        let page = reserve(&head.pages, key, Page::new)?;
+        Some(Slot {
+            head,
+            page,
+            key,
+            reserved: true,
+        })
+    }
+
+    fn membership<'a>(&'a self, address: usize, guard: MutexGuard<'a, ()>) -> Membership<'a> {
+        let head = self.head(address);
+        let key = position(address);
+        let pages = head.pages.load();
+        let slot = pages.get((key & !PAGE_MASK) as u64).map(|page| Slot {
+            head,
+            page: page.clone(),
+            key,
+            reserved: false,
+        });
+        let metadata = slot
+            .as_ref()
+            .and_then(|s| s.page.entries[key & PAGE_MASK].get()?.load_full());
+        Membership {
+            _guard: guard,
+            slot,
+            metadata,
+            address,
+        }
+    }
+
+    pub(crate) fn lock(&self, address: usize) -> Membership<'_> {
+        self.membership(address, self.guards.lock(address))
+    }
+
+    pub(crate) fn try_lock(&self, address: usize) -> Option<Membership<'_>> {
+        Some(self.membership(address, self.guards.try_lock(address)?))
     }
 
     pub(crate) fn scan<R>(
@@ -286,27 +326,28 @@ impl Objects {
         cursor: &mut Cursor,
         read: impl FnOnce(&MetadataRef) -> R,
     ) -> Scan<R> {
-        use std::ops::Bound::{Excluded, Unbounded};
-        match self.descriptors.scan_with(cursor, |map, after| {
-            map.objects
-                .range((Excluded(after), Unbounded))
-                .next()
-                .map(|(&k, v)| (k, v.birth.visible().then(|| read(v))))
-        }) {
-            Scan::Entry(address, Some(value)) => Scan::Entry(address, value),
-            Scan::Entry(_, None) | Scan::Advance => Scan::Advance,
+        if !cursor.begin(self.pages.len()) {
+            return Scan::Done;
+        }
+        let Some(_guard) = self.guards.try_lock_bucket(cursor.shard) else {
+            cursor.rotate();
+            return Scan::Busy;
+        };
+        match Self::next(&self.pages[cursor.shard].pages, cursor, &mut None, || {}) {
+            Scan::Entry(key, page) => {
+                let entry = page.entries[key & PAGE_MASK]
+                    .get()
+                    .and_then(Cell::load_full);
+                if let Some(metadata) = entry.as_ref().filter(|m| m.birth.visible()) {
+                    Scan::Entry(address_of(key), read(metadata))
+                } else {
+                    Scan::Advance
+                }
+            }
+            Scan::Advance => Scan::Advance,
             Scan::Busy => Scan::Busy,
             Scan::Done => Scan::Done,
         }
-    }
-
-    pub(crate) fn try_membership(&self, address: usize) -> Option<Membership<'_>> {
-        let bucket = address_bucket(address);
-        Some(Membership {
-            objects: self.descriptors.try_lock_bucket(bucket)?,
-            pages: &self.nursery[bucket & (self.nursery.len() - 1)],
-            key: position(address),
-        })
     }
 
     pub(crate) fn scan_young(&self, cursor: &mut YoungCursor) -> Scan<()> {
@@ -318,72 +359,180 @@ impl Objects {
         young: &mut YoungCursor,
         observed: impl FnOnce(),
     ) -> Scan<()> {
-        let cursor = &mut young.position;
-        if !cursor.begin(self.nursery.len()) {
+        if !young.position.begin(self.pages.len()) {
             return Scan::Done;
         }
+        match Self::next(
+            &self.pages[young.position.shard].young,
+            &mut young.position,
+            &mut young.page,
+            observed,
+        ) {
+            Scan::Entry(key, _) => Scan::Entry(address_of(key), ()),
+            Scan::Advance => Scan::Advance,
+            Scan::Busy => Scan::Busy,
+            Scan::Done => Scan::Done,
+        }
+    }
+
+    fn next<T: Occupancy>(
+        directory: &Pages<T>,
+        cursor: &mut Cursor,
+        cache: &mut Option<(usize, usize, Arc<T>)>,
+        observed: impl FnOnce(),
+    ) -> Scan<Arc<T>> {
         let Some(start) = cursor.addresses[cursor.shard].checked_add(1) else {
             return cursor.exhausted();
         };
         let base = start & !PAGE_MASK;
-        if let Some((shard, key, page)) = &young.page
+        if let Some((shard, key, page)) = cache
             && *shard == cursor.shard
             && *key == base
             && let Some(offset) = page.next(start & PAGE_MASK)
         {
             let key = base | offset;
             cursor.selected(key);
-            return Scan::Entry(address_of(key), ());
+            return Scan::Entry(key, page.clone());
         }
-        let pages = self.nursery[cursor.shard].load();
+        let pages = directory.load();
         observed();
-        if let Some(page) = pages.get(base as u64)
-            && let Some(offset) = page.next(start & PAGE_MASK)
-        {
-            young.page = Some((cursor.shard, base, page.clone()));
-            let key = base | offset;
-            cursor.selected(key);
-            return Scan::Entry(address_of(key), ());
-        }
-        let Some((base, page)) = pages.next_after(Some(base as u64)) else {
-            return cursor.exhausted();
-        };
-        #[expect(
-            clippy::cast_possible_truncation,
-            reason = "keys are zero-extended usize addresses"
-        )]
-        let base = base as usize;
-        if let Some(offset) = page.next(0) {
-            young.page = Some((cursor.shard, base, page.clone()));
-            let key = base | offset;
-            cursor.selected(key);
-            Scan::Entry(address_of(key), ())
+        let selected = pages
+            .get(base as u64)
+            .and_then(|p| p.next(start & PAGE_MASK).map(|offset| (base | offset, p)));
+        let (key, page) = if let Some(entry) = selected {
+            entry
         } else {
-            // A concurrent writer emptied a page in this view. Charge this page
-            // to the current unit and resume at the next one.
-            cursor.addresses[cursor.shard] = base | PAGE_MASK;
-            Scan::Advance
+            let Some((base, page)) = pages.next_after(Some(base as u64)) else {
+                return cursor.exhausted();
+            };
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "all page keys originate from usize addresses"
+            )]
+            let base = base as usize;
+            let Some(offset) = page.next(0) else {
+                cursor.addresses[cursor.shard] = base | PAGE_MASK;
+                return Scan::Advance;
+            };
+            (base | offset, page)
+        };
+        cursor.selected(key);
+        *cache = Some((cursor.shard, key & !PAGE_MASK, page.clone()));
+        Scan::Entry(key, page.clone())
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.pages
+            .iter()
+            .map(|head| head.indexed.load(Relaxed))
+            .sum()
+    }
+
+    pub(crate) fn unlink(&self, sealed: &Sealed) {
+        sealed.unlink(self.head(sealed.address));
+    }
+
+    pub(crate) fn for_each(&self, mut visit: impl FnMut(&MetadataRef)) {
+        for (index, head) in self.pages.iter().enumerate() {
+            let _guard = self.guards.lock_bucket(index);
+            let pages = head.pages.load();
+            let mut after = None;
+            while let Some((key, page)) = pages.next_after(after) {
+                let mut bits = page.occupied.load(Acquire);
+                while bits != 0 {
+                    if let Some(entry) = page.entries[bits.trailing_zeros() as usize]
+                        .get()
+                        .and_then(Cell::load_full)
+                    {
+                        visit(&entry);
+                    }
+                    bits &= bits - 1;
+                }
+                after = Some(key);
+            }
         }
     }
 
+    /// Called only from the collector destructor, with no outstanding publishers.
     pub(crate) fn drain(&self) -> Vec<MetadataRef> {
-        self.descriptors
-            .iter()
-            .zip(self.nursery.iter())
-            .flat_map(|(mut objects, pages)| {
-                pages.store(Arc::new(Pages::default()));
-                let old = std::mem::take(&mut *objects);
-                old.objects.into_values()
-            })
-            .collect()
+        let mut entries = Vec::new();
+        for head in &self.pages {
+            let pages = head.pages.swap(Arc::default());
+            head.young.store(Arc::default());
+            head.indexed.store(0, Relaxed);
+            let mut after = None;
+            while let Some((key, page)) = pages.next_after(after) {
+                for entry in &page.entries {
+                    entries.extend(entry.get().and_then(|cell| cell.swap(None)));
+                }
+                after = Some(key);
+            }
+        }
+        entries
     }
 
     #[cfg(test)]
     pub(crate) fn contains_young(&self, address: usize) -> bool {
-        self.nursery[address_bucket(address) & (self.nursery.len() - 1)]
+        let key = position(address);
+        self.head(address)
+            .young
             .load()
-            .get((position(address) & !PAGE_MASK) as u64)
-            .is_some_and(|p| p.contains(position(address)))
+            .get((key & !PAGE_MASK) as u64)
+            .is_some_and(|p| p.load(Acquire) & (1 << (key & PAGE_MASK)) != 0)
+    }
+
+    // Fixtures can construct partial write sets. Keep their occupancy bit as
+    // long as either synthetic index is present, exactly like a reservation.
+    #[cfg(test)]
+    fn edit_for_test(&self, address: usize, edit: impl FnOnce(&Slot<'_>)) {
+        let point = self.lock(address);
+        let mut slot = self.reserve(address).or(point.slot).expect("address slot");
+        slot.reserved = false;
+        edit(&slot);
+        if !self.contains_young(address)
+            && slot.page.entries[slot.key & PAGE_MASK]
+                .get()
+                .and_then(Cell::load_full)
+                .is_none()
+        {
+            slot.reserved = true;
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_young_for_test(&self, address: usize, young: bool) {
+        self.edit_for_test(address, |slot| {
+            if young {
+                slot.mark_young();
+            } else if let Some(page) = slot.clear_young() {
+                unlink(&slot.head.young, (slot.key & !PAGE_MASK) as u64, &page);
+            }
+        });
+    }
+
+    #[cfg(test)]
+    pub(crate) fn replace_for_test(
+        &self,
+        address: usize,
+        entry: Option<MetadataRef>,
+    ) -> Option<MetadataRef> {
+        let mut old = None;
+        self.edit_for_test(address, |s| {
+            let present = entry.is_some();
+            old = s.page.entries[s.key & PAGE_MASK]
+                .get_or_init(|| Cell::from(None))
+                .swap(entry);
+            match (old.is_some(), present) {
+                (false, true) => {
+                    s.head.indexed.fetch_add(1, Relaxed);
+                }
+                (true, false) => {
+                    s.head.indexed.fetch_sub(1, Relaxed);
+                }
+                _ => {}
+            }
+        });
+        old
     }
 }
 
@@ -393,12 +542,7 @@ mod tests {
     use std::collections::BTreeSet;
 
     fn update(objects: &Objects, address: usize, present: bool) {
-        let mut membership = objects.try_membership(address).expect("exclusive fixture");
-        if present {
-            membership.split().1.insert();
-        } else {
-            membership.split().1.remove();
-        }
+        objects.set_young_for_test(address, present);
     }
 
     #[test]
@@ -411,6 +555,27 @@ mod tests {
                 assert_eq!(position(address_of(address)), address);
             }
         }
+    }
+
+    #[test]
+    fn late_unlink_preserves_a_new_occupant_at_the_identical_address() {
+        let objects = Objects::new(1);
+        let mut original = objects.reserve(8).expect("exact address");
+        original.mark_young();
+        original.reserved = false;
+        let (_, sealed) = original.remove();
+        let replacement = objects.reserve(8).expect("sealed page replaced");
+        replacement.mark_young();
+        objects.unlink(&sealed.expect("last occupant"));
+        assert!(objects.contains_young(8));
+        assert!(objects.reserve(8).is_none());
+        drop(replacement);
+        assert!(
+            objects
+                .pages
+                .iter()
+                .all(|head| head.pages.load().len() == 0)
+        );
     }
 
     #[test]
@@ -434,7 +599,12 @@ mod tests {
         ));
         assert!(matches!(objects.scan_young(&mut fresh), Scan::Done));
         update(&objects, 16, false);
-        assert!(objects.nursery.iter().all(|slot| slot.load().len() == 0));
+        assert!(
+            objects
+                .pages
+                .iter()
+                .all(|slot| slot.pages.load().len() == 0)
+        );
     }
 
     #[test]
@@ -463,7 +633,7 @@ mod tests {
 
     #[cfg(all(not(target_family = "wasm"), not(miri)))]
     #[test]
-    fn a_peer_observes_replacement_page_and_new_word_through_publication() {
+    fn a_peer_observes_replacement_page_and_another_slot_through_publication() {
         use std::thread;
         use std::time::{Duration, Instant};
 
@@ -474,20 +644,20 @@ mod tests {
             objects.scan_young(&mut cursor),
             Scan::Entry(8, ())
         ));
-        let slot = objects.nursery.first().expect("one shard");
-        let original = slot.load().get(0).expect("first page").clone();
+        let slot = objects.pages.first().expect("one shard");
+        let original = slot.young.load().get(0).expect("first page").clone();
         thread::scope(|scope| {
             scope.spawn(|| {
                 update(&objects, 8, false);
                 update(&objects, 16, true);
-                // Same page, next word. Only the first insertion swaps the root.
-                update(&objects, 512, true);
+                // Same page, different slot. The second insertion reuses the root.
+                update(&objects, 24, true);
             });
             let deadline = Instant::now() + Duration::from_secs(5);
             // The reader never joins the writer or receives a ready signal.
-            // Observe the new directory and the new word's summary directly.
+            // Observe the new directory and the second slot directly.
             let page = loop {
-                if let Some(p) = slot.load().get(0)
+                if let Some(p) = slot.young.load().get(0)
                     && !Arc::ptr_eq(&original, p)
                 {
                     break p.clone();
@@ -495,9 +665,9 @@ mod tests {
                 assert!(Instant::now() < deadline, "replacement was not published");
                 thread::yield_now();
             };
-            assert!(page.contains(position(16)));
-            while page.nonempty.load(Acquire) & 2 == 0 {
-                assert!(Instant::now() < deadline, "word was not published");
+            assert_ne!(page.load(Acquire) & (1 << position(16)), 0);
+            while page.load(Acquire) & (1 << position(24)) == 0 {
+                assert!(Instant::now() < deadline, "slot was not published");
                 thread::yield_now();
             }
             cursor.retry_entry();
@@ -507,7 +677,7 @@ mod tests {
             ));
             assert!(matches!(
                 objects.scan_young(&mut cursor),
-                Scan::Entry(512, ())
+                Scan::Entry(24, ())
             ));
             assert!(matches!(objects.scan_young(&mut cursor), Scan::Done));
         });
@@ -520,9 +690,9 @@ mod tests {
             let keys = [
                 1,
                 2,
-                63,
-                64,
-                65,
+                7,
+                8,
+                9,
                 PAGE_SIZE - 1,
                 PAGE_SIZE,
                 PAGE_SIZE + 64,
@@ -532,10 +702,9 @@ mod tests {
                 usize::MAX,
             ];
             for key in keys {
-                let mut held = objects.try_membership(key).expect("exclusive fixture");
-                assert!(!held.is_young());
-                held.split().1.insert();
-                assert!(held.is_young());
+                assert!(!objects.contains_young(key));
+                update(&objects, key, true);
+                assert!(objects.contains_young(key));
             }
             let mut cursor = YoungCursor::default();
             let mut seen = BTreeSet::new();
@@ -543,12 +712,7 @@ mod tests {
                 match objects.scan_young(&mut cursor) {
                     Scan::Entry(key, ()) => {
                         assert!(seen.insert(key));
-                        objects
-                            .try_membership(key)
-                            .expect("exclusive fixture")
-                            .split()
-                            .1
-                            .remove();
+                        update(&objects, key, false);
                     }
                     Scan::Advance => {}
                     Scan::Done => break,
@@ -556,7 +720,12 @@ mod tests {
                 }
             }
             assert_eq!(seen, keys.into_iter().collect());
-            assert!(objects.nursery.iter().all(|slot| slot.load().len() == 0));
+            assert!(
+                objects
+                    .pages
+                    .iter()
+                    .all(|slot| slot.pages.load().len() == 0)
+            );
         }
     }
 }

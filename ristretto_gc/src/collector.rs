@@ -86,28 +86,17 @@ struct PhasePublication<'a> {
 /// Unwind after index installation must remove the private descriptor before
 /// its construction roots are released. The outer constructor owns the payload.
 struct PendingBirth<'a> {
-    armed: bool,
+    slot: crate::index::Slot<'a>,
     gc: &'a GarbageCollector,
     metadata: &'a MetadataRef,
 }
 
 impl Drop for PendingBirth<'_> {
     fn drop(&mut self) {
-        if !self.armed {
+        if !self.slot.reserved {
             return;
         }
         let address = self.metadata.ptr().0;
-        let mut membership = self.gc.prepare_registration(address, self.metadata.id);
-        let (objects, mut young) = membership.split();
-        if !objects
-            .get(&address)
-            .is_some_and(|entry| MetadataRef::ptr_eq(entry, self.metadata))
-        {
-            return;
-        }
-        young.remove();
-        objects.remove(&address);
-        drop(membership);
         let id = self.metadata.id.to_i64().cast_unsigned();
         #[cfg(not(feature = "experimental-identity-index"))]
         self.gc.identities.remove(id, address);
@@ -1580,7 +1569,7 @@ impl GarbageCollector {
             }
             metadata.birth.retry();
         }
-        rollback.armed = false;
+        rollback.slot.reserved = false;
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         publication_tests::pause_after_birth_decision();
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
@@ -1689,53 +1678,54 @@ impl GarbageCollector {
             .prepare(metadata.id.to_i64().cast_unsigned());
         #[cfg(test)]
         self.pause_metadata_preparation();
-        // Initial and construction roots protect the graph while this private
-        // record is installed. Scanners can pass this record as soon as the shard unlocks.
-        let mut objects = self.prepare_registration(address, metadata.id);
+        // Reserve the exact address before installing any shared effect. A
+        // pending reservation holds no live-object or phase guard. Even another
+        // constructor in this page can proceed while this one is parked.
+        let slot = self
+            .objects
+            .reserve(address)
+            .ok_or(crate::registration_key::Conflict::Address)?;
+        #[cfg(test)]
+        if let Some(observer) = lock(&self.metadata_registration_observer).take() {
+            let _ = observer.send((address, metadata.id));
+        }
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         publication_tests::pause_inside_registration_commit();
-        // Validate every registry effect before changing either domain's marks,
-        // accounting or indexes. Even an exact duplicate is not proof that its
-        // earlier traversal/phase obligations finished, so this once-only API
-        // rejects it instead of silently replaying an admitted partial write.
         let key = crate::registration_key::Key {
             address,
             id: metadata.id,
-        };
-        let was_young = objects.is_young();
-        let (entries, mut young) = objects.split();
-        let object = entries.entry(address);
-        let previous_object = match &object {
-            std::collections::btree_map::Entry::Occupied(entry) => Some(entry.get().id),
-            std::collections::btree_map::Entry::Vacant(_) => None,
         };
         #[cfg(feature = "experimental-identity-index")]
         let previous_identity = self.identities.get(metadata.id.to_i64().cast_unsigned());
         #[cfg(not(feature = "experimental-identity-index"))]
         let previous_identity = identity.as_ref().err().copied().flatten();
         key.vacant(crate::registration_key::Observed {
-            object: previous_object,
+            object: None,
             identity: previous_identity,
-            young: was_young,
+            young: false,
         })?;
-        let std::collections::btree_map::Entry::Vacant(object) = object else {
-            return Err(crate::registration_key::Conflict::Address);
-        };
+        if metadata.birth.indexed() {
+            return Err(crate::registration_key::Conflict::AlreadyPresent);
+        }
+        // The young scan may encounter this exact slot before its descriptor.
+        // The following phase-clock RMW covers scans that passed it early.
+        slot.mark_young();
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        publication_tests::pause_after_young_slot();
         #[cfg(not(feature = "experimental-identity-index"))]
         identity
             .map_err(|_| crate::registration_key::Conflict::Identity)?
             .install(address);
         #[cfg(feature = "experimental-identity-index")]
         self.identities.insert(identity);
-        metadata.record_publication(self);
-        object.insert(metadata.clone());
-        young.insert();
-        drop(objects);
-        Ok(PendingBirth {
-            armed: true,
+        let pending = PendingBirth {
+            slot,
             gc: self,
             metadata,
-        })
+        };
+        metadata.record_publication(self);
+        pending.slot.install(metadata.clone());
+        Ok(pending)
     }
 
     #[cfg(test)]
@@ -1760,28 +1750,6 @@ impl GarbageCollector {
         if let Some(observer) = observer {
             observer.store(self.managed_budget.used(), Ordering::Release);
             panic!("injected unwind after descriptor publication");
-        }
-    }
-
-    fn prepare_registration(
-        &self,
-        address: usize,
-        id: crate::ObjectId,
-    ) -> crate::index::Membership<'_> {
-        loop {
-            if let Some(registration) = self.objects.try_membership(address) {
-                return registration;
-            }
-            #[cfg(test)]
-            if let Some(observer) = lock(&self.metadata_registration_observer).take() {
-                observer
-                    .send((address, id))
-                    .expect("registration wait observed");
-            }
-            #[cfg(not(test))]
-            let _ = id;
-            // A blocked constructor holds neither phase admission nor an object shard.
-            drop(self.objects.lock(address));
         }
     }
 
@@ -2173,13 +2141,13 @@ impl GarbageCollector {
                 owners.insert(*address, owner);
             }
         }
-        for shard in self.objects.iter() {
-            for metadata in shard.live_values() {
-                if let Some(owner) = metadata.owner.as_ref().and_then(Weak::upgrade) {
-                    owners.insert(Arc::as_ptr(&owner).cast::<()>() as usize, owner);
-                }
+        self.objects.for_each(|metadata| {
+            if metadata.birth.is_live()
+                && let Some(owner) = metadata.owner.as_ref().and_then(Weak::upgrade)
+            {
+                owners.insert(Arc::as_ptr(&owner).cast::<()>() as usize, owner);
             }
-        }
+        });
         for owner in owners.into_values() {
             owner.release_heap_roots();
         }
@@ -2583,7 +2551,7 @@ impl GarbageCollector {
         stats.bytes_live = self.published_bytes.load(Ordering::Acquire);
         stats.bytes_managed = self.managed_bytes();
         stats.allocation_debt = self.allocation_debt.load(Ordering::Acquire);
-        stats.live_objects = self.objects.iter().map(|shard| shard.len()).sum();
+        stats.live_objects = self.objects.len();
         Ok(stats)
     }
 
@@ -4620,19 +4588,12 @@ impl GarbageCollector {
                     Phase::References => match self.reference_unit(&mut cycle, &mut counters) {
                         Unit::Progress => {}
                         Unit::Busy => break,
-                        #[cfg(not(feature = "experimental-identity-index"))]
-                        Unit::UnlinkIdentity(page) => {
+                        Unit::Sweep(work) => {
+                            let epoch = cycle.epoch;
                             drop(cycle);
                             drop(coordinator);
-                            self.identities.unlink(page);
+                            work.run(self, index, epoch, &mut counters);
                             break 'units;
-                        }
-                        Unit::Reclaim(task, _) => {
-                            // This arm is shared with sweep work, but reference
-                            // enumeration currently never returns a reclaim task.
-                            self.queue_clearing(task.metadata, task.offset, task.finalized);
-                            self.retired_ready.fetch_sub(1, Ordering::AcqRel);
-                            break;
                         }
                         Unit::Boundary => {
                             if coordinator.is_none() {
@@ -4897,18 +4858,11 @@ impl GarbageCollector {
                     Phase::Sweep => match self.sweep_unit(&mut cycle, &mut work, &mut counters) {
                         Unit::Progress => {}
                         Unit::Busy => break,
-                        #[cfg(not(feature = "experimental-identity-index"))]
-                        Unit::UnlinkIdentity(page) => {
-                            drop(cycle);
-                            drop(coordinator);
-                            self.identities.unlink(page);
-                            break 'units;
-                        }
-                        Unit::Reclaim(task, budget) => {
+                        Unit::Sweep(external) => {
                             let epoch = cycle.epoch;
                             drop(cycle);
                             drop(coordinator);
-                            self.reclaim_swept(task, index, epoch, budget, &mut counters);
+                            external.run(self, index, epoch, &mut counters);
                             coordinator = if self.configuration.independent_phases {
                                 None
                             } else {
@@ -5803,7 +5757,10 @@ mod tests {
             prepare_full_mark(&gc);
             drop(root);
             // Simulate retirement by another generation with a queued task left.
-            let retired = gc.objects.lock(address).remove(&address).expect("metadata");
+            let retired = gc
+                .objects
+                .replace_for_test(address, None)
+                .expect("metadata");
             #[cfg(feature = "experimental-identity-index")]
             {
                 let mut cursor = crate::identity_index::Removal::default();
@@ -5816,12 +5773,7 @@ mod tests {
             #[cfg(not(feature = "experimental-identity-index"))]
             gc.identities
                 .remove(retired.id.to_i64().cast_unsigned(), address);
-            gc.objects
-                .try_membership(address)
-                .expect("sole writer")
-                .split()
-                .1
-                .remove();
+            gc.objects.set_young_for_test(address, false);
             retired.drop_object();
             assert_eq!(drops.load(Ordering::Relaxed), 1);
             assert!(ObjectMetadata::lease(&retired).is_none());
@@ -5837,7 +5789,7 @@ mod tests {
             // Force the old address to resolve to a different type and identity,
             // regardless of the host allocator's reuse policy. Never dereference
             // this synthetic index alias; only the queued identity may be used.
-            gc.objects.lock(address).insert(address, metadata.clone());
+            gc.objects.replace_for_test(address, Some(metadata.clone()));
             let context = Context::enter(&gc, 1);
             let mut tasks = std::array::from_fn(|_| None);
             assert_eq!(gc.claim_mark_batch(&mut tasks, &mut 1), 1);
@@ -5855,7 +5807,7 @@ mod tests {
             gc.publish_mark_batch(tasks, &mut WorkCounters::default());
             assert!(gc.remembered.lock(address).contains(&address));
             if address != replacement_address {
-                gc.objects.lock(address).remove(&address);
+                gc.objects.replace_for_test(address, None);
             }
             gc.remembered.lock(address).remove(&address);
             drop(context);

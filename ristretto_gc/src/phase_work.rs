@@ -8,9 +8,57 @@ pub(super) enum Unit {
     Progress,
     Busy,
     Boundary,
+    Sweep(SweepWork),
+}
+
+pub(super) enum SweepWork {
     Reclaim(ReclaimTask, usize),
+    Unlink(SealedPages),
+}
+
+impl SweepWork {
+    pub(super) fn run(
+        self,
+        gc: &GarbageCollector,
+        index: usize,
+        epoch: u64,
+        counters: &mut WorkCounters,
+    ) {
+        match self {
+            Self::Reclaim(task, budget) => gc.reclaim_swept(task, index, epoch, budget, counters),
+            Self::Unlink(pages) => pages.unlink(gc),
+        }
+    }
+}
+
+#[derive(Default)]
+pub(super) struct SealedPages {
+    address: Option<crate::index::Sealed>,
     #[cfg(not(feature = "experimental-identity-index"))]
-    UnlinkIdentity(crate::identity_pages::Sealed),
+    identity: Option<crate::identity_pages::Sealed>,
+}
+impl SealedPages {
+    fn into_unit(self) -> Unit {
+        #[cfg(not(feature = "experimental-identity-index"))]
+        if self.identity.is_some() {
+            return Unit::Sweep(SweepWork::Unlink(self));
+        }
+        if self.address.is_some() {
+            Unit::Sweep(SweepWork::Unlink(self))
+        } else {
+            Unit::Progress
+        }
+    }
+
+    fn unlink(self, gc: &GarbageCollector) {
+        if let Some(page) = self.address {
+            gc.objects.unlink(&page);
+        }
+        #[cfg(not(feature = "experimental-identity-index"))]
+        if let Some(page) = self.identity {
+            gc.identities.unlink(page);
+        }
+    }
 }
 
 pub(super) enum ContextUnit {
@@ -129,17 +177,11 @@ impl GarbageCollector {
                         break;
                     }
                     Unit::Boundary => break,
-                    #[cfg(not(feature = "experimental-identity-index"))]
-                    Unit::UnlinkIdentity(page) => {
-                        drop(cycle);
-                        self.identities.unlink(page);
-                        break 'units true;
-                    }
-                    Unit::Reclaim(task, budget) => {
+                    Unit::Sweep(work) => {
                         progressed = true;
                         let epoch = cycle.epoch;
                         drop(cycle);
-                        self.reclaim_swept(task, index, epoch, budget, &mut counters);
+                        work.run(self, index, epoch, &mut counters);
                         let Ok(next) = self.domain().cycle.try_lock() else {
                             break 'units true;
                         };
@@ -499,10 +541,9 @@ impl GarbageCollector {
             self.retired_bytes
                 .fetch_add(task.metadata.size(), Ordering::AcqRel);
             self.retired_ready.fetch_add(1, Ordering::AcqRel);
-            return Unit::Reclaim(task, scan_budget);
+            return Unit::Sweep(SweepWork::Reclaim(task, scan_budget));
         }
-        #[cfg(not(feature = "experimental-identity-index"))]
-        let mut sealed = None;
+        let mut sealed = SealedPages::default();
         let removed = {
             let Some(_publication) = self.try_publication_write() else {
                 return Unit::Busy;
@@ -552,18 +593,14 @@ impl GarbageCollector {
                 }
                 Unit::Busy
             };
-            let Some(mut objects) = self.objects.try_membership(address) else {
+            let Some(objects) = self.objects.try_lock(address) else {
                 return retry(cycle);
             };
-            let (objects, mut young) = objects.split();
-            if let Some(metadata) = objects
-                .get(&address)
-                .filter(|metadata| metadata.birth.visible())
-            {
+            if let Some(metadata) = objects.get(&address) {
                 let previous = metadata.age.load(Ordering::Acquire);
                 let promotion_age = self.configuration.promotion_age.max(1);
                 // A reader may have selected an address just before promotion
-                // or reuse. Promotion and registration both hold this shard.
+                // or reuse. Revalidate the current live descriptor under its guard.
                 if (cycle.kind == CollectionKind::Young && previous >= promotion_age)
                     || self.old_excludes_young(index, metadata)
                 {
@@ -587,7 +624,7 @@ impl GarbageCollector {
                         };
                         self.promotion_snapshot(metadata);
                         metadata.age.store(age, Ordering::Release);
-                        young.remove();
+                        sealed.address = objects.promote();
                         remembered.insert(address);
                         counters.promoted += 1;
                         drop(remembered);
@@ -623,17 +660,16 @@ impl GarbageCollector {
                     }
                     #[cfg(not(feature = "experimental-identity-index"))]
                     {
-                        sealed = self.identities.retire(
+                        sealed.identity = self.identities.retire(
                             metadata.id.to_i64().cast_unsigned(),
                             address,
                             &mut cycle.identity_cursor,
                         );
                     }
-                    if previous < promotion_age {
-                        young.remove();
-                    }
                     remembered.remove(&address);
-                    objects.remove(&address)
+                    let (removed, address_page) = objects.retire();
+                    sealed.address = address_page;
+                    removed
                 }
             } else {
                 None
@@ -650,10 +686,6 @@ impl GarbageCollector {
                 self.defer_retirement(metadata);
             }
         }
-        #[cfg(not(feature = "experimental-identity-index"))]
-        if let Some(page) = sealed {
-            return Unit::UnlinkIdentity(page);
-        }
-        Unit::Progress
+        sealed.into_unit()
     }
 }
