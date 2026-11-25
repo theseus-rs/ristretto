@@ -158,3 +158,41 @@ fn volatile_fields_and_final_writes_outside_initializer_reject() -> Result<(), E
     }
     Ok(())
 }
+
+#[tokio::test]
+async fn static_arrays_retain_their_actual_element_type_across_entries() -> Result<(), Error> {
+    let program = Program::from_classfiles([ClassFile::from_bytes(include_bytes!(
+        "fixtures/canonical/CanonicalStaticArrays.class"
+    ))?])?;
+    let configuration = Configuration {
+        objects: 16,
+        roots: 32,
+        mutators: 1,
+        helpers: 1,
+        edges_per_object: 8,
+    };
+    let heap = program
+        .with_heap(configuration, 8 * 1024 * 1024, 100_000, async |heap| {
+            let mut thread = heap.attach(Limits::default())?;
+            for value in [37, -11] {
+                assert_eq!(
+                    thread
+                        .invoke("CanonicalStaticArrays", "store", value)
+                        .await?
+                        .result,
+                    value
+                );
+                assert_eq!(
+                    thread
+                        .invoke("CanonicalStaticArrays", "unlink", 0)
+                        .await?
+                        .result,
+                    value
+                );
+            }
+            Ok(())
+        })
+        .await?;
+    assert!(heap.cleanup_polls > 0);
+    Ok(())
+}
