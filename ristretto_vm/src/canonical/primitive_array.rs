@@ -215,7 +215,7 @@ impl PrimitiveArray {
 // SAFETY: only fixed-size atomics and exclusively owned atomic slices are stored.
 // No managed references, user callbacks, resize or raw mutable pointer escapes.
 #[expect(unsafe_code, reason = "audited reference-free primitive array backing")]
-impl Trace for PrimitiveArray {
+unsafe impl Trace for PrimitiveArray {
     fn canonical_payload() -> Option<ristretto_gc::CanonicalPayload<Self>> {
         // SAFETY: every field is primitive storage. Managed edges live in the catalog.
         Some(unsafe { ristretto_gc::CanonicalPayload::new() })

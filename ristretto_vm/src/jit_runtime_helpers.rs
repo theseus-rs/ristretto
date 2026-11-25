@@ -30,7 +30,7 @@ use ristretto_gc::sync::{Mutex, RwLock};
 use ristretto_gc::{GarbageCollector, Gc, GcRootGuard};
 use ristretto_types::array::{allocate_array, allocate_primitive_array};
 use std::future::Future;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
 use tokio::runtime::Handle;
 
@@ -147,14 +147,14 @@ pub(crate) struct RuntimeContext {
     /// Failure maps are created only on error; successful lookups need no map lock.
     field_errors: OnceLock<RwLock<ahash::AHashMap<u16, CachedResolutionError>>>,
     class_errors: OnceLock<RwLock<ahash::AHashMap<u16, CachedResolutionError>>>,
-    /// Pending exception Gc pointer encoded as i64 (0 == none).
+    /// Stable identity observed by compiled code, or zero for an empty slot.
     pending_exception: AtomicI64,
-    /// GC root id for `pending_exception` (0 == not currently rooted).
-    pending_exception_root: AtomicUsize,
-    /// Short-lived roots for object pointers handed back to compiled code. Cranelift frames are
+    /// Owning Java reference paired with the compiled exception slot.
+    pending_exception_owner: Mutex<Option<Gc<RwLock<Reference>>>>,
+    /// Short-lived roots for identities handed back to compiled code. Cranelift frames are
     /// not currently scanned by the GC, so helpers that move a rooted pointer onto the JIT
     /// operand stack must keep an explicit root until the compiled invocation returns.
-    transient_roots: Mutex<Vec<usize>>,
+    transient_roots: Mutex<Vec<Gc<RwLock<Reference>>>>,
     /// BCI of the bytecode instruction currently invoking a runtime helper. Set by every
     /// throwing helper on entry so [`store_pending_error`] can stamp the JIT frame's
     /// program counter, producing accurate Java stack traces (BCI != 0 in
@@ -189,7 +189,7 @@ impl RuntimeContext {
                 )?)),
             ),
         };
-        let sentinel_throwable = sentinel.as_ptr_i64();
+        let sentinel_throwable = sentinel.as_handle_i64();
         Ok(Self {
             gc: std::ptr::from_ref::<GarbageCollector>(gc).cast::<u8>(),
             gc_owner: Arc::clone(gc),
@@ -204,7 +204,7 @@ impl RuntimeContext {
             field_errors: OnceLock::new(),
             class_errors: OnceLock::new(),
             pending_exception: AtomicI64::new(0),
-            pending_exception_root: AtomicUsize::new(0),
+            pending_exception_owner: Mutex::new(None),
             transient_roots: Mutex::new(Vec::new()),
             current_bci: std::sync::atomic::AtomicI32::new(-1),
         })
@@ -215,7 +215,7 @@ impl RuntimeContext {
         std::ptr::from_ref::<Self>(self).cast::<u8>()
     }
 
-    fn garbage_collector(&self) -> &Arc<GarbageCollector> {
+    pub(crate) fn garbage_collector(&self) -> &Arc<GarbageCollector> {
         &self.gc_owner
     }
 
@@ -226,111 +226,60 @@ impl RuntimeContext {
             .ok_or_else(|| ristretto_classfile::Error::InvalidConstantPoolIndex(index).into())
     }
 
-    /// Returns the current pending exception Gc pointer (0 if none).
+    /// Returns the pending exception identity, or zero.
     pub fn pending_exception(&self) -> i64 {
         self.pending_exception.load(Ordering::Acquire)
     }
 
-    /// Stores a new pending exception, taking responsibility for rooting it with the
-    /// garbage collector so the concurrent collector cannot reclaim it before it is
-    /// consumed. Any previously-rooted pending exception is unrooted last so the slot
-    /// is never observably referencing an unrooted Gc pointer.
-    ///
-    /// `gc_ptr` of 0 clears the pending exception (and unroots the prior one).
+    /// Acquire the incoming owner before publishing its identity. Passing zero
+    /// clears the slot. Release the previous owner after unlocking the slot.
     fn set_pending_exception(&self, gc_ptr: i64) {
         if gc_ptr == self.sentinel_throwable {
             self.sentinel_used.store(true, Ordering::Release);
         }
-        // Install the new GC root *before* publishing the pointer so the slot never
-        // refers to an unrooted allocation that a concurrent GC pass could reclaim.
-        let new_root_id = if gc_ptr != 0 {
-            match Gc::<RwLock<Reference>>::from_raw_i64(gc_ptr) {
-                Ok(gc_ref) => gc_from_context(self.as_ptr()).add_root(&gc_ref),
+        let owner = if gc_ptr == 0 {
+            None
+        } else {
+            match Gc::from_handle_rooted(self.garbage_collector(), gc_ptr) {
+                Ok(root) => Some(root),
                 Err(error) => {
-                    tracing::error!("invalid pending exception pointer: {error}");
+                    tracing::error!("invalid pending exception handle: {error}");
                     return;
                 }
             }
-        } else {
-            0
         };
-        let prior_root = self
-            .pending_exception_root
-            .swap(new_root_id, Ordering::AcqRel);
-        self.pending_exception.store(gc_ptr, Ordering::Release);
-        if prior_root != 0 {
-            gc_from_context(self.as_ptr()).remove_root_by_id(prior_root);
-        }
+        let prior = {
+            let mut slot = self.pending_exception_owner.lock();
+            let prior = std::mem::replace(&mut *slot, owner);
+            self.pending_exception.store(gc_ptr, Ordering::Release);
+            prior
+        };
+        drop(prior);
     }
 
-    /// Reads and clears the pending exception. The associated GC root is removed by this
-    /// call. JIT-emitted code should use `jit_take_pending_exception`, which transfers the
-    /// pointer into this context's transient roots before releasing the pending-exception root.
-    ///
-    /// **Rust-side consumers must use [`Self::take_pending_exception_into`] instead.** That
-    /// API holds the root alive across the consumer callback so the new owner has time to
-    /// install its own root before the GC observes an unrooted allocation.
-    pub fn take_pending_exception(&self) -> i64 {
-        let value = self.pending_exception.swap(0, Ordering::AcqRel);
-        let root_id = self.pending_exception_root.swap(0, Ordering::AcqRel);
-        if root_id != 0 {
-            gc_from_context(self.as_ptr()).remove_root_by_id(root_id);
-        }
-        value
+    fn take_exception_owner(&self) -> Option<Gc<RwLock<Reference>>> {
+        let mut slot = self.pending_exception_owner.lock();
+        self.pending_exception.store(0, Ordering::Release);
+        slot.take()
     }
 
-    /// Atomic-transfer variant of `take_pending_exception` for Rust-side consumers.
-    ///
-    /// Reads and clears the pending exception, invokes the consumer with the raw `i64`
-    /// pointer (or 0 if none was pending), and only after the consumer returns does it
-    /// release the GC root. This guarantees the throwable allocation remains rooted for
-    /// the entire duration of the conversion to `Err(Throwable(..))` (or however the
-    /// consumer chooses to re-root it), eliminating the unrooted window the bare
-    /// `take_pending_exception` would otherwise expose to a concurrent GC cycle.
+    /// Keep the exception rooted until the consumer has acquired its own handle.
     pub fn take_pending_exception_into<R>(&self, consumer: impl FnOnce(i64) -> R) -> R {
-        let value = self.pending_exception.swap(0, Ordering::AcqRel);
-        let root_id = self.pending_exception_root.swap(0, Ordering::AcqRel);
-        let result = consumer(value);
-        if root_id != 0 {
-            gc_from_context(self.as_ptr()).remove_root_by_id(root_id);
-        }
-        result
+        let owner = self.take_exception_owner();
+        consumer(owner.as_ref().map_or(0, Gc::as_handle_i64))
     }
 
-    /// Keeps an object reference rooted until this JIT invocation returns.
     fn add_transient_root(&self, gc_ref: &Gc<RwLock<Reference>>) {
-        let root_id = gc_from_context(self.as_ptr()).add_root(gc_ref);
-        self.transient_roots.lock().push(root_id);
-    }
-
-    /// Keeps a raw object pointer rooted until this JIT invocation returns.
-    fn add_transient_root_ptr(&self, gc_ptr: i64) -> Result<()> {
-        if gc_ptr == 0 {
-            return Ok(());
-        }
-        let gc_ref = Gc::<RwLock<Reference>>::from_raw_i64(gc_ptr)?;
-        self.add_transient_root(&gc_ref);
-        Ok(())
+        let owner = gc_ref.rooted_clone();
+        self.transient_roots.lock().push(owner);
     }
 }
 
 impl Drop for RuntimeContext {
     fn drop(&mut self) {
-        let transient_roots = std::mem::take(self.transient_roots.get_mut());
-        for root_id in transient_roots {
-            if root_id != 0 {
-                gc_from_context(self.as_ptr()).remove_root_by_id(root_id);
-            }
-        }
-        let root_id = self.pending_exception_root.load(Ordering::Acquire);
-        if root_id != 0 {
-            gc_from_context(self.as_ptr()).remove_root_by_id(root_id);
-        }
         if let Some(sentinel) = self.sentinel.take() {
             if self.sentinel_used.load(Ordering::Acquire) {
-                // Java/Rust Values can outlive this context. Preserve the previous
-                // VM-lifetime ownership of an emergency throwable once it escapes.
-                let _ = sentinel.into_retained();
+                drop(sentinel);
             } else {
                 self.thread.jit_runtime().sentinels.lock().push(sentinel);
             }
@@ -406,31 +355,22 @@ pub(crate) fn symbols() -> [(&'static str, *const u8); 55] {
 // Array allocation helpers
 // ---------------------------------------------------------------------------
 
-/// Reconstructs a `&GarbageCollector` from the raw context pointer passed by JIT code.
+/// Allocate a reference and return its stable identity to compiled code.
 ///
-/// The context pointer is a `*const RuntimeContext`, and the GC is extracted from
-/// its first field via `GarbageCollector::from_context_struct_ptr`.
-fn gc_from_context(context: *const u8) -> &'static GarbageCollector {
-    GarbageCollector::from_context_struct_ptr(context)
-}
-
-/// Wraps a `Reference` in a `Gc<RwLock<Reference>>` and returns the raw pointer as i64.
-///
-/// JIT allocations can escape to untraced VM containers, so retain them for the VM's
-/// lifetime, matching `Value::new_object`. Transient roots still describe compiled frames.
+/// The invocation owns this allocation until its result is rooted by its caller.
 fn alloc_reference(ctx: &RuntimeContext, reference: Reference) -> i64 {
     let gc_ref = Gc::new(ctx.garbage_collector(), RwLock::new(reference)).into_retained();
     ctx.add_transient_root(&gc_ref);
-    gc_ref.as_ptr_i64()
+    gc_ref.as_handle_i64()
 }
 
-/// Reconstructs a `Gc<RwLock<Reference>>` from a raw i64 pointer.
-fn gc_ref_from_ptr(ptr: i64) -> Result<Gc<RwLock<Reference>>> {
-    Ok(Gc::from_raw_i64(ptr)?)
+/// Resolve the compiled identity in the invoking heap and take an owning root.
+fn gc_ref_from_ptr(ctx: &RuntimeContext, ptr: i64) -> Result<Gc<RwLock<Reference>>> {
+    Ok(Gc::from_handle_rooted(ctx.garbage_collector(), ptr)?)
 }
 
 fn gc_ref_from_ptr_or_pending(ctx: &RuntimeContext, ptr: i64) -> Option<Gc<RwLock<Reference>>> {
-    match gc_ref_from_ptr(ptr) {
+    match gc_ref_from_ptr(ctx, ptr) {
         Ok(gc_ref) => Some(gc_ref),
         Err(error) => {
             store_pending_error(ctx, error);
@@ -1113,7 +1053,7 @@ fn jit_aaload_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32) ->
                 Value::Object(None) => 0i64,
                 Value::Object(Some(gc)) => {
                     ctx.add_transient_root(gc);
-                    gc.as_ptr_i64()
+                    gc.as_handle_i64()
                 }
                 other => {
                     store_pending_error(
@@ -1344,7 +1284,7 @@ fn store_pending_error(ctx: &RuntimeContext, error: crate::Error) {
     });
     match throwable {
         Ok(Value::Object(Some(gc_ref))) => {
-            ctx.set_pending_exception(gc_ref.as_ptr_i64());
+            ctx.set_pending_exception(gc_ref.as_handle_i64());
         }
         Ok(other) => {
             tracing::error!(
@@ -1547,7 +1487,7 @@ fn value_to_obj_ptr(ctx: &RuntimeContext, value: &Value) -> Result<i64> {
     match value {
         Value::Object(Some(gc)) => {
             ctx.add_transient_root(gc);
-            Ok(gc.as_ptr_i64())
+            Ok(gc.as_handle_i64())
         }
         Value::Object(None) => Ok(0),
         other => Err(InternalError(format!(
@@ -1557,11 +1497,11 @@ fn value_to_obj_ptr(ctx: &RuntimeContext, value: &Value) -> Result<i64> {
 }
 
 /// Convert a raw i64 GC pointer back to a `Value::Object`.
-fn obj_ptr_to_value(ptr: i64) -> Result<Value> {
+fn obj_ptr_to_value(ctx: &RuntimeContext, ptr: i64) -> Result<Value> {
     if ptr == 0 {
         Ok(Value::Object(None))
     } else {
-        let gc = Gc::from_raw_i64(ptr)?;
+        let gc = gc_ref_from_ptr(ctx, ptr)?;
         Ok(Value::Object(Some(gc)))
     }
 }
@@ -1730,7 +1670,7 @@ fn jit_multianewarray_impl(
     match array {
         Value::Object(Some(gc)) => {
             ctx.add_transient_root(&gc);
-            Ok(gc.as_ptr_i64())
+            Ok(gc.as_handle_i64())
         }
         Value::Object(None) => Ok(0),
         other => Err(InternalError(format!(
@@ -2045,7 +1985,7 @@ extern "C" fn jit_putstatic_object(context: *const u8, bci: i32, cp_index: i32, 
                 return Default::default();
             }
         };
-        let value = match obj_ptr_to_value(value) {
+        let value = match obj_ptr_to_value(ctx, value) {
             Ok(value) => value,
             Err(error) => {
                 store_pending_error(ctx, error);
@@ -2067,7 +2007,7 @@ fn getfield_helper(ctx: &RuntimeContext, cp_index: u16, object_ptr: i64) -> Resu
         return Err(JavaError(NullPointerException(None)));
     }
     let resolved = resolve_field_ref(ctx, cp_index)?;
-    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(object_ptr)?;
+    let gc_ref: Gc<RwLock<Reference>> = gc_ref_from_ptr(ctx, object_ptr)?;
     let reference = gc_ref.read();
     match &*reference {
         Reference::Object(object) => {
@@ -2089,7 +2029,7 @@ fn putfield_helper(
         return Err(JavaError(NullPointerException(None)));
     }
     let resolved = resolve_field_ref(ctx, cp_index)?;
-    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(object_ptr)?;
+    let gc_ref: Gc<RwLock<Reference>> = gc_ref_from_ptr(ctx, object_ptr)?;
     let mut reference = gc_ref.write();
     match &mut *reference {
         Reference::Object(object) => {
@@ -2349,7 +2289,7 @@ extern "C" fn jit_putfield_object(
                 return Default::default();
             }
         };
-        let value = match obj_ptr_to_value(value) {
+        let value = match obj_ptr_to_value(ctx, value) {
             Ok(value) => value,
             Err(error) => {
                 store_pending_error(ctx, error);
@@ -2418,7 +2358,7 @@ extern "C" fn jit_checkcast(
         match jit_checkcast_impl(ctx, object_ptr, cp_class_index) {
             Ok(true) => 1,
             Ok(false) => {
-                let gc_ref = match gc_ref_from_ptr(object_ptr) {
+                let gc_ref = match gc_ref_from_ptr(ctx, object_ptr) {
                     Ok(gc_ref) => gc_ref,
                     Err(error) => {
                         store_pending_error(ctx, error);
@@ -2459,7 +2399,7 @@ extern "C" fn jit_checkcast(
 
 fn jit_checkcast_impl(ctx: &RuntimeContext, object_ptr: i64, cp_class_index: u16) -> Result<bool> {
     let target_class = resolve_class_ref_no_init(ctx, cp_class_index)?;
-    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(object_ptr)?;
+    let gc_ref: Gc<RwLock<Reference>> = gc_ref_from_ptr(ctx, object_ptr)?;
     let thread = thread_from_ctx(ctx);
     is_instance_of(thread, &gc_ref, &target_class)
 }
@@ -2541,7 +2481,7 @@ extern "C" fn jit_athrow(context: *const u8, bci: i32, exception_ptr: i64) {
 
 fn is_athrow_operand_throwable(ctx: &RuntimeContext, exception_ptr: i64) -> Result<bool> {
     let thread = thread_from_ctx(ctx);
-    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(exception_ptr)?;
+    let gc_ref: Gc<RwLock<Reference>> = gc_ref_from_ptr(ctx, exception_ptr)?;
     is_instance_of(thread, &gc_ref, &ctx.exception_classes.throwable)
 }
 
@@ -2564,13 +2504,10 @@ extern "C" fn jit_throw_npe(context: *const u8, bci: i32) {
 extern "C" fn jit_take_pending_exception(context: *const u8) -> i64 {
     guarded!("jit_take_pending_exception", {
         let ctx = ctx_from_ptr(context);
-        ctx.take_pending_exception_into(|pending| {
-            if let Err(error) = ctx.add_transient_root_ptr(pending) {
-                tracing::error!("invalid pending exception pointer during JIT transfer: {error}");
-                0
-            } else {
-                pending
-            }
+        ctx.take_exception_owner().map_or(0, |owner| {
+            let handle = owner.as_handle_i64();
+            ctx.transient_roots.lock().push(owner);
+            handle
         })
     })
 }
@@ -2606,7 +2543,7 @@ fn jit_exception_matches_impl(
     cp_class_index: u16,
 ) -> Result<bool> {
     let target_class = resolve_class_ref_no_init(ctx, cp_class_index)?;
-    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(exception_ptr)?;
+    let gc_ref: Gc<RwLock<Reference>> = gc_ref_from_ptr(ctx, exception_ptr)?;
     let thread = thread_from_ctx(ctx);
     is_instance_of(thread, &gc_ref, &target_class)
 }
@@ -2658,11 +2595,9 @@ mod tests {
         let (vm, thread, class) = test::class().await?;
         let collector = vm.garbage_collector();
         let context = RuntimeContext::new(collector, &vm, &thread, &class)?;
-        let array = Value::Object(Some(gc_ref_from_ptr(alloc_reference(
-            &context,
-            Reference::from(vec![42_i8]),
-        ))?));
-        let sentinel = Value::Object(Some(gc_ref_from_ptr(context.sentinel_throwable)?));
+        let array_handle = alloc_reference(&context, Reference::from(vec![42_i8]));
+        let array = Value::Object(Some(gc_ref_from_ptr(&context, array_handle)?));
+        let sentinel = Value::Object(Some(gc_ref_from_ptr(&context, context.sentinel_throwable)?));
         let mut context = Some(context);
         for cycle in 0..2 {
             let completed = collector.statistics()?.collections_completed;
@@ -2680,12 +2615,14 @@ mod tests {
             }
         }
         // Both objects escaped the compiled invocation into untraced Rust values.
-        assert_eq!(0, collector.statistics()?.objects_swept);
         assert_eq!(&[42_i8], &*array.as_byte_vec_ref()?);
         assert_eq!(
             "java/lang/VirtualMachineError",
             sentinel.as_object_ref()?.class().name()
         );
+        drop(array);
+        collector.collect_full()?;
+        assert!(Gc::<RwLock<Reference>>::from_handle_rooted(collector, array_handle).is_err());
         Ok(())
     }
 
@@ -2698,37 +2635,55 @@ mod tests {
         let throwable =
             Value::new_object(collector, Reference::from(Object::new(throwable_class)?));
         let throwable_ptr = match &throwable {
-            Value::Object(Some(gc)) => gc.as_ptr_i64(),
+            Value::Object(Some(gc)) => gc.as_handle_i64(),
             _ => panic!("expected Object value"),
         };
 
         let ctx = RuntimeContext::new(collector, &vm, &thread, &class)?;
         assert_eq!(ctx.pending_exception(), 0);
         assert_eq!(
-            ctx.pending_exception_root.load(Ordering::Acquire),
+            ctx.pending_exception_owner
+                .lock()
+                .as_ref()
+                .map_or(0, Gc::as_handle_i64),
             0,
             "no root should be registered initially"
         );
 
         ctx.set_pending_exception(throwable_ptr);
         assert_eq!(ctx.pending_exception(), throwable_ptr);
-        let root_after_set = ctx.pending_exception_root.load(Ordering::Acquire);
+        let root_after_set = ctx
+            .pending_exception_owner
+            .lock()
+            .as_ref()
+            .map_or(0, Gc::as_handle_i64);
         assert_ne!(
             root_after_set, 0,
             "set_pending_exception must register a GC root"
         );
 
-        let taken = ctx.take_pending_exception();
+        let taken = ctx
+            .take_exception_owner()
+            .map_or(0, |owner| owner.as_handle_i64());
         assert_eq!(taken, throwable_ptr);
         assert_eq!(ctx.pending_exception(), 0);
         assert_eq!(
-            ctx.pending_exception_root.load(Ordering::Acquire),
+            ctx.pending_exception_owner
+                .lock()
+                .as_ref()
+                .map_or(0, Gc::as_handle_i64),
             0,
-            "take_pending_exception must clear the GC root id"
+            "take_pending_exception must clear the GC owner"
         );
 
         ctx.set_pending_exception(throwable_ptr);
-        assert_ne!(ctx.pending_exception_root.load(Ordering::Acquire), 0);
+        assert_ne!(
+            ctx.pending_exception_owner
+                .lock()
+                .as_ref()
+                .map_or(0, Gc::as_handle_i64),
+            0
+        );
         // Drop runs at end of scope; verifies no panic and the unroot path is exercised.
         drop(ctx);
 
@@ -2749,21 +2704,29 @@ mod tests {
         let throwable_b =
             Value::new_object(collector, Reference::from(Object::new(throwable_class)?));
         let ptr_a = match &throwable_a {
-            Value::Object(Some(gc)) => gc.as_ptr_i64(),
+            Value::Object(Some(gc)) => gc.as_handle_i64(),
             _ => panic!("expected Object value"),
         };
         let ptr_b = match &throwable_b {
-            Value::Object(Some(gc)) => gc.as_ptr_i64(),
+            Value::Object(Some(gc)) => gc.as_handle_i64(),
             _ => panic!("expected Object value"),
         };
 
         let ctx = RuntimeContext::new(collector, &vm, &thread, &class)?;
         ctx.set_pending_exception(ptr_a);
-        let root_a = ctx.pending_exception_root.load(Ordering::Acquire);
+        let root_a = ctx
+            .pending_exception_owner
+            .lock()
+            .as_ref()
+            .map_or(0, Gc::as_handle_i64);
         assert_ne!(root_a, 0);
 
         ctx.set_pending_exception(ptr_b);
-        let root_b = ctx.pending_exception_root.load(Ordering::Acquire);
+        let root_b = ctx
+            .pending_exception_owner
+            .lock()
+            .as_ref()
+            .map_or(0, Gc::as_handle_i64);
         assert_ne!(root_b, 0);
         assert_ne!(
             root_a, root_b,
@@ -2774,9 +2737,12 @@ mod tests {
         ctx.set_pending_exception(0);
         assert_eq!(ctx.pending_exception(), 0);
         assert_eq!(
-            ctx.pending_exception_root.load(Ordering::Acquire),
+            ctx.pending_exception_owner
+                .lock()
+                .as_ref()
+                .map_or(0, Gc::as_handle_i64),
             0,
-            "clearing pending exception must clear the GC root id"
+            "clearing pending exception must clear the GC owner"
         );
 
         drop(throwable_a);
@@ -2828,11 +2794,11 @@ mod tests {
             assert_ne!(pointer, 0);
             assert_eq!(ctx.pending_exception(), 0);
             assert_eq!(ctx.current_bci.load(Ordering::Relaxed), 17);
-            assert_eq!(*gc_ref_from_ptr(pointer)?.read(), expected);
+            assert_eq!(*gc_ref_from_ptr(&ctx, pointer)?.read(), expected);
 
             assert_eq!(allocate(ctx.as_ptr(), 23, -1), 0);
             assert_eq!(ctx.current_bci.load(Ordering::Relaxed), 23);
-            let exception = gc_ref_from_ptr(ctx.take_pending_exception())?;
+            let exception = ctx.take_exception_owner().expect("pending exception");
             assert_eq!(
                 exception.read().class_name()?,
                 "java/lang/NegativeArraySizeException"
@@ -2917,7 +2883,7 @@ mod tests {
         let object_class = thread.class("java/lang/Object").await?;
         let plain = Value::new_object(collector, Reference::from(Object::new(object_class)?));
         let plain_ptr = match &plain {
-            Value::Object(Some(gc)) => gc.as_ptr_i64(),
+            Value::Object(Some(gc)) => gc.as_handle_i64(),
             _ => panic!("expected Object value"),
         };
 
@@ -2927,7 +2893,7 @@ mod tests {
         let throwable_class = thread.class("java/lang/Throwable").await?;
         let thr = Value::new_object(collector, Reference::from(Object::new(throwable_class)?));
         let thr_ptr = match &thr {
-            Value::Object(Some(gc)) => gc.as_ptr_i64(),
+            Value::Object(Some(gc)) => gc.as_handle_i64(),
             _ => panic!("expected Object value"),
         };
         assert!(is_athrow_operand_throwable(&ctx, thr_ptr)?);
