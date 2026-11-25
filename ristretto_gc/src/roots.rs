@@ -462,7 +462,7 @@ impl RootSlots {
             // The address selects a preferred shard. The registration itself
             // records its physical shard, so any available writer can host it.
             let Some((shard, mut state)) = self.available_writer(preferred) else {
-                return PreparedSlot::Overflow(self.overflow.reserve());
+                return PreparedSlot::Overflow(self.overflow.reserve(None));
             };
             let registry = &self.shards[shard];
             let old_view = if registry.cleanup_pending.swap(false, Ordering::AcqRel) {
@@ -558,8 +558,15 @@ impl RootSlots {
         slot.address().store(0, Ordering::Release);
         match slot {
             PreparedSlot::Paged(slot) => self.cancel(slot),
-            PreparedSlot::Overflow(record) => self.finish_overflow(&record),
+            PreparedSlot::Overflow(record) => {
+                record.cancel_typed();
+                self.finish_overflow(&record);
+            }
         }
+    }
+
+    pub(crate) fn prepare_typed_attempt(&self, address: usize) -> Arc<Record> {
+        self.overflow.reserve(Some(address))
     }
 
     pub(crate) fn finish_overflow(&self, record: &Arc<Record>) {

@@ -178,8 +178,47 @@ impl GraphBirth {
 #[path = "graph_birth_queue.rs"]
 mod graph_birth_queue;
 
+/// Traversal debt belongs to the exact domain epoch containing this proposal.
+/// The record remains committed even after the owning handle has been dropped.
+#[derive(Clone, Debug)]
+pub(crate) struct RootProposal {
+    pub(crate) metadata: MetadataRef,
+    pub(crate) record: Arc<crate::roots::Record>,
+    pub(crate) index: usize,
+    pub(crate) strength: crate::metadata::Retention,
+    pub(crate) promotion_age: usize,
+}
+
+impl RootProposal {
+    fn claim(self, epoch: &BirthEpoch) -> Option<MarkItem> {
+        if !self.record.owes_trace() || !self.metadata.birth.is_live() {
+            return None;
+        }
+        let young = self.metadata.age.load(Ordering::Acquire) < self.promotion_age;
+        if self.index == 0 && !young {
+            return None;
+        }
+        if epoch.old_only && young {
+            // Old-only callbacks scan promoted objects via the handoff. A
+            // black post-snapshot birth is never introduced into the old core.
+            if !self.metadata.marked(self.index, epoch.number)
+                || self.metadata.retention(self.index, epoch.number).is_some()
+            {
+                self.metadata.mark(self.index, epoch.number, self.strength);
+            }
+            return None;
+        }
+        self.metadata
+            .mark(self.index, epoch.number, self.strength)
+            .then(|| MarkItem::fresh(self.metadata))
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct BirthEpoch {
+    pub(crate) number: u64,
+    pub(crate) old_only: bool,
+    roots: OnceBox<graph_birth_queue::Queue<RootProposal>>,
     inbox: OnceBox<graph_birth_queue::Queue<GraphBirth>>,
     strong_closed: AtomicBool,
 }
@@ -200,6 +239,8 @@ pub(crate) struct MarkQueues {
     birth_pending: AtomicUsize,
     graph_inbox: ArcSwapOption<BirthEpoch>,
     graph_offered: AtomicBool,
+    root_offered: AtomicBool,
+    root_turn: AtomicBool,
     graph_turn: AtomicBool,
     overflow_cursor: AtomicUsize,
 }
@@ -232,6 +273,8 @@ impl MarkQueues {
             birth_pending: AtomicUsize::new(0),
             graph_inbox: ArcSwapOption::empty(),
             graph_offered: AtomicBool::new(false),
+            root_offered: AtomicBool::new(false),
+            root_turn: AtomicBool::new(false),
             graph_turn: AtomicBool::new(false),
             overflow_cursor: AtomicUsize::new(0),
         }
@@ -239,14 +282,18 @@ impl MarkQueues {
 
     /// The domain coordinator installs a fresh inbox before publishing strong
     /// tracing. Late producers may retain the old inbox across any later epoch.
-    pub(crate) fn open_graph_inbox(&self) {
+    pub(crate) fn open_graph_inbox(&self, number: u64, old_only: bool) {
         self.graph_inbox.store(Some(Arc::new(BirthEpoch {
+            number,
+            old_only,
+            roots: OnceBox::new(),
             inbox: OnceBox::new(),
             strong_closed: AtomicBool::new(false),
         })));
     }
 
     pub(crate) fn close_graph_inbox(&self) {
+        self.root_offered.store(false, Ordering::Release);
         self.graph_offered.store(false, Ordering::Release);
         self.graph_inbox.store(None);
     }
@@ -292,33 +339,68 @@ impl MarkQueues {
         epoch.inbox.get().map(f)
     }
 
+    pub(crate) fn propose_root(&self, epoch: &BirthEpoch, proposal: RootProposal) {
+        let queue = epoch
+            .roots
+            .get_or_init(|| Box::new(graph_birth_queue::Queue::new()));
+        self.root_offered.store(true, Ordering::Release);
+        queue.push(proposal);
+    }
+
+    fn with_roots<R>(
+        &self,
+        visit: impl FnOnce(&BirthEpoch, &graph_birth_queue::Queue<RootProposal>) -> R,
+    ) -> Option<R> {
+        if !self.root_offered.load(Ordering::Acquire) {
+            return None;
+        }
+        let view = self.graph_inbox.load();
+        let epoch = view.as_ref()?;
+        epoch.roots.get().map(|queue| visit(epoch, queue))
+    }
+
+    fn claim_roots(&self, limit: usize, remaining: &mut usize) -> Option<Claim> {
+        self.with_roots(|epoch, queue| {
+            Self::claim_proposals(queue, limit, remaining, |item| item.claim(epoch))
+        })?
+    }
+
     fn claim_graph(&self, limit: usize, remaining: &mut usize) -> Option<Claim> {
+        self.with_graph_inbox(|queue| {
+            Self::claim_proposals(queue, limit, remaining, GraphBirth::claim)
+        })?
+    }
+
+    fn claim_proposals<T>(
+        queue: &graph_birth_queue::Queue<T>,
+        limit: usize,
+        remaining: &mut usize,
+        claim_one: impl Fn(T) -> Option<MarkItem>,
+    ) -> Option<Claim> {
         if *remaining == 0 {
             return None;
         }
-        self.with_graph_inbox(|queue| {
-            let mut claim = Claim {
-                items: std::array::from_fn(|_| None),
-                stolen: 0,
-                misses: 0,
-            };
-            let mut live = 0;
-            for _ in 0..limit.clamp(1, 8) {
-                if *remaining == 0 {
-                    break;
-                }
-                let Some(graph) = queue.pop() else { break };
-                if let Some(item) = graph.claim() {
-                    let budget = (*remaining).min(32).min(item.metadata.trace.budget.max(1));
-                    *remaining -= budget;
-                    claim.items[live] = Some((item, budget));
-                    live += 1;
-                } else {
-                    *remaining -= 1;
-                }
+        let mut claim = Claim {
+            items: std::array::from_fn(|_| None),
+            stolen: 0,
+            misses: 0,
+        };
+        let mut live = 0;
+        for _ in 0..limit.clamp(1, 8) {
+            if *remaining == 0 {
+                break;
             }
-            (live != 0).then_some(claim)
-        })?
+            let Some(graph) = queue.pop() else { break };
+            if let Some(item) = claim_one(graph) {
+                let budget = (*remaining).min(32).min(item.metadata.trace.budget.max(1));
+                *remaining -= budget;
+                claim.items[live] = Some((item, budget));
+                live += 1;
+            } else {
+                *remaining -= 1;
+            }
+        }
+        (live != 0).then_some(claim)
     }
 
     pub(crate) fn worker_queue(&self, worker: usize) -> usize {
@@ -496,6 +578,12 @@ impl MarkQueues {
             misses: 0,
         };
         let local = local % self.queues.len();
+        if self.root_offered.load(Ordering::Acquire)
+            && !self.root_turn.fetch_xor(true, Ordering::Relaxed)
+            && let Some(claim) = self.claim_roots(limit, remaining)
+        {
+            return claim;
+        }
         if self.graph_offered.load(Ordering::Acquire)
             && !self.graph_turn.fetch_xor(true, Ordering::Relaxed)
             && let Some(claim) = self.claim_graph(limit, remaining)
@@ -562,7 +650,9 @@ impl MarkQueues {
             claim.misses += result.misses;
             return claim;
         }
-        self.claim_graph(limit, remaining).unwrap_or(result)
+        self.claim_graph(limit, remaining)
+            .or_else(|| self.claim_roots(limit, remaining))
+            .unwrap_or(result)
     }
 
     /// A termination decision additionally excludes publication and new claims,
@@ -575,7 +665,8 @@ impl MarkQueues {
         // private, unlinked intent is not tracing work; admission/claim protection
         // still excludes closure across the actual append. Inspect the links so
         // private preparation alone cannot strand a generation at termination.
-        if self.with_graph_inbox(|queue| !queue.is_empty()) == Some(true)
+        if self.with_roots(|_, queue| !queue.is_empty()) == Some(true)
+            || self.with_graph_inbox(|queue| !queue.is_empty()) == Some(true)
             || self.fallback.pending() != 0 && !self.fallback.is_empty()
             || self.birth_pending.load(Ordering::Acquire) != 0
                 && self
@@ -610,10 +701,12 @@ impl MarkQueues {
             .load()
             .as_ref()
             .and_then(|epoch| epoch.inbox.get())
-            .map_or(0, graph_birth_queue::Queue::capacity);
+            .map_or(0, graph_birth_queue::Queue::capacity)
+            + self.with_roots(|_, q| q.capacity()).unwrap_or_default();
         self.queues.iter().fold(
             (
                 self.fallback.pending()
+                    + self.with_roots(|_, q| q.pending()).unwrap_or_default()
                     + self.birth_pending.load(Ordering::Acquire)
                     + self
                         .with_graph_inbox(graph_birth_queue::Queue::pending)
@@ -641,6 +734,7 @@ impl MarkQueues {
             self.fallback
                 .pending()
                 .checked_add(self.birth_pending.load(Ordering::Acquire))?
+                .checked_add(self.with_roots(|_, q| q.pending()).unwrap_or_default())?
                 .checked_add(
                     self.with_graph_inbox(graph_birth_queue::Queue::pending)
                         .unwrap_or_default(),

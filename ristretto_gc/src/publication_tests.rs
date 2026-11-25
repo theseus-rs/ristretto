@@ -631,6 +631,16 @@ thread_local! {
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
+thread_local! {
+    static TYPED_PROPOSALS_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn pause_after_typed_proposals() {
+    wait_for_constructor_resume(TYPED_PROPOSALS_PAUSE.take());
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
 pub(super) fn pause_after_typed_lookup() {
     wait_for_constructor_resume(TYPED_LOOKUP_PAUSE.take());
 }
@@ -732,6 +742,230 @@ fn a_stopped_typed_identity_lookup_allows_unrelated_capped_recovery() -> Result<
                 assert_eq!(gc.root_statistics().reserved_slots, 0);
                 assert_eq!(gc.managed_bytes(), 0);
             }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    reason = "deterministic bounded peer schedule"
+)]
+fn a_parked_root_of_an_unvisited_child_never_holds_capped_recovery() -> Result<()> {
+    use std::future::Future;
+    use std::sync::mpsc;
+    use std::task::{Context as TaskContext, Poll, Waker};
+    use std::time::Duration;
+
+    let scalar = Gc::allocation_size(&23_u64)?;
+    let node = Gc::allocation_size(&Vec::<Gc<u64>>::with_capacity(1))?;
+    for counted in [false, true] {
+        for storage in [
+            crate::RootStorage::Tree,
+            crate::RootStorage::Slots,
+            crate::RootStorage::Contexts,
+        ] {
+            for (committed, keep_parent) in [(false, false), (false, true), (true, false)] {
+                let gc = GarbageCollector::with_config(
+                    Configuration::builder()
+                        .max_heap_bytes(2 * scalar + 2 * node)
+                        .allocation_threshold(usize::MAX)
+                        .incremental_step_size(1)
+                        .max_pause_time_us(0)
+                        .metadata_shards(1)
+                        .root_storage(storage)
+                        .concurrent_publication(counted)
+                        .build(),
+                );
+                let context = gc.register_context();
+                drop(Gc::try_new(&gc, 11_u64)?);
+                let grandchild = Gc::try_new(&gc, 17_u64)?;
+                let target = Gc::try_new(&gc, vec![grandchild.into_rooted()])?;
+                let handle = target.as_handle_i64();
+                let addr = target.as_ptr() as usize;
+                let mut parent = Some(Gc::try_new(&gc, vec![target.into_rooted()])?);
+                gc.phase_clock.disable_certification();
+                gc.collect();
+                assert!((0..1024).any(|_| {
+                    gc.step();
+                    lock(&gc.domains[1].cycle).phase == Phase::Mark
+                }));
+                assert!(
+                    !gc.objects
+                        .lookup(addr)
+                        .unwrap()
+                        .marked(1, gc.domains[1].epoch.load(Ordering::Acquire))
+                );
+                let (entered, parked) = mpsc::channel();
+                let (resume, receiver) = mpsc::channel();
+                let resolver_gc = gc.clone();
+                let lookup = thread::spawn(move || {
+                    let hook = if committed {
+                        &TYPED_ACTIVATION_PAUSE
+                    } else {
+                        &TYPED_PROPOSALS_PAUSE
+                    };
+                    hook.set(Some(ClaimPause {
+                        entered,
+                        resume: receiver,
+                    }));
+                    context.with(|| Gc::<Vec<Gc<u64>>>::from_handle_rooted(&resolver_gc, handle))
+                });
+                parked
+                    .recv_timeout(Duration::from_secs(5))
+                    .expect("typed proposal boundary");
+                if !keep_parent {
+                    drop(parent.take());
+                }
+                let mut request = Box::pin(Gc::try_new_async(&gc, 23_u64));
+                let mut cx = TaskContext::from_waker(Waker::noop());
+                let outcome = (0..1024).find_map(|_| match request.as_mut().poll(&mut cx) {
+                    Poll::Pending => None,
+                    Poll::Ready(value) => Some(value),
+                });
+                if outcome.is_some() {
+                    // Bound each pass independently so a lost claim cannot hang the test.
+                    for _ in 0..2 {
+                        let ticket = gc.request_full_cycle();
+                        assert!((0..8192).any(|_| {
+                            gc.step();
+                            gc.completed_full_ticket() >= ticket
+                        }));
+                    }
+                }
+                resume.send(()).expect("resume resolver");
+                let root = lookup.join().expect("resolver");
+                assert_eq!(
+                    **outcome.expect("capped peer exhausted its poll budget")?,
+                    23
+                );
+                if committed || keep_parent {
+                    let root = root?;
+                    assert_eq!(root.as_handle_i64(), handle);
+                    assert_eq!(root.first().map(|child| **child), Some(17));
+                } else {
+                    assert!(root.is_err());
+                }
+                drop(parent);
+                gc.stop()?;
+                assert_eq!(gc.managed_bytes(), 0);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn both_epochs_claim_released_root_debt_after_strong_closure() -> Result<()> {
+    let gc = GarbageCollector::new();
+    let root = Gc::try_new(&gc, 17_u64)?;
+    let metadata = gc.objects.lookup(root.as_ptr() as usize).unwrap();
+    let slots = crate::roots::RootSlots::default();
+    let record = slots.prepare_typed_attempt(root.as_ptr() as usize);
+    let queues = [0, 1].map(|index| {
+        let queue = MarkQueues::new(0, 1);
+        queue.open_graph_inbox(4, false);
+        queue.finish_strong_births();
+        let epoch = queue.birth_epoch().unwrap();
+        // An existing weaker mark must be upgraded even if the handle drops
+        // before the next claim. The other domain has an independent epoch.
+        metadata.mark(index, 4, Retention::Phantom);
+        queue.propose_root(
+            &epoch,
+            crate::work::RootProposal {
+                metadata: metadata.clone(),
+                record: record.clone(),
+                index,
+                strength: Retention::Final,
+                promotion_age: 2,
+            },
+        );
+        assert_eq!(queue.try_is_empty(), Some(false));
+        queue
+    });
+    assert!(record.commit_typed());
+    assert_eq!(record.take_address(), Some(root.as_ptr() as usize));
+    slots.finish_overflow(&record);
+    for (index, queue) in queues.into_iter().enumerate() {
+        let claimed = queue.claim(0, 1, &mut 1);
+        assert!(
+            claimed
+                .items
+                .into_iter()
+                .flatten()
+                .any(|(item, _)| MetadataRef::ptr_eq(&item.metadata, &metadata))
+        );
+        assert_eq!(metadata.retention(index, 4), Some(Retention::Final));
+        assert_eq!(queue.try_is_empty(), Some(true));
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    reason = "bounded parked activation schedule"
+)]
+fn active_epoch_identity_protects_a_typed_graph_with_numeric_certification_disabled() -> Result<()>
+{
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for phase in [Phase::Mark, Phase::Sweep] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let child = Gc::try_new(&gc, 17_u64)?.into_rooted();
+            let root = Gc::try_new(&gc, vec![child])?;
+            let identity = root.as_handle_i64();
+            gc.phase_clock.disable_certification();
+            gc.collect();
+            assert!((0..1024).any(|_| {
+                gc.step();
+                lock(&gc.domains[1].cycle).phase == phase
+            }));
+            let (entered, parked) = mpsc::channel();
+            let (resume, receiver) = mpsc::channel();
+            let other = gc.clone();
+            let lookup = thread::spawn(move || {
+                TYPED_ACTIVATION_PAUSE.set(Some(ClaimPause {
+                    entered,
+                    resume: receiver,
+                }));
+                Gc::<Vec<Gc<u64>>>::from_handle_rooted(&other, identity)
+            });
+            parked
+                .recv_timeout(Duration::from_secs(3))
+                .expect("guard-free activation in active epoch");
+            drop(root);
+            let other = gc.clone();
+            let (finished, result) = mpsc::channel();
+            let peer = thread::spawn(move || {
+                let outcome = (|| -> Result<()> {
+                    for _ in 0..2 {
+                        other.collect_full()?;
+                    }
+                    Ok(())
+                })();
+                finished.send(outcome).expect("collection observer");
+            });
+            let outcome = result.recv_timeout(Duration::from_secs(3));
+            resume.send(()).expect("resume active lookup");
+            let protected = lookup.join().expect("lookup")?;
+            peer.join().expect("collection");
+            outcome.expect("cycles finished before resuming lookup")?;
+            assert_eq!(protected.first().map(|child| **child), Some(17));
+            drop(protected);
+            gc.stop()?;
+            assert_eq!(gc.managed_bytes(), 0);
         }
     }
     Ok(())
@@ -1516,7 +1750,7 @@ fn a_graph_relinks_if_the_same_strong_flags_now_name_a_different_epoch() -> Resu
         let queue = &gc.domains[1].mark_queue;
         assert_eq!(queue.queued_sample(), Some(1));
         queue.close_graph_inbox();
-        queue.open_graph_inbox();
+        queue.open_graph_inbox(4, false);
         assert_eq!(queue.queued_sample(), Some(0));
     }));
     let scans = Arc::new(AtomicUsize::new(0));
