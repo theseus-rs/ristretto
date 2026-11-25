@@ -80,7 +80,18 @@ use publication_owner::Publication;
 #[derive(Clone)]
 enum Owner {
     Edge(Weak<GarbageCollector>),
+    Traced(crate::metadata::MetadataRef),
     Root(RootArc<OwnedRoot>),
+}
+
+impl Owner {
+    fn edge_heap(&self) -> Option<&Weak<GarbageCollector>> {
+        match self {
+            Self::Edge(heap) => Some(heap),
+            Self::Traced(metadata) => Some(&metadata.collector),
+            Self::Root(_) => None,
+        }
+    }
 }
 
 /// A garbage collected pointer type for `T`.
@@ -496,6 +507,7 @@ impl<T> Gc<T> {
     pub(crate) fn collector(&self) -> Weak<GarbageCollector> {
         match &self.owner {
             Owner::Edge(collector) => collector.clone(),
+            Owner::Traced(metadata) => metadata.collector.clone(),
             Owner::Root(root) => Arc::downgrade(&root.collector),
         }
     }
@@ -633,6 +645,7 @@ impl<T> Gc<T> {
         let source = match &self.owner {
             Owner::Root(root) => Arc::as_ptr(&root.collector),
             Owner::Edge(source) => source.as_ptr(),
+            Owner::Traced(metadata) => metadata.collector.as_ptr(),
         };
         std::ptr::eq(source, collector)
     }
@@ -655,9 +668,11 @@ impl<T> Gc<T> {
                 phantom: PhantomData,
                 owner: Owner::Root(root.clone()),
             },
-            Owner::Edge(owner) => {
-                let collector = owner
-                    .upgrade()
+            Owner::Edge(_) | Owner::Traced(_) => {
+                let collector = self
+                    .owner
+                    .edge_heap()
+                    .and_then(Weak::upgrade)
                     .expect("rooting requires a live managed allocation");
                 let id = collector
                     .clone_edge_root(self)
@@ -730,10 +745,10 @@ impl<T> Gc<T> {
     /// its deletion barrier and cannot be undone by dropping this stale guard.
     pub(crate) fn suppress_guard_edge_barrier(&mut self, registration: &OwnedRoot) {
         if self.id == registration.target
-            && let Owner::Edge(collector) = &mut self.owner
+            && let Some(collector) = self.owner.edge_heap()
             && std::ptr::eq(collector.as_ptr(), Arc::as_ptr(&registration.collector))
         {
-            *collector = Weak::new();
+            self.owner = Owner::Edge(Weak::new());
         }
     }
 
@@ -856,9 +871,11 @@ impl<T> Gc<T> {
         }
         let registration = match &self.owner {
             Owner::Root(_) => collector.add_owned_root(self),
-            Owner::Edge(_) => collector.clone_edge_root(self).ok_or_else(|| {
-                Error::InvalidPointer("root guard target is no longer live".into())
-            })?,
+            Owner::Edge(_) | Owner::Traced(_) => {
+                collector.clone_edge_root(self).ok_or_else(|| {
+                    Error::InvalidPointer("root guard target is no longer live".into())
+                })?
+            }
         };
         // The guard owns the new registration. Copying the inner handle can
         // preserve its current ownership without promoting an edge a second time.
@@ -905,9 +922,7 @@ impl<T> Deref for Gc<T> {
 
 impl<T> Drop for Gc<T> {
     fn drop(&mut self) {
-        if let Owner::Edge(owner) = &self.owner
-            && let Some(collector) = owner.upgrade()
-        {
+        if let Some(collector) = self.owner.edge_heap().and_then(Weak::upgrade) {
             collector.snapshot_edge(self.ptr.as_ptr() as usize);
         }
     }
@@ -987,7 +1002,7 @@ impl<T> AsRef<T> for Gc<T> {
 // root restores ownership before a handle can move independently of its owner.
 unsafe impl<T: Trace> Trace for Gc<T> {
     fn root(&mut self) {
-        if matches!(self.owner, Owner::Edge(_)) {
+        if self.owner.edge_heap().is_some() {
             *self = self.rooted_clone();
         }
     }
@@ -997,10 +1012,20 @@ unsafe impl<T: Trace> Trace for Gc<T> {
                 std::ptr::eq(Arc::as_ptr(&root.collector), owner.collector().as_ptr())
             }
             Owner::Edge(collector) => Weak::ptr_eq(collector, owner.collector()),
+            Owner::Traced(metadata) => Weak::ptr_eq(&metadata.collector, owner.collector()),
         };
         if same_heap {
-            // SAFETY: the caller binds this edge to its actual traced owner.
-            unsafe { Self::unroot(self) };
+            // Only edges inside a traced graph retain descriptor metadata.
+            // An explicitly demoted external handle retains weak heap access.
+            if let Owner::Root(root) = &self.owner {
+                self.owner = root
+                    .collector
+                    .traced_edge(self.ptr.as_ptr().addr(), self.id)
+                    .map_or_else(
+                        || Owner::Edge(Arc::downgrade(&root.collector)),
+                        Owner::Traced,
+                    );
+            }
         } else {
             // A different collector cannot trace this allocation. Retain its
             // source heap independently, including when an edge is rebound.
@@ -1008,6 +1033,10 @@ unsafe impl<T: Trace> Trace for Gc<T> {
         }
     }
     fn trace(&self, collector: &GarbageCollector) {
+        if let Owner::Traced(metadata) = &self.owner {
+            collector.mark_traced_edge(metadata);
+            return;
+        }
         // Mark this object as reachable in the object registry
         let ptr = SafePtr::from_ptr(self.ptr.as_ptr().cast::<u8>());
 
@@ -1062,6 +1091,32 @@ pub(crate) fn root_refund_order(
 mod tests {
     use super::*;
     use std::collections::{HashMap, HashSet};
+
+    #[test]
+    #[expect(
+        clippy::panic_in_result_fn,
+        reason = "exact descriptor and refund checks"
+    )]
+    fn managed_edges_release_the_payload_while_descriptor_witnesses_remain() -> Result<()> {
+        let gc = GarbageCollector::new();
+        let child = Gc::try_new(&gc, 17_u64)?;
+        let identity = child.as_handle_i64();
+        let graph = Gc::try_new(&gc, vec![child.into_rooted()])?;
+        let edge = graph.first().expect("child edge");
+        let Owner::Traced(metadata) = &edge.owner else {
+            panic!("expected a managed edge")
+        };
+        let saved = metadata.clone();
+        gc.collect_full()?;
+        assert_eq!(**edge, 17);
+        drop(graph);
+        gc.collect_full()?;
+        assert_eq!(gc.managed_bytes(), 0);
+        assert!(!saved.birth.is_live());
+        assert!(!saved.birth.unpublished());
+        assert!(Gc::<u64>::from_handle_rooted(&gc, identity).is_err());
+        Ok(())
+    }
 
     #[test]
     #[expect(clippy::panic_in_result_fn, reason = "private cancellation invariants")]

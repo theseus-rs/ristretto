@@ -123,8 +123,7 @@ impl<T> Drop for Publication<'_, T> {
         drop(self.root.take());
         if unfinished
             && let Some(metadata) = &self.metadata
-            && metadata.birth.indexed()
-            && !metadata.birth.is_live()
+            && metadata.birth.unpublished()
         {
             // Ordinary registration already rolled back the private indexes.
             // Skipped queue records can retain metadata, but can never trace this

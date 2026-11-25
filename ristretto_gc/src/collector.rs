@@ -3624,6 +3624,26 @@ impl GarbageCollector {
         Some(!self.pending())
     }
 
+    pub(crate) fn traced_edge(
+        &self,
+        address: usize,
+        identity: crate::ObjectId,
+    ) -> Option<MetadataRef> {
+        // Old-only callbacks have an additional cross-generation handoff.
+        if self.configuration.old_collection_interval != 0 {
+            return None;
+        }
+        self.objects.lookup(address).filter(|m| m.id == identity)
+    }
+
+    /// A traced edge owns inert descriptor metadata only. Retirement invalidates
+    /// it before address reuse. Each trace callback still acquires a storage lease.
+    pub(crate) fn mark_traced_edge(&self, metadata: &MetadataRef) {
+        if std::ptr::eq(metadata.collector.as_ptr(), self) && metadata.birth.is_live() {
+            self.shade_known(metadata);
+        }
+    }
+
     pub(crate) fn mark_object(&self, ptr: SafePtr) {
         // With independent young closure, each actual cross-domain publication
         // carries admission; the old callback itself does not park young GC.

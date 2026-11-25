@@ -299,6 +299,9 @@ impl Membership<'_> {
     // The caller has observed LIVE under the guard. Other live operations on
     // this address are excluded, and a new constructor cannot claim its bit.
     pub(crate) fn retire(self) -> (Option<MetadataRef>, Option<Sealed>) {
+        if let Some(metadata) = &self.metadata {
+            metadata.birth.retire();
+        }
         self.slot.as_ref().map_or((None, None), Slot::remove)
     }
 

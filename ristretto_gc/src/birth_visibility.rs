@@ -7,6 +7,7 @@ const PRIVATE: u8 = 0;
 const PENDING: u8 = 1;
 const PASSED: u8 = 2;
 const LIVE: u8 = 3;
+const RETIRED: u8 = 8;
 // This bit stays set across all later attempts. A queue entry for the first
 // attempt can therefore use the descriptor itself as its exact ticket.
 const RETRIED: u8 = 4;
@@ -87,6 +88,17 @@ impl BirthVisibility {
                 .is_ok(),
             Err(_) => false,
         }
+    }
+
+    /// Called under the address shard before detaching a live descriptor.
+    pub(crate) fn retire(&self) {
+        self.0.store(RETIRED, Ordering::Release);
+    }
+
+    /// Only an indexed descriptor that never became public can be rolled
+    /// back as a private payload, even if retirement beat publisher unwind.
+    pub(crate) fn unpublished(&self) -> bool {
+        matches!(self.0.load(Ordering::Acquire) & !RETRIED, PENDING | PASSED)
     }
 
     pub(crate) fn is_live(&self) -> bool {
