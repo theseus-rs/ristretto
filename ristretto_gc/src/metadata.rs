@@ -375,6 +375,25 @@ impl ObjectMetadata {
         self.run_drop_fn_with_collector(Some(collector));
     }
 
+    pub(crate) fn destroy_retired(metadata: &mut MetadataRef, collector: &crate::GarbageCollector) {
+        if let Some(unique) = MetadataRef::get_mut(metadata) {
+            assert!(
+                std::ptr::eq(unique.collector.as_ptr(), collector),
+                "foreign descriptor refund collector"
+            );
+            if unique.storage.destroy_unique() {
+                let payload = unique
+                    .drop_fn
+                    .get_mut()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .take();
+                unique.destroy_payload(payload, Some(collector));
+            }
+        } else {
+            metadata.run_drop_fn_in(collector);
+        }
+    }
+
     fn run_drop_fn_with_collector(&self, collector: Option<&crate::GarbageCollector>) {
         if !self.storage.destroy() {
             return;
@@ -385,6 +404,10 @@ impl ObjectMetadata {
             warn!("Failed to acquire drop_fn lock during object cleanup; drop skipped");
             return;
         };
+        self.destroy_payload(drop_fn, collector);
+    }
+
+    fn destroy_payload(&self, drop_fn: DropFn, collector: Option<&crate::GarbageCollector>) {
         if let Some(Payload { allocation, owner }) = drop_fn {
             {
                 let _refund = Refund {
@@ -417,7 +440,9 @@ impl Drop for ObjectMetadata {
     fn drop(&mut self) {
         // The last Arc cannot disappear with a lease outstanding. This also
         // cleans retired storage if its collector was destroyed before release.
-        self.drop_object();
+        if !self.storage.destroyed() {
+            self.drop_object();
+        }
     }
 }
 

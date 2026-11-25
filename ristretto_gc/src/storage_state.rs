@@ -83,6 +83,19 @@ impl StorageState {
         self.0.load(Ordering::Acquire) & !NOTIFY == RETIRED
     }
 
+    /// Unique descriptor ownership excludes all readers and competing claims.
+    pub(super) fn destroy_unique(&mut self) -> bool {
+        if !self.ready() {
+            return false;
+        }
+        self.0.store(DESTROYED, Ordering::Relaxed);
+        true
+    }
+
+    pub(super) fn destroyed(&self) -> bool {
+        self.0.load(Ordering::Relaxed) == DESTROYED
+    }
+
     /// Exactly one caller may destroy storage, after observing every borrow end.
     pub(super) fn destroy(&self) -> bool {
         match self

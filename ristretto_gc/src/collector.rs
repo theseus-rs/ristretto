@@ -3705,7 +3705,7 @@ impl GarbageCollector {
     /// callback unwinds, its partially cleared payload can only be destroyed.
     fn clear_retired(
         &self,
-        metadata: &ObjectMetadata,
+        metadata: &mut MetadataRef,
         offset: usize,
         finalized: bool,
         budget: usize,
@@ -3725,7 +3725,9 @@ impl GarbageCollector {
         };
         // Drop the storage even if other owners still hold inert metadata. Its
         // own refund guard also runs if reporting a destructor panic unwinds.
-        let destruction = catch_unwind(AssertUnwindSafe(|| metadata.run_drop_fn_in(self)));
+        let destruction = catch_unwind(AssertUnwindSafe(|| {
+            ObjectMetadata::destroy_retired(metadata, self)
+        }));
         self.retired_bytes
             .fetch_sub(metadata.size(), Ordering::AcqRel);
         counters.swept += 1;
@@ -3752,11 +3754,11 @@ impl GarbageCollector {
         counters: &mut WorkCounters,
     ) {
         let ReclaimTask {
-            metadata,
+            mut metadata,
             offset,
             finalized,
         } = task;
-        let progress = self.clear_retired(&metadata, offset, finalized, budget, counters);
+        let progress = self.clear_retired(&mut metadata, offset, finalized, budget, counters);
         if progress == TraceProgress::Complete {
             if let Ok(mut cycle) = self.domain_at(index).cycle.try_lock()
                 && cycle.epoch == epoch
@@ -3818,7 +3820,7 @@ impl GarbageCollector {
         }
         .measure(self.diagnostics_enabled());
         let ReclaimTask {
-            metadata,
+            mut metadata,
             offset,
             finalized,
         } = self.retired.load().as_ref()?.pop()?;
@@ -3829,7 +3831,7 @@ impl GarbageCollector {
             .clamp(1, 32)
             .min(metadata.trace.budget);
         let mut counters = WorkCounters::default();
-        let progress = self.clear_retired(&metadata, offset, finalized, budget, &mut counters);
+        let progress = self.clear_retired(&mut metadata, offset, finalized, budget, &mut counters);
         if progress == TraceProgress::Complete {
             self.retired_ready.fetch_sub(1, Ordering::AcqRel);
         } else {
