@@ -4,6 +4,11 @@ use super::{
     ReclaimTask, TraceRetention, Unbounded, WorkCounters, lock, now,
 };
 
+type WhiteRun<'a> = (
+    crate::index::Membership<'a>,
+    crate::index::RememberedGuard<'a>,
+);
+
 pub(super) const SWEEP_BATCH: usize = 16;
 
 pub(super) enum Unit {
@@ -545,6 +550,7 @@ impl GarbageCollector {
         } else {
             1
         };
+        let mut run = None;
         for visit in 0..limit {
             if visit != 0 {
                 if *work == 0 {
@@ -552,7 +558,7 @@ impl GarbageCollector {
                 }
                 *work -= 1;
             }
-            match self.sweep_one(cycle, work, counters) {
+            match self.sweep_one(cycle, work, counters, &mut run) {
                 Unit::Progress => {}
                 Unit::Boundary if !cycle.reclaim.is_empty() => return Unit::Progress,
                 next => return next,
@@ -561,23 +567,35 @@ impl GarbageCollector {
         Unit::Progress
     }
 
+    fn check_sweep_mark_work(&self) -> Option<Unit> {
+        match self.domain().mark_queue.try_is_empty() {
+            Some(true) => None,
+            Some(false) => Some(Unit::Boundary),
+            None => Some(Unit::Busy),
+        }
+    }
+
     #[expect(
         clippy::too_many_lines,
         reason = "keep admission and transactional index removal in one scope"
     )]
-    fn sweep_one(&self, cycle: &mut Cycle, work: &mut usize, counters: &mut WorkCounters) -> Unit {
+    fn sweep_one<'gc>(
+        &'gc self,
+        cycle: &mut Cycle,
+        work: &mut usize,
+        counters: &mut WorkCounters,
+        run: &mut Option<WhiteRun<'gc>>,
+    ) -> Unit {
         let index = self.domain_index();
-        let scan_budget = (*work + 1).min(32);
         let mut sealed = SealedPages::default();
         let removed = {
             if self.contexts.pending.load(Ordering::Acquire) != 0 {
                 return Unit::Busy;
             }
-            let Some(empty) = self.domain().mark_queue.try_is_empty() else {
-                return Unit::Busy;
-            };
-            if !empty {
-                return Unit::Boundary;
+            let full_scan =
+                cycle.kind == CollectionKind::Full && !self.configuration.overlapping_generations;
+            if !full_scan && let Some(unit) = self.check_sweep_mark_work() {
+                return unit;
             }
             let retry = |cycle: &mut Cycle| {
                 if cycle.kind == CollectionKind::Young {
@@ -587,7 +605,20 @@ impl GarbageCollector {
                 }
                 Unit::Busy
             };
-            let selected = if cycle.kind == CollectionKind::Young {
+            let mut retained = None;
+            let consecutive = run.take().and_then(|(mut member, remembered)| {
+                let address = self.objects.next_white(
+                    &mut member,
+                    &mut cycle.sweep_object_cursor,
+                    index,
+                    cycle.epoch,
+                )?;
+                retained = Some(remembered);
+                Some((address, member))
+            });
+            let selected = if consecutive.is_some() {
+                consecutive
+            } else if cycle.kind == CollectionKind::Young {
                 match self.objects.scan_young(&mut cycle.sweep_young_cursor) {
                     crate::index::Scan::Entry(address, ()) => {
                         let Some(member) = self.objects.try_lock(address) else {
@@ -604,7 +635,7 @@ impl GarbageCollector {
                 // time limit is active. Otherwise share one admission and
                 // shard lookup across at most the remaining sweep budget.
                 let limit = if self.configuration.max_pause_time_us == 0 {
-                    scan_budget
+                    (*work + 1).min(64)
                 } else {
                     1
                 };
@@ -631,7 +662,13 @@ impl GarbageCollector {
                     crate::index::Scan::Done => None,
                 }
             };
-            let Some((address, objects)) = selected else {
+            if full_scan && let Some(unit) = self.check_sweep_mark_work() {
+                if selected.is_some() {
+                    cycle.sweep_object_cursor.retry_entry();
+                }
+                return unit;
+            }
+            let Some((address, mut objects)) = selected else {
                 #[cfg(feature = "experimental-identity-index")]
                 return if self.identities.cleanup_step(&mut cycle.identity_cleanup) {
                     Unit::Boundary
@@ -682,7 +719,9 @@ impl GarbageCollector {
                     // Registry removal commits only after every shard is held.
                     // In particular, an identity must remain resolvable when a
                     // contended remembered shard defers this retirement.
-                    let Some(mut remembered) = self.remembered.try_lock(address) else {
+                    let Some(mut remembered) =
+                        retained.or_else(|| self.remembered.try_lock(address))
+                    else {
                         return retry(cycle);
                     };
                     #[cfg(feature = "experimental-identity-index")]
@@ -714,6 +753,9 @@ impl GarbageCollector {
                     remembered.remove(address);
                     let (removed, address_page) = objects.retire(&mut cycle.young_retirement);
                     sealed.address = address_page;
+                    if full_scan && sealed.address.is_none() {
+                        *run = Some((objects, remembered));
+                    }
                     removed
                 }
             } else {
@@ -732,6 +774,9 @@ impl GarbageCollector {
                     finalized: false,
                 });
             } else {
+                // Returning the retiring borrow may publish external clearing
+                // work. Do not retain page or remembered guards for that handoff.
+                drop(run.take());
                 self.defer_retirement(metadata);
             }
         }

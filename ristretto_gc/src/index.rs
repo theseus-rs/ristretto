@@ -7,7 +7,9 @@ use std::sync::{Mutex, MutexGuard, TryLockError};
 
 #[path = "nursery.rs"]
 mod nursery;
-pub(crate) use nursery::{Objects, Sealed, Slot, SweepEntry, YoungCursor, YoungRetirement};
+pub(crate) use nursery::{
+    Membership, Objects, Sealed, Slot, SweepEntry, YoungCursor, YoungRetirement,
+};
 
 const MAX_SHARDS: usize = 16;
 

@@ -372,10 +372,10 @@ impl Membership<'_> {
     // The caller has observed LIVE under the guard. Other live operations on
     // this address are excluded, and a new constructor cannot claim its bit.
     pub(crate) fn retire(
-        self,
+        &mut self,
         cache: &mut YoungRetirement,
     ) -> (Option<MetadataRef>, Option<Sealed>) {
-        if let Some(metadata) = &self.metadata {
+        if let Some(metadata) = self.metadata.take() {
             metadata.birth.retire();
         }
         self.slot
@@ -586,6 +586,30 @@ impl Objects {
             }
             SweepEntry::Survivors(count)
         })
+    }
+
+    /// Reuse the guarded address page for a consecutive white entry. Leave
+    /// the cursor unchanged on a miss so normal scanning handles boundaries,
+    /// new reservations and survivors with the usual rules.
+    pub(crate) fn next_white(
+        &self,
+        member: &mut Membership<'_>,
+        cursor: &mut Cursor,
+        domain: usize,
+        epoch: u64,
+    ) -> Option<usize> {
+        let slot = member.slot.as_mut()?;
+        let offset = slot.page.occupied.next((slot.key & PAGE_MASK) + 1)?;
+        let metadata = slot.page.entry(offset)?.load_full()?;
+        if !metadata.birth.is_live() || metadata.marked(domain, epoch) {
+            return None;
+        }
+        slot.key = (slot.key & !PAGE_MASK) | offset;
+        cursor.selected(slot.key);
+        let address = unpack_key(slot.key, cursor.shard, self.shard_bits);
+        member.address = address;
+        member.metadata = Some(metadata);
+        Some(address)
     }
 
     pub(crate) fn scan_young(&self, cursor: &mut YoungCursor) -> Scan<()> {
