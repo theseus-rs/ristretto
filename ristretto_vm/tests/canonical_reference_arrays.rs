@@ -132,3 +132,92 @@ fn multidimensional_reference_layouts_still_reject_before_execution()
     }
     Ok(())
 }
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_reference_arrays_match_hotspot_including_2048()
+-> Result<(), Box<dyn std::error::Error>> {
+    let program = program()?;
+    let compiled = program.compile()?;
+    let mut rows = 0;
+    for line in include_str!("fixtures/canonical/reference-array-oracle.tsv").lines() {
+        let mut fields = line.split('\t');
+        let method = fields.next().ok_or("method")?;
+        let argument = fields.next().ok_or("argument")?.parse::<i32>()?;
+        let expected = fields.next().ok_or("expected")?;
+        let result = compiled
+            .run(
+                "CanonicalReferenceArrayWorkload",
+                method,
+                argument,
+                configuration(argument, method == "nodes"),
+                ristretto_vm::canonical::CompiledLimits {
+                    cleanup_polls: 5_000_000,
+                    ..ristretto_vm::canonical::CompiledLimits::default()
+                },
+            )
+            .await;
+        println!("{method}({argument}) -> {result:?}");
+        if let Ok(expected) = expected.parse::<i32>() {
+            let report = result?;
+            assert_eq!(report.result, expected);
+            assert_eq!(report.compiled_entries, report.calls);
+            assert!(report.compiled_entries > 0);
+            assert!(!report.instruction_count_available);
+            assert_eq!(report.allocations, report.released_objects);
+            assert_eq!(report.payload_bytes_after_cleanup, 0);
+            assert_eq!(report.catalog_bytes_after_drop, 0);
+            if argument == 2048 {
+                assert_eq!(report.internal_allocations, 292);
+            }
+            assert!(report.reference_array_allocations >= 1);
+        } else {
+            let error = result.err().ok_or("missing Java fault")?;
+            assert!(
+                error
+                    .to_string()
+                    .contains(expected.rsplit('.').next().ok_or("fault name")?),
+                "{error} != {expected}"
+            );
+        }
+        rows += 1;
+    }
+    assert_eq!(rows, 34);
+    Ok(())
+}
+
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[tokio::test]
+async fn native_reference_array_quota_failure_does_not_pin_frame_owners()
+-> Result<(), Box<dyn std::error::Error>> {
+    use ristretto_vm::canonical::CompiledLimits;
+    let program = program()?;
+    let compiled = program.compile()?;
+    assert!(matches!(
+        compiled
+            .run(
+                "CanonicalReferenceArrayWorkload",
+                "failNegative",
+                2048,
+                Configuration {
+                    objects: 292,
+                    ..configuration(2048, false)
+                },
+                CompiledLimits::default()
+            )
+            .await,
+        Err(Error::Limit(_))
+    ));
+    let result = compiled
+        .run(
+            "CanonicalReferenceArrayWorkload",
+            "returned",
+            9,
+            configuration(9, false),
+            CompiledLimits::default(),
+        )
+        .await?;
+    assert_eq!(result.payload_bytes_after_cleanup, 0);
+    assert_eq!(result.catalog_bytes_after_drop, 0);
+    Ok(())
+}
