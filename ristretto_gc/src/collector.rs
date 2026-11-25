@@ -1261,24 +1261,121 @@ impl GarbageCollector {
             return Ok((ptr, registration));
         }
 
-        // A scan passed the reservation, or an active domain still needs
-        // shading. Recheck the exact member and both domains under admission.
-        let _publication = self.allocation_guard();
-        if !self
-            .objects
-            .lookup(address)
-            .is_some_and(|m| MetadataRef::ptr_eq(&m, &metadata))
-            || !self.can_root(&metadata, false)
+        // The one-shot record is both the registry's decision and the identity
+        // retained by epoch-bound traversal proposals. Releasing this original
+        // reservation cannot affect a subsequent attempt.
+        let context = reservation.context.clone();
+        drop(reservation);
+        let slots = context.as_ref().map_or_else(
+            || self.scanned_slots().expect("typed root slots installed"),
+            |context| &context.roots,
+        );
+        loop {
+            let record = slots.prepare_typed_attempt(address);
+            let mut attempt = RootReservation {
+                collector: self,
+                address,
+                context: context.clone(),
+                slot: Some(crate::roots::PreparedSlot::Overflow(record.clone())),
+            };
+            let phases = self.phase_clock.indexed_root();
+            if !self
+                .objects
+                .lookup(address)
+                .is_some_and(|m| MetadataRef::ptr_eq(&m, &metadata))
+            {
+                return Err(invalid());
+            }
+            match self.certify_root_attempt(phases, &metadata, &record) {
+                Some(false) => return Err(invalid()),
+                None => continue,
+                Some(true) => {}
+            }
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            publication_tests::pause_after_typed_proposals();
+            if record.commit_typed() {
+                let registration = attempt
+                    .slot
+                    .take()
+                    .expect("typed attempt registered")
+                    .finish(attempt.context.take());
+                if self.diagnostics_enabled() {
+                    self.diagnostics
+                        .root_registrations
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                publication_tests::pause_after_typed_activation();
+                return Ok((ptr, registration));
+            }
+        }
+    }
+
+    fn certify_root_attempt(
+        &self,
+        phases: publication_state::Birth,
+        metadata: &MetadataRef,
+        record: &Arc<crate::roots::Record>,
+    ) -> Option<bool> {
+        let snapshot = match phases {
+            publication_state::Birth::Idle => return Some(true),
+            publication_state::Birth::Inline(s) | publication_state::Birth::Epochs(s) => s,
+        };
+        let epochs = [0, 1].map(|i| {
+            snapshot
+                .stage(i)
+                .and_then(|_| self.domain_at(i).mark_queue.birth_epoch())
+        });
+        let mut eligible = true;
+        let mut linked = false;
+        let mature = self.configuration.promotion_age.max(1);
+        for (index, epoch) in epochs.iter().enumerate() {
+            let Some(stage) = snapshot.stage(index) else {
+                continue;
+            };
+            let epoch = epoch.as_ref()?;
+            let young = metadata.age.load(Ordering::Acquire) < mature;
+            if index == 0 && !young {
+                continue;
+            }
+            let exempt = epoch.old_only && young;
+            let marked = metadata.marked(index, epoch.number);
+            if stage != 0 && !exempt && !marked {
+                eligible = false;
+                break;
+            }
+            let strength = Retention::at_phase(stage);
+            let retention = metadata.retention(index, epoch.number);
+            if stage < 5
+                && retention.is_none_or(|previous| previous > strength)
+                && !(exempt && marked && retention.is_none())
+            {
+                self.domain_at(index).mark_queue.propose_root(
+                    epoch,
+                    crate::work::RootProposal {
+                        metadata: metadata.clone(),
+                        record: record.clone(),
+                        index,
+                        strength,
+                        promotion_age: mature,
+                    },
+                );
+                linked = true;
+            }
+        }
+        // A consumer that passed a pending ticket cancelled this exact record.
+        // The stamp invalidates an earlier empty observation even when all
+        // participating domains otherwise retained their current epoch identity.
+        if self.phase_clock.certify_epochs(snapshot, linked)
+            && epochs.iter().enumerate().all(|(i, e)| {
+                e.as_ref()
+                    .is_none_or(|epoch| self.domain_at(i).mark_queue.current_birth_epoch(epoch))
+            })
         {
-            return Err(invalid());
+            Some(eligible)
+        } else {
+            None
         }
-        let registration = self.install_root_registration(&mut reservation);
-        let _retention = TraceRetention::enter(self, Retention::Strong);
-        for index in 0..2 {
-            let _context = Context::enter(self, index);
-            self.shade_known(&metadata);
-        }
-        Ok((ptr, registration))
     }
 
     fn typed_root_covered(
@@ -4490,7 +4587,9 @@ impl GarbageCollector {
             cycle.epoch =
                 self.domain().epoch.load(Ordering::Acquire) + crate::metadata::EPOCH_STRIDE;
             self.domain().epoch.store(cycle.epoch, Ordering::Release);
-            self.domain().mark_queue.open_graph_inbox();
+            self.domain()
+                .mark_queue
+                .open_graph_inbox(cycle.epoch, cycle.kind == CollectionKind::Old);
             if !self.commit_phase(observation, true, true, 0) {
                 self.domain().mark_queue.close_graph_inbox();
                 if cycle.kind == CollectionKind::Old {

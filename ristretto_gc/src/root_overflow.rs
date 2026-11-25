@@ -3,12 +3,16 @@ use super::{RootStatistics, Scan};
 use crate::publication_directory::Directory;
 use arc_swap::ArcSwapOption;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
+
+#[path = "root_attempt_state.rs"]
+mod root_attempt_state;
 
 #[derive(Debug, Default)]
 pub(crate) struct Record {
     pub(super) address: AtomicUsize,
     pub(super) published: AtomicBool,
+    typed: Option<(usize, root_attempt_state::Decision)>,
 }
 
 impl Record {
@@ -19,7 +23,42 @@ impl Record {
         self.address.store(address, Ordering::Release);
     }
 
+    pub(crate) fn commit_typed(&self) -> bool {
+        self.typed
+            .as_ref()
+            .is_some_and(|(_, decision)| decision.commit())
+    }
+
+    pub(super) fn cancel_typed(&self) {
+        if let Some((_, decision)) = &self.typed {
+            decision.scan();
+        }
+    }
+
+    pub(crate) fn owes_trace(&self) -> bool {
+        self.typed
+            .as_ref()
+            .is_some_and(|(_, decision)| decision.owes_trace())
+    }
+
+    fn visible_address(&self) -> usize {
+        self.typed.as_ref().map_or_else(
+            || self.address.load(Ordering::Acquire),
+            |(address, decision)| if decision.live() { *address } else { 0 },
+        )
+    }
+
+    fn scan_address(&self) -> usize {
+        self.typed.as_ref().map_or_else(
+            || super::scan_address(&self.address),
+            |(address, decision)| if decision.scan() { *address } else { 0 },
+        )
+    }
+
     pub(crate) fn take_address(&self) -> Option<usize> {
+        if let Some((address, decision)) = &self.typed {
+            return decision.take().then_some(*address);
+        }
         let address = self.address.swap(0, Ordering::AcqRel);
         (address != 0).then_some(address)
     }
@@ -41,8 +80,11 @@ impl Overflow {
         clippy::expect_used,
         reason = "each indexed key owns a distinct live allocation"
     )]
-    pub(super) fn reserve(&self) -> Arc<Record> {
-        let record = Arc::new(Record::default());
+    pub(super) fn reserve(&self, typed: Option<usize>) -> Arc<Record> {
+        let record = Arc::new(Record {
+            typed: typed.map(|address| (address, root_attempt_state::Decision::default())),
+            ..Record::default()
+        });
         let key = Record::key(&record) as u64;
         self.records.rcu(|current| {
             let empty = Directory::default();
@@ -80,7 +122,7 @@ impl Overflow {
             return Scan::Done;
         };
         *after = Record::key(record);
-        match super::scan_address(&record.address) {
+        match record.scan_address() {
             0 => Scan::Advance,
             address => Scan::Root(address),
         }
@@ -89,7 +131,7 @@ impl Overflow {
     pub(super) fn matching(&self, address: usize) -> Vec<Arc<Record>> {
         let mut result = Vec::new();
         self.for_each(|record| {
-            if record.address.load(Ordering::Acquire) == address {
+            if record.visible_address() == address {
                 result.push(record.clone());
             }
         });
@@ -98,7 +140,7 @@ impl Overflow {
 
     pub(super) fn count(&self, stats: &mut RootStatistics) {
         self.for_each(|record| {
-            let address = record.address.load(Ordering::Acquire);
+            let address = record.visible_address();
             stats.slot_roots += usize::from(address != 0 && address != super::PENDING_ROOT);
             stats.reserved_slots += usize::from(
                 (address == 0 || address == super::PENDING_ROOT)
@@ -137,7 +179,7 @@ mod tests {
                 let (registry, meeting) = (&registry, &meeting);
                 scope.spawn(move || {
                     meeting.wait();
-                    let registration = registry.reserve();
+                    let registration = registry.reserve(None);
                     registration.publish(value);
                     meeting.wait();
                     meeting.wait();
