@@ -6,6 +6,7 @@ use super::root_owner::{PreparedRoot, SharedRoot, backing_bytes};
 use super::{LeafAccessError, LeafRecord, LeafView};
 use crate::canonical_catalog as gc_catalog;
 use crate::{GarbageCollector, Trace};
+use gc_catalog::EdgeMembership;
 use gc_catalog::bounded::{
     BoundedCatalog, Budget, Capacities, CatalogHandle, ConfigError, EdgeCommand, EdgeHandle,
     EdgeKey, EdgeObservation, Footprint, GuardedCommand, Participant, Progress, RegisterError,
@@ -17,9 +18,8 @@ use std::sync::Arc;
 
 #[path = "canonical_graph_access.rs"]
 mod access;
-pub(in crate::canonical_adapter) use access::GraphWrite;
+pub(in crate::canonical_adapter) use access::{GraphRead, GraphWrite};
 
-type Worker = Participant<LeafRecord, GuardedCommand>;
 const MAX_DEGREE: usize = 8;
 
 #[derive(Debug)]
@@ -53,6 +53,11 @@ impl<T> Clone for GraphRoot<T> {
         }
     }
 }
+pub(in crate::canonical_adapter) enum GraphReadValue<T> {
+    Null,
+    Root(GraphRoot<T>),
+}
+
 pub(in crate::canonical_adapter) struct GraphRuntime<'gc> {
     catalog: CatalogHandle<LeafRecord>,
     collector: &'gc GarbageCollector,
@@ -84,12 +89,15 @@ impl GraphFootprint {
             .checked_add(backing)
             .and_then(|n| n.checked_sub(size_of::<RootHandle<LeafRecord>>()))
             .ok_or(GraphError::Config(ConfigError::CapacityOverflow))?;
-        let request = size_of::<GraphAllocation<'_, '_, ()>>().max(size_of::<GraphWrite<'_, '_>>());
+        let request = size_of::<GraphAllocation<'_, '_, ()>>()
+            .max(size_of::<GraphRead<'_, '_, ()>>())
+            .max(size_of::<GraphWrite<'_, '_>>());
         let mutator = size_of::<GraphMutator<'_>>()
-            .checked_sub(size_of::<Worker>())
+            .checked_sub(size_of::<Participant<LeafRecord, GuardedCommand>>())
             .and_then(|v| v.checked_add(request))
             .and_then(|v| v.checked_add(backing));
-        let helper = size_of::<LeafMaintenance<'_>>().checked_sub(size_of::<Worker>());
+        let helper = size_of::<LeafMaintenance<'_>>()
+            .checked_sub(size_of::<Participant<LeafRecord, GuardedCommand>>());
         let runtime = mutator
             .and_then(|v| capacities.mutators().checked_mul(v))
             .and_then(|v| v.checked_add(capacities.helpers().checked_mul(helper?)?))
@@ -168,7 +176,7 @@ pub(in crate::canonical_adapter) struct GraphMutator<'gc> {
     // The exclusive request borrows this private backing until it hands off a root.
     // Drop it before returning the participant's quota.
     prepared: Option<PreparedRoot>,
-    worker: Worker,
+    worker: Participant<LeafRecord, GuardedCommand>,
     catalog: CatalogHandle<LeafRecord>,
     collector: &'gc GarbageCollector,
     degree: usize,
