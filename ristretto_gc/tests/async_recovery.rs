@@ -482,6 +482,30 @@ mod native {
         }
     }
 
+    #[test]
+    fn registering_a_sleeping_allocator_and_refunding_cannot_miss_each_other() {
+        use loom::sync::Arc;
+        use loom::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+        loom::model(|| {
+            let used = Arc::new(AtomicUsize::new(1));
+            let registered = Arc::new(AtomicBool::new(false));
+            let refunder = {
+                let used = used.clone();
+                let registered = registered.clone();
+                loom::thread::spawn(move || {
+                    used.fetch_sub(1, Ordering::AcqRel);
+                    registered.load(Ordering::Acquire)
+                })
+            };
+            registered.store(true, Ordering::Release);
+            // AllocationBudget::used_after_registration and release share the
+            // byte counter's modification order, including on weak targets.
+            let fits = used.fetch_or(0, Ordering::AcqRel) == 0;
+            assert!(refunder.join().unwrap() || fits);
+        });
+    }
+
     struct Resume(std::thread::Thread);
     impl Wake for Resume {
         fn wake(self: Arc<Self>) {
@@ -659,6 +683,156 @@ mod native {
         until(|| gate.entered.load(Ordering::Acquire) > 0);
         until(|| gc.diagnostics().worker_backoffs > 0);
         gate.release();
+        gc.stop()?;
+        assert_eq!(gc.managed_bytes(), 0);
+        Ok(())
+    }
+
+    #[cfg(feature = "experimental-canonical-runtime")]
+    struct ParkedAllocationWake {
+        gate: Arc<Gate>,
+        armed: std::sync::atomic::AtomicBool,
+        refunder: std::thread::ThreadId,
+    }
+
+    #[cfg(feature = "experimental-canonical-runtime")]
+    impl Wake for ParkedAllocationWake {
+        fn wake(self: Arc<Self>) {
+            self.wake_by_ref();
+        }
+
+        fn wake_by_ref(self: &Arc<Self>) {
+            if self.armed.load(Ordering::Acquire) {
+                assert_ne!(std::thread::current().id(), self.refunder);
+                self.gate.wait();
+            }
+        }
+    }
+
+    #[cfg(feature = "experimental-canonical-runtime")]
+    fn register_allocation<F: Future>(
+        gc: &GarbageCollector,
+        mut request: std::pin::Pin<&mut F>,
+        waker: &Waker,
+        expected: usize,
+    ) {
+        let mut cx = Context::from_waker(waker);
+        for _ in 0..32 {
+            assert!(request.as_mut().poll(&mut cx).is_pending());
+            if gc.diagnostics().allocation_waiters == expected {
+                return;
+            }
+        }
+        panic!("allocator did not register");
+    }
+
+    #[cfg(feature = "experimental-canonical-runtime")]
+    fn allocate_after_refund(
+        gc: &Arc<GarbageCollector>,
+        freed: usize,
+        refund: impl FnOnce(),
+    ) -> Result<()> {
+        let initial = gc.managed_bytes();
+        let parked = Arc::new(ParkedAllocationWake {
+            gate: Arc::new(Gate::default()),
+            armed: std::sync::atomic::AtomicBool::new(false),
+            refunder: std::thread::current().id(),
+        });
+        let _release = Release(parked.gate.clone());
+        let mut abandoned = Box::pin(Gc::try_new_async(gc, 61_u128));
+        register_allocation(gc, abandoned.as_mut(), &Waker::from(parked.clone()), 1);
+        let notifications = Arc::new(Wakes::default());
+        let waker = Waker::from(notifications.clone());
+        let mut request = Box::pin(Gc::try_new_async(gc, 42_u128));
+        register_allocation(gc, request.as_mut(), &waker, 2);
+        let before = notifications.0.load(Ordering::Acquire);
+        parked.armed.store(true, Ordering::Release);
+        refund();
+        assert_eq!(gc.managed_bytes(), initial - freed);
+        until(|| parked.gate.entered.load(Ordering::Acquire) > 0);
+        // The first recipient cannot finish its callback and will never retry.
+        drop(abandoned);
+        until(|| notifications.0.load(Ordering::Acquire) > before);
+        let mut cx = Context::from_waker(&waker);
+        let Poll::Ready(value) = request.as_mut().poll(&mut cx) else {
+            panic!("allocator did not reserve refunded bytes");
+        };
+        assert_eq!(**value?, 42);
+        assert_eq!(gc.statistics()?.full_collections, 0);
+        Ok(())
+    }
+
+    #[cfg(feature = "experimental-canonical-runtime")]
+    #[test]
+    #[expect(
+        clippy::unwrap_in_result,
+        reason = "independent canonical setup and bounded schedule"
+    )]
+    fn canonical_refund_wakes_an_allocator_while_the_only_worker_is_tracing() -> Result<()> {
+        use ristretto_gc::canonical::{Budget, Configuration as Bounds, Runtime};
+
+        let limit = 512;
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .threads(1)
+                .diagnostics(true)
+                .max_heap_bytes(limit)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let gate = Arc::new(Gate::default());
+        let child = Gc::try_new(&gc, 17_u64)?;
+        let parent = Gc::try_new(&gc, (Slow(gate.clone()), child.into_rooted()))?;
+        let budget = Budget::new(usize::MAX);
+        let bounds = Bounds {
+            objects: 4,
+            roots: 4,
+            mutators: 1,
+            helpers: 1,
+            edges_per_object: 1,
+        };
+        let mut runtime = Runtime::new(&gc, bounds, &budget).expect("canonical runtime");
+        let separate = Runtime::new(&gc, bounds, &budget).expect("independent runtime");
+        let mut owner = separate.mutator().expect("independent mutator");
+        let unpublished = owner.allocate(9_u128).expect("unpublished payload");
+        let mut worker = runtime.mutator().expect("canonical mutator");
+        let mut permits = Vec::new();
+        for value in 0..4_u128 {
+            let mut allocation = worker.allocate(value).expect("canonical allocation");
+            let permit = (0..4096)
+                .find_map(|_| match allocation.poll().expect("allocation poll") {
+                    Poll::Ready(root) => Some(root),
+                    Poll::Pending => None,
+                })
+                .expect("published");
+            permits.push(permit);
+        }
+        drop(worker);
+        let backing = limit - gc.managed_bytes() - Gc::allocation_size(&Vec::<u8>::new())?;
+        let filler = Gc::try_new(&gc, vec![0_u8; backing])?;
+        assert_eq!(gc.managed_bytes(), limit);
+        let _release = Release(gate.clone());
+        gc.start();
+        gc.collect();
+        until(|| gate.entered.load(Ordering::Acquire) != 0);
+
+        allocate_after_refund(&gc, 4 * size_of::<u128>(), || {
+            drop(permits);
+            let mut drain = runtime.drain().expect("exclusive drain");
+            assert!((0..100_000).any(|_| drain.poll().expect("drain poll").1));
+        })?;
+        let backing = limit - gc.managed_bytes() - Gc::allocation_size(&Vec::<u8>::new())?;
+        let second_filler = Gc::try_new(&gc, vec![0_u8; backing])?;
+        assert_eq!(gc.managed_bytes(), limit);
+        // No helper or drain visit follows destruction of this unpublished request.
+        allocate_after_refund(&gc, size_of::<u128>(), || drop(unpublished))?;
+        gate.release();
+        until(|| {
+            gc.statistics()
+                .is_ok_and(|stats| stats.full_collections > 0)
+        });
+        assert_eq!(*parent.1, 17);
+        drop((owner, separate, runtime, parent, filler, second_filler));
         gc.stop()?;
         assert_eq!(gc.managed_bytes(), 0);
         Ok(())
