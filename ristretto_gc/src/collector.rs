@@ -1242,17 +1242,7 @@ impl GarbageCollector {
             .ok_or_else(invalid)?;
         let ptr = std::ptr::NonNull::new(metadata.trace.ptr.cast_mut().cast::<T>())
             .ok_or_else(invalid)?;
-        let covered = match observation {
-            publication_state::Birth::Idle => true,
-            publication_state::Birth::Inline(snapshot) => {
-                self.domains.iter().enumerate().all(|(i, domain)| {
-                    snapshot.stage(i).is_none()
-                        || metadata.retention(i, domain.epoch.load(Ordering::Acquire))
-                            == Some(Retention::Strong)
-                }) && self.phase_clock.unchanged(snapshot)
-            }
-            publication_state::Birth::Epochs(_) => false,
-        };
+        let covered = self.typed_root_covered(observation, &metadata);
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         publication_tests::pause_after_typed_lookup();
         if covered && slot.activate(address) {
@@ -1289,6 +1279,44 @@ impl GarbageCollector {
             self.shade_known(&metadata);
         }
         Ok((ptr, registration))
+    }
+
+    fn typed_root_covered(
+        &self,
+        observation: publication_state::Birth,
+        metadata: &ObjectMetadata,
+    ) -> bool {
+        let (snapshot, bind_epochs) = match observation {
+            publication_state::Birth::Idle => return true,
+            publication_state::Birth::Inline(snapshot) => (snapshot, false),
+            publication_state::Birth::Epochs(snapshot) => (snapshot, true),
+        };
+        // An owning inbox identity survives numeric epoch/revision reuse. Take
+        // it before reading marks, then check it again after phase validation.
+        let epochs = [0, 1].map(|i| {
+            if bind_epochs && snapshot.stage(i).is_some() {
+                self.domain_at(i).mark_queue.birth_epoch()
+            } else {
+                None
+            }
+        });
+        let covered = epochs.iter().enumerate().all(|(i, epoch)| {
+            snapshot.stage(i).is_none()
+                || ((!bind_epochs || epoch.is_some())
+                    && metadata.retention(i, self.domain_at(i).epoch.load(Ordering::Acquire))
+                        == Some(Retention::Strong))
+        });
+        covered
+            && if bind_epochs {
+                self.phase_clock.certify_epochs(snapshot, false)
+                    && epochs.iter().enumerate().all(|(i, epoch)| {
+                        epoch
+                            .as_ref()
+                            .is_none_or(|e| self.domain_at(i).mark_queue.current_birth_epoch(e))
+                    })
+            } else {
+                self.phase_clock.unchanged(snapshot)
+            }
     }
 
     pub(crate) fn resolve_address<T: 'static>(

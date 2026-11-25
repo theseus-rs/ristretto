@@ -738,6 +738,74 @@ fn a_stopped_typed_identity_lookup_allows_unrelated_capped_recovery() -> Result<
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    reason = "bounded parked activation schedule"
+)]
+fn active_epoch_identity_protects_a_typed_graph_with_numeric_certification_disabled() -> Result<()>
+{
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for phase in [Phase::Mark, Phase::Sweep] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let child = Gc::try_new(&gc, 17_u64)?.into_rooted();
+            let root = Gc::try_new(&gc, vec![child])?;
+            let identity = root.as_handle_i64();
+            gc.phase_clock.disable_certification();
+            gc.collect();
+            assert!((0..1024).any(|_| {
+                gc.step();
+                lock(&gc.domains[1].cycle).phase == phase
+            }));
+            let (entered, parked) = mpsc::channel();
+            let (resume, receiver) = mpsc::channel();
+            let other = gc.clone();
+            let lookup = thread::spawn(move || {
+                TYPED_ACTIVATION_PAUSE.set(Some(ClaimPause {
+                    entered,
+                    resume: receiver,
+                }));
+                Gc::<Vec<Gc<u64>>>::from_handle_rooted(&other, identity)
+            });
+            parked
+                .recv_timeout(Duration::from_secs(3))
+                .expect("guard-free activation in active epoch");
+            drop(root);
+            let other = gc.clone();
+            let (finished, result) = mpsc::channel();
+            let peer = thread::spawn(move || {
+                let outcome = (|| -> Result<()> {
+                    for _ in 0..2 {
+                        other.collect_full()?;
+                    }
+                    Ok(())
+                })();
+                finished.send(outcome).expect("collection observer");
+            });
+            let outcome = result.recv_timeout(Duration::from_secs(3));
+            resume.send(()).expect("resume active lookup");
+            let protected = lookup.join().expect("lookup")?;
+            peer.join().expect("collection");
+            outcome.expect("cycles finished before resuming lookup")?;
+            assert_eq!(protected.first().map(|child| **child), Some(17));
+            drop(protected);
+            gc.stop()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
 pub(super) fn pause_after_registration_indexes() {
     wait_for_constructor_resume(INDEXED_PAUSE.take());
 }
