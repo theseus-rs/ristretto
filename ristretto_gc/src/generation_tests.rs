@@ -461,3 +461,54 @@ fn young_cycles_complete_while_a_full_relocation_callback_is_in_flight() -> Resu
     }
     Ok(())
 }
+
+#[test]
+fn retired_bytes_cover_every_unregistered_allocation_until_storage_is_released() -> Result<()> {
+    struct Chunk([u8; 16]);
+    // SAFETY: the fixture has no managed edges or external storage.
+    unsafe impl Trace for Chunk {
+        fn trace(&self, _: &GarbageCollector) {}
+        fn clear_step(&mut self, offset: usize, _: usize) -> TraceProgress {
+            if offset < self.0.len() {
+                self.0[offset] = 0;
+                TraceProgress::Continue(offset + 1)
+            } else {
+                TraceProgress::Complete
+            }
+        }
+    }
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .diagnostics(true)
+            .allocation_threshold(usize::MAX)
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .build(),
+    );
+    let bytes = Gc::allocation_size(&Chunk([0; 16]))?;
+    let mut roots = Vec::new();
+    for value in 0..16 {
+        roots.push(Gc::try_new(&gc, Chunk([value; 16]))?);
+    }
+    let addresses: Vec<_> = roots.iter().map(|root| root.as_ptr().addr()).collect();
+    drop(roots);
+    let ticket = gc.request_full_cycle();
+    let mut observed_local_debt = false;
+    for _ in 0..8192 {
+        gc.step();
+        let registered = addresses
+            .iter()
+            .filter(|a| gc.objects.lookup(**a).is_some())
+            .count();
+        let unregistered_bytes = gc.managed_bytes() - registered * bytes;
+        assert_eq!(gc.diagnostics().retired_bytes, unregistered_bytes);
+        observed_local_debt |= !lock(&gc.domains[1].cycle).reclaim.is_empty();
+        if gc.completed_full_ticket() >= ticket && gc.managed_bytes() == 0 {
+            break;
+        }
+    }
+    assert!(observed_local_debt);
+    assert_eq!(gc.managed_bytes(), 0);
+    assert_eq!(gc.diagnostics().retired_bytes, 0);
+    Ok(())
+}

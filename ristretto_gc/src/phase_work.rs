@@ -534,8 +534,6 @@ impl GarbageCollector {
         if let Some(task) = cycle.reclaim.pop_front() {
             let scan_budget = scan_budget.min(task.metadata.trace.budget);
             *work = work.saturating_sub(scan_budget.saturating_sub(1));
-            self.retired_bytes
-                .fetch_add(task.metadata.size(), Ordering::AcqRel);
             self.retired_ready.fetch_add(1, Ordering::AcqRel);
             return Unit::Sweep(SweepWork::Reclaim(task, scan_budget));
         }
@@ -726,6 +724,10 @@ impl GarbageCollector {
             }
         };
         if let Some(metadata) = removed {
+            // The byte debt belongs to the retired descriptor, independent of
+            // which queue or callback currently owns its clearing progress.
+            self.retired_bytes
+                .fetch_add(metadata.size(), Ordering::AcqRel);
             if metadata.retire() {
                 cycle.reclaim.push_back(ReclaimTask {
                     metadata,
