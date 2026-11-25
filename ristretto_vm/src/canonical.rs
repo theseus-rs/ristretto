@@ -8,6 +8,7 @@ mod objects;
 #[path = "canonical_statics.rs"]
 mod statics;
 pub use heap::{HeapCompletion, Invocation, JavaHeap, JavaThread};
+mod primitive_array;
 use layout::Layout;
 pub use objects::{InitializationWork, Limits, Report};
 mod scalar;
