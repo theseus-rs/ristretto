@@ -481,10 +481,7 @@ impl GarbageCollector {
         // Reading an owning descriptor grants no access to its payload. A
         // parked object-shard holder cannot stall the weak/soft decision while
         // the coordinator owns publication. An address replacement is a miss.
-        let target = self
-            .objects
-            .lookup(address)
-            .filter(|m| m.id == slot.target_identity);
+        let target = self.weak_target_metadata(&slot, address);
         if !pending && target.as_ref().is_none_or(|m| !self.is_young_metadata(m)) {
             self.weak_slots.prune(id, entry, true);
         }
@@ -536,13 +533,13 @@ impl GarbageCollector {
             if matches!(
                 slot.kind,
                 crate::ReferenceKind::Final | crate::ReferenceKind::PhantomRetained
-            ) && self.weak_target_is_registered(&slot, address)
+            ) && let Some(metadata) = &target
             {
                 if slot.kind == crate::ReferenceKind::PhantomRetained && cycle.reference_stage == 3
                 {
                     cycle.phantom_retained.insert(address);
                 }
-                self.shade(address);
+                self.shade_known(metadata);
             } else {
                 slot.target.store(0, Ordering::Release);
             }

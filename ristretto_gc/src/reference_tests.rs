@@ -1059,3 +1059,82 @@ fn parked_late_decision_allows_the_other_wrapped_slot_to_activate() -> Result<()
     }
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn retaining_reference_shades_exact_graph_with_parked_target_shard() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        for (kind, stage) in [
+            (ReferenceKind::Final, 2),
+            (ReferenceKind::PhantomRetained, 3),
+        ] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let child = Gc::try_new(&gc, 17_u64)?;
+            let child_id = child.as_handle_i64();
+            let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+            let metadata = gc.objects.lookup(parent.as_ptr().addr()).unwrap();
+            let retained = GcWeak::new(&parent, kind, 0);
+            drop(parent);
+            gc.collect();
+            at_reference_stage(&gc, 1, stage);
+            let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+            let held = gc.objects.lock(metadata.ptr().0);
+            let (done, finished) = mpsc::channel();
+            let progress = thread::scope(|scope| {
+                let heap = &gc;
+                scope.spawn(move || {
+                    heap.step();
+                    done.send(()).unwrap();
+                });
+                let result = finished.recv_timeout(Duration::from_secs(2));
+                drop(held);
+                result
+            });
+            assert!(progress.is_ok(), "retaining shade waited on target shard");
+            assert!(metadata.marked(1, epoch));
+            finish(&gc);
+            assert_eq!(gc.statistics()?.live_objects, 2);
+            assert_eq!(*Gc::<u64>::from_handle_rooted(&gc, child_id)?, 17);
+            retained.clear();
+            gc.collect_full()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn retaining_decision_cannot_mark_a_replacement_at_the_target_address() -> Result<()> {
+    for counted in [false, true] {
+        for kind in [ReferenceKind::Final, ReferenceKind::PhantomRetained] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let first = Gc::try_new(&gc, 1_u64)?;
+            let stale = GcWeak::new(&first, kind, 0);
+            let replacement = Gc::try_new(&gc, 2_u64)?;
+            // Present a reused address while retaining the original slot identity.
+            stale
+                .slot
+                .target
+                .store(replacement.as_ptr().addr(), Ordering::Release);
+            drop((first, replacement));
+            gc.collect_full()?;
+            assert!(stale.upgrade().is_none());
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
