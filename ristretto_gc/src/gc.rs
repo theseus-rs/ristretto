@@ -525,13 +525,24 @@ impl<T> Gc<T> {
         let address = collector
             .address_for_identity(expected)
             .ok_or_else(|| Error::InvalidPointer("unknown object identity".into()))?;
-        let (ptr, registration) = collector.acquire_typed_root::<T>(address, expected)?;
+        Self::root_at_address(collector, address, Some(expected))
+    }
+
+    fn root_at_address(
+        collector: &Arc<GarbageCollector>,
+        address: usize,
+        expected: Option<crate::ObjectId>,
+    ) -> Result<Self>
+    where
+        T: Trace + 'static,
+    {
+        let (ptr, target, registration) = collector.acquire_typed_root::<T>(address, expected)?;
         Ok(PreparedRoot {
             ptr,
             registration: OwnedRoot {
                 collector: collector.clone(),
                 id: registration,
-                target: expected,
+                target,
             },
         }
         .finish())
@@ -766,7 +777,9 @@ impl<T> Gc<T> {
     where
         T: Trace + 'static,
     {
-        Self::from_conditional_rooted(collector, address, false, None)
+        let address = usize::try_from(address)
+            .map_err(|_| Error::InvalidPointer("invalid allocation address".into()))?;
+        Self::root_at_address(collector, address, None)
     }
 
     /// Retaining conditional edges may admit a white graph before sweep starts.

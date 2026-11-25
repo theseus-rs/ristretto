@@ -1207,17 +1207,34 @@ impl GarbageCollector {
         Ok(())
     }
 
-    /// An armed reservation is visible to every subsequent root scan. Either
-    /// that scan claims the right to skip it or activation exposes the root.
+    pub(crate) fn acquire_typed_root<T: 'static>(
+        &self,
+        address: usize,
+        expected: Option<crate::ObjectId>,
+    ) -> Result<(
+        std::ptr::NonNull<T>,
+        crate::ObjectId,
+        crate::roots::Registration,
+    )> {
+        self.acquire_checked_root(address, expected, ObjectMetadata::is_type::<T>)
+    }
+
+    /// An armed slot or its one-shot replacement keeps root acceptance ordered
+    /// with scanning. The caller supplies the type proof for its handle source.
     #[expect(
         clippy::expect_used,
         reason = "typed lookup owns a prepared slot until activation"
     )]
-    pub(crate) fn acquire_typed_root<T: 'static>(
+    fn acquire_checked_root<T>(
         &self,
         address: usize,
-        expected: crate::ObjectId,
-    ) -> Result<(std::ptr::NonNull<T>, crate::roots::Registration)> {
+        expected: Option<crate::ObjectId>,
+        accepts: impl FnOnce(&ObjectMetadata) -> bool,
+    ) -> Result<(
+        std::ptr::NonNull<T>,
+        crate::ObjectId,
+        crate::roots::Registration,
+    )> {
         let invalid = || {
             crate::Error::InvalidPointer(
                 "unknown, logically dead, or incorrectly typed allocation".into(),
@@ -1238,7 +1255,7 @@ impl GarbageCollector {
         let metadata = self
             .objects
             .lookup(address)
-            .filter(|m| m.id == expected && m.is_type::<T>())
+            .filter(|m| expected.is_none_or(|id| m.id == id) && accepts(m))
             .ok_or_else(invalid)?;
         let ptr = std::ptr::NonNull::new(metadata.trace.ptr.cast_mut().cast::<T>())
             .ok_or_else(invalid)?;
@@ -1258,7 +1275,7 @@ impl GarbageCollector {
             }
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
             publication_tests::pause_after_typed_activation();
-            return Ok((ptr, registration));
+            return Ok((ptr, metadata.id, registration));
         }
 
         // The one-shot record is both the registry's decision and the identity
@@ -1306,7 +1323,7 @@ impl GarbageCollector {
                 }
                 #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
                 publication_tests::pause_after_typed_activation();
-                return Ok((ptr, registration));
+                return Ok((ptr, metadata.id, registration));
             }
         }
     }
@@ -2803,25 +2820,12 @@ impl GarbageCollector {
         }
     }
 
-    /// Cloning a managed edge must not resurrect retired storage or an allocation
-    /// that subsequently reused the same address. Admission spans identity and
-    /// liveness validation through registration. No payload is dereferenced.
+    /// A managed edge already carries its original Rust type. Resolve its
+    /// exact identity in this collector and certify liveness as for a VM handle.
     pub(crate) fn clone_edge_root<T>(&self, root: &Gc<T>) -> Option<crate::roots::Registration> {
-        let _measurement = self
-            .diagnostics
-            .root_acquire
-            .measure(self.diagnostics_enabled());
-        let address = root.ptr.as_ptr() as usize;
-        let mut reservation = self.reserve_owned_root(address);
-        let _publication = self.allocation_guard();
-        let valid = self
-            .objects
-            .lock(address)
-            .get(&address)
-            .is_some_and(|metadata| {
-                metadata.id == root.identity() && self.can_root(metadata, false)
-            });
-        valid.then(|| self.commit_owned_root(root, &mut reservation))
+        self.acquire_checked_root::<T>(root.ptr.as_ptr().addr(), Some(root.identity()), |_| true)
+            .ok()
+            .map(|(_, _, registration)| registration)
     }
 
     pub(crate) fn add_owned_root<T>(&self, root: &Gc<T>) -> crate::roots::Registration {

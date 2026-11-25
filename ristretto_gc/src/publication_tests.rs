@@ -748,109 +748,147 @@ fn a_stopped_typed_identity_lookup_allows_unrelated_capped_recovery() -> Result<
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
-#[test]
+#[derive(Clone, Copy)]
+enum RootSource {
+    Identity,
+    Edge,
+    Address,
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[expect(
     clippy::unwrap_in_result,
     reason = "deterministic bounded peer schedule"
 )]
-fn a_parked_root_of_an_unvisited_child_never_holds_capped_recovery() -> Result<()> {
+fn run_parked_root_schedule(
+    counted: bool,
+    storage: crate::RootStorage,
+    committed: bool,
+    keep_parent: bool,
+    source: RootSource,
+) -> Result<()> {
     use std::future::Future;
     use std::sync::mpsc;
     use std::task::{Context as TaskContext, Poll, Waker};
     use std::time::Duration;
-
     let scalar = Gc::allocation_size(&23_u64)?;
     let node = Gc::allocation_size(&Vec::<Gc<u64>>::with_capacity(1))?;
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .max_heap_bytes(2 * scalar + 2 * node)
+            .allocation_threshold(usize::MAX)
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .metadata_shards(1)
+            .root_storage(storage)
+            .concurrent_publication(counted)
+            .build(),
+    );
+    let context = gc.register_context();
+    drop(Gc::try_new(&gc, 11_u64)?);
+    let grandchild = Gc::try_new(&gc, 17_u64)?;
+    let target = Gc::try_new(&gc, vec![grandchild.into_rooted()])?;
+    let handle = target.as_handle_i64();
+    let addr = target.as_ptr() as usize;
+    let mut edge = target.clone_gc();
+    // SAFETY: the original target still owns the value. The worker
+    // uses only the identity edge until a checked clone is acquired.
+    unsafe { edge.unroot() };
+    let mut parent = Some(Gc::try_new(&gc, vec![target.into_rooted()])?);
+    gc.phase_clock.disable_certification();
+    gc.collect();
+    assert!((0..1024).any(|_| {
+        gc.step();
+        lock(&gc.domains[1].cycle).phase == Phase::Mark
+    }));
+    assert!(
+        !gc.objects
+            .lookup(addr)
+            .unwrap()
+            .marked(1, gc.domains[1].epoch.load(Ordering::Acquire))
+    );
+    let (entered, parked) = mpsc::channel();
+    let (resume, receiver) = mpsc::channel();
+    let resolver_gc = gc.clone();
+    let lookup = thread::spawn(move || {
+        let hook = if committed {
+            &TYPED_ACTIVATION_PAUSE
+        } else {
+            &TYPED_PROPOSALS_PAUSE
+        };
+        hook.set(Some(ClaimPause {
+            entered,
+            resume: receiver,
+        }));
+        context.with(|| match source {
+            RootSource::Edge => Ok(edge.rooted_clone()),
+            RootSource::Address => {
+                Gc::<Vec<Gc<u64>>>::from_raw_rooted(&resolver_gc, i64::try_from(addr).unwrap())
+            }
+            RootSource::Identity => Gc::<Vec<Gc<u64>>>::from_handle_rooted(&resolver_gc, handle),
+        })
+    });
+    parked
+        .recv_timeout(Duration::from_secs(5))
+        .expect("typed proposal boundary");
+    if !keep_parent {
+        drop(parent.take());
+    }
+    let mut request = Box::pin(Gc::try_new_async(&gc, 23_u64));
+    let mut cx = TaskContext::from_waker(Waker::noop());
+    let outcome = (0..1024).find_map(|_| match request.as_mut().poll(&mut cx) {
+        Poll::Pending => None,
+        Poll::Ready(value) => Some(value),
+    });
+    if outcome.is_some() {
+        // Bound each pass independently so a lost claim cannot hang the test.
+        for _ in 0..2 {
+            let ticket = gc.request_full_cycle();
+            assert!((0..8192).any(|_| {
+                gc.step();
+                gc.completed_full_ticket() >= ticket
+            }));
+        }
+    }
+    resume.send(()).expect("resume resolver");
+    let root = lookup.join().expect("resolver");
+    assert_eq!(
+        **outcome.expect("capped peer exhausted its poll budget")?,
+        23
+    );
+    if committed || keep_parent {
+        let root = root?;
+        assert_eq!(root.as_handle_i64(), handle);
+        assert_eq!(root.first().map(|child| **child), Some(17));
+    } else {
+        assert!(root.is_err());
+    }
+    drop(parent);
+    gc.stop()?;
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn a_parked_root_of_an_unvisited_child_never_holds_capped_recovery() -> Result<()> {
     for counted in [false, true] {
         for storage in [
             crate::RootStorage::Tree,
             crate::RootStorage::Slots,
             crate::RootStorage::Contexts,
         ] {
-            for (committed, keep_parent) in [(false, false), (false, true), (true, false)] {
-                let gc = GarbageCollector::with_config(
-                    Configuration::builder()
-                        .max_heap_bytes(2 * scalar + 2 * node)
-                        .allocation_threshold(usize::MAX)
-                        .incremental_step_size(1)
-                        .max_pause_time_us(0)
-                        .metadata_shards(1)
-                        .root_storage(storage)
-                        .concurrent_publication(counted)
-                        .build(),
-                );
-                let context = gc.register_context();
-                drop(Gc::try_new(&gc, 11_u64)?);
-                let grandchild = Gc::try_new(&gc, 17_u64)?;
-                let target = Gc::try_new(&gc, vec![grandchild.into_rooted()])?;
-                let handle = target.as_handle_i64();
-                let addr = target.as_ptr() as usize;
-                let mut parent = Some(Gc::try_new(&gc, vec![target.into_rooted()])?);
-                gc.phase_clock.disable_certification();
-                gc.collect();
-                assert!((0..1024).any(|_| {
-                    gc.step();
-                    lock(&gc.domains[1].cycle).phase == Phase::Mark
-                }));
-                assert!(
-                    !gc.objects
-                        .lookup(addr)
-                        .unwrap()
-                        .marked(1, gc.domains[1].epoch.load(Ordering::Acquire))
-                );
-                let (entered, parked) = mpsc::channel();
-                let (resume, receiver) = mpsc::channel();
-                let resolver_gc = gc.clone();
-                let lookup = thread::spawn(move || {
-                    let hook = if committed {
-                        &TYPED_ACTIVATION_PAUSE
-                    } else {
-                        &TYPED_PROPOSALS_PAUSE
-                    };
-                    hook.set(Some(ClaimPause {
-                        entered,
-                        resume: receiver,
-                    }));
-                    context.with(|| Gc::<Vec<Gc<u64>>>::from_handle_rooted(&resolver_gc, handle))
-                });
-                parked
-                    .recv_timeout(Duration::from_secs(5))
-                    .expect("typed proposal boundary");
-                if !keep_parent {
-                    drop(parent.take());
-                }
-                let mut request = Box::pin(Gc::try_new_async(&gc, 23_u64));
-                let mut cx = TaskContext::from_waker(Waker::noop());
-                let outcome = (0..1024).find_map(|_| match request.as_mut().poll(&mut cx) {
-                    Poll::Pending => None,
-                    Poll::Ready(value) => Some(value),
-                });
-                if outcome.is_some() {
-                    // Bound each pass independently so a lost claim cannot hang the test.
-                    for _ in 0..2 {
-                        let ticket = gc.request_full_cycle();
-                        assert!((0..8192).any(|_| {
-                            gc.step();
-                            gc.completed_full_ticket() >= ticket
-                        }));
-                    }
-                }
-                resume.send(()).expect("resume resolver");
-                let root = lookup.join().expect("resolver");
-                assert_eq!(
-                    **outcome.expect("capped peer exhausted its poll budget")?,
-                    23
-                );
-                if committed || keep_parent {
-                    let root = root?;
-                    assert_eq!(root.as_handle_i64(), handle);
-                    assert_eq!(root.first().map(|child| **child), Some(17));
-                } else {
-                    assert!(root.is_err());
-                }
-                drop(parent);
-                gc.stop()?;
-                assert_eq!(gc.managed_bytes(), 0);
+            for (committed, keep_parent, source) in [
+                (false, false, RootSource::Identity),
+                (false, true, RootSource::Identity),
+                (true, false, RootSource::Identity),
+                (false, true, RootSource::Edge),
+                (true, false, RootSource::Edge),
+                (false, false, RootSource::Address),
+                (false, true, RootSource::Address),
+                (true, false, RootSource::Address),
+            ] {
+                run_parked_root_schedule(counted, storage, committed, keep_parent, source)?;
             }
         }
     }
@@ -2010,7 +2048,7 @@ fn descriptor_birth_protects_a_root_installed_after_its_scan() -> Result<()> {
 }
 
 #[test]
-fn idle_typed_roots_use_slots_and_conditional_tree_roots_reuse_one_admission() -> Result<()> {
+fn idle_address_and_identity_lookups_use_slots_and_weak_upgrade_keeps_its_decision() -> Result<()> {
     thread_local! {
         static CHECKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
     }
@@ -2035,9 +2073,13 @@ fn idle_typed_roots_use_slots_and_conditional_tree_roots_reuse_one_admission() -
     assert_eq!(gc.root_statistics().slot_roots, 1);
     assert_eq!(CHECKS.get(), 0);
     drop(typed);
-    assert_eq!(*Gc::<u64>::from_raw_rooted(&gc, root.as_ptr_i64())?, 42);
+    let by_address = Gc::<u64>::from_raw_rooted(&gc, root.as_ptr_i64())?;
+    assert_eq!(*by_address, 42);
+    assert_eq!(gc.root_statistics().slot_roots, 1);
+    assert_eq!(CHECKS.get(), 0);
+    drop(by_address);
     assert_eq!(weak.upgrade().map(|root| *root), Some(42));
-    assert_eq!(CHECKS.get(), 2);
+    assert_eq!(CHECKS.get(), 1);
     assert_eq!(gc.diagnostics().active_publications, 0);
     *lock(&gc.tree_root_insert_probe) = None;
     drop(root);
