@@ -1,4 +1,7 @@
 //! Execution of verified closed object methods on a dedicated incremental heap.
+#[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
+#[path = "compiled_frame.rs"]
+mod compiled_frame;
 #[cfg(feature = "experimental-canonical-jit")]
 #[path = "frame_table.rs"]
 mod frame_table;
