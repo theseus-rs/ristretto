@@ -295,7 +295,7 @@ fn reference_decision_finishes_while_target_shard_is_parked() -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
     for counted in [false, true] {
-        for keep in [false, true] {
+        for (keep, cleared) in [(false, false), (true, false), (true, true)] {
             let gc = GarbageCollector::with_config(
                 Configuration::builder()
                     .concurrent_publication(counted)
@@ -308,10 +308,13 @@ fn reference_decision_finishes_while_target_shard_is_parked() -> Result<()> {
             let address = target.as_ptr().addr();
             let weak = GcWeak::new(&target, ReferenceKind::Weak, 0);
             let survivor = keep.then(|| target.rooted_clone());
+            if cleared {
+                weak.clear();
+            }
             drop(target);
             gc.collect();
             at_reference_stage(&gc, 1, 1);
-            let held = gc.objects.lock(address);
+            let held = gc.objects.lock(if cleared { 0 } else { address });
             let (done, received) = mpsc::channel();
             let finished = thread::scope(|scope| {
                 let heap = &gc;
@@ -327,9 +330,16 @@ fn reference_decision_finishes_while_target_shard_is_parked() -> Result<()> {
                 finished.is_ok(),
                 "object shard stalled the reference decision"
             );
-            assert_eq!(weak.slot.target.load(Ordering::Acquire) != 0, keep);
+            assert_eq!(
+                weak.slot.target.load(Ordering::Acquire) != 0,
+                keep && !cleared
+            );
             finish(&gc);
-            assert_eq!(weak.upgrade().as_deref(), survivor.as_deref());
+            assert_eq!(
+                weak.upgrade().as_deref().copied(),
+                (keep && !cleared).then_some(17)
+            );
+            drop(survivor);
         }
     }
     Ok(())
