@@ -1443,36 +1443,23 @@ impl Thread {
         call: MethodCall,
         caller: Option<&mut FrameState>,
     ) -> Result<DispatchResult> {
-        let MethodCall {
-            intrinsic,
-            class,
-            method,
-            parameters,
-            has_return_type,
-        } = call;
-        let class_name = class.name();
-        let method_name = method.name();
-        let method_descriptor = method.descriptor();
         let vm = self.vm()?;
 
         let sync_monitor = self
-            .acquire_sync_monitor(&class, &method, parameters.as_slice(caller.as_deref())?)
+            .acquire_sync_monitor(
+                &call.class,
+                &call.method,
+                call.parameters.as_slice(caller.as_deref())?,
+            )
             .await?;
         let monitor_guard = MonitorGuard::new(sync_monitor, self.id);
 
-        let method_registry = vm.method_registry();
-        let rust_method = match intrinsic {
-            crate::frame::IntrinsicBinding::Resolved(method) => method,
-            crate::frame::IntrinsicBinding::Unresolved => method_registry
-                .method(class_name, method_name, method_descriptor)
-                .copied(),
-        };
         #[cfg(feature = "experimental-canonical-runtime")]
-        if method.is_native()
+        if call.method.is_native()
             && let Some(binding) = vm.canonical_native.get()
-            && binding.matches(&class, &method)
+            && binding.matches(&call.class, &call.method)
         {
-            let mut arguments = parameters.into_parameters(caller)?;
+            let mut arguments = call.parameters.into_parameters(caller)?;
             if arguments.len() != 1 {
                 return Err(InternalError(
                     "canonical native binding expects one int".into(),
@@ -1486,6 +1473,34 @@ impl Thread {
                 Err(error) => Err(crate::canonical::native::java_error(self, error).await),
             };
         }
+        self.dispatch_ordinary_method(vm, call, caller, monitor_guard)
+            .await
+    }
+
+    async fn dispatch_ordinary_method(
+        &self,
+        vm: Arc<VM>,
+        call: MethodCall,
+        caller: Option<&mut FrameState>,
+        monitor_guard: MonitorGuard,
+    ) -> Result<DispatchResult> {
+        let MethodCall {
+            intrinsic,
+            class,
+            method,
+            parameters,
+            has_return_type,
+        } = call;
+        let class_name = class.name();
+        let method_name = method.name();
+        let method_descriptor = method.descriptor();
+        let method_registry = vm.method_registry();
+        let rust_method = match intrinsic {
+            crate::frame::IntrinsicBinding::Resolved(method) => method,
+            crate::frame::IntrinsicBinding::Unresolved => method_registry
+                .method(class_name, method_name, method_descriptor)
+                .copied(),
+        };
         let jit_method = if rust_method.is_none() {
             if let Some(compiler) = vm.compiler() {
                 compiler.compile(&class, &method).await?
