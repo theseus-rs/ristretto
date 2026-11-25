@@ -112,94 +112,9 @@ pub(crate) struct TreeRoot {
     pub(crate) generation: NonZeroU64,
 }
 
-#[derive(Debug)]
-struct TreeEntry {
-    generation: NonZeroU64,
-    address: usize,
-}
-
-#[derive(Debug, Default)]
-pub(crate) struct TreeRoots {
-    entries: BTreeMap<usize, TreeEntry>,
-    generation: u64,
-}
-
-impl TreeRoots {
-    pub(crate) fn insert(&mut self, next: &AtomicUsize, address: usize) -> TreeRoot {
-        self.insert_kind(next, address, true)
-    }
-
-    pub(crate) fn insert_manual(&mut self, next: &AtomicUsize, address: usize) -> TreeRoot {
-        self.insert_kind(next, address, false)
-    }
-
-    #[expect(
-        clippy::expect_used,
-        reason = "root generations fail closed before reuse"
-    )]
-    fn insert_kind(&mut self, next: &AtomicUsize, address: usize, owned: bool) -> TreeRoot {
-        debug_assert_ne!(address, 0);
-        loop {
-            let id = next.fetch_add(1, Ordering::Relaxed);
-            if id == 0 {
-                continue;
-            }
-            if let std::collections::btree_map::Entry::Vacant(entry) = self.entries.entry(id) {
-                let generation = self
-                    .generation
-                    .checked_add(1)
-                    .filter(|&generation| generation <= MAX_TREE_GENERATION)
-                    .expect("tree root generation exhausted");
-                self.generation = generation;
-                let generation =
-                    NonZeroU64::new(generation | if owned { OWNED_TREE_ROOT } else { 0 })
-                        .expect("nonzero tree root generation");
-                entry.insert(TreeEntry {
-                    generation,
-                    address,
-                });
-                return TreeRoot { id, generation };
-            }
-        }
-    }
-
-    pub(crate) fn remove(&mut self, id: usize, generation: Option<NonZeroU64>) -> Option<usize> {
-        let std::collections::btree_map::Entry::Occupied(entry) = self.entries.entry(id) else {
-            return None;
-        };
-        let actual = entry.get().generation;
-        if generation.map_or_else(
-            || actual.get() & OWNED_TREE_ROOT != 0,
-            |expected| expected != actual,
-        ) {
-            return None;
-        }
-        Some(entry.remove().address)
-    }
-
-    pub(crate) fn len(&self) -> usize {
-        self.entries.len()
-    }
-
-    pub(crate) fn next(&self, after: usize) -> Option<(usize, usize)> {
-        self.entries
-            .range((Excluded(after), Unbounded))
-            .next()
-            .map(|(&id, entry)| (id, entry.address))
-    }
-
-    pub(crate) fn matching(&self, address: usize) -> Vec<TreeRoot> {
-        self.entries
-            .iter()
-            .filter_map(|(&id, entry)| {
-                (entry.address == address).then_some(TreeRoot {
-                    id,
-                    generation: entry.generation,
-                })
-            })
-            .collect()
-    }
-}
+#[path = "tree_roots.rs"]
+mod tree_roots;
+pub(crate) use tree_roots::{TreeRoots, TreeScan};
 
 #[derive(Debug, Default)]
 pub(crate) struct Cursor {
@@ -913,7 +828,7 @@ mod tests {
 
     #[test]
     fn manual_removal_and_owning_tokens_stay_separate_across_id_reuse() {
-        let mut roots = TreeRoots::default();
+        let roots = TreeRoots::default();
         let next = AtomicUsize::new(usize::MAX);
         let owned = roots.insert(&next, 0x1000);
         assert_eq!(roots.remove(owned.id, None), None);
@@ -939,10 +854,8 @@ mod tests {
 
     #[test]
     fn manual_generations_exhaust_before_the_owning_bit() {
-        let mut roots = TreeRoots {
-            generation: MAX_TREE_GENERATION - 1,
-            ..TreeRoots::default()
-        };
+        let roots = TreeRoots::default();
+        roots.set_generation(MAX_TREE_GENERATION - 1);
         let next = AtomicUsize::new(1);
         let last = roots.insert_manual(&next, 0x1000);
         assert_eq!(last.generation.get(), MAX_TREE_GENERATION);
@@ -959,17 +872,17 @@ mod tests {
 
     #[test]
     fn tree_generations_reject_stale_removal_and_exhaust_without_reuse() {
-        let mut roots = TreeRoots::default();
+        let roots = TreeRoots::default();
         let next = AtomicUsize::new(1);
         let old = roots.insert(&next, 0x1000);
         assert_eq!(roots.remove(old.id, Some(old.generation)), Some(0x1000));
         next.store(old.id, Ordering::Relaxed);
-        roots.generation = MAX_TREE_GENERATION - 1;
+        roots.set_generation(MAX_TREE_GENERATION - 1);
         let last = roots.insert(&next, 0x2000);
         assert_eq!(old.id, last.id);
         assert_eq!(last.generation.get(), u64::MAX);
         assert_eq!(roots.remove(old.id, Some(old.generation)), None);
-        assert_eq!(roots.next(0), Some((last.id, 0x2000)));
+        assert_eq!(roots.scan(0), TreeScan::Root(last.id, 0x2000));
         assert_eq!(roots.matching(0x2000), vec![last]);
         #[cfg(panic = "unwind")]
         {
@@ -981,7 +894,6 @@ mod tests {
         assert_eq!(roots.len(), 1);
         assert_eq!(roots.remove(last.id, Some(last.generation)), Some(0x2000));
         assert_eq!(roots.len(), 0);
-        assert_eq!(size_of::<TreeEntry>(), 16);
         assert!(size_of::<Registration>() <= 32);
     }
 
