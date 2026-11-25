@@ -3286,9 +3286,27 @@ impl GarbageCollector {
         id: usize,
         generation: Option<std::num::NonZeroU64>,
     ) {
+        if !ADOPT
+            && let Some(generation) = generation
+            && (self.configuration.barrier_buffer_size == 0
+                || crate::context::current(self).is_none())
+            && self.roots.remove_covered(
+                crate::roots::TreeRoot { id, generation },
+                |address, pending| self.deletion_covered(address, pending),
+            )
+        {
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            {
+                publication_tests::record_covered_removal();
+                publication_tests::pause_after_tree_detach();
+            }
+            return;
+        }
         let _publication = self.allocation_guard();
         let removed = self.roots.remove(id, generation);
         if let Some(address) = removed {
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            publication_tests::pause_after_tree_detach();
             if ADOPT {
                 crate::construction::retain(self, address);
             }

@@ -309,6 +309,7 @@ impl GarbageCollector {
                     }
                     cycle.cursor = id;
                 }
+                crate::roots::TreeScan::Retry => return false,
                 crate::roots::TreeScan::Advance(id) => cycle.cursor = id,
                 crate::roots::TreeScan::Done => {
                     cycle.cursor = 0;
