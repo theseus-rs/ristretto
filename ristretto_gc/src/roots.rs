@@ -316,6 +316,11 @@ impl SlotRoot {
     }
 
     #[expect(clippy::indexing_slicing, reason = "private slot index is bounded")]
+    pub(crate) fn removal_pending(&self) -> bool {
+        self.page.slots[self.slot()].removal_pending(self.slot_and_generation.get() >> SLOT_BITS)
+    }
+
+    #[expect(clippy::indexing_slicing, reason = "private slot index is bounded")]
     pub(crate) fn finish_removal(&self) -> bool {
         self.page.slots[self.slot()].finish_removal(self.slot_and_generation.get() >> SLOT_BITS)
     }

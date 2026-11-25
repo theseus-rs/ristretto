@@ -56,3 +56,29 @@ fn scanner_and_compatibility_take_race_a_certified_drop() {
         assert!(!record.begin_removal());
     });
 }
+
+#[test]
+fn revoking_a_source_cannot_commit_an_unrelated_deletion_attempt() {
+    loom::model(|| {
+        let source = Arc::new(Decision::default());
+        assert!(source.commit() && source.begin_removal());
+        let debt = Arc::new(Decision::default());
+        let descriptor = Arc::new(AtomicU8::new(1));
+        let revoker = {
+            let source = source.clone();
+            let descriptor = descriptor.clone();
+            thread::spawn(move || {
+                assert!(source.take());
+                descriptor.store(2, Ordering::Release);
+            })
+        };
+        let captured = descriptor.load(Ordering::Acquire);
+        let committed = source.removal_pending() && debt.commit();
+        if committed {
+            assert_eq!(captured, 1);
+        }
+        revoker.join().unwrap();
+        assert!(!source.removal_pending());
+        assert_eq!(debt.owes_trace(), committed);
+    });
+}

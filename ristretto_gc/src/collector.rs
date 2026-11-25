@@ -3015,7 +3015,7 @@ impl GarbageCollector {
     fn remove_paged_root<const ADOPT: bool>(&self, root: &crate::roots::SlotRoot) -> bool {
         if !ADOPT
             && let Some(address) = root.begin_removal()
-            && self.deletion_covered(address)
+            && self.deletion_covered(address, || root.removal_pending())
             && root.finish_removal()
         {
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
@@ -3035,13 +3035,39 @@ impl GarbageCollector {
     }
 
     /// The exact removal intent must already be visible to every root scanner.
-    fn deletion_covered(&self, address: usize) -> bool {
+    fn deletion_covered(&self, address: usize, removal_pending: impl FnOnce() -> bool) -> bool {
         let observation = self.phase_clock.indexed_root();
         let covered = matches!(observation, publication_state::Birth::Idle)
-            || self
-                .objects
-                .lookup(address)
-                .is_some_and(|m| self.typed_root_covered(observation, &m));
+            || self.objects.lookup(address).is_some_and(|metadata| {
+                if self.typed_root_covered(observation, &metadata) {
+                    return true;
+                }
+                // Attached contexts already batch deletion barriers in fixed-size
+                // buffers. Preserve that path and its allocation behavior.
+                if self.configuration.barrier_buffer_size != 0
+                    && crate::context::current(self).is_some()
+                {
+                    return false;
+                }
+                let phases = self.phase_clock.indexed_root();
+                match &phases {
+                    publication_state::Birth::Idle => return true,
+                    publication_state::Birth::Inline(s) | publication_state::Birth::Epochs(s)
+                        if (0..2).any(|i| s.stage(i).is_some_and(|stage| stage != 0)) =>
+                    {
+                        return false;
+                    }
+                    _ => {}
+                }
+                // Each attempt has its own decision. Collectors can cancel a parked
+                // publisher when they visit a proposal. Validate the source after
+                // linking, while a live matching generation still owns the address.
+                let debt = Arc::new(crate::roots::Record::typed(address));
+                let certified = self.certify_root_attempt(phases, &metadata, &debt) == Some(true);
+                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                publication_tests::pause_after_typed_proposals();
+                certified && removal_pending() && debt.commit_typed()
+            });
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         publication_tests::pause_after_drop_coverage();
         covered
@@ -3054,7 +3080,7 @@ impl GarbageCollector {
     ) {
         if !ADOPT
             && let Some(address) = record.begin_typed_removal()
-            && self.deletion_covered(address)
+            && self.deletion_covered(address, || record.typed_removal_pending())
             && record.finish_typed_removal()
         {
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]

@@ -907,7 +907,6 @@ fn a_parked_root_of_an_unvisited_child_never_holds_capped_recovery() -> Result<(
     Ok(())
 }
 
-#[cfg(all(not(target_family = "wasm"), not(miri)))]
 fn drop_test_registration(
     gc: &GarbageCollector,
     context: &crate::ExecutionContext,
@@ -960,29 +959,35 @@ fn typed_root_drop_orders_both_winners_against_a_new_full_cycle() -> Result<()> 
                         .max_pause_time_us(0)
                         .build(),
                 );
-                let child = Gc::try_new(&gc, 17_u64)?;
-                let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
-                let addr = parent.as_ptr().addr();
-                let handle = parent.as_handle_i64();
                 let context = gc.register_context();
-                let registration = drop_test_registration(&gc, &context, addr);
-                drop(parent);
-                let (entered, paused) = mpsc::channel();
-                let (resume, wait) = mpsc::channel();
-                let peer = gc.clone();
-                let stale = registration.clone();
-                let remover = thread::spawn(move || {
-                    DROP_COVERAGE_PAUSE.set(Some(ClaimPause {
-                        entered,
-                        resume: wait,
-                    }));
-                    peer.remove_detached_root(&registration);
-                });
-                paused
-                    .recv_timeout(Duration::from_secs(5))
-                    .expect("removal certified");
+                let mut removers = Vec::new();
+                // One startup step can already visit a root. Park three independent
+                // removers so the remaining sources definitely precede their scan.
+                for value in 17..20_u64 {
+                    let child = Gc::try_new(&gc, value)?;
+                    let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+                    let addr = parent.as_ptr().addr();
+                    let handle = parent.as_handle_i64();
+                    let registration = drop_test_registration(&gc, &context, addr);
+                    drop(parent);
+                    let (entered, paused) = mpsc::channel();
+                    let (resume, wait) = mpsc::channel();
+                    let peer = gc.clone();
+                    let stale = registration.clone();
+                    let remover = thread::spawn(move || {
+                        DROP_COVERAGE_PAUSE.set(Some(ClaimPause {
+                            entered,
+                            resume: wait,
+                        }));
+                        peer.remove_detached_root(&registration);
+                        COVERED_REMOVAL.take()
+                    });
+                    paused
+                        .recv_timeout(Duration::from_secs(5))
+                        .expect("removal certified");
+                    removers.push((resume, remover, handle, value, stale));
+                }
                 let ticket = gc.request_full_cycle();
-                // A one-unit step starts the epoch before the overflow scanner can visit.
                 gc.step();
                 assert_ne!(lock(&gc.domains[1].cycle).phase, Phase::Idle);
                 if scan_first {
@@ -991,23 +996,192 @@ fn typed_root_drop_orders_both_winners_against_a_new_full_cycle() -> Result<()> 
                         gc.completed_full_ticket() >= ticket
                     }));
                 }
-                resume.send(()).expect("resume removal");
-                remover.join().expect("remover");
+                let mut outcomes = Vec::new();
+                for (resume, remover, handle, value, stale) in removers {
+                    resume.send(()).expect("resume removal");
+                    outcomes.push((remover.join().expect("remover"), handle, value, stale));
+                }
+                assert_eq!(outcomes.iter().any(|(won, ..)| *won), !scan_first);
                 assert!((0..8192).any(|_| {
                     gc.step();
                     gc.completed_full_ticket() >= ticket
                 }));
-                let result = Gc::<Vec<Gc<u64>>>::from_handle_rooted(&gc, handle);
-                if scan_first {
-                    assert_eq!(result?.first().map(|child| **child), Some(17));
-                } else {
-                    assert!(
-                        result.is_err(),
-                        "a root deleted before its scan retained garbage"
-                    );
+                for (removed_first, handle, value, stale) in outcomes {
+                    let result = Gc::<Vec<Gc<u64>>>::from_handle_rooted(&gc, handle);
+                    if removed_first {
+                        assert!(
+                            result.is_err(),
+                            "a root deleted before its scan retained garbage"
+                        );
+                    } else {
+                        assert_eq!(result?.first().map(|child| **child), Some(value));
+                    }
+                    gc.remove_owned_root(&stale);
                 }
-                // A compatibility caller can still be holding the old directory view.
-                gc.remove_owned_root(&stale);
+                gc.stop()?;
+                assert_eq!(gc.managed_bytes(), 0);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn unvisited_deletion_links_independent_young_and_full_traversals() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .root_storage(crate::RootStorage::Slots)
+                .concurrent_publication(counted)
+                .incremental_step_size(1)
+                .allocation_threshold(usize::MAX)
+                .max_pause_time_us(0)
+                .build(),
+        );
+        let context = gc.register_context();
+        let mut sources = Vec::new();
+        for _ in 0..4 {
+            let child = Gc::try_new(&gc, 41_u64)?;
+            let handle = child.as_handle_i64();
+            let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+            let address = parent.as_ptr().addr();
+            sources.push((
+                gc.objects.lookup(address).unwrap(),
+                drop_test_registration(&gc, &context, address),
+                handle,
+            ));
+            drop(parent);
+        }
+        gc.collect();
+        gc.collect_young();
+        for index in [1, 0] {
+            assert!((0..1024).any(|_| {
+                gc.next_domain.store(index, Ordering::Release);
+                gc.coordinated_step(false);
+                gc.domains[index].active()
+            }));
+        }
+        let epochs = gc
+            .domains
+            .each_ref()
+            .map(|d| d.epoch.load(Ordering::Acquire));
+        let index = sources
+            .iter()
+            .position(|(m, _, _)| (0..2).all(|i| !m.marked(i, epochs[i])))
+            .expect("unvisited in both domains");
+        let (metadata, source, handle) = sources.swap_remove(index);
+        gc.remove_detached_root(&source);
+        // Absent admission, both queues own the strong deletion traversal.
+        // Neither domain has marked the source synchronously.
+        for (i, epoch) in epochs.into_iter().enumerate() {
+            assert!(!metadata.marked(i, epoch));
+            assert!(
+                gc.domains[i]
+                    .mark_queue
+                    .queued_sample()
+                    .is_some_and(|n| n > 0)
+            );
+        }
+        assert!((0..16384).any(|_| gc.step()));
+        assert_eq!(*Gc::<u64>::from_handle_rooted(&gc, handle)?, 41);
+        gc.collect_full()?;
+        assert!(Gc::<u64>::from_handle_rooted(&gc, handle).is_err());
+        for (_, source, _) in sources {
+            gc.remove_detached_root(&source);
+        }
+        gc.stop()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    reason = "deterministic inter-thread schedule"
+)]
+fn unvisited_root_deletion_orders_traversal_before_removal_or_cancels() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for storage in [
+        crate::RootStorage::Tree,
+        crate::RootStorage::Slots,
+        crate::RootStorage::Contexts,
+    ] {
+        for (counted, bind_epochs) in [(false, false), (true, false), (false, true), (true, true)] {
+            for visit_first in [false, true] {
+                let gc = GarbageCollector::with_config(
+                    Configuration::builder()
+                        .root_storage(storage)
+                        .concurrent_publication(counted)
+                        .incremental_step_size(1)
+                        .allocation_threshold(usize::MAX)
+                        .max_pause_time_us(0)
+                        .build(),
+                );
+                let context = gc.register_context();
+                // The first one-unit step can already visit one root. Choose an
+                // unvisited source after the step, independent of slot ordering.
+                let mut sources = Vec::new();
+                for _ in 0..3 {
+                    let child = Gc::try_new(&gc, 53_u64)?;
+                    let child_handle = child.as_handle_i64();
+                    let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+                    let address = parent.as_ptr().addr();
+                    let metadata = gc.objects.lookup(address).unwrap();
+                    let source = drop_test_registration(&gc, &context, address);
+                    sources.push((metadata, source, child_handle));
+                    drop(parent);
+                }
+                if bind_epochs {
+                    gc.phase_clock.disable_certification();
+                }
+                let ticket = gc.request_full_cycle();
+                assert!((0..4096).any(|_| {
+                    gc.step();
+                    gc.domains[1].active()
+                }));
+                let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+                let index = sources
+                    .iter()
+                    .position(|(m, _, _)| !m.marked(1, epoch))
+                    .expect("unvisited parent");
+                let (_, source, child_handle) = sources.swap_remove(index);
+                let (entered, paused) = mpsc::channel();
+                let (resume, wait) = mpsc::channel();
+                let peer = gc.clone();
+                let remover = thread::spawn(move || {
+                    TYPED_PROPOSALS_PAUSE.set(Some(ClaimPause {
+                        entered,
+                        resume: wait,
+                    }));
+                    peer.remove_detached_root(&source);
+                    COVERED_REMOVAL.take()
+                });
+                paused
+                    .recv_timeout(Duration::from_secs(5))
+                    .expect("linked deletion debt");
+                let complete = || {
+                    (0..8192).any(|_| {
+                        gc.step();
+                        gc.completed_full_ticket() >= ticket
+                    })
+                };
+                if visit_first {
+                    assert!(complete(), "a parked remover must leave the root scannable");
+                }
+                resume.send(()).unwrap();
+                assert_eq!(remover.join().unwrap(), !visit_first);
+                assert!(complete());
+                let child = Gc::<u64>::from_handle_rooted(&gc, child_handle)?;
+                assert_eq!(*child, 53);
+                drop(child);
+                gc.collect_full()?;
+                assert!(Gc::<u64>::from_handle_rooted(&gc, child_handle).is_err());
+                for (_, registration, _) in sources {
+                    gc.remove_detached_root(&registration);
+                }
                 gc.stop()?;
                 assert_eq!(gc.managed_bytes(), 0);
             }
