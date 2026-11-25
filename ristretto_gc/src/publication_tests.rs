@@ -3829,3 +3829,97 @@ fn parked_external_trace_cannot_rewind_a_later_full_epoch() -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+thread_local! {
+    static REVOCATION_SCAN: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn pause_after_revocation_scan() {
+    if let Some(pause) = REVOCATION_SCAN.take() {
+        pause.entered.send(()).expect("paused revoker");
+        pause
+            .resume
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("resume revoker");
+    }
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn parked_root_revocation_allows_peer_reclamation_and_exact_id_reuse() -> Result<()> {
+    use std::future::Future;
+    use std::sync::mpsc;
+    use std::task::{Context as TaskContext, Poll, Waker};
+    use std::time::Duration;
+    let bytes = Gc::allocation_size(&13_u64)?;
+    let owner_bytes = Gc::allocation_size(&Vec::<Gc<u64>>::with_capacity(1))?;
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .root_storage(crate::RootStorage::Tree)
+                .max_heap_bytes(owner_bytes + 2 * bytes)
+                .allocation_threshold(usize::MAX)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .build(),
+        );
+        let object = Gc::try_new(&gc, 13_u64)?;
+        let parent = Gc::try_new(&gc, vec![object.rooted_clone()])?;
+        let manual = gc.add_root(&object);
+        drop(Gc::try_new(&gc, 19_u64)?);
+        let (entered, parked) = mpsc::channel();
+        let (resume, release) = mpsc::channel();
+        thread::scope(|scope| -> Result<()> {
+            let heap = &gc;
+            let payload = &**object;
+            let worker = scope.spawn(move || {
+                REVOCATION_SCAN.set(Some(ClaimPause {
+                    entered,
+                    resume: release,
+                }));
+                // SAFETY: the separately rooted parent keeps this exact payload and
+                // its graph reachable throughout enumeration and after revocation.
+                unsafe {
+                    heap.remove_root(payload);
+                }
+            });
+            parked
+                .recv_timeout(Duration::from_secs(3))
+                .expect("paused after exact matching");
+            let mut allocation = std::pin::pin!(Gc::try_new_async(&gc, 29_u64));
+            let mut cx = TaskContext::from_waker(Waker::noop());
+            let recovered = (0..1024).find_map(|_| match allocation.as_mut().poll(&mut cx) {
+                Poll::Ready(root) => Some(root),
+                Poll::Pending => None,
+            });
+            if recovered.is_none() {
+                resume.send(()).expect("release");
+                worker.join().expect("revoker");
+                panic!("peer allocation exhausted its poll budget");
+            }
+            let extra = recovered.expect("successful poll")?;
+            for _ in 0..2 {
+                gc.collect_full()?;
+            }
+            gc.remove_root_by_id(manual);
+            gc.next_root_id.store(manual, Ordering::Relaxed);
+            let replacement = gc.add_root(&extra);
+            assert_eq!(replacement, manual);
+            drop(extra);
+            resume.send(()).expect("release");
+            worker.join().expect("revoker");
+            gc.collect_full()?;
+            assert_eq!(gc.statistics()?.live_objects, 3);
+            gc.remove_root_by_id(replacement);
+            Ok(())
+        })?;
+        assert_eq!(*parent[0], 13);
+        drop((object, parent));
+        gc.stop()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
