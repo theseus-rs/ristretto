@@ -4,6 +4,8 @@ use super::{
     ReclaimTask, TraceRetention, Unbounded, WorkCounters, lock, now,
 };
 
+pub(super) const SWEEP_BATCH: usize = 16;
+
 pub(super) enum Unit {
     Progress,
     Busy,
@@ -522,10 +524,6 @@ impl GarbageCollector {
         }
         Unit::Progress
     }
-    #[expect(
-        clippy::too_many_lines,
-        reason = "keep admission and transactional index removal in one scope"
-    )]
     pub(super) fn sweep_unit(
         &self,
         cycle: &mut Cycle,
@@ -533,8 +531,7 @@ impl GarbageCollector {
         counters: &mut WorkCounters,
     ) -> Unit {
         let scan_budget = (*work + 1).min(32);
-        let index = self.domain_index();
-        if let Some(task) = cycle.reclaim.take() {
+        if let Some(task) = cycle.reclaim.pop_front() {
             let scan_budget = scan_budget.min(task.metadata.trace.budget);
             *work = work.saturating_sub(scan_budget.saturating_sub(1));
             self.retired_bytes
@@ -542,14 +539,42 @@ impl GarbageCollector {
             self.retired_ready.fetch_add(1, Ordering::AcqRel);
             return Unit::Sweep(SweepWork::Reclaim(task, scan_budget));
         }
+        let Some(_publication) = self.try_publication_write() else {
+            return Unit::Busy;
+        };
+        let _admission = (self.configuration.independent_phases
+            && self.publication_clock.is_some())
+        .then(|| self.allocation_guard());
+        let limit = if self.configuration.max_pause_time_us == 0 {
+            SWEEP_BATCH
+        } else {
+            1
+        };
+        for visit in 0..limit {
+            if visit != 0 {
+                if *work == 0 {
+                    return Unit::Progress;
+                }
+                *work -= 1;
+            }
+            match self.sweep_one(cycle, work, counters) {
+                Unit::Progress => {}
+                Unit::Boundary if !cycle.reclaim.is_empty() => return Unit::Progress,
+                next => return next,
+            }
+        }
+        Unit::Progress
+    }
+
+    #[expect(
+        clippy::too_many_lines,
+        reason = "keep admission and transactional index removal in one scope"
+    )]
+    fn sweep_one(&self, cycle: &mut Cycle, work: &mut usize, counters: &mut WorkCounters) -> Unit {
+        let index = self.domain_index();
+        let scan_budget = (*work + 1).min(32);
         let mut sealed = SealedPages::default();
         let removed = {
-            let Some(_publication) = self.try_publication_write() else {
-                return Unit::Busy;
-            };
-            let _admission = (self.configuration.independent_phases
-                && self.publication_clock.is_some())
-            .then(|| self.allocation_guard());
             if self.contexts.pending.load(Ordering::Acquire) != 0 {
                 return Unit::Busy;
             }
@@ -559,9 +584,22 @@ impl GarbageCollector {
             if !empty {
                 return Unit::Boundary;
             }
-            let address = if cycle.kind == CollectionKind::Young {
+            let retry = |cycle: &mut Cycle| {
+                if cycle.kind == CollectionKind::Young {
+                    cycle.sweep_young_cursor.retry_entry();
+                } else {
+                    cycle.sweep_object_cursor.retry_entry();
+                }
+                Unit::Busy
+            };
+            let selected = if cycle.kind == CollectionKind::Young {
                 match self.objects.scan_young(&mut cycle.sweep_young_cursor) {
-                    crate::index::Scan::Entry(address, ()) => Some(address),
+                    crate::index::Scan::Entry(address, ()) => {
+                        let Some(member) = self.objects.try_lock(address) else {
+                            return retry(cycle);
+                        };
+                        Some((address, member))
+                    }
                     crate::index::Scan::Advance => return Unit::Progress,
                     crate::index::Scan::Busy => return Unit::Busy,
                     crate::index::Scan::Done => None,
@@ -582,8 +620,14 @@ impl GarbageCollector {
                     self.configuration.promotion_age.max(1),
                     limit,
                 ) {
-                    crate::index::Scan::Entry(address, 0) => Some(address),
-                    crate::index::Scan::Entry(_, survivors) => {
+                    crate::index::Scan::Entry(
+                        address,
+                        crate::index::SweepEntry::Object(member),
+                    ) => Some((address, member)),
+                    crate::index::Scan::Entry(
+                        _,
+                        crate::index::SweepEntry::Survivors(survivors),
+                    ) => {
                         *work -= survivors - 1;
                         return Unit::Progress;
                     }
@@ -592,7 +636,7 @@ impl GarbageCollector {
                     crate::index::Scan::Done => None,
                 }
             };
-            let Some(address) = address else {
+            let Some((address, objects)) = selected else {
                 #[cfg(feature = "experimental-identity-index")]
                 return if self.identities.cleanup_step(&mut cycle.identity_cleanup) {
                     Unit::Boundary
@@ -601,17 +645,6 @@ impl GarbageCollector {
                 };
                 #[cfg(not(feature = "experimental-identity-index"))]
                 return Unit::Boundary;
-            };
-            let retry = |cycle: &mut Cycle| {
-                if cycle.kind == CollectionKind::Young {
-                    cycle.sweep_young_cursor.retry_entry();
-                } else {
-                    cycle.sweep_object_cursor.retry_entry();
-                }
-                Unit::Busy
-            };
-            let Some(objects) = self.objects.try_lock(address) else {
-                return retry(cycle);
             };
             if let Some(metadata) = objects.get(&address) {
                 let previous = metadata.age.load(Ordering::Acquire);
@@ -641,7 +674,7 @@ impl GarbageCollector {
                         };
                         self.promotion_snapshot(metadata);
                         metadata.age.store(age, Ordering::Release);
-                        sealed.address = objects.promote();
+                        sealed.address = objects.promote(&mut cycle.young_retirement);
                         remembered.insert(address);
                         counters.promoted += 1;
                         drop(remembered);
@@ -683,8 +716,8 @@ impl GarbageCollector {
                             &mut cycle.identity_cursor,
                         );
                     }
-                    remembered.remove(&address);
-                    let (removed, address_page) = objects.retire();
+                    remembered.remove(address);
+                    let (removed, address_page) = objects.retire(&mut cycle.young_retirement);
                     sealed.address = address_page;
                     removed
                 }
@@ -694,7 +727,7 @@ impl GarbageCollector {
         };
         if let Some(metadata) = removed {
             if metadata.retire() {
-                cycle.reclaim = Some(ReclaimTask {
+                cycle.reclaim.push_back(ReclaimTask {
                     metadata,
                     offset: 0,
                     finalized: false,

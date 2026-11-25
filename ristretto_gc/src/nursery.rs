@@ -133,7 +133,11 @@ impl Bitmap {
 
     fn remove(&self, offset: usize) -> bool {
         let bit = 1 << (offset % WORD);
-        self.words[offset / WORD].fetch_and(!bit, AcqRel) & bit != 0 && self.unpin()
+        self.remove_bit(bit, offset).unwrap_or(false)
+    }
+
+    fn remove_bit(&self, bit: u64, offset: usize) -> Option<bool> {
+        (self.words[offset / WORD].fetch_and(!bit, AcqRel) & bit != 0).then(|| self.unpin())
     }
 
     fn next(&self, start: usize) -> Option<usize> {
@@ -257,10 +261,30 @@ impl Slot<'_> {
         let _ = reserve(&self.head.young, self.key, Bitmap::new);
     }
 
-    fn clear_young(&self) -> Option<Arc<Bitmap>> {
-        let current = self.head.young.load();
-        let page = current.get((self.key & !PAGE_MASK) as u64)?;
-        page.remove(self.key & PAGE_MASK).then(|| page.clone())
+    fn clear_young(&self, cache: &mut YoungRetirement) -> Option<Arc<Bitmap>> {
+        let base = self.key & !PAGE_MASK;
+        let offset = self.key & PAGE_MASK;
+        let bit = 1 << (offset % WORD);
+        // A detached generation has no set bits and cannot reopen. A cache
+        // miss, including an absent bit, must retry the current directory.
+        if let Some((shard, key, page)) = &cache.0
+            && *shard == self.head.shard
+            && *key == base
+            && let Some(last) = page.remove_bit(bit, offset)
+        {
+            return if last {
+                cache.0.take().map(|(_, _, page)| page)
+            } else {
+                None
+            };
+        }
+        let directory = self.head.young.load();
+        let page = directory.get(base as u64)?;
+        if page.remove_bit(bit, offset)? {
+            return Some(page.clone());
+        }
+        cache.0 = Some((self.head.shard, base, page.clone()));
+        None
     }
 
     pub(crate) fn install(&self, metadata: MetadataRef) {
@@ -279,7 +303,11 @@ impl Slot<'_> {
     }
 
     fn remove(&self) -> (Option<MetadataRef>, Option<Sealed>) {
-        let young = self.clear_young();
+        self.remove_cached(&mut YoungRetirement::default())
+    }
+
+    fn remove_cached(&self, cache: &mut YoungRetirement) -> (Option<MetadataRef>, Option<Sealed>) {
+        let young = self.clear_young(cache);
         let removed = self.page.entry(self.key).and_then(|entry| entry.swap(None));
         if removed.is_some() {
             self.head.indexed.fetch_sub(1, Relaxed);
@@ -312,6 +340,11 @@ pub(crate) struct Membership<'a> {
     address: usize,
 }
 
+pub(crate) enum SweepEntry<'a> {
+    Survivors(usize),
+    Object(Membership<'a>),
+}
+
 impl Membership<'_> {
     #[expect(
         clippy::trivially_copy_pass_by_ref,
@@ -323,9 +356,9 @@ impl Membership<'_> {
             .filter(|m| *address == self.address && m.birth.visible())
     }
 
-    pub(crate) fn promote(&self) -> Option<Sealed> {
+    pub(crate) fn promote(&self, cache: &mut YoungRetirement) -> Option<Sealed> {
         let slot = self.slot.as_ref()?;
-        let page = slot.clear_young()?;
+        let page = slot.clear_young(cache)?;
         Some(Sealed {
             key: slot.key,
             shard: slot.head.shard,
@@ -336,11 +369,16 @@ impl Membership<'_> {
 
     // The caller has observed LIVE under the guard. Other live operations on
     // this address are excluded, and a new constructor cannot claim its bit.
-    pub(crate) fn retire(self) -> (Option<MetadataRef>, Option<Sealed>) {
+    pub(crate) fn retire(
+        self,
+        cache: &mut YoungRetirement,
+    ) -> (Option<MetadataRef>, Option<Sealed>) {
         if let Some(metadata) = &self.metadata {
             metadata.birth.retire();
         }
-        self.slot.as_ref().map_or((None, None), Slot::remove)
+        self.slot
+            .as_ref()
+            .map_or((None, None), |slot| slot.remove_cached(cache))
     }
 
     #[cfg(test)]
@@ -348,6 +386,9 @@ impl Membership<'_> {
         self.metadata.is_some()
     }
 }
+
+#[derive(Debug, Default)]
+pub(crate) struct YoungRetirement(Option<(usize, usize, Arc<Bitmap>)>);
 
 #[derive(Debug, Default)]
 pub(crate) struct YoungCursor {
@@ -453,24 +494,28 @@ impl Objects {
         cursor: &mut Cursor,
         read: impl FnOnce(&MetadataRef) -> R,
     ) -> Scan<R> {
-        self.scan_page(cursor, |metadata, _, _, _| read(metadata))
+        self.scan_page(cursor, |metadata, _, _, _, guard| {
+            let result = read(metadata);
+            drop(guard);
+            result
+        })
     }
 
     // All reads in a batch use the same live-operation guard. New births
     // behind the cursor have the usual per-domain publication obligations.
-    fn scan_page<R>(
-        &self,
+    fn scan_page<'a, R>(
+        &'a self,
         cursor: &mut Cursor,
-        read: impl FnOnce(&MetadataRef, &Page, usize, &mut Cursor) -> R,
+        read: impl FnOnce(&MetadataRef, Arc<Page>, usize, &mut Cursor, MutexGuard<'a, ()>) -> R,
     ) -> Scan<R> {
         if !cursor.begin(self.pages.len()) {
             return Scan::Done;
         }
-        let Some(_guard) = self.guards.try_lock_bucket(cursor.shard) else {
+        let Some(guard) = self.guards.try_lock_bucket(cursor.shard) else {
             cursor.rotate();
             return Scan::Busy;
         };
-        match Self::next(&self.pages[cursor.shard].pages, cursor, &mut None, || {}) {
+        match Self::next(&self.pages[cursor.shard].pages, cursor, None, || {}) {
             Scan::Entry(key, page) => {
                 let entry = page.entry(key).map(Cell::load);
                 if let Some(metadata) = entry
@@ -480,7 +525,7 @@ impl Objects {
                 {
                     Scan::Entry(
                         unpack_key(key, cursor.shard, self.shard_bits),
-                        read(metadata, &page, key, cursor),
+                        read(metadata, page, key, cursor, guard),
                     )
                 } else {
                     Scan::Advance
@@ -502,12 +547,22 @@ impl Objects {
         epoch: u64,
         promotion_age: usize,
         limit: usize,
-    ) -> Scan<usize> {
+    ) -> Scan<SweepEntry<'_>> {
         let survivor =
             |m: &MetadataRef| m.age.load(Acquire) == promotion_age && m.marked(domain, epoch);
-        self.scan_page(cursor, |metadata, page, key, cursor| {
+        self.scan_page(cursor, |metadata, page, key, cursor, guard| {
             if !survivor(metadata) {
-                return 0;
+                return SweepEntry::Object(Membership {
+                    _guard: guard,
+                    metadata: Some(metadata.clone()),
+                    address: unpack_key(key, cursor.shard, self.shard_bits),
+                    slot: Some(Slot {
+                        head: &self.pages[cursor.shard],
+                        page,
+                        key,
+                        reserved: false,
+                    }),
+                });
             }
             let mut offset = key & PAGE_MASK;
             let mut count = 1;
@@ -527,7 +582,7 @@ impl Objects {
                 offset = next;
                 count += 1;
             }
-            count
+            SweepEntry::Survivors(count)
         })
     }
 
@@ -546,7 +601,7 @@ impl Objects {
         match Self::next(
             &self.pages[young.position.shard].young,
             &mut young.position,
-            &mut young.page,
+            Some(&mut young.page),
             observed,
         ) {
             Scan::Entry(key, _) => {
@@ -561,14 +616,14 @@ impl Objects {
     fn next<T: Occupancy>(
         directory: &Pages<T>,
         cursor: &mut Cursor,
-        cache: &mut Option<(usize, usize, Arc<T>)>,
+        cache: Option<&mut Option<(usize, usize, Arc<T>)>>,
         observed: impl FnOnce(),
     ) -> Scan<Arc<T>> {
         let Some(start) = cursor.addresses[cursor.shard].checked_add(1) else {
             return cursor.exhausted();
         };
         let base = start & !PAGE_MASK;
-        if let Some((shard, key, page)) = cache
+        if let Some((shard, key, page)) = cache.as_deref().and_then(Option::as_ref)
             && *shard == cursor.shard
             && *key == base
             && let Some(offset) = page.bitmap().next(start & PAGE_MASK)
@@ -602,7 +657,9 @@ impl Objects {
             (base | offset, page)
         };
         cursor.selected(key);
-        *cache = Some((cursor.shard, key & !PAGE_MASK, page.clone()));
+        if let Some(cache) = cache {
+            *cache = Some((cursor.shard, key & !PAGE_MASK, page.clone()));
+        }
         Scan::Entry(key, page.clone())
     }
 
@@ -687,7 +744,7 @@ impl Objects {
         self.edit_for_test(address, |slot| {
             if young {
                 slot.mark_young();
-            } else if let Some(page) = slot.clear_young() {
+            } else if let Some(page) = slot.clear_young(&mut YoungRetirement::default()) {
                 unlink(&slot.head.young, (slot.key & !PAGE_MASK) as u64, &page);
             }
         });
@@ -788,8 +845,17 @@ mod tests {
         }
         let mut cursor = Cursor::default();
         for (address, count) in [(8, 2), (24, 1), (32, 0), (40, 0), (48, 1)] {
-            assert!(matches!(objects.scan_sweep(&mut cursor,1,4,2,2),
-                        Scan::Entry(a,n) if (a,n)==(address,count)));
+            let Scan::Entry(actual, entry) = objects.scan_sweep(&mut cursor, 1, 4, 2, 2) else {
+                panic!("expected sweep entry");
+            };
+            assert_eq!(actual, address);
+            match entry {
+                SweepEntry::Survivors(n) => assert_eq!(n, count),
+                SweepEntry::Object(member) => {
+                    assert_eq!(count, 0);
+                    assert!(member.get(&address).is_some());
+                }
+            }
         }
         assert!(matches!(
             objects.scan_sweep(&mut cursor, 1, 4, 2, 2),
@@ -880,6 +946,36 @@ mod tests {
                 .iter()
                 .all(|slot| slot.pages.load().len() == 0)
         );
+    }
+
+    #[test]
+    fn stale_retirement_cursor_clears_the_current_generation_only() {
+        let objects = Objects::new(1);
+        let first = objects.reserve(8).expect("first address");
+        let second = objects.reserve(16).expect("same page");
+        first.mark_young();
+        second.mark_young();
+        let mut stale = YoungRetirement::default();
+        assert!(first.clear_young(&mut stale).is_none());
+        assert!(stale.0.is_some());
+        assert!(objects.contains_young(16));
+        let sealed = second
+            .clear_young(&mut YoungRetirement::default())
+            .expect("last young member");
+        first.mark_young();
+        second.mark_young();
+        unlink(&first.head.young, 0, &sealed);
+        assert!(first.clear_young(&mut stale).is_none());
+        assert!(!objects.contains_young(8));
+        assert!(objects.contains_young(16));
+        let last = second.clear_young(&mut stale).expect("replacement seals");
+        assert!(!Arc::ptr_eq(&sealed, &last));
+        unlink(&first.head.young, 0, &last);
+        assert!(matches!(
+            objects.scan_young(&mut YoungCursor::default()),
+            Scan::Done
+        ));
+        assert!(objects.reserve(8).is_none());
     }
 
     #[test]

@@ -343,12 +343,12 @@ mod native {
             )?);
             gc.collect();
             for _ in 0..10000 {
-                if lock(&gc.domains[1].cycle).reclaim.is_some() {
+                if !lock(&gc.domains[1].cycle).reclaim.is_empty() {
                     break;
                 }
                 gc.step();
             }
-            assert!(lock(&gc.domains[1].cycle).reclaim.is_some());
+            assert!(!lock(&gc.domains[1].cycle).reclaim.is_empty());
             let worker_gc = gc.clone();
             let worker = thread::spawn(move || worker_gc.step());
             entered_rx

@@ -617,6 +617,7 @@ struct Cycle {
     sweep_young_cursor: crate::index::YoungCursor,
     object_cursor: crate::index::Cursor,
     sweep_object_cursor: crate::index::Cursor,
+    young_retirement: crate::index::YoungRetirement,
     #[cfg(not(feature = "experimental-identity-index"))]
     identity_cursor: crate::identity_pages::RetireCursor,
     #[cfg(feature = "experimental-identity-index")]
@@ -630,7 +631,7 @@ struct Cycle {
     relocations: VecDeque<(MetadataRef, usize)>,
     relocation_scan_done: bool,
     phantom_retained: BTreeSet<usize>,
-    reclaim: Option<ReclaimTask>,
+    reclaim: VecDeque<ReclaimTask>,
     reclaimed_bytes: usize,
     handoff: Option<(MetadataRef, usize)>,
     root_cursor: crate::roots::Cursor,
@@ -648,6 +649,7 @@ impl Default for Cycle {
             sweep_young_cursor: crate::index::YoungCursor::default(),
             object_cursor: crate::index::Cursor::default(),
             sweep_object_cursor: crate::index::Cursor::default(),
+            young_retirement: crate::index::YoungRetirement::default(),
             #[cfg(not(feature = "experimental-identity-index"))]
             identity_cursor: crate::identity_pages::RetireCursor::default(),
             #[cfg(feature = "experimental-identity-index")]
@@ -661,7 +663,7 @@ impl Default for Cycle {
             relocations: VecDeque::new(),
             relocation_scan_done: false,
             phantom_retained: BTreeSet::new(),
-            reclaim: None,
+            reclaim: VecDeque::new(),
             reclaimed_bytes: 0,
             handoff: None,
             root_cursor: crate::roots::Cursor::default(),
@@ -731,7 +733,7 @@ pub struct GarbageCollector {
     #[cfg(not(feature = "experimental-identity-index"))]
     identities: crate::identity_pages::Index,
     heap_owners: Mutex<BTreeMap<usize, Weak<dyn HeapOwner>>>,
-    remembered: crate::index::Shards<BTreeSet<usize>>,
+    remembered: crate::index::Remembered,
     publication: crate::sync::RecursiveRwLock<()>,
     domains: [Domain; 2],
     old_requested: AtomicBool,
@@ -1486,7 +1488,7 @@ impl GarbageCollector {
                 identities: crate::identity_index::Index::new(4096),
                 #[cfg(not(feature = "experimental-identity-index"))]
                 identities: crate::identity_pages::Index::new(configuration.metadata_shards),
-                remembered: crate::index::Shards::new(configuration.metadata_shards),
+                remembered: crate::index::Remembered::new(configuration.metadata_shards),
                 domains: std::array::from_fn(|index| {
                     Domain::new(&configuration, index, publication_clock.clone())
                 }),
@@ -2086,6 +2088,14 @@ impl GarbageCollector {
                             continue;
                         }
                         let claimed = gc.step_inner(true).is_some();
+                        if !claimed && gc.configuration.worker_yield_time_us == 0 {
+                            // A competing helper owns the available claim. Spread
+                            // retries without sleeping or delaying a successful step.
+                            for _ in 0..contention_delay {
+                                std::hint::spin_loop();
+                            }
+                            contention_delay = (contention_delay * 2).min(512);
+                        }
                         let pacing = gc.pacing.as_ref().map_or(
                             gc.configuration.worker_yield_time_us,
                             crate::pacing::Controller::delay,
@@ -2262,8 +2272,8 @@ impl GarbageCollector {
         for domain in &self.domains {
             // An if-let scrutinee would retain its guard through the callback
             // body. Transfer the task first, then run all teardown outside it.
-            let task = { lock(&domain.cycle).reclaim.take() };
-            if let Some(task) = task {
+            let tasks = std::mem::take(&mut lock(&domain.cycle).reclaim);
+            for task in tasks {
                 task.metadata.run_finalizer();
                 task.metadata.run_drop_fn();
             }
@@ -2297,9 +2307,7 @@ impl GarbageCollector {
         self.retired_objects.store(0, Ordering::Release);
         self.retired_bytes.store(0, Ordering::Release);
         self.retired_ready.store(0, Ordering::Release);
-        for mut shard in self.remembered.iter() {
-            shard.clear();
-        }
+        self.remembered.clear();
         // Private reservations may outlive the ordinary heap. Each owner refunds its own charge.
     }
 
@@ -2379,8 +2387,16 @@ impl GarbageCollector {
                 .fetch_add(1, Ordering::Relaxed);
         }
         let ticket = self.request_full_cycle();
+        let mut misses = 1;
         while self.domains[1].completed_ticket.load(Ordering::Acquire) < ticket {
-            self.step();
+            if self.step_inner(false).is_none() {
+                for _ in 0..misses {
+                    std::hint::spin_loop();
+                }
+                misses = (misses * 2).min(512);
+            } else {
+                misses = 1;
+            }
         }
         Ok(())
     }
@@ -3108,7 +3124,10 @@ impl GarbageCollector {
         has_young: bool,
     ) {
         // Fresh leaves usually have no remembered entry.
-        if has_young || !self.remembered.lock(address).contains(&address) {
+        if has_young
+            || !self.remembered.may_contain(address)
+            || !self.remembered.lock(address).contains(&address)
+        {
             return;
         }
         // Mutation versions advance under this same object shard. Keep the shard
@@ -3119,7 +3138,7 @@ impl GarbageCollector {
         if objects.get(&address).is_some_and(|metadata| {
             metadata.id == identity && metadata.mutation.load(Ordering::Acquire) == version
         }) {
-            self.remembered.lock(address).remove(&address);
+            self.remembered.lock(address).remove(address);
         }
     }
 
@@ -3812,14 +3831,13 @@ impl GarbageCollector {
         } = task;
         let progress = self.clear_retired(&mut metadata, offset, finalized, budget, counters);
         if progress == TraceProgress::Complete {
-            if let Ok(mut cycle) = self.domain_at(index).cycle.try_lock()
+            if let Some(scheduler) = &self.scheduler
+                && let Ok(mut cycle) = self.domain_at(index).cycle.try_lock()
                 && cycle.epoch == epoch
                 && cycle.kind == CollectionKind::Full
                 && cycle.phase != Phase::Idle
             {
-                if cycle.reclaimed_bytes == 0
-                    && let Some(scheduler) = &self.scheduler
-                {
+                if cycle.reclaimed_bytes == 0 {
                     scheduler.reclaimed();
                 }
                 cycle.reclaimed_bytes = cycle.reclaimed_bytes.saturating_add(metadata.size());
@@ -3834,11 +3852,11 @@ impl GarbageCollector {
                 && let Ok(mut cycle) = self.domain_at(index).cycle.try_lock()
                 && cycle.epoch == epoch
                 && cycle.phase == Phase::Sweep
-                && cycle.reclaim.is_none()
+                && cycle.reclaim.len() < phase_work::SWEEP_BATCH
             {
                 self.retired_bytes
                     .fetch_sub(metadata.size(), Ordering::AcqRel);
-                cycle.reclaim = Some(ReclaimTask {
+                cycle.reclaim.push_back(ReclaimTask {
                     metadata,
                     offset,
                     finalized: true,
@@ -4008,6 +4026,15 @@ impl GarbageCollector {
     /// A successful independent step never reacquires the coordinator. Reservations
     /// remain outstanding until all continuations and statistics have been published.
     fn independent_mark_step(&self, concurrent: bool) -> Option<bool> {
+        // A new publication can race this hint; the coordinated fallback and
+        // the next step still inspect the authoritative phase and work queues.
+        if self
+            .domains
+            .iter()
+            .all(|domain| !domain.trace_ready.load(Ordering::Acquire))
+        {
+            return None;
+        }
         let gate = self.mark_claims.as_ref()?;
         let started = now();
         let Ok(claim) = gate.try_read() else {
@@ -4113,7 +4140,8 @@ impl GarbageCollector {
     fn step_inner(&self, concurrent: bool) -> Option<bool> {
         // A delayed borrower cannot hold a collection ticket open. Once released,
         // give its bounded clearing work alternating turns with active cycles.
-        if self.retired_ready.load(Ordering::Acquire) != 0
+        if self.retired_objects.load(Ordering::Acquire) != 0
+            && self.retired_ready.load(Ordering::Acquire) != 0
             && (!self.retirement_turn.fetch_xor(true, Ordering::Relaxed)
                 || !self
                     .domains
@@ -4554,6 +4582,7 @@ impl GarbageCollector {
             cycle.sweep_young_cursor = crate::index::YoungCursor::default();
             cycle.object_cursor = crate::index::Cursor::default();
             cycle.sweep_object_cursor = crate::index::Cursor::default();
+            cycle.young_retirement = crate::index::YoungRetirement::default();
             #[cfg(feature = "experimental-identity-index")]
             {
                 cycle.identity_removals =
@@ -5954,7 +5983,7 @@ mod tests {
             if address != replacement_address {
                 gc.objects.replace_for_test(address, None);
             }
-            gc.remembered.lock(address).remove(&address);
+            gc.remembered.lock(address).remove(address);
             drop(context);
             while !gc.step() {}
             drop(replacement);

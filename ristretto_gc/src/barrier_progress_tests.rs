@@ -32,7 +32,7 @@ fn young_start_cannot_pass_a_dirty_owner_prepared_while_inactive() -> Result<()>
             context.with(|| *parent.write() = Some(child.into_rooted()));
             // Require the buffered notification below, not an entry left by
             // promotion or the immediate idle mutation barrier.
-            assert!(gc.remembered.lock(address).remove(&address));
+            assert!(gc.remembered.lock(address).remove(address));
             gc.collect();
             assert!(!gc.step());
             context.with(|| gc.remember(&parent));

@@ -314,8 +314,8 @@ fn shutdown_pending_reclaim_releases_cycle_guard_before_owner_drop() -> Result<(
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .reclaim
-                .as_ref()
-                .is_some_and(|task| task.metadata.id == parked.id)
+                .iter()
+                .any(|task| task.metadata.id == parked.id)
         })
     };
     for _ in 0..4096 {

@@ -198,11 +198,11 @@ fn young_reference_processing_rejects_a_logically_retired_old_owner() -> Result<
         gc.collect();
         for _ in 0..1000 {
             gc.step();
-            if lock(&gc.domains[1].cycle).reclaim.is_some() {
+            if !lock(&gc.domains[1].cycle).reclaim.is_empty() {
                 break;
             }
         }
-        assert!(lock(&gc.domains[1].cycle).reclaim.is_some());
+        assert!(!lock(&gc.domains[1].cycle).reclaim.is_empty());
         let metadata = gc
             .objects
             .lock(address)
@@ -289,11 +289,11 @@ fn young_garbage_is_reclaimed_while_an_old_clear_remains_busy() -> Result<()> {
             gc.collect();
             for _ in 0..1000 {
                 gc.step();
-                if lock(&gc.domains[1].cycle).reclaim.is_some() {
+                if !lock(&gc.domains[1].cycle).reclaim.is_empty() {
                     break;
                 }
             }
-            assert!(lock(&gc.domains[1].cycle).reclaim.is_some());
+            assert!(!lock(&gc.domains[1].cycle).reclaim.is_empty());
             assert_eq!(gc.domains[1].weak_phase(), 5);
             for round in 0..3 {
                 let value = Gc::try_new(&gc, round)?;

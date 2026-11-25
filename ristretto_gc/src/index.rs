@@ -7,7 +7,7 @@ use std::sync::{Mutex, MutexGuard, TryLockError};
 
 #[path = "nursery.rs"]
 mod nursery;
-pub(crate) use nursery::{Objects, Sealed, Slot, YoungCursor};
+pub(crate) use nursery::{Objects, Sealed, Slot, SweepEntry, YoungCursor, YoungRetirement};
 
 const MAX_SHARDS: usize = 16;
 
@@ -178,6 +178,92 @@ impl Shards<BTreeSet<usize>> {
                 .next()
                 .map(|&k| (k, ()))
         })
+    }
+}
+
+/// An empty shard can skip optional post-trace pruning. Enumeration and sweep
+/// retirement still acquire the shard and inspect its authoritative set.
+#[derive(Debug)]
+pub(crate) struct Remembered {
+    sets: Shards<BTreeSet<usize>>,
+    nonempty: Box<[std::sync::atomic::AtomicBool]>,
+}
+
+impl Remembered {
+    pub(crate) fn new(count: usize) -> Self {
+        Self {
+            sets: Shards::new(count),
+            nonempty: (0..shard_count(count)).map(|_| false.into()).collect(),
+        }
+    }
+
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "the index is masked by the power-of-two shard count"
+    )]
+    fn hint(&self, bucket: usize) -> &std::sync::atomic::AtomicBool {
+        &self.nonempty[bucket & (self.nonempty.len() - 1)]
+    }
+
+    pub(crate) fn may_contain(&self, address: usize) -> bool {
+        self.hint(address_bucket(address))
+            .load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    pub(crate) fn lock(&self, address: usize) -> RememberedGuard<'_> {
+        self.lock_bucket(address_bucket(address))
+    }
+
+    pub(crate) fn lock_bucket(&self, bucket: usize) -> RememberedGuard<'_> {
+        RememberedGuard {
+            set: self.sets.lock_bucket(bucket),
+            hint: self.hint(bucket),
+        }
+    }
+
+    pub(crate) fn try_lock(&self, address: usize) -> Option<RememberedGuard<'_>> {
+        Some(RememberedGuard {
+            set: self.sets.try_lock(address)?,
+            hint: self.hint(address_bucket(address)),
+        })
+    }
+
+    pub(crate) fn scan(&self, cursor: &mut Cursor) -> Scan<()> {
+        self.sets.scan(cursor)
+    }
+
+    pub(crate) fn clear(&self) {
+        for (mut set, hint) in self.sets.iter().zip(&self.nonempty) {
+            set.clear();
+            hint.store(false, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+}
+
+pub(crate) struct RememberedGuard<'a> {
+    set: MutexGuard<'a, BTreeSet<usize>>,
+    hint: &'a std::sync::atomic::AtomicBool,
+}
+
+impl std::ops::Deref for RememberedGuard<'_> {
+    type Target = BTreeSet<usize>;
+    fn deref(&self) -> &Self::Target {
+        &self.set
+    }
+}
+impl RememberedGuard<'_> {
+    pub(crate) fn insert(&mut self, address: usize) -> bool {
+        if self.set.is_empty() {
+            self.hint.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+        self.set.insert(address)
+    }
+    pub(crate) fn remove(&mut self, address: usize) -> bool {
+        let removed = self.set.remove(&address);
+        if removed && self.set.is_empty() {
+            self.hint.store(false, std::sync::atomic::Ordering::Relaxed);
+        }
+        removed
     }
 }
 
