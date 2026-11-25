@@ -530,3 +530,210 @@ fn mutator_overflow_leaves_busy_required_records_for_collector_drain() -> Result
     }
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+thread_local! {
+    static BEFORE_REMEMBER: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn pause_before_remembering() {
+    if let Some(pause) = BEFORE_REMEMBER.take() {
+        pause.entered.send(()).expect("parked writer");
+        pause
+            .resume
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("release writer");
+    }
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn parked_writer_retains_incoming_root_through_two_young_cycles() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .promotion_age(4)
+                .barrier_buffer_size(0)
+                .allocation_threshold(usize::MAX)
+                .full_collection_interval(usize::MAX)
+                .build(),
+        );
+        let owner = Gc::try_new(&gc, crate::cell::RwLock::new(None::<Gc<u64>>))?;
+        for _ in 0..4 {
+            gc.collect_full()?;
+        }
+        let address = owner.as_ptr() as usize;
+        assert!(!gc.is_young_allocation(address));
+        gc.collect_young();
+        while !gc.step() {}
+        assert!(!gc.remembered.lock(address).contains(&address));
+        let incoming = Gc::try_new(&gc, 42_u64)?.into_rooted();
+        let incoming_address = incoming.as_ptr() as usize;
+        let alias = incoming.clone();
+        let weak = crate::GcWeak::new(&incoming, crate::ReferenceKind::Weak, 0);
+        let garbage = Gc::try_new(&gc, 11_u64)?;
+        let unreachable = crate::GcWeak::new(&garbage, crate::ReferenceKind::Weak, 0);
+        drop(garbage);
+        let (entered, parked) = mpsc::channel();
+        let (resume, release) = mpsc::channel();
+        thread::scope(|scope| -> Result<()> {
+            let writer_owner = &owner;
+            let writer = scope.spawn(move || {
+                let mut guard = writer_owner.write();
+                *guard = Some(incoming);
+                BEFORE_REMEMBER.set(Some(ClaimPause {
+                    entered,
+                    resume: release,
+                }));
+                drop(guard);
+            });
+            parked
+                .recv_timeout(Duration::from_secs(3))
+                .expect("writer suspended before membership");
+            drop(alias);
+            let before = gc.statistics()?.young_collections;
+            for _ in 0..2 {
+                gc.collect_young();
+                for _ in 0..4096 {
+                    if gc.step() {
+                        break;
+                    }
+                }
+            }
+            let completed = gc.statistics()?.young_collections;
+            let child_alive = weak.upgrade().is_some();
+            let reclaimed = unreachable.upgrade().is_none();
+            resume.send(()).expect("release writer");
+            writer.join().expect("writer");
+            assert_eq!(completed, before + 2);
+            assert!(reclaimed, "unrelated garbage survived both young cycles");
+            assert!(
+                child_alive,
+                "incoming edge lost its last root before publication"
+            );
+            Ok(())
+        })?;
+        assert!(gc.remembered.lock(address).contains(&address));
+        assert!(gc.is_young_allocation(incoming_address));
+        let before = gc.statistics()?.young_collections;
+        gc.collect_young();
+        for _ in 0..4096 {
+            if gc.step() {
+                break;
+            }
+        }
+        assert_eq!(gc.statistics()?.young_collections, before + 1);
+        assert!(weak.upgrade().is_some());
+        assert_eq!(**owner.read().as_ref().expect("protected field"), 42);
+        *owner.write() = None;
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+        drop(owner);
+        gc.stop()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
+
+#[test]
+fn prepared_field_update_keeps_new_membership_against_a_stale_prune() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .promotion_age(1)
+                .allocation_threshold(usize::MAX)
+                .full_collection_interval(usize::MAX)
+                .build(),
+        );
+        let owner = Gc::try_new(&gc, crate::cell::RwLock::new(None::<Gc<u64>>))?;
+        gc.collect_full()?;
+        let address = owner.as_ptr() as usize;
+        assert!(!gc.is_young_allocation(address));
+        let metadata = gc.objects.lookup(address).expect("live owner");
+        let stale_version = metadata.mutation.load(Ordering::Acquire);
+        let child = Gc::try_new(&gc, 19_u64)?.into_rooted();
+        let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+        *owner.write() = Some(child);
+        gc.prune_remembered(address, metadata.id, stale_version, false);
+        assert!(gc.remembered.lock(address).contains(&address));
+        gc.collect_young();
+        for _ in 0..4096 {
+            if gc.step() {
+                break;
+            }
+        }
+        assert_eq!(gc.statistics()?.young_collections, 1);
+        assert_eq!(*weak.upgrade().expect("strong field"), 19);
+        *owner.write() = None;
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn pinned_retired_owner_cannot_reinsert_its_remembered_address() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .barrier_buffer_size(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let owner = Gc::try_new(&gc, 23_u64)?;
+        let address = owner.as_ptr() as usize;
+        let metadata = gc.objects.lookup(address).expect("visible owner");
+        let lease = ObjectMetadata::lease(&metadata).expect("storage pin");
+        let (entered, parked) = mpsc::channel();
+        let (resume, release) = mpsc::channel();
+        thread::scope(|scope| -> Result<()> {
+            let heap = &gc;
+            let writer = scope.spawn(move || {
+                BEFORE_REMEMBER.set(Some(ClaimPause {
+                    entered,
+                    resume: release,
+                }));
+                heap.remember_before_unroot(address)
+            });
+            parked
+                .recv_timeout(Duration::from_secs(3))
+                .expect("publisher pending");
+            drop(owner);
+            gc.collect_full()?;
+            assert!(gc.objects.lookup(address).is_none());
+            resume.send(()).expect("resume");
+            assert!(!writer.join().expect("publisher"));
+            assert!(!gc.remembered.lock(address).contains(&address));
+            Ok(())
+        })?;
+        drop(lease);
+        gc.stop()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
+
+#[test]
+fn mutation_version_saturation_disables_optional_pruning_for_that_owner() -> Result<()> {
+    let gc = GarbageCollector::new();
+    let owner = Gc::try_new(&gc, crate::cell::RwLock::new(None::<Gc<u64>>))?;
+    let address = owner.as_ptr() as usize;
+    let metadata = gc.objects.lookup(address).expect("visible owner");
+    metadata.mutation.store(usize::MAX - 1, Ordering::Release);
+    gc.remember(&owner);
+    *owner.write() = Some(Gc::try_new(&gc, 75_u64)?.into_rooted());
+    assert_eq!(metadata.mutation.load(Ordering::Acquire), usize::MAX);
+    gc.prune_remembered(address, metadata.id, usize::MAX, false);
+    assert!(gc.remembered.lock(address).contains(&address));
+    Ok(())
+}

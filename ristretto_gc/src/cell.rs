@@ -60,7 +60,7 @@ struct Hook<T: ?Sized> {
     collector: sync::Weak<crate::GarbageCollector>,
     address: usize,
     begin_mutation: fn(&mut T),
-    finish_write: fn(&mut T, crate::TraceOwner<'_>) -> bool,
+    finish_write: fn(&mut T, crate::TraceOwner<'_>, bool) -> bool,
     pins: Option<sync::Arc<crate::diagnostics::Counters>>,
     trace_covered: trace_certificate::Certificate,
 }
@@ -281,7 +281,7 @@ impl<T: ?Sized> Drop for RwLockWriteGuard<'_, T> {
             // SAFETY: attachment binds this hook to the actual traced owner;
             // rooted movement detaches it before the cell can escape that owner.
             let owner = unsafe { crate::TraceOwner::new_unchecked(&hook.collector, hook.address) };
-            if (hook.finish_write)(&mut self.0, owner)
+            if (hook.finish_write)(&mut self.0, owner, self.3)
                 && let Some(gc) = hook.collector.upgrade()
             {
                 gc.remember_address(hook.address);
@@ -589,11 +589,17 @@ impl<T: crate::Trace> RwLock<T> {
             collector: owner.collector().clone(),
             address: owner.address(),
             begin_mutation: T::root,
-            finish_write: |value, owner| {
+            finish_write: |value, owner, prepared| {
+                let remembered = prepared
+                    && value.edges_rooted_before_unroot()
+                    && owner
+                        .collector()
+                        .upgrade()
+                        .is_some_and(|gc| gc.remember_before_unroot(owner.address()));
                 // SAFETY: the bound guard retains exclusive access until its
                 // demotion and mutation notification have both completed.
                 unsafe { value.unroot(owner) };
-                T::may_contain_gc_references() && value.needs_write_barrier()
+                !remembered && T::may_contain_gc_references() && value.needs_write_barrier()
             },
             pins,
             trace_covered: trace_certificate::Certificate::default(),

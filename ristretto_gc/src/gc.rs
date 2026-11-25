@@ -1010,6 +1010,10 @@ impl<T> AsRef<T> for Gc<T> {
 // SAFETY: same-heap edges are traced, owning roots protect foreign heaps, and
 // root restores ownership before a handle can move independently of its owner.
 unsafe impl<T: Trace> Trace for Gc<T> {
+    fn edges_rooted_before_unroot(&self) -> bool {
+        matches!(self.owner, Owner::Root(_))
+    }
+
     fn root(&mut self) {
         if self.owner.edge_heap().is_some() {
             *self = self.rooted_clone();

@@ -140,6 +140,16 @@ impl Drop for DestroyPayload<'_> {
 }
 
 impl ObjectMetadata {
+    /// A delayed scan must never observe its version again after a write.
+    /// At saturation only this allocation loses optional remembered pruning.
+    pub(crate) fn record_mutation(&self) {
+        let _ = self
+            .mutation
+            .try_update(Ordering::Release, Ordering::Relaxed, |version| {
+                version.checked_add(1)
+            });
+    }
+
     pub(crate) fn is_type<T: 'static>(&self) -> bool {
         self.kind.type_id == std::any::TypeId::of::<T>()
     }
