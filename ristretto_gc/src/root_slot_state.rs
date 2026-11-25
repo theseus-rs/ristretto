@@ -1,6 +1,32 @@
 //! Generation claims for root deletion. The parent supplies native or Loom atomics.
 use super::{AtomicU64, AtomicUsize, Ordering};
 
+// A managed allocation has at least one byte, including for a ZST. Its
+// one-past-end pointer must fit in the address space.
+pub(crate) const PENDING_ROOT: usize = usize::MAX;
+
+pub(crate) fn arm_root(slot: &AtomicUsize) {
+    slot.store(PENDING_ROOT, Ordering::Release);
+}
+
+pub(crate) fn activate_root(slot: &AtomicUsize, address: usize) -> bool {
+    slot.compare_exchange(PENDING_ROOT, address, Ordering::AcqRel, Ordering::Acquire)
+        .is_ok()
+}
+
+pub(crate) fn scan_address(slot: &AtomicUsize) -> usize {
+    let value = slot.load(Ordering::Acquire);
+    if value != PENDING_ROOT {
+        return value;
+    }
+    // A successful skip prevents this attempt from activating. If the
+    // publisher won, trace the address returned by the failed CAS.
+    match slot.compare_exchange(PENDING_ROOT, 0, Ordering::AcqRel, Ordering::Acquire) {
+        Ok(_) => 0,
+        Err(address) => address,
+    }
+}
+
 pub(crate) const TAKEN: u64 = u64::MAX;
 
 #[derive(Debug, Default)]

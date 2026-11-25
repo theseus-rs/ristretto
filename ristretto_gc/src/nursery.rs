@@ -358,6 +358,14 @@ impl Objects {
         })
     }
 
+    /// An owning snapshot of the exact cell. It grants no graph or payload access.
+    pub(crate) fn lookup(&self, address: usize) -> Option<MetadataRef> {
+        let key = position(address);
+        let pages = self.head(address).pages.load();
+        let page = pages.get((key & !PAGE_MASK) as u64)?;
+        page.entry(key)?.load_full().filter(|m| m.birth.visible())
+    }
+
     fn membership<'a>(&'a self, address: usize, guard: MutexGuard<'a, ()>) -> Membership<'a> {
         let head = self.head(address);
         let key = position(address);

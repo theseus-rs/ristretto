@@ -95,6 +95,12 @@ impl Clock {
         }
     }
 
+    /// Publish the armed root slot to later cycle starts. An active snapshot
+    /// still requires exact strong coverage in each domain before activation.
+    pub(crate) fn indexed_root(&self) -> Birth {
+        self.indexed_birth(true)
+    }
+
     /// The caller holds each active epoch's owning identity and must validate
     /// them after this operation. Unrelated publisher stamps do not change
     /// those identities. A linked traversal invalidates an earlier empty sample.

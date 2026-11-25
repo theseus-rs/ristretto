@@ -148,7 +148,7 @@ impl Drop for RootReservation<'_> {
         if let Some(slot) = self.slot.take() {
             if let Some(context) = &self.context {
                 context.roots.cancel_prepared(slot);
-            } else if let Some(roots) = &self.collector.root_slots {
+            } else if let Some(roots) = self.collector.scanned_slots() {
                 roots.cancel_prepared(slot);
             }
         }
@@ -708,6 +708,7 @@ pub struct GarbageCollector {
     tree_root_insert_probe: Mutex<Option<fn(&GarbageCollector)>>,
     pub(crate) contexts: crate::context::Registry,
     root_slots: Option<Box<crate::roots::RootSlots>>,
+    typed_slots: once_cell::race::OnceBox<crate::roots::RootSlots>,
     next_root_id: AtomicUsize,
     objects: crate::index::Objects,
     #[cfg(feature = "experimental-identity-index")]
@@ -1206,6 +1207,90 @@ impl GarbageCollector {
         Ok(())
     }
 
+    /// An armed reservation is visible to every subsequent root scan. Either
+    /// that scan claims the right to skip it or activation exposes the root.
+    #[expect(
+        clippy::expect_used,
+        reason = "typed lookup owns a prepared slot until activation"
+    )]
+    pub(crate) fn acquire_typed_root<T: 'static>(
+        &self,
+        address: usize,
+        expected: crate::ObjectId,
+    ) -> Result<(std::ptr::NonNull<T>, crate::roots::Registration)> {
+        let invalid = || {
+            crate::Error::InvalidPointer(
+                "unknown, logically dead, or incorrectly typed allocation".into(),
+            )
+        };
+        let _measurement = self
+            .diagnostics
+            .root_acquire
+            .measure(self.diagnostics_enabled());
+        let mut reservation = self.reserve_owned_root(address);
+        let slot = reservation.slot.get_or_insert_with(|| {
+            self.typed_slots
+                .get_or_init(|| Box::new(crate::roots::RootSlots::default()))
+                .prepare(address)
+        });
+        slot.arm();
+        let observation = self.phase_clock.indexed_root();
+        let metadata = self
+            .objects
+            .lookup(address)
+            .filter(|m| m.id == expected && m.is_type::<T>())
+            .ok_or_else(invalid)?;
+        let ptr = std::ptr::NonNull::new(metadata.trace.ptr.cast_mut().cast::<T>())
+            .ok_or_else(invalid)?;
+        let covered = match observation {
+            publication_state::Birth::Idle => true,
+            publication_state::Birth::Inline(snapshot) => {
+                self.domains.iter().enumerate().all(|(i, domain)| {
+                    snapshot.stage(i).is_none()
+                        || metadata.retention(i, domain.epoch.load(Ordering::Acquire))
+                            == Some(Retention::Strong)
+                }) && self.phase_clock.unchanged(snapshot)
+            }
+            publication_state::Birth::Epochs(_) => false,
+        };
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        publication_tests::pause_after_typed_lookup();
+        if covered && slot.activate(address) {
+            let registration = reservation
+                .slot
+                .take()
+                .expect("activated typed root")
+                .finish(reservation.context.take());
+            if self.diagnostics_enabled() {
+                self.diagnostics
+                    .root_registrations
+                    .fetch_add(1, Ordering::Relaxed);
+            }
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            publication_tests::pause_after_typed_activation();
+            return Ok((ptr, registration));
+        }
+
+        // A scan passed the reservation, or an active domain still needs
+        // shading. Recheck the exact member and both domains under admission.
+        let _publication = self.allocation_guard();
+        if !self
+            .objects
+            .lookup(address)
+            .is_some_and(|m| MetadataRef::ptr_eq(&m, &metadata))
+            || !self.can_root(&metadata, false)
+        {
+            return Err(invalid());
+        }
+        let registration = self.install_root_registration(&mut reservation);
+        let _retention = TraceRetention::enter(self, Retention::Strong);
+        for index in 0..2 {
+            let _context = Context::enter(self, index);
+            self.shade_known(&metadata);
+        }
+        Ok((ptr, registration))
+    }
+
     pub(crate) fn resolve_address<T: 'static>(
         &self,
         address: usize,
@@ -1354,6 +1439,7 @@ impl GarbageCollector {
                         configuration.worker_yield_time_us,
                     )
                 }),
+                typed_slots: once_cell::race::OnceBox::new(),
                 root_slots: (configuration.root_storage != crate::RootStorage::Tree)
                     .then(|| Box::new(crate::roots::RootSlots::default())),
                 scheduler: (configuration.predictive_collection
@@ -2112,7 +2198,7 @@ impl GarbageCollector {
                 queues.trim_empty();
             }
         }
-        if let Some(roots) = &self.root_slots {
+        if let Some(roots) = self.scanned_slots() {
             roots.trim_empty();
         }
         self.contexts.for_each(|context| {
@@ -2558,13 +2644,19 @@ impl GarbageCollector {
     /// Returns root occupancy and retained slot-page storage, separately from managed bytes.
     #[must_use]
     pub fn root_statistics(&self) -> crate::RootStatistics {
-        let mut result = self
-            .root_slots
-            .as_ref()
-            .map_or_else(crate::RootStatistics::default, |roots| roots.statistics());
+        let mut result = self.scanned_slots().map_or_else(
+            crate::RootStatistics::default,
+            crate::roots::RootSlots::statistics,
+        );
         result.merge(self.contexts.statistics().1);
         result.compatibility_roots = lock(&self.roots).len();
         result
+    }
+
+    fn scanned_slots(&self) -> Option<&crate::roots::RootSlots> {
+        self.root_slots
+            .as_deref()
+            .or_else(|| self.typed_slots.get())
     }
 
     pub(crate) fn reserve_owned_root(&self, address: usize) -> RootReservation<'_> {
@@ -2645,22 +2737,14 @@ impl GarbageCollector {
         registration
     }
 
-    #[expect(
-        clippy::expect_used,
-        reason = "validated reservation is committed once"
-    )]
     fn install_root_registration(
         &self,
         reservation: &mut RootReservation<'_>,
     ) -> crate::roots::Registration {
         let address = reservation.address;
-        let Some(_) = &self.root_slots else {
+        let Some(slot) = reservation.slot.take() else {
             return crate::roots::Registration::Tree(self.insert_root(address));
         };
-        let slot = reservation
-            .slot
-            .take()
-            .expect("uncommitted root reservation");
         let registration = slot.commit(address, reservation.context.take());
         if self.diagnostics_enabled() {
             self.diagnostics
@@ -2694,7 +2778,7 @@ impl GarbageCollector {
                 self.remove_tree_registration::<ADOPT>(id.id, Some(id.generation));
             }
             crate::roots::Registration::Overflow(record) => {
-                if let Some(roots) = &self.root_slots {
+                if let Some(roots) = self.scanned_slots() {
                     self.remove_overflow_root::<ADOPT>(roots, record);
                 }
             }
@@ -2713,7 +2797,7 @@ impl GarbageCollector {
                     false
                 };
                 drop(publication);
-                if cleanup && let Some(roots) = &self.root_slots {
+                if cleanup && let Some(roots) = self.scanned_slots() {
                     roots.finish_removal(root);
                 }
             }
@@ -2885,7 +2969,7 @@ impl GarbageCollector {
     pub unsafe fn remove_root<T: Trace>(&self, root: &T) {
         let _publication = self.allocation_guard();
         let ptr = std::ptr::from_ref(root).cast::<()>();
-        if let Some(roots) = &self.root_slots {
+        if let Some(roots) = self.scanned_slots() {
             for record in roots.matching_overflow(ptr as usize) {
                 self.remove_owned_root(&crate::roots::Registration::Overflow(record));
             }
@@ -4394,7 +4478,7 @@ impl GarbageCollector {
                 || self.configuration.local_allocation_buffers
             {
                 Phase::ContextRoots
-            } else if self.root_slots.is_some() {
+            } else if self.scanned_slots().is_some() {
                 Phase::RootSlots
             } else {
                 Phase::Roots

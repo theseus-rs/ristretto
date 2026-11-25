@@ -714,6 +714,34 @@ fn an_invisible_slot_does_not_prevent_retirement_or_resurrect_after_it() {
 mod root_slot_state;
 
 #[test]
+fn an_idle_typed_root_cannot_activate_after_its_target_is_skipped_and_retired() {
+    loom::model(|| {
+        let clock = Arc::new(Clock::new(8 * REVISION));
+        let slot = Arc::new(AtomicUsize::new(0));
+        let member = Arc::new(AtomicBool::new(true));
+        let publisher = {
+            let (clock, slot, member) = (clock.clone(), slot.clone(), member.clone());
+            thread::spawn(move || {
+                root_slot_state::arm_root(&slot);
+                matches!(clock.indexed_root(), Birth::Idle)
+                    && member.load(Ordering::Acquire)
+                    && root_slot_state::activate_root(&slot, 17)
+            })
+        };
+        // One complete cycle. A registrar may observe idle on either side.
+        assert!(clock.transition(clock.observe().unwrap(), 1, 3));
+        if root_slot_state::scan_address(&slot) == 0 {
+            member.store(false, Ordering::Release);
+        }
+        assert!(clock.transition(clock.observe().unwrap(), 1, 0));
+        if publisher.join().unwrap() {
+            assert!(member.load(Ordering::Acquire));
+            assert_eq!(root_slot_state::scan_address(&slot), 17);
+        }
+    });
+}
+
+#[test]
 fn a_stale_root_remover_cannot_clear_a_reused_slot() {
     loom::model(|| {
         let slot = Arc::new(root_slot_state::Slot::default());

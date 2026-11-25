@@ -525,21 +525,16 @@ impl<T> Gc<T> {
         let address = collector
             .address_for_identity(expected)
             .ok_or_else(|| Error::InvalidPointer("unknown object identity".into()))?;
-        // The identity index yields only an address hint. Its lock wait must not
-        // retain phase admission; the expected ID, type and logical eligibility
-        // are all revalidated below before any payload pointer is exposed.
-        let mut reservation = collector.reserve_owned_root(address);
-        let publication = collector.root_publication_guard();
-        let prepared = Self::prepare_conditional_root(
-            collector,
-            i64::try_from(address).map_err(|_| Error::InvalidPointer("address overflow".into()))?,
-            false,
-            Some(expected),
-            &publication,
-            &mut reservation,
-        )?;
-        drop(publication);
-        Ok(prepared.finish())
+        let (ptr, registration) = collector.acquire_typed_root::<T>(address, expected)?;
+        Ok(PreparedRoot {
+            ptr,
+            registration: OwnedRoot {
+                collector: collector.clone(),
+                id: registration,
+                target: expected,
+            },
+        }
+        .finish())
     }
 
     /// Returns `true` if the two `Gc`s point to the same allocation.

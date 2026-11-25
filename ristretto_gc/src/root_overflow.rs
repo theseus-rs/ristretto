@@ -7,11 +7,12 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 #[derive(Debug, Default)]
 pub(crate) struct Record {
-    address: AtomicUsize,
-    published: AtomicBool,
+    pub(super) address: AtomicUsize,
+    pub(super) published: AtomicBool,
 }
 
 impl Record {
+    #[cfg(test)]
     pub(super) fn publish(&self, address: usize) {
         debug_assert_ne!(address, 0);
         self.published.store(true, Ordering::Relaxed);
@@ -79,7 +80,7 @@ impl Overflow {
             return Scan::Done;
         };
         *after = Record::key(record);
-        match record.address.load(Ordering::Acquire) {
+        match super::scan_address(&record.address) {
             0 => Scan::Advance,
             address => Scan::Root(address),
         }
@@ -98,9 +99,11 @@ impl Overflow {
     pub(super) fn count(&self, stats: &mut RootStatistics) {
         self.for_each(|record| {
             let address = record.address.load(Ordering::Acquire);
-            stats.slot_roots += usize::from(address != 0);
-            stats.reserved_slots +=
-                usize::from(address == 0 && !record.published.load(Ordering::Acquire));
+            stats.slot_roots += usize::from(address != 0 && address != super::PENDING_ROOT);
+            stats.reserved_slots += usize::from(
+                (address == 0 || address == super::PENDING_ROOT)
+                    && !record.published.load(Ordering::Acquire),
+            );
             stats.overflow_records += 1;
         });
         stats.slot_capacity += stats.overflow_records;

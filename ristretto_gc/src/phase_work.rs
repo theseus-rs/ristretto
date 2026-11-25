@@ -284,8 +284,7 @@ impl GarbageCollector {
             }
             Phase::RootSlots => {
                 match self
-                    .root_slots
-                    .as_ref()
+                    .scanned_slots()
                     .map(|roots| roots.scan(&mut cycle.root_cursor))
                 {
                     Some(crate::roots::Scan::Root(address)) => {

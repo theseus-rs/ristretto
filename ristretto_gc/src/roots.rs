@@ -233,7 +233,7 @@ pub(crate) enum Scan {
 
 #[path = "root_slot_state.rs"]
 mod root_slot_state;
-use root_slot_state::{Slot, TAKEN};
+use root_slot_state::{PENDING_ROOT, Slot, TAKEN, scan_address};
 
 #[derive(Debug)]
 struct Page {
@@ -341,21 +341,44 @@ pub(crate) enum PreparedSlot {
 }
 
 impl PreparedSlot {
+    #[expect(clippy::indexing_slicing, reason = "reserved slot index is bounded")]
+    fn address(&self) -> &AtomicUsize {
+        match self {
+            Self::Paged(slot) => &slot.page.slots[slot.id.slot()].address,
+            Self::Overflow(record) => &record.address,
+        }
+    }
+
+    pub(crate) fn arm(&self) {
+        root_slot_state::arm_root(self.address());
+    }
+
+    pub(crate) fn activate(&self, address: usize) -> bool {
+        root_slot_state::activate_root(self.address(), address)
+    }
+
     pub(crate) fn commit(
         self,
         address: usize,
         context: Option<Arc<crate::context::State>>,
     ) -> Registration {
+        self.address().store(address, Ordering::Release);
+        self.finish(context)
+    }
+
+    // Once activation exposes the address a revoker can take the generation.
+    // Transferring ownership must never write to that address a second time.
+    pub(crate) fn finish(self, context: Option<Arc<crate::context::State>>) -> Registration {
         match self {
             Self::Paged(slot) => {
-                let root = slot.commit(address);
+                let root = SlotRoot::new(slot.id, slot.page);
                 match context {
                     Some(context) => Registration::Context(context, root),
                     None => Registration::Slot(root),
                 }
             }
             Self::Overflow(root) => {
-                root.publish(address);
+                root.published.store(true, Ordering::Release);
                 match context {
                     Some(context) => Registration::ContextOverflow(context, root),
                     None => Registration::Overflow(root),
@@ -365,12 +388,10 @@ impl PreparedSlot {
     }
 }
 
+#[cfg(test)]
 impl Reservation {
     #[expect(clippy::indexing_slicing, reason = "reserved slot index is bounded")]
-    /// The collector holds publication admission and has validated the target.
-    /// Reservation cannot be removed by address because its address is still zero.
-    pub(crate) fn commit(self, address: usize) -> SlotRoot {
-        debug_assert_ne!(address, 0);
+    fn commit(self, address: usize) -> SlotRoot {
         self.page.slots[self.id.slot()]
             .address
             .store(address, Ordering::Release);
@@ -533,6 +554,8 @@ impl RootSlots {
     }
 
     pub(crate) fn cancel_prepared(&self, slot: PreparedSlot) {
+        // The caller still exclusively owns this unpublished generation.
+        slot.address().store(0, Ordering::Release);
         match slot {
             PreparedSlot::Paged(slot) => self.cancel(slot),
             PreparedSlot::Overflow(record) => self.finish_overflow(&record),
@@ -692,7 +715,7 @@ impl RootSlots {
             if remaining != 0 {
                 let slot = remaining.trailing_zeros() as usize;
                 cursor.slot = slot + 1;
-                let address = page.slots[slot].address.load(Ordering::Acquire);
+                let address = scan_address(&page.slots[slot].address);
                 // A concurrent removal can clear the address after the bitmap
                 // read. Its deletion barrier preserves the active snapshot.
                 return if address == 0 {
@@ -789,9 +812,9 @@ impl RootSlots {
                     let slot = occupied.trailing_zeros() as usize;
                     occupied &= occupied - 1;
                     let address = page.slots[slot].address.load(Ordering::Acquire);
-                    result.slot_roots += usize::from(address != 0);
+                    result.slot_roots += usize::from(address != 0 && address != PENDING_ROOT);
                     result.reserved_slots += usize::from(
-                        address == 0
+                        (address == 0 || address == PENDING_ROOT)
                             && page.slots[slot].generation.load(Ordering::Acquire) != TAKEN,
                     );
                 }

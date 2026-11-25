@@ -164,7 +164,7 @@ impl GarbageCollector {
                 || self.configuration.local_allocation_buffers
             {
                 Phase::ContextRoots
-            } else if self.root_slots.is_some() {
+            } else if self.scanned_slots().is_some() {
                 Phase::RootSlots
             } else {
                 Phase::Roots

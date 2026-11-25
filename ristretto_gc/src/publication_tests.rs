@@ -625,6 +625,119 @@ thread_local! {
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
+thread_local! {
+    static TYPED_ACTIVATION_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+    static TYPED_LOOKUP_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn pause_after_typed_lookup() {
+    wait_for_constructor_resume(TYPED_LOOKUP_PAUSE.take());
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn pause_after_typed_activation() {
+    wait_for_constructor_resume(TYPED_ACTIVATION_PAUSE.take());
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(clippy::unwrap_in_result, reason = "forced root lookup schedule")]
+fn a_stopped_typed_identity_lookup_allows_unrelated_capped_recovery() -> Result<()> {
+    use std::future::Future;
+    use std::sync::mpsc;
+    use std::task::{Context as TaskContext, Poll, Waker};
+    use std::time::Duration;
+
+    let bytes = Gc::allocation_size(&11_u64)?;
+    for counted in [false, true] {
+        for storage in [
+            crate::RootStorage::Tree,
+            crate::RootStorage::Slots,
+            crate::RootStorage::Contexts,
+        ] {
+            for (activated, keep_original) in [(false, false), (false, true), (true, false)] {
+                let gc = GarbageCollector::with_config(
+                    Configuration::builder()
+                        .max_heap_bytes(2 * bytes)
+                        .allocation_threshold(usize::MAX)
+                        .incremental_step_size(1)
+                        .metadata_shards(1)
+                        .max_pause_time_us(0)
+                        .root_storage(storage)
+                        .concurrent_publication(counted)
+                        .build(),
+                );
+                let context = gc.register_context();
+                drop(Gc::try_new(&gc, 11_u64)?);
+                let mut survivor = Some(Gc::try_new(&gc, 17_u64)?);
+                let identity = survivor.as_ref().expect("root").as_handle_i64();
+                assert!(Gc::<i64>::from_handle_rooted(&gc, identity).is_err());
+                let (entered, parked) = mpsc::channel();
+                let (resume, receiver) = mpsc::channel();
+                let resolver_gc = gc.clone();
+                let resolver = thread::spawn(move || {
+                    let hook = if activated {
+                        &TYPED_ACTIVATION_PAUSE
+                    } else {
+                        &TYPED_LOOKUP_PAUSE
+                    };
+                    hook.set(Some(ClaimPause {
+                        entered,
+                        resume: receiver,
+                    }));
+                    context.with(|| Gc::<u64>::from_handle_rooted(&resolver_gc, identity))
+                });
+                parked
+                    .recv_timeout(Duration::from_secs(5))
+                    .expect("typed root handoff");
+                if !keep_original {
+                    drop(survivor.take());
+                }
+                let peer_gc = gc.clone();
+                let (done, result) = mpsc::channel();
+                let peer = thread::spawn(move || {
+                    let mut allocation = Box::pin(Gc::try_new_async(&peer_gc, 23_u64));
+                    let mut context = TaskContext::from_waker(Waker::noop());
+                    for _ in 0..1024 {
+                        if let Poll::Ready(root) = allocation.as_mut().poll(&mut context) {
+                            // A recovery ticket may free its first victim before
+                            // reaching the target. Finish the full cycle while parked.
+                            let root = root.and_then(|root| {
+                                peer_gc.collect_full()?;
+                                Ok(root)
+                            });
+                            done.send(root).expect("publish capped result");
+                            return;
+                        }
+                    }
+                });
+                let outcome = result.recv_timeout(Duration::from_secs(3));
+                resume.send(()).expect("resume typed lookup");
+                let acquisition = resolver.join().expect("typed lookup");
+                peer.join().expect("capped peer");
+                assert_eq!(**outcome.expect("capped peer completed while parked")?, 23);
+                if activated || keep_original {
+                    let root = acquisition?;
+                    assert_eq!(root.as_handle_i64(), identity);
+                    assert_eq!(*root, 17);
+                } else {
+                    assert!(
+                        acquisition.is_err(),
+                        "scan passed and retired a private proposal"
+                    );
+                }
+                drop(survivor);
+                gc.stop()?;
+                assert_eq!(gc.root_statistics().reserved_slots, 0);
+                assert_eq!(gc.managed_bytes(), 0);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
 pub(super) fn pause_after_registration_indexes() {
     wait_for_constructor_resume(INDEXED_PAUSE.take());
 }
@@ -1663,7 +1776,7 @@ fn descriptor_birth_protects_a_root_installed_after_its_scan() -> Result<()> {
 }
 
 #[test]
-fn identity_and_weak_roots_reuse_exactly_one_admission() -> Result<()> {
+fn idle_typed_roots_use_slots_and_conditional_tree_roots_reuse_one_admission() -> Result<()> {
     thread_local! {
         static CHECKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
     }
@@ -1683,13 +1796,14 @@ fn identity_and_weak_roots_reuse_exactly_one_admission() -> Result<()> {
     let weak = crate::GcWeak::new(&root, crate::ReferenceKind::Weak, 0);
     CHECKS.set(0);
     *lock(&gc.tree_root_insert_probe) = Some(probe);
-    assert_eq!(
-        *Gc::<u64>::from_handle_rooted(&gc, root.as_handle_i64())?,
-        42
-    );
+    let typed = Gc::<u64>::from_handle_rooted(&gc, root.as_handle_i64())?;
+    assert_eq!(*typed, 42);
+    assert_eq!(gc.root_statistics().slot_roots, 1);
+    assert_eq!(CHECKS.get(), 0);
+    drop(typed);
     assert_eq!(*Gc::<u64>::from_raw_rooted(&gc, root.as_ptr_i64())?, 42);
     assert_eq!(weak.upgrade().map(|root| *root), Some(42));
-    assert_eq!(CHECKS.get(), 3);
+    assert_eq!(CHECKS.get(), 2);
     assert_eq!(gc.diagnostics().active_publications, 0);
     *lock(&gc.tree_root_insert_probe) = None;
     drop(root);
