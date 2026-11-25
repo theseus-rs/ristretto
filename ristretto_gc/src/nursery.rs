@@ -750,6 +750,26 @@ mod tests {
     }
 
     #[test]
+    fn sparse_bitmap_matches_live_offsets_after_word_reuse() {
+        let page = Bitmap::new(0);
+        let mut occupied = BTreeSet::from([0]);
+        for offset in [1, WORD - 1, WORD, 8 * WORD + 1, PAGE_SIZE - 1] {
+            assert!(page.pin() && page.set(offset));
+            occupied.insert(offset);
+        }
+        for offset in [0, WORD, 8 * WORD + 1] {
+            assert!(!page.remove(offset));
+            occupied.remove(&offset);
+        }
+        // The middle word has an existing summary bit but a new live slot.
+        assert!(page.pin() && page.set(8 * WORD + 2));
+        occupied.insert(8 * WORD + 2);
+        for start in 0..=PAGE_SIZE {
+            assert_eq!(page.next(start), occupied.range(start..).next().copied());
+        }
+    }
+
+    #[test]
     fn a_stalled_page_claim_cannot_lose_a_peer_in_another_word() {
         let page = Bitmap::new(1);
         assert!(page.pin()); // A publisher has not selected its slot yet.
