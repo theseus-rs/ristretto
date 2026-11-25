@@ -453,7 +453,6 @@ impl GarbageCollector {
         // The private publisher will sample both domains again if this scan
         // passes it. Keep both entries and leave its birth stamps untouched.
         if !slot.visible() {
-            cycle.cursor = id;
             return Unit::Progress;
         }
         if slot.unpublished_owners.load(Ordering::Acquire) != 0 {
