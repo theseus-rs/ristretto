@@ -99,7 +99,9 @@ def plot(results, output, repeats, target):
         for x, value in enumerate(values):
             ci = value['after_before']
             axis.errorbar(x, ci['median'], yerr=[[ci['median'] - ci['low']], [ci['high'] - ci['median']]], fmt='o', capsize=4)
-        axis.axhline(1, color='grey', linestyle='--')
+        axis.axhline(1, color='grey', linestyle='--', label='Baseline')
+        axis.axhline(1 / 3, color='#ad4c27', linestyle=':', label='3× faster')
+        axis.legend(fontsize='small')
         axis.set_xticks(range(len(values)), [f"{s['shape']}\n{s['policy']}" for s in values])
         axis.set_ylim(bottom=0)
         axis.set_ylabel('After / before collection time (lower is better)')

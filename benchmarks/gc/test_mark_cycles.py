@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from mark_cycles import INVOCATION_NAME, invocation, summarize, validate
+from mark_cycles import INVOCATION_NAME, invocation, summarize, validate, validate_builds
 
 
 def evidence():
@@ -54,6 +54,13 @@ class MarkCycleEvidenceTests(unittest.TestCase):
         for key in ('swept', 'freed'):
             with self.assertRaises(ValueError):
                 validate(dict(data, **{key: data[key] - 1}), 'mixed', 'gated', 127, 3, 0, True)
+
+    def test_shared_binary_from_different_source_trees_is_rejected(self):
+        common = dict(fixture_sha256='f', toolchain='rust', target='native', profile_sha256='p',
+                      dependencies_sha256='d', binary_sha256='same')
+        with self.assertRaisesRegex(ValueError, 'identical timed binaries'):
+            validate_builds({'before': dict(common, source_sha256={'gc.rs': 'old'}),
+                             'after': dict(common, source_sha256={'gc.rs': 'new'})})
 
     def test_disabled_diagnostics_must_have_no_tasks(self):
         data = dict(evidence(), diagnostics=False, trace_tasks=0)
