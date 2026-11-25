@@ -7,7 +7,7 @@ The integrated collector at `53897798` includes fresh host weak-reference public
 | Native | 24 | 24 | 5.76× | 5.59× |
 | WASI | 12 | 24 | 6.80× | 6.68× |
 
-The intervals are paired bootstrap intervals for individual conditions. This campaign measures collector wall time on chains, trees and wide graphs. Application latency and global pause duration require separate measurements.
+The intervals are paired bootstrap intervals for individual conditions. This campaign measures collector wall time on live trees, wide graphs and trees with newly allocated garbage. Application latency and global pause duration require separate measurements.
 
 ![Native complete collection speedups](native.svg)
 
