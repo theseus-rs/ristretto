@@ -1,5 +1,9 @@
 package ristretto:playground;
 
 world playground {
+    /// Accept a request when the reactor is idle.
+    export start-request: func(request: string) -> bool;
+    /// Drive the request until completion or its cooperative time slice.
+    export poll-request: func() -> bool;
     export execute: func(request: string);
 }
