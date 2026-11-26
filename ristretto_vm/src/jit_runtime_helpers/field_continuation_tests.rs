@@ -441,7 +441,7 @@ async fn ordinary_long_caller(thread: &Thread, target: &Class) -> Result<Arc<Cla
             Instruction::Return,
         ],
     )?;
-    // Transfer the sole array owner into the caller's local before entering the JIT.
+    // Save the array in local zero and clear the static before calling publish.
     let outer = method(
         &mut pool,
         "outer",
