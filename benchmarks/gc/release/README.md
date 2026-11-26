@@ -18,27 +18,29 @@ JDK on PATH to regenerate the checked classfiles and execute the cycle oracle.
 
 ## Check coordinated packaged features
 
-The external consumer checker packages the workspace and extracts the actual
+The external consumer checker packages the publishable workspace members and extracts the actual
 `.crate` files for each selected crate and its workspace dependencies. It patches
 those normalized archives together at their package versions, then builds a
 separate consumer with default features disabled and the requested features
-explicitly enabled. This checks a coordinated workspace release; it does not use
-unpublished registry versions or the original workspace source paths.
+explicitly enabled. A bare package name requests its base library with default
+features disabled. Each external build uses the normalized archives from the
+coordinated release.
 
 ```sh
 export CARGO_BUILD_JOBS=1
 export CARGO_TARGET_DIR="$PWD/../preview-package-target"
 python3 .github/scripts/check-packaged-features.py \
   ristretto_gc/experimental-canonical-runtime \
-  ristretto_vm/experimental-canonical-jit \
+  ristretto_vm/experimental-reference-dispatch \
   ristretto_jit/experimental-reference-dispatch
 rustup target add wasm32-wasip2
 python3 .github/scripts/check-packaged-features.py --target wasm32-wasip2 \
   ristretto_gc/experimental-canonical-runtime \
-  ristretto_vm/experimental-canonical-runtime
+  ristretto_vm
 ```
 
-The native consumer includes the opt-in compiled tier. The WASI consumer builds
-the interpreted runtime only. These are feature compilation checks; execution,
-Java semantics, and cleanup are checked separately by the source-archive suites.
+The native consumer includes the shipping VM's reference-dispatch feature. The
+WASI consumer builds the ordinary interpreter. Both also compile the explicitly
+selected GC adapter. The source-archive suites exercise the restricted Java
+session in the workspace-private research crate.
 Native and WASI consumer artifacts use separate absolute target directories.

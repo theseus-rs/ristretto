@@ -54,7 +54,7 @@ four object slots, twelve root slots, two reference fields per object, one mutat
 and one helper. It creates cycles and retains children across unlinking. These are
 functional checks; released slots are not collection-cycle or pause counts.
 [Java source](ristretto_vm/tests/fixtures/canonical/CanonicalGraphWorkload.java) ·
-[Rust example](ristretto_vm/examples/canonical_java.rs)
+[Rust example](ristretto_vm_research/examples/canonical_java.rs)
 
 ## Supported scope and limits
 
