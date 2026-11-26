@@ -5,17 +5,40 @@ use super::*;
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 thread_local! {
+    static AFTER_FULL_REQUEST: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+    static BEFORE_SWEEP_HANDOFF: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+    static BEFORE_SNAPSHOT_COMMIT: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static AFTER_ACTIVATION: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn before_snapshot_commit() {
+    pause_once(&BEFORE_SNAPSHOT_COMMIT);
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
 pub(super) fn after_snapshot_activation() {
-    if let Some(pause) = AFTER_ACTIVATION.take() {
-        pause.entered.send(()).expect("snapshot observer");
+    pause_once(&AFTER_ACTIVATION);
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn after_full_request() {
+    pause_once(&AFTER_FULL_REQUEST);
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn before_sweep_handoff() {
+    pause_once(&BEFORE_SWEEP_HANDOFF);
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+fn pause_once(point: &'static thread::LocalKey<std::cell::Cell<Option<ClaimPause>>>) {
+    if let Some(pause) = point.take() {
+        pause.entered.send(()).expect("collection observer");
         pause
             .resume
             .recv_timeout(std::time::Duration::from_secs(10))
-            .expect("resume snapshot");
+            .expect("resume collection");
     }
 }
 
@@ -115,6 +138,189 @@ mod native {
     use super::*;
     use std::sync::mpsc;
     use std::time::Duration;
+
+    #[cfg(not(miri))]
+    #[test]
+    fn a_failed_full_start_preserves_both_cleanup_groups() -> Result<()> {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(true)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .diagnostics(true)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let (_, first) = gc.request_full_cleanup();
+        let (_, joined) = gc.request_full_cleanup();
+        assert!(Arc::ptr_eq(&first, &joined));
+        let (before, observed) = mpsc::channel();
+        let (release, resume) = mpsc::channel();
+        let heap = gc.clone();
+        let starter = thread::spawn(move || {
+            BEFORE_SNAPSHOT_COMMIT.set(Some(ClaimPause {
+                entered: before,
+                resume,
+            }));
+            heap.step();
+        });
+        observed
+            .recv_timeout(Duration::from_secs(5))
+            .expect("captured original group");
+        let (new_ticket, later) = gc.request_full_cleanup();
+        assert!(!Arc::ptr_eq(&first, &later));
+        // Change the real counted publication clock after observe and before commit.
+        drop(gc.phase_clock.enter());
+        release.send(()).expect("attempt stale transition");
+        starter.join().expect("starter");
+        assert_eq!(gc.statistics()?.collections_started, 0);
+        assert!(gc.diagnostics().publication_retries > 0);
+        for _ in 0..16384 {
+            if first.load(Ordering::Acquire) == 0 {
+                break;
+            }
+            gc.step();
+        }
+        assert_eq!(first.load(Ordering::Acquire), 0);
+        assert!(gc.completed_full_ticket() >= new_ticket);
+        assert_eq!(
+            later.load(Ordering::Acquire),
+            1,
+            "the numerical ticket covered two requests"
+        );
+        for _ in 0..16384 {
+            if later.load(Ordering::Acquire) == 0 {
+                break;
+            }
+            gc.step();
+        }
+        assert_eq!(
+            later.load(Ordering::Acquire),
+            0,
+            "later group lost its full request"
+        );
+        assert_eq!(gc.statistics()?.full_collections, 2);
+        Ok(())
+    }
+
+    #[cfg(not(miri))]
+    #[test]
+    fn explicit_full_publishes_its_cleanup_request_while_the_cycle_lock_is_parked() -> Result<()> {
+        let gc = collector(true);
+        let cycle = lock(&gc.domains[1].cycle);
+        let (issued, observed) = mpsc::channel();
+        let (start, resume) = mpsc::channel();
+        let heap = gc.clone();
+        let owner = thread::spawn(move || {
+            AFTER_FULL_REQUEST.set(Some(ClaimPause {
+                entered: issued,
+                resume,
+            }));
+            heap.collect_full()
+        });
+        let published = observed.recv_timeout(Duration::from_secs(1));
+        let request_visible = gc.domains[1].requested.load(Ordering::Acquire);
+        drop(cycle);
+        start.send(()).expect("resume explicit caller");
+        owner.join().expect("requesting thread")?;
+        assert!(
+            published.is_ok() && request_visible,
+            "parked cycle blocked request publication"
+        );
+        Ok(())
+    }
+
+    #[cfg(not(miri))]
+    #[test]
+    fn synchronous_full_waits_for_its_claimed_cleanup_while_another_full_finishes() -> Result<()> {
+        for counted in [false, true] {
+            for independent in [false, true] {
+                let gc = GarbageCollector::with_config(
+                    Configuration::builder()
+                        .concurrent_publication(counted)
+                        .independent_phases(independent)
+                        .incremental_step_size(1)
+                        .max_pause_time_us(0)
+                        .allocation_threshold(usize::MAX)
+                        .build(),
+                );
+                let drops = Arc::new(AtomicUsize::new(0));
+                let (_, unused) = mpsc::channel();
+                drop(Gc::try_new(
+                    &gc,
+                    HeldClear {
+                        entered: None,
+                        release: Mutex::new(unused),
+                        drops: drops.clone(),
+                    },
+                )?);
+                let (issued, observed) = mpsc::channel();
+                let (start, resume) = mpsc::channel();
+                let (done, result) = mpsc::channel();
+                let owner = {
+                    let heap = gc.clone();
+                    let drops = drops.clone();
+                    thread::spawn(move || {
+                        AFTER_FULL_REQUEST.set(Some(ClaimPause {
+                            entered: issued,
+                            resume,
+                        }));
+                        let collected = heap.collect_full();
+                        done.send(drops.load(Ordering::Acquire))
+                            .expect("owner result");
+                        collected
+                    })
+                };
+                observed
+                    .recv_timeout(Duration::from_secs(5))
+                    .expect("owner issued ticket");
+                let ticket = gc.domains[1].request_ticket.load(Ordering::Acquire);
+                let (claimed, held) = mpsc::channel();
+                let (release, resume) = mpsc::channel();
+                let sweeper = {
+                    let heap = gc.clone();
+                    let drops = drops.clone();
+                    thread::spawn(move || {
+                        BEFORE_SWEEP_HANDOFF.set(Some(ClaimPause {
+                            entered: claimed,
+                            resume,
+                        }));
+                        for _ in 0..65536 {
+                            heap.step();
+                            if drops.load(Ordering::Acquire) != 0 {
+                                return;
+                            }
+                        }
+                        panic!("sweeper did not destroy the test object");
+                    })
+                };
+                held.recv_timeout(Duration::from_secs(5))
+                    .expect("private sweep task");
+                for _ in 0..65536 {
+                    if gc.completed_full_ticket() >= ticket {
+                        break;
+                    }
+                    gc.step();
+                }
+                assert_eq!(gc.completed_full_ticket(), ticket);
+                gc.collect_full()?;
+                assert!(gc.completed_full_ticket() > ticket);
+                assert_eq!(drops.load(Ordering::Acquire), 0);
+                start.send(()).expect("resume owner");
+                let early = result.recv_timeout(Duration::from_millis(75));
+                release.send(()).expect("publish claimed cleanup");
+                let count = early.or_else(|_| result.recv_timeout(Duration::from_secs(5)));
+                owner.join().expect("owner")?;
+                sweeper.join().expect("sweeper");
+                assert_eq!(
+                    count.expect("successful collection"),
+                    1,
+                    "owning full returned before private sweep cleanup"
+                );
+            }
+        }
+        Ok(())
+    }
 
     #[cfg(not(miri))]
     #[test]

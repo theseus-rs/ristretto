@@ -37,6 +37,10 @@ impl SweepWork {
         epoch: u64,
         counters: &mut WorkCounters,
     ) {
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        if matches!(&self, Self::CleanupBatch(..) | Self::Reclaim(..)) {
+            super::phase_tests::before_sweep_handoff();
+        }
         match self {
             #[cfg(not(target_family = "wasm"))]
             Self::CleanupBatch(pool, batch) => {
@@ -981,7 +985,18 @@ impl GarbageCollector {
             .dirty
             .retire(metadata.id.to_i64().cast_unsigned());
         if super::ObjectMetadata::retire_swept(&mut metadata) {
-            cycle.reclaim.push_back(ReclaimTask::new(metadata));
+            let task = ReclaimTask::new(metadata);
+            #[cfg(not(target_family = "wasm"))]
+            let task = {
+                let mut task = task;
+                if let Some(cleanup) = &cycle.active_full_cleanup
+                    && task.metadata.has_cleanup()
+                {
+                    task.full_cleanup = Some(cleanup.reserve());
+                }
+                task
+            };
+            cycle.reclaim.push_back(task);
         } else {
             // Returning the retiring borrow may publish external clearing
             // work. Do not retain page or remembered guards for that handoff.

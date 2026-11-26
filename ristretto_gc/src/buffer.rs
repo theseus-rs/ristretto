@@ -109,7 +109,7 @@ impl<T> HeapBuffer<T> {
                 Err(error) if crate::cell::has_guards() || retry.exhausted(collector) => {
                     return Err(error);
                 }
-                Err(_) => collector.recover_physical(layout)?,
+                Err(_) => collector.recover_physical(layout),
             }
         }
     }

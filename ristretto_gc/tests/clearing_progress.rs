@@ -30,6 +30,64 @@ impl Drop for Contended {
     }
 }
 
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn an_explicit_full_returns_after_its_busy_cleanup_is_requeued() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .incremental_step_size(1)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let release = Arc::new(AtomicBool::new(false));
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let drops = Arc::new(AtomicUsize::new(0));
+        drop(Gc::try_new(
+            &gc,
+            Contended {
+                release: release.clone(),
+                attempts: attempts.clone(),
+                drops: drops.clone(),
+            },
+        )?);
+        let bytes = gc.managed_bytes();
+        let (send, done) = mpsc::channel();
+        let heap = gc.clone();
+        let owner = std::thread::spawn(move || {
+            let result = heap.collect_full();
+            send.send(()).expect("collection observer");
+            result
+        });
+        let finished = done.recv_timeout(Duration::from_secs(5));
+        let retained = gc.managed_bytes();
+        let calls = attempts.load(Ordering::Acquire);
+        let early_drops = drops.load(Ordering::Acquire);
+        release.store(true, Ordering::Release);
+        owner.join().map_err(|_| {
+            ristretto_gc::Error::CollectionPhaseError("explicit collection panicked".into())
+        })??;
+        gc.stop()?;
+        assert!(
+            finished.is_ok(),
+            "explicit collection waited on an external Busy result"
+        );
+        assert!(
+            calls >= 2,
+            "the Continue offset must reach the busy callback"
+        );
+        assert_eq!(retained, bytes);
+        assert_eq!(early_drops, 0);
+        assert_eq!(drops.load(Ordering::Acquire), 1);
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
+
 #[test]
 fn busy_clearing_rotates_and_unrelated_generations_finish() -> Result<()> {
     for concurrent in [false, true] {
