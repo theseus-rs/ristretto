@@ -526,7 +526,7 @@ mod component {
                     return false;
                 }
                 *slot = Some(Box::pin(async move {
-                    super::handle_request(request.as_bytes()).await
+                    super::handle_request(request.as_bytes()).await;
                 }));
                 true
             })
