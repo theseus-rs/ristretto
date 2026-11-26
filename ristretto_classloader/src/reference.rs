@@ -724,6 +724,12 @@ impl PartialEq for Reference {
 )]
 unsafe impl Trace for Reference {
     fn needs_write_barrier(&self) -> bool {
+        !self.can_skip_unroot_after_write()
+    }
+
+    // Primitive writes dirty their HeapBuffer on mutable access. Their unroot
+    // arm has no action. Object and reference-array variants demote their edges.
+    fn can_skip_unroot_after_write(&self) -> bool {
         match self {
             Self::BooleanArray(_)
             | Self::ByteArray(_)
@@ -732,8 +738,8 @@ unsafe impl Trace for Reference {
             | Self::IntArray(_)
             | Self::LongArray(_)
             | Self::FloatArray(_)
-            | Self::DoubleArray(_) => false,
-            Self::Object(_) | Self::Array(_) => true,
+            | Self::DoubleArray(_) => true,
+            Self::Object(_) | Self::Array(_) => false,
         }
     }
 
@@ -1116,6 +1122,44 @@ mod tests {
             assert!(heap.statistics().bytes_recopied > 0);
             assert_eq!(gc.diagnostics().barrier_record.count, before);
             drop(root);
+            gc.stop()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn primitive_writer_rechecks_the_variant_after_each_replacement() -> Result<()> {
+        use ristretto_gc::{Configuration, GcWeak, ReferenceKind};
+
+        let class = load_class("java.lang.Object").await?;
+        for concurrent in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .allocation_threshold(usize::MAX)
+                    .concurrent_publication(concurrent)
+                    .build(),
+            );
+            let parent = Value::try_new_object(&gc, Reference::from(vec![0_i32]))?;
+            for _ in 0..2 {
+                let child = Value::try_new_object(&gc, Reference::from(vec![42_i32]))?;
+                let Value::Object(Some(handle)) = &child else {
+                    unreachable!("allocated non-null array");
+                };
+                let weak = GcWeak::new(handle, ReferenceKind::Weak, 0);
+                *parent.as_reference_mut()? = Reference::Array(ObjectArray {
+                    class: class.clone(),
+                    elements: vec![child].into(),
+                });
+                gc.collect_full()?;
+                assert!(weak.upgrade().is_some());
+                *parent.as_reference_mut()? = Reference::from(vec![1_i32]);
+                for _ in 0..3 {
+                    gc.collect_full()?;
+                }
+                assert!(weak.upgrade().is_none());
+            }
+            drop(parent);
             gc.stop()?;
             assert_eq!(gc.managed_bytes(), 0);
         }

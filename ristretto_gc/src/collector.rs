@@ -695,6 +695,16 @@ pub unsafe trait Trace {
         true
     }
 
+    /// Whether releasing a managed write guard can omit both `unroot` and the
+    /// owner notification for the current value. The guard holds exclusive access.
+    /// Returning true requires an empty strong and conditional graph, a no-op
+    /// `unroot` (including custom, nested and relocation hooks), and no pending
+    /// notification. This must also hold after replacing a different value.
+    /// The query must not allocate, lock or call the collector.
+    fn can_skip_unroot_after_write(&self) -> bool {
+        false
+    }
+
     /// Whether all outgoing edges currently carry owning strong registrations and
     /// demotion only converts those same edges using ordinary deletion barriers.
     /// Returning true permits a write guard to publish remembered membership

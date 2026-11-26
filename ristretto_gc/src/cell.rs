@@ -585,6 +585,9 @@ impl<T: crate::Trace> RwLock<T> {
                     value.root();
                     return;
                 };
+                if value.can_skip_unroot_after_write() {
+                    return;
+                }
                 if T::may_contain_gc_references()
                     && let Some(gc) = owner.collector().upgrade()
                     && !(prepared
