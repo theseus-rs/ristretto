@@ -2,6 +2,22 @@
 
 ## Tenfold complete-collection gate
 
+At `a9242931`, four asynchronous allocations sharing an independent 32-byte
+donor retained their eligibility across fresh collection tickets. All 400 forced
+native schedules passed, as did all 1,800 fresh processes replaying the earlier
+four-allocator contention test. Each forced schedule also checked that a fifth
+request arriving after both donors were private returned OOM. All 36 complete-
+collection conditions passed against `f1daebeb`. The weakest individual 95%
+lower speedup bounds were 10.53× native and 10.63× WASI.
+
+Enrolling and cancelling a suspended allocation on a full heap took 7.30×,
+10.86× and 7.59× as long as on `42c37eb4` with one, 64 and 1,024 pending
+requests. The next alpha work is to reduce that cost, bound the scan for eligible
+wakeups, and qualify synchronous allocation, other storage retirement paths and
+the integrated VM. The grant currently applies to asynchronous requests for
+storage released directly to the global allocator, with exact matching charges
+and no cleanup callbacks. [Process measurements, eligibility and scope](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#allocation-recovery-with-an-independent-donor).
+
 At `42c37eb4`, a parked allocation registrar permits peer enrolment, cancellation
 and spending returned bytes with no completed full ticket. All 36 complete-
 collection conditions passed against `f1daebeb`. The weakest individual 95%
@@ -42,7 +58,7 @@ native and WASI conditions against `f1daebeb`. The weakest individual 95%
 lower bounds were 10.11× and 11.78×.
 [Per-process results and forced schedules](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md).
 
-Hard-cap recovery remains an integrated alpha blocker. With one reaper parked and
+The earlier hard-cap recovery failure blocked the integrated alpha. With one reaper parked and
 an independent 32-byte donor available to four 8-byte requests, 8 of 1,800
 fresh native processes returned at least one terminal OOM. After all four peers
 finished, each failing process had enough headroom for its missing roots before
