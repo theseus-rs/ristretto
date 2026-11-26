@@ -673,7 +673,14 @@ impl GarbageCollector {
                             address,
                             &mut cycle.identity_cursor,
                         );
-                        remembered.remove(address);
+                        // This run admits only age-zero descriptors. Under
+                        // the shard, an unbuffered enrollment always has a
+                        // nonzero mutation version; promotion also changes age.
+                        if self.configuration.barrier_buffer_size != 0
+                            || metadata.mutation.load(Ordering::Acquire) != 0
+                        {
+                            remembered.remove(address);
+                        }
                         true
                     },
                 );
@@ -684,7 +691,12 @@ impl GarbageCollector {
                     if sealed.address.is_some() || deferred.is_some() {
                         drop(run.take());
                     }
-                    for metadata in retired.into_iter().flatten() {
+                    // Publish the whole prefix before any descriptor can
+                    // release storage to a peer. Every refund still debits
+                    // its own exact charge after destruction.
+                    let bytes: usize = retired.iter().take(count).flatten().map(|m| m.size()).sum();
+                    self.retired_bytes.fetch_add(bytes, Ordering::AcqRel);
+                    for metadata in retired.into_iter().take(count).flatten() {
                         self.enqueue_swept(metadata, cycle, run);
                     }
                     // A deferred candidate has no effects and remains next. A
@@ -862,8 +874,13 @@ impl GarbageCollector {
                             &mut cycle.identity_cursor,
                         );
                     }
-                    remembered.remove(address);
                     let was_mature = previous == promotion_age;
+                    if was_mature
+                        || self.configuration.barrier_buffer_size != 0
+                        || metadata.mutation.load(Ordering::Acquire) != 0
+                    {
+                        remembered.remove(address);
+                    }
                     let (removed, address_page) = objects.retire(&mut cycle.young_retirement);
                     if was_mature && removed.is_some() {
                         cycle.packet_cleanup = Some(0);
@@ -882,6 +899,8 @@ impl GarbageCollector {
             }
         };
         if let Some(metadata) = removed {
+            self.retired_bytes
+                .fetch_add(metadata.size(), Ordering::AcqRel);
             self.enqueue_swept(metadata, cycle, run);
         }
         sealed.into_unit()
@@ -896,10 +915,6 @@ impl GarbageCollector {
         self.remembered
             .dirty
             .retire(metadata.id.to_i64().cast_unsigned());
-        // The byte debt belongs to the retired descriptor, independent of
-        // which queue or callback currently owns its clearing progress.
-        self.retired_bytes
-            .fetch_add(metadata.size(), Ordering::AcqRel);
         if metadata.retire() {
             cycle.reclaim.push_back(ReclaimTask {
                 metadata,

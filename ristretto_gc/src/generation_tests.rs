@@ -703,3 +703,41 @@ fn retiring_a_promoted_graph_releases_cached_groups_while_a_small_root_survives(
     }
     Ok(())
 }
+
+#[test]
+fn first_sweep_removes_explicitly_remembered_unaged_owners_in_a_white_run() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .allocation_threshold(usize::MAX)
+                .incremental_step_size(256)
+                .max_pause_time_us(0)
+                .metadata_shards(1)
+                .build(),
+        );
+        let mut roots = Vec::new();
+        let mut remembered = Vec::new();
+        for n in 0..256 {
+            let scalar = Gc::try_new(&gc, n)?;
+            if n % 3 == 0 {
+                gc.remember(&scalar);
+                let address = scalar.as_ptr().addr();
+                assert!(gc.remembered.lock(address).contains(&address));
+                remembered.push(address);
+            }
+            roots.push(scalar);
+        }
+        drop(roots);
+        gc.collect_full()?;
+        assert_eq!(gc.statistics()?.objects_swept, 256);
+        assert_eq!(gc.managed_bytes(), 0);
+        assert_eq!(gc.retired_bytes.load(Ordering::Acquire), 0);
+        assert!(
+            remembered
+                .into_iter()
+                .all(|a| !gc.remembered.lock(a).contains(&a))
+        );
+    }
+    Ok(())
+}
