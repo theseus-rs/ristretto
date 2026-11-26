@@ -381,12 +381,15 @@ impl RegionHeap {
                     }
                 }
             }
-            #[cfg(not(target_family = "wasm"))]
-            if before.is_none() && busy != 0 && self.states.len() > 1 {
+            if cfg!(not(target_family = "wasm"))
+                && before.is_none()
+                && busy != 0
+                && self.states.len() > 1
+            {
                 // There may be no backing credit until a block is dropped. Waiting
                 // on a particular busy shard would miss holes returned to its peers.
                 // Back off with no registry lock held, then recheck all registries.
-                #[cfg(test)]
+                #[cfg(all(test, not(target_family = "wasm")))]
                 shard_tests::record_contended_retry();
                 std::thread::sleep(std::time::Duration::from_micros(100));
                 continue;

@@ -189,7 +189,8 @@ async fn execute(
     emit(&json!({"id": id, "type": "compiled", "classes": classes.len()}))?;
     // Drop the compiler VM before starting the user's VM to reduce peak memory.
     drop(compiler);
-    let mut done = json!({"id": id, "type": "done"});
+    let mut done =
+        serde_json::Map::from_iter([("id".into(), id.into()), ("type".into(), "done".into())]);
     if request.action == Action::Run {
         emit(&json!({"id": id, "type": "phase", "phase": "running"}))?;
         let memory = Memory::new("playground");
@@ -209,16 +210,16 @@ async fn execute(
         }
         if let Some(before) = before {
             let after = collector.statistics()?;
-            done["gc"] = json!({
+            done.insert("gc".into(), json!({
                 "completed": after.collections_completed.checked_sub(before.collections_completed).ok_or("collection counter decreased")?,
                 "objectsSwept": after.objects_swept.checked_sub(before.objects_swept).ok_or("sweep counter decreased")?,
                 "bytesFreed": after.bytes_freed.checked_sub(before.bytes_freed).ok_or("refund counter decreased")?,
                 "liveBytesBefore": before.bytes_live,
                 "liveBytesAfter": after.bytes_live,
-            });
+            }));
         }
     }
-    emit(&done)?;
+    emit(&done.into())?;
     Ok(())
 }
 
