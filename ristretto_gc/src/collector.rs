@@ -3108,6 +3108,8 @@ impl GarbageCollector {
                 .fetch_add(1, Ordering::Relaxed);
         }
         let ticket = self.request_full_cycle();
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        phase_tests::after_full_request();
         let mut misses = 1;
         while self.domains[1].completed_ticket.load(Ordering::Acquire) < ticket {
             if self.step_inner(false).is_none() {

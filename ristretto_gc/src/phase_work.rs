@@ -37,6 +37,10 @@ impl SweepWork {
         epoch: u64,
         counters: &mut WorkCounters,
     ) {
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        if matches!(&self, Self::CleanupBatch(..) | Self::Reclaim(..)) {
+            super::phase_tests::before_sweep_handoff();
+        }
         match self {
             #[cfg(not(target_family = "wasm"))]
             Self::CleanupBatch(pool, batch) => {
