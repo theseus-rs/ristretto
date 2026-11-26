@@ -257,6 +257,77 @@ fn a_parked_first_destructor_does_not_capture_the_rest_of_its_sweep_batch() -> R
 
 struct Ready(mpsc::SyncSender<()>);
 
+#[cfg(all(not(miri), panic = "unwind"))]
+#[test]
+fn shutdown_observes_a_failed_clear_from_the_pressure_consumer() -> Result<()> {
+    struct Fails(mpsc::Sender<String>, Arc<AtomicUsize>);
+    // SAFETY: both fields contain host-side test state.
+    unsafe impl Trace for Fails {
+        fn trace(&self, _: &GarbageCollector) {}
+        fn clear_step(&mut self, _: usize, _: usize) -> TraceProgress {
+            self.0
+                .send(std::thread::current().name().unwrap_or("").to_owned())
+                .expect("observer live");
+            panic!("independent clearing failure");
+        }
+    }
+    impl Drop for Fails {
+        fn drop(&mut self) {
+            self.1.fetch_add(1, Ordering::Release);
+        }
+    }
+    let (entered, parked) = mpsc::channel();
+    let (resume, release) = mpsc::channel();
+    let older = Arc::new(Callback {
+        stage: Stage::Drop,
+        entered,
+        resume: Mutex::new(release),
+        released: AtomicBool::new(false),
+        finalized: AtomicUsize::new(0),
+        cleared: AtomicUsize::new(0),
+        dropped: AtomicUsize::new(0),
+    });
+    let (signal, clearing) = mpsc::channel();
+    let drops = Arc::new(AtomicUsize::new(0));
+    let first = Payload(older.clone());
+    let second = Fails(signal, drops.clone());
+    let cap = Gc::allocation_size(&first)? + Gc::allocation_size(&second)?;
+    let heap = GarbageCollector::with_config(
+        Configuration::builder()
+            .threads(1)
+            .max_heap_bytes(cap)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
+    let first = Gc::try_new(&heap, first)?;
+    let second = Gc::try_new(&heap, second)?;
+    drop(first);
+    heap.start();
+    heap.collect();
+    assert_eq!(parked.recv_timeout(Duration::from_secs(4)), Ok(()));
+    drop(second);
+    wait_for_registered_worker_sweep(&heap)?;
+    let mut allocation = Box::pin(Gc::try_new_async(&heap, 11_u64));
+    assert!(
+        allocation
+            .as_mut()
+            .poll(&mut Context::from_waker(Waker::noop()))
+            .is_pending()
+    );
+    let thread = clearing.recv_timeout(Duration::from_secs(3));
+    let still_parked = !older.released.load(Ordering::Acquire);
+    drop(allocation);
+    drop(resume);
+    let stopped = heap.stop();
+    assert_eq!(thread.as_deref(), Ok("gc-pressure-finalizers"));
+    assert!(still_parked);
+    assert!(matches!(stopped, Err(ristretto_gc::Error::SyncError(_))));
+    assert_eq!(drops.load(Ordering::Acquire), 1);
+    assert_eq!(older.dropped.load(Ordering::Acquire), 1);
+    assert_eq!(heap.managed_bytes(), 0);
+    Ok(())
+}
+
 #[cfg(not(miri))]
 #[test]
 #[expect(
