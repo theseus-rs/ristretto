@@ -32,3 +32,20 @@ allocation adjustment by type, and replacing the destructor mutex with an
 exclusively claimed payload slot. A retained descriptor can outlive payload
 destruction. The charge is released after backing return. Per-object RSS and
 total allocation throughput require separate measurements.
+
+## Returning a stale descriptor under contention
+
+The native regression retains the descriptor of a collected object, verifies
+zero charged managed bytes, and parks the allocation registry before releasing
+the descriptor on another thread. The release must complete within 250 ms.
+On top of `2e9795b8`, the ordinary allocator passed 16 of 16 fresh processes.
+An experiment that placed payload and descriptor in one regional reservation
+passed 0 of 16. Returning the last descriptor tried to lock the parked registry.
+The process order was shuffled. This tests a particular parked-owner schedule.
+
+Run the test with
+`cargo test --locked -p ristretto_gc --lib retained_descriptor_release_finishes_with_its_allocation_registry_parked`.
+To reproduce the rejected implementation, apply the decompressed patch to
+`2e9795b8` with the regression test present. Its changes are research evidence.
+
+[Trial order and outcomes](paired-region-outcomes.json) · [Regional experiment patch](paired-region-experiment.patch.gz)

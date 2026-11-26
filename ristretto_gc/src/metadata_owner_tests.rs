@@ -376,3 +376,50 @@ fn unpublished_owner_is_released_after_constructor_cancellation() -> Result<()> 
     }
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn retained_descriptor_release_finishes_with_its_allocation_registry_parked() -> Result<()> {
+    use std::sync::Barrier;
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .local_allocation_buffers(true)
+            .max_heap_bytes(1024 * 1024)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
+    let context = gc.register_context();
+    let root = context.with(|| Gc::try_new(&gc, 42_u64))?;
+    let stale = gc
+        .metadata_for_address(root.as_ptr() as usize)
+        .expect("live descriptor");
+    drop(root);
+    drop(context);
+    for _ in 0..3 {
+        gc.collect_full()?;
+    }
+    assert_eq!(gc.managed_bytes(), 0);
+    let start = Barrier::new(2);
+    let (finished, observed) = mpsc::channel();
+    let mut released = false;
+    std::thread::scope(|scope| {
+        let start_peer = &start;
+        scope.spawn(move || {
+            start_peer.wait();
+            drop(stale);
+            finished.send(()).expect("observer remains live");
+        });
+        gc.with_parked_descriptor_registry(|| {
+            start.wait();
+            released = observed.recv_timeout(Duration::from_millis(250)).is_ok();
+        });
+    });
+    assert!(
+        released,
+        "dropping inert metadata waited for a parked range registry"
+    );
+    Ok(())
+}
