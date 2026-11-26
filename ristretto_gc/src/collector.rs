@@ -1675,7 +1675,11 @@ impl GarbageCollector {
         }
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         barrier_progress_tests::pause_before_remembering();
-        self.enroll_unbuffered_owner(address, self.remembered.lock(address))
+        // If the shard is busy, the caller keeps the demoted registrations
+        // through the ordinary barrier, which can publish to the overflow index.
+        self.remembered
+            .try_lock(address)
+            .and_then(|remembered| self.enroll_unbuffered_owner(address, remembered))
             .is_some()
     }
 
@@ -1708,7 +1712,9 @@ impl GarbageCollector {
             }
             return;
         }
-        if let Some(metadata) = self.objects.lock(address).get(&address) {
+        // The managed writer pins this owner throughout the hook. Its address
+        // cannot be reused, and the snapshot owns the exact visible descriptor.
+        if let Some(metadata) = self.objects.lookup(address) {
             metadata.record_mutation();
         } else {
             return;
@@ -3726,8 +3732,8 @@ impl GarbageCollector {
         let Some(objects) = self.objects.try_lock(address) else {
             return;
         };
-        // Ordinary writes update under the object shard. Prepared writes update
-        // under the remembered shard. Compare only after acquiring both.
+        // Verify identity and version under the remembered shard. A later
+        // buffered update publishes a fresh insertion after this removal.
         if let Some(mut remembered) = self.remembered.try_lock(address)
             && objects.get(&address).is_some_and(|metadata| {
                 metadata.id == identity && metadata.mutation.load(Ordering::Acquire) == version

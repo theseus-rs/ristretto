@@ -905,6 +905,58 @@ fn ordinary_vector_write_enrolls_a_mature_owner_while_either_shard_is_parked() -
     Ok(())
 }
 
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn prepared_field_store_completes_with_a_parked_metadata_writer() -> Result<()> {
+    for (counted, buffer) in [(false, 0), (true, 0), (false, 4), (true, 4)] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .barrier_buffer_size(buffer)
+                .promotion_age(1)
+                .allocation_threshold(usize::MAX)
+                .full_collection_interval(usize::MAX)
+                .build(),
+        );
+        let owner = Gc::try_new(&gc, crate::cell::RwLock::new(None::<Gc<u64>>))?;
+        gc.collect_full()?;
+        generation_tests::finish_young(&gc)?;
+        let address = owner.as_ptr().addr();
+        assert!(!gc.remembered.lock(address).contains(&address));
+        let child = Gc::try_new(&gc, 71_u64)?.into_rooted();
+        let id = child.identity();
+        let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+        thread::scope(|scope| {
+            let objects = (buffer != 0).then(|| gc.objects.lock(address));
+            let remembered = (buffer == 0).then(|| gc.remembered.lock(address));
+            let (done, finished) = std::sync::mpsc::channel();
+            let parent = &owner;
+            let writer = scope.spawn(move || {
+                *parent.write() = Some(child);
+                done.send(()).unwrap();
+            });
+            let completed = finished
+                .recv_timeout(std::time::Duration::from_secs(3))
+                .is_ok();
+            drop((objects, remembered));
+            writer.join().unwrap();
+            assert!(
+                completed,
+                "a parked metadata writer blocked field publication"
+            );
+        });
+        generation_tests::finish_young(&gc)?;
+        let witness = owner.read().as_ref().unwrap().rooted_clone();
+        assert_eq!(witness.identity(), id);
+        assert_eq!(*witness, 71);
+        drop(witness);
+        *owner.write() = None;
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+    }
+    Ok(())
+}
+
 struct SplitField {
     edge: Mutex<Option<Gc<u64>>>,
     scans: AtomicUsize,
