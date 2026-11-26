@@ -40,3 +40,13 @@ does not attribute any interval to a global GC pause.
 | [1](3d882623-chromium-1.json.gz) | 2.180 | 136/136 | 19.0 | 23.5 | 25.0 |
 | [2](3d882623-chromium-2.json.gz) | 2.057 | 129/129 | 20.4 | 20.7 | 20.8 |
 | [3](3d882623-chromium-3.json.gz) | 1.477 | 92/92 | 20.3 | 23.9 | 23.9 |
+
+## Inline WASM guards at `09b6207d`
+
+Three fresh Chromium 153.0.8010.12 workers ran the production WASI playground on CPUs 4 and 6. Each completed 13 guest collections, swept 54,059 objects, freed 10,473,075 bytes and returned checksum 799864. The workers replied to 225 of 225 scheduled pings within the Java measurement windows. All scheduled pings eventually received a response. These intervals include browser scheduling, Java and collector execution, and message delivery. GC-attributable global pause duration remains unmeasured.
+
+| Process | Java window (s) | Replies during Java / scheduled | p95 gap (ms) | p99 (ms) | Maximum (ms) |
+|---|---:|---:|---:|---:|---:|
+| [1](09b6207d-chromium-1.json.gz) | 1.174 | 73/73 | 20.5 | 24.0 | 24.0 |
+| [2](09b6207d-chromium-2.json.gz) | 1.235 | 77/77 | 21.5 | 22.9 | 22.9 |
+| [3](09b6207d-chromium-3.json.gz) | 1.202 | 75/75 | 20.6 | 23.2 | 23.2 |
