@@ -358,6 +358,57 @@ fn fresh_collections_trim_an_available_shard_and_finish_while_the_other_is_parke
     }
 }
 
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn a_guarded_payload_and_parked_registry_allow_an_independent_full_ticket() {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    for counted in [false, true] {
+        let gc = crate::GarbageCollector::with_config(
+            crate::Configuration::builder()
+                .compact_heap(true)
+                .concurrent_publication(counted)
+                .cost_aware_relocation(true)
+                .region_shards(2)
+                .region_layout(1024, 64)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let heap = gc.region_heap().expect("payload heap");
+        let payload = crate::HeapBuffer::try_with_fn(Some(heap), 32, |i| Ok(i as u64))
+            .expect("regional payload");
+        let source = heap.index(payload.relocation_region(heap).expect("source region"));
+        let owner = crate::Gc::new(&gc, crate::RwLock::new(payload));
+        let guard = owner.read();
+        let address = guard.as_ptr();
+        drop(crate::Gc::new(&gc, 93_u64));
+        let expected =
+            gc.managed_bytes() - crate::Gc::allocation_size(&93_u64).expect("scalar charge");
+        let (entered, ready) = mpsc::channel();
+        let (send, recv) = mpsc::channel();
+        std::thread::scope(|scope| {
+            let parked = lock(heap.shard(source));
+            let gc = &gc;
+            scope.spawn(move || {
+                entered.send(()).expect("start helper");
+                send.send(gc.collect_full()).expect("report ticket");
+            });
+            ready.recv().expect("helper started");
+            let completed = recv.recv_timeout(Duration::from_secs(2));
+            drop(parked);
+            assert!(matches!(completed, Ok(Ok(()))), "{completed:?}");
+        });
+        assert_eq!(gc.managed_bytes(), expected);
+        assert_eq!(guard.as_ptr(), address);
+        assert!(guard.iter().copied().eq(0_u64..32));
+        drop(guard);
+        drop(owner);
+        gc.collect_full().expect("physical cleanup");
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+}
+
 #[test]
 fn skipped_evacuation_index_from_an_older_epoch_is_never_ranked() {
     let heap = RegionHeap::with_shards(1024, 4096, 0, Budget::new(4096), true, 2);
