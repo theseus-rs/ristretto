@@ -321,7 +321,7 @@ impl RuntimeContext {
         if !self.reference_roots.lock().contains_key(&handle) {
             // Acquiring an edge's root or releasing a replaced owner may run
             // collection barriers. Both operations belong outside the frame lock.
-            let owner = reference.rooted_clone();
+            let owner = reference.try_rooted_clone()?;
             let previous = self.reference_roots.lock().insert(handle, owner);
             drop(previous);
         }

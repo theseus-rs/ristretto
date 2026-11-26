@@ -760,3 +760,26 @@ async fn completed_reference_context_validates_fallbacks_and_releases_unused_roo
     }
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn retired_same_heap_helper_result_returns_an_error_before_cache_admission() -> Result<()> {
+    let (vm, thread, class) = crate::test::class().await?;
+    let gc = vm.garbage_collector();
+    let ctx = RuntimeContext::new(gc, &vm, &thread, &class)?;
+    let owner = Gc::try_new(gc, RwLock::new(Reference::IntArray(vec![7].into())))?.into_rooted();
+    let weak = ristretto_gc::GcWeak::new(&owner, ristretto_gc::ReferenceKind::Weak, 0);
+    let mut edge = owner.clone();
+    // SAFETY: the test uses only the identity of this edge after retirement.
+    // It never dereferences the expired allocation.
+    #[expect(unsafe_code, reason = "non-owning identity validation fixture")]
+    unsafe {
+        edge.unroot();
+    }
+    drop(owner);
+    collect(gc).await?;
+    collect(gc).await?;
+    assert!(weak.upgrade().is_none());
+    assert!(ctx.retain_helper_result(&edge).is_err());
+    assert!(ctx.reference_roots.lock().is_empty());
+    Ok(())
+}

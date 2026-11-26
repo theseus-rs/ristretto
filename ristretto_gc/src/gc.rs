@@ -689,7 +689,17 @@ impl<T> Gc<T> {
         reason = "cloning rejects unassociated or retired handles"
     )]
     pub fn rooted_clone(&self) -> Self {
-        match &self.owner {
+        self.try_rooted_clone()
+            .expect("rooting requires a live managed allocation with matching identity")
+    }
+
+    /// Shares an owned root or acquires an owning root for the exact live edge.
+    ///
+    /// # Errors
+    /// Returns an error if the edge's collector has expired or its allocation
+    /// has retired or no longer matches its recorded identity.
+    pub fn try_rooted_clone(&self) -> Result<Self> {
+        Ok(match &self.owner {
             Owner::Root(root) => Self {
                 id: self.id,
                 ptr: self.ptr,
@@ -701,10 +711,10 @@ impl<T> Gc<T> {
                     .owner
                     .edge_heap()
                     .and_then(Weak::upgrade)
-                    .expect("rooting requires a live managed allocation");
-                let id = collector
-                    .clone_edge_root(self)
-                    .expect("rooting requires a live managed allocation with matching identity");
+                    .ok_or_else(|| Error::InvalidPointer("rooting requires a live heap".into()))?;
+                let id = collector.clone_edge_root(self).ok_or_else(|| {
+                    Error::InvalidPointer("root target has retired or changed identity".into())
+                })?;
                 Self {
                     id: self.id,
                     ptr: self.ptr,
@@ -716,7 +726,7 @@ impl<T> Gc<T> {
                     })),
                 }
             }
-        }
+        })
     }
 
     /// Copy a guard's inner handle without acquiring a second registration.
