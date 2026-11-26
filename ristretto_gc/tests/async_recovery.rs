@@ -936,8 +936,10 @@ mod native {
             notifications.0.store(0, Ordering::Release);
             mark.release();
             until(|| compact.entered.load(Ordering::Acquire) > 0);
+            // Refund delivery may run on the independent notifier. Keep the
+            // compaction callback parked until the executor actually gets a wake.
+            until(|| notifications.0.load(Ordering::Acquire) > 0);
             assert_eq!(gc.statistics()?.full_collections, 0);
-            assert!(notifications.0.load(Ordering::Acquire) > 0);
             assert_eq!(gc.diagnostics().allocation_early_wakeups, 1);
             let value = if cancel {
                 None
