@@ -19,6 +19,9 @@ Each row compares two fresh forks per rate. The table gives the median of their 
 | `849b9f31` | Ristretto | 163 | 1028 | 257.8 |
 | `849b9f31` | G1 | 241.5 | 12 | 62.0 |
 | `849b9f31` | ZGC | 9.5 | 36.5 | 105.6 |
+| `81594aad` | Ristretto | 243 | 315 | 253.0 |
+| `81594aad` | G1 | 5.5 | 124.5 | 61.8 |
+| `81594aad` | ZGC | 133 | 104.5 | 110.1 |
 
 The unchanged Java roots workload used a 64 MiB managed heap, two CPUs, a two-CPU quota, a 512 MiB cgroup, a five-second warmup and a 60-second measurement. The [earlier integrated run](../consolidated-java/README.md) reached 397.9 MiB on Ristretto. These short runs characterize latency and memory at fixed demand. Endurance, maximum sustainable throughput and global mutator pauses have separate gates.
 
