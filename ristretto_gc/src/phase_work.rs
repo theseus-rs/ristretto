@@ -11,6 +11,13 @@ type WhiteRun<'a> = (
 
 pub(super) const SWEEP_BATCH: usize = 16;
 
+#[derive(Debug, PartialEq, Eq)]
+pub(super) enum PhaseStep {
+    Fallback,
+    CycleBusy(usize),
+    Worked(bool),
+}
+
 pub(super) enum Unit {
     Progress,
     Busy,
@@ -79,9 +86,9 @@ impl GarbageCollector {
         clippy::too_many_lines,
         reason = "one budget for independent domain units"
     )]
-    pub(super) fn independent_phase_step(&self, concurrent: bool) -> Option<bool> {
+    pub(super) fn independent_phase_step(&self, concurrent: bool) -> PhaseStep {
         if !self.configuration.independent_phases {
-            return None;
+            return PhaseStep::Fallback;
         }
         let preferred = self.next_domain.load(Ordering::Relaxed) % 2;
         let terminal =
@@ -96,7 +103,9 @@ impl GarbageCollector {
             }
         });
         let context = Context::enter(self, index);
-        let cycle = self.domain().cycle.try_lock().ok()?;
+        let Ok(cycle) = self.domain().cycle.try_lock() else {
+            return PhaseStep::CycleBusy(index);
+        };
         let started = now();
         let cpu_started = (concurrent && self.diagnostics_enabled())
             .then(crate::diagnostics::thread_cpu_ns)
@@ -202,7 +211,7 @@ impl GarbageCollector {
             progressed
         };
         if !progressed {
-            return None;
+            return PhaseStep::Fallback;
         }
         let measurement = if concurrent {
             &self.diagnostics.worker_steps
@@ -220,7 +229,7 @@ impl GarbageCollector {
         self.record_step(started, cpu_started, concurrent, &mut counters);
         drop(measurement);
         self.notify_progress();
-        Some(!self.pending())
+        PhaseStep::Worked(!self.pending())
     }
 
     pub(super) fn context_root_unit(&self, cycle: &mut Cycle) -> ContextUnit {

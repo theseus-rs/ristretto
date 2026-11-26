@@ -23,6 +23,38 @@ fn collector(concurrent: bool) -> Arc<GarbageCollector> {
 }
 
 #[test]
+fn a_busy_sole_sweep_skips_the_duplicate_probe_and_preserves_other_domain_turns() -> Result<()> {
+    for counted in [false, true] {
+        let gc = collector(counted);
+        drop(Gc::try_new(&gc, 57_u64)?);
+        gc.collect();
+        for _ in 0..10000 {
+            if lock(&gc.domains[1].cycle).phase == Phase::Sweep {
+                break;
+            }
+            gc.step();
+        }
+        let guard = lock(&gc.domains[1].cycle);
+        assert_eq!(guard.phase, Phase::Sweep);
+        let before = gc.next_domain.load(Ordering::Relaxed);
+        assert!(gc.step_inner(false).is_none());
+        assert_eq!(gc.next_domain.load(Ordering::Relaxed), before);
+        gc.collect_young();
+        gc.step();
+        assert_ne!(gc.next_domain.load(Ordering::Relaxed), before);
+        drop(guard);
+        for _ in 0..10000 {
+            if gc.step() {
+                break;
+            }
+        }
+        assert_eq!(gc.managed_bytes(), 0);
+        assert!(!gc.pending());
+    }
+    Ok(())
+}
+
+#[test]
 fn roots_reference_slots_and_sweep_entries_progress_with_the_coordinator_held() -> Result<()> {
     for concurrent in [false, true] {
         for phase in [
@@ -45,7 +77,10 @@ fn roots_reference_slots_and_sweep_entries_progress_with_the_coordinator_held() 
             assert_eq!(lock(&gc.domains[1].cycle).phase, phase);
             let before = gc.diagnostics().independent_phase_steps;
             let coordinator = lock(&gc.coordinator);
-            assert!(gc.independent_phase_step(false).is_some());
+            assert!(matches!(
+                gc.independent_phase_step(false),
+                phase_work::PhaseStep::Worked(_)
+            ));
             assert_eq!(gc.diagnostics().independent_phase_steps, before + 1);
             drop(coordinator);
             while !gc.step() {}
@@ -396,7 +431,7 @@ mod native {
             );
             drop(objects);
             worker.join().expect("root scan");
-            assert_eq!(yielded, Ok(Some(false)));
+            assert_eq!(yielded, Ok(phase_work::PhaseStep::Worked(false)));
             assert!(coordinator_free && admission_free);
             assert_eq!(lock(&gc.domains[1].cycle).cursor, cursor);
             gc.collect_full()?;

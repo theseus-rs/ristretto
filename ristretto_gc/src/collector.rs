@@ -945,6 +945,13 @@ impl GarbageCollector {
             self.shade_metadata(metadata);
         }
     }
+    fn domain_has_work(&self, index: usize) -> bool {
+        let domain = self.domain_at(index);
+        domain.active()
+            || domain.requested.load(Ordering::Acquire)
+            || (index == 1 && self.old_requested.load(Ordering::Acquire))
+    }
+
     fn pending(&self) -> bool {
         self.retired_ready.load(Ordering::Acquire) != 0
             || self.old_requested.load(Ordering::Acquire)
@@ -4586,8 +4593,13 @@ impl GarbageCollector {
         let result = self
             .independent_mark_step(concurrent)
             .or_else(|| self.independent_relocation_step(concurrent))
-            .or_else(|| self.independent_phase_step(concurrent))
-            .or_else(|| self.coordinated_step(concurrent));
+            .or_else(|| match self.independent_phase_step(concurrent) {
+                phase_work::PhaseStep::Worked(progress) => Some(progress),
+                // A coordinator turn would try the same held mutex. A request
+                // racing this hint is reconsidered on the very next step.
+                phase_work::PhaseStep::CycleBusy(index) if !self.domain_has_work(1 - index) => None,
+                _ => self.coordinated_step(concurrent),
+            });
         // A producer may park after linking while still holding the coordinator.
         // Another ordinary worker or caller can deliver that visible notification.
         if result.is_none() && self.has_pending_references() {
@@ -4897,10 +4909,7 @@ impl GarbageCollector {
                 self.terminal_priority(index) && domain.weak_phase() != 0
             });
         let index = terminal.unwrap_or_else(|| {
-            if self.domain_at(preferred).active()
-                || self.domain_at(preferred).requested.load(Ordering::Acquire)
-                || (preferred == 1 && self.old_requested.load(Ordering::Acquire))
-            {
+            if self.domain_has_work(preferred) {
                 preferred
             } else {
                 1 - preferred
