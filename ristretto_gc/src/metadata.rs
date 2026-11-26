@@ -6,8 +6,9 @@ use crate::finalizer::FinalizerFn;
 use crate::pointers::SafePtr;
 use crate::pointers::TracePtr;
 use portable_atomic::AtomicU64;
+use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::{Arc, Weak};
 use tracing::warn;
 
 #[path = "birth_visibility.rs"]
@@ -118,12 +119,28 @@ impl Drop for RegionalReturn {
     }
 }
 
-type DropFn = Option<Payload>;
+/// Only the winner of the storage destruction transition can take the payload.
+struct PayloadSlot(UnsafeCell<Option<Payload>>);
+
+// SAFETY: shared access to the contents is limited to the unique destruction
+// claimant. Moving the owner across threads requires Payload to be Send.
+unsafe impl Sync for PayloadSlot where Payload: Send {}
+
+impl PayloadSlot {
+    /// # Safety
+    /// The caller must have just changed this descriptor to DESTROYED and
+    /// must be the sole caller consuming that successful transition.
+    unsafe fn take_claimed(&self) -> Option<Payload> {
+        // SAFETY: the successful transition excludes every other access.
+        unsafe { (*self.0.get()).take() }
+    }
+}
 
 /// Type and callback identity are immutable and shared by all matching allocations.
 struct Kind {
     type_id: std::any::TypeId,
     finalizer: Option<FinalizerFn>,
+    sentinel_bytes: usize,
 }
 
 #[path = "direct_marks.rs"]
@@ -141,6 +158,10 @@ pub(crate) struct ObjectMetadata {
     pub(crate) age: AtomicUsize,
     pub(crate) birth: BirthVisibility,
     scanning: AtomicBool,
+    finalized: AtomicBool,
+    direct_refund: bool,
+    host_cleanup: bool,
+    dirty_scan: AtomicU8,
     storage: storage_state::StorageState,
     // Installing this link transfers the reservation's logical charge. It stays
     // charged until this descriptor destroys its payload, even before publication
@@ -151,13 +172,8 @@ pub(crate) struct ObjectMetadata {
     pub(crate) old_birth: AtomicU64,
     pub(crate) direct_marks: direct_marks::DirectMarks,
     size: usize,
-    logical_size: usize,
-    drop_fn: Mutex<DropFn>,
+    payload: PayloadSlot,
     kind: &'static Kind,
-    finalized: AtomicBool,
-    direct_refund: bool,
-    host_cleanup: bool,
-    dirty_scan: AtomicU8,
     // Discovery must not turn old descriptor snapshots into managed roots.
     // The matching strong owner lives only in the payload destruction record.
     pub(crate) owner: Option<Weak<dyn crate::HeapOwner>>,
@@ -402,19 +418,18 @@ impl ObjectMetadata {
                 && !T::has_bounded_cleanup());
         let direct_refund =
             owner.is_none() && allocation.direct_refund(size) && !trace.requires_clear();
-        let drop_fn: DropFn = Some(Payload { allocation, owner });
 
         Self {
             id,
             size,
             direct_refund,
             host_cleanup,
-            logical_size: size - crate::gc::Allocation::<T>::layout().size() + size_of::<T>(),
             birth: BirthVisibility::default(),
-            drop_fn: Mutex::new(drop_fn),
+            payload: PayloadSlot(UnsafeCell::new(Some(Payload { allocation, owner }))),
             kind: &const {
                 Kind {
                     type_id: std::any::TypeId::of::<T>(),
+                    sentinel_bytes: crate::gc::Allocation::<T>::layout().size() - size_of::<T>(),
                     finalizer: None,
                 }
             },
@@ -444,6 +459,7 @@ impl ObjectMetadata {
         metadata.kind = &const {
             Kind {
                 type_id: std::any::TypeId::of::<T>(),
+                sentinel_bytes: crate::gc::Allocation::<T>::layout().size() - size_of::<T>(),
                 finalizer: Some(crate::finalizer::finalize::<T>),
             }
         };
@@ -462,19 +478,19 @@ impl ObjectMetadata {
 
     /// Logical payload bytes exclude the ordinary allocator's inline wrapper.
     pub(crate) fn logical_size(&self) -> usize {
-        self.logical_size
+        self.size - self.kind.sentinel_bytes
     }
 
     pub(crate) fn record_publication(&self, collector: &crate::GarbageCollector) {
         self.birth.index();
-        collector.record_published_bytes(self.logical_size);
+        collector.record_published_bytes(self.logical_size());
     }
 
     fn refund_publication(&self, collector: &crate::GarbageCollector) {
         // StorageState::destroy and the taken Payload grant exactly one Refund.
         // An indexed descriptor retains its history even after storage retirement.
         if self.birth.indexed() {
-            collector.release_published_bytes(self.logical_size);
+            collector.release_published_bytes(self.logical_size());
         }
     }
 
@@ -551,16 +567,13 @@ impl ObjectMetadata {
             if !unique.storage.destroy_unique() {
                 return None;
             }
-            unique
-                .drop_fn
-                .get_mut()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .take()
+            unique.payload.0.get_mut().take()
         } else {
             if !metadata.storage.destroy() {
                 return None;
             }
-            metadata.take_claimed_payload()
+            // SAFETY: this call just claimed destruction of the same storage.
+            unsafe { metadata.payload.take_claimed() }
         }?;
         if payload.allocation.is_regional() {
             let mut pending = RegionalReturn {
@@ -585,22 +598,14 @@ impl ObjectMetadata {
         if !self.storage.destroy() {
             return;
         }
-        self.destroy_payload(self.take_claimed_payload(), collector, selection);
-    }
-
-    // Only the successful terminal storage transition reaches this method.
-    // The unique-owner path already holds &mut self. Neither path invokes a
-    // callback while accessing the slot, so a parked peer cannot own its lock.
-    fn take_claimed_payload(&self) -> DropFn {
-        self.drop_fn
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .take()
+        // SAFETY: this call just claimed destruction of this descriptor.
+        let payload = unsafe { self.payload.take_claimed() };
+        self.destroy_payload(payload, collector, selection);
     }
 
     fn destroy_payload(
         &self,
-        drop_fn: DropFn,
+        drop_fn: Option<Payload>,
         collector: Option<&crate::GarbageCollector>,
         selection: Option<crate::retirement_grants::Selection>,
     ) {

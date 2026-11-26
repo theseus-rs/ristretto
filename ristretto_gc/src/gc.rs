@@ -26,7 +26,7 @@ impl<T> Allocation<T> {
         Self { value }
     }
 
-    pub(crate) fn layout() -> std::alloc::Layout {
+    pub(crate) const fn layout() -> std::alloc::Layout {
         if size_of::<T>() == 0 {
             std::alloc::Layout::new::<(T, u8)>()
         } else {
