@@ -248,6 +248,8 @@ impl Drop for AllocationReservation<'_> {
 }
 
 thread_local! {
+    #[cfg(not(target_family = "wasm"))]
+    static SPARE_FULL_CLEANUP: std::cell::Cell<Option<Arc<AtomicUsize>>> = const { std::cell::Cell::new(None) };
     static CLEANUP_HEAPS: std::cell::RefCell<Vec<usize>> = const { std::cell::RefCell::new(Vec::new()) };
     static CONTEXT: std::cell::Cell<Option<(usize, usize)>> = const { std::cell::Cell::new(None) };
     static WORKER: std::cell::Cell<Option<(usize, usize)>> = const { std::cell::Cell::new(None) };
@@ -393,7 +395,11 @@ impl Domain {
         }
         // The initial reservation belongs to the full cycle. An already
         // completed numerical ticket cannot satisfy an enrolment still pending.
-        let fresh = Arc::new(AtomicUsize::new(1));
+        let fresh = SPARE_FULL_CLEANUP
+            .try_with(std::cell::Cell::take)
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| Arc::new(AtomicUsize::new(1)));
         let previous = self
             .pending_full_cleanup
             .compare_and_swap(std::ptr::null::<AtomicUsize>(), Some(fresh.clone()));
@@ -541,6 +547,16 @@ impl FullCleanup {
     fn reserve(&self) -> Self {
         self.0.fetch_add(1, Ordering::Relaxed);
         Self(self.0.clone())
+    }
+
+    fn recycle(mut completed: Arc<AtomicUsize>) {
+        // Other callers can still be observing this group's terminal zero.
+        // Only its final owner may prepare it for another request, possibly on another heap.
+        if let Some(unique) = Arc::get_mut(&mut completed) {
+            debug_assert_eq!(*unique.get_mut(), 0);
+            *unique.get_mut() = 1;
+            let _ = SPARE_FULL_CLEANUP.try_with(|spare| spare.set(Some(completed)));
+        }
     }
 }
 
@@ -3176,6 +3192,7 @@ impl GarbageCollector {
                     pool.callbacks.help_ready(jobs);
                 }
                 if cleanup.load(Ordering::Acquire) == 0 {
+                    FullCleanup::recycle(cleanup);
                     return Ok(());
                 }
                 self.step_inner(false);
