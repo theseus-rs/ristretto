@@ -27,6 +27,10 @@ At the same candidate, every scheduled Java roots request finished, but
 Ristretto's median scheduled p99.9 remained 3,648 µs at 1,000/s and 5,632 µs at
 1,500/s. One 1,500/s process reached 327,680 µs.
 [Java results and G1/ZGC comparison](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/primitive-writes/README.md)
+A 30-process, single-policy root-storage screen reduced the native scheduled
+p99.99 from 8.32 ms (tree) to 2.91 ms (contexts), while the corresponding WASI
+median rose from 5.57 ms to 8.45 ms. The shipping root policy remains unchanged.
+[Configurations, histograms and backlog](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/primitive-writes/root-storage/README.md)
 
 
 

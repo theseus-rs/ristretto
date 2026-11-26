@@ -1,0 +1,7 @@
+target,policy,processes,operations,backlog_operations,operation_p999_us,operation_p9999_us,arrival_p9999_us
+native,tree,5,24000,0,314,3008,8320
+native,slots,5,24000,0,230,2880,3936
+native,contexts,5,24000,0,180,2016,2912
+wasm,tree,5,23999,1,168,4480,5568
+wasm,slots,5,23998,2,124,4224,5696
+wasm,contexts,5,24000,0,156,4416,8448

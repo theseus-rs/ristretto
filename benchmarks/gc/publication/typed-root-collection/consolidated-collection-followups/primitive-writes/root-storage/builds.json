@@ -1,0 +1,22 @@
+{
+  "source": "3d882623",
+  "profile": "release",
+  "package": "ristretto_classloader",
+  "example": "gc_endurance",
+  "builds": {
+    "native": {
+      "binary_sha256": "5f116f26976e80649927913bc8ae5fcbe0cbbccedcb8e8b2638774d997ea72de",
+      "cpu_affinity": [
+        16,
+        18
+      ]
+    },
+    "wasm": {
+      "binary_sha256": "95cf62e93f9a1d3761d2043cba6d649940432c85558bf561ac276991c51cdfb7",
+      "cpu_affinity": [
+        20
+      ],
+      "wasmtime_sha256": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8"
+    }
+  }
+}
