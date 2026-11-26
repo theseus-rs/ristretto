@@ -41,6 +41,18 @@ and reference-bearing continuations with owning roots across suspension,
 then repeat the timed-window checks before capacity or endurance qualification.
 [Timed method counts and diagnostic forks](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/null-local-dispatch/README.md).
 
+At `2616e035`, all 18 fixed-rate Java roots forks completed their requests.
+At 1,500/s the median scheduled p99.9 was 1,856 µs for Ristretto, 216 µs
+for G1 and 110 µs for ZGC. Three saturated forks per runtime measured median
+rates of 4,798 roots operations/s for Ristretto, 14,865,550/s for G1 and
+14,613,853/s for ZGC under the same resource limits. Object allocation admission must preserve the
+receiver and the previous node across the constructor call, including when
+collection or cancellation occurs between allocation and return. Establish the
+constructor owner and allocation-site identity before treating receiver aliases
+as initialized. At `15d6df3f` both ordinary allocation paths reject abstract
+classes and interfaces before running their initializers. Arrays of those
+component types still allocate. [Java roots results and graphs](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/null-local-roots/README.md).
+
 At `2ec923ac` a terminal native allocator gives the runnable callback assistant
 one acknowledged dispatch opportunity. The delayed-worker parent denied the
 request in 100/100 processes. The ordinary collector now stays pending and
@@ -55,6 +67,13 @@ passed 400 forced allocation and reclamation runs. It took 32% longer for 64
 cheap finalizers with two workers. Independent claims, pressure-service
 progress and physical refund remain separate release checks.
 [Queue candidate and remaining obligation](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/parked-claim-qualification/README.md).
+
+One hypothesis for cheaper independent claims is a fixed-size page of jobs
+per publishing native worker. Test whether a claimant parked immediately before
+or after taking one index leaves 128 or 127 peers available across a page
+boundary. Count live pages after the other peers drain while the claimant stays
+parked. Check shutdown during publication, destructor ordering across workers
+and exact-once physical refunds before comparing the six cheap-finalizer costs.
 
 Default Java instance fields carry zeroes and nulls. Construction and first
 publication now avoid scanning those fields for reference cards and demotions.
