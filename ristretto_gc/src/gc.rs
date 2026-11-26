@@ -519,6 +519,13 @@ impl<T> Gc<T> {
         publication.finish_unrooted(collector)
     }
 
+    pub(crate) fn traced_metadata(&self) -> Option<&crate::metadata::MetadataRef> {
+        match &self.owner {
+            Owner::Traced(metadata) => Some(metadata),
+            Owner::Root(_) | Owner::Edge(_) => None,
+        }
+    }
+
     pub(crate) fn collector(&self) -> Weak<GarbageCollector> {
         match &self.owner {
             Owner::Edge(collector) => collector.clone(),
@@ -958,7 +965,7 @@ impl<T> Deref for Gc<T> {
 impl<T> Drop for Gc<T> {
     fn drop(&mut self) {
         if let Some(collector) = self.owner.edge_heap().and_then(Weak::upgrade) {
-            collector.snapshot_edge(self.ptr.as_ptr() as usize);
+            collector.snapshot_edge(self);
         }
     }
 }

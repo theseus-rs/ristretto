@@ -1718,9 +1718,9 @@ impl GarbageCollector {
             .filter(|metadata| metadata.id == slot.target_identity)
     }
 
-    pub(crate) fn snapshot_edge(&self, address: usize) {
+    pub(crate) fn snapshot_edge<T>(&self, target: &Gc<T>) {
         if self.domains.iter().any(Domain::marking) {
-            self.edge_barrier(address);
+            self.edge_barrier(target);
         }
     }
 
@@ -3801,18 +3801,20 @@ impl GarbageCollector {
     }
 
     fn shade_all(&self, address: usize) -> bool {
+        self.domains.iter().any(Domain::active)
+            && self
+                .objects
+                .lookup(address)
+                .is_some_and(|metadata| self.shade_live_domains(&metadata))
+    }
+
+    fn shade_live_domains(&self, metadata: &MetadataRef) -> bool {
         // The caller holds publication admission through both domain barriers.
-        if !self.domains.iter().any(Domain::active) {
-            return false;
-        }
-        let Some(metadata) = self.objects.lookup(address) else {
-            return false;
-        };
         let _retention = TraceRetention::enter(self, Retention::Strong);
         let mut changed = false;
         for index in 0..2 {
             let _context = Context::enter(self, index);
-            changed |= self.shade_known(&metadata);
+            changed |= self.shade_known(metadata);
         }
         changed
     }
@@ -3926,42 +3928,20 @@ impl GarbageCollector {
 
     /// Shades a reference before it is overwritten. Barrier work is never discarded.
     pub fn write_barrier<T: Trace>(&self, target: &Gc<T>) {
-        self.edge_barrier(target.ptr.as_ptr() as usize);
+        self.edge_barrier(target);
     }
 
     /// Certify a no-op against the packed phase/revision clock. Retention only
     /// strengthens within an epoch; all phase transitions stamp the revision.
     /// Metadata ownership permits the check to finish after storage retirement,
     /// but does not access payloads or imply that their graphs remain reachable.
-    fn edge_already_satisfied(&self, address: usize) -> bool {
-        let Some(clock) = &self.publication_clock else {
-            return false;
-        };
-        let Some(snapshot) = clock.snapshot() else {
-            return false;
-        };
-        let active = |index| snapshot.flags(index) & 1 != 0;
-        if !active(0) && !active(1) {
-            return clock.unchanged(snapshot);
-        }
-        let record = crate::context::Record {
-            address,
-            epochs: std::array::from_fn(|index| {
-                active(index).then(|| self.domain_at(index).epoch.load(Ordering::Acquire))
-            }),
-            dirty: false,
-        };
-        if crate::context::with_state(self, |state| state.satisfies(&self.contexts, record))
-            == Some(true)
-        {
-            return clock.unchanged(snapshot);
-        }
-        // Release the shard before checking. A paused checker owns only metadata
-        // and cannot pin publication admission or this registry shard.
-        let metadata = self.objects.lock(address).get(&address).cloned();
-        let Some(metadata) = metadata else {
-            return false;
-        };
+    fn edge_already_satisfied(
+        &self,
+        metadata: &MetadataRef,
+        clock: &publication_state::Clock,
+        snapshot: publication_state::Snapshot,
+        record: crate::context::Record,
+    ) -> bool {
         let satisfied = record.epochs.iter().enumerate().all(|(index, epoch)| {
             epoch.is_none()
                 || (index == 0
@@ -3989,78 +3969,97 @@ impl GarbageCollector {
         if satisfied && clock.unchanged(snapshot) {
             // Cache only after successful certification. Phase changes after this
             // point merely leave a stale epoch key; rollover disables the cache.
-            crate::context::with_state(self, |state| state.completed(record));
+            crate::context::with_state(self, |state| {
+                state.completed(crate::context::Record {
+                    identity: metadata.id,
+                    ..record
+                })
+            });
             true
         } else {
             false
         }
     }
 
-    fn edge_barrier(&self, address: usize) {
-        if self.publication_clock.is_some() {
-            self.counted_edge_barrier(address);
-        } else {
-            let _publication = self.allocation_guard();
-            self.barrier(address, None);
-        }
+    fn edge_barrier<T>(&self, target: &Gc<T>) {
+        self.publish_edge(
+            target.ptr.as_ptr().addr(),
+            target.identity(),
+            target.traced_metadata(),
+        );
     }
 
-    fn counted_edge_barrier(&self, address: usize) {
+    fn publish_edge(&self, address: usize, identity: crate::ObjectId, known: Option<&MetadataRef>) {
         let _measurement = self
             .diagnostics
             .barrier_record
             .measure(self.diagnostics_enabled());
-        if self.edge_already_satisfied(address) {
-            return;
-        }
-        // Confirm idle under admission without touching the object index. The
-        // phase can change between the hint and admission, so retry the ordinary
-        // active path if that happens. The guard still excludes a late start.
-        if self.publication_clock.is_some() && self.domains.iter().all(|domain| !domain.active()) {
-            let _publication = self.barrier_guard();
+        let mut certificate = None;
+        let legacy = if let Some(clock) = &self.publication_clock {
+            if let Some(snapshot) = clock.snapshot() {
+                if (snapshot.flags(0) | snapshot.flags(1)) & 1 == 0 {
+                    if clock.unchanged(snapshot) {
+                        return;
+                    }
+                } else {
+                    let record = crate::context::Record {
+                        address,
+                        identity,
+                        dirty: false,
+                        epochs: std::array::from_fn(|index| {
+                            (snapshot.flags(index) & 1 != 0)
+                                .then(|| self.domain_at(index).epoch.load(Ordering::Acquire))
+                        }),
+                    };
+                    // Only a concrete birth can have a pending or completed record.
+                    // Check it before consulting the address directory.
+                    if crate::context::with_state(self, |state| {
+                        state.satisfies(&self.contexts, record)
+                    }) == Some(true)
+                    {
+                        if clock.unchanged(snapshot) {
+                            return;
+                        }
+                    } else {
+                        certificate = Some((clock, snapshot, record));
+                    }
+                }
+            }
+            None
+        } else {
+            let admission = self.allocation_guard();
             if self.domains.iter().all(|domain| !domain.active()) {
                 return;
             }
-        }
-        // Waiting for a hot object shard must not keep counted admission active.
-        // Hold the shard through the short mark-only operation, releasing
-        // admission first: hot-shard waiters cannot form an unbroken admission
-        // convoy. This inverse order is only valid for nonblocking admission;
-        // the legacy reader retains its original lock ordering.
-        if self.publication_clock.is_some()
-            && (self.configuration.barrier_buffer_size == 0
-                || self.domains.iter().any(|domain| domain.weak_phase() != 0))
-        {
-            let objects = self.objects.lock(address);
-            let publication = self.barrier_guard();
-            let metadata = objects.get(&address);
-            if let Some(metadata) = metadata {
-                let _retention = TraceRetention::enter(self, Retention::Strong);
-                let mut changed = false;
-                for index in 0..2 {
-                    let domain = self.domain_at(index);
-                    if !domain.active()
-                        || domain.weak_phase() >= 5
-                        || (index == 0
-                            && metadata.age.load(Ordering::Acquire)
-                                >= self.configuration.promotion_age.max(1))
-                        || metadata.retention(index, domain.epoch.load(Ordering::Acquire))
-                            == Some(Retention::Strong)
-                    {
-                        continue;
-                    }
-                    let _context = Context::enter(self, index);
-                    changed |= self.shade_known(metadata);
-                }
-                if changed {
-                    publication.changed();
-                }
+            Some(admission)
+        };
+        // A traced edge already owns its original descriptor. An unsafe raw
+        // wrapper instead pins its address through the caller's lifetime
+        // contract; capture the real identity before any work is deferred.
+        let resolved;
+        let metadata = if let Some(metadata) = known {
+            if !std::ptr::eq(metadata.collector.as_ptr(), self) {
+                return;
             }
+            metadata
         } else {
-            let publication = self.barrier_guard();
-            if self.barrier_inner(address, None) {
-                publication.changed();
-            }
+            let found = if identity.to_i64() == 0 {
+                self.objects.lookup(address)
+            } else {
+                self.objects.lookup_identity(address, identity)
+            };
+            let Some(found) = found else { return };
+            resolved = found;
+            &resolved
+        };
+        if certificate.is_some_and(|(clock, snapshot, record)| {
+            self.edge_already_satisfied(metadata, clock, snapshot, record)
+        }) {
+            return;
+        }
+        let publication = legacy.unwrap_or_else(|| self.barrier_guard());
+        if self.barrier_inner(metadata, None) {
+            publication.changed();
         }
     }
 
@@ -4086,14 +4085,28 @@ impl GarbageCollector {
             .diagnostics
             .barrier_record
             .measure(self.diagnostics_enabled());
-        self.barrier_inner(address, owner)
+        if let Some((metadata, version)) = owner {
+            return self.barrier_inner(metadata, Some(version));
+        }
+        self.domains.iter().any(Domain::active)
+            && self
+                .objects
+                .lookup(address)
+                .is_some_and(|metadata| self.barrier_inner(&metadata, None))
     }
 
-    fn barrier_inner(&self, address: usize, owner: Option<(&MetadataRef, usize)>) -> bool {
-        if self.configuration.barrier_buffer_size == 0 {
-            debug_assert!(owner.is_none(), "an unbuffered owner is enrolled directly");
-            return self.shade_all(address);
+    fn barrier_inner(&self, metadata: &MetadataRef, version: Option<usize>) -> bool {
+        if !metadata.birth.is_live() {
+            return false;
         }
+        if self.configuration.barrier_buffer_size == 0 {
+            debug_assert!(
+                version.is_none(),
+                "an unbuffered owner is enrolled directly"
+            );
+            return self.shade_live_domains(metadata);
+        }
+        let owner = version.map(|version| (metadata, version));
         let epochs = std::array::from_fn(|index| {
             let domain = self.domain_at(index);
             domain
@@ -4101,7 +4114,8 @@ impl GarbageCollector {
                 .then(|| domain.epoch.load(Ordering::Acquire))
         });
         let record = crate::context::Record {
-            address,
+            address: metadata.trace.ptr.addr(),
+            identity: metadata.id,
             epochs,
             dirty: owner.is_some(),
         };
@@ -4193,22 +4207,24 @@ impl GarbageCollector {
         true
     }
 
+    fn buffered_target(&self, record: crate::context::Record) -> Option<MetadataRef> {
+        self.objects
+            .lookup_identity(record.address, record.identity)
+    }
+
     fn apply_barrier(&self, record: crate::context::Record) -> bool {
         let _retention = TraceRetention::enter(self, Retention::Strong);
         if record.dirty {
-            self.remembered.lock(record.address).insert(record.address);
+            let mut remembered = self.remembered.lock(record.address);
+            let Some(metadata) = self.buffered_target(record) else {
+                return false;
+            };
+            remembered.insert(record.address);
+            drop(remembered);
             // A buffered notification may have crossed the young remembered scan.
-            // Trace that owner in any active young snapshot, including old owners.
             if self.domains[0].active() {
                 let _context = Context::enter(self, 0);
-                if let Some(metadata) = self
-                    .objects
-                    .lock(record.address)
-                    .get(&record.address)
-                    .cloned()
-                {
-                    self.shade_metadata(&metadata);
-                }
+                self.shade_metadata(&metadata);
             }
             true
         } else {
@@ -4229,7 +4245,7 @@ impl GarbageCollector {
             // Publication admission or the buffered record's outstanding debt
             // covers the epoch. Marking needs a visible descriptor, never a
             // payload lease or exclusive access to its address shard.
-            let Some(target) = self.objects.lookup(record.address) else {
+            let Some(target) = self.buffered_target(record) else {
                 return false;
             };
             let mut changed = false;
@@ -4315,29 +4331,23 @@ impl GarbageCollector {
                     .expect("resume barrier preparation");
             }
         }
-        let objects = if needs_metadata {
-            let Some(objects) = self.objects.try_lock(record.address) else {
-                return false;
-            };
-            Some(objects)
-        } else {
-            None
-        };
-        let metadata = objects
-            .as_ref()
-            .and_then(|objects| objects.get(&record.address).cloned());
+        // The remembered shard orders address retirement against enrollment.
+        // The exact descriptor can be read without a second shard or payload lease.
+        let metadata = self.buffered_target(record);
         let Some(record) = context.try_pop_matching(&self.contexts, record) else {
             return false;
         };
-        drop(objects);
-        remembered.insert(record.address);
+        if metadata.is_some() {
+            remembered.insert(record.address);
+        }
         drop(remembered);
         #[cfg(test)]
         if let Some(observer) = lock(&self.barrier_claim_observer).take() {
             observer.send(()).expect("barrier claim observer");
         }
         let _retention = TraceRetention::enter(self, Retention::Strong);
-        if let Some(metadata) = metadata.as_ref()
+        if needs_metadata
+            && let Some(metadata) = metadata.as_ref()
             && self.domains[0].active()
         {
             let _context = Context::enter(self, 0);
@@ -4353,28 +4363,15 @@ impl GarbageCollector {
         record: crate::context::Record,
     ) {
         if !record.dirty && record.epochs.iter().any(Option::is_some) {
-            // Certification is optional; a busy index cannot delay acknowledgment
-            // after the required mark/remembered publication has completed.
-            let strong = self
-                .objects
-                .try_lock(record.address)
-                .is_some_and(|objects| {
-                    objects.get(&record.address).is_some_and(|metadata| {
-                        record.epochs.iter().enumerate().all(|(index, epoch)| {
-                            epoch.is_none_or(|epoch| {
-                                // Old allocations are outside young tracing. Age
-                                // never decreases; address reuse during this young
-                                // epoch publishes the new allocation Strong before
-                                // releasing registration admission. Dirty owners are
-                                // excluded above and still require notifications.
-                                (index == 0
-                                    && metadata.age.load(Ordering::Acquire)
-                                        >= self.configuration.promotion_age.max(1))
-                                    || metadata.retention(index, epoch) == Some(Retention::Strong)
-                            })
-                        })
+            // A certificate is valid only for the same birth and tagged epochs.
+            let strong = self.buffered_target(record).is_some_and(|metadata| {
+                record.epochs.iter().enumerate().all(|(index, epoch)| {
+                    epoch.is_none_or(|epoch| {
+                        (index == 0 && !self.is_young_metadata(&metadata))
+                            || metadata.retention(index, epoch) == Some(Retention::Strong)
                     })
-                });
+                })
+            });
             if strong {
                 context.completed(record);
             }

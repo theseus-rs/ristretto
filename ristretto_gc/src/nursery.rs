@@ -570,10 +570,26 @@ impl Objects {
 
     /// An owning snapshot of the exact cell. It grants no graph or payload access.
     pub(crate) fn lookup(&self, address: usize) -> Option<MetadataRef> {
+        self.descriptor_at(address)
+            .filter(|metadata| metadata.birth.visible())
+    }
+
+    /// Compare the birth before observing visibility: a stale edge cannot
+    /// force an unrelated publisher at the same address to retry.
+    pub(crate) fn lookup_identity(
+        &self,
+        address: usize,
+        identity: crate::ObjectId,
+    ) -> Option<MetadataRef> {
+        self.descriptor_at(address)
+            .filter(|metadata| metadata.id == identity && metadata.birth.visible())
+    }
+
+    fn descriptor_at(&self, address: usize) -> Option<MetadataRef> {
         let key = packed_key(address, self.shard_bits);
         let pages = self.head(address).pages.load();
         let page = pages.get((key & !PAGE_MASK) as u64)?;
-        page.entry(key)?.load_full().filter(|m| m.birth.visible())
+        page.entry(key)?.load_full()
     }
 
     fn membership<'a>(

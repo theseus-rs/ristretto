@@ -273,6 +273,7 @@ fn optional_barrier_certification_skips_busy_metadata_after_required_work() -> R
         // optional certificate lookup from the necessary metadata lookup.
         let record = crate::context::Record {
             address,
+            identity: root.identity(),
             epochs: [Some(4), None],
             dirty: false,
         };
@@ -1170,4 +1171,39 @@ pub(super) fn pause_after_buffer_claim() {
             .recv_timeout(std::time::Duration::from_secs(10))
             .expect("resume flusher");
     }
+}
+
+#[test]
+fn dirty_owner_debt_can_drain_while_the_young_owner_shard_is_parked() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .barrier_buffer_size(4)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .full_collection_interval(usize::MAX)
+                .build(),
+        );
+        let context = gc.register_context();
+        let owner = Gc::try_new(&gc, vec![Gc::try_new(&gc, 41u64)?.into_rooted()])?;
+        let address = owner.as_ptr().addr();
+        gc.collect_young();
+        gc.step();
+        assert!(gc.domains[0].active());
+        context.with(|| gc.remember(&owner));
+        assert!(context.0.try_peek().expect("pending owner").dirty);
+        let shard = gc.objects.lock(address);
+        assert!(
+            gc.try_apply_buffered_record(&context.0),
+            "dirty owner waited for object shard"
+        );
+        assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+        assert!(gc.remembered.lock(address).contains(&address));
+        drop(shard);
+        gc.collect_full()?;
+        assert_eq!(**owner.first().expect("live child"), 41);
+    }
+    Ok(())
 }

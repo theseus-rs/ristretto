@@ -140,6 +140,7 @@ pub(crate) fn try_with_allocation<R>(
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct Record {
     pub(crate) address: usize,
+    pub(crate) identity: crate::ObjectId,
     pub(crate) epochs: [Option<u64>; 2],
     pub(crate) dirty: bool,
 }
@@ -727,6 +728,7 @@ mod coalescing_tests {
         let record = Record {
             address: 0x1000,
             epochs: [Some(4), None],
+            identity: crate::ObjectId::from_i64(1),
             dirty: false,
         };
         let owned = Arc::strong_count(&context.0);
@@ -770,9 +772,14 @@ mod coalescing_tests {
         let base = Record {
             address: 0x1000,
             epochs: [Some(4), None],
+            identity: crate::ObjectId::from_i64(1),
             dirty: false,
         };
         for second in [
+            Record {
+                identity: crate::ObjectId::from_i64(2),
+                ..base
+            },
             Record {
                 address: 0x2000,
                 ..base
@@ -813,6 +820,7 @@ mod coalescing_tests {
         let record = Record {
             address: 0x1000,
             epochs: [Some(4), None],
+            identity: crate::ObjectId::from_i64(1),
             dirty: false,
         };
         let publication = gc.allocation_guard();
@@ -835,6 +843,7 @@ mod coalescing_tests {
         let record = Record {
             address: 0x1000,
             epochs: [Some(4), None],
+            identity: crate::ObjectId::from_i64(1),
             dirty: false,
         };
         let publication = gc.allocation_guard();
@@ -986,6 +995,7 @@ mod coalescing_tests {
                 let record = Record {
                     address: root.as_ptr() as usize,
                     epochs: [Some(4), None],
+                    identity: crate::ObjectId::from_i64(1),
                     dirty: false,
                 };
                 // A stale young record is safe to drain; its old target also
@@ -1019,6 +1029,7 @@ mod coalescing_tests {
             .map(|index| Record {
                 address: 0x1000 + index * 64,
                 epochs: [Some(4), Some(8)],
+                identity: crate::ObjectId::from_i64(1),
                 dirty: false,
             })
             .collect();
@@ -1028,6 +1039,10 @@ mod coalescing_tests {
         for &record in &records {
             assert!(context.0.satisfies(&gc.contexts, record));
             for changed in [
+                Record {
+                    identity: crate::ObjectId::from_i64(2),
+                    ..record
+                },
                 Record {
                     dirty: true,
                     ..record
@@ -1069,6 +1084,7 @@ mod coalescing_tests {
             completed.insert(Record {
                 address: 0x1000 + index * 64,
                 epochs: [Some(4), Some(8)],
+                identity: crate::ObjectId::from_i64(1),
                 dirty: false,
             });
         }
@@ -1077,6 +1093,7 @@ mod coalescing_tests {
                 completed.contains(Record {
                     address: 0x1000 + index * 64,
                     epochs: [Some(4), Some(8)],
+                    identity: crate::ObjectId::from_i64(1),
                     dirty: false,
                 })
             })
@@ -1086,6 +1103,7 @@ mod coalescing_tests {
             assert!(!completed.contains(Record {
                 address: 0x1001 + index * 64,
                 epochs: [Some(4), Some(8)],
+                identity: crate::ObjectId::from_i64(1),
                 dirty: false,
             }));
         }
@@ -1097,6 +1115,7 @@ mod coalescing_tests {
         let record = |index: usize| Record {
             address: 0x1000 + index * 64,
             epochs: [Some(4), Some(8)],
+            identity: crate::ObjectId::from_i64(1),
             dirty: false,
         };
         for index in 0..64 {
@@ -1131,6 +1150,7 @@ mod coalescing_tests {
         let edge = Record {
             address: 42,
             epochs: [Some(4), Some(8)],
+            identity: crate::ObjectId::from_i64(1),
             dirty: false,
         };
         let owner = Record {
@@ -1157,6 +1177,7 @@ mod coalescing_tests {
         let record = Record {
             address: 42,
             epochs: [Some(4), None],
+            identity: crate::ObjectId::from_i64(1),
             dirty: false,
         };
         assert_eq!(context.0.push(registry, record, 1), Push::Added);

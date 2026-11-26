@@ -3012,7 +3012,7 @@ fn completed_edge_barriers_only_invalidate_observations_when_they_publish() -> R
             for _ in 0..16 {
                 let before = clock.observe().expect("no publishers");
                 gc.write_barrier(&root);
-                gc.snapshot_edge(root.as_ptr() as usize);
+                gc.snapshot_edge(&root);
                 // Same flags: tests revision invalidation, not a phase closure.
                 // A coalesced buffered record still has its pending reservation.
                 assert!(clock.transition(before, 1, flags));
@@ -4151,6 +4151,216 @@ fn parked_tree_deletion_allows_capped_allocation_and_snapshot_completion() -> Re
         );
         gc.collect_full()?;
         assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    reason = "forced retirement and address reuse"
+)]
+fn clearing_a_leased_parent_does_not_mark_an_unrelated_reused_address() -> Result<()> {
+    for counted in [false, true] {
+        for (old_interval, buffer_size) in [(0, 0), (4, 0), (0, 4), (4, 4)] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .allocation_threshold(usize::MAX)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .concurrent_publication(counted)
+                    .barrier_buffer_size(buffer_size)
+                    .old_collection_interval(old_interval)
+                    .build(),
+            );
+            // Keep the scalar page present after the original child's physical retirement.
+            let anchor = Gc::try_new(&gc, 1u64)?;
+            let child = Gc::try_new(&gc, 2u64)?;
+            let address = child.as_ptr().addr();
+            let birth = child.as_handle_i64();
+            let parent = Gc::try_new(&gc, crate::sync::RwLock::new(vec![child.clone_gc()]))?;
+            let metadata = gc.objects.lookup(parent.as_ptr().addr()).unwrap();
+            let lease = ObjectMetadata::borrow_callback(&metadata, false).unwrap();
+            drop((parent, child));
+            gc.collect_full()?;
+            assert!(gc.objects.lookup(address).is_none());
+            let replacement = Gc::try_new(&gc, 3u64)?;
+            assert_eq!(
+                replacement.as_ptr().addr(),
+                address,
+                "fixture requires physical address reuse"
+            );
+            assert_ne!(birth, replacement.as_handle_i64());
+            let new_metadata = gc.objects.lookup(address).unwrap();
+            drop(replacement);
+            gc.collect();
+            assert!((0..1024).any(|_| {
+                gc.step();
+                lock(&gc.domains[1].cycle).phase == Phase::Mark
+            }));
+            let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+            assert!(!new_metadata.marked(1, epoch));
+            let context = gc.register_context();
+            context.with(|| {
+                drop(lease);
+                for _ in 0..32 {
+                    gc.reap_retired(false, None);
+                }
+                context.flush();
+            });
+            assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+            assert!(
+                !new_metadata.marked(1, epoch),
+                "retiring a stale child edge marked a later birth"
+            );
+            gc.collect_full()?;
+            assert!(gc.objects.lookup(address).is_none());
+            drop(anchor);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    reason = "bounded deferred clearing schedule"
+)]
+fn deleting_a_live_child_edge_keeps_marking_while_its_shard_is_parked() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .allocation_threshold(usize::MAX)
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .concurrent_publication(true)
+            .build(),
+    );
+    let child = Gc::try_new(&gc, 2u64)?;
+    let address = child.as_ptr().addr();
+    let child_meta = gc.objects.lookup(address).unwrap();
+    let parent = Gc::try_new(&gc, crate::sync::RwLock::new(vec![child.clone_gc()]))?;
+    let metadata = gc.objects.lookup(parent.as_ptr().addr()).unwrap();
+    let lease = ObjectMetadata::borrow_callback(&metadata, false).unwrap();
+    drop(parent);
+    gc.collect_full()?;
+    drop(child);
+    gc.collect();
+    assert!((0..1024).any(|_| {
+        gc.step();
+        lock(&gc.domains[1].cycle).phase == Phase::Mark
+    }));
+    let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+    assert!(!child_meta.marked(1, epoch));
+    let shard = gc.objects.lock(address);
+    drop(lease);
+    let (sent, done) = mpsc::channel();
+    let cleared = thread::scope(|scope| {
+        scope.spawn(|| {
+            for _ in 0..32 {
+                gc.reap_retired(false, None);
+            }
+            sent.send(()).unwrap();
+        });
+        let observed = done.recv_timeout(Duration::from_secs(1));
+        drop(shard);
+        observed
+    });
+    assert!(
+        cleared.is_ok(),
+        "deletion barrier waited for the child's shard"
+    );
+    assert!(
+        child_meta.marked(1, epoch),
+        "live child lost its snapshot protection"
+    );
+    Ok(())
+}
+
+#[test]
+fn flushing_an_old_identity_preserves_an_unrelated_pending_birth() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .barrier_buffer_size(4)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        // A deterministic white-box control for the consumer of delayed records.
+        PENDING_BIRTH_PROBE.set(Some(|gc, pending| {
+            let context = gc.register_context();
+            let address = pending.ptr().0;
+            let wrong_id = crate::ObjectId::allocate().expect("distinct identity");
+            for dirty in [false, true] {
+                let record = crate::context::Record {
+                    address,
+                    identity: wrong_id,
+                    epochs: [None, Some(1)],
+                    dirty,
+                };
+                assert_eq!(
+                    context.0.push(&gc.contexts, record, 4),
+                    crate::context::Push::Added
+                );
+                context.flush();
+                assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+                assert!(!gc.remembered.lock(address).contains(&address));
+                assert!(!context.0.satisfies(&gc.contexts, record));
+            }
+        }));
+        let value = Gc::try_new(&gc, 19u64)?;
+        let metadata = gc
+            .objects
+            .lookup(value.as_ptr().addr())
+            .expect("published scalar");
+        assert!(
+            metadata.birth.first_attempt(),
+            "stale record disturbed a later birth"
+        );
+        assert_eq!(**value, 19);
+    }
+    Ok(())
+}
+
+#[test]
+fn raw_explicit_barrier_queues_the_protected_child_identity() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .barrier_buffer_size(4)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let child = Gc::try_new(&gc, 42u64)?;
+        let id = child.identity();
+        let address = child.as_ptr();
+        let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+        // SAFETY: the rooted parent keeps the original child alive until after the barrier.
+        let raw = unsafe { Gc::from_raw(address)? };
+        let metadata = gc.objects.lookup(address.addr()).expect("child descriptor");
+        gc.collect();
+        gc.step();
+        let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+        assert!(!metadata.marked(1, epoch));
+        let context = gc.register_context();
+        context.with(|| {
+            raw.write_barrier(&gc);
+            let record = context.0.try_peek().expect("pending raw edge");
+            assert_eq!(record.identity, id);
+            assert_eq!(record.address, address.addr());
+            drop(raw);
+            assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 1);
+            context.flush();
+        });
+        assert!(metadata.marked(1, epoch));
+        assert_eq!(**parent.first().expect("protected child"), 42);
     }
     Ok(())
 }
