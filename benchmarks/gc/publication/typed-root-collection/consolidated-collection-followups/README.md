@@ -30,6 +30,21 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Cooperative clearing through optional values | `f350e347` | 251126976 | **11.02×** | **10.50×** | **36 / 36** |
 | Compiled helper-result heap ownership | `8b15e59c` | 251126980 | **10.65×** | **10.29×** | **36 / 36** |
 | Reject retired same-heap compiled helper results | `89c0f698` | 251126985 | **10.77×** | **10.59×** | **36 / 36** |
+| Allocation waiters and last-worker exit (withheld experiment) | `53c3f961` | 251126992 | **10.35×** | **10.35×** | **36 / 36** |
+
+## Withheld allocation-waiter experiment
+
+On the release branch an allocation can remain asleep while an independent waiter is publishing. In the experiment at `53c3f961`, the allocation woke, returned a rooted value and unregistered before the publisher resumed. Fourteen forced schedules passed in 100 fresh native processes each. The experiment passed all 36 complete-collection comparisons. A subsequent test cancelled the allocation before a subthreshold refund, leaving only a ticket waiter. That waiter missed the last worker’s exit when the worker was parked before notification.
+
+The paired comparison used the release source at `eecab7c4` and 1, 64 or 1,024 sleeping allocations on a full heap. Each registration run timed 16,384 public allocations through two or three polls and cancellation. The refund run timed the return of eight bytes through delivery of the eligible rooted value. Ratios below one mean the experiment took less time.
+
+| Candidate / release median elapsed time | 1 waiter | 64 waiters | 1,024 waiters |
+| --- | ---: | ---: | ---: |
+| Two polls and cancellation, 32 process pairs | 1.035× | 1.003× | 0.884× |
+| Three polls and cancellation, 32 process pairs | 1.519× | 2.375× | 2.148× |
+| Refund to rooted allocation, 48 process pairs | 1.050× | 0.857× | 1.025× |
+
+The implementation remains outside the release branch. Repeated executor polls and ticket-only wake delivery are open. [Source patch, fixtures, failures and per-process data](withheld-allocation-waiters.json.gz) · [Full-collection samples](allocation-waiter-exit.csv)
 
 ## Retired same-heap compiled helper results
 

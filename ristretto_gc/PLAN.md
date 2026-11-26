@@ -2,6 +2,9 @@
 
 ## Tenfold complete-collection gate
 
+A withheld allocation-waiter experiment at `53c3f961` passed 1,400 forced native schedules and all 36 complete-collection comparisons. A later test stranded a ticket-only waiter after the last worker exited. Three executor polls plus cancellation took 1.52–2.38× as long as the release source. Both issues remain on the integrated alpha critical path.
+[Experiment and reproducible controls](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#withheld-allocation-waiter-experiment).
+
 At `89c0f698`, a compiled helper returning a retired same-heap edge reports a VM error before caching the reference. The parent panicked on the same input. All 36 complete-collection conditions cleared 10×, with weakest individual 95% speedup bounds of 10.77× native and 10.59× WASI. Allocation-waiter progress, shared VM ownership, native boundaries and broader compiled coverage remain open.
 [Retired-edge regression and measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#retired-same-heap-compiled-helper-results).
 
