@@ -490,6 +490,29 @@ impl ReservedFullScan {
 struct ReclaimTask {
     metadata: MetadataRef,
     stage: ReclaimStage,
+    #[cfg(not(target_family = "wasm"))]
+    full_cleanup: Option<FullCleanup>,
+}
+
+/// A synchronous full caller owns a count of cleanup tasks admitted by its snapshot.
+/// Moving a task to another helper transfers the same obligation.
+#[cfg(not(target_family = "wasm"))]
+#[derive(Debug)]
+struct FullCleanup(Arc<AtomicUsize>);
+
+#[cfg(not(target_family = "wasm"))]
+impl FullCleanup {
+    fn reserve(count: &Arc<AtomicUsize>) -> Self {
+        count.fetch_add(1, Ordering::Relaxed);
+        Self(count.clone())
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Drop for FullCleanup {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::AcqRel);
+    }
 }
 
 #[derive(Debug)]
@@ -507,6 +530,8 @@ impl ReclaimTask {
     fn new(metadata: MetadataRef) -> Self {
         Self {
             metadata,
+            #[cfg(not(target_family = "wasm"))]
+            full_cleanup: None,
             stage: ReclaimStage::Clear {
                 offset: 0,
                 finalized: false,
@@ -857,6 +882,10 @@ struct Cycle {
     late_reference_turn: bool,
     retry_reference: Option<crate::weak_registry::Entry>,
     ticket: u64,
+    #[cfg(not(target_family = "wasm"))]
+    pending_full_cleanup: Option<Arc<AtomicUsize>>,
+    #[cfg(not(target_family = "wasm"))]
+    active_full_cleanup: Option<Arc<AtomicUsize>>,
     relocations: VecDeque<(MetadataRef, usize)>,
     relocation_scan_done: bool,
     phantom_retained: BTreeSet<usize>,
@@ -897,6 +926,10 @@ impl Default for Cycle {
             late_reference_turn: false,
             retry_reference: None,
             ticket: 0,
+            #[cfg(not(target_family = "wasm"))]
+            pending_full_cleanup: None,
+            #[cfg(not(target_family = "wasm"))]
+            active_full_cleanup: None,
             relocations: VecDeque::new(),
             relocation_scan_done: false,
             phantom_retained: BTreeSet::new(),
@@ -3083,31 +3116,53 @@ impl GarbageCollector {
     }
 
     /// Runs a full collection to completion on the calling thread.
+    /// Native callers help finish ready host cleanup retired by their snapshot.
+    /// A storage lease or a contended cleanup can keep its charge until a later step.
     ///
     /// # Errors
     /// Reserved for collection errors; currently collection itself is infallible.
     pub fn collect_full(&self) -> Result<()> {
-        self.wait_full_cycle();
         #[cfg(not(target_family = "wasm"))]
-        {
-            let jobs = self.callback_jobs.load(Ordering::Acquire);
-            if jobs != 0
-                && !CleanupScope::contains(self)
-                && let Some(pool) = self.worker_signals.load_full()
-            {
-                pool.callbacks.help_ready(jobs);
+        if !CleanupScope::contains(self) {
+            // Startup holds this same lock across the ticket cut and successful
+            // activation. Failed starts and old-only cycles leave the group pending.
+            let (ticket, cleanup) = {
+                let mut cycle = lock(&self.domains[1].cycle);
+                let cleanup = cycle
+                    .pending_full_cleanup
+                    .get_or_insert_with(Default::default)
+                    .clone();
+                (self.request_full_cycle(), cleanup)
+            };
+            self.wait_full_ticket(ticket);
+            loop {
+                let jobs = self.callback_jobs.load(Ordering::Acquire);
+                if jobs != 0
+                    && let Some(pool) = self.worker_signals.load_full()
+                {
+                    pool.callbacks.help_ready(jobs);
+                }
+                if cleanup.load(Ordering::Acquire) == 0 {
+                    return Ok(());
+                }
+                self.step_inner(false);
+                thread::yield_now();
             }
         }
+        self.wait_full_cycle();
         Ok(())
     }
 
     fn wait_full_cycle(&self) {
+        self.wait_full_ticket(self.request_full_cycle());
+    }
+
+    fn wait_full_ticket(&self, ticket: u64) {
         if self.diagnostics_enabled() {
             self.diagnostics
                 .full_collection_calls
                 .fetch_add(1, Ordering::Relaxed);
         }
-        let ticket = self.request_full_cycle();
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         phase_tests::after_full_request();
         let mut misses = 1;
@@ -4733,9 +4788,22 @@ impl GarbageCollector {
     }
 
     /// Publish a continuation before releasing the current callback's ready count.
-    fn queue_clearing(&self, task: ReclaimTask) {
-        self.retired_objects.fetch_add(1, Ordering::AcqRel);
+    fn queue_clearing(&self, task: ReclaimTask, progress: TraceProgress) {
         self.retired_ready.fetch_add(1, Ordering::AcqRel);
+        self.requeue_retirement(task, progress);
+    }
+
+    fn requeue_retirement(&self, mut task: ReclaimTask, progress: TraceProgress) {
+        task.advance(progress);
+        // A Busy callback or regional return still owns all its storage. Once
+        // its retry is public the requesting thread may itself release the blocker.
+        #[cfg(not(target_family = "wasm"))]
+        let _deferred = if progress == TraceProgress::Busy {
+            task.full_cleanup.take()
+        } else {
+            None
+        };
+        self.retired_objects.fetch_add(1, Ordering::AcqRel);
         self.publish_retirement(task);
     }
 
@@ -4797,7 +4865,11 @@ impl GarbageCollector {
                 // the callback panic. The queued job accounts for its own refund.
                 let mut next = ReclaimTask::new(metadata.clone());
                 std::mem::swap(&mut next.stage, &mut task.stage);
-                self.queue_clearing(next);
+                #[cfg(not(target_family = "wasm"))]
+                {
+                    next.full_cleanup = task.full_cleanup.take();
+                }
+                self.queue_clearing(next, TraceProgress::Busy);
                 self.retired_ready.fetch_sub(1, Ordering::AcqRel);
                 self.wake();
                 resume_unwind(panic);
@@ -4809,6 +4881,8 @@ impl GarbageCollector {
         counters.swept += 1;
         counters.freed += metadata.size();
         counters.logical_freed += metadata.logical_size();
+        #[cfg(not(target_family = "wasm"))]
+        drop(task.full_cleanup.take());
         if let Some(panic) = callback_panic.or(destruction.err()) {
             self.retired_ready.fetch_sub(1, Ordering::AcqRel);
             counters.flush(&mut lock(&self.statistics));
@@ -4875,18 +4949,16 @@ impl GarbageCollector {
         let progress = self.clear_retired(&mut task, budget, counters, selection);
         if progress == TraceProgress::Complete {
             self.record_sweep_reclaimed(index, epoch, task.metadata.size());
-        } else {
+        } else if progress != TraceProgress::Busy
+            && let Ok(mut cycle) = self.domain_at(index).cycle.try_lock()
+            && cycle.epoch == epoch
+            && cycle.phase == Phase::Sweep
+            && cycle.reclaim.len() < phase_work::SWEEP_BATCH
+        {
             task.advance(progress);
-            if progress != TraceProgress::Busy
-                && let Ok(mut cycle) = self.domain_at(index).cycle.try_lock()
-                && cycle.epoch == epoch
-                && cycle.phase == Phase::Sweep
-                && cycle.reclaim.len() < phase_work::SWEEP_BATCH
-            {
-                cycle.reclaim.push_back(task);
-            } else {
-                self.queue_clearing(task);
-            }
+            cycle.reclaim.push_back(task);
+        } else {
+            self.queue_clearing(task, progress);
         }
         self.retired_ready.fetch_sub(1, Ordering::AcqRel);
     }
@@ -4974,9 +5046,7 @@ impl GarbageCollector {
         if progress == TraceProgress::Complete {
             self.retired_ready.fetch_sub(1, Ordering::AcqRel);
         } else {
-            task.advance(progress);
-            self.retired_objects.fetch_add(1, Ordering::AcqRel);
-            self.publish_retirement(task);
+            self.requeue_retirement(task, progress);
         }
         self.record_step(started, cpu_started, concurrent, &mut counters);
         drop(measurement);
@@ -5748,6 +5818,10 @@ impl GarbageCollector {
             cycle.cursor = 0;
             cycle.reference_stage = 0;
             cycle.ticket = ticket;
+            #[cfg(not(target_family = "wasm"))]
+            if cycle.kind == CollectionKind::Full {
+                cycle.active_full_cleanup = cycle.pending_full_cleanup.take();
+            }
             cycle.relocations.clear();
             cycle.relocation_scan_done = false;
             debug_assert!(cycle.phantom_retained.is_empty());
@@ -6231,6 +6305,10 @@ impl GarbageCollector {
                             let duration = started.elapsed();
                             stats.last_collection_duration = Some(duration);
                             stats.total_collection_time += duration;
+                        }
+                        #[cfg(not(target_family = "wasm"))]
+                        if cycle.kind == CollectionKind::Full {
+                            cycle.active_full_cleanup = None;
                         }
                         if cycle.kind != CollectionKind::Old {
                             self.domain()

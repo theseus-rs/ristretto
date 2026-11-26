@@ -125,8 +125,7 @@ impl Job {
                         gc.record_sweep_reclaimed(domain, epoch, task.metadata.size());
                     }
                 } else {
-                    task.advance(progress);
-                    gc.queue_clearing(task);
+                    gc.queue_clearing(task, progress);
                 }
                 gc.retired_ready.fetch_sub(1, Ordering::AcqRel);
                 gc.record_step(started, None, true, &mut counters);
