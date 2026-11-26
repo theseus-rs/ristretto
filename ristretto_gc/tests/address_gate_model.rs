@@ -21,18 +21,20 @@ fn changing_a_slot_excludes_readers_or_hands_cleanup_to_one_owner() {
             let (gate, value, replacement) = (gate.clone(), value.clone(), replacement.clone());
             loom::thread::spawn(move || {
                 match gate.read() {
-                    ReadMode::Primary => value.with(|p| {
-                        // SAFETY: read admission protects the primary in this scope.
-                        let old = unsafe { *p };
-                        loom::thread::yield_now();
-                        assert!(old == 1 || old == 2);
-                        assert_eq!(unsafe { *p }, old);
-                    }),
+                    ReadMode::Primary => {
+                        value.with(|p| {
+                            // SAFETY: read admission protects the primary in this scope.
+                            let old = unsafe { *p };
+                            loom::thread::yield_now();
+                            assert!(old == 1 || old == 2);
+                            assert_eq!(unsafe { *p }, old);
+                        });
+                        if gate.release() {
+                            value.with_mut(|p| unsafe { *p = 0 });
+                        }
+                    }
                     ReadMode::Shared => assert!(replacement.load(Ordering::Relaxed)),
                     ReadMode::Vacant => {}
-                }
-                if gate.release() {
-                    value.with_mut(|p| unsafe { *p = 0 });
                 }
             })
         };
@@ -75,9 +77,9 @@ fn a_sole_reader_can_take_the_slot_while_a_concurrent_reader_remains_safe() {
                         loom::thread::yield_now();
                         assert_eq!(before, unsafe { *p });
                     });
-                }
-                if gate.release() {
-                    cell.with_mut(|p| unsafe { *p = 0 });
+                    if gate.release() {
+                        cell.with_mut(|p| unsafe { *p = 0 });
+                    }
                 }
             })
         };
@@ -114,7 +116,31 @@ fn a_vacant_observation_cannot_force_the_next_primary_owner_to_promote() {
         // received a reference to primary storage.
         gate.finish_exclusive();
         assert_eq!(gate.read(), ReadMode::Primary);
-        assert!(gate.take_reader(), "a vacant observer kept a primary admission");
+        assert!(
+            gate.take_reader(),
+            "a vacant observer kept a primary admission"
+        );
         gate.finish_exclusive();
+    });
+}
+
+#[test]
+fn promotion_keeps_primary_readers_until_exactly_one_cleanup_claim() {
+    loom::model(|| {
+        let gate = Arc::new(Gate::default());
+        assert_eq!(gate.read(), ReadMode::Primary);
+        assert_eq!(gate.write(), WriteMode::Promote);
+        // This observation may remain parked across both publication and cleanup.
+        assert_eq!(gate.read(), ReadMode::Vacant);
+        let old_reader = {
+            let gate = gate.clone();
+            loom::thread::spawn(move || gate.release())
+        };
+        let writer_claimed = gate.publish_shared();
+        assert_eq!(gate.read(), ReadMode::Shared);
+        let reader_claimed = old_reader.join().unwrap();
+        assert_ne!(writer_claimed, reader_claimed);
+        assert!(gate.cleaned());
+        assert_eq!(gate.write(), WriteMode::Shared);
     });
 }

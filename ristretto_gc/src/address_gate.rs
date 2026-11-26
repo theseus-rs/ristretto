@@ -25,27 +25,27 @@ pub(super) enum WriteMode {
 
 impl Gate {
     pub(super) fn read(&self) -> ReadMode {
-        // Refuse saturation before changing the ownership bits, even if the
-        // overflowing caller is suspended immediately before aborting.
         let mut old = self.0.load(Ordering::Relaxed);
         loop {
-            if old & READERS == READERS {
-                std::process::abort();
-            }
+            let (mode, next) = if old & SHARED != 0 {
+                (ReadMode::Shared, old)
+            } else if old & WRITER != 0 {
+                (ReadMode::Vacant, old)
+            } else {
+                if old & READERS == READERS {
+                    std::process::abort();
+                }
+                (ReadMode::Primary, old + 1)
+            };
+            // Validate the observed mode against the current slot even when
+            // the reader needs no primary admission. Acquire observes a promoted slot.
             match self
                 .0
-                .compare_exchange_weak(old, old + 1, Ordering::Acquire, Ordering::Relaxed)
+                .compare_exchange_weak(old, next, Ordering::Acquire, Ordering::Relaxed)
             {
-                Ok(_) => break,
+                Ok(_) => return mode,
                 Err(current) => old = current,
             }
-        }
-        if old & SHARED != 0 {
-            ReadMode::Shared
-        } else if old & WRITER != 0 {
-            ReadMode::Vacant
-        } else {
-            ReadMode::Primary
         }
     }
 
@@ -82,7 +82,7 @@ impl Gate {
         let previous = self.0.fetch_or(WRITER, Ordering::AcqRel);
         assert_eq!(previous & WRITER, 0, "overlapping address writers");
         if previous & SHARED != 0 {
-            self.finish_exclusive();
+            self.0.fetch_and(!WRITER, Ordering::Release);
             WriteMode::Shared
         } else if previous & READERS == 0 {
             WriteMode::Exclusive
@@ -91,13 +91,15 @@ impl Gate {
         }
     }
 
+    /// Only an exclusive writer acquired from zero or from its own sole reader
+    /// may finish this way. Observers of WRITER own no count that could be lost.
     pub(super) fn finish_exclusive(&self) {
-        self.0.fetch_and(!WRITER, Ordering::Release);
+        self.0.store(0, Ordering::Release);
     }
 
     pub(super) fn publish_shared(&self) -> bool {
         self.0.fetch_or(SHARED, Ordering::Release);
-        self.finish_exclusive();
+        self.0.fetch_and(!WRITER, Ordering::Release);
         self.claim_cleanup()
     }
 

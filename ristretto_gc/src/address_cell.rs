@@ -85,7 +85,6 @@ impl Cell {
         if mode == ReadMode::Primary {
             return Read::Primary(self);
         }
-        self.release();
         if mode == ReadMode::Vacant {
             return Read::Vacant;
         }
