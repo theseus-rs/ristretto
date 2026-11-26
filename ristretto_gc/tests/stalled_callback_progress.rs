@@ -154,6 +154,107 @@ fn explicit_collection_reclaims_queued_objects_while_an_older_drop_is_parked() -
     Ok(())
 }
 
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    reason = "closed channels fail the forced schedule"
+)]
+fn a_parked_first_destructor_does_not_capture_the_rest_of_its_sweep_batch() -> Result<()> {
+    struct Group {
+        first: AtomicBool,
+        entered: mpsc::Sender<()>,
+        release: Mutex<mpsc::Receiver<()>>,
+        drops: AtomicUsize,
+        per_id: [AtomicUsize; PEERS],
+    }
+    struct Peer(Arc<Group>, usize);
+    // SAFETY: the entire group contains only host scheduling controls.
+    unsafe impl Trace for Peer {
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+    impl Drop for Peer {
+        fn drop(&mut self) {
+            if !self.0.first.swap(true, Ordering::AcqRel) {
+                self.0.entered.send(()).expect("first drop observer");
+                self.0
+                    .release
+                    .lock()
+                    .expect("drop gate")
+                    .recv_timeout(Duration::from_secs(10))
+                    .expect("release the first destructor");
+            }
+            self.0
+                .per_id
+                .get(self.1)
+                .expect("peer identity")
+                .fetch_add(1, Ordering::Release);
+            self.0.drops.fetch_add(1, Ordering::Release);
+        }
+    }
+    const PEERS: usize = 128;
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .threads(1)
+                .metadata_shards(1)
+                .incremental_step_size(256)
+                .max_pause_time_us(0)
+                .concurrent_publication(counted)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let (entered, parked) = mpsc::channel();
+        let (release, gate) = mpsc::channel();
+        let group = Arc::new(Group {
+            first: AtomicBool::new(false),
+            entered,
+            release: Mutex::new(gate),
+            drops: AtomicUsize::new(0),
+            per_id: std::array::from_fn(|_| AtomicUsize::new(0)),
+        });
+        for id in 0..PEERS {
+            drop(Gc::try_new(&gc, Peer(group.clone(), id))?);
+        }
+        let total_charge = gc.managed_bytes();
+        gc.start();
+        gc.collect();
+        parked
+            .recv_timeout(Duration::from_secs(3))
+            .expect("first callback");
+        wait_for_registered_worker_sweep(&gc)?;
+        let (done, result) = mpsc::channel();
+        let heap = gc.clone();
+        let progress = group.clone();
+        let later = std::thread::spawn(move || {
+            let result = heap.collect_full();
+            done.send(progress.drops.load(Ordering::Acquire))
+                .expect("later caller");
+            result
+        });
+        let completed = result.recv_timeout(Duration::from_secs(3));
+        let retained = gc.managed_bytes();
+        let reclaimed_ids = group
+            .per_id
+            .iter()
+            .filter(|n| n.load(Ordering::Acquire) == 1)
+            .count();
+        release.send(()).expect("release first callback");
+        later.join().expect("independent full")?;
+        gc.stop()?;
+        assert_eq!(
+            completed.expect("later full returned"),
+            PEERS - 1,
+            "parked destructor stranded independent storage within its batch"
+        );
+        assert_eq!(reclaimed_ids, PEERS - 1);
+        assert_eq!(retained * PEERS, total_charge);
+        assert_eq!(group.drops.load(Ordering::Acquire), PEERS);
+        assert!(group.per_id.iter().all(|n| n.load(Ordering::Acquire) == 1));
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
+
 struct Ready(mpsc::SyncSender<()>);
 
 #[cfg(all(not(miri), panic = "unwind"))]

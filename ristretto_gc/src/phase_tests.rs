@@ -139,6 +139,32 @@ mod native {
     use std::sync::mpsc;
     use std::time::Duration;
 
+    #[test]
+    fn completed_cleanup_storage_is_reusable_only_after_the_last_observer_leaves() -> Result<()> {
+        let _ = SPARE_FULL_CLEANUP.take();
+        let first = collector(true);
+        let second = collector(false);
+        let (ticket, original) = first.request_full_cleanup();
+        let identity = Arc::as_ptr(&original);
+        let witness = original.clone();
+        first.wait_full_ticket(ticket);
+        FullCleanup::recycle(original);
+        assert_eq!(witness.load(Ordering::Acquire), 0);
+        let (ticket, other) = second.request_full_cleanup();
+        assert_ne!(Arc::as_ptr(&other), identity);
+        second.wait_full_ticket(ticket);
+        FullCleanup::recycle(witness);
+        let (ticket, reused) = first.request_full_cleanup();
+        assert_eq!(Arc::as_ptr(&reused), identity);
+        assert_eq!(reused.load(Ordering::Acquire), 1);
+        assert_eq!(other.load(Ordering::Acquire), 0);
+        first.wait_full_ticket(ticket);
+        assert_eq!(reused.load(Ordering::Acquire), 0);
+        first.stop()?;
+        second.stop()?;
+        Ok(())
+    }
+
     #[cfg(not(miri))]
     #[test]
     fn a_failed_full_start_preserves_both_cleanup_groups() -> Result<()> {
