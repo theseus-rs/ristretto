@@ -656,8 +656,9 @@ impl<T> FromIterator<T> for HeapBuffer<T> {
 // initialization and existing guarded relocation invariants.
 unsafe impl<T: crate::Trace> crate::Trace for HeapBuffer<T> {
     fn has_bounded_cleanup() -> bool {
-        // Clearing returns each owned block cooperatively before ordinary destruction.
-        !std::mem::needs_drop::<T>()
+        // Each clearing step drops a bounded number of elements directly.
+        // The buffer itself returns its backing cooperatively before destruction.
+        T::has_bounded_drop()
     }
 
     fn may_contain_gc_references() -> bool {

@@ -637,7 +637,10 @@ mod bounded_lock_donor {
         let buffer = ristretto_gc::HeapBuffer::try_with_fn(Some(&regions), 97, |_| {
             Ok(String::from("backing"))
         })?;
-        assert_eq!(regions.statistics().occupied_bytes, 97 * size_of::<String>());
+        assert_eq!(
+            regions.statistics().occupied_bytes,
+            97 * size_of::<String>()
+        );
         check(buffer)?;
         assert_eq!(regions.statistics().occupied_bytes, 0);
         Ok(())

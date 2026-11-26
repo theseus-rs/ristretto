@@ -787,6 +787,18 @@ pub unsafe trait Trace {
         false
     }
 
+    /// Whether dropping any initialized value directly, without calling
+    /// `clear_step` first, can finish in bounded work without invoking user
+    /// callbacks or waiting on another thread, assuming allocator progress.
+    /// Containers use this when truncation runs their elements' Rust destructors.
+    #[must_use]
+    fn has_bounded_drop() -> bool
+    where
+        Self: Sized,
+    {
+        !std::mem::needs_drop::<Self>()
+    }
+
     /// Releases outgoing edges in bounded batches before destruction of unreachable values.
     fn clear_step(&mut self, _offset: usize, _budget: usize) -> TraceProgress {
         TraceProgress::Complete
@@ -6544,6 +6556,10 @@ impl Drop for GarbageCollector {
 
 // SAFETY: all hooks forward to the present value with the same protected owner.
 unsafe impl<T: Trace> Trace for Option<T> {
+    fn has_bounded_drop() -> bool {
+        T::has_bounded_drop()
+    }
+
     fn has_bounded_cleanup() -> bool {
         T::has_bounded_cleanup()
     }
@@ -6593,6 +6609,11 @@ unsafe impl<T: Trace> Trace for Option<T> {
 // conversion; clearing only destroys initialized elements under exclusive access.
 unsafe impl<T: Trace> Trace for Vec<T> {
     fn has_bounded_cleanup() -> bool {
+        T::has_bounded_drop()
+    }
+
+    fn has_bounded_drop() -> bool {
+        // Direct destruction visits the entire vector if elements have drop glue.
         !std::mem::needs_drop::<T>()
     }
 
@@ -6773,6 +6794,10 @@ unsafe impl<A: Trace, B: Trace, C: Trace> Trace for (A, B, C) {
 
 // SAFETY: strings contain no managed edges and retain ordinary Rust storage.
 unsafe impl Trace for String {
+    fn has_bounded_drop() -> bool {
+        true
+    }
+
     fn has_bounded_cleanup() -> bool {
         true
     }

@@ -53,6 +53,18 @@ fn clearing_a_heap_buffer_without_element_destructors_runs_no_element_hooks() {
 }
 
 #[test]
+fn element_retirement_requires_bounded_destruction_before_clearing() {
+    use ristretto_gc::HeapBuffer;
+
+    assert!(Vec::<Option<String>>::has_bounded_cleanup());
+    assert!(HeapBuffer::<Vec<u8>>::has_bounded_cleanup());
+    assert!(!Vec::<Vec<String>>::has_bounded_cleanup());
+    assert!(HeapBuffer::<u8>::has_bounded_cleanup());
+    assert!(!Vec::<HeapBuffer<u8>>::has_bounded_cleanup());
+    assert!(!HeapBuffer::<Payload>::has_bounded_cleanup());
+}
+
+#[test]
 fn limit_failure_and_success_refund_once_after_destruction() -> ristretto_gc::Result<()> {
     let collector = GarbageCollector::with_config(
         Configuration::builder()
