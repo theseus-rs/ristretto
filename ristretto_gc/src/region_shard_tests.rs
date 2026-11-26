@@ -305,6 +305,60 @@ fn parked_registry_allows_phase_publication_and_bounded_selection_retry() {
 }
 
 #[test]
+fn fresh_collections_trim_an_available_shard_and_finish_while_the_other_is_parked() {
+    for cost_aware in [false, true] {
+        for counted in [false, true] {
+            let gc = crate::GarbageCollector::with_config(
+                crate::Configuration::builder()
+                    .concurrent_publication(counted)
+                    .compact_heap(true)
+                    .cost_aware_relocation(cost_aware)
+                    .region_shards(2)
+                    .region_layout(1024, 32)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let heap = gc.region_heap().expect("regional payloads");
+            for i in 0..2 {
+                drop(
+                    heap.allocate_selected(Layout::new::<u64>(), None, false, i)
+                        .expect("seed backing"),
+                );
+            }
+            assert_eq!(heap.statistics().committed_bytes, 2048);
+            let peer = lock(heap.shard(1)).backing.clone();
+            let root = crate::Gc::new(&gc, 47_u64);
+            let parked = lock(heap.shard(0));
+            for _ in 0..2 {
+                drop(crate::Gc::new(&gc, 17_u64));
+                let before = gc.completed_full_ticket();
+                gc.collect();
+                for _ in 0..4096 {
+                    if gc.completed_full_ticket() > before {
+                        break;
+                    }
+                    gc.step();
+                }
+                assert!(
+                    gc.completed_full_ticket() > before,
+                    "cost aware {cost_aware}, counted {counted}"
+                );
+                assert_eq!(
+                    gc.managed_bytes(),
+                    crate::Gc::allocation_size(&47_u64).expect("live scalar")
+                );
+                assert_eq!(peer.committed.load(Ordering::Acquire), 0);
+                assert_eq!(parked.backing.committed.load(Ordering::Acquire), 1024);
+                assert_eq!(**root, 47);
+            }
+            drop(parked);
+            gc.collect_full().expect("next physical trim");
+            assert_eq!(heap.statistics().committed_bytes, 0);
+        }
+    }
+}
+
+#[test]
 fn a_retired_source_keeps_its_release_accounting_after_the_epoch_ends() {
     let heap = RegionHeap::with_policy(1024, 4096, 0, Budget::new(4096), true);
     let layout = Layout::from_size_align(128, 64).expect("layout");
