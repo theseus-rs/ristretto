@@ -413,6 +413,55 @@ fn probe_reuses_a_returned_peer_range_before_a_parked_registry_resumes() {
     drop((reused, keep));
 }
 
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn workerless_allocation_reclaims_an_unreachable_peer_range_before_registry_release() {
+    use std::future::Future;
+    use std::sync::mpsc;
+    use std::task::{Context, Poll, Waker};
+    use std::time::Duration;
+
+    let gc = crate::GarbageCollector::with_config(
+        crate::Configuration::builder()
+            .region_shards(2)
+            .compact_heap(true)
+            .cost_aware_relocation(true)
+            .region_layout(1024, 0)
+            .max_heap_bytes(2048)
+            .relocation_reserve_bytes(1024)
+            .build(),
+    );
+    let heap = gc.region_heap().expect("payload heap");
+    let buffer = crate::HeapBuffer::try_with_fn(Some(heap), 896, |_| Ok(0_u8)).expect("donor");
+    let source = heap.index(buffer.relocation_region(heap).expect("regional donor"));
+    let root = crate::Gc::try_new(&gc, buffer).expect("publish donor");
+    assert_eq!(heap.statistics().shared_committed_bytes, 1024);
+    assert_eq!(gc.registered_workers(), 0);
+    drop(root);
+
+    let (send, recv) = mpsc::channel();
+    std::thread::scope(|scope| {
+        let parked = lock(heap.shard(1 - source));
+        let gc = &gc;
+        scope.spawn(move || {
+            let mut future = std::pin::pin!(crate::HeapBuffer::try_with_fn_in_async(gc, 256, |_| {
+                Ok(3_u8)
+            }));
+            let mut cx = Context::from_waker(Waker::noop());
+            for _ in 0..4096 {
+                if let Poll::Ready(result) = future.as_mut().poll(&mut cx) {
+                    send.send(result.map(|buf| buf.iter().copied().map(usize::from).sum::<usize>()))
+                        .expect("report completion");
+                    return;
+                }
+            }
+        });
+        let before_release = recv.recv_timeout(Duration::from_secs(3));
+        drop(parked);
+        assert!(matches!(before_release, Ok(Ok(768))), "{before_release:?}");
+    });
+}
+
 #[test]
 fn probe_resumes_alignment_search_after_its_extent_budget() {
     use std::task::Poll;
