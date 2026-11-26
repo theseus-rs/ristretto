@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "tier": "interpreted",
+  "class": "CanonicalGraphWorkload",
+  "method": "run",
+  "argument": 8,
+  "configuration": {
+    "objects": 4,
+    "roots": 12,
+    "mutators": 1,
+    "helpers": 1,
+    "edges_per_object": 2
+  },
+  "limits": {
+    "instructions": 1000000,
+    "request_polls": 100000,
+    "cleanup_polls": 1000000,
+    "frames": 64,
+    "native_slices": 100000,
+    "array_bytes": 8388608
+  },
+  "recorder_capacity": 131072,
+  "expected_result": 64,
+  "require_compiled_backedges": true,
+  "window_kind": "entry_body_v1"
+}

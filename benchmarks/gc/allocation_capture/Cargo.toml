@@ -1,0 +1,29 @@
+[package]
+name = "canonical-allocation-capture"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[features]
+compiled = ["ristretto_vm/experimental-canonical-jit"]
+
+[dependencies]
+portable-atomic = "=1.15.0"
+ristretto_classfile = { path = "../../../ristretto_classfile" }
+ristretto_gc = { path = "../../../ristretto_gc", features = ["experimental-canonical-runtime"] }
+ristretto_vm = { path = "../../../ristretto_vm", default-features = false, features = ["experimental-canonical-runtime"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+sha2 = "=0.11.1"
+tokio = { version = "=1.54.1", default-features = false, features = ["macros", "rt"] }
+
+[lints.rust]
+unsafe_code = "deny"
+warnings = "deny"
+
+[lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
