@@ -335,14 +335,9 @@ async fn typed_access(vm: &Arc<VM>, thread: &Arc<Thread>) -> Result<()> {
     Ok(())
 }
 
-async fn initialization_fixture(
-    thread: &Thread,
-    name: &str,
-    put: bool,
-) -> Result<(Arc<Class>, Arc<Class>)> {
-    let target_name = format!("{name}Target");
+async fn initialization_target(thread: &Thread, target_name: &str) -> Result<Arc<Class>> {
     let mut pool = ConstantPool::new();
-    let own = pool.add_class(&target_name)?;
+    let own = pool.add_class(target_name)?;
     let mut fields = Vec::new();
     for (name, descriptor) in [("count", "I"), ("gate", "I"), ("value", "[I")] {
         fields.push(field(
@@ -352,6 +347,12 @@ async fn initialization_fixture(
             FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC,
         )?);
     }
+    fields.push(field(
+        &mut pool,
+        "bits",
+        "J",
+        FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::VOLATILE,
+    )?);
     let count = pool.add_field_ref(own, "count", "I")?;
     let gate = pool.add_field_ref(own, "gate", "I")?;
     let initializer = method(
@@ -368,15 +369,24 @@ async fn initialization_fixture(
             Instruction::Return,
         ],
     )?;
-    let target = register_fields(
+    register_fields(
         thread,
-        &target_name,
+        target_name,
         "java/lang/Object",
         pool,
         vec![initializer],
         fields,
     )
-    .await?;
+    .await
+}
+
+async fn initialization_fixture(
+    thread: &Thread,
+    name: &str,
+    put: bool,
+) -> Result<(Arc<Class>, Arc<Class>)> {
+    let target_name = format!("{name}Target");
+    let target = initialization_target(thread, &target_name).await?;
     let mut pool = ConstantPool::new();
     let target_ref = pool.add_class(&target_name)?;
     let index = pool.add_field_ref(
@@ -411,6 +421,128 @@ async fn initialization_fixture(
     .await?;
     thread.initialize_class(&caller).await?;
     Ok((target, caller))
+}
+
+async fn ordinary_long_caller(thread: &Thread, target: &Class) -> Result<Arc<Class>> {
+    let mut pool = ConstantPool::new();
+    let name = "OrdinaryLongCaller";
+    let own = pool.add_class(name)?;
+    let target_ref = pool.add_class(target.name())?;
+    let bits = pool.add_field_ref(target_ref, "bits", "J")?;
+    let initial = pool.add_field_ref(own, "initial", "[I")?;
+    let publish = pool.add_method_ref(own, "publish", "()V")?;
+    let store = method(
+        &mut pool,
+        "publish",
+        "()V",
+        vec![
+            Instruction::Lconst_1,
+            Instruction::Putstatic(bits),
+            Instruction::Return,
+        ],
+    )?;
+    // Transfer the sole array owner into the caller's local before entering the JIT.
+    let outer = method(
+        &mut pool,
+        "outer",
+        "()I",
+        vec![
+            Instruction::Getstatic(initial),
+            Instruction::Astore_0,
+            Instruction::Aconst_null,
+            Instruction::Putstatic(initial),
+            Instruction::Invokestatic(publish),
+            Instruction::Aload_0,
+            Instruction::Iconst_0,
+            Instruction::Iaload,
+            Instruction::Ireturn,
+        ],
+    )?;
+    let slot = field(
+        &mut pool,
+        "initial",
+        "[I",
+        FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC,
+    )?;
+    register_fields(
+        thread,
+        name,
+        "java/lang/Object",
+        pool,
+        vec![store, outer],
+        vec![slot],
+    )
+    .await
+}
+
+async fn ordinary_store_during_initialization(cancel: bool) -> Result<()> {
+    let (vm, thread) = vm(true, false, 0).await?;
+    let target = initialization_target(&thread, "OrdinaryLongTarget").await?;
+    let caller = ordinary_long_caller(&thread, &target).await?;
+    thread.initialize_class(&caller).await?;
+    let gc = vm.garbage_collector();
+    let value = Value::try_new_object_async(gc, Reference::IntArray(vec![77].into())).await?;
+    let weak = ristretto_gc::GcWeak::new(owner(&value)?, ristretto_gc::ReferenceKind::Weak, 0);
+    caller.set_static_value("initial", value)?;
+    let outer = caller.try_get_method("outer", "()I")?;
+    let mut run = Box::pin(thread.execute(&caller, &outer, &[] as &[Value]));
+    std::future::poll_fn(|cx| {
+        if let std::task::Poll::Ready(result) = run.as_mut().poll(cx) {
+            result?;
+            return std::task::Poll::Ready(Err(InternalError(
+                "store returned before initialization parked".into(),
+            )));
+        }
+        if target.static_value("count")? == Value::Int(1) {
+            std::task::Poll::Ready(Ok(()))
+        } else {
+            std::task::Poll::Pending
+        }
+    })
+    .await?;
+    assert!(caller.static_value("initial")?.is_null());
+    assert_eq!(target.static_value("bits")?, Value::Long(0));
+    let publish = caller.try_get_method("publish", "()V")?;
+    let function = vm
+        .compiler()
+        .and_then(|compiler| compiler.get_cached(crate::jit::cache_key(&publish)))
+        .flatten()
+        .ok_or_else(|| InternalError("ordinary static store was interpreted".into()))?;
+    assert!(function.supports_cooperation());
+    #[cfg(feature = "execution-profile")]
+    assert_eq!(function.execution_count(), 1);
+    collect(gc)?;
+    assert!(weak.upgrade().is_some());
+    if cancel {
+        drop(run);
+        assert!(matches!(
+            target.initialization_state()?,
+            InitializationState::Failed { .. }
+        ));
+        assert_eq!(target.static_value("bits")?, Value::Long(0));
+    } else {
+        target.set_static_value("gate", Value::Int(1))?;
+        assert_eq!(run.await?, Some(Value::Int(77)));
+        assert_eq!(target.static_value("bits")?, Value::Long(1));
+    }
+    assert_eq!(target.static_value("count")?, Value::Int(1));
+    assert!(thread.frames()?.is_empty());
+    collect(gc)?;
+    assert!(weak.upgrade().is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn ordinary_static_store_preserves_its_callers_root_during_initialization() -> Result<()> {
+    for cancel in [false, true] {
+        tokio::time::timeout(
+            Duration::from_secs(20),
+            ordinary_store_during_initialization(cancel),
+        )
+        .await
+        .map_err(|_| InternalError("ordinary field initialization timed out".into()))??;
+    }
+    Ok(())
 }
 
 #[expect(
