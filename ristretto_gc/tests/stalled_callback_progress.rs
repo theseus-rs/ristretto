@@ -65,7 +65,28 @@ impl Drop for Payload {
     }
 }
 
+fn wait_for_registered_worker_sweep(gc: &GarbageCollector) -> Result<()> {
+    assert_eq!(gc.registered_workers(), 1);
+    let mut request = Box::pin(gc.collect_full_async());
+    let mut cx = Context::from_waker(Waker::noop());
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        if let Poll::Ready(result) = request.as_mut().poll(&mut cx) {
+            return result;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "native worker did not finish the full ticket"
+        );
+        std::thread::yield_now();
+    }
+}
+
 #[test]
+#[expect(
+    clippy::unwrap_in_result,
+    reason = "closed schedule channels fail the test"
+)]
 fn explicit_collection_reclaims_queued_objects_while_an_older_drop_is_parked() -> Result<()> {
     struct Counted(Arc<AtomicUsize>);
     // SAFETY: this fixture owns only a host-side destructor counter.
@@ -109,15 +130,8 @@ fn explicit_collection_reclaims_queued_objects_while_an_older_drop_is_parked() -
         }
         // A registered native worker retires the second group. Only the original
         // callback runner is parked, and no address lease protects this group.
-        gc.collect();
-        let deadline = Instant::now() + Duration::from_secs(5);
-        while gc.statistics()?.live_objects != 0 {
-            assert!(
-                Instant::now() < deadline,
-                "worker did not unlink independent donors"
-            );
-            std::thread::yield_now();
-        }
+        wait_for_registered_worker_sweep(&gc)?;
+        assert_eq!(gc.statistics()?.live_objects, 0);
         let (send, recv) = mpsc::channel();
         let (completed, still_parked) = std::thread::scope(|scope| {
             let gc = gc.clone();
@@ -141,6 +155,89 @@ fn explicit_collection_reclaims_queued_objects_while_an_older_drop_is_parked() -
 }
 
 struct Ready(mpsc::SyncSender<()>);
+
+#[cfg(all(not(miri), panic = "unwind"))]
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    reason = "closed schedule channels fail the test"
+)]
+fn shutdown_observes_failure_from_a_foreground_callback_it_did_not_run() -> Result<()> {
+    struct Fails(
+        mpsc::Sender<std::thread::ThreadId>,
+        Mutex<mpsc::Receiver<()>>,
+    );
+    // SAFETY: the two channels carry only host signals.
+    unsafe impl Trace for Fails {
+        fn trace(&self, _: &GarbageCollector) {}
+        fn clear_step(&mut self, _: usize, _: usize) -> TraceProgress {
+            self.0
+                .send(std::thread::current().id())
+                .expect("callback observer");
+            self.1
+                .lock()
+                .expect("failure gate")
+                .recv_timeout(Duration::from_secs(5))
+                .expect("release helper");
+            panic!("intentional foreground clearing failure")
+        }
+    }
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .threads(1)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
+    let (entered, parked) = mpsc::channel();
+    let (resume, release) = mpsc::channel();
+    let older = Arc::new(Callback {
+        stage: Stage::Drop,
+        entered,
+        resume: Mutex::new(release),
+        released: AtomicBool::new(false),
+        finalized: AtomicUsize::new(0),
+        cleared: AtomicUsize::new(0),
+        dropped: AtomicUsize::new(0),
+    });
+    drop(Gc::try_new(&gc, Payload(older.clone()))?);
+    gc.start();
+    gc.collect();
+    parked
+        .recv_timeout(Duration::from_secs(3))
+        .expect("native callback parked");
+    let (started, running) = mpsc::channel();
+    let (finish, fail) = mpsc::channel();
+    drop(Gc::try_new(&gc, Fails(started, Mutex::new(fail)))?);
+    wait_for_registered_worker_sweep(&gc)?;
+    assert_eq!(gc.statistics()?.live_objects, 0);
+    let heap = gc.clone();
+    let helper = std::thread::spawn(move || heap.collect_full());
+    assert_eq!(
+        running.recv_timeout(Duration::from_secs(3)),
+        Ok(helper.thread().id())
+    );
+    let heap = gc.clone();
+    let stopper = std::thread::spawn(move || heap.stop());
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while gc.registered_workers() != 0 {
+        assert!(Instant::now() < deadline);
+        std::thread::yield_now();
+    }
+    resume.send(()).expect("release native callback");
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while !older.released.load(Ordering::Acquire) {
+        assert!(Instant::now() < deadline);
+        std::thread::yield_now();
+    }
+    finish.send(()).expect("allow clearing failure");
+    helper.join().expect("foreground helper")?;
+    assert!(matches!(
+        stopper.join().expect("stopper"),
+        Err(ristretto_gc::Error::SyncError(_))
+    ));
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
 
 impl Wake for Ready {
     fn wake(self: Arc<Self>) {

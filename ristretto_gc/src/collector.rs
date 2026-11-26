@@ -1444,22 +1444,23 @@ impl GarbageCollector {
         snapshot
     }
 
-    pub(crate) fn recover_allocation(&self) -> Result<()> {
+    pub(crate) fn recover_allocation(&self) {
         let _measurement = self
             .diagnostics
             .allocation_recovery
             .measure(self.diagnostics_enabled());
-        self.collect_full()
+        self.wait_full_cycle();
     }
 
-    pub(crate) fn recover_physical(&self, layout: std::alloc::Layout) -> Result<()> {
-        let Some(heap) = &self.regions else {
-            return self.recover_allocation();
-        };
+    pub(crate) fn recover_physical(&self, layout: std::alloc::Layout) {
         let _measurement = self
             .diagnostics
             .allocation_recovery
             .measure(self.diagnostics_enabled());
+        let Some(heap) = &self.regions else {
+            self.wait_full_cycle();
+            return;
+        };
         let ticket = self.request_recovery_cycle();
         while self.completed_full_ticket() < ticket {
             // An available range is advisory. Advance at least one batch on each
@@ -1469,7 +1470,6 @@ impl GarbageCollector {
                 break;
             }
         }
-        Ok(())
     }
 
     pub(crate) async fn recover_allocation_async(&self) -> Result<()> {
@@ -3087,6 +3087,21 @@ impl GarbageCollector {
     /// # Errors
     /// Reserved for collection errors; currently collection itself is infallible.
     pub fn collect_full(&self) -> Result<()> {
+        self.wait_full_cycle();
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let jobs = self.callback_jobs.load(Ordering::Acquire);
+            if jobs != 0
+                && !CleanupScope::contains(self)
+                && let Some(pool) = self.worker_signals.load_full()
+            {
+                pool.callbacks.help_ready(jobs);
+            }
+        }
+        Ok(())
+    }
+
+    fn wait_full_cycle(&self) {
         if self.diagnostics_enabled() {
             self.diagnostics
                 .full_collection_calls
@@ -3104,7 +3119,6 @@ impl GarbageCollector {
                 misses = 1;
             }
         }
-        Ok(())
     }
 
     /// Requests a young collection without requiring a native worker.

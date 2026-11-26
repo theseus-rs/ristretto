@@ -194,7 +194,7 @@ impl<T> Gc<T> {
                 Ok(()) => break,
                 Err(error) if attempt == 2 || crate::cell::has_guards() => return Err(error),
                 Err(_) => {
-                    collector.recover_allocation()?;
+                    collector.recover_allocation();
                 }
             }
         }

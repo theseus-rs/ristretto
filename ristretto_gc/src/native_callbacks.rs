@@ -3,7 +3,7 @@
 use super::{GarbageCollector, ReclaimTask, WorkCounters, lock, now};
 use crate::TraceProgress;
 use once_cell::race::OnceBox;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
@@ -28,6 +28,8 @@ pub(super) struct Callbacks(OnceBox<Runner>);
 #[derive(Debug)]
 struct Runner {
     send: arc_swap::ArcSwapOption<mpsc::Sender<Job>>,
+    receive: Arc<Mutex<mpsc::Receiver<Job>>>,
+    helper_failed: AtomicBool,
     thread: Mutex<Option<thread::JoinHandle<bool>>>,
 }
 
@@ -79,12 +81,32 @@ impl Callbacks {
             if let Some(handle) = lock(&runner.thread).take()
                 && handle.thread().id() != thread::current().id()
             {
-                return handle.join().map_err(|_| {
+                let failed = handle.join().map_err(|_| {
                     crate::Error::SyncError("collector callback worker panicked".into())
-                });
+                })?;
+                return Ok(failed || runner.helper_failed.load(Ordering::Acquire));
             }
         }
         Ok(false)
+    }
+
+    pub(super) fn help_ready(&self, jobs: usize) {
+        let Some(runner) = self.0.get() else { return };
+        // Retain a sender through the last acknowledgement: shutdown's receive
+        // loop cannot see disconnection while this helper owns a callback.
+        let Some(_participation) = runner.send.load_full() else {
+            return;
+        };
+        for _ in 0..jobs {
+            let Ok(receiver) = runner.receive.try_lock() else {
+                break;
+            };
+            let Ok(job) = receiver.try_recv() else { break };
+            drop(receiver);
+            if job.run() {
+                runner.helper_failed.store(true, Ordering::Release);
+            }
+        }
     }
 }
 
@@ -142,17 +164,23 @@ impl Job {
 impl Runner {
     fn spawn() -> std::io::Result<Box<Self>> {
         let (send, recv) = mpsc::channel::<Job>();
+        let receive = Arc::new(Mutex::new(recv));
+        let queue = receive.clone();
         let thread = thread::Builder::new()
             .name("gc-finalizers".into())
             .spawn(move || {
                 let mut failed = false;
-                while let Ok(job) = recv.recv() {
+                loop {
+                    let next = lock(&queue).recv();
+                    let Ok(job) = next else { break };
                     failed |= job.run();
                 }
                 failed
             })?;
         Ok(Box::new(Self {
             send: arc_swap::ArcSwapOption::from(Some(Arc::new(send))),
+            receive,
+            helper_failed: AtomicBool::new(false),
             thread: Mutex::new(Some(thread)),
         }))
     }
