@@ -808,7 +808,7 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-fn try_lock<T>(mutex: &Mutex<T>) -> Option<std::sync::MutexGuard<'_, T>> {
+pub(crate) fn try_lock<T>(mutex: &Mutex<T>) -> Option<std::sync::MutexGuard<'_, T>> {
     match mutex.try_lock() {
         Ok(guard) => Some(guard),
         Err(std::sync::TryLockError::Poisoned(error)) => Some(error.into_inner()),
@@ -5622,16 +5622,8 @@ impl GarbageCollector {
                         }
                     },
                     Phase::SelectRegions => {
-                        if self
-                            .regions
-                            .as_ref()
-                            .is_none_or(|heap| heap.select_evacuation())
-                        {
-                            cycle.phase = Phase::Compact;
-                            self.domain().relocation_ready.store(
-                                self.regions.is_some() && self.configuration.independent_relocation,
-                                Ordering::Release,
-                            );
+                        if matches!(self.select_regions_unit(&mut cycle), Unit::Busy) {
+                            break;
                         }
                     }
                     Phase::Compact => {
@@ -5770,13 +5762,13 @@ impl GarbageCollector {
                             self.domain().trace_ready.store(true, Ordering::Release);
                             continue;
                         }
+                        if !self.commit_phase(observation, false, false, 0) {
+                            break;
+                        }
                         if let Some(heap) = &self.regions
                             && (!self.configuration.overlapping_generations || index == 1)
                         {
                             heap.end_evacuation();
-                        }
-                        if !self.commit_phase(observation, false, false, 0) {
-                            break;
                         }
                         self.domain().mark_queue.close_graph_inbox();
                         self.domain().active.store(false, Ordering::Release);
