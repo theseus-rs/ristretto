@@ -143,7 +143,7 @@ impl Object {
         drop(fields);
         Ok(Self {
             class,
-            values: values.into(),
+            values: crate::ArrayElements::from_default_fields(values),
             reference,
         })
     }
@@ -185,7 +185,7 @@ impl Object {
         drop(object_fields);
         Ok(Self {
             class,
-            values: values.into(),
+            values: crate::ArrayElements::from_default_fields(values),
             reference,
         })
     }

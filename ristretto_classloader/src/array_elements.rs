@@ -19,6 +19,28 @@ pub struct ArrayElements {
     scan_mutation: std::sync::atomic::AtomicUsize,
 }
 impl ArrayElements {
+    /// Java default fields contain only numeric zeroes and null references.
+    pub(crate) fn from_default_fields(values: ristretto_gc::HeapBuffer<Value>) -> Self {
+        debug_assert!(
+            values
+                .iter()
+                .all(|value| !matches!(value, Value::Object(Some(_))))
+        );
+        Self::with_cards(values, CardSet::default())
+    }
+
+    fn with_cards(values: ristretto_gc::HeapBuffer<Value>, cards: CardSet) -> Self {
+        Self {
+            dirty: (!cards.is_empty()).then_some(0..values.len()),
+            values,
+            cards: Mutex::new(cards),
+            owner: 0,
+            mutation: 0,
+            #[cfg(test)]
+            scan_mutation: std::sync::atomic::AtomicUsize::new(0),
+        }
+    }
+
     pub(crate) fn prepare(
         &mut self,
         heap: &ristretto_gc::region::RegionHeap,
@@ -222,15 +244,7 @@ impl From<ristretto_gc::HeapBuffer<Value>> for ArrayElements {
                 matches!(value, Value::Object(Some(_))).then_some(index / CARD_SIZE)
             })
             .collect();
-        Self {
-            dirty: Some(0..values.len()),
-            values,
-            cards: Mutex::new(cards),
-            owner: 0,
-            mutation: 0,
-            #[cfg(test)]
-            scan_mutation: std::sync::atomic::AtomicUsize::new(0),
-        }
+        Self::with_cards(values, cards)
     }
 }
 impl From<Box<[Value]>> for ArrayElements {
