@@ -6,8 +6,8 @@ use ristretto_gc::{Configuration, Finalize, GarbageCollector, Gc, Result, Trace,
 use std::future::Future;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
-use std::task::{Context, Poll, Waker};
-use std::time::Duration;
+use std::task::{Context, Poll, Wake, Waker};
+use std::time::{Duration, Instant};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Stage {
@@ -63,7 +63,19 @@ impl Drop for Payload {
     }
 }
 
-fn exercise(stage: Stage) -> Result<()> {
+struct Ready(mpsc::SyncSender<()>);
+
+impl Wake for Ready {
+    fn wake(self: Arc<Self>) {
+        self.wake_by_ref();
+    }
+
+    fn wake_by_ref(self: &Arc<Self>) {
+        let _ = self.0.try_send(());
+    }
+}
+
+fn exercise(stage: Stage, registered: bool) -> Result<()> {
     let (entered, ready) = mpsc::channel();
     let (resume, release) = mpsc::channel();
     let callback = Arc::new(Callback {
@@ -79,6 +91,7 @@ fn exercise(stage: Stage) -> Result<()> {
     let payload_size = Gc::allocation_size(&payload)?;
     let scalar_size = Gc::allocation_size(&7_u64)?;
     let gc = GarbageCollector::with_config(Configuration {
+        threads: 1,
         max_heap_bytes: payload_size + scalar_size,
         allocation_threshold: usize::MAX,
         incremental_step_size: 1,
@@ -89,8 +102,14 @@ fn exercise(stage: Stage) -> Result<()> {
     let garbage = Gc::try_new(&gc, 7_u64)?;
     assert_eq!(gc.managed_bytes(), payload_size + scalar_size);
     drop(doomed);
-    let first_gc = gc.clone();
-    let first = std::thread::spawn(move || first_gc.collect_full());
+    let first = if registered {
+        gc.start();
+        gc.collect();
+        None
+    } else {
+        let first_gc = gc.clone();
+        Some(std::thread::spawn(move || first_gc.collect_full()))
+    };
     ready
         .recv_timeout(Duration::from_secs(if cfg!(miri) { 120 } else { 20 }))
         .map_err(|error| {
@@ -100,11 +119,21 @@ fn exercise(stage: Stage) -> Result<()> {
     // reclaim it while the earlier detached callback is still stalled.
     drop(garbage);
     let mut allocation = Box::pin(Gc::try_new_async(&gc, 11_u64));
-    let mut context = Context::from_waker(Waker::noop());
+    let (signal, runnable) = mpsc::sync_channel(1);
+    let waker = Waker::from(Arc::new(Ready(signal)));
+    let mut context = Context::from_waker(&waker);
+    let deadline = Instant::now() + Duration::from_secs(if cfg!(miri) { 20 } else { 2 });
     let mut result = None;
     for _ in 0..2048 {
         if let Poll::Ready(value) = allocation.as_mut().poll(&mut context) {
             result = Some(value);
+            break;
+        }
+        if registered
+            && runnable
+                .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                .is_err()
+        {
             break;
         }
     }
@@ -112,9 +141,11 @@ fn exercise(stage: Stage) -> Result<()> {
     let progress = gc.statistics()?;
     drop(allocation);
     drop(resume);
-    first.join().map_err(|_| {
-        ristretto_gc::Error::CollectionPhaseError("first mutator panicked".into())
-    })??;
+    if let Some(first) = first {
+        first.join().map_err(|_| {
+            ristretto_gc::Error::CollectionPhaseError("first mutator panicked".into())
+        })??;
+    }
     let allocated = result.expect("another mutator's recovery awaited the host callback")?;
     assert!(still_parked, "host callback failure deadline expired");
     assert!(
@@ -133,13 +164,31 @@ fn exercise(stage: Stage) -> Result<()> {
 
 #[test]
 fn default_recovery_progresses_during_a_stalled_finalizer() -> Result<()> {
-    exercise(Stage::Finalize)
+    exercise(Stage::Finalize, false)
 }
 #[test]
 fn default_recovery_progresses_during_a_stalled_clear_callback() -> Result<()> {
-    exercise(Stage::Clear)
+    exercise(Stage::Clear, false)
 }
 #[test]
 fn default_recovery_progresses_during_a_stalled_destructor() -> Result<()> {
-    exercise(Stage::Drop)
+    exercise(Stage::Drop, false)
+}
+
+#[cfg(not(miri))]
+#[test]
+fn registered_worker_recovers_an_independent_donor_during_finalize() -> Result<()> {
+    exercise(Stage::Finalize, true)
+}
+
+#[cfg(not(miri))]
+#[test]
+fn registered_worker_recovers_an_independent_donor_during_clear() -> Result<()> {
+    exercise(Stage::Clear, true)
+}
+
+#[cfg(not(miri))]
+#[test]
+fn registered_worker_recovers_an_independent_donor_during_drop() -> Result<()> {
+    exercise(Stage::Drop, true)
 }
