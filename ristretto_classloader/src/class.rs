@@ -8,6 +8,7 @@ use ristretto_classfile::{
     CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, Constant, ConstantPool,
     FieldAccessFlags, JavaStr, JavaString, MethodAccessFlags,
 };
+use ristretto_gc::ReferenceKind;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
@@ -17,6 +18,12 @@ use tokio::sync::Notify;
 
 mod method_resolution;
 pub use method_resolution::{MethodResolutionError, ResolvedMethod};
+
+#[derive(Debug)]
+struct InstanceLayout {
+    fields: Box<[Arc<Field>]>,
+    reference_kind: Option<ReferenceKind>,
+}
 
 /// A list of methods that are designated as polymorphic in the Java Virtual Machine.
 ///
@@ -309,7 +316,7 @@ pub struct Class {
     class_file: Arc<ClassFile<'static>>,
     parent: RwLock<Option<Arc<Class>>>,
     /// Published after linking; ancestor slots are a stable prefix of descendant layouts.
-    field_layout: OnceLock<Box<[Arc<Field>]>>,
+    field_layout: OnceLock<InstanceLayout>,
     /// Verification is independent of linking and initialization.
     verification: OnceLock<std::result::Result<(), String>>,
     interfaces: RwLock<Vec<Arc<Class>>>,
@@ -1104,17 +1111,24 @@ impl Class {
                 ["Incomplete links for ", self.name()].concat(),
             ));
         }
-        let mut fields = if let Some(parent) = parent.as_ref() {
-            parent
-                .field_layout
-                .get()
-                .ok_or_else(|| InternalError(["Unlinked parent of ", self.name()].concat()))?
-                .to_vec()
-        } else {
-            Vec::new()
-        };
+        let parent_layout = parent
+            .as_ref()
+            .map(|parent| {
+                parent
+                    .field_layout
+                    .get()
+                    .ok_or_else(|| InternalError(["Unlinked parent of ", self.name()].concat()))
+            })
+            .transpose()?;
+        let mut fields = parent_layout.map_or_else(Vec::new, |layout| layout.fields.to_vec());
         fields.extend(self.object_fields.iter().cloned());
-        let _ = self.field_layout.set(fields.into_boxed_slice());
+        let reference_kind = self
+            .declared_reference_kind()
+            .or_else(|| parent_layout.and_then(|layout| layout.reference_kind));
+        let _ = self.field_layout.set(InstanceLayout {
+            fields: fields.into_boxed_slice(),
+            reference_kind,
+        });
         Ok(())
     }
 
@@ -1125,9 +1139,39 @@ impl Class {
     /// Returns an error if a hierarchy lock is poisoned.
     pub fn object_field_layout(&self) -> Result<Cow<'_, [Arc<Field>]>> {
         if let Some(fields) = self.field_layout.get() {
-            return Ok(Cow::Borrowed(fields));
+            return Ok(Cow::Borrowed(&fields.fields));
         }
         Ok(Cow::Owned(self.build_object_fields()?))
+    }
+
+    fn declared_reference_kind(&self) -> Option<ReferenceKind> {
+        match self.name() {
+            "java/lang/ref/SoftReference" => Some(ReferenceKind::Soft),
+            "java/lang/ref/WeakReference" => Some(ReferenceKind::Weak),
+            "java/lang/ref/FinalReference" => Some(ReferenceKind::Final),
+            "java/lang/ref/PhantomReference"
+                if self.class_file.version <= ristretto_classfile::JAVA_8 =>
+            {
+                Some(ReferenceKind::PhantomRetained)
+            }
+            "java/lang/ref/PhantomReference" => Some(ReferenceKind::Phantom),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn reference_kind(self: &Arc<Self>) -> Result<Option<ReferenceKind>> {
+        if let Some(layout) = self.field_layout.get() {
+            return Ok(layout.reference_kind);
+        }
+        // Standalone classes can still change parent until their layout is published.
+        let mut ancestor = Some(self.clone());
+        while let Some(current) = ancestor {
+            if let Some(kind) = current.declared_reference_kind() {
+                return Ok(Some(kind));
+            }
+            ancestor = current.parent()?;
+        }
+        Ok(None)
     }
 
     /// Get storage for a static field declared in this class, by its local static-field index.

@@ -120,3 +120,33 @@ fn concurrent_layout_finalization_preserves_shared_storage() -> Result<()> {
     assert!(child.set_parent(None).is_err());
     Ok(())
 }
+
+#[test]
+fn linked_reference_classes_keep_the_nearest_kind_and_its_classfile_version() -> Result<()> {
+    let ordinary = class("Ordinary", None, "referent")?;
+    ordinary.finalize_field_layout()?;
+    assert_eq!(ordinary.reference_kind()?, None);
+    for (version, expected) in [
+        (ristretto_classfile::JAVA_8, ReferenceKind::PhantomRetained),
+        (ristretto_classfile::JAVA_17, ReferenceKind::Phantom),
+    ] {
+        let mut definition = class("java/lang/ref/PhantomReference", None, "referent")?
+            .class_file()
+            .clone();
+        definition.version = version;
+        let phantom = Class::from(None, definition)?;
+        phantom.finalize_field_layout()?;
+        let child = class("Child", Some(&phantom), "referent")?;
+        child.set_parent(Some(ordinary.clone()))?;
+        assert_eq!(child.reference_kind()?, None);
+        child.set_parent(Some(phantom))?;
+        assert_eq!(child.reference_kind()?, Some(expected));
+        child.finalize_field_layout()?;
+        assert_eq!(child.reference_kind()?, Some(expected));
+        let weak = class("java/lang/ref/WeakReference", Some(&child), "other")?;
+        weak.set_parent(Some(child))?;
+        weak.finalize_field_layout()?;
+        assert_eq!(weak.reference_kind()?, Some(ReferenceKind::Weak));
+    }
+    Ok(())
+}
