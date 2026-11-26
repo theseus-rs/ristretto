@@ -2,6 +2,9 @@
 
 ## Tenfold complete-collection gate
 
+At `d07426d1`, three supported lock wrappers forward cooperative clearing of their contents. Each had previously stranded an unrelated allocation at the heap limit. All 900 forced native runs and all 36 complete-collection comparisons passed, with weakest individual 95% speedup bounds of 10.43× native and 10.63× WASI.
+[Locked-buffer controls and collection measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#cooperative-clearing-of-locked-buffers).
+
 A withheld allocation-waiter experiment at `53c3f961` passed 1,400 forced native schedules and all 36 complete-collection comparisons. A later test stranded a ticket-only waiter after the last worker exited. Three executor polls plus cancellation took 1.52–2.38× as long as the release source. Both issues remain on the integrated alpha critical path.
 [Experiment and reproducible controls](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#withheld-allocation-waiter-experiment).
 

@@ -31,6 +31,13 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Compiled helper-result heap ownership | `8b15e59c` | 251126980 | **10.65×** | **10.29×** | **36 / 36** |
 | Reject retired same-heap compiled helper results | `89c0f698` | 251126985 | **10.77×** | **10.59×** | **36 / 36** |
 | Allocation waiters and last-worker exit (withheld experiment) | `53c3f961` | 251126992 | **10.35×** | **10.35×** | **36 / 36** |
+| Cooperative clearing of locked buffers | `d07426d1` | 251127009 | **10.43×** | **10.63×** | **36 / 36** |
+
+## Cooperative clearing of locked buffers
+
+On `d65e7802`, each of three lock wrappers around a region-backed buffer could strand an unrelated eight-byte allocation while a region registry was parked. The standard mutex, standard reader-writer lock and collector mutex now forward their inner clearing operation using exclusive access. A poisoned standard lock still propagates the original offset, budget and progress result. The unrelated allocation returned its rooted value before the parked thread resumed. All nine contention and clearing regressions passed in 100 fresh processes each.
+
+All 36 collection conditions exceeded 10×, with weakest individual 95% speedup bounds of 10.43× native and 10.63× WASI. GC packaging, strict Clippy, native all-feature tests, 319 WASI GC tests and the bare-Wasm check passed. [Paired full-cycle samples](locked-buffers.csv) · [Failing parent regressions, stress runs and audit](locked-buffer-verification.json.gz)
 
 ## Withheld allocation-waiter experiment
 
