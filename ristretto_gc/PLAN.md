@@ -2,7 +2,18 @@
 
 ## Tenfold complete-collection gate
 
-The latest qualified integrated source at `849b9f31` clears every native and
+The integrated region changes at `81594aad` passed all 36 native and WASI
+collection conditions against `f1daebeb`. Minimum medians were 10.42× and
+11.81×, and the weakest individual 95% lower bounds were 10.18× and
+11.68×. The compaction-specific tests cover activation and invalidation while
+a region registry is parked, exclusion of stale roles, source release accounting
+and bounded helper polls under both publication policies. The final trim test
+timed out on its parent and passed with the change. The core benchmark runs
+without compaction. The Chromium receipts cover the earlier `849b9f31` source.
+[Collection measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md)
+· [Chromium worker runs](../benchmarks/gc/publication/browser-worker-reclamation/consolidated-alpha/README.md).
+
+The earlier integrated source at `849b9f31` clears every native and
 WASI cell against `f1daebeb`. Its lowest medians were 10.92× and 12.22×,
 and its lowest individual 95% bounds were 10.19× and 11.96×. Two
 intermediate revisions missed the native gate after the deadline-aware
