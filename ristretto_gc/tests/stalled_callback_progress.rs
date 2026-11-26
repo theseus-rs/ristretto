@@ -627,6 +627,23 @@ mod bounded_lock_donor {
     }
 
     #[test]
+    fn string_vector_reclaims_across_multiple_clearing_steps() -> Result<()> {
+        check(vec![String::from("backing"); 97])
+    }
+
+    #[test]
+    fn string_region_buffer_reclaims_across_multiple_clearing_steps() -> Result<()> {
+        let regions = ristretto_gc::region::RegionHeap::new(4096, 16_384, 0);
+        let buffer = ristretto_gc::HeapBuffer::try_with_fn(Some(&regions), 97, |_| {
+            Ok(String::from("backing"))
+        })?;
+        assert_eq!(regions.statistics().occupied_bytes, 97 * size_of::<String>());
+        check(buffer)?;
+        assert_eq!(regions.statistics().occupied_bytes, 0);
+        Ok(())
+    }
+
+    #[test]
     fn managed_region_heap_buffer() -> Result<()> {
         let regions = ristretto_gc::region::RegionHeap::new(1024, 4096, 0);
         let buffer = ristretto_gc::HeapBuffer::try_with_fn(Some(&regions), 256, |_| Ok(5_u8))?;
