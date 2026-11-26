@@ -23,7 +23,14 @@ pub use method_resolution::{MethodResolutionError, ResolvedMethod};
 struct InstanceLayout {
     fields: Box<[Arc<Field>]>,
     reference_kind: Option<ReferenceKind>,
-    reference_fields: Option<Arc<[Option<usize>; 3]>>,
+    reference_fields: Option<Arc<ReferenceSlots>>,
+}
+
+#[derive(Debug)]
+struct ReferenceSlots {
+    referent: Option<usize>,
+    discovered: Option<usize>,
+    queue: Option<usize>,
 }
 
 /// Instance fields owned by java.lang.ref.Reference and accessed by the VM.
@@ -1167,13 +1174,16 @@ impl Class {
         let reference_fields = if self.name() == "java/lang/ref/Reference" {
             use JavaReferenceField::{Discovered, Queue, Referent};
             let inherited = fields.len() - self.object_fields.len();
-            let mut slots = [None; 3];
-            for member in [Referent, Discovered, Queue] {
-                slots[member as usize] = member
+            let slot = |member: JavaReferenceField| {
+                member
                     .declared_index(&self.object_fields)
-                    .map(|index| inherited + index);
-            }
-            Some(Arc::new(slots))
+                    .map(|index| inherited + index)
+            };
+            Some(Arc::new(ReferenceSlots {
+                referent: slot(Referent),
+                discovered: slot(Discovered),
+                queue: slot(Queue),
+            }))
         } else {
             parent_layout.and_then(|layout| layout.reference_fields.clone())
         };
@@ -1205,7 +1215,11 @@ impl Class {
         self.field_layout
             .get()
             .and_then(|layout| layout.reference_fields.as_deref())
-            .and_then(|fields| fields[member as usize])
+            .and_then(|fields| match member {
+                JavaReferenceField::Referent => fields.referent,
+                JavaReferenceField::Discovered => fields.discovered,
+                JavaReferenceField::Queue => fields.queue,
+            })
             .ok_or_else(|| member.missing())
     }
 
@@ -1221,10 +1235,10 @@ impl Class {
             let mut ancestor = self.parent()?;
             while let Some(class) = ancestor {
                 if class.name() == "java/lang/ref/Reference" {
-                    let index = member
+                    let declared = member
                         .declared_index(&class.object_fields)
+                        .and_then(|index| class.object_fields.get(index))
                         .ok_or_else(|| member.missing())?;
-                    let declared = &class.object_fields[index];
                     return fields
                         .iter()
                         .position(|field| Arc::ptr_eq(field, declared))
