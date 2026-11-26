@@ -41,6 +41,18 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Parked remembered publishers and native worker retries | `b7eb6c4b` | 251127109 | **10.28×** | **10.58×** | **36 / 36** |
 | Parked native cleanup and independent bounded storage | `a0eba4e2` | 251127124 | **10.39×** | **10.50×** | **36 / 36** |
 | Exact Java Reference fields through hidden subclass members | `cdee5888` | 251127133 | **10.86×** | **10.61×** | **36 / 36** |
+| Terminal refund and bounded lock cleanup | `43ffb7cc` | 251127142 | **10.34×** | **10.29×** | **36 / 36** |
+| Buffer reclamation and advisory admission | `113da93b` | 251127151 | **10.40×** | **10.23×** | **36 / 36** |
+
+## Returning buffer storage to waiting allocations
+
+At the heap limit an allocator now rechecks spendable bytes after it closes an unfunded retirement request. Four standard and managed lock wrappers preserve bounded cleanup for their contents. A worker can also reclaim a host-backed or regional `HeapBuffer<T>` during a parked destructor when `T` has no drop glue. Clearing tries the staged and original range returns separately. A busy range keeps its physical charge and the worker can service another task. A buffer containing an arbitrary element destructor still uses the host callback path.
+
+Buffer construction first checks whether enough space could be made available. The synchronous and asynchronous checks now help a fixed snapshot of eligible, publicly returned donors before reporting exhaustion. They skip later arrivals, preserve grants already pledged to other allocations, and recheck actual headroom. The asynchronous check yields between units of work. Its regression puts 4,096 nonfitting demands in front of one donor and tests both publication policies.
+
+All 13 forced cases passed in 100 fresh processes each. Thirty additional native allocator stress processes passed. Each covered 24 configurations with four mutators and 500 operations per mutator, for 1.44 million operations total. The default and all-feature native libraries passed 566 and 857 tests, respectively, and the WASI library passed 328. Strict native and WASI Clippy, bare Wasm and Cargo package verification passed. The physical collection comparison passed all 36 conditions on both revisions shown above. [Terminal and wrapper measurements](terminal-cleanup.csv) · [Buffer measurements](buffer-admission.csv) · [Controls, stress trials, audits and package checksum](buffer-admission-controls.json.gz)
+
+The complete default collector suite still has an outstanding native failure. After four mutators released 2,000 objects, the context-migration test counted 1,339 destructors on `cdee5888` and 1,443 on the updated test tip `7f18d32d` immediately after two full collections. The latter run passed 933 tests, failed one and ignored one. A separate test update samples the live byte charge at allocator wake and cumulative refund counters after shutdown, when all workers have flushed their batches. The open release questions include physical completion for a caller's own collection, progress when an unrelated opaque destructor stalls, and async allocation with a parked region registry or range map.
 
 ## Native allocation while a second host destructor is pending
 
