@@ -2,6 +2,14 @@
 
 ## Tenfold complete-collection gate
 
+At `74275197`, a parked target address shard permits clean buffered edge
+publication during an explicit context flush, a mutator overflow and collector
+draining. The forced schedules retain the graph and keep a privately claimed
+record pending until its mark work publishes. The collector cleared all 36
+native and WASI conditions against `f1daebeb`. The weakest individual 95%
+lower bounds were 10.11× and 11.78×.
+[Per-process results and forced schedules](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md).
+
 Hard-cap recovery remains an integrated alpha blocker. With one reaper parked and
 an independent 32-byte donor available to four 8-byte requests, 8 of 1,800
 fresh native processes returned at least one terminal OOM. After all four peers
@@ -21,7 +29,7 @@ and GC-attributable global-pause evidence remain release requirements.
 [Java latency](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/README.md)
 · [JIT coverage](../benchmarks/gc/publication/typed-root-collection/ordinary-roots-jit-coverage/README.md).
 
-The latest qualified collector, `1bd9360c`, admits a copy to an available
+The preceding qualified collector, `1bd9360c`, admits a copy to an available
 destination and continues partial chunks while the source registry is parked.
 Its minimum per-condition 95% speedup bounds against `f1daebeb` were 10.18×
 native and 11.91× WASI over 1,728 fresh processes. Separate one-minute
