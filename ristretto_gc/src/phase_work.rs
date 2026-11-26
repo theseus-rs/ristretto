@@ -814,7 +814,10 @@ impl GarbageCollector {
                         self.mature_census.promotions.fetch_add(1, Ordering::AcqRel);
                         metadata.age.store(age, Ordering::Release);
                         let promoted = metadata.clone();
-                        sealed.address = objects.promote(&mut cycle.young_retirement);
+                        sealed.address = objects.promote(
+                            &mut cycle.young_retirement,
+                            self.configuration.max_pause_time_us == 0,
+                        );
                         remembered.insert(address);
                         counters.promoted += 1;
                         drop(remembered);

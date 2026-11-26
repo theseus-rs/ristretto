@@ -514,6 +514,34 @@ fn retired_bytes_cover_every_unregistered_allocation_until_storage_is_released()
 }
 
 #[test]
+fn timed_single_entry_sweeps_promote_without_a_mature_word() -> Result<()> {
+    for deadline in [0, 100] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .max_pause_time_us(deadline)
+                .promotion_age(1)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let root = Gc::try_new(&gc, 37_u64)?;
+        let address = root.as_ptr() as usize;
+        gc.collect_full()?;
+        assert!(!gc.is_young_allocation(address));
+        assert_eq!(
+            gc.objects.mature_word_count(address),
+            usize::from(deadline == 0)
+        );
+        gc.collect_full()?;
+        assert_eq!(**root, 37);
+        drop(root);
+        gc.collect_full()?;
+        assert_eq!(gc.objects.mature_word_count(address), 0);
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
+
+#[test]
 fn mature_coverage_distinguishes_duplicate_edges_from_a_white_mature_object() -> Result<()> {
     for counted in [false, true] {
         for white_mature in [false, true] {

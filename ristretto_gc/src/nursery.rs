@@ -416,9 +416,17 @@ impl Membership<'_> {
             .filter(|m| *address == self.address && m.birth.visible())
     }
 
-    pub(crate) fn promote(&mut self, cache: &mut YoungRetirement) -> Option<Sealed> {
+    pub(crate) fn promote(
+        &mut self,
+        cache: &mut YoungRetirement,
+        batch_survivors: bool,
+    ) -> Option<Sealed> {
         let slot = self.slot.as_ref()?;
-        self.mature.insert(slot.key, self.metadata.as_ref()?);
+        // A deadline-limited sweep takes a single entry and never reads
+        // this index. Its address cell already owns the live descriptor.
+        if batch_survivors {
+            self.mature.insert(slot.key, self.metadata.as_ref()?);
+        }
         let page = slot.clear_young(cache)?;
         Some(Sealed {
             key: slot.key,
@@ -932,6 +940,11 @@ impl Objects {
             }
         }
         entries
+    }
+
+    #[cfg(test)]
+    pub(crate) fn mature_word_count(&self, address: usize) -> usize {
+        self.guards.lock(address).0.len()
     }
 
     #[cfg(test)]
