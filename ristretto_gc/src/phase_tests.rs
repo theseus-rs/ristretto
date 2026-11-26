@@ -77,10 +77,10 @@ fn roots_reference_slots_and_sweep_entries_progress_with_the_coordinator_held() 
             assert_eq!(lock(&gc.domains[1].cycle).phase, phase);
             let before = gc.diagnostics().independent_phase_steps;
             let coordinator = lock(&gc.coordinator);
-            assert!(matches!(
-                gc.independent_phase_step(false),
-                phase_work::PhaseStep::Worked(_)
-            ));
+            assert!(
+                gc.independent_phase_step(false)
+                    .is_ok_and(|step| step.is_some())
+            );
             assert_eq!(gc.diagnostics().independent_phase_steps, before + 1);
             drop(coordinator);
             while !gc.step() {}
@@ -420,7 +420,7 @@ mod native {
             let (finished, result) = mpsc::channel();
             let worker = thread::spawn(move || {
                 finished
-                    .send(worker_gc.independent_phase_step(false))
+                    .send(worker_gc.independent_phase_step(false).ok().flatten())
                     .expect("root observer");
             });
             let yielded = result.recv_timeout(Duration::from_secs(1));
@@ -431,7 +431,7 @@ mod native {
             );
             drop(objects);
             worker.join().expect("root scan");
-            assert_eq!(yielded, Ok(phase_work::PhaseStep::Worked(false)));
+            assert_eq!(yielded, Ok(Some(false)));
             assert!(coordinator_free && admission_free);
             assert!(lock(&gc.domains[1].cycle).cursor > cursor);
             gc.collect_full()?;

@@ -58,7 +58,7 @@ impl StorageState {
     }
 
     pub(super) fn release_scan(&self) -> bool {
-        self.0.fetch_and(!SCANNING, Ordering::AcqRel) == RETIRED | NOTIFY | SCANNING
+        self.0.fetch_sub(SCANNING, Ordering::AcqRel) == RETIRED | NOTIFY | SCANNING
     }
 
     /// The last borrower owns the notification if the sweeper has armed it.
@@ -77,6 +77,10 @@ impl StorageState {
         let previous = self.0.fetch_or(NOTIFY, Ordering::AcqRel);
         debug_assert_eq!(previous & !(MAX_READERS | SCANNING), RETIRED);
         previous == RETIRED
+    }
+
+    pub(super) fn open(&self) -> bool {
+        self.0.load(Ordering::Acquire) < RETIRED
     }
 
     pub(super) fn ready(&self) -> bool {

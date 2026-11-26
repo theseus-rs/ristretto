@@ -35,6 +35,10 @@ pub(crate) struct Cursor {
 }
 
 impl DirtyOwners {
+    pub(crate) fn initialized(&self) -> bool {
+        self.overflow.get().is_some()
+    }
+
     /// Publish the latest dirtiness for this exact identity. A writer delayed
     /// after its mutation increment must not roll a newer entry back.
     #[expect(

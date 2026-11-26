@@ -2,8 +2,8 @@
 //! traversal to the owning epoch so suspending the caller cannot pin an epoch
 //! or let it modify a later epoch's mark word.
 use super::{
-    GarbageCollector, MetadataRef, ObjectMetadata, Ordering, Retention, SCAN_YOUNG,
-    TRACE_RETENTION, publication_state,
+    GarbageCollector, MetadataRef, ObjectMetadata, Ordering, Retention, SCAN_YOUNG, TraceRetention,
+    publication_state,
 };
 use std::sync::Arc;
 
@@ -39,18 +39,14 @@ impl GarbageCollector {
         // Old handoff uses per-edge cross-domain admission and has its own
         // semantics for a young birth. Reserved callbacks already pin closure.
         self.configuration.old_collection_interval == 0
-            && !TRACE_RETENTION.get().is_some_and(|(gc, _, reserved)| {
-                reserved && gc == std::ptr::from_ref(self) as usize
-            })
+            && !TraceRetention::current(self).is_some_and(|(_, reserved)| reserved)
     }
 
     pub(super) fn publish_external_trace(&self, metadata: &MetadataRef) {
         let source = self.domain_index();
         let mature = self.configuration.promotion_age.max(1);
-        let inherited = TRACE_RETENTION
-            .get()
-            .filter(|(heap, _, _)| *heap == std::ptr::from_ref(self) as usize)
-            .map_or(Retention::Strong, |(_, strength, _)| strength);
+        let inherited =
+            TraceRetention::current(self).map_or(Retention::Strong, |(strength, _)| strength);
 
         loop {
             let snapshot = match self.phase_clock.indexed_root() {
