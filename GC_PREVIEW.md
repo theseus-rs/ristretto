@@ -1,10 +1,12 @@
-# Restricted Java GC source preview
+# Restricted Java GC research preview
 
-This opt-in source preview runs an admitted Java class set on the native
-interpreter, native compiled tier, and WASI interpreter. The ordinary launcher
-continues to use its existing collector. The preview catalog and pool are private
-modules inside `ristretto_gc`; no unpublished catalog registry package or sibling
-validation project is needed.
+The alpha JVM uses the ordinary Ristretto collector for every Java allocation on
+native, WASI and browser targets. The canonical catalog and bounded pool are a
+separate research implementation in `ristretto_gc_catalog`. Its restricted
+interpreter, compiled tier and WASI examples live in the workspace-only
+`ristretto_vm_research` crate. Run
+`python3 benchmarks/gc/release/verify_alpha_heap.py` to check the dependency
+graphs of the shipping JVM, launcher and browser engine.
 
 ## Build from the archive
 
@@ -40,9 +42,9 @@ The verifier runs the following commands with a complete build/run watchdog and
 checks the report's top-level fields, keeping nested initialization counts apart:
 
 ```sh
-cargo run --locked -p ristretto_vm --no-default-features --features experimental-canonical-runtime --example canonical_java
-cargo run --locked -p ristretto_vm --no-default-features --features experimental-canonical-jit --example canonical_java -- --compiled
-cargo run --locked -p ristretto_vm --no-default-features --features experimental-canonical-runtime --example canonical_java --target wasm32-wasip2
+cargo run --locked -p ristretto_vm_research --no-default-features --features experimental-canonical-runtime --example canonical_java
+cargo run --locked -p ristretto_vm_research --no-default-features --features experimental-canonical-jit --example canonical_java -- --compiled
+cargo run --locked -p ristretto_vm_research --no-default-features --features experimental-canonical-runtime --example canonical_java --target wasm32-wasip2
 ```
 
 Each run must return **64**, report **16 allocations and 16 released objects**,
@@ -75,8 +77,8 @@ unrestricted bytecode dispatch is outside the preview. Unsupported bytecodes and
 layouts reject. Runtime faults return Rust errors rather than providing general
 Java exception execution. The limited initializer failure behavior and detailed
 storage restrictions are documented with
-[heap ownership](ristretto_vm/CANONICAL_HEAP.md),
-[static fields and initialization](ristretto_vm/CANONICAL_STATICS.md), and the
+[heap ownership](ristretto_vm_research/CANONICAL_HEAP.md),
+[static fields and initialization](ristretto_vm_research/CANONICAL_STATICS.md), and the
 [GC ownership contract](ristretto_gc/CANONICAL_RUNTIME.md).
 
 General inheritance/interfaces, virtual/interface/dynamic calls, monitors, native
@@ -103,25 +105,17 @@ do not replace sustained capacity, scheduled-tail or endurance qualification.
 
 ## Reproduce the GC package check
 
-The `.crate` archive also includes the private catalog/pool sources. From this
-source tree, with a fresh package target:
+Cargo can stage both versioned crates together before a registry release. It
+resolves the optional research dependency against the staged catalog package and
+verifies each extracted crate. From the workspace root run:
 
 ```sh
-export CARGO_TARGET_DIR="$PWD/../preview-package-target"
-cargo package --locked -p ristretto_gc --no-verify
-mkdir ../preview-gc-package
-cd ../preview-gc-package
-tar -xzf "$CARGO_TARGET_DIR/package/ristretto_gc-0.35.0.crate"
-cd ristretto_gc-0.35.0
-export CARGO_TARGET_DIR="$PWD/../../preview-extracted-gc-target"
-cargo +1.100.0 test --locked --features experimental-canonical-runtime --lib
-cargo +1.100.0 test --locked --features experimental-canonical-runtime --lib --target wasm32-wasip2
+cargo package --locked -p ristretto_gc_catalog -p ristretto_gc
 ```
 
-`--no-verify` only defers Cargo's package build: the two following commands test
-the actual extracted package with its feature enabled. Keep the Wasmtime runner
-setting above for the WASI command. Other workspace crates and the Java example
-are distributed through the complete source archive.
+Independent registry publication orders `ristretto_gc_catalog` before
+`ristretto_gc` because Cargo resolves optional dependencies when packaging.
+The regular JVM dependency check above also covers all launcher features.
 
 ## Reproduce source identity and validation
 

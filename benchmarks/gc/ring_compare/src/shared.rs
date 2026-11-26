@@ -6,7 +6,7 @@
 use super::{Admission, Plan};
 use ristretto_gc::canonical::PrimaryCycles;
 use ristretto_gc::clock::{monotonic_clock_name, monotonic_resolution_ns, monotonic_time_ns};
-use ristretto_vm::canonical::{Error, Invocation, JavaThread, Program};
+use ristretto_vm_research::canonical::{Error, Invocation, JavaThread, Program};
 type Result<T> = std::result::Result<T, Error>;
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -25,7 +25,7 @@ impl Context for JavaThread<'_, '_, '_> {
     }
 }
 #[cfg(all(feature = "compiled", not(target_family = "wasm")))]
-impl Context for ristretto_vm::canonical::CompiledThread<'_, '_, '_, '_> {
+impl Context for ristretto_vm_research::canonical::CompiledThread<'_, '_, '_, '_> {
     async fn invoke(&mut self, admission: &Admission) -> Result<Invocation> {
         self.invoke(&admission.class, &admission.method, admission.argument)
             .await
@@ -271,7 +271,7 @@ pub(super) async fn run<'p>(
     admission: &Admission,
     plan: &Plan,
     #[cfg(all(feature = "compiled", not(target_family = "wasm")))] compiled: Option<
-        &ristretto_vm::canonical::CompiledProgram<'p>,
+        &ristretto_vm_research::canonical::CompiledProgram<'p>,
     >,
 ) -> Result<Outcome> {
     let measured = plan.mode == "measure";

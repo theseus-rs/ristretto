@@ -89,7 +89,7 @@ def command_for(tier):
     if tier not in TIERS:
         raise ValueError(f"unsupported tier {tier!r}")
     feature = "experimental-canonical-jit" if tier == "native-compiled" else "experimental-canonical-runtime"
-    command = ["cargo", "run", "--locked", "-p", "ristretto_vm", "--no-default-features",
+    command = ["cargo", "run", "--locked", "-p", "ristretto_vm_research", "--no-default-features",
                "--features", feature, "--example", "canonical_java"]
     if tier == "wasi-interpreted":
         command.extend(["--target", "wasm32-wasip2"])

@@ -68,9 +68,6 @@ serde_json = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]
-experimental-canonical-runtime = ["ristretto_gc/experimental-canonical-runtime"]
-experimental-canonical-telemetry = ["experimental-canonical-runtime", "ristretto_gc/experimental-canonical-service"]
-experimental-canonical-jit = ["experimental-canonical-runtime", "ristretto_jit/experimental-reference-dispatch", "ristretto_jit/execution-profile"]
 default = ["audio", "tls-rustls-ring"]
 audio = [
     "ristretto_intrinsics/audio",
@@ -119,11 +116,3 @@ name = "class_resolution"
 [[bench]]
 harness = false
 name = "strings"
-
-[[example]]
-name = "canonical_java"
-required-features = ["experimental-canonical-runtime"]
-
-[[example]]
-name = "canonical_ring_samples"
-required-features = ["experimental-canonical-runtime"]

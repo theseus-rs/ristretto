@@ -5,7 +5,7 @@ mod shared;
 use inputs::{Admission, Inputs};
 use ristretto_classfile::ClassFile;
 use ristretto_gc::clock::{monotonic_clock_name, monotonic_resolution_ns, monotonic_time_ns};
-use ristretto_vm::canonical::{Program, Report};
+use ristretto_vm_research::canonical::{Program, Report};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::path::PathBuf;
@@ -89,7 +89,7 @@ fn sample(report: &Report, admission: &Admission, elapsed_ns: Option<u64>) -> Re
 }
 
 #[cfg(all(feature = "compiled", not(target_family = "wasm")))]
-fn profiles(compiled: Option<&ristretto_vm::canonical::CompiledProgram<'_>>) -> Result<Value> {
+fn profiles(compiled: Option<&ristretto_vm_research::canonical::CompiledProgram<'_>>) -> Result<Value> {
     let Some(compiled) = compiled else {
         return Ok(Value::Null);
     };

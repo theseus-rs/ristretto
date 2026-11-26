@@ -159,7 +159,7 @@ dependencies = [
  "portable-atomic",
  "ristretto_classfile",
  "ristretto_gc",
- "ristretto_vm",
+ "ristretto_vm_research",
  "serde",
  "serde_json",
  "sha2",
@@ -1874,6 +1874,20 @@ dependencies = [
  "tokio",
  "tracing",
  "zerocopy",
+]
+
+[[package]]
+name = "ristretto_vm_research"
+version = "0.35.0"
+dependencies = [
+ "async-recursion",
+ "ristretto_classfile",
+ "ristretto_classloader",
+ "ristretto_gc",
+ "ristretto_jit",
+ "ristretto_vm",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]

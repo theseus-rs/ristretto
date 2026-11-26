@@ -1,5 +1,5 @@
 use ristretto_gc::canonical::Configuration;
-use ristretto_vm::canonical::Limits;
+use ristretto_vm_research::canonical::Limits;
 
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -51,8 +51,8 @@ impl WorkLimits {
         }
     }
     #[cfg(all(feature = "compiled", not(target_family = "wasm")))]
-    pub fn compiled(&self) -> ristretto_vm::canonical::CompiledLimits {
-        ristretto_vm::canonical::CompiledLimits {
+    pub fn compiled(&self) -> ristretto_vm_research::canonical::CompiledLimits {
+        ristretto_vm_research::canonical::CompiledLimits {
             request_polls: self.request_polls,
             cleanup_polls: self.cleanup_polls,
             frames: self.frames,

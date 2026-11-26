@@ -36,6 +36,7 @@ members = [
     "ristretto_test_util",
     "ristretto_types",
     "ristretto_vm",
+    "ristretto_vm_research",
     "web/runner",
 ]
 resolver = "3"
