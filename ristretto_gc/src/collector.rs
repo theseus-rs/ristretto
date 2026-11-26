@@ -894,6 +894,9 @@ fn now() -> Option<std::time::Instant> {
 }
 
 #[cfg(not(target_family = "wasm"))]
+#[path = "native_callbacks.rs"]
+mod native_callbacks;
+#[cfg(not(target_family = "wasm"))]
 #[path = "worker_signals.rs"]
 mod worker_signals;
 #[cfg(not(target_family = "wasm"))]
@@ -948,6 +951,8 @@ pub struct GarbageCollector {
     retired_objects: AtomicUsize,
     retired_bytes: AtomicUsize,
     retired_ready: AtomicUsize,
+    #[cfg(not(target_family = "wasm"))]
+    callback_jobs: AtomicUsize,
     retirement_turn: AtomicBool,
     released_donors: crate::retirement_grants::ReleasedDonors,
     released_turn: AtomicBool,
@@ -1104,9 +1109,23 @@ impl GarbageCollector {
             || (index == 1 && self.old_requested.load(Ordering::Acquire))
     }
 
+    #[cfg(not(target_family = "wasm"))]
+    fn worker_pending(&self) -> bool {
+        if self.callback_jobs.load(Ordering::Acquire) == 0 {
+            return self.pending();
+        }
+        // A callback can retain its physical charge indefinitely. A worker
+        // still sees every published retirement while that private job sleeps.
+        self.pending_with_retirement(self.retired.load().as_ref().is_some_and(|q| !q.is_empty()))
+    }
+
     fn pending(&self) -> bool {
+        self.pending_with_retirement(self.retired_ready.load(Ordering::Acquire) != 0)
+    }
+
+    fn pending_with_retirement(&self, ready: bool) -> bool {
         self.remembered.dirty.cleanup_pending()
-            || self.retired_ready.load(Ordering::Acquire) != 0
+            || ready
             || self.released_donors.has_jobs()
             || self
                 .scanned_slots()
@@ -1998,6 +2017,8 @@ impl GarbageCollector {
                 retired_objects: AtomicUsize::new(0),
                 retired_bytes: AtomicUsize::new(0),
                 retired_ready: AtomicUsize::new(0),
+                #[cfg(not(target_family = "wasm"))]
+                callback_jobs: AtomicUsize::new(0),
                 retirement_turn: AtomicBool::new(false),
                 released_donors: crate::retirement_grants::ReleasedDonors::default(),
                 released_turn: AtomicBool::new(false),
@@ -2622,6 +2643,7 @@ impl GarbageCollector {
             let registration = crate::recovery::WorkerRegistration::new(self);
             worker.push(thread::spawn(move || {
                 let _registration = registration;
+                native_callbacks::register(&generation);
                 let mut contention_delay = 1_u64;
                 #[expect(
                     clippy::indexing_slicing,
@@ -2639,7 +2661,7 @@ impl GarbageCollector {
                     }
                     let Some(gc) = weak.upgrade() else { break };
                     let _worker = WorkerContext::enter(&gc, index);
-                    while gc.pending() {
+                    while gc.worker_pending() {
                         if generation.closed.load(Ordering::Acquire) {
                             break;
                         }
@@ -2693,7 +2715,7 @@ impl GarbageCollector {
                     // A request can look idle while another worker transfers it to
                     // active state. Never block the idle handoff on that worker.
                     retry = if let Ok(_coordinator) = gc.coordinator.try_lock() {
-                        gc.pending()
+                        gc.worker_pending()
                     } else {
                         gc.back_off_worker(&mut contention_delay);
                         true
@@ -2765,12 +2787,18 @@ impl GarbageCollector {
     pub fn stop(&self) -> Result<()> {
         #[cfg(not(target_family = "wasm"))]
         {
-            let workers = {
+            if native_callbacks::executing(self) {
+                return Err(crate::Error::CollectionPhaseError(
+                    "a native cleanup callback cannot wait for its own shutdown".into(),
+                ));
+            }
+            let (workers, generation) = {
                 let mut workers = lock(&self.collector_thread);
-                if let Some(previous) = self.worker_signals.swap(None) {
+                let generation = self.worker_signals.swap(None);
+                if let Some(previous) = &generation {
                     previous.close();
                 }
-                std::mem::take(&mut *workers)
+                (std::mem::take(&mut *workers), generation)
             };
             for worker in workers {
                 if worker.thread().id() == thread::current().id() {
@@ -2779,6 +2807,9 @@ impl GarbageCollector {
                 worker
                     .join()
                     .map_err(|_| crate::Error::SyncError("collector worker panicked".into()))?;
+            }
+            if let Some(generation) = generation {
+                generation.callbacks.join()?;
             }
             let notifier = {
                 let _workers = lock(&self.collector_thread);
@@ -4668,6 +4699,25 @@ impl GarbageCollector {
         TraceProgress::Complete
     }
 
+    #[cfg(not(target_family = "wasm"))]
+    fn offload_finalizer(
+        &self,
+        task: ReclaimTask,
+        budget: usize,
+        origin: Option<(usize, u64)>,
+    ) -> Option<ReclaimTask> {
+        if task.metadata.has_finalizer()
+            && WORKER
+                .get()
+                .is_some_and(|(heap, _)| heap == std::ptr::from_ref(self).addr())
+            && let Some(pool) = native_callbacks::pool()
+            && !pool.closed.load(Ordering::Acquire)
+        {
+            return pool.callbacks.send(self, task, budget, origin);
+        }
+        Some(task)
+    }
+
     /// Execute a sweep callback with exclusive descriptor ownership and no cycle,
     /// coordinator, or publication lock. A continuation can return to its original
     /// sweep while that exact epoch has space in its bounded continuation queue.
@@ -4680,19 +4730,16 @@ impl GarbageCollector {
         counters: &mut WorkCounters,
         selection: Option<crate::retirement_grants::Selection>,
     ) {
+        #[cfg(not(target_family = "wasm"))]
+        if selection.is_none() {
+            let Some(owned) = self.offload_finalizer(task, budget, Some((index, epoch))) else {
+                return;
+            };
+            task = owned;
+        }
         let progress = self.clear_retired(&mut task, budget, counters, selection);
         if progress == TraceProgress::Complete {
-            if let Some(scheduler) = &self.scheduler
-                && let Ok(mut cycle) = self.domain_at(index).cycle.try_lock()
-                && cycle.epoch == epoch
-                && cycle.kind == CollectionKind::Full
-                && cycle.phase != Phase::Idle
-            {
-                if cycle.reclaimed_bytes == 0 {
-                    scheduler.reclaimed();
-                }
-                cycle.reclaimed_bytes = cycle.reclaimed_bytes.saturating_add(task.metadata.size());
-            }
+            self.record_sweep_reclaimed(index, epoch, task.metadata.size());
         } else {
             task.advance(progress);
             if progress != TraceProgress::Busy
@@ -4707,6 +4754,20 @@ impl GarbageCollector {
             }
         }
         self.retired_ready.fetch_sub(1, Ordering::AcqRel);
+    }
+
+    fn record_sweep_reclaimed(&self, index: usize, epoch: u64, bytes: usize) {
+        if let Some(scheduler) = &self.scheduler
+            && let Ok(mut cycle) = self.domain_at(index).cycle.try_lock()
+            && cycle.epoch == epoch
+            && cycle.kind == CollectionKind::Full
+            && cycle.phase != Phase::Idle
+        {
+            if cycle.reclaimed_bytes == 0 {
+                scheduler.reclaimed();
+            }
+            cycle.reclaimed_bytes = cycle.reclaimed_bytes.saturating_add(bytes);
+        }
     }
 
     pub(crate) fn storage_ready(&self, metadata: MetadataRef) {
@@ -4762,6 +4823,13 @@ impl GarbageCollector {
         let measurement = timing.measure_from(self.diagnostics_enabled(), started);
         self.retired_objects.fetch_sub(1, Ordering::AcqRel);
         let budget = budget.min(task.metadata.trace.budget);
+        #[cfg(not(target_family = "wasm"))]
+        if selection.is_none() {
+            let Some(owned) = self.offload_finalizer(task, budget, None) else {
+                return Some(RetirementStep::Progress(false));
+            };
+            task = owned;
+        }
         let progress = self.clear_retired(&mut task, budget, &mut counters, selection);
         let contended = progress == TraceProgress::Busy;
         if progress == TraceProgress::Complete {

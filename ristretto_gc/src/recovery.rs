@@ -283,6 +283,14 @@ impl Recovery {
         (workers.count, workers.failed)
     }
 
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn callback_failed(&self) {
+        self.workers.rcu(|workers| Workers {
+            failed: true,
+            ..**workers
+        });
+    }
+
     fn worker_failed(&self) -> bool {
         self.worker_snapshot().failed
     }

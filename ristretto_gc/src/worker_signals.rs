@@ -7,12 +7,14 @@ use std::thread;
 pub(super) struct WorkerSignals {
     pub(super) closed: AtomicBool,
     pub(super) workers: Box<[Signal]>,
+    pub(super) callbacks: super::native_callbacks::Callbacks,
 }
 
 impl WorkerSignals {
     pub(super) fn new(count: usize) -> Self {
         Self {
             closed: AtomicBool::new(false),
+            callbacks: super::native_callbacks::Callbacks::default(),
             workers: (0..count).map(|_| Signal::default()).collect(),
         }
     }

@@ -75,7 +75,7 @@ impl Wake for Ready {
     }
 }
 
-fn exercise(stage: Stage, registered: bool) -> Result<()> {
+fn exercise(stage: Stage, registered: bool, release_donor: bool) -> Result<()> {
     let (entered, ready) = mpsc::channel();
     let (resume, release) = mpsc::channel();
     let callback = Arc::new(Callback {
@@ -117,7 +117,7 @@ fn exercise(stage: Stage, registered: bool) -> Result<()> {
         })?;
     // The first snapshot kept this object alive. A later recovery cycle must
     // reclaim it while the earlier detached callback is still stalled.
-    drop(garbage);
+    let retained = (!release_donor).then_some(garbage);
     let mut allocation = Box::pin(Gc::try_new_async(&gc, 11_u64));
     let (signal, runnable) = mpsc::sync_channel(1);
     let waker = Waker::from(Arc::new(Ready(signal)));
@@ -146,14 +146,18 @@ fn exercise(stage: Stage, registered: bool) -> Result<()> {
             ristretto_gc::Error::CollectionPhaseError("first mutator panicked".into())
         })??;
     }
-    let allocated = result.expect("another mutator's recovery awaited the host callback")?;
+    let result = result.expect("another mutator's recovery awaited the host callback");
     assert!(still_parked, "host callback failure deadline expired");
-    assert!(
-        progress.collections_started >= 2 && progress.managed_bytes_freed >= scalar_size,
-        "a later cycle did not reclaim the unrelated object"
-    );
-    assert_eq!(**allocated, 11);
-    drop(allocated);
+    assert!(progress.collections_started >= 2);
+    if release_donor {
+        let allocated = result?;
+        assert!(progress.managed_bytes_freed >= scalar_size);
+        assert_eq!(**allocated, 11);
+    } else {
+        assert!(matches!(result, Err(ristretto_gc::Error::OutOfMemory)));
+        assert_eq!(progress.managed_bytes_freed, 0);
+    }
+    drop(retained);
     gc.stop()?;
     assert_eq!(callback.finalized.load(Ordering::Relaxed), 1);
     assert_eq!(callback.cleared.load(Ordering::Relaxed), 1);
@@ -164,31 +168,71 @@ fn exercise(stage: Stage, registered: bool) -> Result<()> {
 
 #[test]
 fn default_recovery_progresses_during_a_stalled_finalizer() -> Result<()> {
-    exercise(Stage::Finalize, false)
+    exercise(Stage::Finalize, false, true)
 }
 #[test]
 fn default_recovery_progresses_during_a_stalled_clear_callback() -> Result<()> {
-    exercise(Stage::Clear, false)
+    exercise(Stage::Clear, false, true)
 }
 #[test]
 fn default_recovery_progresses_during_a_stalled_destructor() -> Result<()> {
-    exercise(Stage::Drop, false)
+    exercise(Stage::Drop, false, true)
 }
 
 #[cfg(not(miri))]
 #[test]
 fn registered_worker_recovers_an_independent_donor_during_finalize() -> Result<()> {
-    exercise(Stage::Finalize, true)
+    exercise(Stage::Finalize, true, true)
 }
 
 #[cfg(not(miri))]
 #[test]
 fn registered_worker_recovers_an_independent_donor_during_clear() -> Result<()> {
-    exercise(Stage::Clear, true)
+    exercise(Stage::Clear, true, true)
 }
 
 #[cfg(not(miri))]
 #[test]
 fn registered_worker_recovers_an_independent_donor_during_drop() -> Result<()> {
-    exercise(Stage::Drop, true)
+    exercise(Stage::Drop, true, true)
+}
+
+#[cfg(not(miri))]
+#[test]
+fn parked_cleanup_keeps_its_charge_until_physical_release() -> Result<()> {
+    for stage in [Stage::Finalize, Stage::Clear, Stage::Drop] {
+        exercise(stage, true, false)?;
+    }
+    Ok(())
+}
+
+#[cfg(not(miri))]
+#[test]
+fn callback_shutdown_cannot_wait_for_itself_and_the_pool_can_restart() -> Result<()> {
+    struct Reentrant(std::sync::Weak<GarbageCollector>, mpsc::Sender<bool>);
+    // SAFETY: the weak heap reference and test notification contain no managed edges.
+    unsafe impl Trace for Reentrant {
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+    impl Finalize for Reentrant {
+        fn finalize(&self) {
+            if let Some(gc) = self.0.upgrade() {
+                let error = matches!(gc.stop(), Err(ristretto_gc::Error::CollectionPhaseError(_)));
+                self.1.send(error).expect("shutdown observer");
+            }
+        }
+    }
+    let gc = GarbageCollector::with_config(Configuration::builder().threads(1).build());
+    for _ in 0..2 {
+        let (send, receive) = mpsc::channel();
+        let owner = Gc::new_with_finalizer(&gc, Reentrant(Arc::downgrade(&gc), send));
+        drop(owner);
+        gc.start();
+        gc.collect();
+        assert_eq!(receive.recv_timeout(Duration::from_secs(5)), Ok(true));
+        gc.stop()?;
+        assert_eq!(gc.registered_workers(), 0);
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
 }

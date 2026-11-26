@@ -235,6 +235,11 @@ impl ObjectMetadata {
         previous == 3
     }
 
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn has_finalizer(&self) -> bool {
+        self.kind.finalizer.is_some()
+    }
+
     pub(crate) fn can_transfer_retired_charge(&self) -> bool {
         self.direct_refund && self.kind.finalizer.is_none()
     }
