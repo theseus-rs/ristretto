@@ -18,8 +18,9 @@ the original reaper resumed. The release test must exercise competing waiters,
 retain their successful roots and account for both donors.
 [Forced schedules and process receipts](../benchmarks/gc/publication/compacting-endurance/region-epochs/README.md).
 
-In the latest matched Java run at `81594aad`, Ristretto completed all arrivals
-but both HotSpot collectors had lower scheduled p99.9 at each rate. The
+At `74275197`, all three runtimes completed all arrivals. At 1,500/s the
+median scheduled p99.9 was 229.5 µs for Ristretto, 211 µs for G1 and
+156.5 µs for ZGC. Both HotSpot collectors also had lower tails at 1,000/s. The
 JIT-enabled diagnostic interpreted every one of 35,891 entries to
 `GcBench.operation`. Its first production rejection was `putstatic` at byte
 27. Pinning the physical reaper before freeing the only 32-byte allocation
@@ -28,6 +29,12 @@ and phase policies. Stable reclamation under contention, execution coverage
 and GC-attributable global-pause evidence remain release requirements.
 [Java latency](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/README.md)
 · [JIT coverage](../benchmarks/gc/publication/typed-root-collection/ordinary-roots-jit-coverage/README.md).
+
+Three Chromium workers running the same `74275197` guest each completed 13
+collections and reclaimed 10,473,075 bytes. The workers replied to 256 of 257
+scheduled pings during Java execution and answered the last ping after the
+window. Attributing pauses to GC still requires instrumentation.
+[Worker timings and raw captures](../benchmarks/gc/publication/browser-worker-reclamation/consolidated-alpha/README.md#clean-buffered-barriers-at-74275197).
 
 The preceding qualified collector, `1bd9360c`, admits a copy to an available
 destination and continues partial chunks while the source registry is parked.
