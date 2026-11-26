@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 
 const SLOT_BITS: usize = 6;
-const SLOTS: usize = 1 << SLOT_BITS;
+pub(crate) const SLOTS: usize = 1 << SLOT_BITS;
 const SHARD_BITS: usize = 4;
 const SHARDS: usize = 1 << SHARD_BITS;
 const LOCATION_BITS: usize = SLOT_BITS + SHARD_BITS;
