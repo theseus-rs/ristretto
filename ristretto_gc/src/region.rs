@@ -81,7 +81,6 @@ struct State {
     backing: Arc<BackingTotals>,
     registered: usize,
     occupied: usize,
-    reclaimed: u64,
     trim_cursor: u64,
     evacuation: Option<Evacuation>,
 }
@@ -216,7 +215,7 @@ pub struct RegionHeap {
     trim_shard: Mutex<usize>,
     selection: Option<Arc<Selection>>,
     budget: Arc<Budget>,
-    identity: Arc<()>,
+    returned_bytes: Arc<AtomicU64>,
     region_size: usize,
     limit: usize,
     reserve: usize,
@@ -275,7 +274,7 @@ impl RegionHeap {
         let selection = cost_aware.then(|| Arc::new(Selection::default()));
         Arc::new(Self {
             budget,
-            identity: Arc::new(()),
+            returned_bytes: Arc::new(AtomicU64::new(0)),
             states: (0..count)
                 .map(|index| {
                     Arc::new(Mutex::new(State {
@@ -285,7 +284,6 @@ impl RegionHeap {
                         backing: Arc::default(),
                         registered: 0,
                         occupied: 0,
-                        reclaimed: 0,
                         trim_cursor: 0,
                         evacuation: selection.as_ref().map(|s| Evacuation::new(s.clone())),
                     }))
@@ -519,7 +517,7 @@ impl RegionHeap {
             id,
             Layout::from_size_align(size, layout.align().max(64))
                 .map_err(|_| Error::OutOfMemory)?,
-            self.identity.clone(),
+            self.returned_bytes.clone(),
             Registry {
                 state: Arc::downgrade(self.shard(index)),
                 totals: reservation.totals.clone(),
@@ -546,7 +544,7 @@ impl RegionHeap {
     }
 
     pub(crate) fn owns(&self, block: &Block) -> bool {
-        Arc::ptr_eq(&self.identity, &block.region.heap_identity)
+        Arc::ptr_eq(&self.returned_bytes, &block.region.returned_bytes)
     }
 
     /// Conservative, nonblocking readiness for a physical waiter. This offers no
@@ -795,10 +793,10 @@ impl RegionHeap {
     /// Advisory progress survives another allocator consuming a returned range.
     /// Backing refunds from the descriptor arena also make payload capacity available.
     pub(crate) fn recovery_progress(&self) -> (u64, u64) {
-        let reclaimed = self.states.iter().fold(0_u64, |total, shard| {
-            total.wrapping_add(lock(shard).reclaimed)
-        });
-        (reclaimed, self.budget.released.load(Ordering::Acquire))
+        (
+            self.returned_bytes.load(Ordering::Acquire),
+            self.budget.released.load(Ordering::Acquire),
+        )
     }
 
     pub(crate) fn record_staging(&self, bytes: usize) {
@@ -823,7 +821,7 @@ impl RegionHeap {
 #[derive(Debug)]
 struct Region {
     registry: Registry,
-    heap_identity: Arc<()>,
+    returned_bytes: Arc<AtomicU64>,
     id: u64,
     ptr: NonNull<u8>,
     layout: Layout,
@@ -867,7 +865,7 @@ impl Region {
     fn new(
         id: u64,
         layout: Layout,
-        heap_identity: Arc<()>,
+        returned_bytes: Arc<AtomicU64>,
         registry: Registry,
         backing: BackingCredit,
         track_relocation: bool,
@@ -878,7 +876,7 @@ impl Region {
         let ptr = NonNull::new(unsafe { alloc(layout) }).ok_or(Error::OutOfMemory)?;
         Ok(Self {
             registry,
-            heap_identity,
+            returned_bytes,
             id,
             ptr,
             layout,
@@ -990,6 +988,10 @@ pub(crate) struct Block {
 }
 
 impl Block {
+    pub(crate) fn set_staging(&mut self, staging: bool) {
+        self.relocation = staging;
+    }
+
     pub(crate) fn transfer_ownership(&mut self, destination: &mut Self) {
         self.relocation = true;
         destination.relocation = false;
@@ -1053,29 +1055,32 @@ impl Block {
         } else {
             None
         };
-        let Some(mut free) = try_lock(&self.region.free) else {
+        let Some(free) = try_lock(&self.region.free) else {
             return false;
         };
-        self.release_locked(state, &mut free);
+        self.release_locked(state, free);
         self.returned = true;
         true
     }
 
-    fn release_locked(&self, mut state: Option<MutexGuard<'_, State>>, free: &mut FreeRanges) {
+    fn release_locked(
+        &self,
+        mut state: Option<MutexGuard<'_, State>>,
+        mut free: MutexGuard<'_, FreeRanges>,
+    ) {
         let previous = free.by_size.last().map_or(0, |(size, _)| *size);
         if self.length != 0 {
-            self.region.release(free, self.offset, self.length);
+            self.region.release(&mut free, self.offset, self.length);
             if !self.relocation {
                 self.region.reclaimed.store(true, Ordering::Relaxed);
             }
         }
+        let mut recorded = false;
         if let Some(state) = &mut state
             && state.regions.contains_key(&self.region.id)
         {
+            recorded = !self.relocation && self.length != 0;
             state.occupied -= self.length;
-            if !self.relocation {
-                state.reclaimed = state.reclaimed.wrapping_add(self.length as u64);
-            }
             state.available.remove(&(previous, self.region.id));
             let largest = free.by_size.last().map_or(0, |(size, _)| *size);
             state.available.insert((largest, self.region.id));
@@ -1083,6 +1088,15 @@ impl Block {
             {
                 state.remove_region(self.region.id, !self.region.oversized);
             }
+        }
+        drop(free);
+        drop(state);
+        if recorded {
+            // Only published payload space, now reusable by other allocators,
+            // counts as progress for an exact physical recovery retry.
+            self.region
+                .returned_bytes
+                .fetch_add(self.length as u64, Ordering::Release);
         }
     }
 }
@@ -1096,8 +1110,8 @@ impl Drop for Block {
         crate::refund_tests::before_region_return();
         let registry = self.region.registry.state.upgrade();
         let state = registry.as_ref().map(|registry| lock(registry));
-        let mut free = lock(&self.region.free);
-        self.release_locked(state, &mut free);
+        let free = lock(&self.region.free);
+        self.release_locked(state, free);
     }
 }
 

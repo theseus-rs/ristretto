@@ -815,7 +815,15 @@ unsafe impl Trace for Reference {
         match self {
             Self::Object(object) => object.clear_step(offset, budget),
             Self::Array(array) => array.elements.clear_step(offset, budget),
-            _ => ristretto_gc::TraceProgress::Complete,
+            Self::BooleanArray(values) | Self::ByteArray(values) => {
+                values.clear_step(offset, budget)
+            }
+            Self::CharArray(values) => values.clear_step(offset, budget),
+            Self::ShortArray(values) => values.clear_step(offset, budget),
+            Self::IntArray(values) => values.clear_step(offset, budget),
+            Self::LongArray(values) => values.clear_step(offset, budget),
+            Self::FloatArray(values) => values.clear_step(offset, budget),
+            Self::DoubleArray(values) => values.clear_step(offset, budget),
         }
     }
     fn heap_owner(&self) -> Option<Arc<dyn ristretto_gc::HeapOwner>> {

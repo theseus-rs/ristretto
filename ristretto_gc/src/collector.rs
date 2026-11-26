@@ -4739,8 +4739,7 @@ impl GarbageCollector {
         self.retired_objects.fetch_sub(1, Ordering::AcqRel);
         let budget = budget.min(task.metadata.trace.budget);
         let progress = self.clear_retired(&mut task, budget, &mut counters, selection);
-        let contended =
-            progress == TraceProgress::Busy && matches!(task.stage, ReclaimStage::Return(_));
+        let contended = progress == TraceProgress::Busy;
         if progress == TraceProgress::Complete {
             self.retired_ready.fetch_sub(1, Ordering::AcqRel);
         } else {
@@ -6563,6 +6562,78 @@ where
 mod tests {
     #![expect(clippy::panic_in_result_fn)]
     use super::*;
+
+    #[cfg(all(not(target_family = "wasm"), not(miri)))]
+    #[test]
+    fn abandoning_a_contended_regional_return_releases_its_range_once() -> Result<()> {
+        struct CountDrop(Arc<AtomicUsize>);
+        // SAFETY: the host counter owns no managed edges.
+        unsafe impl Trace for CountDrop {
+            fn trace(&self, _: &GarbageCollector) {}
+        }
+        impl Drop for CountDrop {
+            fn drop(&mut self) {
+                self.0.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+        for heap_gone in [false, true] {
+            let drops = Arc::new(AtomicUsize::new(0));
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .local_allocation_buffers(true)
+                    .max_heap_bytes(8)
+                    .region_shards(1)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let heap = gc.descriptor_regions.clone().expect("descriptor heap");
+            let root = gc
+                .register_context()
+                .with(|| Gc::try_new(&gc, CountDrop(drops.clone())))?;
+            assert_eq!(heap.statistics().occupied_bytes, 8);
+            let meta = gc
+                .metadata_for_address(root.as_ptr().addr())
+                .expect("live allocation");
+            let lease = ObjectMetadata::borrow_callback(&meta, false).map_err(|_| {
+                crate::Error::CollectionPhaseError("expected a live descriptor".to_owned())
+            })?;
+            drop(root);
+            gc.collect_full()?;
+            drop(lease);
+            heap.with_parked_registry(|| {
+                assert!(matches!(
+                    gc.reap_retired(false, None),
+                    Some(RetirementStep::Contended)
+                ));
+            });
+            assert_eq!(gc.managed_bytes(), 8);
+            assert_eq!(drops.load(Ordering::Acquire), 1);
+            let job = gc
+                .retired
+                .load()
+                .as_ref()
+                .and_then(|queue| queue.pop())
+                .expect("queued return");
+            assert!(matches!(job.stage, ReclaimStage::Return(_)));
+            let weak = gc.weak();
+            let live = if heap_gone {
+                drop(gc);
+                None
+            } else {
+                Some(gc)
+            };
+            assert_eq!(weak.upgrade().is_none(), heap_gone);
+            drop(job);
+            if let Some(heap) = &live {
+                assert_eq!(heap.managed_bytes(), 0);
+            }
+            assert_eq!(heap.statistics().occupied_bytes, 0);
+            while !heap.trim(1) {}
+            assert_eq!(heap.statistics().shared_committed_bytes, 0);
+            assert_eq!(drops.load(Ordering::Acquire), 1);
+        }
+        Ok(())
+    }
 
     #[cfg(not(target_family = "wasm"))]
     #[test]

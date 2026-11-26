@@ -250,8 +250,10 @@ impl<T> HeapBuffer<T> {
             // partially copied relocation storage from the original heap.
             self.copying = None;
             let layout = Layout::array::<T>(self.length).map_err(|_| Error::OutOfMemory)?;
+            let mut destination = heap.allocate(layout, None)?;
+            destination.set_staging(true);
             self.copying = Some(Transfer::Preparing {
-                destination: heap.allocate(layout, None)?,
+                destination,
                 cursor: 0,
             });
         }
@@ -280,7 +282,11 @@ impl<T> HeapBuffer<T> {
         if end < self.length {
             return Ok(TraceProgress::Continue(end));
         }
-        if let Some(Transfer::Preparing { destination, .. }) = self.copying.take() {
+        if let Some(Transfer::Preparing {
+            mut destination, ..
+        }) = self.copying.take()
+        {
+            destination.set_staging(false);
             self.commit(destination);
         }
         Ok(TraceProgress::Complete)
@@ -662,16 +668,34 @@ unsafe impl<T: crate::Trace> crate::Trace for HeapBuffer<T> {
         }
     }
     fn clear_step(&mut self, _: usize, budget: usize) -> TraceProgress {
-        if !T::may_contain_gc_references() && !std::mem::needs_drop::<T>() {
-            self.truncate(0);
-            return TraceProgress::Complete;
+        if let Some(transfer) = &mut self.copying {
+            let destination = match transfer {
+                Transfer::Preparing { destination, .. } => destination,
+                Transfer::Compacting(copy) => &mut copy.destination,
+            };
+            // Staged bytes still belong to the source. Return their raw range
+            // before truncating, including when its registry is contended.
+            if !destination.try_return() {
+                return TraceProgress::Busy;
+            }
+            self.copying = None;
         }
-        self.truncate(self.len().saturating_sub(budget.max(1)));
-        if self.is_empty() {
-            TraceProgress::Complete
+        let keep = if !T::may_contain_gc_references() && !std::mem::needs_drop::<T>() {
+            0
         } else {
-            TraceProgress::Continue(0)
+            self.len().saturating_sub(budget.max(1))
+        };
+        self.truncate(keep);
+        if !self.is_empty() {
+            return TraceProgress::Continue(0);
         }
+        if let Storage::Region(block) = &mut self.storage {
+            if !block.try_return() {
+                return TraceProgress::Busy;
+            }
+            self.storage = Storage::Host(Vec::new());
+        }
+        TraceProgress::Complete
     }
     fn external_size(&self) -> usize {
         self.capacity() * size_of::<T>()

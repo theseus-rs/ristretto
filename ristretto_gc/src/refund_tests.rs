@@ -782,11 +782,7 @@ fn publishing_a_second_returned_lease_cannot_revoke_the_first_physical_claim() -
 }
 
 #[test]
-#[expect(
-    clippy::unwrap_in_result,
-    clippy::panic_in_result_fn,
-    reason = "bounded forced schedule"
-)]
+#[expect(clippy::panic_in_result_fn, reason = "bounded forced schedule")]
 fn a_busy_descriptor_registry_does_not_strand_an_unrelated_native_allocation() -> Result<()> {
     #[derive(Default)]
     struct Counts {
@@ -825,6 +821,29 @@ fn a_busy_descriptor_registry_does_not_strand_an_unrelated_native_allocation() -
     let keep = context.with(|| Gc::try_new(&gc, 17_u64))?;
     assert_eq!(gc.managed_bytes(), 24);
     assert_eq!(gc.diagnostics().descriptor_occupied_bytes, 16);
+    let root = recover_past_region_return(&gc, global, regional, false)?;
+    drop((root, keep, context));
+    gc.collect_full()?;
+    assert_eq!(gc.managed_bytes(), 0);
+    assert_eq!(counts.cleared.load(Ordering::Acquire), 1);
+    assert_eq!(counts.dropped.load(Ordering::Acquire), 1);
+    Ok(())
+}
+
+#[expect(
+    clippy::unwrap_in_result,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic_in_result_fn,
+    reason = "bounded forced schedule"
+)]
+fn recover_past_region_return<T: crate::Trace + 'static>(
+    gc: &Arc<GarbageCollector>,
+    global: crate::GcRootGuard<u64>,
+    regional: crate::GcRootGuard<T>,
+    payload_registry: bool,
+) -> Result<crate::GcRootGuard<u64>> {
+    let cap = gc.managed_bytes();
     let global_meta = gc.metadata_for_address(global.as_ptr().addr()).unwrap();
     let region_meta = gc.metadata_for_address(regional.as_ptr().addr()).unwrap();
     let global_lease =
@@ -833,18 +852,23 @@ fn a_busy_descriptor_registry_does_not_strand_an_unrelated_native_allocation() -
         crate::metadata::ObjectMetadata::borrow_callback(&region_meta, false).unwrap();
     drop((global, regional));
     gc.collect_full()?;
-    assert_eq!(gc.managed_bytes(), 24);
+    assert_eq!(gc.managed_bytes(), cap);
     let (entered, parked) = mpsc::channel();
     let (resume, release) = mpsc::channel();
     let (at_region, attempted) = mpsc::channel();
     let finished = AtomicBool::new(false);
     let recovered = std::thread::scope(|scope| {
-        let heap = &gc;
+        let heap = gc;
         scope.spawn(move || {
-            heap.with_parked_descriptor_registry(|| {
+            let wait = || {
                 entered.send(()).unwrap();
                 release.recv_timeout(Duration::from_secs(8)).unwrap();
-            });
+            };
+            if payload_registry {
+                heap.region_heap().unwrap().with_parked_registry(wait);
+            } else {
+                heap.with_parked_descriptor_registry(wait);
+            }
         });
         parked.recv_timeout(Duration::from_secs(3)).unwrap();
         drop(region_lease);
@@ -858,7 +882,7 @@ fn a_busy_descriptor_registry_does_not_strand_an_unrelated_native_allocation() -
             }
         });
         let observed = attempted.recv_timeout(Duration::from_secs(3));
-        let mut peer = WaitingPeer::new(&gc, 23);
+        let mut peer = WaitingPeer::new(gc, 23);
         peer.poll_until_parked();
         drop(global_lease);
         let deadline = Instant::now() + Duration::from_secs(1);
@@ -874,16 +898,106 @@ fn a_busy_descriptor_registry_does_not_strand_an_unrelated_native_allocation() -
             observed.is_ok(),
             "worker must attempt returning regional storage"
         );
-        assert_eq!(held_bytes, 24);
+        assert_eq!(held_bytes, cap);
         recovered
     });
     let root =
         recovered.expect("unrelated global allocation must finish before registry release")?;
     assert_eq!(**root, 23);
-    drop((root, keep, context));
+    Ok(root)
+}
+
+#[test]
+#[expect(clippy::panic_in_result_fn, reason = "bounded forced schedule")]
+fn a_busy_payload_registry_does_not_strand_an_unrelated_native_allocation() -> Result<()> {
+    let example: crate::HeapBuffer<u8> = vec![0; 256].into();
+    let size = Gc::allocation_size(&example)?;
+    drop(example);
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .compact_heap(true)
+            .region_shards(1)
+            .region_layout(256, 0)
+            .max_heap_bytes(size + 8)
+            .allocation_threshold(usize::MAX)
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .build(),
+    );
+    let global = Gc::try_new(&gc, 11u64)?;
+    let buffer =
+        crate::HeapBuffer::try_with_fn(gc.region_heap().map(Arc::as_ref), 256, |_| Ok(7u8))?;
+    let regional = Gc::try_new(&gc, buffer)?;
+    assert_eq!(gc.managed_bytes(), size + 8);
+    assert_eq!(gc.region_heap().unwrap().statistics().occupied_bytes, 256);
+    let root = recover_past_region_return(&gc, global, regional, true)?;
+    drop(root);
     gc.collect_full()?;
     assert_eq!(gc.managed_bytes(), 0);
-    assert_eq!(counts.cleared.load(Ordering::Acquire), 1);
-    assert_eq!(counts.dropped.load(Ordering::Acquire), 1);
+    Ok(())
+}
+
+#[test]
+#[expect(
+    clippy::panic_in_result_fn,
+    clippy::unwrap_in_result,
+    reason = "single registered worker schedule"
+)]
+fn sole_native_worker_recovers_a_global_donor_while_a_descriptor_registry_remains_busy()
+-> Result<()> {
+    struct Enter(Arc<mpsc::Sender<()>>);
+    // SAFETY: only the owned host channel is reachable.
+    unsafe impl crate::Trace for Enter {
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+    impl Drop for Enter {
+        fn drop(&mut self) {
+            let _ = self.0.send(());
+        }
+    }
+
+    let (entered, dropping) = mpsc::channel();
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .threads(1)
+            .local_allocation_buffers(true)
+            .region_shards(1)
+            .max_heap_bytes(16)
+            .allocation_threshold(usize::MAX)
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .build(),
+    );
+    let global = Gc::try_new(&gc, 7u64)?;
+    let regional = gc
+        .register_context()
+        .with(|| Gc::try_new(&gc, Enter(Arc::new(entered))))?;
+    let a = gc.metadata_for_address(global.as_ptr().addr()).unwrap();
+    let b = gc.metadata_for_address(regional.as_ptr().addr()).unwrap();
+    let global_lease = crate::metadata::ObjectMetadata::borrow_callback(&a, false).unwrap();
+    let region_lease = crate::metadata::ObjectMetadata::borrow_callback(&b, false).unwrap();
+    drop((global, regional));
+    gc.collect_full()?;
+    gc.start();
+    let mut recovered = None;
+    gc.with_parked_descriptor_registry(|| {
+        drop(region_lease);
+        dropping.recv_timeout(Duration::from_secs(3)).unwrap();
+        assert_eq!(gc.registered_workers(), 1);
+        let mut waiter = WaitingPeer::new(&gc, 29);
+        waiter.poll_until_parked();
+        drop(global_lease);
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while waiter.result.is_none() && Instant::now() < deadline {
+            waiter.poll_when_woken();
+            std::thread::yield_now();
+        }
+        recovered = waiter.result;
+    });
+    let result = recovered.expect("native worker reached an independent donor")?;
+    assert_eq!(**result, 29);
+    drop(result);
+    gc.stop()?;
+    assert_eq!(gc.managed_bytes(), 0);
     Ok(())
 }

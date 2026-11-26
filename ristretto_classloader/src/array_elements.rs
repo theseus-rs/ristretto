@@ -129,11 +129,12 @@ impl ArrayElements {
         }
     }
 
-    pub(crate) fn clear_step(&mut self, _offset: usize, budget: usize) -> TraceProgress {
-        // Truncate rather than replacing with null: the final container destructor must
-        // not revisit every element of a large, already cleared allocation.
-        self.values
-            .truncate(self.values.len().saturating_sub(budget.max(1)));
+    pub(crate) fn clear_step(&mut self, offset: usize, budget: usize) -> TraceProgress {
+        let elements = self.values.clear_step(offset, budget);
+        if elements != TraceProgress::Complete {
+            // Values still present may depend on the old-to-young card map.
+            return elements;
+        }
         // Card metadata also needs bounded destruction.
         for _ in 0..budget.max(1) {
             if self
@@ -146,12 +147,11 @@ impl ArrayElements {
                 break;
             }
         }
-        if self.values.is_empty()
-            && self
-                .cards
-                .get_mut()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .is_empty()
+        if self
+            .cards
+            .get_mut()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .is_empty()
         {
             TraceProgress::Complete
         } else {
@@ -334,6 +334,17 @@ mod tests {
     use ristretto_gc::sync::RwLock;
     use ristretto_gc::{Configuration, Gc, GcWeak, ReferenceKind};
     use std::sync::Arc;
+
+    #[test]
+    fn incremental_clear_retains_cards_until_all_values_have_been_removed() {
+        let mut array = ArrayElements::from(vec![Value::Int(1); CARD_SIZE + 1]);
+        array.cards.get_mut().unwrap().insert(0);
+        assert_eq!(array.clear_step(0, 1), TraceProgress::Continue(0));
+        assert_eq!(array.len(), CARD_SIZE);
+        assert_eq!(array.cards.get_mut().unwrap().next_from(0), Some(0));
+        assert_eq!(array.clear_step(0, CARD_SIZE + 1), TraceProgress::Complete);
+        assert!(array.cards.get_mut().unwrap().is_empty());
+    }
 
     struct Array(ArrayElements);
     // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.

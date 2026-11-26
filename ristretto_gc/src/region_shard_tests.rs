@@ -415,3 +415,43 @@ fn last_unlinked_region_releases_its_backing_while_registry_is_parked() {
     assert_eq!(stats.committed_bytes, 0);
     assert_eq!(stats.regions_released, 1);
 }
+
+#[test]
+fn clearing_a_partial_buffer_keeps_its_elements_until_staging_can_return() {
+    use crate::{HeapBuffer, Trace, TraceProgress};
+    let heap = RegionHeap::new(1024, 2048, 0);
+    let progress = heap.recovery_progress();
+    let mut buffer: HeapBuffer<u64> = (0..64).collect();
+    assert!(matches!(
+        buffer.prepare_step(&heap, 8).unwrap(),
+        TraceProgress::Continue(_)
+    ));
+    assert_eq!(heap.statistics().occupied_bytes, 512);
+    {
+        let _parked = lock(heap.shard(0));
+        assert_eq!(heap.recovery_progress(), progress);
+        assert_eq!(buffer.clear_step(0, 1), TraceProgress::Busy);
+        assert_eq!(buffer.as_ref(), (0..64).collect::<Vec<_>>());
+    }
+    assert_eq!(buffer.clear_step(0, 1), TraceProgress::Complete);
+    assert!(buffer.is_empty());
+    assert_eq!(heap.recovery_progress(), progress);
+    assert_eq!(heap.statistics().occupied_bytes, 0);
+}
+
+#[test]
+fn a_busy_free_range_map_keeps_the_block_and_its_exact_charge() {
+    let heap = RegionHeap::new(1024, 1024, 0);
+    let mut block = heap.allocate(Layout::new::<[u64; 8]>(), None).unwrap();
+    let region = block.region.clone();
+    {
+        let _parked = lock(&region.free);
+        assert!(!block.try_return());
+        assert_eq!(region.occupied(), 64);
+    }
+    assert!(block.try_return());
+    assert!(block.try_return());
+    drop(block);
+    assert_eq!(heap.statistics().occupied_bytes, 0);
+    assert_eq!(region.occupied(), 0);
+}
