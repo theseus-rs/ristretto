@@ -1708,23 +1708,21 @@ impl GarbageCollector {
                     self.rescan_dirty_owner(&metadata);
                 }
             } else if let Some(metadata) = self.objects.lookup(address) {
-                self.remember_contended_owner(&metadata);
+                self.remember_contended_owner(&metadata, None);
             }
             return;
         }
         // The managed writer pins this owner throughout the hook. Its address
         // cannot be reused, and the snapshot owns the exact visible descriptor.
         if let Some(metadata) = self.objects.lookup(address) {
-            metadata.record_mutation();
-        } else {
-            return;
+            let version = metadata.record_mutation();
+            self.barrier(address, Some((&metadata, version)));
         }
-        self.barrier(address, true);
     }
 
     /// Called under publication admission. A future young cycle sees the
     /// directory; an already-started strong snapshot may have passed the owner.
-    fn remember_contended_owner(&self, metadata: &MetadataRef) {
+    fn remember_contended_owner(&self, metadata: &MetadataRef, version: Option<usize>) {
         let _measurement = self
             .diagnostics
             .barrier_record
@@ -1741,7 +1739,7 @@ impl GarbageCollector {
         {
             return;
         }
-        let version = metadata.record_mutation();
+        let version = version.unwrap_or_else(|| metadata.record_mutation());
         self.remembered.dirty.publish(id, address, version);
         self.rescan_dirty_owner(metadata);
     }
@@ -3355,7 +3353,7 @@ impl GarbageCollector {
             if ADOPT {
                 crate::construction::retain(self, address);
             }
-            self.barrier(address, false);
+            self.barrier(address, None);
             root.release()
         } else {
             false
@@ -3423,7 +3421,7 @@ impl GarbageCollector {
             if ADOPT {
                 crate::construction::retain(self, address);
             }
-            self.barrier(address, false);
+            self.barrier(address, None);
             drop(publication);
             roots.finish_overflow(record);
         }
@@ -3547,7 +3545,7 @@ impl GarbageCollector {
             if ADOPT {
                 crate::construction::retain(self, address);
             }
-            self.barrier(address, false);
+            self.barrier(address, None);
         }
     }
 
@@ -3844,7 +3842,7 @@ impl GarbageCollector {
             self.counted_edge_barrier(address);
         } else {
             let _publication = self.allocation_guard();
-            self.barrier(address, false);
+            self.barrier(address, None);
         }
     }
 
@@ -3901,7 +3899,7 @@ impl GarbageCollector {
             }
         } else {
             let publication = self.barrier_guard();
-            if self.barrier_inner(address, false) {
+            if self.barrier_inner(address, None) {
                 publication.changed();
             }
         }
@@ -3924,20 +3922,17 @@ impl GarbageCollector {
 
     /// Called under the publication reader. Idle dirty notifications are immediate
     /// so a new young snapshot sees remembered owners even if the context sleeps.
-    fn barrier(&self, address: usize, dirty: bool) -> bool {
+    fn barrier(&self, address: usize, owner: Option<(&MetadataRef, usize)>) -> bool {
         let _measurement = self
             .diagnostics
             .barrier_record
             .measure(self.diagnostics_enabled());
-        self.barrier_inner(address, dirty)
+        self.barrier_inner(address, owner)
     }
 
-    fn barrier_inner(&self, address: usize, dirty: bool) -> bool {
+    fn barrier_inner(&self, address: usize, owner: Option<(&MetadataRef, usize)>) -> bool {
         if self.configuration.barrier_buffer_size == 0 {
-            if dirty {
-                self.remembered.lock(address).insert(address);
-                return true;
-            }
+            debug_assert!(owner.is_none(), "an unbuffered owner is enrolled directly");
             return self.shade_all(address);
         }
         let epochs = std::array::from_fn(|index| {
@@ -3949,7 +3944,7 @@ impl GarbageCollector {
         let record = crate::context::Record {
             address,
             epochs,
-            dirty,
+            dirty: owner.is_some(),
         };
         // After either domain closes strong tracing, publish immediately. This
         // prevents a stream of already-black deletions from continually refilling
@@ -3988,7 +3983,7 @@ impl GarbageCollector {
             }
             let changed = match result {
                 crate::context::Push::Full | crate::context::Push::Busy => {
-                    self.apply_barrier(record, false)
+                    self.apply_direct_barrier(record, owner)
                 }
                 crate::context::Push::Added => {
                     if self.diagnostics_enabled() {
@@ -4012,17 +4007,40 @@ impl GarbageCollector {
             // already established Strong retention in every tagged epoch.
             changed || overflowed
         } else {
-            self.apply_barrier(record, false)
+            self.apply_direct_barrier(record, owner)
         }
     }
 
-    fn apply_barrier(&self, record: crate::context::Record, buffered: bool) -> bool {
+    fn apply_direct_barrier(
+        &self,
+        record: crate::context::Record,
+        owner: Option<(&MetadataRef, usize)>,
+    ) -> bool {
+        let Some((metadata, version)) = owner else {
+            return self.apply_barrier(record);
+        };
+        // The immediate store already advanced this exact owner's version. All
+        // physical retirements revoke its birth while holding the same shard.
+        if let Some(mut remembered) = self.remembered.try_lock(record.address) {
+            if !metadata.birth.is_live() {
+                return false;
+            }
+            remembered.insert(record.address);
+            drop(remembered);
+            self.rescan_dirty_owner(metadata);
+        } else {
+            self.remember_contended_owner(metadata, Some(version));
+        }
+        true
+    }
+
+    fn apply_barrier(&self, record: crate::context::Record) -> bool {
         let _retention = TraceRetention::enter(self, Retention::Strong);
         if record.dirty {
             self.remembered.lock(record.address).insert(record.address);
             // A buffered notification may have crossed the young remembered scan.
             // Trace that owner in any active young snapshot, including old owners.
-            if buffered && self.domains[0].active() {
+            if self.domains[0].active() {
                 let _context = Context::enter(self, 0);
                 if let Some(metadata) = self
                     .objects
@@ -4079,7 +4097,7 @@ impl GarbageCollector {
             .diagnostics
             .barrier_drain
             .measure(self.diagnostics_enabled());
-        self.apply_barrier(record, true);
+        self.apply_barrier(record);
         self.acknowledge_buffered_record(context, record);
     }
 

@@ -908,7 +908,10 @@ fn ordinary_vector_write_enrolls_a_mature_owner_while_either_shard_is_parked() -
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[test]
 fn prepared_field_store_completes_with_a_parked_metadata_writer() -> Result<()> {
-    for (counted, buffer) in [(false, 0), (true, 0), (false, 4), (true, 4)] {
+    for (counted, buffer, object) in [false, true].into_iter().flat_map(|counted| {
+        [(0, false), (0, true), (4, false), (4, true)]
+            .map(|(buffer, object)| (counted, buffer, object))
+    }) {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .concurrent_publication(counted)
@@ -927,8 +930,8 @@ fn prepared_field_store_completes_with_a_parked_metadata_writer() -> Result<()> 
         let id = child.identity();
         let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
         thread::scope(|scope| {
-            let objects = (buffer != 0).then(|| gc.objects.lock(address));
-            let remembered = (buffer == 0).then(|| gc.remembered.lock(address));
+            let objects = object.then(|| gc.objects.lock(address));
+            let remembered = (!object).then(|| gc.remembered.lock(address));
             let (done, finished) = std::sync::mpsc::channel();
             let parent = &owner;
             let writer = scope.spawn(move || {
@@ -988,10 +991,14 @@ unsafe impl Trace for SplitField {
 
 #[test]
 fn a_late_contended_dirty_owner_is_retraced_even_if_already_strong() -> Result<()> {
-    for (counted, contended) in [(false, false), (true, false), (false, true), (true, true)] {
+    for (counted, contended, buffer) in [(false, false), (true, false), (false, true), (true, true)]
+        .into_iter()
+        .flat_map(|(counted, contended)| [0, 4].map(|buffer| (counted, contended, buffer)))
+    {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .concurrent_publication(counted)
+                .barrier_buffer_size(buffer)
                 .promotion_age(2)
                 .incremental_step_size(1)
                 .max_pause_time_us(0)
@@ -1067,7 +1074,7 @@ fn a_late_contended_dirty_owner_is_retraced_even_if_already_strong() -> Result<(
                 .is_none()
         );
         let _admission = gc.allocation_guard();
-        gc.remember_contended_owner(&meta);
+        gc.remember_contended_owner(&meta, None);
         assert!(
             gc.remembered
                 .dirty
