@@ -1,6 +1,6 @@
 use ristretto_classfile::VersionSpecification::{GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21};
-use ristretto_classloader::Value;
+use ristretto_classloader::{JavaReferenceField, Value};
 use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result};
@@ -14,7 +14,10 @@ pub fn clear_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
     let mut object = object.as_object_mut()?;
-    object.set_value("referent", Value::Object(None))?;
+    let slot = object
+        .class()
+        .java_reference_field_slot(JavaReferenceField::Referent)?;
+    object.set_value_at_slot(slot, Value::Object(None))?;
     Ok(None)
 }
 
@@ -29,7 +32,10 @@ pub fn get_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let reference = parameters.pop()?;
     let reference = reference.as_object_ref()?;
-    Ok(Some(reference.value("referent")?))
+    let slot = reference
+        .class()
+        .java_reference_field_slot(JavaReferenceField::Referent)?;
+    Ok(Some(reference.value_at_slot(slot)?))
 }
 
 #[intrinsic_method(
@@ -47,7 +53,13 @@ pub fn get_and_clear_reference_pending_list<T: Thread + 'static>(
         gc.take_pending_reference::<ristretto_gc::sync::RwLock<ristretto_classloader::Reference>>()?
     {
         let value = Value::Object(Some(reference));
-        value.as_object_mut()?.set_value("discovered", head)?;
+        {
+            let mut object = value.as_object_mut()?;
+            let slot = object
+                .class()
+                .java_reference_field_slot(JavaReferenceField::Discovered)?;
+            object.set_value_at_slot(slot, head)?;
+        }
         head = value;
     }
     Ok(Some(head))
@@ -77,7 +89,10 @@ pub fn refers_to_0<T: Thread + 'static>(
     let object_parameter = parameters.pop()?;
     let reference = parameters.pop()?;
     let reference = reference.as_object_ref()?;
-    let object = reference.value("referent")?;
+    let slot = reference
+        .class()
+        .java_reference_field_slot(JavaReferenceField::Referent)?;
+    let object = reference.value_at_slot(slot)?;
     let refers_to = match (&object, &object_parameter) {
         (Value::Object(Some(a)), Value::Object(Some(b))) => Gc::ptr_eq(a, b),
         (Value::Object(None), Value::Object(None)) => true,
@@ -125,7 +140,13 @@ pub async fn try_handle_pending<T: Thread + 'static>(
             .invoke("sun/misc/Cleaner", "clean()V", &[reference])
             .await?;
     } else {
-        let queue = reference.as_object_ref()?.value("queue")?;
+        let queue = {
+            let object = reference.as_object_ref()?;
+            let slot = object
+                .class()
+                .java_reference_field_slot(JavaReferenceField::Queue)?;
+            object.value_at_slot(slot)?
+        };
         thread
             .invoke(
                 "java/lang/ref/ReferenceQueue",

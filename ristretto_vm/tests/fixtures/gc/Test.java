@@ -10,6 +10,49 @@ public class Test {
     static volatile boolean referenceOwnerCleared;
     static volatile Object referenceOwnerTarget;
 
+    static class HiddenFields extends WeakReference<Object> {
+        Object referent;
+        Reference<?> discovered;
+        ReferenceQueue<Object> queue;
+        HiddenFields(Object target, ReferenceQueue<Object> registered) {
+            super(target, registered);
+            discovered = this;
+            queue = shadowQueue;
+        }
+    }
+    static final ReferenceQueue<Object> shadowQueue = new ReferenceQueue<Object>();
+    static final ReferenceQueue<Object> registeredQueue = new ReferenceQueue<Object>();
+    static HiddenFields firstPending, secondPending;
+    static HiddenFields hidden;
+    static Object baseTarget;
+    static WeakReference<Object> hiddenProbe;
+
+    public static void createHiddenReference() {
+        baseTarget = new Object();
+        hidden = new HiddenFields(baseTarget, registeredQueue);
+        hidden.referent = new Object();
+        hiddenProbe = new WeakReference<Object>(hidden.referent);
+    }
+    public static boolean readsBaseReferent() { return hidden.get() == baseTarget; }
+    public static void clearBaseReferent() { hidden.clear(); }
+    public static boolean hiddenStrongFieldSurvives() {
+        return hidden.get() == null && hidden.referent != null && hiddenProbe.get() == hidden.referent;
+    }
+
+    public static void createHiddenPendingPair() {
+        firstPending = new HiddenFields(new Object(), registeredQueue);
+        secondPending = new HiddenFields(new Object(), registeredQueue);
+    }
+    public static int pollHiddenPair() {
+        Reference<?> r = registeredQueue.poll();
+        return r == null ? 0 : r == firstPending ? 1 : r == secondPending ? 2 : -1;
+    }
+    public static boolean hiddenQueueFieldsSurvive() {
+        return firstPending.discovered == firstPending && secondPending.discovered == secondPending
+            && firstPending.queue == shadowQueue && secondPending.queue == shadowQueue
+            && shadowQueue.poll() == null;
+    }
+
     static class FinalizableTarget {
         @Override protected void finalize() { referenceOwnerTarget = this; }
     }

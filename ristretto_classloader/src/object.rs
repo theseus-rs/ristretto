@@ -194,17 +194,17 @@ impl Object {
         class: &Arc<Class>,
         object_fields: &[Arc<Field>],
     ) -> Result<Option<ReferenceState>> {
-        Ok(class.reference_kind()?.and_then(|kind| {
-            object_fields
-                .iter()
-                .position(|field| field.name() == "referent")
-                .map(|slot| ReferenceState {
-                    slot,
-                    kind,
-                    owner: 0,
-                    link: None,
-                })
-        }))
+        let Some(kind) = class.reference_kind()? else {
+            return Ok(None);
+        };
+        Ok(class
+            .conditional_referent_slot(object_fields)?
+            .map(|slot| ReferenceState {
+                slot,
+                kind,
+                owner: 0,
+                link: None,
+            }))
     }
 
     /// Read an already resolved instance slot without rebuilding or searching the layout.

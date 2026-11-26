@@ -80,8 +80,8 @@ mod tls;
 mod value;
 
 pub use class::{
-    Class, InitializationAction, InitializationState, MethodResolutionError, POLYMORPHIC_METHODS,
-    ResolvedMethod,
+    Class, InitializationAction, InitializationState, JavaReferenceField, MethodResolutionError,
+    POLYMORPHIC_METHODS, ResolvedMethod,
 };
 pub use class_loader::ClassLoader;
 pub use class_loader_type::ClassLoaderType;

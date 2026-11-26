@@ -23,6 +23,43 @@ pub use method_resolution::{MethodResolutionError, ResolvedMethod};
 struct InstanceLayout {
     fields: Box<[Arc<Field>]>,
     reference_kind: Option<ReferenceKind>,
+    reference_fields: Option<Arc<[Option<usize>; 3]>>,
+}
+
+/// Instance fields owned by java.lang.ref.Reference and accessed by the VM.
+#[derive(Clone, Copy, Debug)]
+pub enum JavaReferenceField {
+    /// Conditional reference to the target.
+    Referent,
+    /// Link in the pending-reference chain.
+    Discovered,
+    /// Queue supplied to the Reference constructor.
+    Queue,
+}
+
+impl JavaReferenceField {
+    fn definition(self) -> (&'static str, &'static str) {
+        match self {
+            Self::Referent => ("referent", "java/lang/Object"),
+            Self::Discovered => ("discovered", "java/lang/ref/Reference"),
+            Self::Queue => ("queue", "java/lang/ref/ReferenceQueue"),
+        }
+    }
+
+    fn declared_index(self, fields: &[Arc<Field>]) -> Option<usize> {
+        let (name, target) = self.definition();
+        fields.iter().position(|field| {
+            field.name() == name
+                && matches!(field.field_type(), ristretto_classfile::FieldType::Object(t) if t == target)
+        })
+    }
+
+    fn missing(self) -> crate::Error {
+        FieldNotFound {
+            class_name: "java/lang/ref/Reference".to_owned(),
+            field_name: self.definition().0.to_owned(),
+        }
+    }
 }
 
 /// A list of methods that are designated as polymorphic in the Java Virtual Machine.
@@ -1125,9 +1162,25 @@ impl Class {
         let reference_kind = self
             .declared_reference_kind()
             .or_else(|| parent_layout.and_then(|layout| layout.reference_kind));
+        // Resolve the declaring class once. A subclass may declare a strong field with
+        // the same name and descriptor, while its inherited slot stays at the same offset.
+        let reference_fields = if self.name() == "java/lang/ref/Reference" {
+            use JavaReferenceField::{Discovered, Queue, Referent};
+            let inherited = fields.len() - self.object_fields.len();
+            let mut slots = [None; 3];
+            for member in [Referent, Discovered, Queue] {
+                slots[member as usize] = member
+                    .declared_index(&self.object_fields)
+                    .map(|index| inherited + index);
+            }
+            Some(Arc::new(slots))
+        } else {
+            parent_layout.and_then(|layout| layout.reference_fields.clone())
+        };
         let _ = self.field_layout.set(InstanceLayout {
             fields: fields.into_boxed_slice(),
             reference_kind,
+            reference_fields,
         });
         Ok(())
     }
@@ -1142,6 +1195,47 @@ impl Class {
             return Ok(Cow::Borrowed(&fields.fields));
         }
         Ok(Cow::Owned(self.build_object_fields()?))
+    }
+
+    /// Return the slot declared by java.lang.ref.Reference in this linked class hierarchy.
+    ///
+    /// # Errors
+    /// Returns an error for an unlinked receiver or a missing or mistyped declaration.
+    pub fn java_reference_field_slot(&self, member: JavaReferenceField) -> Result<usize> {
+        self.field_layout
+            .get()
+            .and_then(|layout| layout.reference_fields.as_deref())
+            .and_then(|fields| fields[member as usize])
+            .ok_or_else(|| member.missing())
+    }
+
+    pub(crate) fn conditional_referent_slot(&self, fields: &[Arc<Field>]) -> Result<Option<usize>> {
+        let member = JavaReferenceField::Referent;
+        if let Some(layout) = self.field_layout.get() {
+            if layout.reference_fields.is_some() {
+                return self.java_reference_field_slot(member).map(Some);
+            }
+        } else {
+            // Unlinked clients may have a mutable ancestor chain. Match the declaration
+            // against this object's captured field metadata before using its slot.
+            let mut ancestor = self.parent()?;
+            while let Some(class) = ancestor {
+                if class.name() == "java/lang/ref/Reference" {
+                    let index = member
+                        .declared_index(&class.object_fields)
+                        .ok_or_else(|| member.missing())?;
+                    let declared = &class.object_fields[index];
+                    return fields
+                        .iter()
+                        .position(|field| Arc::ptr_eq(field, declared))
+                        .map(Some)
+                        .ok_or_else(|| member.missing());
+                }
+                ancestor = class.parent()?;
+            }
+        }
+        // Standalone conditional classes can supply their own referent without a JDK base.
+        Ok(member.declared_index(fields))
     }
 
     fn declared_reference_kind(&self) -> Option<ReferenceKind> {

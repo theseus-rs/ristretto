@@ -12,10 +12,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-fn compile_reference_fixture() -> Result<PathBuf> {
+fn compile_reference_fixture(output_name: &str) -> Result<PathBuf> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let source = root.join("tests/fixtures/gc");
-    let output = root.join("../target/gc-reference-fixtures");
+    let output = root.join("../target").join(output_name);
     let home = common::java::home(JAVA_25_VERSION)?;
     common::java::compile(
         &home,
@@ -29,12 +29,86 @@ fn compile_reference_fixture() -> Result<PathBuf> {
 }
 
 #[test]
+fn hidden_strong_referent_survives_reference_native_calls() -> Result<()> {
+    let output = compile_reference_fixture("gc-hidden-reference-fixtures")?;
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?
+        .block_on(async {
+            for version in [JAVA_8_VERSION, JAVA_25_VERSION] {
+                let config = ConfigurationBuilder::new()
+                    .java_version(version)
+                    .class_path(ClassPath::from(std::slice::from_ref(&output)))
+                    .build()?;
+                let vm = VM::new(config).await?;
+                let args: &[Value] = &[];
+                vm.invoke("Test", "createHiddenReference()V", args).await?;
+                assert!(
+                    vm.try_invoke("Test", "readsBaseReferent()Z", args)
+                        .await?
+                        .as_bool()?
+                );
+                if version == JAVA_25_VERSION {
+                    let class = vm.class("Test").await?;
+                    let hidden = class.static_value("hidden")?;
+                    let target = class.static_value("baseTarget")?;
+                    let shadow = hidden.as_object_ref()?.value("referent")?;
+                    for (candidate, expected) in [(target, true), (shadow, false)] {
+                        let result = vm
+                            .try_invoke(
+                                "java/lang/ref/Reference",
+                                "refersTo(Ljava/lang/Object;)Z",
+                                &[hidden.clone(), candidate],
+                            )
+                            .await?;
+                        assert_eq!(result.as_bool()?, expected);
+                    }
+                }
+                vm.invoke("Test", "clearBaseReferent()V", args).await?;
+                vm.invoke("Test", "createHiddenPendingPair()V", args)
+                    .await?;
+                vm.garbage_collector().collect_full()?;
+                vm.garbage_collector().collect_full()?;
+                assert!(
+                    vm.try_invoke("Test", "hiddenStrongFieldSurvives()Z", args)
+                        .await?
+                        .as_bool()?
+                );
+                let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+                let mut seen = 0;
+                while seen != 3 {
+                    let next = vm
+                        .try_invoke("Test", "pollHiddenPair()I", args)
+                        .await?
+                        .as_i32()?;
+                    assert!(
+                        [0, 1, 2].contains(&next) && seen & next == 0,
+                        "unexpected queue entry on {version}: {next}"
+                    );
+                    seen |= next;
+                    assert!(
+                        tokio::time::Instant::now() < deadline,
+                        "incomplete hidden pair on {version}: {seen}"
+                    );
+                    tokio::task::yield_now().await;
+                }
+                assert!(
+                    vm.try_invoke("Test", "hiddenQueueFieldsSurvive()Z", args)
+                        .await?
+                        .as_bool()?
+                );
+            }
+            Ok(())
+        })
+}
+
+#[test]
 #[expect(
     clippy::too_many_lines,
     reason = "one reference lifecycle across library and publication policies"
 )]
 fn reference_ordering_resurrection_and_finalization_once() -> Result<()> {
-    let output = compile_reference_fixture()?;
+    let output = compile_reference_fixture("gc-reference-fixtures")?;
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?;
