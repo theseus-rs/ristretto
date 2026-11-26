@@ -7,6 +7,7 @@ use std::time::Duration;
 thread_local! {
     static WAITER_PUBLICATION: Cell<Option<(mpsc::Sender<()>, mpsc::Receiver<()>)>> = const { Cell::new(None) };
     static REGION_RETURN: Cell<Option<mpsc::Sender<()>>> = const { Cell::new(None) };
+    static TERMINAL_CLOSE: Cell<Option<(mpsc::Sender<()>, mpsc::Receiver<()>)>> = const { Cell::new(None) };
     static TERMINAL: Cell<bool> = const { Cell::new(false) };
     static SELECTOR: std::cell::RefCell<Option<SelectorGate>> = const { std::cell::RefCell::new(None) };
     static PARK: Cell<Option<(mpsc::Sender<()>, mpsc::Receiver<()>)>> = const { Cell::new(None) };
@@ -672,6 +673,91 @@ fn terminal_allocation_assists_a_released_donor_past_nonfitting_requests() -> Re
     drop((prefix, live, root));
     gc.collect_full()?;
     assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
+
+#[expect(clippy::expect_used, reason = "bounded forced allocation schedule")]
+pub(super) fn before_terminal_close() {
+    if let Some((entered, resume)) = TERMINAL_CLOSE.take() {
+        entered.send(()).expect("observer of the terminal decision");
+        resume
+            .recv_timeout(Duration::from_secs(5))
+            .expect("resume the decision");
+    }
+}
+
+#[test]
+#[expect(
+    clippy::expect_used,
+    clippy::panic_in_result_fn,
+    reason = "bounded physical-refund schedule"
+)]
+fn terminal_allocation_close_rechecks_backing_released_by_an_independent_owner() -> Result<()> {
+    struct HostValue(u64);
+    // SAFETY: this value contains only a primitive. Its host destructor owns no GC edge.
+    #[expect(unsafe_code)]
+    unsafe impl crate::Trace for HostValue {
+        fn may_contain_gc_references() -> bool {
+            false
+        }
+        fn needs_clear() -> bool {
+            false
+        }
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+    impl Drop for HostValue {
+        fn drop(&mut self) {
+            std::hint::black_box(self.0);
+        }
+    }
+    let charge = Gc::allocation_size(&11_u64)?;
+    assert_eq!(charge, Gc::allocation_size(&HostValue(17))?);
+    for counted in [false, true] {
+        for available in [0, charge - 1, charge] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .threads(1)
+                    .concurrent_publication(counted)
+                    .max_heap_bytes(charge)
+                    .allocation_threshold(usize::MAX)
+                    .incremental_step_size(1)
+                    .build(),
+            );
+            let released = Gc::try_new(&gc, HostValue(17))?;
+            assert_eq!(gc.managed_bytes(), charge);
+            gc.start();
+            let (entered, ready) = mpsc::channel();
+            let (resume, wait) = mpsc::channel();
+            let peer = {
+                let gc = gc.clone();
+                std::thread::spawn(move || {
+                    TERMINAL_CLOSE.set(Some((entered, wait)));
+                    allocate_after_first_poll(&gc, 11, || {})
+                })
+            };
+            let reached = ready.recv_timeout(Duration::from_secs(4));
+            drop(released);
+            gc.collect_full()?;
+            let deadline = Instant::now() + Duration::from_secs(2);
+            while gc.managed_bytes() != 0 {
+                assert!(Instant::now() < deadline, "physical donor was not returned");
+                std::thread::yield_now();
+            }
+            let retained = gc.reserve_bytes(charge - available)?;
+            assert_eq!(gc.managed_bytes(), charge - available);
+            let _ = resume.send(());
+            assert!(reached.is_ok());
+            let result = peer.join().expect("peer joined").expect("peer completed");
+            if available == charge {
+                assert_eq!(**result?, 11);
+            } else {
+                assert!(matches!(result, Err(crate::Error::OutOfMemory)));
+            }
+            drop(retained);
+            gc.stop()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
     Ok(())
 }
 

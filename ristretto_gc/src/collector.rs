@@ -3273,8 +3273,13 @@ impl GarbageCollector {
                     crate::recovery::yield_once().await;
                     continue;
                 }
+                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                crate::refund_tests::before_terminal_close();
                 if demand.finish_uncovered() {
-                    return Err(crate::Error::OutOfMemory);
+                    // Closing the grant demand and reserving general headroom are
+                    // separate operations. An unrelated owner can physically refund
+                    // storage after our last probe and before this close.
+                    return self.reserve_bytes(size);
                 }
                 // This donor was selected while publicly owned. Its charge is
                 // still unavailable until the backing storage is actually freed.
