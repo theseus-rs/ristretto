@@ -3054,12 +3054,13 @@ impl GarbageCollector {
                 .diagnostics
                 .async_allocation_recovery
                 .measure(self.diagnostics_enabled());
-            // Also separates consecutive cycles into distinct cooperative polls.
+            // Register before yielding so a refund taken by a competitor
+            // during that suspension counts as an allocation opportunity.
+            let mut opportunity = self.observe_space(size)?;
             crate::recovery::yield_once().await;
             if let Ok(reservation) = self.reserve_bytes(size) {
                 return Ok(reservation);
             }
-            let mut opportunity = self.observe_space(size)?;
             let ticket = self.request_space_cycle(empty_cycles);
             let mut observed_space = false;
             loop {
@@ -3144,11 +3145,11 @@ impl GarbageCollector {
                 .diagnostics
                 .async_allocation_recovery
                 .measure(self.diagnostics_enabled());
+            let mut opportunity = self.observe_space(size)?;
             crate::recovery::yield_once().await;
             if size <= self.context_headroom(size) {
                 return Ok(());
             }
-            let mut opportunity = self.observe_space(size)?;
             let ticket = self.request_space_cycle(empty_cycles);
             let offered =
                 crate::recovery::CollectionWait::for_space(self, ticket, &mut opportunity).await?;

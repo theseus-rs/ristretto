@@ -1104,6 +1104,103 @@ mod tests {
     }
 
     #[test]
+    fn a_refund_stolen_during_the_first_yield_does_not_spend_an_empty_cycle() -> Result<()> {
+        use std::task::Wake;
+        struct Runnable(AtomicBool);
+        impl Wake for Runnable {
+            fn wake(self: Arc<Self>) {
+                self.0.store(true, Ordering::Release);
+            }
+        }
+        for advisory in [false, true] {
+            for refund in [false, true] {
+                let gc = GarbageCollector::with_config(
+                    Configuration::builder()
+                        .max_heap_bytes(8)
+                        .allocation_threshold(usize::MAX)
+                        .build(),
+                );
+                let mut charge = Some(gc.reserve_exact_bytes(8)?);
+                let runnable = Arc::new(Runnable(AtomicBool::new(false)));
+                let waker = Waker::from(runnable.clone());
+                let mut cx = Context::from_waker(&waker);
+                let mut future = Box::pin(async {
+                    if advisory {
+                        gc.make_room_async(8).await
+                    } else {
+                        crate::Gc::try_new_async(&gc, 42_u64).await.map(drop)
+                    }
+                });
+                assert!(future.as_mut().poll(&mut cx).is_pending());
+                assert_eq!(gc.completed_full_ticket(), 0);
+                if refund {
+                    drop(charge.take());
+                    charge = Some(gc.reserve_exact_bytes(8)?);
+                }
+                let mut terminal = false;
+                for _ in 0..1024 {
+                    assert!(
+                        runnable.0.swap(false, Ordering::AcqRel),
+                        "poll requires a real wake"
+                    );
+                    if let Poll::Ready(result) = future.as_mut().poll(&mut cx) {
+                        assert!(matches!(result, Err(Error::OutOfMemory)));
+                        terminal = true;
+                        break;
+                    }
+                }
+                assert!(terminal);
+                assert_eq!(
+                    gc.completed_full_ticket(),
+                    if refund { 3 } else { 2 },
+                    "advisory={advisory} refund={refund}"
+                );
+                drop((future, charge));
+                gc.stop()?;
+                assert_eq!(gc.managed_bytes(), 0);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn cancelling_during_the_first_yield_restores_context_batching() -> Result<()> {
+        let batch = crate::allocation::CREDIT;
+        for advisory in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .max_heap_bytes(batch)
+                    .local_allocation_buffers(true)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let scope = gc.register_context();
+            let charge = gc.reserve_exact_bytes(batch)?;
+            let mut future = Box::pin(async {
+                if advisory {
+                    gc.make_room_async(8).await
+                } else {
+                    crate::Gc::try_new_async(&gc, 42_u64).await.map(drop)
+                }
+            });
+            let mut cx = Context::from_waker(Waker::noop());
+            assert!(scope.with(|| future.as_mut().poll(&mut cx)).is_pending());
+            assert_eq!(gc.recovery.observing.load(Ordering::Acquire), 1);
+            drop(future);
+            assert_eq!(gc.recovery.observing.load(Ordering::Acquire), 0);
+            assert_eq!(gc.recovery.waiter_count(), 0);
+            drop(charge);
+            let next = scope.with(|| gc.reserve_bytes(8))?;
+            assert_eq!(scope.0.available_credit(), batch - 8);
+            drop((next, scope));
+            gc.collect_full()?;
+            assert_eq!(gc.completed_full_ticket(), 1);
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+        Ok(())
+    }
+
+    #[test]
     fn reclaimed_headroom_survives_competition_before_first_poll() -> Result<()> {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
