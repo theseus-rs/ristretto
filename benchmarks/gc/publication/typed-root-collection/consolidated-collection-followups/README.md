@@ -47,6 +47,16 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Collection with parked regional maintenance | `9e7e3580` | 251127171 | **10.41×** | **10.09×** | **36 / 36** |
 | Exhaustion with an empty parked shard | `e34d1a6a` | 251127182 | **10.22×** | **10.30×** | **36 / 36** |
 | Guarded payload pin feedback | `2f5b3276` | 251127193 | **10.44×** | **10.07×** | **36 / 36** |
+| Capture full requests before snapshot activation | `1116f721` | 251127211 | 9.89× | 10.23× | 34 / 36 |
+| Retire exclusively owned swept storage | `b0db10cd` | 251127223 | **10.47×** | **10.42×** | **36 / 36** |
+
+## Full collection requests during snapshot activation
+
+With counted publication, the collector could activate a snapshot before recording which explicit collection requests it would satisfy. The forced schedule issued a second request after activation. On the original code the first snapshot acknowledged ticket 2. The collector now captures the tickets before activation and preserves the ordering between successive requests that share a wake flag. The second request waits for a fresh snapshot, which reclaims the object whose last root was dropped. The public regression passed in 100 fresh processes, and a two-requester Loom model passed. [Regression, model and stress controls](snapshot-ticket-controls.json.gz)
+
+The ticket fix alone missed the 10× threshold in two native mixed-graph conditions with two workers and diagnostics off. Their individual 95% lower bounds were 9.89× under gated publication and 9.97× under counted publication. After unlinking the exact object identity, the sweep can now retire exclusively owned metadata without a shared atomic read-modify-write. Shared descriptors and borrowed storage continue through the existing atomic path. The combined revision passed all 36 comparisons against `f1daebeb`. In a separate direct comparison against the ticket fix, all eight native mixed-graph intervals across 48 process pairs per condition included parity. The data leave the incremental speedup from private retirement uncertain. [Ticket-fix process data](snapshot-tickets.csv) · [Combined process data](private-retirement.csv) · [Minimum speedup graph](minimum.svg)
+
+On the combined source, 870 all-feature native library tests, six storage model tests, 334 WASI library tests, 30 selected WASI integration tests, strict native and WASI Clippy, bare-Wasm checking and local Cargo package verification passed. A Miri reader-ownership control passed. The default native integration suite observed 1,090 of 2,000 expected destructors in the migration test and two indexed survivors in the generational test after two explicit full collections. On the ticket fix alone, 99 of 100 migration processes and 24 of 100 generational processes failed their respective assertions. A fresh snapshot fixes which cycle owns a request. The completion of physical cleanup under contention remains open. [Verification logs, direct comparison, audits and package checksums](snapshot-ticket-controls.json.gz)
 
 ## Heap exhaustion and pin feedback with parked registries
 
