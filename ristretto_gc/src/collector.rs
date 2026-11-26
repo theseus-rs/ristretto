@@ -958,6 +958,9 @@ impl GarbageCollector {
     fn pending(&self) -> bool {
         self.remembered.dirty.cleanup_pending()
             || self.retired_ready.load(Ordering::Acquire) != 0
+            || self
+                .scanned_slots()
+                .is_some_and(crate::roots::RootSlots::repair_pending)
             || self.old_requested.load(Ordering::Acquire)
             || self
                 .domains
@@ -3091,7 +3094,7 @@ impl GarbageCollector {
         result
     }
 
-    fn scanned_slots(&self) -> Option<&crate::roots::RootSlots> {
+    pub(crate) fn scanned_slots(&self) -> Option<&crate::roots::RootSlots> {
         self.root_slots
             .as_deref()
             .or_else(|| self.typed_slots.get())
@@ -4652,6 +4655,16 @@ impl GarbageCollector {
                     .lookup(address)
                     .is_some_and(|metadata| metadata.id.to_i64().cast_unsigned() == id)
             });
+        }
+        if self
+            .scanned_slots()
+            .is_some_and(crate::roots::RootSlots::repair_step)
+            && self.retired_ready.load(Ordering::Acquire) == 0
+            && !self.domain_has_work(0)
+            && !self.domain_has_work(1)
+            && self.contexts.pending.load(Ordering::Acquire) == 0
+        {
+            return Some(!self.pending());
         }
         // A delayed borrower cannot hold a collection ticket open. Once released,
         // give its bounded clearing work alternating turns with active cycles.

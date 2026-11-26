@@ -436,6 +436,8 @@ pub(crate) struct ContextCleanup {
 
 impl ContextCleanup {
     pub(crate) fn run(self, gc: &GarbageCollector) {
+        // This maintenance runs after releasing the generation and publication guards.
+        self.state.roots.repair_step();
         if self.release_allocations {
             self.state.try_release_allocations(gc);
         }

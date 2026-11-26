@@ -6,9 +6,8 @@ mod overflow;
 use overflow::Overflow;
 pub(crate) use overflow::Record;
 use portable_atomic::AtomicU64;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::num::NonZeroU64;
-use std::ops::Bound::{Excluded, Unbounded};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 
@@ -314,11 +313,30 @@ impl Reservation {
     }
 }
 
+type Pages = crate::publication_directory::Directory<Arc<Page>>;
+
+// Keys originate exclusively from a checked, pointer-width page number.
+#[expect(
+    clippy::expect_used,
+    reason = "only pointer-width page indices enter this directory"
+)]
+fn page_number(key: u64) -> usize {
+    usize::try_from(key).expect("addressable root page")
+}
+
+fn indexed_pages(pages: &Pages) -> impl Iterator<Item = (u64, &Arc<Page>)> {
+    std::iter::successors(pages.next_after(None), |(id, _)| {
+        pages.next_after(Some(*id))
+    })
+}
+
 #[derive(Debug, Default)]
 struct State {
-    pages: BTreeMap<usize, Arc<Page>>,
+    pages: Pages,
     available: BTreeSet<usize>,
     cached_page: Option<usize>,
+    // Next page and inclusive high-water mark for a deferred cleanup pass.
+    repair: Option<(u64, u64)>,
     next_page: usize,
     generation: u64,
     created: u64,
@@ -333,13 +351,16 @@ struct Shard {
     // Updated only when page membership changes, under `state`. A scan never
     // takes that mutex or retains this map across work units. The current page
     // has its own Arc, so retirement does not invalidate a resumable cursor.
-    published: ArcSwap<BTreeMap<usize, Arc<Page>>>,
-    cleanup_pending: AtomicBool,
+    published: ArcSwap<Pages>,
 }
 
 #[derive(Debug, Default)]
 pub(crate) struct RootSlots {
     shards: [Shard; SHARDS],
+    // Low bits record new deferred removals. High bits record unfinished
+    // sweeps, so a new removal behind a paused cursor starts another pass.
+    repair_mask: AtomicUsize,
+    repair_turn: AtomicUsize,
     overflow: Overflow,
     resident: Arc<AtomicUsize>,
     #[cfg(test)]
@@ -379,25 +400,23 @@ impl RootSlots {
             let Some((shard, mut state)) = self.available_writer(preferred) else {
                 return PreparedSlot::Overflow(self.overflow.reserve(None));
             };
-            let registry = &self.shards[shard];
-            let old_view = if registry.cleanup_pending.swap(false, Ordering::AcqRel) {
-                Self::clean_all(registry, &mut state)
-            } else {
-                None
-            };
             let page_id = if let Some(&id) = state.available.first() {
                 id
             } else if let Some(mut page) = spare.take() {
                 let id = loop {
                     let id = state.next_page;
                     state.next_page = id.wrapping_add(1) & MAX_PAGE;
-                    if !state.pages.contains_key(&id) {
+                    if state.pages.get(id as u64).is_none() {
                         break id;
                     }
                 };
                 Arc::get_mut(&mut page).expect("unpublished page").location =
                     (id << LOCATION_BITS) | (shard << SLOT_BITS);
-                state.pages.insert(id, page);
+                state.pages = state
+                    .pages
+                    .insert(id as u64, page)
+                    .expect("addressable root pages")
+                    .0;
                 self.shards[shard]
                     .published
                     .store(Arc::new(state.pages.clone()));
@@ -408,7 +427,6 @@ impl RootSlots {
                 // System allocation does not hold a shard lock. A racing insertion
                 // can make this spare unnecessary; it is dropped after unlocking.
                 drop(state);
-                drop(old_view);
                 self.finish_deferred(shard);
                 spare = Some(Arc::new(Page::new(&self.resident)));
                 continue;
@@ -417,7 +435,7 @@ impl RootSlots {
                 state.cached_page = Some(page_id);
                 state
                     .pages
-                    .get(&page_id)
+                    .get(page_id as u64)
                     .expect("available page")
                     .keep_empty
                     .store(true, Ordering::Release);
@@ -437,7 +455,10 @@ impl RootSlots {
                 .filter(|generation| *generation <= MAX_GENERATION)
                 .expect("root slot generation exhausted");
             state.generation = generation;
-            let page = state.pages.get_mut(&page_id).expect("available root page");
+            let page = state
+                .pages
+                .get(page_id as u64)
+                .expect("available root page");
             let occupied = page.occupied.load(Ordering::Acquire);
             let slot = (!occupied).trailing_zeros() as usize;
             let reused = page.slots[slot].generation.load(Ordering::Relaxed) != 0;
@@ -454,7 +475,6 @@ impl RootSlots {
                 page,
             };
             drop(state);
-            drop(old_view);
             self.finish_deferred(shard);
             return PreparedSlot::Paged(reservation);
         }
@@ -511,7 +531,7 @@ impl RootSlots {
         let page = self.shards[id.shard()]
             .published
             .load()
-            .get(&id.page())
+            .get(id.page() as u64)
             .cloned()?;
         let root = SlotRoot::new(id, page);
         let address = root.take_address()?;
@@ -545,7 +565,7 @@ impl RootSlots {
     // Caller owns the writer mutex. Atomic removers only clear occupied bits;
     // no new reservation can appear while this mutex is held.
     fn clean_page(state: &mut State, id: usize) -> bool {
-        let Some(page) = state.pages.get(&id) else {
+        let Some(page) = state.pages.get(id as u64) else {
             return false;
         };
         let occupied = page.occupied.load(Ordering::Acquire);
@@ -562,20 +582,16 @@ impl RootSlots {
         }
         state.available.remove(&id);
         state.released += 1;
-        state.pages.remove(&id);
+        state.pages = state.pages.remove(id as u64).0;
         true
     }
 
-    fn clean_all(registry: &Shard, state: &mut State) -> Option<Arc<BTreeMap<usize, Arc<Page>>>> {
-        let mut next = state.pages.first_key_value().map(|(&id, _)| id);
+    fn clean_all(registry: &Shard, state: &mut State) -> Option<Arc<Pages>> {
+        let mut next = state.pages.next_after(None).map(|(id, _)| id);
         let mut changed = false;
         while let Some(id) = next {
-            changed |= Self::clean_page(state, id);
-            next = state
-                .pages
-                .range((Excluded(id), Unbounded))
-                .next()
-                .map(|(&id, _)| id);
+            changed |= Self::clean_page(state, page_number(id));
+            next = state.pages.next_after(Some(id)).map(|(id, _)| id);
         }
         changed.then(|| registry.published.swap(Arc::new(state.pages.clone())))
     }
@@ -587,34 +603,77 @@ impl RootSlots {
         if let Some(mut state) = Self::try_state(registry) {
             let same_page = state
                 .pages
-                .get(&root.page_id())
+                .get(root.page_id() as u64)
                 .is_some_and(|page| Arc::ptr_eq(page, &root.page));
             let changed = same_page && Self::clean_page(&mut state, root.page_id());
             let old_view = changed.then(|| registry.published.swap(Arc::new(state.pages.clone())));
             drop(state);
             drop(old_view);
         } else {
-            registry.cleanup_pending.store(true, Ordering::Release);
+            self.repair_mask
+                .fetch_or(1 << root.shard(), Ordering::Release);
         }
         // Retry after setting the flag: the writer may have unlocked just before
         // that store. Either this retry or that writer's exit observes the work.
         self.finish_deferred(root.shard());
     }
 
-    fn finish_deferred(&self, shard: usize) {
-        let registry = &self.shards[shard];
-        while registry.cleanup_pending.load(Ordering::Acquire) {
-            let Some(mut state) = Self::try_state(registry) else {
-                return;
-            };
-            let old_view = if registry.cleanup_pending.swap(false, Ordering::AcqRel) {
-                Self::clean_all(registry, &mut state)
-            } else {
-                None
-            };
-            drop(state);
-            drop(old_view);
+    fn finish_deferred(&self, shard: usize) -> bool {
+        let dirty = 1_usize << shard;
+        let active = dirty << SHARDS;
+        if self.repair_mask.load(Ordering::Acquire) & (dirty | active) == 0 {
+            return false;
         }
+        let registry = &self.shards[shard];
+        let Some(mut state) = Self::try_state(registry) else {
+            return false;
+        };
+        if state.repair.is_none() {
+            // Advertise the in-progress pass before acknowledging its request.
+            // Only this shard's writer can clear its active bit.
+            self.repair_mask.fetch_or(active, Ordering::Release);
+            if self.repair_mask.fetch_and(!dirty, Ordering::AcqRel) & dirty != 0 {
+                state.repair = state
+                    .pages
+                    .next_after(None)
+                    .zip(state.pages.last_key())
+                    .map(|((first, _), last)| (first, last));
+            }
+        }
+        let old = if let Some((id, last)) = state.repair {
+            let changed = Self::clean_page(&mut state, page_number(id));
+            state.repair = state
+                .pages
+                .next_after(Some(id))
+                .filter(|(next, _)| *next <= last)
+                .map(|(next, _)| (next, last));
+            changed.then(|| registry.published.swap(Arc::new(state.pages.clone())))
+        } else {
+            None
+        };
+        if state.repair.is_none() {
+            self.repair_mask.fetch_and(!active, Ordering::Release);
+        }
+        drop(state);
+        drop(old);
+        true
+    }
+
+    pub(crate) fn repair_pending(&self) -> bool {
+        self.repair_mask.load(Ordering::Acquire) != 0
+    }
+
+    /// Service at most one accessible shard, rotating under sustained churn.
+    pub(crate) fn repair_step(&self) -> bool {
+        let mask = self.repair_mask.load(Ordering::Acquire);
+        if mask == 0 {
+            return false;
+        }
+        let shards = mask | (mask >> SHARDS);
+        let start = self.repair_turn.fetch_add(1, Ordering::Relaxed) % SHARDS;
+        (0..SHARDS)
+            .map(|n| (start + n) % SHARDS)
+            .any(|shard| shards & (1 << shard) != 0 && self.finish_deferred(shard))
     }
 
     /// At most one root or one page/shard advance per work unit. Page membership
@@ -625,7 +684,7 @@ impl RootSlots {
             return self.overflow.scan(&mut cursor.page);
         };
         if cursor.current.is_none() && cursor.slot == 0 {
-            cursor.current = shard.published.load().get(&cursor.page).cloned();
+            cursor.current = shard.published.load().get(cursor.page as u64).cloned();
         }
         if let Some(page) = &cursor.current {
             let mask = if cursor.slot < SLOTS {
@@ -653,9 +712,8 @@ impl RootSlots {
         let next = shard
             .published
             .load()
-            .range((Excluded(cursor.page), Unbounded))
-            .next()
-            .map(|(&id, page)| (id, page.clone()));
+            .next_after(Some(cursor.page as u64))
+            .map(|(id, page)| (page_number(id), page.clone()));
         cursor.current = None;
         if let Some((id, page)) = next {
             cursor.page = id;
@@ -675,14 +733,14 @@ impl RootSlots {
         let mut found = Vec::new();
         for (shard, registry) in self.shards.iter().enumerate() {
             let pages = registry.published.load();
-            for (&id, page) in pages.iter() {
+            for (id, page) in indexed_pages(&pages) {
                 let mut occupied = page.occupied.load(Ordering::Acquire);
                 while occupied != 0 {
                     let slot = occupied.trailing_zeros() as usize;
                     occupied &= occupied - 1;
                     if let Some(generation) = page.slots[slot].matching_generation(address) {
                         found.push(SlotRoot::new(
-                            SlotId::new(shard, id, slot, generation),
+                            SlotId::new(shard, page_number(id), slot, generation),
                             page.clone(),
                         ));
                     }
@@ -700,14 +758,16 @@ impl RootSlots {
             let empty_cached = state.cached_page.filter(|id| {
                 state
                     .pages
-                    .get(id)
+                    .get(*id as u64)
                     .is_some_and(|page| page.occupied.load(Ordering::Acquire) == 0)
             });
             let retired = empty_cached.and_then(|id| {
                 state.cached_page = None;
                 state.available.remove(&id);
                 state.released += 1;
-                state.pages.remove(&id)
+                let (next, page) = state.pages.remove(id as u64);
+                state.pages = next;
+                page
             });
             if retired.is_some() {
                 shard.published.store(Arc::new(state.pages.clone()));
@@ -731,7 +791,7 @@ impl RootSlots {
         let mut result = RootStatistics::default();
         for (index, shard) in self.shards.iter().enumerate() {
             let state = lock(&shard.state);
-            for page in state.pages.values() {
+            for (_, page) in indexed_pages(&state.pages) {
                 let mut occupied = page.occupied.load(Ordering::Acquire);
                 while occupied != 0 {
                     let slot = occupied.trailing_zeros() as usize;
@@ -748,7 +808,7 @@ impl RootSlots {
             result.cached_empty_pages += usize::from(
                 state
                     .cached_page
-                    .and_then(|id| state.pages.get(&id))
+                    .and_then(|id| state.pages.get(id as u64))
                     .is_some_and(|page| page.occupied.load(Ordering::Acquire) == 0),
             );
             result.pages_created += state.created;
@@ -769,6 +829,82 @@ impl RootSlots {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn idle_collector_repairs_one_page_per_turn_and_revisits_late_removal() {
+        let gc = crate::GarbageCollector::with_config(
+            crate::Configuration::builder()
+                .root_storage(crate::RootStorage::Slots)
+                .threads(0)
+                .build(),
+        );
+        let roots = gc.scanned_slots().expect("fixture uses paged roots");
+        let ids: Vec<_> = (0..SLOTS * 16).map(|_| roots.insert(0x1000)).collect();
+        let shard = &roots.shards[ids[0].shard()];
+        // Page one is kept full until the cursor has passed it. Other pages
+        // lose their roots while the writer is parked.
+        roots.with_all_writers_held(|| {
+            for id in ids.iter().skip(SLOTS * 2) {
+                assert_eq!(roots.remove(*id), Some(0x1000));
+            }
+            assert!(!roots.repair_step());
+        });
+        assert!(roots.repair_pending());
+        for _ in 0..3 {
+            assert!(!gc.step());
+        }
+        assert_eq!(lock(&shard.state).released, 1);
+        roots.with_all_writers_held(|| {
+            for id in &ids[SLOTS..2 * SLOTS] {
+                assert_eq!(roots.remove(*id), Some(0x1000));
+            }
+        });
+        let mut previous = 1;
+        let mut turns = 0;
+        while roots.repair_pending() {
+            assert_eq!(gc.step(), !roots.repair_pending());
+            let released = lock(&shard.state).released;
+            assert!(released == previous || released == previous + 1);
+            previous = released;
+            turns += 1;
+            assert!(turns <= 32);
+        }
+        assert_eq!(previous, 15);
+        for id in &ids[..SLOTS] {
+            assert_eq!(roots.remove(*id), Some(0x1000));
+        }
+        roots.trim_empty();
+        assert_eq!(roots.statistics().resident_pages, 0);
+    }
+
+    #[test]
+    fn published_page_updates_share_unaffected_pages_with_a_pinned_view() {
+        let roots = RootSlots::default();
+        let mut ids: Vec<_> = (0..SLOTS * 2).map(|_| roots.insert(0x1000)).collect();
+        let first = ids[0];
+        let shard = &roots.shards[first.shard()];
+        let pinned = shard.published.load_full();
+        let page = pinned.get(first.page() as u64).expect("first page");
+        let owners = Arc::strong_count(page);
+        let extra = roots.insert(0x1000);
+        let current = shard.published.load_full();
+        assert_eq!(pinned.len(), 2);
+        assert_eq!(current.len(), 3);
+        assert!(Arc::ptr_eq(
+            page,
+            current.get(first.page() as u64).expect("same page")
+        ));
+        assert_eq!(Arc::strong_count(page), owners);
+        assert_eq!(roots.remove(extra), Some(0x1000));
+        assert_eq!(shard.published.load().len(), 2);
+        assert!(current.get(extra.page() as u64).is_some());
+        while let Some(id) = ids.pop() {
+            assert_eq!(roots.remove(id), Some(0x1000));
+        }
+        drop((current, pinned));
+        roots.trim_empty();
+        assert_eq!(roots.statistics().resident_pages, 0);
+    }
 
     #[test]
     fn overflow_retry_and_cancellation() {
