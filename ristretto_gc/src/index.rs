@@ -5,6 +5,10 @@ use std::collections::BTreeSet;
 use std::ops::Bound::{Excluded, Unbounded};
 use std::sync::{Mutex, MutexGuard, TryLockError};
 
+#[path = "dirty_owners.rs"]
+mod dirty_owners;
+pub(crate) use dirty_owners::Cursor as RememberedOverflow;
+
 #[path = "nursery.rs"]
 mod nursery;
 pub(crate) use nursery::{
@@ -188,6 +192,7 @@ impl Shards<BTreeSet<usize>> {
 #[derive(Debug)]
 pub(crate) struct Remembered {
     sets: Shards<BTreeSet<usize>>,
+    pub(crate) dirty: dirty_owners::DirtyOwners,
     nonempty: Box<[std::sync::atomic::AtomicBool]>,
 }
 
@@ -195,6 +200,7 @@ impl Remembered {
     pub(crate) fn new(count: usize) -> Self {
         Self {
             sets: Shards::new(count),
+            dirty: dirty_owners::DirtyOwners::default(),
             nonempty: (0..shard_count(count)).map(|_| false.into()).collect(),
         }
     }
@@ -235,6 +241,7 @@ impl Remembered {
     }
 
     pub(crate) fn clear(&self) {
+        self.dirty.clear();
         for (mut set, hint) in self.sets.iter().zip(&self.nonempty) {
             set.clear();
             hint.store(false, std::sync::atomic::Ordering::Relaxed);

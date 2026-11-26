@@ -18,6 +18,7 @@ pub(crate) struct MarkItem {
     pub(crate) offset: usize,
     pub(crate) version: Option<usize>,
     pub(crate) has_young: bool,
+    pub(crate) dirty_scan: bool,
 }
 
 impl MarkItem {
@@ -27,7 +28,19 @@ impl MarkItem {
             offset: 0,
             version: None,
             has_young: false,
+            dirty_scan: false,
         }
+    }
+
+    pub(crate) fn dirty(metadata: MetadataRef) -> Self {
+        Self {
+            dirty_scan: true,
+            ..Self::fresh(metadata)
+        }
+    }
+
+    fn compact_fresh(&self) -> bool {
+        self.version.is_none() && !self.dirty_scan
     }
 }
 
@@ -427,7 +440,7 @@ impl MarkQueues {
     }
 
     pub(crate) fn push(&self, local: usize, item: MarkItem) {
-        if item.version.is_none() {
+        if item.compact_fresh() {
             self.push_fresh(local, item.metadata.ptr().0, item.metadata);
         } else if let Err(item) = self.try_push_any(local, item) {
             self.fallback.push(item);
@@ -517,7 +530,7 @@ impl MarkQueues {
                 Err(item) => item,
             };
         }
-        let item = if item.version.is_none() {
+        let item = if item.compact_fresh() {
             MarkItem::fresh(item.metadata)
         } else {
             item
@@ -534,10 +547,10 @@ impl MarkQueues {
         if local != 0 && queue.len() >= LOCAL_LIMIT {
             return Err(item);
         }
-        if item.version.is_some() {
-            queue.current.push_back(item);
-        } else {
+        if item.compact_fresh() {
             queue.push_fresh(item.metadata);
+        } else {
+            queue.current.push_back(item);
         }
         self.queues[local]
             .queued
@@ -857,6 +870,7 @@ mod tests {
             offset,
             version,
             has_young: true,
+            dirty_scan: false,
         }
     }
 

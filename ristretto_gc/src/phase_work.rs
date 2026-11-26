@@ -364,6 +364,16 @@ impl GarbageCollector {
                 }
             }
             Phase::Remembered => {
+                if let Some((id, address)) =
+                    self.remembered.dirty.next(&mut cycle.remembered_overflow)
+                {
+                    if let Some(metadata) = self.objects.lookup(address)
+                        && metadata.id.to_i64().cast_unsigned() == id
+                    {
+                        self.shade_metadata(&metadata);
+                    }
+                    return true;
+                }
                 // Promotions are remembered so younger children of survivors remain live.
                 let next = if cycle.kind == CollectionKind::Young {
                     match self.remembered.scan(&mut cycle.remembered_cursor) {
@@ -828,6 +838,9 @@ impl GarbageCollector {
             }
         };
         if let Some(metadata) = removed {
+            self.remembered
+                .dirty
+                .retire(metadata.id.to_i64().cast_unsigned());
             // The byte debt belongs to the retired descriptor, independent of
             // which queue or callback currently owns its clearing progress.
             self.retired_bytes

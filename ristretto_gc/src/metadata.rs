@@ -95,6 +95,7 @@ pub(crate) struct ObjectMetadata {
     drop_fn: Mutex<DropFn>,
     kind: &'static Kind,
     finalized: AtomicBool,
+    dirty_scan: AtomicU8,
     pub(crate) trace: TracePtr,
     epochs: [MarkWord; 2],
     pub(crate) age: AtomicUsize,
@@ -142,12 +143,30 @@ impl Drop for DestroyPayload<'_> {
 impl ObjectMetadata {
     /// A delayed scan must never observe its version again after a write.
     /// At saturation only this allocation loses optional remembered pruning.
-    pub(crate) fn record_mutation(&self) {
-        let _ = self
-            .mutation
+    pub(crate) fn record_mutation(&self) -> usize {
+        self.mutation
             .try_update(Ordering::Release, Ordering::Relaxed, |version| {
                 version.checked_add(1)
-            });
+            })
+            .map_or(usize::MAX, |previous| previous + 1)
+    }
+
+    // Bit zero requests a complete young traversal. Bit one belongs to the
+    // single tagged task from its first claim through its last continuation.
+    // Repeated writers reserve at most one successor while a trace is running.
+    pub(crate) fn request_dirty_scan(&self) -> bool {
+        self.dirty_scan.fetch_or(1, Ordering::AcqRel) == 0
+    }
+
+    pub(crate) fn begin_dirty_scan(&self) {
+        let previous = self.dirty_scan.swap(2, Ordering::AcqRel);
+        debug_assert_eq!(previous, 1);
+    }
+
+    pub(crate) fn finish_dirty_scan(&self) -> bool {
+        let previous = self.dirty_scan.fetch_and(!2, Ordering::AcqRel);
+        debug_assert!(matches!(previous, 2 | 3));
+        previous == 3
     }
 
     pub(crate) fn is_type<T: 'static>(&self) -> bool {
@@ -276,6 +295,7 @@ impl ObjectMetadata {
                 }
             },
             finalized: AtomicBool::new(false),
+            dirty_scan: AtomicU8::new(0),
             trace,
             direct_marks: direct_marks::DirectMarks::default(),
             epochs: std::array::from_fn(|_| MarkWord::default()),
