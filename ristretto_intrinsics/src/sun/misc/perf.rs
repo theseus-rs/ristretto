@@ -14,7 +14,8 @@ async fn create_byte_buffer<T: Thread + 'static>(
     bytes: Vec<i8>,
 ) -> Result<Option<Value>> {
     let vm = thread.vm()?;
-    let byte_array = Value::new_object(vm.garbage_collector(), Reference::from(bytes));
+    let byte_array =
+        Value::try_new_object_async(vm.garbage_collector(), Reference::from(bytes)).await?;
     let result = thread
         .try_invoke(
             "java.nio.ByteBuffer",

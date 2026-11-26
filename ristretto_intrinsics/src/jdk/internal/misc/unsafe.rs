@@ -55,10 +55,10 @@ pub async fn allocate_instance<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let class_object = parameters.pop()?;
     let class = get_class(&thread, &class_object).await?;
-    let object = Object::new(class)?;
+    let object = Object::new_in_async(thread.vm()?.garbage_collector(), class).await?;
     let vm = thread.vm()?;
     let collector = vm.garbage_collector();
-    Ok(Some(Value::from_object(collector, object)))
+    Ok(Some(Value::try_from_object_async(collector, object).await?))
 }
 
 #[intrinsic_method(
@@ -2152,6 +2152,73 @@ pub fn writeback_pre_sync_0<T: Thread + 'static>(
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn native_object_and_array_allocations_await_exhausted_heap_recovery() -> Result<()> {
+        use ristretto_gc::{GarbageCollector, Gc, Trace};
+        struct LiveBytes(Vec<u8>);
+        // SAFETY: this fixture contains no outgoing GC references.
+        #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+        unsafe impl Trace for LiveBytes {
+            fn trace(&self, _: &GarbageCollector) {}
+            fn external_size(&self) -> usize {
+                self.0.len()
+            }
+        }
+        const LIMIT: usize = 16 * 1024 * 1024;
+        for compact in [false, true] {
+            let gc = GarbageCollector::with_config(
+                ristretto_gc::Configuration::builder()
+                    .compact_heap(compact)
+                    .diagnostics(true)
+                    .threads(2)
+                    .max_heap_bytes(LIMIT)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let vm = ristretto_vm::VM::new(
+                ristretto_vm::ConfigurationBuilder::new()
+                    .garbage_collector(gc.clone())
+                    .build()?,
+            )
+            .await?;
+            let thread = ristretto_vm::Thread::new(&Arc::downgrade(&vm), 3);
+            let class = thread.class("java/lang/Object").await?;
+            let class_object = class.to_object(&thread).await?;
+            gc.collect_full()?;
+            gc.collect_full()?;
+            let overhead = Gc::allocation_size(&LiveBytes(Vec::new()))?;
+            let length = LIMIT - gc.managed_bytes() - overhead;
+            let live = Gc::try_new_async(&gc, LiveBytes(vec![7; length])).await?;
+            let before = gc.diagnostics();
+            let object =
+                allocate_instance(thread.clone(), Parameters::new(vec![class_object.clone()]))
+                    .await;
+            assert!(matches!(
+                object,
+                Err(ristretto_types::Error::JavaError(OutOfMemoryError(_)))
+            ));
+            let array = crate::java::lang::class::get_interfaces_0(
+                thread.clone(),
+                Parameters::new(vec![class_object]),
+            )
+            .await;
+            assert!(matches!(
+                array,
+                Err(ristretto_types::Error::JavaError(OutOfMemoryError(_)))
+            ));
+            let after = gc.diagnostics();
+            assert_eq!(
+                after.allocation_recovery.count,
+                before.allocation_recovery.count
+            );
+            assert!(after.async_allocation_recovery.count > before.async_allocation_recovery.count);
+            assert_eq!(after.allocation_waiters, 0);
+            assert!(live.0.iter().all(|&byte| byte == 7));
+            assert!(gc.managed_bytes() <= LIMIT);
+        }
+        Ok(())
+    }
+
     use super::*;
     use ristretto_classfile::JavaStr;
     use std::time::Duration;

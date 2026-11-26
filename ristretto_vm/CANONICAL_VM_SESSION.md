@@ -23,9 +23,8 @@ let completion = program.with_vm(
 For native execution with `experimental-canonical-jit`, prepare
 `let compiled = program.compile()?` before the session, then attach through
 `compiled.attach(heap, CompiledLimits::default())?` inside the same closure.
-Admission, exact-program checks, frame roots, initialization use the existing paths. The public `Invocation` retains its existing fields;
-the compiled session control rejects a zero native-slice budget, and the
-existing dedicated compiled regressions verify entry/backedge counters. WASI uses the interpreter.
+Admission, exact-program checks, frame roots, initialization and native
+entry/backedge counters use the existing paths. WASI uses the interpreter.
 `Program::with_collector` provides the same session boundary for direct collector
 embeddings. `Program::with_heap` remains available for a dedicated collector and
 also verifies zero total managed bytes after successful cleanup.

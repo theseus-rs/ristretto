@@ -73,6 +73,8 @@ pub struct Compiler {
     batch_compilation_enabled: bool,
     /// Whether the compiler is in interpreted-only mode
     interpreted: bool,
+    #[cfg(feature = "execution-profile")]
+    pub(crate) execution_recorder: Arc<crate::execution_profile::Recorder>,
 }
 
 impl std::fmt::Debug for Compiler {
@@ -113,6 +115,8 @@ impl Compiler {
             compilation_queue: Mutex::new(None),
             batch_compilation_enabled: batch_compilation,
             interpreted,
+            #[cfg(feature = "execution-profile")]
+            execution_recorder: Arc::new(crate::execution_profile::Recorder::default()),
         })
     }
 
@@ -126,7 +130,13 @@ impl Compiler {
 
     /// Inserts a function into the cache.
     pub fn insert_cached(&self, key: usize, function: Option<Arc<Function>>) {
-        self.function_cache.insert(key, function);
+        if function.is_some() {
+            self.function_cache.insert(key, function);
+        } else {
+            // A concurrent production rejection must not erase a successfully
+            // prepared function. Successful code remains available for dispatch.
+            self.function_cache.entry(key).or_insert(None);
+        }
     }
 
     /// Checks if a key exists in the cache.
@@ -202,6 +212,8 @@ impl Compiler {
             // Mark method as pending in cache (None = not yet compiled)
             // This prevents duplicate queueing on subsequent calls
             self.insert_cached(key, None);
+            #[cfg(feature = "execution-profile")]
+            self.execution_recorder.queued(class, method);
 
             // Initialize batch compiler and send request in a single lock acquisition
             let request = CompilationRequest {
@@ -228,9 +240,20 @@ impl Compiler {
         let function = if ristretto_jit::Compiler::can_compile(definition) {
             let class_file = class.class_file();
             let symbols = jit_runtime_helpers::symbols();
+            #[cfg(feature = "execution-profile")]
+            self.execution_recorder.starting(class, method);
+            #[cfg(feature = "execution-profile")]
+            let started = std::time::Instant::now();
             match self.jit_compiler.compile(class_file, definition, &symbols) {
                 Ok(function) => {
                     let function = Arc::new(function);
+                    #[cfg(feature = "execution-profile")]
+                    self.execution_recorder.finished(
+                        class,
+                        method,
+                        Ok(&function),
+                        started.elapsed(),
+                    );
                     info!(
                         "compiled method {}.{}{}",
                         class.name(),
@@ -240,6 +263,13 @@ impl Compiler {
                     Some(function)
                 }
                 Err(error) => {
+                    #[cfg(feature = "execution-profile")]
+                    self.execution_recorder.finished(
+                        class,
+                        method,
+                        Err(error.to_string()),
+                        started.elapsed(),
+                    );
                     debug!(
                         "JIT compilation failed for {}.{}{}: {error}",
                         class.name(),
@@ -250,11 +280,68 @@ impl Compiler {
                 }
             }
         } else {
+            #[cfg(feature = "execution-profile")]
+            self.execution_recorder.rejected(class, method);
             None
         };
 
         self.insert_cached(key, function.clone());
         function
+    }
+
+    /// Prepare an explicitly requested experimental method for ordinary dispatch.
+    /// Reject background mode so a queued production rejection cannot overwrite
+    /// the prepared function. Failures are returned to the caller, never hidden as
+    /// successful preparation followed by interpreter fallback.
+    #[cfg(feature = "experimental-reference-dispatch")]
+    pub(crate) fn prepare_experimental(
+        &self,
+        class: &Arc<Class>,
+        method: &Arc<Method>,
+    ) -> Result<()> {
+        if self.interpreted || self.batch_compilation_enabled {
+            return Err(InternalError(
+                "Experimental preparation requires JIT enabled and batch compilation disabled"
+                    .to_owned(),
+            ));
+        }
+        if let Some(reason) = ristretto_jit::Compiler::experimental_rejection_reason(
+            class.class_file(),
+            method.definition(),
+        ) {
+            return Err(InternalError(format!(
+                "Experimental JIT rejected {}.{}{}: {reason}",
+                class.name(),
+                method.name(),
+                method.descriptor()
+            )));
+        }
+        let key = cache_key(method);
+        if self.get_cached(key).flatten().is_some() {
+            return Ok(());
+        }
+        #[cfg(feature = "execution-profile")]
+        self.execution_recorder.starting_experimental(class, method);
+        #[cfg(feature = "execution-profile")]
+        let started = std::time::Instant::now();
+        let result = self
+            .jit_compiler
+            .compile(
+                class.class_file(),
+                method.definition(),
+                &jit_runtime_helpers::symbols(),
+            )
+            .map(Arc::new);
+        #[cfg(feature = "execution-profile")]
+        self.execution_recorder.finished(
+            class,
+            method,
+            result.as_ref().map_err(ToString::to_string),
+            started.elapsed(),
+        );
+        let function = result?;
+        self.insert_cached(key, Some(function));
+        Ok(())
     }
 
     /// Send a compilation request, initializing the batch compiler if needed.
@@ -274,6 +361,8 @@ impl Compiler {
 
             let jit_compiler = self.jit_compiler.clone();
             let function_cache = self.function_cache.clone();
+            #[cfg(feature = "execution-profile")]
+            let execution_recorder = self.execution_recorder.clone();
             tokio::spawn(async move {
                 let mut batch = Vec::new();
 
@@ -304,6 +393,8 @@ impl Compiler {
                             &mut batch,
                             &jit_compiler,
                             &function_cache,
+                            #[cfg(feature = "execution-profile")]
+                            &execution_recorder,
                         );
                     }
                 }
@@ -323,6 +414,7 @@ fn process_compilation_batch(
     batch: &mut Vec<CompilationRequest>,
     jit_compiler: &ristretto_jit::Compiler,
     function_cache: &Arc<DashMap<usize, Option<Arc<Function>>>>,
+    #[cfg(feature = "execution-profile")] execution_recorder: &crate::execution_profile::Recorder,
 ) {
     debug!("Processing compilation batch of {} methods", batch.len());
     let thread_pool = match ThreadPoolBuilder::new()
@@ -347,9 +439,20 @@ fn process_compilation_batch(
             let function = if ristretto_jit::Compiler::can_compile(definition) {
                 let class_file = request.class.class_file();
                 let symbols = jit_runtime_helpers::symbols();
+                #[cfg(feature = "execution-profile")]
+                execution_recorder.starting(&request.class, &request.method);
+                #[cfg(feature = "execution-profile")]
+                let started = std::time::Instant::now();
                 match jit_compiler.compile(class_file, definition, &symbols) {
                     Ok(function) => {
                         let function = Arc::new(function);
+                        #[cfg(feature = "execution-profile")]
+                        execution_recorder.finished(
+                            &request.class,
+                            &request.method,
+                            Ok(&function),
+                            started.elapsed(),
+                        );
                         info!(
                             "compiled method {}.{}{}",
                             request.class.name(),
@@ -359,6 +462,13 @@ fn process_compilation_batch(
                         Some(function)
                     }
                     Err(error) => {
+                        #[cfg(feature = "execution-profile")]
+                        execution_recorder.finished(
+                            &request.class,
+                            &request.method,
+                            Err(error.to_string()),
+                            started.elapsed(),
+                        );
                         debug!(
                             "JIT compilation failed for {}.{}{}: {error}",
                             request.class.name(),
@@ -369,6 +479,8 @@ fn process_compilation_batch(
                     }
                 }
             } else {
+                #[cfg(feature = "execution-profile")]
+                execution_recorder.rejected(&request.class, &request.method);
                 None
             };
 
@@ -386,6 +498,173 @@ fn process_compilation_batch(
 /// Parameters are converted from VM value representation to JIT value representation before
 /// execution, and the result is converted back from JIT value to VM value.
 pub(crate) fn execute(
+    function: &Arc<Function>,
+    parameters: &[Value],
+    gc: &Arc<GarbageCollector>,
+    vm: &Arc<VM>,
+    thread: &Arc<Thread>,
+    class: &Arc<Class>,
+) -> Result<Option<Value>> {
+    crate::native_stack::with_compiled_stack(function.native_stack_bytes(), || {
+        execute_on_stack(function, parameters, gc, vm, thread, class)
+    })
+}
+
+/// Return the native frame before yielding so cancellation and executor migration
+/// cannot race code still using the Java stack. Reference-bearing continuations
+/// retain an owning context across slices; call requests await ordinary VM dispatch
+/// after their generated caller has returned.
+#[expect(
+    clippy::too_many_lines,
+    reason = "keep native slices, owning request dispatch and shared fuel accounting together"
+)]
+pub(crate) async fn execute_cooperatively(
+    function: &Arc<Function>,
+    parameters: &[Value],
+    gc: &Arc<GarbageCollector>,
+    vm: &Arc<VM>,
+    thread: &Arc<Thread>,
+    class: &Arc<Class>,
+) -> Result<Option<Value>> {
+    if !function.supports_cooperation() {
+        return execute(function, parameters, gc, vm, thread, class);
+    }
+    let mut activation = function
+        .activation(&convert_parameters(parameters)?)
+        .map_err(execution_error)?;
+    let runtime_context = if function.cooperation_requires_context() {
+        Some(RuntimeContext::new(gc, vm, thread, class)?)
+    } else {
+        None
+    };
+    let frame = thread.current_frame()?;
+    let mut budget = function.cooperation_budget();
+    loop {
+        let step = crate::native_stack::with_compiled_stack(function.native_stack_bytes(), || {
+            activation
+                .resume_with_context(
+                    budget,
+                    runtime_context
+                        .as_ref()
+                        .map_or(std::ptr::null(), RuntimeContext::as_ptr),
+                )
+                .map_err(execution_error)
+        })?;
+        match step {
+            ristretto_jit::ExecutionStep::Call(request) => {
+                frame.set_program_counter(request.bci);
+                // A chain of finite callees also needs a cancellation boundary.
+                // No generated frame or borrowed runtime pointer spans this yield.
+                tokio::task::yield_now().await;
+                budget = function.cooperation_budget();
+                let context = runtime_context
+                    .as_ref()
+                    .ok_or_else(|| InternalError("call has no owning context".to_owned()))?;
+                let arguments = activation.call_arguments().map_err(execution_error)?;
+                let bits =
+                    crate::native_stack::CallFuture::new(context.invoke_call(request, arguments))
+                        .await?;
+                activation.complete_call(bits).map_err(execution_error)?;
+            }
+            request @ (ristretto_jit::ExecutionStep::Monitor(_)
+            | ristretto_jit::ExecutionStep::Allocation(_)
+            | ristretto_jit::ExecutionStep::Field(_)
+            | ristretto_jit::ExecutionStep::TypeCheck(_)
+            | ristretto_jit::ExecutionStep::Constant(_)
+            | ristretto_jit::ExecutionStep::ExceptionMatch(_)
+            | ristretto_jit::ExecutionStep::ArrayStore(_)
+            | ristretto_jit::ExecutionStep::ArrayAccess(_)) => {
+                let remaining = activation.remaining_budget().map_err(execution_error)?;
+                let context = runtime_context.as_ref().ok_or_else(|| {
+                    InternalError("runtime request has no owning context".to_owned())
+                })?;
+                let arguments = activation.call_arguments().map_err(execution_error)?;
+                let bits = match request {
+                    ristretto_jit::ExecutionStep::Monitor(request) => {
+                        frame.set_program_counter(request.bci);
+                        crate::native_stack::CallFuture::new(
+                            context.invoke_monitor(request, arguments),
+                        )
+                        .await?
+                    }
+                    ristretto_jit::ExecutionStep::Allocation(request) => {
+                        frame.set_program_counter(request.bci);
+                        crate::native_stack::CallFuture::new(
+                            context.invoke_allocation(request, arguments),
+                        )
+                        .await?
+                    }
+                    ristretto_jit::ExecutionStep::Field(request) => {
+                        frame.set_program_counter(request.bci);
+                        crate::native_stack::CallFuture::new(
+                            context.invoke_field(request, arguments),
+                        )
+                        .await?
+                    }
+                    ristretto_jit::ExecutionStep::ExceptionMatch(request) => {
+                        frame.set_program_counter(request.bci);
+                        crate::native_stack::CallFuture::new(
+                            context.invoke_exception_match(request, arguments),
+                        )
+                        .await?
+                    }
+                    ristretto_jit::ExecutionStep::Constant(request) => {
+                        frame.set_program_counter(request.bci);
+                        crate::native_stack::CallFuture::new(
+                            context.invoke_constant(request, arguments),
+                        )
+                        .await?
+                    }
+                    ristretto_jit::ExecutionStep::TypeCheck(request) => {
+                        frame.set_program_counter(request.bci);
+                        crate::native_stack::CallFuture::new(
+                            context.invoke_type_check(request, arguments),
+                        )
+                        .await?
+                    }
+                    ristretto_jit::ExecutionStep::ArrayAccess(request) => {
+                        frame.set_program_counter(request.bci);
+                        crate::native_stack::CallFuture::new(
+                            context.invoke_array_access(request, arguments),
+                        )
+                        .await?
+                    }
+                    ristretto_jit::ExecutionStep::ArrayStore(request) => {
+                        frame.set_program_counter(request.bci);
+                        crate::native_stack::CallFuture::new(
+                            context.invoke_array_store(request, arguments),
+                        )
+                        .await?
+                    }
+                    _ => return Err(InternalError("invalid runtime request".to_owned())),
+                };
+                activation.complete_call(bits).map_err(execution_error)?;
+                budget = if let Some(remaining) = remaining {
+                    remaining
+                } else {
+                    tokio::task::yield_now().await;
+                    function.cooperation_budget()
+                };
+            }
+            ristretto_jit::ExecutionStep::Yielded => {
+                let bci = activation
+                    .suspended_bci()
+                    .ok_or_else(|| InternalError("missing continuation BCI".to_owned()))?;
+                frame.set_program_counter(bci);
+                tokio::task::yield_now().await;
+                budget = function.cooperation_budget();
+            }
+            ristretto_jit::ExecutionStep::Returned(value) => {
+                return match runtime_context {
+                    Some(context) => finish_execute(context, value),
+                    None => value.map(|value| convert_to_vm(gc, &value)).transpose(),
+                };
+            }
+        }
+    }
+}
+
+fn execute_on_stack(
     function: &Arc<Function>,
     parameters: &[Value],
     gc: &Arc<GarbageCollector>,
@@ -416,34 +695,46 @@ pub(crate) fn execute(
         let vec = convert_parameters(parameters)?;
         let runtime_context = RuntimeContext::new(gc, vm, thread, class)?;
         let context = runtime_context.as_ptr();
-        let result = function.execute(&vec, context)?;
-        return finish_execute(&runtime_context, result);
+        let result = function.execute(&vec, context).map_err(execution_error)?;
+        return finish_execute(runtime_context, result);
     };
 
     let runtime_context = RuntimeContext::new(gc, vm, thread, class)?;
     let context = runtime_context.as_ptr();
-    let result = function.execute(arguments, context)?;
-    finish_execute(&runtime_context, result)
+    let result = function
+        .execute(arguments, context)
+        .map_err(execution_error)?;
+    finish_execute(runtime_context, result)
+}
+
+fn execution_error(error: ristretto_jit::Error) -> crate::Error {
+    match error {
+        ristretto_jit::Error::NativeStackOverflow { .. } => {
+            crate::JavaError::StackOverflowError("Native stack exhausted".to_owned()).into()
+        }
+        error => error.into(),
+    }
 }
 
 /// Converts the raw JIT result to a VM value, surfacing any pending exception
 /// stored in the runtime context as `Err(Throwable(..))`.
 ///
-/// The pending exception stays rooted through conversion to the owning VM value.
+/// Consumes the completed invocation. Exceptions and published reference results
+/// transfer their owning handles into the returned error/value before context cleanup.
 fn finish_execute(
-    runtime_context: &RuntimeContext,
+    runtime_context: RuntimeContext,
     result: Option<ristretto_jit::Value>,
 ) -> Result<Option<Value>> {
-    runtime_context.take_pending_exception_into(|pending| {
-        if pending != 0 {
-            let gc_ref: Gc<ristretto_gc::sync::RwLock<ristretto_classloader::Reference>> =
-                Gc::from_handle_rooted(runtime_context.garbage_collector(), pending)?;
-            return Err(crate::Error::Throwable(Value::Object(Some(gc_ref))));
+    if let Some(exception) = runtime_context.take_pending_exception_owner() {
+        return Err(crate::Error::Throwable(Value::Object(Some(exception))));
+    }
+    match result {
+        Some(ristretto_jit::Value::Ptr(handle)) => {
+            runtime_context.into_reference_result(handle).map(Some)
         }
-        result
-            .map(|v| convert_to_vm(runtime_context.garbage_collector(), &v))
-            .transpose()
-    })
+        Some(value) => convert_to_vm(runtime_context.garbage_collector(), &value).map(Some),
+        None => Ok(None),
+    }
 }
 
 /// Converts a vector of VM values to a vector of JIT values for passing to a JIT-compiled function.
@@ -479,8 +770,16 @@ fn convert_to_jit(value: &Value) -> Result<ristretto_jit::Value> {
     Ok(jit_value)
 }
 
-/// Resolve reference results by stable identity while the invocation still owns its roots.
-fn convert_to_vm(gc: &Arc<GarbageCollector>, jit_value: &ristretto_jit::Value) -> Result<Value> {
+/// Converts a JIT value returned by a compiled function back to a VM value.
+///
+/// # Safety
+///
+/// For `Ptr` values, the raw pointer must still be valid (i.e., the original `Gc` reference
+/// must be kept alive by the caller for the duration of JIT execution).
+fn convert_to_vm(
+    collector: &Arc<GarbageCollector>,
+    jit_value: &ristretto_jit::Value,
+) -> Result<Value> {
     let value = match jit_value {
         ristretto_jit::Value::I32(value) => Value::from(*value),
         ristretto_jit::Value::I64(value) => Value::from(*value),
@@ -488,16 +787,143 @@ fn convert_to_vm(gc: &Arc<GarbageCollector>, jit_value: &ristretto_jit::Value) -
         ristretto_jit::Value::F64(value) => Value::from(*value),
         ristretto_jit::Value::Ptr(0) => Value::Object(None),
         ristretto_jit::Value::Ptr(ptr) => {
-            let gc_ref = Gc::from_handle_rooted(gc, *ptr)?;
+            let gc_ref = Gc::from_handle_rooted(collector, *ptr)?;
             Value::Object(Some(gc_ref))
         }
     };
     Ok(value)
 }
 
+#[cfg(all(
+    test,
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
+#[path = "jit_control_flow_tests.rs"]
+mod control_flow_tests;
+
+#[cfg(all(
+    test,
+    not(any(
+        target_family = "wasm",
+        target_endian = "big",
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
+#[path = "jit_primitive_control_flow_tests.rs"]
+mod primitive_control_flow_tests;
+
+#[cfg(all(
+    test,
+    not(any(
+        target_family = "wasm",
+        target_endian = "big",
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
+#[path = "jit_static_call_tests.rs"]
+pub(crate) mod static_call_tests;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(all(
+        not(target_family = "wasm"),
+        target_endian = "little",
+        not(any(
+            target_arch = "mips",
+            target_arch = "mips64",
+            target_os = "dragonfly",
+            target_os = "solaris"
+        ))
+    ))]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn mixed_width_duplication_executes_through_the_production_gate() -> Result<()> {
+        use ristretto_classfile::attributes::{Attribute, Instruction};
+        use ristretto_classfile::{ClassFile, ConstantPool, MethodAccessFlags};
+
+        let (vm, thread) = crate::test::thread().await?;
+        let mut pool = ConstantPool::default();
+        let this_class = pool.add_class("MixedWidthDuplication")?;
+        let name_index = pool.add_utf8("run")?;
+        let descriptor_index = pool.add_utf8("()I")?;
+        let code_name = pool.add_utf8("Code")?;
+        let class = Class::from(
+            None,
+            ClassFile {
+                constant_pool: pool,
+                this_class,
+                methods: vec![ristretto_classfile::Method {
+                    access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                    name_index,
+                    descriptor_index,
+                    attributes: vec![Attribute::Code {
+                        name_index: code_name,
+                        max_stack: 6,
+                        max_locals: 0,
+                        code: vec![
+                            Instruction::Lconst_1,
+                            Instruction::Iconst_2,
+                            Instruction::Iconst_3,
+                            Instruction::Dup2_x2,
+                            Instruction::Isub,
+                            Instruction::I2l,
+                            Instruction::Lsub,
+                            Instruction::L2i,
+                            Instruction::Isub,
+                            Instruction::Isub,
+                            Instruction::Ireturn,
+                        ],
+                        exception_table: vec![],
+                        attributes: vec![],
+                    }],
+                }],
+                ..Default::default()
+            },
+        )?;
+        let method = class.try_get_method("run", "()I")?;
+        assert!(ristretto_jit::Compiler::can_compile(method.definition()));
+        assert_eq!(
+            thread.execute(&class, &method, &[] as &[Value]).await?,
+            Some(Value::Int(1))
+        );
+        // Simulate a rejection finishing after successful code publication.
+        vm.compiler()
+            .expect("compiler")
+            .insert_cached(cache_key(&method), None);
+        assert!(
+            vm.compiler()
+                .expect("compiler")
+                .get_cached(cache_key(&method))
+                .flatten()
+                .is_some()
+        );
+        #[cfg(feature = "execution-profile")]
+        {
+            let profile = vm.execution_profile();
+            let method = profile
+                .methods
+                .iter()
+                .find(|m| m.class == "MixedWidthDuplication")
+                .expect("method record");
+            assert_eq!(method.compiled_entries, 1);
+            assert_eq!(method.interpreter_entries, 0);
+        }
+        Ok(())
+    }
 
     #[test]
     fn test_convert_parameters() -> Result<()> {

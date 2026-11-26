@@ -1,30 +1,80 @@
-use crate::Error::{InvalidConstant, InvalidConstantIndex, UnsupportedType};
+use crate::Error::{InvalidConstant, InvalidConstantIndex};
 use crate::Result;
+use crate::function::activation::RequestKind;
+use crate::instruction::{
+    RequestContinuation, ThrowContext, emit_bci, emit_pending_exception_check, single_inst_result,
+};
 use crate::operand_stack::OperandStack;
+use crate::runtime_helpers::RuntimeHelpers;
 use cranelift::prelude::{FunctionBuilder, InstBuilder, types};
-use ristretto_classfile::{Constant, ConstantPool};
+use ristretto_classfile::{Constant, ConstantPool, attributes::Instruction};
+
+/// Only reference constants require an owning runtime request. Numeric constants
+/// remain immediate values; unsupported constant kinds still fail compilation.
+pub(crate) fn reference_constant_index(
+    instruction: &Instruction,
+    pool: &ConstantPool,
+) -> Option<u16> {
+    let index = match instruction {
+        Instruction::Ldc(index) => u16::from(*index),
+        Instruction::Ldc_w(index) => *index,
+        _ => return None,
+    };
+    matches!(
+        pool.get(index),
+        Some(Constant::String(_) | Constant::Class(_))
+    )
+    .then_some(index)
+}
 
 /// # References
 /// - [JVMS §6.5.ldc](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc)
+#[expect(
+    clippy::too_many_arguments,
+    reason = "constant metadata and runtime continuation state"
+)]
 pub(crate) fn ldc(
     constant_pool: &ConstantPool,
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
-    index: u8,
-) -> Result<()> {
-    let index = u16::from(index);
-    load_constant(constant_pool, function_builder, stack, index)
-}
-
-/// # References
-/// - [JVMS §6.5.ldc_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc_w)
-pub(crate) fn ldc_w(
-    constant_pool: &ConstantPool,
-    function_builder: &mut FunctionBuilder,
-    stack: &mut OperandStack,
     index: u16,
+    helpers: &RuntimeHelpers,
+    context_pointer: cranelift::prelude::Value,
+    throw_context: &ThrowContext<'_>,
+    continuation: Option<RequestContinuation<'_>>,
 ) -> Result<()> {
-    load_constant(constant_pool, function_builder, stack, index)
+    let Some(Constant::String(name) | Constant::Class(name)) = constant_pool.get(index) else {
+        return load_constant(constant_pool, function_builder, stack, index);
+    };
+    constant_pool.try_get_utf8(*name)?;
+    let bci = emit_bci(function_builder, throw_context);
+    let constant_index = function_builder.ins().iconst(types::I32, i64::from(index));
+    let synchronous = |builder: &mut FunctionBuilder| {
+        let call = builder.ins().call(
+            helpers.load_constant,
+            &[context_pointer, bci, constant_index],
+        );
+        single_inst_result(builder, call)
+    };
+    let result = if let Some(continuation) = continuation {
+        continuation.emit_bits(
+            function_builder,
+            stack,
+            (RequestKind::Constant, index),
+            &[],
+            synchronous,
+        )?
+    } else {
+        synchronous(function_builder)?
+    };
+    stack.push_object(function_builder, result)?;
+    emit_pending_exception_check(
+        function_builder,
+        stack,
+        helpers,
+        context_pointer,
+        throw_context,
+    )
 }
 
 /// Load the constant at the specified index onto the stack
@@ -51,18 +101,6 @@ fn load_constant(
         Constant::Float(value) => {
             let value = function_builder.ins().f32const(*value);
             stack.push_float(function_builder, value)?;
-        }
-        Constant::String(utf8_index) => {
-            let _utf8_value = constant_pool.try_get_utf8(*utf8_index)?;
-            return Err(UnsupportedType(
-                "loading string constants not supported".to_string(),
-            ));
-        }
-        Constant::Class(class_index) => {
-            let _class_name = constant_pool.try_get_utf8(*class_index)?;
-            return Err(UnsupportedType(
-                "loading class constants not supported".to_string(),
-            ));
         }
         constant => {
             return Err(InvalidConstant {

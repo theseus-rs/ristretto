@@ -38,7 +38,7 @@ impl ResolvedFieldRef {
                 if object.is_null() {
                     return Err(NullPointerException(None).into());
                 }
-                let mut object = object.as_object_mut()?;
+                let mut object = object.as_reference_mut()?;
                 self.put(&mut object, value)?;
             }
             _ => {

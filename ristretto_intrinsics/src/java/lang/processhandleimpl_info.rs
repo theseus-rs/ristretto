@@ -118,7 +118,8 @@ mod tests {
         let class = thread.class("java.lang.ProcessHandleImpl$Info").await?;
         let info_object = Object::new(class)?;
         let vm = thread.vm()?;
-        let info_value = Value::new_object(vm.garbage_collector(), Reference::Object(info_object));
+        let info_value =
+            Value::try_new_object(vm.garbage_collector(), Reference::Object(info_object))?;
 
         let mut parameters = Parameters::default();
         parameters.push(info_value);
@@ -135,7 +136,8 @@ mod tests {
         let class = thread.class("java.lang.ProcessHandleImpl$Info").await?;
         let info_object = Object::new(class)?;
         let vm = thread.vm()?;
-        let info_value = Value::new_object(vm.garbage_collector(), Reference::Object(info_object));
+        let info_value =
+            Value::try_new_object(vm.garbage_collector(), Reference::Object(info_object))?;
         let info_clone = info_value.clone();
 
         let mut parameters = Parameters::default();
@@ -162,7 +164,8 @@ mod tests {
         let class = thread.class("java.lang.ProcessHandleImpl$Info").await?;
         let info_object = Object::new(class)?;
         let vm = thread.vm()?;
-        let info_value = Value::new_object(vm.garbage_collector(), Reference::Object(info_object));
+        let info_value =
+            Value::try_new_object(vm.garbage_collector(), Reference::Object(info_object))?;
         let info_clone = info_value.clone();
 
         let mut parameters = Parameters::default();
@@ -189,7 +192,8 @@ mod tests {
         let class = thread.class("java.lang.ProcessHandleImpl$Info").await?;
         let info_object = Object::new(class)?;
         let vm = thread.vm()?;
-        let info_value = Value::new_object(vm.garbage_collector(), Reference::Object(info_object));
+        let info_value =
+            Value::try_new_object(vm.garbage_collector(), Reference::Object(info_object))?;
         let info_clone = info_value.clone();
 
         let mut parameters = Parameters::default();

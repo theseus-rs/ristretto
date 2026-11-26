@@ -1,28 +1,59 @@
-//! Spill typed scalar state only at taken backward edges; resume at the destination.
-//! No native frame remains on the stack while the activation is suspended.
+//! Local native continuations with independently owned runtime roots.
+//!
+//! A selected backward edge or handler entry consumes one unit. Exhaustion spills typed locals
+//! and remaining operands, then returns. Resumption restores that state and
+//! enters the destination directly, without repeating the edge or any bytecode.
 use super::frame_roots::FrameRoots;
 use super::native_frame::word_offset;
 use crate::Error::{InternalError, InvalidBlockAddress};
 use crate::Result;
 use crate::function::ContinuationLayout;
+use crate::instruction::{CallTarget, allocation_metadata, call_signature};
 use crate::local_variables::LocalVariables;
 use crate::runtime_helpers::RuntimeHelpers;
 use ahash::AHashMap;
 use cranelift::codegen::ir::MemFlagsData;
 use cranelift::prelude::*;
 use ristretto_classfile::ConstantPool;
-use ristretto_classfile::attributes::Instruction;
+use ristretto_classfile::attributes::{ExceptionTableEntry, Instruction};
+use std::collections::{BTreeMap, BTreeSet};
 
 #[path = "call_continuation.rs"]
 mod call;
-pub(crate) use call::{CallContinuation, CallTarget};
-#[path = "heap_continuation.rs"]
-mod heap;
-pub(crate) use heap::HeapRequest;
-#[path = "array_continuation.rs"]
-mod array;
-pub(crate) use array::ArrayRequest;
-use std::collections::{BTreeMap, BTreeSet};
+pub(crate) use call::CallContinuation;
+
+/// Logical cells needed by an outgoing runtime request; shared by native and heap buffers.
+pub(crate) fn argument_count(
+    instruction: &Instruction,
+    pool: &ConstantPool,
+) -> Result<Option<usize>> {
+    if crate::instruction::reference_constant_index(instruction, pool).is_some() {
+        return Ok(Some(0));
+    }
+    if let Some(target) = CallTarget::from_instruction(instruction) {
+        let (_, receiver, _) = target.metadata();
+        return Ok(Some(call_signature(pool, target)?.0.len() + receiver));
+    }
+    if let Some((kind, _)) = crate::instruction::array_access_metadata(instruction) {
+        return Ok(Some(kind.argument_count()));
+    }
+    if matches!(instruction, Instruction::Aastore) {
+        return Ok(Some(3));
+    }
+    if matches!(
+        instruction,
+        Instruction::Monitorenter
+            | Instruction::Monitorexit
+            | Instruction::Checkcast(_)
+            | Instruction::Instanceof(_)
+    ) {
+        return Ok(Some(1));
+    }
+    if let Some((_, _, count)) = crate::instruction::field_metadata(instruction) {
+        return Ok(Some(count));
+    }
+    Ok(allocation_metadata(instruction).map(|(_, _, count)| count))
+}
 
 const MAX_TRANSFER_SLOTS: usize = 64 * 1024;
 const INVALID_CONTINUATION_TRAP: u8 = 1;
@@ -38,6 +69,7 @@ struct Point {
 pub(crate) struct Continuation {
     points: BTreeMap<usize, Point>,
     calls: BTreeMap<usize, Block>,
+    pub(crate) exception_dispatch: BTreeMap<usize, Block>,
     locals: Vec<(Variable, Type)>,
     remaining: Variable,
     pub layout: ContinuationLayout,
@@ -46,38 +78,68 @@ pub(crate) struct Continuation {
 impl Continuation {
     #[expect(
         clippy::too_many_arguments,
-        reason = "bounded continuation layout metadata"
+        clippy::too_many_lines,
+        reason = "method metadata, bounded handler sites and compiler state define the private continuation layout"
     )]
     pub fn new(
         builder: &mut FunctionBuilder,
         blocks: &AHashMap<usize, Block>,
         instructions: &[Instruction],
         locals: &LocalVariables,
-        max_stack: u16,
         references: &[Value],
         requires_context: bool,
+        max_stack: u16,
         pool: &ConstantPool,
+        exception_table: &[ExceptionTableEntry],
+        requests_only: bool,
     ) -> Result<Self> {
-        let mut addresses = BTreeSet::new();
+        let mut points = BTreeMap::new();
         let mut calls = BTreeMap::new();
+        let mut exception_dispatch = BTreeMap::new();
+        let typed_entries = exception_table
+            .iter()
+            .enumerate()
+            .filter(|(_, entry)| entry.catch_type != 0)
+            .collect::<Vec<_>>();
+        // Bound table expansion before allocating Cranelift blocks. Even unreachable
+        // protected bytecodes can otherwise multiply a large exception table.
+        if instructions
+            .len()
+            .checked_mul(typed_entries.len())
+            .is_none_or(|sites| sites > 64 * 1024)
+        {
+            return Err(crate::Error::UnsupportedMethod(
+                "exception continuation expansion limit exceeded".to_owned(),
+            ));
+        }
         let mut call_capacity = 0;
+        let mut addresses: BTreeSet<_> = exception_table
+            .iter()
+            .map(|entry| usize::from(entry.handler_pc))
+            .collect();
         for (pc, instruction) in Instruction::with_offsets(instructions) {
-            if let Some(target) = CallTarget::from_instruction(instruction) {
-                let (parameters, _) = target.signature(pool)?;
-                call_capacity = call_capacity.max(parameters.len() + target.receiver());
-                calls.insert(pc, builder.create_block());
-            } else if let Some(request) = HeapRequest::from_instruction(instruction) {
-                call_capacity = call_capacity.max(request.capacity(pool)?);
-                calls.insert(pc, builder.create_block());
-            } else if let Some(request) = ArrayRequest::from_instruction(instruction) {
-                call_capacity = call_capacity.max(request.capacity());
+            for &(ordinal, entry) in &typed_entries {
+                if entry.catch_type != 0 && entry.range_pc.contains(&u16::try_from(pc)?) {
+                    exception_dispatch
+                        .entry(pc)
+                        .or_insert_with(|| builder.create_block());
+                    calls.insert(Self::exception_site(pc, ordinal)?, builder.create_block());
+                }
+            }
+            if let Some(count) = argument_count(instruction, pool)? {
+                call_capacity = call_capacity.max(count);
                 calls.insert(pc, builder.create_block());
             }
             for offset in instruction.branch_offsets().filter(|offset| *offset <= 0) {
-                addresses.insert(usize::try_from(i64::try_from(pc)? + i64::from(offset))?);
+                let address = usize::try_from(i64::try_from(pc)? + i64::from(offset))?;
+                addresses.insert(address);
             }
         }
         let locals = locals.continuation_variables();
+        // Every restore edge carries declared typed locals and potentially an
+        // operand stack. Reject excessive state expansion before emitting those
+        // stores/loads and SSA joins; otherwise a small class file can create
+        // millions of IR instructions and monopolize compilation.
         let frame_slots = locals.len().checked_add(usize::from(max_stack));
         if frame_slots.is_none_or(|slots| {
             slots > MAX_TRANSFER_SLOTS
@@ -91,9 +153,9 @@ impl Continuation {
                 "continuation state-transfer limit exceeded".to_owned(),
             ));
         }
-        let mut points = BTreeMap::new();
         for address in addresses {
             let target = *blocks.get(&address).ok_or(InvalidBlockAddress(address))?;
+            // Capture explicit operands before SSA appends implicit locals.
             let operands: Vec<_> = builder
                 .block_params(target)
                 .iter()
@@ -121,33 +183,34 @@ impl Continuation {
                 },
             );
         }
-        let max_operands = points
-            .values()
-            .map(|point| point.operands.len())
-            .max()
-            .unwrap_or(0)
-            .max(if calls.is_empty() {
-                0
-            } else {
-                usize::from(max_stack)
-            });
-        let words = ContinuationLayout::HEADER_WORDS
+        let max_operands = if calls.is_empty() {
+            points
+                .values()
+                .map(|point| point.operands.len())
+                .max()
+                .unwrap_or(0)
+        } else {
+            usize::from(max_stack)
+        };
+        let mut words = ContinuationLayout::HEADER_WORDS
             .checked_add(locals.len())
             .and_then(|words| words.checked_add(max_operands))
             .ok_or_else(|| InternalError("continuation size overflow".to_owned()))?;
-        let call_offset = (!calls.is_empty()).then_some(words);
-        let words = if calls.is_empty() {
-            words
+        let call_offset = if calls.is_empty() {
+            None
         } else {
-            words
+            let offset = words;
+            words = words
                 .checked_add(ContinuationLayout::CALL_HEADER_WORDS)
                 .and_then(|words| words.checked_add(call_capacity))
-                .ok_or_else(|| InternalError("call continuation size overflow".to_owned()))?
+                .ok_or_else(|| InternalError("call continuation size overflow".to_owned()))?;
+            Some(offset)
         };
         let _ = word_offset(words)?;
         Ok(Self {
             points,
             calls,
+            exception_dispatch,
             locals,
             remaining: builder.declare_var(types::I64),
             layout: ContinuationLayout {
@@ -156,8 +219,20 @@ impl Continuation {
                 requires_context,
                 call_offset,
                 call_capacity,
+                requests_only,
             },
         })
+    }
+
+    /// Separate each typed table entry from both bytecode calls and other entries
+    /// at the same throwing BCI, including duplicate catch types.
+    pub(crate) fn exception_site(bci: usize, ordinal: usize) -> Result<usize> {
+        let bci = u16::try_from(bci)?;
+        ordinal
+            .checked_add(1)
+            .and_then(|entry| entry.checked_mul(1 << 16))
+            .and_then(|base| base.checked_add(usize::from(bci)))
+            .ok_or_else(|| InternalError("exception continuation token overflow".to_owned()))
     }
 
     /// Emit in the ABI entry block, after argument locals have been declared.
@@ -251,6 +326,25 @@ impl Continuation {
         Ok(())
     }
 
+    /// Exception dispatch has its own destination map. Normal branches to a
+    /// handler BCI still use their ordinary forward/backward branch semantics.
+    pub fn handler_targets(
+        &self,
+        blocks: &AHashMap<usize, Block>,
+        exception_table: &[ExceptionTableEntry],
+    ) -> Result<AHashMap<usize, Block>> {
+        let mut targets = blocks.clone();
+        for entry in exception_table {
+            let address = usize::from(entry.handler_pc);
+            let point = self
+                .points
+                .get(&address)
+                .ok_or(InvalidBlockAddress(address))?;
+            targets.insert(address, point.edge);
+        }
+        Ok(targets)
+    }
+
     /// Reuse one target map for the method; do not clone the whole CFG per edge.
     /// Repeated switch destinations restore the same original block idempotently.
     pub fn restore_targets(
@@ -270,7 +364,8 @@ impl Continuation {
         Ok(())
     }
 
-    /// Emit one spill point per selected backward destination. SSA supplies locals.
+    /// Emit once after all bytecode blocks: SSA supplies the locals from whichever
+    /// predecessor selected this edge. Only explicit operands are forwarded.
     pub(super) fn finish(
         &self,
         builder: &mut FunctionBuilder,
@@ -280,6 +375,18 @@ impl Continuation {
         helpers: &RuntimeHelpers,
         context: Value,
     ) -> Result<()> {
+        // Unreachable bytecodes never emitted their call body. A private token
+        // cannot validly select them; keep the dispatch total with a cold trap.
+        for block in self.calls.values() {
+            if !builder.func.layout.is_block_inserted(*block) {
+                builder.switch_to_block(*block);
+                builder.ins().trap(
+                    TrapCode::user(crate::instruction::TRAP_INTERNAL_ERROR).ok_or_else(|| {
+                        InternalError("invalid continuation trap code".to_owned())
+                    })?,
+                );
+            }
+        }
         for (&address, point) in &self.points {
             builder.switch_to_block(point.edge);
             let remaining = builder.use_var(self.remaining);
@@ -299,6 +406,9 @@ impl Continuation {
                 .brif(remaining, point.target, &arguments, spill, &[]);
             builder.switch_to_block(spill);
             if let Some(roots) = &mut frame_roots {
+                // Publish the destination's live set, not the predecessor's:
+                // consumed reference conditions and dead locals must not remain
+                // rooted for the duration of an arbitrarily long suspension.
                 let references = point
                     .reference_operands
                     .iter()
@@ -308,7 +418,6 @@ impl Continuation {
                         })
                     })
                     .collect::<Result<Vec<_>>>()?;
-                // The destination live set is authoritative while suspended.
                 roots.publish(builder, locals, references, helpers, context, address)?;
             }
             for (index, &(variable, _)) in self.locals.iter().enumerate() {

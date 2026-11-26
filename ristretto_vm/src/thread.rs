@@ -16,7 +16,7 @@ use ristretto_classfile::{
     CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, FieldAccessFlags, FieldType, JavaStr,
     MethodAccessFlags,
 };
-use ristretto_classloader::{Class, ClassLoaderType, Method, Object, Reference, Value};
+use ristretto_classloader::{Class, ClassLoaderType, Method, Object, Value};
 use ristretto_intrinsics::get_monitor_id;
 use ristretto_macros::async_method;
 use ristretto_types::method_resolution;
@@ -28,15 +28,34 @@ use tokio::sync::{Notify, RwLock};
 use tokio::time::{Instant, timeout_at};
 use tracing::{Level, debug, event_enabled};
 
-#[cfg(all(not(target_family = "wasm"), not(target_os = "solaris")))]
-// Leave room for another interpreter transition without rejecting legitimate bootstrap work on
-// Tokio's smaller worker-thread stacks.
-const NATIVE_STACK_RED_ZONE: usize = 128 * 1024;
+#[path = "explicit_monitors.rs"]
+mod explicit_monitors;
+use explicit_monitors::ExplicitMonitors;
 
 const STACK_OVERFLOW_RESERVE_SLOTS: usize = 1_024;
 
 /// Number of bytecodes to dispatch before yielding to the Tokio runtime.
 const INSTRUCTION_YIELD_COUNT: u32 = 4096;
+
+/// A cancelled initializer cannot leave other logical threads waiting forever,
+/// or allow its partial side effects to replay on a later initialization attempt.
+struct ClassInitializationGuard<'a> {
+    class: &'a Class,
+    thread_id: u64,
+}
+
+impl Drop for ClassInitializationGuard<'_> {
+    fn drop(&mut self) {
+        if matches!(self.class.initialization_state(),
+            Ok(ristretto_classloader::InitializationState::BeingInitialized { thread_id })
+                if thread_id == self.thread_id)
+        {
+            let _ = self
+                .class
+                .fail_initialization("Class initialization cancelled".to_owned());
+        }
+    }
+}
 
 /// Account locally while synchronous dispatch owns execution. Commit before any suspension,
 /// method call, exception handling or return, so reentrant Java execution sees the current count.
@@ -93,8 +112,8 @@ impl Drop for MonitorGuard {
 
 /// Remove an in-progress Java class lookup even when loading fails or panics.
 struct ClassLoadingGuard<'a> {
-    loading: &'a Mutex<HashSet<(usize, String)>>,
-    name: Option<(usize, String)>,
+    loading: &'a Mutex<HashSet<(ristretto_gc::ObjectId, String)>>,
+    name: Option<(ristretto_gc::ObjectId, String)>,
 }
 
 impl Drop for ClassLoadingGuard<'_> {
@@ -196,7 +215,12 @@ impl JavaStack {
         true
     }
 
-    fn push_interpreted(&mut self, thread: &Thread, call: MethodCall) -> Result<()> {
+    fn push_interpreted(
+        &mut self,
+        thread: &Thread,
+        call: MethodCall,
+        #[cfg(feature = "execution-profile")] vm: &VM,
+    ) -> Result<()> {
         let MethodCall {
             class,
             method,
@@ -221,6 +245,8 @@ impl JavaStack {
             has_return_type,
             monitor: MonitorGuard::new(None, thread.id),
         });
+        #[cfg(feature = "execution-profile")]
+        vm.execution_recorder.interpreted(&class, &method);
         Ok(())
     }
 
@@ -283,14 +309,23 @@ impl JavaStack {
         Ok(used_slots)
     }
 
-    fn push_jit(&mut self, frame: Arc<Frame>, has_return_type: bool, monitor: MonitorGuard) {
+    fn push_jit(
+        &mut self,
+        frame: Arc<Frame>,
+        has_return_type: bool,
+        monitor: MonitorGuard,
+    ) -> Result<()> {
+        let slots = frame.stack_slots()?;
+        let used_slots = self.checked_used_slots(slots, frame.class(), frame.method())?;
+        self.used_slots = used_slots;
         self.entries.push(StackEntry {
             frame,
             state: None,
-            slots: 0,
+            slots,
             has_return_type,
             monitor,
         });
+        Ok(())
     }
 
     fn pop(&mut self) -> Option<StackEntry> {
@@ -354,12 +389,19 @@ enum InterpreterExit {
 struct ExecutionBoundary<'a> {
     thread: &'a Thread,
     depth: usize,
+    monitor_checkpoint: u64,
+    completed: bool,
 }
 
 impl Drop for ExecutionBoundary<'_> {
     fn drop(&mut self) {
         while self.thread.stack.read().entries.len() > self.depth {
             let _ = self.thread.pop_frame();
+        }
+        if !self.completed {
+            self.thread
+                .explicit_monitors
+                .cancel_since(self.monitor_checkpoint);
         }
     }
 }
@@ -432,10 +474,12 @@ pub struct Thread {
     stack: parking_lot::RwLock<JavaStack>,
     instruction_yield_count: AtomicU32,
     jit_runtime: ThreadRuntime,
+    explicit_monitors: ExplicitMonitors,
+    gc_context: Option<ristretto_gc::ExecutionContext>,
     /// Tracks (loader, name) pairs currently being loaded on this thread, preventing infinite
     /// recursion when `loadClass()` internally triggers further class resolution.
     /// Uses `std::sync::Mutex` (not tokio) so it can be accessed from `Drop`.
-    java_cl_loading: Mutex<HashSet<(usize, String)>>,
+    java_cl_loading: Mutex<HashSet<(ristretto_gc::ObjectId, String)>>,
     park_state: ParkState,
 }
 
@@ -446,6 +490,11 @@ impl Thread {
         let vm_ref = vm.clone();
         let max_stack_size = vm.upgrade().map_or(DEFAULT_MAX_JAVA_STACK_SIZE, |vm| {
             vm.configuration().max_java_stack_size()
+        });
+        let gc_context = vm.upgrade().and_then(|vm| {
+            let gc = vm.garbage_collector();
+            gc.execution_contexts_enabled()
+                .then(|| gc.register_context())
         });
         let max_stack_slots = max_stack_size / JAVA_STACK_SLOT_SIZE;
         let name = format!("Thread-{id}");
@@ -459,6 +508,8 @@ impl Thread {
             stack: parking_lot::RwLock::new(JavaStack::new(max_stack_slots)),
             instruction_yield_count: AtomicU32::new(0),
             jit_runtime: ThreadRuntime::default(),
+            explicit_monitors: ExplicitMonitors::default(),
+            gc_context,
             java_cl_loading: Mutex::new(HashSet::new()),
             park_state: ParkState::new(),
         })
@@ -1035,7 +1086,7 @@ impl Thread {
         }
 
         let loader_id = match &java_classloader {
-            Value::Object(Some(reference)) => reference.as_ptr() as usize,
+            Value::Object(Some(reference)) => reference.identity(),
             _ => return Err(InternalError("invalid Java class loader".to_string())),
         };
         let loading_key = (loader_id, class_name_str.clone());
@@ -1135,10 +1186,24 @@ impl Thread {
     /// if the class initialization fails
     #[async_method]
     pub(crate) async fn initialize_class(&self, class: &Arc<Class>) -> Result<()> {
+        self.vm()?.garbage_collector().register_heap_owner(class);
         if !self.claim_class_initialization(class).await? {
             return Ok(());
         }
-        self.initialize_class_contents(class).await
+        let _claim = ClassInitializationGuard {
+            class,
+            thread_id: self.id,
+        };
+        let result = self.initialize_class_contents(class).await;
+        if let Err(error) = &result
+            && matches!(
+                class.initialization_state()?,
+                ristretto_classloader::InitializationState::BeingInitialized { .. }
+            )
+        {
+            class.fail_initialization(error.to_string())?;
+        }
+        result
     }
 
     /// Waits for another initializer or claims initialization for this thread.
@@ -1389,13 +1454,19 @@ impl Thread {
             return Ok(None);
         }
         let monitor_id = if method.is_static() {
-            if let Ok(Some(Value::Object(Some(ref reference)))) = class.object() {
-                get_monitor_id(&reference.read())
+            let mirror = match class.object()? {
+                Some(mirror) => mirror,
+                None => Box::pin(class.to_object(self)).await?,
+            };
+            if let Value::Object(Some(reference)) = mirror {
+                get_monitor_id(&reference)
             } else {
-                None
+                return Err(InternalError(
+                    "Invalid synchronized class mirror".to_owned(),
+                ));
             }
         } else if let Some(Value::Object(Some(reference))) = parameters.first() {
-            get_monitor_id(&reference.read())
+            get_monitor_id(reference)
         } else {
             None
         };
@@ -1421,11 +1492,30 @@ impl Thread {
         method: &Arc<Method>,
         parameters: &[impl RustValue],
     ) -> Result<Option<Value>> {
+        let mut execution = std::pin::pin!(self.execute_in_context(class, method, parameters));
+        std::future::poll_fn(|cx| {
+            if let Some(context) = &self.gc_context {
+                context.with(|| execution.as_mut().poll(cx))
+            } else {
+                execution.as_mut().poll(cx)
+            }
+        })
+        .await
+    }
+
+    async fn execute_in_context(
+        &self,
+        class: &Arc<Class>,
+        method: &Arc<Method>,
+        parameters: &[impl RustValue],
+    ) -> Result<Option<Value>> {
         let parameters = process_values(self, parameters).await?;
         let base_depth = self.stack.read().entries.len();
-        let _boundary = ExecutionBoundary {
+        let mut boundary = ExecutionBoundary {
             thread: self,
             depth: base_depth,
+            monitor_checkpoint: self.explicit_monitors.checkpoint(),
+            completed: false,
         };
         let call = MethodCall {
             intrinsic: crate::frame::IntrinsicBinding::Unresolved,
@@ -1435,10 +1525,13 @@ impl Thread {
             has_return_type: false,
         };
 
-        match self.dispatch_method(call, None).await? {
-            DispatchResult::FramePushed => self.run_interpreter(base_depth).await,
-            DispatchResult::Completed(value) => Ok(value),
-        }
+        let result = match self.dispatch_method(call, None).await {
+            Ok(DispatchResult::FramePushed) => self.run_interpreter(base_depth).await,
+            Ok(DispatchResult::Completed(value)) => Ok(value),
+            Err(error) => Err(error),
+        };
+        boundary.completed = true;
+        result
     }
 
     async fn dispatch_method(
@@ -1446,6 +1539,8 @@ impl Thread {
         call: MethodCall,
         caller: Option<&mut FrameState>,
     ) -> Result<DispatchResult> {
+        #[cfg(not(target_family = "wasm"))]
+        crate::native_stack::check_entry()?;
         let vm = self.vm()?;
 
         let sync_monitor = self
@@ -1469,6 +1564,8 @@ impl Thread {
                 ));
             }
             let argument = arguments.pop_int()?;
+            #[cfg(feature = "execution-profile")]
+            vm.execution_recorder.intrinsic(&call.class, &call.method);
             let monitor = monitor_guard.monitor.is_some().then_some(monitor_guard);
             let result = binding
                 .invoke(vm.garbage_collector(), argument, monitor)
@@ -1532,6 +1629,9 @@ impl Thread {
                 return Err(InternalError("Call stack is not available".to_string()));
             };
             let parameters = parameters.into_parameters(caller)?;
+            #[cfg(feature = "execution-profile")]
+            vm.execution_recorder.intrinsic(&class, &method);
+            drop(vm);
             let result = match rust_method {
                 IntrinsicMethod::Sync(function) => function(thread, parameters),
                 IntrinsicMethod::Async(function) => function(thread, parameters).await,
@@ -1546,17 +1646,22 @@ impl Thread {
             };
             {
                 let mut stack = self.stack.write();
+                // Reject before taking a pooled frame or moving the monitor guard
+                // under the stack lock. Compiled and interpreted frames share one
+                // Java budget; native stack consumption is a separate constraint.
+                stack.check_capacity(Frame::stack_slots_for(&method)?, &class, &method)?;
                 let frame = stack.take_frame(&self.thread, &class, &method);
-                stack.push_jit(frame, has_return_type, monitor_guard);
+                stack.push_jit(frame, has_return_type, monitor_guard)?;
             }
-            let result = jit::execute(
+            let result = jit::execute_cooperatively(
                 &jit_method,
                 parameters.as_slice(caller.as_deref())?,
                 gc,
                 &vm,
                 &thread,
                 &class,
-            );
+            )
+            .await;
             self.pop_frame()?;
             if let CallParameters::Stack(count) = parameters {
                 let caller = caller.ok_or_else(|| {
@@ -1580,6 +1685,8 @@ impl Thread {
         parameters.initialize(&mut state, &class, &method, caller)?;
         let frame = stack.take_frame(&self.thread, &class, &method);
         stack.push(frame, state, has_return_type, monitor_guard)?;
+        #[cfg(feature = "execution-profile")]
+        vm.execution_recorder.interpreted(&class, &method);
         Ok(DispatchResult::FramePushed)
     }
 
@@ -1649,7 +1756,12 @@ impl Thread {
                             ExecutionResult::Call(call),
                         )));
                     }
-                    if let Err(error) = stack.push_interpreted(self, call) {
+                    if let Err(error) = stack.push_interpreted(
+                        self,
+                        call,
+                        #[cfg(feature = "execution-profile")]
+                        vm,
+                    ) {
                         return Ok(InterpreterExit::Boundary(BatchExit::Fault(error)));
                     }
                 }
@@ -1687,9 +1799,12 @@ impl Thread {
     }
 
     async fn run_interpreter(&self, base_depth: usize) -> Result<Option<Value>> {
-        let vm = self.vm()?;
         loop {
-            let boundary = match self.run_sync_interpreter(&vm, base_depth) {
+            let batch = {
+                let vm = self.vm()?;
+                self.run_sync_interpreter(&vm, base_depth)
+            };
+            let boundary = match batch {
                 Ok(InterpreterExit::Completed(value)) => return Ok(value),
                 Ok(InterpreterExit::Boundary(BatchExit::Complete(ExecutionResult::Continue))) => {
                     continue;
@@ -1892,10 +2007,10 @@ impl Thread {
 
         let parameters = process_values(self, parameters).await?;
         let mut constructor_parameters = Vec::with_capacity(parameters.len() + 1);
-        let object = Value::new_object(
-            self.vm()?.garbage_collector(),
-            Reference::Object(Object::new(class.clone())?),
-        );
+        let vm = self.vm()?;
+        let gc = vm.garbage_collector();
+        let instance = Object::new_in_async(gc, class.clone()).await?;
+        let object = Value::try_from_object_async(gc, instance).await?;
         constructor_parameters.push(object.clone());
         constructor_parameters.extend(parameters);
         Box::pin(self.execute(&class, &constructor, &constructor_parameters)).await?;
@@ -2391,7 +2506,12 @@ mod tests {
             parameters: vec![Value::Int(3)].into(),
             has_return_type: false,
         };
-        thread.stack.write().push_interpreted(&thread, call)?;
+        thread.stack.write().push_interpreted(
+            &thread,
+            call,
+            #[cfg(feature = "execution-profile")]
+            &vm,
+        )?;
         let count = thread.instruction_count();
         assert!(matches!(
             thread.run_sync_interpreter(&vm, 0)?,
@@ -2401,6 +2521,20 @@ mod tests {
         assert_eq!(31, thread.instruction_count().wrapping_sub(count));
         assert!(thread.frames()?.is_empty());
         assert_eq!(0, thread.stack.read().used_slots);
+        #[cfg(feature = "execution-profile")]
+        {
+            let profile = vm.execution_profile();
+            let method = profile
+                .methods
+                .iter()
+                .find(|m| m.class == "InterpreterRecursionTest" && m.name == "recurse")
+                .expect("recursive method coverage");
+            assert_eq!(
+                method.interpreter_entries, 6,
+                "both dispatch and fast frame pushes must count"
+            );
+            assert_eq!(method.compiled_entries, 0);
+        }
         Ok(())
     }
 
@@ -2642,6 +2776,8 @@ mod tests {
             let _boundary = ExecutionBoundary {
                 thread: &thread,
                 depth: 0,
+                monitor_checkpoint: thread.explicit_monitors.checkpoint(),
+                completed: false,
             };
             thread.stack.write().push(
                 frame,
@@ -2665,8 +2801,10 @@ mod tests {
         let class = thread.class("java/lang/Object").await?;
         let object = Value::from_object(vm.garbage_collector(), Object::new(class.clone())?);
         let monitor_id = {
-            let reference = object.as_reference()?;
-            get_monitor_id(&reference)
+            let Value::Object(Some(reference)) = &object else {
+                return Err(InternalError("missing object".into()));
+            };
+            get_monitor_id(reference)
                 .ok_or_else(|| InternalError("object monitor ID missing".to_owned()))?
         };
         let monitor = vm.monitor_registry().monitor(monitor_id);
@@ -2903,3 +3041,31 @@ mod tests {
         Ok(())
     }
 }
+
+#[cfg(all(
+    test,
+    not(any(
+        target_family = "wasm",
+        target_endian = "big",
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
+#[path = "jit_stack_tests.rs"]
+mod jit_stack_tests;
+
+#[cfg(all(
+    test,
+    not(any(
+        target_family = "wasm",
+        target_endian = "big",
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
+#[path = "jit_monitor_tests.rs"]
+mod jit_monitor_tests;

@@ -1,49 +1,38 @@
-#[path = "frame_roots.rs"]
-mod frame_roots;
-#[path = "reference_liveness.rs"]
-mod reference_liveness;
-
-#[path = "continuation.rs"]
-mod continuation;
-
-#[path = "native_frame.rs"]
-mod native_frame;
-
 use crate::Error::{
     InternalError, InvalidBlockAddress, UnsupportedInstruction, UnsupportedTargetISA,
 };
 use crate::control_flow_graph::InstructionControlFlow;
+use crate::control_flow_graph::StackType;
 use crate::function::Function;
-use crate::instruction::ThrowContext;
+use crate::instruction::{CallTarget, ThrowContext, array_access, array_access_metadata};
 use crate::instruction::{
-    aaload, aastore, aconst_null, aload_ref, aload_ref_0, aload_ref_1, aload_ref_2, aload_ref_3,
-    aload_ref_w, anewarray, areturn, arraylength, astore_ref, astore_ref_0, astore_ref_1,
-    astore_ref_2, astore_ref_3, astore_ref_w, athrow, baload, bastore, bipush, breakpoint, caload,
-    castore, checkcast, d2f, d2i, d2l, dadd, daload, dastore, dcmpg, dcmpl, dconst_0, dconst_1,
-    ddiv, dload, dload_0, dload_1, dload_2, dload_3, dload_w, dmul, dneg, drem, dreturn, dstore,
-    dstore_0, dstore_1, dstore_2, dstore_3, dstore_w, dsub, dup, dup_x1, dup_x2, dup2, dup2_x1,
-    dup2_x2, emit_exception_return, f2d, f2i, f2l, fadd, faload, fastore, fcmpg, fcmpl, fconst_0,
-    fconst_1, fconst_2, fdiv, fload, fload_0, fload_1, fload_2, fload_3, fload_w, fmul, fneg, frem,
-    freturn, fstore, fstore_0, fstore_1, fstore_2, fstore_3, fstore_w, fsub, getfield, getstatic,
-    goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iaload, iand, iastore, iconst_0, iconst_1,
-    iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv, if_acmpeq, if_acmpne, if_icmpeq,
-    if_icmpge, if_icmpgt, if_icmple, if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne,
-    ifnonnull, ifnull, iinc, iinc_w, iload, iload_0, iload_1, iload_2, iload_3, iload_w, impdep1,
-    impdep2, imul, ineg, instanceof, ior, irem, ireturn, ishl, ishr, istore, istore_0, istore_1,
-    istore_2, istore_3, istore_w, isub, iushr, ixor, jsr, jsr_w, l2d, l2f, l2i, ladd, laload, land,
-    lastore, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w, ldiv, lload, lload_0, lload_1, lload_2,
+    aastore, aconst_null, aload_ref, aload_ref_0, aload_ref_1, aload_ref_2, aload_ref_3,
+    aload_ref_w, anewarray, areturn, astore_ref, astore_ref_0, astore_ref_1, astore_ref_2,
+    astore_ref_3, astore_ref_w, athrow, bipush, breakpoint, checkcast, d2f, d2i, d2l, dadd, dcmpg,
+    dcmpl, dconst_0, dconst_1, ddiv, dload, dload_0, dload_1, dload_2, dload_3, dload_w, dmul,
+    dneg, drem, dreturn, dstore, dstore_0, dstore_1, dstore_2, dstore_3, dstore_w, dsub, dup,
+    dup_x1, dup_x2, dup2, dup2_x1, dup2_x2, emit_exception_return, f2d, f2i, f2l, fadd, fcmpg,
+    fcmpl, fconst_0, fconst_1, fconst_2, fdiv, fload, fload_0, fload_1, fload_2, fload_3, fload_w,
+    fmul, fneg, frem, freturn, fstore, fstore_0, fstore_1, fstore_2, fstore_3, fstore_w, fsub,
+    getfield, getstatic, goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iand, iconst_0,
+    iconst_1, iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv, if_acmpeq, if_acmpne,
+    if_icmpeq, if_icmpge, if_icmpgt, if_icmple, if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt,
+    ifne, ifnonnull, ifnull, iinc, iinc_w, iload, iload_0, iload_1, iload_2, iload_3, iload_w,
+    impdep1, impdep2, imul, ineg, instanceof, invoke, ior, irem, ireturn, ishl, ishr, istore,
+    istore_0, istore_1, istore_2, istore_3, istore_w, isub, iushr, ixor, jsr, jsr_w, l2d, l2f, l2i,
+    ladd, land, lcmp, lconst_0, lconst_1, ldc, ldc2_w, ldiv, lload, lload_0, lload_1, lload_2,
     lload_3, lload_w, lmul, lneg, lookupswitch, lor, lrem, lreturn, lshl, lshr, lstore, lstore_0,
-    lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr, lxor, monitorenter, monitorexit,
-    multianewarray, new_object, newarray, nop, pop, pop2, putfield, putstatic, ret, ret_w,
-    r#return, saload, sastore, sipush, swap, tableswitch, wide,
+    lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr, lxor, monitor, multianewarray, new_object,
+    newarray, nop, pop, pop2, putfield, putstatic, ret, ret_w, r#return, sipush, swap, tableswitch,
+    wide,
 };
-use crate::local_type::{LocalType, StackType};
+use crate::local_type::LocalType;
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
 use crate::{JitValue, Result, control_flow_graph};
 use ahash::AHashMap;
-use cranelift::codegen::ir::{MemFlagsData, UserFuncName};
+use cranelift::codegen::ir::{MemFlagsData, StackSlot, UserFuncName};
 use cranelift::codegen::isa::OwnedTargetIsa;
 use cranelift::codegen::settings::Flags;
 use cranelift::jit::{JITBuilder, JITModule};
@@ -56,6 +45,18 @@ use ristretto_classfile::{
 use std::fmt::Debug;
 use std::mem;
 use std::sync::Arc;
+
+#[cfg(feature = "execution-profile")]
+#[path = "backedge_profile.rs"]
+mod backedge_profile;
+#[path = "continuation.rs"]
+pub(crate) mod continuation;
+#[path = "frame_roots.rs"]
+mod frame_roots;
+#[path = "native_frame.rs"]
+mod native_frame;
+#[path = "reference_liveness.rs"]
+mod reference_liveness;
 
 #[cfg(debug_assertions)]
 const ENABLE_VERIFIER: &str = "true";
@@ -96,6 +97,11 @@ impl Compiler {
         }
         let flags = Flags::new(flag_builder);
         let target_isa = isa_builder.finish(flags)?;
+        if !matches!(target_isa.name(), "x64" | "aarch64" | "riscv64") {
+            return Err(UnsupportedTargetISA(
+                "native frame sizing is not supported for this ISA",
+            ));
+        }
         Ok(Compiler { target_isa })
     }
 
@@ -107,6 +113,11 @@ impl Compiler {
             jit_builder.symbol(name, ptr);
         }
         jit_builder.symbol(native_frame::PROBE_SYMBOL, native_frame::probe as *const u8);
+        #[cfg(feature = "execution-profile")]
+        jit_builder.symbol(
+            backedge_profile::SYMBOL,
+            backedge_profile::record as *const u8,
+        );
         JITModule::new(jit_builder)
     }
 
@@ -114,10 +125,10 @@ impl Compiler {
     /// This performs a fast scan of the method's bytecode instructions to check
     /// for unsupported opcodes without doing any expensive compilation work.
     ///
-    /// Production execution is currently limited to static, straight-line primitive methods.
-    /// Reference operations, runtime-helper calls, and general control flow remain available to
-    /// focused compiler tests, but are not safe to execute in a live VM until compiled frames can
-    /// participate fully in GC root tracing and the remaining control-flow gaps are resolved.
+    /// Production execution is limited to static primitive methods. Backward/self edges
+    /// use an owning continuation ABI so the VM can yield and cancel between bounded slices.
+    /// Reference operations and runtime-helper calls remain available to focused
+    /// compiler tests while their frame-root and semantic qualification is incomplete.
     ///
     /// Methods with non-empty exception tables are also rejected. The
     /// exception-handler dispatch codegen (in `instruction::exception` and
@@ -125,9 +136,8 @@ impl Compiler {
     /// `athrow_caught_by_catch_all_handler` test, but enabling it for production
     /// methods exposes unrelated JIT gaps:
     ///
-    /// - `monitorenter`/`monitorexit` are no-ops in the JIT (see
-    ///   `instruction/monitor.rs`); compiler-generated try/finally blocks for
-    ///   `synchronized` methods would silently lose synchronization semantics.
+    /// - Monitor runtime integration remains experimental until complete synchronization,
+    ///   cancellation and Java memory-ordering qualification.
     /// - Array `iaload`/`aaload`/`arraylength` NPEs from JIT-compiled methods
     ///   currently report the wrong extended message (the receiver name is
     ///   substituted instead of the array name).
@@ -136,8 +146,15 @@ impl Compiler {
     /// dispatch path being exercised by integration tests.
     #[must_use]
     pub fn can_compile(method: &Method) -> bool {
+        Self::rejection_reason(method).is_none()
+    }
+
+    /// Reports the first production eligibility restriction, without compiling.
+    /// This uses the same gate as [`Self::can_compile`].
+    #[must_use]
+    pub fn rejection_reason(method: &Method) -> Option<&'static str> {
         if !method.access_flags.contains(MethodAccessFlags::STATIC) {
-            return false;
+            return Some("non_static_method");
         }
         let Some((instructions, exception_table)) =
             method.attributes.iter().find_map(|attribute| {
@@ -153,99 +170,166 @@ impl Compiler {
                 }
             })
         else {
-            return false;
+            return Some("missing_code");
         };
         if !exception_table.is_empty() {
-            return false;
+            return Some("exception_handlers");
         }
-        Self::first_unsupported_instruction(instructions).is_none()
-            && instructions
-                .iter()
-                .all(Self::is_production_safe_instruction)
+        if Self::first_unsupported_instruction(instructions).is_some() {
+            return Some("unsupported_invocation");
+        }
+        if !instructions
+            .iter()
+            .all(Self::is_production_safe_instruction)
+        {
+            return Some("unqualified_instruction");
+        }
+        None
     }
 
-    /// Compiles the given bytecode into native code.
+    /// Reports restrictions for explicit experimental reference-method preparation.
     ///
-    /// # Errors
-    ///
-    /// if the Java byte code cannot be compiled to native code
-    pub fn compile(
-        &self,
-        class_file: &ClassFile,
+    /// This additive policy does not change production eligibility. The first slice
+    /// supports object graphs, fields and static/constructor calls, using owning
+    /// runtime requests and reference-bearing continuations. Monitors, exception
+    /// handlers, arrays and virtual/interface dispatch remain outside this slice.
+    #[cfg(feature = "experimental-reference-dispatch")]
+    #[must_use]
+    pub fn experimental_rejection_reason(
+        class: &ClassFile,
         method: &Method,
-        symbols: &[(&str, *const u8)],
-    ) -> Result<Function> {
-        self.compile_mode(class_file, method, symbols, false)
+    ) -> Option<&'static str> {
+        Self::reference_rejection_reason(class, method, false)
     }
 
-    /// Restriction for explicit scalar/reference/call and primitive-heap requests.
-    /// Multidimensional arrays, handlers, synchronization and integer division
-    /// remain excluded until their owning request protocols are implemented.
+    /// Capability policy for request-only code, additionally admitting primitive
+    /// arrays, reference arrays with class components, and `checkcast` requests for
+    /// classes or one-dimensional arrays. Multidimensional allocation/cast targets
+    /// and `instanceof` remain excluded. The embedding must separately
+    /// admit descriptors/component layouts, validate token types and perform Java
+    /// null, bounds, reference-store and cast compatibility checks after each request.
+    /// A successful cast must return the original owning token (or null).
+    /// Static fields use the existing zero/one-cell requests. Their constant-pool
+    /// metadata must be well formed; field access rules, declaring-class
+    /// initialization and supported layouts remain the embedding's responsibility.
     #[cfg(feature = "experimental-reference-dispatch")]
     #[must_use]
     pub fn request_rejection_reason(class: &ClassFile, method: &Method) -> Option<&'static str> {
-        if method
-            .access_flags
-            .contains(MethodAccessFlags::SYNCHRONIZED)
-        {
-            return Some("experimental_method_kind");
-        }
         let Ok(descriptor) = class.constant_pool.try_get_utf8(method.descriptor_index) else {
             return Some("experimental_descriptor");
         };
         if FieldType::parse_method_descriptor(descriptor).is_err() {
             return Some("experimental_descriptor");
         }
-        let Some((code, handlers)) = method.attributes.iter().find_map(|attribute| {
-            if let Attribute::Code {
-                code,
-                exception_table,
-                ..
-            } = attribute
-            {
-                Some((code, exception_table))
-            } else {
-                None
+        Self::reference_rejection_reason(class, method, true)
+    }
+
+    #[cfg(feature = "experimental-reference-dispatch")]
+    fn is_request_extension_instruction(class: &ClassFile, instruction: &Instruction) -> bool {
+        match instruction {
+            Instruction::Checkcast(index) => {
+                let Ok(name) = class.constant_pool.try_get_class(*index) else {
+                    return false;
+                };
+                if name.as_bytes().first() == Some(&b'[') {
+                    return matches!(FieldType::parse_java_str(name), Ok(FieldType::Array(component))
+                        if !matches!(*component, FieldType::Array(_)));
+                }
+                name.as_bytes().split(|byte| *byte == b'/').all(|part| {
+                    !part.is_empty() && part.iter().all(|byte| !matches!(byte, b'.' | b';' | b'['))
+                })
             }
-        }) else {
+            Instruction::Anewarray(index) => class
+                .constant_pool
+                .try_get_class(*index)
+                .is_ok_and(|name| !name.to_str_lossy().starts_with('[')),
+            Instruction::Invokevirtual(_)
+            | Instruction::Invokeinterface(..)
+            | Instruction::Newarray(_)
+            | Instruction::Arraylength
+            | Instruction::Aaload
+            | Instruction::Aastore
+            | Instruction::Iaload
+            | Instruction::Laload
+            | Instruction::Faload
+            | Instruction::Daload
+            | Instruction::Baload
+            | Instruction::Caload
+            | Instruction::Saload
+            | Instruction::Iastore
+            | Instruction::Lastore
+            | Instruction::Fastore
+            | Instruction::Dastore
+            | Instruction::Bastore
+            | Instruction::Castore
+            | Instruction::Sastore => true,
+            _ => false,
+        }
+    }
+
+    #[cfg(feature = "experimental-reference-dispatch")]
+    fn reference_rejection_reason(
+        class: &ClassFile,
+        method: &Method,
+        request_extensions: bool,
+    ) -> Option<&'static str> {
+        if method
+            .access_flags
+            .contains(MethodAccessFlags::SYNCHRONIZED)
+        {
+            return Some("experimental_synchronized_method");
+        }
+        let Some((instructions, exception_table)) =
+            method.attributes.iter().find_map(|attribute| {
+                if let Attribute::Code {
+                    code,
+                    exception_table,
+                    ..
+                } = attribute
+                {
+                    Some((code, exception_table))
+                } else {
+                    None
+                }
+            })
+        else {
             return Some("missing_code");
         };
-        if !handlers.is_empty() {
+        if !exception_table.is_empty() {
             return Some("experimental_exception_handlers");
         }
-        if code.iter().any(|instruction| {
-            !(Self::is_production_safe_instruction(instruction)
-                || continuation::ArrayRequest::from_instruction(instruction).is_some()
+        if request_extensions
+            && instructions.iter().any(|instruction| {
+                matches!(instruction, Instruction::Getstatic(index) | Instruction::Putstatic(index)
+                    if !Self::request_static_metadata_valid(class, *index))
+            })
+        {
+            return Some("experimental_static_field_metadata");
+        }
+        if instructions.iter().all(|instruction| {
+            Self::is_production_safe_instruction(instruction)
+                || (request_extensions
+                    && Self::is_request_extension_instruction(class, instruction))
                 || match instruction {
                     Instruction::Ldc(index) => matches!(
-                        class.constant_pool.try_get(u16::from(*index)),
-                        Ok(ristretto_classfile::Constant::Integer(_)
-                            | ristretto_classfile::Constant::Float(_))
+                        class.constant_pool.get(u16::from(*index)),
+                        Some(
+                            ristretto_classfile::Constant::Integer(_)
+                                | ristretto_classfile::Constant::Float(_)
+                        )
                     ),
                     Instruction::Ldc_w(index) => matches!(
-                        class.constant_pool.try_get(*index),
-                        Ok(ristretto_classfile::Constant::Integer(_)
-                            | ristretto_classfile::Constant::Float(_))
+                        class.constant_pool.get(*index),
+                        Some(
+                            ristretto_classfile::Constant::Integer(_)
+                                | ristretto_classfile::Constant::Float(_)
+                        )
                     ),
                     _ => false,
                 }
                 || matches!(
                     instruction,
-                    Instruction::Ifeq(_)
-                        | Instruction::Ifne(_)
-                        | Instruction::Iflt(_)
-                        | Instruction::Ifge(_)
-                        | Instruction::Ifgt(_)
-                        | Instruction::Ifle(_)
-                        | Instruction::If_icmpeq(_)
-                        | Instruction::If_icmpne(_)
-                        | Instruction::If_icmplt(_)
-                        | Instruction::If_icmpge(_)
-                        | Instruction::If_icmpgt(_)
-                        | Instruction::If_icmple(_)
-                        | Instruction::Goto(_)
-                        | Instruction::Goto_w(_)
-                        | Instruction::Aconst_null
+                    Instruction::Aconst_null
                         | Instruction::Aload(_)
                         | Instruction::Aload_w(_)
                         | Instruction::Aload_0
@@ -263,38 +347,73 @@ impl Compiler {
                         | Instruction::Ifnonnull(_)
                         | Instruction::If_acmpeq(_)
                         | Instruction::If_acmpne(_)
-                        | Instruction::Invokestatic(_)
-                        | Instruction::Invokespecial(_)
-                        | Instruction::Invokevirtual(_)
-                        | Instruction::Invokeinterface(..)
                         | Instruction::New(_)
                         | Instruction::Getfield(_)
                         | Instruction::Putfield(_)
                         | Instruction::Getstatic(_)
                         | Instruction::Putstatic(_)
-                        | Instruction::Checkcast(_)
-                ))
+                        | Instruction::Invokestatic(_)
+                        | Instruction::Invokespecial(_)
+                )
         }) {
-            return Some("experimental_unqualified_instruction");
+            None
+        } else {
+            Some("experimental_unqualified_instruction")
         }
-        None
     }
 
-    /// Compile an explicit resumable activation. Ordinary eligibility and
-    /// synchronous compilation are unchanged; the result requires activation dispatch.
-    /// # Errors
-    /// Rejects unsupported capabilities, malformed bytecode and excessive continuation state.
     #[cfg(feature = "experimental-reference-dispatch")]
-    pub fn compile_requests(
+    fn request_static_metadata_valid(class: &ClassFile, index: u16) -> bool {
+        let pool = &class.constant_pool;
+        let Ok((owner, member)) = pool.try_get_field_ref(index) else {
+            return false;
+        };
+        let Ok((name, descriptor)) = pool.try_get_name_and_type(*member) else {
+            return false;
+        };
+        pool.try_get_class(*owner).is_ok()
+            && pool.try_get_utf8(*name).is_ok_and(|name| !name.is_empty())
+            && pool
+                .try_get_utf8(*descriptor)
+                .is_ok_and(|descriptor| FieldType::parse_java_str(descriptor).is_ok())
+    }
+
+    /// Compiles the given bytecode into native code.
+    ///
+    /// # Errors
+    ///
+    /// if the Java byte code cannot be compiled to native code
+    pub fn compile(
         &self,
-        class: &ClassFile,
+        class_file: &ClassFile,
         method: &Method,
         symbols: &[(&str, *const u8)],
     ) -> Result<Function> {
-        if let Some(reason) = Self::request_rejection_reason(class, method) {
+        self.compile_mode(class_file, method, symbols, false)
+    }
+
+    /// Compile the request-only subset with exclusively resumable runtime requests.
+    ///
+    /// Generated code never calls synchronous allocation, field, array, cast or invocation
+    /// helpers. Only frame publication and pending-error callbacks are needed by
+    /// reference-bearing methods. The embedding owns all reference tokens and must
+    /// complete each request after the native frame has returned. Synchronous
+    /// [`Function::execute`] is disabled for the returned function.
+    ///
+    /// # Errors
+    /// Rejects methods outside the explicit experimental capability policy or
+    /// methods that fail native compilation and bounded frame/state limits.
+    #[cfg(feature = "experimental-reference-dispatch")]
+    pub fn compile_requests(
+        &self,
+        class_file: &ClassFile,
+        method: &Method,
+        symbols: &[(&str, *const u8)],
+    ) -> Result<Function> {
+        if let Some(reason) = Self::request_rejection_reason(class_file, method) {
             return Err(crate::Error::UnsupportedMethod(reason.to_owned()));
         }
-        self.compile_mode(class, method, symbols, true)
+        self.compile_mode(class_file, method, symbols, true)
     }
 
     #[expect(clippy::too_many_lines)]
@@ -323,23 +442,13 @@ impl Compiler {
             return Err(InternalError("No Code attribute found".to_string()));
         };
 
-        if let Some(instruction) = instructions.iter().find(|instruction| {
-            Self::first_unsupported_instruction(std::slice::from_ref(*instruction)).is_some()
-                && !(requests_only
-                    && continuation::CallTarget::from_instruction(instruction).is_some())
-        }) {
+        if let Some(instruction) = Self::first_unsupported_instruction(instructions) {
             return Err(UnsupportedInstruction(instruction.clone()));
         }
 
         let constant_pool = &class_file.constant_pool;
         let method_descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
-        let (parameter_types, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
-        let argument_types: Vec<i8> = std::iter::once(crate::jit_value::PTR)
-            .take(usize::from(
-                !method.access_flags.contains(MethodAccessFlags::STATIC),
-            ))
-            .chain(parameter_types.iter().map(Self::argument_tag))
-            .collect();
+        let (_, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
         let is_static = method.access_flags.contains(MethodAccessFlags::STATIC);
         let mut jit_module = self.jit_module(symbols);
         let class_name = class_file.class_name()?;
@@ -361,28 +470,137 @@ impl Compiler {
 
         let helpers = RuntimeHelpers::declare(&mut jit_module, &mut function_builder)?;
 
-        let (entry_block, mut blocks, reference_parameters) = control_flow_graph::get_blocks(
+        let (entry_block, blocks, reference_parameters) = control_flow_graph::get_blocks(
             &mut function_builder,
             constant_pool,
             instructions,
             exception_table,
         )?;
-        if blocks.get(&0) == Some(&entry_block) {
-            blocks.insert(0, function_builder.create_block());
-        }
+        #[cfg(feature = "execution-profile")]
+        let backedge_profile = backedge_profile::BackedgeProfile::new(
+            &mut jit_module,
+            &mut function_builder,
+            &blocks,
+        )?;
         // Use the entry block for function setup (entry_block cannot be jumped to)
         function_builder.switch_to_block(entry_block);
         function_builder.append_block_params_for_function_params(entry_block);
         let (arguments_pointer, arguments_length, return_pointer, context_pointer) =
             Self::function_pointers(&mut function_builder, entry_block)?;
+        // One shared outgoing buffer per activation, rather than one stack slot
+        // per call site. Nested calls have their own native activation buffers.
+        let mut request_capacity = exception_table
+            .iter()
+            .any(|entry| entry.catch_type != 0)
+            .then_some(0);
+        for instruction in instructions {
+            if let Some(count) = continuation::argument_count(instruction, constant_pool)? {
+                request_capacity = Some(request_capacity.unwrap_or(0).max(count));
+            }
+        }
+        let call_arguments = if let Some(capacity) = request_capacity {
+            Some(native_frame::word_stack_slot(
+                &mut function_builder,
+                capacity.max(1),
+            )?)
+        } else {
+            None
+        };
 
-        let mut locals = Self::locals(
+        let (mut locals, argument_types) = Self::locals(
             &mut function_builder,
             method_descriptor,
             instructions,
             arguments_pointer,
             is_static,
         )?;
+        // This initial ABI is exercised by direct backend/VM tests. Qualified
+        // primitive methods need no runtime-helper calls or frame-owned references.
+        // Keep root requirements independent of the production eligibility gate:
+        // qualifying another opcode must never silently remove its root handoff.
+        let rootless = is_static
+            && exception_table.is_empty()
+            && instructions.iter().all(|instruction| {
+                Self::is_rootless_primitive_instruction(instruction)
+                    || (requests_only
+                        && match instruction {
+                            Instruction::Ldc(index) => matches!(
+                                constant_pool.get(u16::from(*index)),
+                                Some(
+                                    ristretto_classfile::Constant::Integer(_)
+                                        | ristretto_classfile::Constant::Float(_)
+                                )
+                            ),
+                            Instruction::Ldc_w(index) => matches!(
+                                constant_pool.get(*index),
+                                Some(
+                                    ristretto_classfile::Constant::Integer(_)
+                                        | ristretto_classfile::Constant::Float(_)
+                                )
+                            ),
+                            _ => false,
+                        })
+            });
+        // Calls return requests to the async VM. Handler entries also consume
+        // local fuel: exception edges can form loops without a backward branch.
+        let continuation = if instructions.iter().all(|instruction| {
+            !matches!(
+                instruction,
+                Instruction::Invokedynamic(_)
+                    | Instruction::Jsr(_)
+                    | Instruction::Jsr_w(_)
+                    | Instruction::Ret(_)
+                    | Instruction::Ret_w(_)
+            )
+        }) && (requests_only
+            || !exception_table.is_empty()
+            || instructions.iter().any(|instruction| {
+                instruction.branch_offsets().any(|offset| offset <= 0)
+                    || CallTarget::from_instruction(instruction).is_some()
+                    || crate::instruction::allocation_metadata(instruction).is_some()
+                    || crate::instruction::field_metadata(instruction).is_some()
+                    || array_access_metadata(instruction).is_some()
+                    || crate::instruction::reference_constant_index(instruction, constant_pool)
+                        .is_some()
+                    || matches!(
+                        instruction,
+                        Instruction::Monitorenter
+                            | Instruction::Monitorexit
+                            | Instruction::Checkcast(_)
+                            | Instruction::Instanceof(_)
+                            | Instruction::Aastore
+                    )
+            })) {
+            Some(continuation::Continuation::new(
+                &mut function_builder,
+                &blocks,
+                instructions,
+                &locals,
+                &reference_parameters,
+                !rootless,
+                max_stack,
+                constant_pool,
+                exception_table,
+                requests_only,
+            )?)
+        } else {
+            None
+        };
+        let continuation_pointer = context_pointer;
+        let context_pointer = if continuation
+            .as_ref()
+            .is_some_and(|state| state.layout.requires_context)
+        {
+            let pointer_type = function_builder.func.dfg.value_type(context_pointer);
+            function_builder.ins().load(
+                pointer_type,
+                MemFlagsData::trusted(),
+                continuation_pointer,
+                native_frame::word_offset(crate::function::ContinuationLayout::CONTEXT)?,
+            )
+        } else {
+            context_pointer
+        };
 
         // Get the block for address 0 (may be entry_block or a separate loop body block)
         let block_zero = *blocks.get(&0).ok_or_else(|| InvalidBlockAddress(0))?;
@@ -391,28 +609,11 @@ impl Compiler {
         // pending exception. The block body writes a NONE discriminant to the return pointer
         // and returns.
         let exception_block = function_builder.create_block();
-
-        let requires_context = requests_only
-            && (argument_types.contains(&crate::jit_value::PTR)
-                || !locals.reference_indices().is_empty()
-                || instructions.iter().any(|instruction| {
-                    matches!(instruction, Instruction::Aconst_null | Instruction::Areturn)
-                        || continuation::CallTarget::from_instruction(instruction).is_some()
-                        || continuation::HeapRequest::from_instruction(instruction).is_some()
-                        || continuation::ArrayRequest::from_instruction(instruction).is_some()
-                }));
-        let continuation_pointer = context_pointer;
-        let context_pointer = if requests_only {
-            function_builder.ins().load(
-                types::I64,
-                MemFlagsData::trusted(),
-                continuation_pointer,
-                native_frame::word_offset(crate::function::ContinuationLayout::CONTEXT)?,
-            )
+        let size_probe = native_frame::SizeProbe::new(&mut function_builder);
+        let mut frame_roots = if rootless {
+            None
         } else {
-            context_pointer
-        };
-        let mut frame_roots = if requires_context {
+            size_probe.initialize(&mut function_builder);
             Some(frame_roots::FrameRoots::new(
                 &mut function_builder,
                 &locals,
@@ -420,46 +621,42 @@ impl Compiler {
                 instructions,
                 exception_table,
                 exception_block,
+                size_probe.slot(),
             )?)
-        } else {
-            None
         };
-        let continuation = if requests_only {
-            Some(continuation::Continuation::new(
+
+        if rootless {
+            let body = if continuation.is_some() {
+                function_builder.create_block()
+            } else {
+                block_zero
+            };
+            size_probe.emit_cold_path(
+                &mut jit_module,
                 &mut function_builder,
-                &blocks,
-                instructions,
-                &locals,
-                max_stack,
-                &reference_parameters,
-                requires_context,
-                constant_pool,
-            )?)
-        } else {
-            None
-        };
-        let dispatch = if continuation.is_some() {
-            function_builder.create_block()
-        } else {
-            block_zero
-        };
-        let frame_probe = native_frame::SizeProbe::new(&mut function_builder);
-        frame_probe.emit_cold_path(
-            &mut jit_module,
-            &mut function_builder,
-            arguments_length,
-            dispatch,
-            exception_block,
-        )?;
-        if let Some(continuation) = &continuation {
-            function_builder.switch_to_block(dispatch);
+                arguments_length,
+                body,
+                exception_block,
+            )?;
+            if let Some(continuation) = &continuation {
+                function_builder.switch_to_block(body);
+                continuation.entry(&mut function_builder, continuation_pointer, block_zero)?;
+            }
+        } else if let Some(continuation) = &continuation {
             continuation.entry(&mut function_builder, continuation_pointer, block_zero)?;
+        } else {
+            function_builder.ins().jump(block_zero, &[]);
         }
         function_builder.switch_to_block(block_zero);
 
         let mut stack = OperandStack::with_capacity(max_stack);
         stack.mark_references(reference_parameters);
         let mut continued_blocks = continuation.as_ref().map(|_| blocks.clone());
+        let handler_blocks = continuation
+            .as_ref()
+            .filter(|_| !exception_table.is_empty())
+            .map(|continuation| continuation.handler_targets(&blocks, exception_table))
+            .transpose()?;
         let mut block_is_terminated = false;
         for (program_counter, instruction) in Instruction::with_offsets(instructions) {
             if let Some(block) = blocks.get(&program_counter) {
@@ -499,67 +696,42 @@ impl Compiler {
             if let (Some(continuation), Some(targets)) = (&continuation, &mut continued_blocks) {
                 continuation.redirect(targets, program_counter, instruction)?;
             }
-            if let (Some(continuation), Some(target)) = (
-                continuation.as_ref(),
-                continuation::CallTarget::from_instruction(instruction),
-            ) {
-                continuation::CallContinuation {
-                    continuation,
-                    state: continuation_pointer,
-                }
-                .invoke(
-                    constant_pool,
-                    &mut function_builder,
-                    &mut stack,
-                    target,
-                    program_counter,
-                )?;
-            } else if let (Some(continuation), Some(request)) = (
-                continuation.as_ref(),
-                continuation::HeapRequest::from_instruction(instruction),
-            ) {
-                request.emit(
-                    &continuation::CallContinuation {
-                        continuation,
-                        state: continuation_pointer,
-                    },
-                    constant_pool,
-                    &mut function_builder,
-                    &mut stack,
-                    program_counter,
-                )?;
-            } else if let (Some(continuation), Some(request)) = (
-                continuation.as_ref(),
-                continuation::ArrayRequest::from_instruction(instruction),
-            ) {
-                request.emit(
-                    &continuation::CallContinuation {
-                        continuation,
-                        state: continuation_pointer,
-                    },
-                    constant_pool,
-                    &mut function_builder,
-                    &mut stack,
-                    program_counter,
-                )?;
-            } else {
-                Self::process_instruction(
-                    constant_pool,
-                    &mut function_builder,
-                    continued_blocks.as_ref().unwrap_or(&blocks),
-                    &mut locals,
-                    &mut stack,
-                    program_counter,
-                    return_pointer,
-                    return_type.as_ref(),
-                    context_pointer,
-                    &helpers,
-                    exception_block,
-                    exception_table,
-                    instruction,
-                )?;
+            let instruction_blocks = continued_blocks.as_ref().unwrap_or(&blocks);
+            #[cfg(feature = "execution-profile")]
+            let backedges = backedge_profile.edges(
+                &mut function_builder,
+                instruction_blocks,
+                program_counter,
+                instruction,
+            )?;
+            #[cfg(feature = "execution-profile")]
+            let instruction_blocks = backedges
+                .as_ref()
+                .map_or(instruction_blocks, |edges| &edges.blocks);
+            Self::process_instruction(
+                constant_pool,
+                &mut function_builder,
+                instruction_blocks,
+                handler_blocks.as_ref().unwrap_or(&blocks),
+                &mut locals,
+                &mut stack,
+                program_counter,
+                return_pointer,
+                return_type.as_ref(),
+                context_pointer,
+                &helpers,
+                call_arguments,
+                continuation
+                    .as_ref()
+                    .map(|continuation| (continuation, continuation_pointer)),
+                exception_block,
+                exception_table,
+                instruction,
+            )?;
+            #[cfg(feature = "execution-profile")]
+            if let Some(edges) = backedges {
+                backedge_profile.emit(&mut function_builder, edges);
             }
-
             if let Some(targets) = &mut continued_blocks {
                 continuation::Continuation::restore_targets(
                     targets,
@@ -598,11 +770,15 @@ impl Compiler {
         let native_stack_bytes = match native_frame::stack_bytes(&module_context) {
             Ok(bytes) => bytes,
             Err(error) => {
-                // SAFETY: no executable entry or owning Function has escaped.
+                // No entry pointer has escaped; release code allocated before metadata rejection.
                 unsafe { jit_module.free_memory() };
                 return Err(error);
             }
         };
+        #[cfg(feature = "execution-profile")]
+        let code_bytes = module_context
+            .compiled_code()
+            .map_or(0, |code| code.code_buffer().len());
         jit_module.clear_context(&mut module_context);
         jit_module.finalize_definitions()?;
 
@@ -613,6 +789,8 @@ impl Compiler {
             Function::with_module(function, jit_module, native_stack_bytes, argument_types)
                 .with_continuation(continuation.map(|continuation| continuation.layout))
         };
+        #[cfg(feature = "execution-profile")]
+        let function = function.with_profile(code_bytes, backedge_profile.counter);
         Ok(function)
     }
 
@@ -684,7 +862,7 @@ impl Compiler {
         instructions: &[Instruction],
         arguments_pointer: Value,
         is_static: bool,
-    ) -> Result<LocalVariables> {
+    ) -> Result<(LocalVariables, Vec<i8>)> {
         let size_of = i64::try_from(size_of::<JitValue>())?;
         let struct_size = function_builder.ins().iconst(types::I64, size_of);
         let mut locals = LocalVariables::new();
@@ -693,7 +871,22 @@ impl Compiler {
             .take(usize::from(!is_static))
             .chain(parameter_types.iter().map(Self::local_kind));
         let mut local_index = 0;
+        let mut argument_types =
+            Vec::with_capacity(parameter_types.len() + usize::from(!is_static));
         for (argument_index, kind) in parameters.enumerate() {
+            let tag = match kind {
+                StackType::Reference => crate::jit_value::PTR,
+                StackType::Primitive(types::I32) => crate::jit_value::I32,
+                StackType::Primitive(types::I64) => crate::jit_value::I64,
+                StackType::Primitive(types::F32) => crate::jit_value::F32,
+                StackType::Primitive(types::F64) => crate::jit_value::F64,
+                StackType::Primitive(_) => {
+                    return Err(InternalError(
+                        "unsupported argument representation".to_owned(),
+                    ));
+                }
+            };
+            argument_types.push(tag);
             let index = function_builder
                 .ins()
                 .iconst(types::I64, i64::try_from(argument_index)?);
@@ -718,24 +911,13 @@ impl Compiler {
                 locals.declare(function_builder, index, Self::local_kind(&field_type));
             }
         }
-        Ok(locals)
+        Ok((locals, argument_types))
     }
 
     fn local_kind(field_type: &FieldType) -> StackType {
         match field_type {
             FieldType::Object(_) | FieldType::Array(_) => StackType::Reference,
             FieldType::Base(_) => StackType::Primitive(Self::native_type(field_type)),
-        }
-    }
-
-    /// The native ABI uses one tagged cell per argument, including wide JVM values.
-    fn argument_tag(field_type: &FieldType) -> i8 {
-        match field_type {
-            FieldType::Object(_) | FieldType::Array(_) => crate::jit_value::PTR,
-            FieldType::Base(BaseType::Long) => crate::jit_value::I64,
-            FieldType::Base(BaseType::Float) => crate::jit_value::F32,
-            FieldType::Base(BaseType::Double) => crate::jit_value::F64,
-            FieldType::Base(_) => crate::jit_value::I32,
         }
     }
 
@@ -767,38 +949,92 @@ impl Compiler {
     ///
     /// # Scope of the JIT today
     ///
-    /// All `Invoke*` opcodes are rejected here. Combined with the `exception_table.is_empty()`
-    /// guard in [`Self::can_compile`], this means production JIT-eligible methods are limited
-    /// to leaf, exception-table-free arithmetic / control-flow / array / field-access code.
+    /// Dynamic calls remain rejected here. Static/special/virtual/interface
+    /// calls use the experimental runtime bridge. This checks backend support only;
+    /// [`Self::can_compile`] additionally restricts production execution to static,
+    /// primitive instructions without exception tables. Loops use resumable execution.
+    /// Reference operations and helper calls remain excluded.
     ///
-    /// A consequence is that the exception-handler dispatch infrastructure built on top of
-    /// `pending_exception` (in `instruction::exception` and `populate_dispatch_block`) is
-    /// reachable from production methods only through `athrow`, NPE, `ArrayStoreException`,
-    /// and `<clinit>` failures from field/array helpers;never through propagation across a
-    /// JIT call site or into a JIT catch handler. The dispatch logic is therefore exercised
-    /// primarily by the synthetic `athrow_caught_by_catch_all_handler` codegen test until
-    /// `Invoke*` lowering and the gating items listed in [`Self::can_compile`] land.
+    /// Direct compiler tests exercise the wider lowering surface, including
+    /// `pending_exception` dispatch and `athrow_caught_by_catch_all_handler`.
+    /// Those tests do not qualify live-VM frame rooting or control-flow behavior.
+    /// The production gate must remain until the conditions in [`Self::can_compile`]
+    /// are resolved and covered by VM integration tests.
     fn first_unsupported_instruction(instructions: &[Instruction]) -> Option<&Instruction> {
-        instructions.iter().find(|instruction| {
-            matches!(
-                instruction,
-                Instruction::Invokevirtual(..)
-                    | Instruction::Invokespecial(..)
-                    | Instruction::Invokestatic(..)
-                    | Instruction::Invokeinterface(..)
-                    | Instruction::Invokedynamic(..)
-            )
-        })
+        instructions
+            .iter()
+            .find(|instruction| matches!(instruction, Instruction::Invokedynamic(..)))
     }
 
-    /// Returns whether an instruction is safe for production JIT execution. Keeping this as a
-    /// positive allowlist makes new bytecodes interpreter-only until their native safety is
-    /// explicitly reviewed.
+    /// Production eligibility can expand only after qualification. Root handoff
+    /// selection separately uses the narrower rootless classification below.
+    fn is_production_safe_instruction(instruction: &Instruction) -> bool {
+        Self::is_rootless_primitive_instruction(instruction)
+    }
+
+    fn is_primitive_branch(instruction: &Instruction) -> bool {
+        matches!(
+            instruction,
+            Instruction::Ifeq(_)
+                | Instruction::Ifne(_)
+                | Instruction::Iflt(_)
+                | Instruction::Ifge(_)
+                | Instruction::Ifgt(_)
+                | Instruction::Ifle(_)
+                | Instruction::If_icmpeq(_)
+                | Instruction::If_icmpne(_)
+                | Instruction::If_icmplt(_)
+                | Instruction::If_icmpge(_)
+                | Instruction::If_icmpgt(_)
+                | Instruction::If_icmple(_)
+                | Instruction::Goto(_)
+                | Instruction::Goto_w(_)
+                | Instruction::Tableswitch(_)
+                | Instruction::Lookupswitch(_)
+        )
+    }
+
+    /// A conservative finite-control-flow subset: every explicit destination must
+    /// advance the bytecode offset. Including switch defaults is essential; a
+    /// single self/backward edge could prevent the executor from regaining control.
+    #[cfg(test)]
+    fn is_forward_primitive_branch(instruction: &Instruction) -> bool {
+        match instruction {
+            Instruction::Ifeq(offset)
+            | Instruction::Ifne(offset)
+            | Instruction::Iflt(offset)
+            | Instruction::Ifge(offset)
+            | Instruction::Ifgt(offset)
+            | Instruction::Ifle(offset)
+            | Instruction::If_icmpeq(offset)
+            | Instruction::If_icmpne(offset)
+            | Instruction::If_icmplt(offset)
+            | Instruction::If_icmpge(offset)
+            | Instruction::If_icmpgt(offset)
+            | Instruction::If_icmple(offset)
+            | Instruction::Goto(offset) => *offset > 0,
+            Instruction::Goto_w(offset) => *offset > 0,
+            Instruction::Tableswitch(table) => {
+                table.default > 0 && table.offsets.iter().all(|offset| *offset > 0)
+            }
+            Instruction::Lookupswitch(table) => {
+                table.default > 0 && table.pairs.values().all(|offset| *offset > 0)
+            }
+            _ => false,
+        }
+    }
+
+    /// Instructions that do not produce frame-owned heap references or require
+    /// helper root handoff. Do not add heap/reference operations here to enable
+    /// production execution; eligibility and root requirements are separate gates.
     #[expect(
         clippy::too_many_lines,
         reason = "the explicit bytecode allowlist is easier to audit as one exhaustive policy"
     )]
-    fn is_production_safe_instruction(instruction: &Instruction) -> bool {
+    fn is_rootless_primitive_instruction(instruction: &Instruction) -> bool {
+        if Self::is_primitive_branch(instruction) {
+            return true;
+        }
         matches!(
             instruction,
             Instruction::Nop
@@ -944,6 +1180,7 @@ impl Compiler {
         constant_pool: &ConstantPool,
         function_builder: &mut FunctionBuilder,
         blocks: &AHashMap<usize, Block>,
+        exception_blocks: &AHashMap<usize, Block>,
         locals: &mut LocalVariables,
         stack: &mut OperandStack,
         program_counter: usize,
@@ -951,18 +1188,87 @@ impl Compiler {
         return_type: Option<&FieldType>,
         context_pointer: Value,
         helpers: &RuntimeHelpers,
+        call_arguments: Option<StackSlot>,
+        continuation: Option<(&continuation::Continuation, Value)>,
         exception_block: Block,
         exception_table: &[ExceptionTableEntry],
         instruction: &Instruction,
     ) -> Result<()> {
         let throw_context = ThrowContext {
             exception_block,
-            blocks,
+            blocks: exception_blocks,
             exception_table,
             program_counter,
+            continuation: continuation.and_then(|(continuation, state)| {
+                call_arguments.map(|arguments| (continuation, state, arguments))
+            }),
         };
         let throw_context = &throw_context;
+        let request_continuation = continuation.and_then(|(continuation, state)| {
+            call_arguments.map(|arguments| crate::instruction::RequestContinuation {
+                call: continuation::CallContinuation {
+                    continuation,
+                    state,
+                },
+                arguments,
+                bci: program_counter,
+            })
+        });
         match instruction {
+            Instruction::Iaload
+            | Instruction::Laload
+            | Instruction::Faload
+            | Instruction::Daload
+            | Instruction::Aaload
+            | Instruction::Baload
+            | Instruction::Caload
+            | Instruction::Saload
+            | Instruction::Iastore
+            | Instruction::Lastore
+            | Instruction::Fastore
+            | Instruction::Dastore
+            | Instruction::Bastore
+            | Instruction::Castore
+            | Instruction::Sastore
+            | Instruction::Arraylength => {
+                let access = array_access_metadata(instruction)
+                    .ok_or_else(|| InternalError("missing array access metadata".to_owned()))?;
+                array_access(
+                    function_builder,
+                    stack,
+                    helpers,
+                    context_pointer,
+                    throw_context,
+                    access,
+                    request_continuation,
+                )?;
+            }
+            Instruction::Invokestatic(index)
+            | Instruction::Invokespecial(index)
+            | Instruction::Invokevirtual(index)
+            | Instruction::Invokeinterface(index, _) => invoke(
+                constant_pool,
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+                call_arguments
+                    .ok_or_else(|| InternalError("missing outgoing argument buffer".to_owned()))?,
+                if matches!(instruction, Instruction::Invokestatic(_)) {
+                    CallTarget::Static(*index)
+                } else if matches!(instruction, Instruction::Invokespecial(_)) {
+                    CallTarget::Special(*index)
+                } else if let Instruction::Invokeinterface(_, count) = instruction {
+                    CallTarget::Interface(*index, *count)
+                } else {
+                    CallTarget::Virtual(*index)
+                },
+                continuation.map(|(continuation, state)| continuation::CallContinuation {
+                    continuation,
+                    state,
+                }),
+            )?,
             Instruction::Nop => nop(),
             Instruction::Aconst_null => aconst_null(function_builder, stack)?,
             Instruction::Iconst_m1 => iconst_m1(function_builder, stack)?,
@@ -981,9 +1287,27 @@ impl Compiler {
             Instruction::Dconst_1 => dconst_1(function_builder, stack)?,
             Instruction::Bipush(value) => bipush(function_builder, stack, *value)?,
             Instruction::Sipush(value) => sipush(function_builder, stack, *value)?,
-            Instruction::Ldc(index) => ldc(constant_pool, function_builder, stack, *index)?,
+            Instruction::Ldc(index) => ldc(
+                constant_pool,
+                function_builder,
+                stack,
+                u16::from(*index),
+                helpers,
+                context_pointer,
+                throw_context,
+                request_continuation,
+            )?,
             Instruction::Ldc_w(index) => {
-                ldc_w(constant_pool, function_builder, stack, *index)?;
+                ldc(
+                    constant_pool,
+                    function_builder,
+                    stack,
+                    *index,
+                    helpers,
+                    context_pointer,
+                    throw_context,
+                    request_continuation,
+                )?;
             }
             Instruction::Ldc2_w(index) => {
                 ldc2_w(constant_pool, function_builder, stack, *index)?;
@@ -1013,62 +1337,6 @@ impl Compiler {
             Instruction::Aload_1 => aload_ref_1(function_builder, locals, stack)?,
             Instruction::Aload_2 => aload_ref_2(function_builder, locals, stack)?,
             Instruction::Aload_3 => aload_ref_3(function_builder, locals, stack)?,
-            Instruction::Iaload => iaload(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
-            Instruction::Laload => laload(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
-            Instruction::Faload => faload(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
-            Instruction::Daload => daload(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
-            Instruction::Aaload => aaload(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
-            Instruction::Baload => baload(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
-            Instruction::Caload => caload(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
-            Instruction::Saload => saload(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
             Instruction::Istore(index) => istore(function_builder, locals, stack, *index)?,
             Instruction::Lstore(index) => lstore(function_builder, locals, stack, *index)?,
             Instruction::Fstore(index) => fstore(function_builder, locals, stack, *index)?,
@@ -1094,61 +1362,13 @@ impl Compiler {
             Instruction::Astore_1 => astore_ref_1(function_builder, locals, stack)?,
             Instruction::Astore_2 => astore_ref_2(function_builder, locals, stack)?,
             Instruction::Astore_3 => astore_ref_3(function_builder, locals, stack)?,
-            Instruction::Iastore => iastore(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
-            Instruction::Lastore => lastore(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
-            Instruction::Fastore => fastore(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
-            Instruction::Dastore => dastore(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
             Instruction::Aastore => aastore(
                 function_builder,
                 stack,
                 helpers,
                 context_pointer,
                 throw_context,
-            )?,
-            Instruction::Bastore => bastore(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
-            Instruction::Castore => castore(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
-            )?,
-            Instruction::Sastore => sastore(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
+                request_continuation,
             )?,
             Instruction::Pop => pop(stack)?,
             Instruction::Pop2 => pop2(function_builder, stack)?,
@@ -1281,7 +1501,9 @@ impl Compiler {
                 program_counter,
                 lookup_switch,
             )?,
-            Instruction::Ireturn => ireturn(function_builder, stack, return_pointer, return_type)?,
+            Instruction::Ireturn => {
+                ireturn(function_builder, stack, return_pointer, return_type)?;
+            }
             Instruction::Lreturn => lreturn(function_builder, stack, return_pointer)?,
             Instruction::Freturn => freturn(function_builder, stack, return_pointer)?,
             Instruction::Dreturn => dreturn(function_builder, stack, return_pointer)?,
@@ -1295,6 +1517,7 @@ impl Compiler {
                 context_pointer,
                 throw_context,
                 *index,
+                request_continuation,
             )?,
             Instruction::Putstatic(index) => putstatic(
                 constant_pool,
@@ -1304,6 +1527,7 @@ impl Compiler {
                 context_pointer,
                 throw_context,
                 *index,
+                request_continuation,
             )?,
             Instruction::Getfield(index) => getfield(
                 constant_pool,
@@ -1313,6 +1537,7 @@ impl Compiler {
                 context_pointer,
                 throw_context,
                 *index,
+                request_continuation,
             )?,
             Instruction::Putfield(index) => putfield(
                 constant_pool,
@@ -1322,6 +1547,7 @@ impl Compiler {
                 context_pointer,
                 throw_context,
                 *index,
+                request_continuation,
             )?,
             Instruction::New(index) => new_object(
                 function_builder,
@@ -1330,6 +1556,7 @@ impl Compiler {
                 context_pointer,
                 throw_context,
                 *index,
+                request_continuation,
             )?,
             Instruction::Newarray(array_type) => {
                 newarray(
@@ -1339,6 +1566,7 @@ impl Compiler {
                     context_pointer,
                     helpers,
                     throw_context,
+                    request_continuation,
                 )?;
             }
             Instruction::Anewarray(index) => anewarray(
@@ -1348,13 +1576,7 @@ impl Compiler {
                 context_pointer,
                 throw_context,
                 *index,
-            )?,
-            Instruction::Arraylength => arraylength(
-                function_builder,
-                stack,
-                helpers,
-                context_pointer,
-                throw_context,
+                request_continuation,
             )?,
             Instruction::Athrow => athrow(
                 function_builder,
@@ -1370,6 +1592,7 @@ impl Compiler {
                 context_pointer,
                 throw_context,
                 *class_index,
+                request_continuation,
             )?,
             Instruction::Instanceof(class_index) => instanceof(
                 function_builder,
@@ -1378,9 +1601,22 @@ impl Compiler {
                 context_pointer,
                 throw_context,
                 *class_index,
+                request_continuation,
             )?,
-            Instruction::Monitorenter => monitorenter(stack)?,
-            Instruction::Monitorexit => monitorexit(stack)?,
+            Instruction::Monitorenter | Instruction::Monitorexit => monitor(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+                call_arguments
+                    .ok_or_else(|| InternalError("missing monitor argument buffer".to_owned()))?,
+                matches!(instruction, Instruction::Monitorenter),
+                continuation.map(|(continuation, state)| continuation::CallContinuation {
+                    continuation,
+                    state,
+                }),
+            )?,
             Instruction::Wide => wide()?,
             Instruction::Multianewarray(index, dimensions) => multianewarray(
                 function_builder,
@@ -1390,6 +1626,7 @@ impl Compiler {
                 throw_context,
                 *index,
                 *dimensions,
+                request_continuation,
             )?,
             Instruction::Ifnull(address) => {
                 ifnull(function_builder, blocks, stack, program_counter, *address)?;
@@ -1421,7 +1658,7 @@ impl Compiler {
                 iinc_w(function_builder, locals, *index, *constant)?;
             }
             Instruction::Ret_w(index) => ret_w(function_builder, blocks, locals, stack, *index)?,
-            _ => {
+            Instruction::Invokedynamic(_) => {
                 return Err(UnsupportedInstruction(instruction.clone()));
             }
         }
@@ -1440,12 +1677,118 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    #[cfg(feature = "experimental-reference-dispatch")]
+    #[test]
+    fn experimental_gate_preserves_production_and_rejects_unqualified_capabilities() {
+        let class = ClassFile::default();
+        let mut method = Method {
+            access_flags: MethodAccessFlags::PUBLIC,
+            attributes: vec![Attribute::Code {
+                name_index: 0,
+                max_stack: 2,
+                max_locals: 2,
+                code: vec![
+                    Instruction::Aload_0,
+                    Instruction::Getfield(1),
+                    Instruction::Areturn,
+                ],
+                exception_table: vec![],
+                attributes: vec![],
+            }],
+            ..Default::default()
+        };
+        assert_eq!(
+            Compiler::experimental_rejection_reason(&class, &method),
+            None
+        );
+        assert_eq!(
+            Compiler::rejection_reason(&method),
+            Some("non_static_method")
+        );
+        method.access_flags.insert(MethodAccessFlags::STATIC);
+        assert_eq!(
+            Compiler::rejection_reason(&method),
+            Some("unqualified_instruction")
+        );
+        for instruction in [
+            Instruction::Invokedynamic(1),
+            Instruction::Invokevirtual(1),
+            Instruction::Invokeinterface(1, 1),
+            Instruction::Monitorenter,
+            Instruction::Monitorexit,
+            Instruction::Jsr(1),
+            Instruction::Ret(1),
+            Instruction::Athrow,
+            Instruction::Aaload,
+            Instruction::Idiv,
+        ] {
+            let Attribute::Code { code, .. } =
+                method.attributes.first_mut().expect("code attribute")
+            else {
+                panic!("expected code attribute")
+            };
+            *code = vec![instruction];
+            assert_eq!(
+                Compiler::experimental_rejection_reason(&class, &method),
+                Some("experimental_unqualified_instruction")
+            );
+        }
+        method.access_flags.insert(MethodAccessFlags::SYNCHRONIZED);
+        assert_eq!(
+            Compiler::experimental_rejection_reason(&class, &method),
+            Some("experimental_synchronized_method")
+        );
+    }
+
+    #[cfg(feature = "experimental-reference-dispatch")]
+    #[test]
+    fn experimental_numeric_constants_do_not_admit_reference_constants() -> Result<()> {
+        let mut class = ClassFile::default();
+        let integer = class.constant_pool.add_integer(-1_000_000)?;
+        let float = class.constant_pool.add_float(1.5)?;
+        let string = class.constant_pool.add_string("not a numeric constant")?;
+        let reference = class.constant_pool.add_class("java/lang/Object")?;
+        for (index, admitted) in [
+            (integer, true),
+            (float, true),
+            (string, false),
+            (reference, false),
+            (u16::MAX, false),
+        ] {
+            let method = Method {
+                access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                attributes: vec![Attribute::Code {
+                    name_index: 0,
+                    max_stack: 1,
+                    max_locals: 0,
+                    code: vec![Instruction::Ldc_w(index), Instruction::Ireturn],
+                    exception_table: vec![],
+                    attributes: vec![],
+                }],
+                ..Default::default()
+            };
+            assert_eq!(
+                Compiler::experimental_rejection_reason(&class, &method).is_none(),
+                admitted
+            );
+            assert!(!Compiler::can_compile(&method));
+        }
+        Ok(())
+    }
+
     #[test]
     fn test_production_safe_instruction_policy() {
         for instruction in [
             Instruction::Iload_0,
             Instruction::Iconst_1,
             Instruction::Iadd,
+            Instruction::Ifeq(3),
+            Instruction::Goto(3),
+            Instruction::Goto_w(5),
+            Instruction::Ifeq(0),
+            Instruction::If_icmpge(-1),
+            Instruction::Goto(-3),
+            Instruction::Goto_w(0),
             Instruction::Ireturn,
         ] {
             assert!(Compiler::is_production_safe_instruction(&instruction));
@@ -1455,10 +1798,75 @@ mod tests {
             Instruction::Aload_0,
             Instruction::Getfield(1),
             Instruction::Iaload,
-            Instruction::Ifeq(1),
+            Instruction::Ifnull(3),
+            Instruction::If_acmpeq(3),
+            Instruction::Jsr(3),
+            Instruction::Monitorenter,
+            Instruction::Idiv,
             Instruction::Invokestatic(1),
+            Instruction::Invokespecial(1),
+            Instruction::Invokevirtual(1),
+            Instruction::Invokeinterface(1, 1),
         ] {
             assert!(!Compiler::is_production_safe_instruction(&instruction));
+        }
+    }
+
+    #[test]
+    fn test_forward_control_flow_requires_every_edge_to_advance() {
+        use indexmap::IndexMap;
+        use ristretto_classfile::attributes::{LookupSwitch, TableSwitch};
+
+        let branches: [fn(i16) -> Instruction; 13] = [
+            Instruction::Ifeq,
+            Instruction::Ifne,
+            Instruction::Iflt,
+            Instruction::Ifge,
+            Instruction::Ifgt,
+            Instruction::Ifle,
+            Instruction::If_icmpeq,
+            Instruction::If_icmpne,
+            Instruction::If_icmplt,
+            Instruction::If_icmpge,
+            Instruction::If_icmpgt,
+            Instruction::If_icmple,
+            Instruction::Goto,
+        ];
+        for offset in [i16::MIN, -1, 0, 3, i16::MAX] {
+            for branch in branches {
+                assert_eq!(
+                    Compiler::is_forward_primitive_branch(&branch(offset)),
+                    offset > 0
+                );
+            }
+        }
+        for offset in [i32::MIN, -1, 0, 5, i32::MAX] {
+            assert_eq!(
+                Compiler::is_forward_primitive_branch(&Instruction::Goto_w(offset)),
+                offset > 0
+            );
+            // Place the candidate edge in the default and each explicit case.
+            for position in 0..3 {
+                let mut offsets = [32, 36, 40];
+                *offsets.get_mut(position).expect("edge position") = offset;
+                for instruction in [
+                    Instruction::Tableswitch(Box::new(TableSwitch {
+                        default: offsets[0],
+                        low: 0,
+                        high: 1,
+                        offsets: offsets[1..].to_vec(),
+                    })),
+                    Instruction::Lookupswitch(Box::new(LookupSwitch {
+                        default: offsets[0],
+                        pairs: IndexMap::from([(-1, offsets[1]), (1, offsets[2])]),
+                    })),
+                ] {
+                    assert_eq!(
+                        Compiler::is_forward_primitive_branch(&instruction),
+                        offset > 0
+                    );
+                }
+            }
         }
     }
 
@@ -1573,3 +1981,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(all(test, feature = "experimental-reference-dispatch"))]
+#[path = "request_only_tests.rs"]
+mod request_only_tests;

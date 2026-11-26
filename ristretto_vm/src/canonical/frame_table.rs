@@ -11,6 +11,18 @@ use token_ranges::{LeaseError, TokenRange};
 
 const LEASE_SIZE: NonZeroU64 = NonZeroU64::MIN.saturating_add(4095);
 
+/// Test-only mechanism counts; never included in an ordinary runtime binary.
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct PublicationCensus {
+    pub calls: usize,
+    pub unchanged: usize,
+    pub nonnull_inputs: usize,
+    pub rebound: usize,
+    pub owner_probes: usize,
+    pub snapshot_cells_checked: usize,
+}
+
 #[derive(Debug)]
 struct Entry {
     token: i64,
@@ -48,6 +60,8 @@ pub(super) struct Table {
     roots_per_frame: usize,
     #[cfg(test)]
     leases_installed: usize,
+    #[cfg(test)]
+    pub(super) publication_census: Cell<PublicationCensus>,
 }
 
 impl Table {
@@ -77,6 +91,8 @@ impl Table {
             roots_per_frame,
             #[cfg(test)]
             leases_installed: 0,
+            #[cfg(test)]
+            publication_census: Cell::new(PublicationCensus::default()),
         })
     }
 
@@ -116,7 +132,15 @@ impl Table {
         self.entries
             .iter()
             .flatten()
-            .find(|entry| entry.token == token)
+            .find(|entry| {
+                #[cfg(test)]
+                {
+                    let mut census = self.publication_census.get();
+                    census.owner_probes += 1;
+                    self.publication_census.set(census);
+                }
+                entry.token == token
+            })
             .and_then(|entry| entry.root.upgrade())
             .ok_or_else(|| Error::Boundary("stale or foreign reference token"))
     }
@@ -207,10 +231,44 @@ impl Table {
         if tokens.len() > frame.limit {
             return Err(Error::Limit("published frame roots"));
         }
+        // These existing owners pin the exact entries: intern never replaces an
+        // entry with a live strong owner, and issued tokens are never reused.
+        // Equality includes order and duplicate multiplicity, ignoring only null.
+        // The provenance and raw-cell quota checks above still precede this path.
+        let unchanged = frame
+            .roots
+            .iter()
+            .map(|(token, _)| {
+                #[cfg(test)]
+                {
+                    let mut census = self.publication_census.get();
+                    census.snapshot_cells_checked += 1;
+                    self.publication_census.set(census);
+                }
+                *token
+            })
+            .eq(tokens.iter().copied().filter(|token| *token != 0));
+        #[cfg(test)]
+        {
+            let mut census = self.publication_census.get();
+            census.calls += 1;
+            census.unchanged += usize::from(unchanged);
+            census.nonnull_inputs += tokens.iter().filter(|token| **token != 0).count();
+            self.publication_census.set(census);
+        }
+        if unchanged {
+            return Ok(());
+        }
         frame.replacement.clear();
         for &token in tokens {
             if token == 0 {
                 continue;
+            }
+            #[cfg(test)]
+            {
+                let mut census = self.publication_census.get();
+                census.rebound += 1;
+                self.publication_census.set(census);
             }
             let owner = match self.owner(token) {
                 Ok(owner) => owner,

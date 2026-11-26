@@ -44,7 +44,7 @@ pub async fn lock_file_0<T: Thread + 'static>(
     let int_array: Vec<i32> = vec![result[0], result[1]];
     let reference = Reference::from(int_array);
     let vm = thread.vm()?;
-    let value = Value::new_object(vm.garbage_collector(), reference);
+    let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     Ok(Some(value))
 }
 

@@ -1,6 +1,7 @@
 //! Heap-owned canonical static roots and logical-owner class initialization.
 use super::layout::Field;
-use super::objects::{Execution, Payload, Value, complete, help};
+use super::objects::{Execution, Payload, Value, complete_recorded};
+use super::recording::Operation;
 use super::{Error, Program};
 use ristretto_classfile::ConstantPool;
 use ristretto_classfile::attributes::Attribute;
@@ -457,7 +458,7 @@ impl Execution<'_, '_, '_> {
                             .class_initialization_waits
                             .checked_add(1)
                             .ok_or(Error::Limit("class wait counter"))?;
-                        help(&mut self.helper, &mut self.report)?;
+                        self.poll_helper()?;
                         notified.await;
                     }
                 }
@@ -532,20 +533,33 @@ impl Execution<'_, '_, '_> {
 
     async fn allocate_static_storage(&mut self, class: usize) -> Result<Root<Payload>, Error> {
         let edges = self.program.layout(class)?.statics.references;
-        let mut request = self.mutator.allocate_with_edges(
-            Payload::Statics {
-                class,
-                integers: std::array::from_fn(|_| AtomicI32::new(0)),
-            },
-            edges,
-        )?;
-        let root = complete(
-            &mut self.helper,
-            &mut self.report,
-            self.limits.request_polls,
-            || request.poll(),
-        )
-        .await?;
+        let recording = self.recording.clone();
+        let event = recording.request(Operation::Allocation);
+        let parent = event.id();
+        let result = async {
+            let mut request = recording.prepare(Operation::Allocation, parent, || {
+                self.mutator.allocate_with_edges(
+                    Payload::Statics {
+                        class,
+                        integers: std::array::from_fn(|_| AtomicI32::new(0)),
+                    },
+                    edges,
+                )
+            })?;
+            complete_recorded(
+                &mut self.helper,
+                &mut self.report,
+                self.limits.request_polls,
+                &recording,
+                Operation::Allocation,
+                parent,
+                || request.poll(),
+            )
+            .await
+        }
+        .await;
+        event.finish_result(&result);
+        let root = result?;
         let allocations = self
             .report
             .allocations
@@ -590,18 +604,7 @@ impl Execution<'_, '_, '_> {
             )),
             Field::Reference { edge, target } => {
                 self.check_static_storage(&root, owner)?;
-                let value = {
-                    let mut request = self.mutator.child::<Payload, Payload>(&root, edge)?;
-                    let child = complete(
-                        &mut self.helper,
-                        &mut self.report,
-                        self.limits.request_polls,
-                        || request.poll(),
-                    )
-                    .await?;
-                    self.report.reference_reads += 1;
-                    child
-                };
+                let value = self.read_edge(&root, edge).await?;
                 if let Some(value) = &value {
                     self.check_reference(value, target)?;
                 }
@@ -652,15 +655,7 @@ impl Execution<'_, '_, '_> {
                 if let Some(value) = &value {
                     self.check_reference(value, target)?;
                 }
-                let mut request = self.mutator.write(&root, edge, value.as_ref())?;
-                complete(
-                    &mut self.helper,
-                    &mut self.report,
-                    self.limits.request_polls,
-                    || request.poll(),
-                )
-                .await?;
-                self.report.reference_writes += 1;
+                self.write_edge(&root, edge, value.as_ref()).await?;
             }
         }
         Ok(())
@@ -768,6 +763,7 @@ mod tests {
             limits: Limits::default(),
             report: Report::default(),
             statics: States::default(),
+            recording: crate::canonical::recording::Recording::default(),
         };
         execution.initialize_class(0, 0).await?;
         let root = execution.statics.root(0)?;
@@ -802,6 +798,7 @@ mod tests {
             limits: Limits::default(),
             report: Report::default(),
             statics: States::default(),
+            recording: crate::canonical::recording::Recording::default(),
         };
         let mut future = Box::pin(execution.initialize_class(0, 0));
         assert!(
@@ -839,3 +836,7 @@ mod tests {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "canonical_statics_tests.rs"]
+mod state_regressions;

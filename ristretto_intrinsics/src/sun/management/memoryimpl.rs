@@ -160,16 +160,19 @@ mod tests {
     #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_get_memory_usage_0_heap_after_collection() -> Result<()> {
+        const ARRAY_BYTES: usize = 1024 * 1024;
         let (vm, thread) = crate::test::thread().await?;
+        let array_bytes = i64::try_from(ARRAY_BYTES)?;
         let retained = Value::new_object(
             vm.garbage_collector(),
-            Reference::ByteArray(vec![42; 1024 * 1024].into_boxed_slice()),
+            Reference::ByteArray(vec![42; ARRAY_BYTES].into()),
         );
         let before = get_memory_usage_0(thread.clone(), Parameters::new(vec![Value::from(true)]))
             .await?
             .expect("heap usage");
         let before_used = before.as_object_ref()?.value("used")?.as_i64()?;
-        assert!(before_used > 0);
+        assert!(before_used >= array_bytes);
+        let mut retained_used = before_used;
 
         for _ in 0..2 {
             let completed = vm.garbage_collector().statistics()?.collections_completed;
@@ -190,13 +193,25 @@ mod tests {
             let usage = after.as_object_ref()?;
             let used = usage.value("used")?.as_i64()?;
             let committed = usage.value("committed")?.as_i64()?;
-            assert!(used >= before_used, "live heap usage was lost during GC");
+            // Bootstrap temporaries can be collected while the array survives.
+            assert!(used >= array_bytes, "live array usage was lost during GC");
+            retained_used = used;
             assert!(committed >= used);
             let array = retained.as_reference()?;
             let bytes = array.as_byte_vec_ref()?;
-            assert_eq!(bytes.len(), 1024 * 1024);
+            assert_eq!(bytes.len(), ARRAY_BYTES);
             assert!(bytes.iter().all(|&byte| byte == 42));
         }
+        drop(retained);
+        vm.garbage_collector().collect_full()?;
+        let released = get_memory_usage_0(thread, Parameters::new(vec![Value::from(true)]))
+            .await?
+            .expect("heap usage");
+        let released_used = released.as_object_ref()?.value("used")?.as_i64()?;
+        assert!(
+            retained_used - released_used >= array_bytes,
+            "collected array still counted as live"
+        );
         Ok(())
     }
 

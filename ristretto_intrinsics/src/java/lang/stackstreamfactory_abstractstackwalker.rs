@@ -37,7 +37,8 @@ async fn build_frame_data<T: Thread + 'static>(
         let method_name = method.name().to_object(thread).await?;
         let descriptor = method.descriptor().to_object(thread).await?;
 
-        let mut member = Object::new(member_class.clone())?;
+        let mut member =
+            Object::new_in_async(thread.vm()?.garbage_collector(), member_class.clone()).await?;
         if modern_layout {
             member.set_value("vmholder", class_mirror.clone())?;
         } else {
@@ -52,7 +53,7 @@ async fn build_frame_data<T: Thread + 'static>(
             let flags = i32::from(method.access_flags().bits()) | member_kind.bits();
             member.set_value("flags", Value::Int(flags))?;
         }
-        let member = Value::new_object(gc, Reference::Object(member));
+        let member = Value::try_new_object_async(gc, Reference::Object(member)).await?;
 
         let bytecode_index = i32::try_from(pc).unwrap_or(0);
         frame_data.push(FrameData {

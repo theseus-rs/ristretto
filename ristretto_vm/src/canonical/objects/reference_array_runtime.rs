@@ -1,7 +1,9 @@
 //! Incremental reference-array construction/access using only canonical edges.
 use super::reference_array::{self, FANOUT, MAX_HEIGHT, span};
-use super::{Component, Error, Execution, Payload, ReferenceType, Root, complete};
-use ristretto_gc::Gc;
+use super::{
+    Component, Error, Execution, Operation, Payload, ReferenceType, Root, complete_recorded,
+};
+use ristretto_gc::CanonicalPayload;
 
 struct ConstructionFrame {
     root: Root<Payload>,
@@ -23,14 +25,27 @@ impl Execution<'_, '_, '_> {
         edges: usize,
         internal: bool,
     ) -> Result<Root<Payload>, Error> {
-        let mut request = self.mutator.allocate_with_edges(payload, edges)?;
-        let root = complete(
-            &mut self.helper,
-            &mut self.report,
-            self.limits.request_polls,
-            || request.poll(),
-        )
-        .await?;
+        let recording = self.recording.clone();
+        let event = recording.request(Operation::Allocation);
+        let parent = event.id();
+        let result = async {
+            let mut request = recording.prepare(Operation::Allocation, parent, || {
+                self.mutator.allocate_with_edges(payload, edges)
+            })?;
+            complete_recorded(
+                &mut self.helper,
+                &mut self.report,
+                self.limits.request_polls,
+                &recording,
+                Operation::Allocation,
+                parent,
+                || request.poll(),
+            )
+            .await
+        }
+        .await;
+        event.finish_result(&result);
+        let root = result?;
         self.report.allocations = self
             .report
             .allocations
@@ -46,19 +61,32 @@ impl Execution<'_, '_, '_> {
         Ok(root)
     }
 
-    pub(super) async fn read_edge(
+    pub(in crate::canonical) async fn read_edge(
         &mut self,
         root: &Root<Payload>,
         edge: usize,
     ) -> Result<Option<Root<Payload>>, Error> {
-        let mut request = self.mutator.child::<Payload, Payload>(root, edge)?;
-        let root = complete(
-            &mut self.helper,
-            &mut self.report,
-            self.limits.request_polls,
-            || request.poll(),
-        )
-        .await?;
+        let recording = self.recording.clone();
+        let event = recording.request(Operation::ChildRead);
+        let parent = event.id();
+        let result = async {
+            let mut request = recording.prepare(Operation::ChildRead, parent, || {
+                self.mutator.child::<Payload, Payload>(root, edge)
+            })?;
+            complete_recorded(
+                &mut self.helper,
+                &mut self.report,
+                self.limits.request_polls,
+                &recording,
+                Operation::ChildRead,
+                parent,
+                || request.poll(),
+            )
+            .await
+        }
+        .await;
+        event.finish_result(&result);
+        let root = result?;
         self.report.reference_reads = self
             .report
             .reference_reads
@@ -67,20 +95,33 @@ impl Execution<'_, '_, '_> {
         Ok(root)
     }
 
-    pub(super) async fn write_edge(
+    pub(in crate::canonical) async fn write_edge(
         &mut self,
         root: &Root<Payload>,
         edge: usize,
         target: Option<&Root<Payload>>,
     ) -> Result<(), Error> {
-        let mut request = self.mutator.write(root, edge, target)?;
-        complete(
-            &mut self.helper,
-            &mut self.report,
-            self.limits.request_polls,
-            || request.poll(),
-        )
-        .await?;
+        let recording = self.recording.clone();
+        let event = recording.request(Operation::EdgeWrite);
+        let parent = event.id();
+        let result = async {
+            let mut request = recording.prepare(Operation::EdgeWrite, parent, || {
+                self.mutator.write(root, edge, target)
+            })?;
+            complete_recorded(
+                &mut self.helper,
+                &mut self.report,
+                self.limits.request_polls,
+                &recording,
+                Operation::EdgeWrite,
+                parent,
+                || request.poll(),
+            )
+            .await
+        }
+        .await;
+        event.finish_result(&result);
+        result?;
         self.report.reference_writes = self
             .report
             .reference_writes
@@ -109,9 +150,10 @@ impl Execution<'_, '_, '_> {
         if usize::from(layout.height) + 1 > configuration.roots {
             return Err(Error::Limit("reference array temporary roots"));
         }
-        let bytes = Gc::<Payload>::allocation_size(&Payload::ReferencePage { height: 1 })?
-            .checked_mul(layout.nodes)
-            .ok_or(Error::Limit("reference array payload bytes"))?;
+        let bytes =
+            CanonicalPayload::<Payload>::allocation_size(&Payload::ReferencePage { height: 1 })?
+                .checked_mul(layout.nodes)
+                .ok_or(Error::Limit("reference array payload bytes"))?;
         if bytes > self.limits.array_bytes {
             return Err(Error::Limit("reference array payload bytes"));
         }

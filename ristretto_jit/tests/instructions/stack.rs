@@ -3,6 +3,66 @@ use ristretto_classfile::attributes::Instruction;
 use ristretto_jit::Value;
 
 #[test]
+fn oversized_reference_root_spills_are_rejected() {
+    let instructions = [
+        Instruction::Aconst_null,
+        Instruction::Pop,
+        Instruction::Return,
+    ];
+    assert!(matches!(
+        crate::util::create_internal_function(
+            "()V",
+            &instructions,
+            u16::try_from(ristretto_jit::FRAME_ROOT_CAPACITY + 1).expect("capacity fits u16")
+        ),
+        Err(ristretto_jit::Error::UnsupportedMethod(_))
+    ));
+}
+
+#[test]
+fn local_slots_can_be_reused_for_different_primitive_types() -> ristretto_jit::Result<()> {
+    let instructions = vec![
+        Instruction::Iconst_2,
+        Instruction::Istore_0,
+        Instruction::Fconst_1,
+        Instruction::Fstore_0,
+        Instruction::Fload_0,
+        Instruction::F2i,
+        Instruction::Iconst_3,
+        Instruction::Istore_0,
+        Instruction::Iload_0,
+        Instruction::Iadd,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("()I", &instructions)?;
+    assert_eq!(
+        function.execute(&[], std::ptr::null())?,
+        Some(Value::I32(4))
+    );
+    Ok(())
+}
+
+#[test]
+fn a_wide_argument_second_slot_can_be_reused() -> ristretto_jit::Result<()> {
+    let instructions = vec![
+        Instruction::Lload_0,
+        Instruction::L2i,
+        Instruction::Fconst_2,
+        Instruction::Fstore_1,
+        Instruction::Fload_1,
+        Instruction::F2i,
+        Instruction::Iadd,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(J)I", &instructions)?;
+    assert_eq!(
+        function.execute(&[Value::I64(40)], std::ptr::null())?,
+        Some(Value::I32(42))
+    );
+    Ok(())
+}
+
+#[test]
 fn reused_reference_and_primitive_locals_cross_block_merges() -> ristretto_jit::Result<()> {
     let instructions = vec![
         Instruction::Aconst_null, // 0
@@ -308,6 +368,31 @@ fn dup2_x2_value1_category_1_value3_category_2() -> ristretto_jit::Result<()> {
     let function = create_function("()I", &instructions)?;
     let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(3));
+    Ok(())
+}
+
+#[test]
+fn dup2_x2_consumes_the_complete_mixed_width_result() -> ristretto_jit::Result<()> {
+    // JVMS dup2_x2 form 3: [1L, 2, 3] becomes [2, 3, 1L, 2, 3].
+    // Consume every value; inspecting only the top pair misses a lost duplicate.
+    let instructions = vec![
+        Instruction::Lconst_1,
+        Instruction::Iconst_2,
+        Instruction::Iconst_3,
+        Instruction::Dup2_x2,
+        Instruction::Isub,
+        Instruction::I2l,
+        Instruction::Lsub,
+        Instruction::L2i,
+        Instruction::Isub,
+        Instruction::Isub,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("()I", &instructions)?;
+    assert_eq!(
+        function.execute(&[], std::ptr::null())?,
+        Some(Value::I32(1))
+    );
     Ok(())
 }
 

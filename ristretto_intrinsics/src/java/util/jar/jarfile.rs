@@ -74,7 +74,7 @@ pub async fn get_meta_inf_entry_names<T: Thread + 'static>(
     let reference = Reference::try_from((string_array_class, string_values))?;
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
-    Ok(Some(Value::new_object(gc, reference)))
+    Ok(Some(Value::try_new_object_async(gc, reference).await?))
 }
 
 #[cfg(test)]

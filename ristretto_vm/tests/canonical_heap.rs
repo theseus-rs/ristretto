@@ -260,6 +260,9 @@ async fn scalar_entries_keep_their_primitive_dispatch_without_allocations() -> R
     Ok(())
 }
 
+#[path = "support/canonical_heap_additional.rs"]
+mod additional_regressions;
+
 #[tokio::test]
 async fn long_scalar_entries_yield_to_a_second_mutator_and_preserve_the_budget() -> Result<(), Error>
 {

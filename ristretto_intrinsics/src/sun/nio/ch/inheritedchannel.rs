@@ -56,7 +56,9 @@ async fn inet_peer_address<T: Thread + 'static>(thread: &Arc<T>, fd: RawFd) -> R
     };
     let vm = thread.vm()?;
     let bytes: Box<[i8]> = bytes.iter().map(|byte| byte.cast_signed()).collect();
-    let bytes = Value::new_object(vm.garbage_collector(), Reference::ByteArray(bytes));
+    let bytes =
+        Value::try_new_object_async(vm.garbage_collector(), Reference::ByteArray(bytes.into()))
+            .await?;
     thread
         .invoke(
             "java.net.InetAddress",
@@ -261,7 +263,7 @@ pub fn so_type_0<T: Thread + 'static>(
     "sun/nio/ch/InheritedChannel.unixPeerAddress0(I)[B",
     GreaterThan(JAVA_11)
 )]
-pub fn unix_peer_address_0<T: Thread + 'static>(
+pub async fn unix_peer_address_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -278,10 +280,10 @@ pub fn unix_peer_address_0<T: Thread + 'static>(
     });
     let vm = thread.vm()?;
     let bytes: Box<[i8]> = bytes.iter().map(|byte| byte.cast_signed()).collect();
-    Ok(Some(Value::new_object(
-        vm.garbage_collector(),
-        Reference::ByteArray(bytes),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(vm.garbage_collector(), Reference::ByteArray(bytes.into()))
+            .await?,
+    ))
 }
 
 #[cfg(test)]
@@ -377,7 +379,7 @@ mod tests {
     #[tokio::test]
     async fn test_unix_peer_address_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = unix_peer_address_0(thread, Parameters::new(vec![Value::Int(-1)]));
+        let result = unix_peer_address_0(thread, Parameters::new(vec![Value::Int(-1)])).await;
         assert_eq!(Some(Value::Object(None)), result.expect("peer address"));
     }
 }

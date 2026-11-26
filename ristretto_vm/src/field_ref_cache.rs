@@ -4,7 +4,7 @@ use crate::Error::{InternalError, PoisonedLock};
 use crate::JavaError::{IllegalAccessError, IncompatibleClassChangeError, NoSuchFieldError};
 use crate::Result;
 use crate::frame::Frame;
-use crate::instruction::method_resolver::check_jpms_access;
+use crate::instruction::method_resolver::check_jpms_class_access;
 use crate::reference_cache::ReferenceCache;
 use dashmap::DashMap;
 use ristretto_classfile::attributes::Attribute;
@@ -12,7 +12,8 @@ use ristretto_classfile::{
     BaseType, CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, FieldAccessFlags,
     FieldType, JAVA_9,
 };
-use ristretto_classloader::{Class, Field, Object, Value};
+use ristretto_classloader::{Class, Field, Object, Reference, ReferenceWriteGuardExt, Value};
+use ristretto_gc::sync::RwLockWriteGuard;
 use std::sync::{Arc, OnceLock, RwLock};
 
 pub(crate) type FieldRefEntry = OnceLock<Arc<ResolvedFieldRef>>;
@@ -65,6 +66,10 @@ pub(crate) struct ResolvedFieldRef {
 }
 
 impl ResolvedFieldRef {
+    pub(crate) fn field_type(&self) -> &FieldType {
+        self.field.field_type()
+    }
+
     pub(crate) fn is_static(&self) -> bool {
         matches!(self.storage, FieldStorage::Static(_))
     }
@@ -90,15 +95,20 @@ impl ResolvedFieldRef {
 
     /// Final writes are checked for each instruction, since frames share resolved references.
     pub(crate) fn check_write(&self, frame: &Frame) -> Result<()> {
+        self.check_write_from(frame.class(), Some(frame.method().name()))
+    }
+
+    /// Embedding helpers without a Java frame cannot authorize constructor-only writes.
+    pub(crate) fn check_write_from(&self, caller: &Arc<Class>, method: Option<&str>) -> Result<()> {
         if self.field.access_flags().contains(FieldAccessFlags::FINAL)
-            && (!Arc::ptr_eq(frame.class(), &self.declaring_class)
+            && (!Arc::ptr_eq(caller, &self.declaring_class)
                 || (self.declaring_class.class_file().version >= JAVA_9
-                    && frame.method().name()
-                        != if self.is_static() {
+                    && method
+                        != Some(if self.is_static() {
                             CLASS_INITIALIZER_NAME
                         } else {
                             CONSTRUCTOR_NAME
-                        }))
+                        })))
         {
             return Err(IllegalAccessError(
                 [
@@ -107,9 +117,9 @@ impl ResolvedFieldRef {
                     ".",
                     self.field.name(),
                     " from ",
-                    frame.class().name(),
+                    caller.name(),
                     ".",
-                    frame.method().name(),
+                    method.unwrap_or("<no Java frame>"),
                 ]
                 .concat(),
             )
@@ -174,8 +184,12 @@ impl ResolvedFieldRef {
         Ok(object.value_at_slot(self.instance_slot(object)?)?)
     }
 
-    pub(crate) fn put(&self, object: &mut Object, value: Value) -> Result<()> {
-        let slot = self.instance_slot(object)?;
+    pub(crate) fn put(
+        &self,
+        object: &mut RwLockWriteGuard<'_, Reference>,
+        value: Value,
+    ) -> Result<()> {
+        let slot = self.instance_slot(object.as_object_ref()?)?;
         let value = self.checked_value(value)?;
         Ok(object.set_value_at_slot(slot, value)?)
     }
@@ -231,35 +245,49 @@ pub(crate) async fn resolve_field_ref(frame: &Frame, index: u16) -> Result<Arc<R
         .field_refs()?
         .get(index)
         .ok_or(ristretto_classfile::Error::InvalidConstantPoolIndex(index))?;
+    // Preserve the interpreter's cache-hit path without upgrading its weak thread.
+    if let Some(resolved) = entry.get() {
+        return Ok(resolved.clone());
+    }
+    let thread = frame.thread()?;
+    resolve_field_reference(&thread, frame.class(), entry, index).await
+}
+
+/// Resolution shared by interpreter frames and owning JIT contexts. The entry
+/// belongs to this exact referring class's VM-owned constant-pool table.
+pub(crate) async fn resolve_field_reference(
+    thread: &crate::Thread,
+    caller: &Arc<Class>,
+    entry: &FieldRefEntry,
+    index: u16,
+) -> Result<Arc<ResolvedFieldRef>> {
     if let Some(resolved) = entry.get() {
         return Ok(resolved.clone());
     }
 
-    let pool = frame.class().constant_pool();
+    let pool = caller.constant_pool();
     let (class_index, name_and_type) = pool.try_get_field_ref(index)?;
     let (name_index, descriptor_index) = pool.try_get_name_and_type(*name_and_type)?;
     let name = pool.try_get_utf8(*name_index)?.to_string();
     let descriptor = pool.try_get_utf8(*descriptor_index)?.to_string();
     let field_type = FieldType::parse(&descriptor)?;
-    let target = frame
-        .thread()?
-        .load_referenced_class(frame.class(), pool.try_get_class(*class_index)?)
+    let target = thread
+        .load_referenced_class(caller, pool.try_get_class(*class_index)?)
         .await?;
-    check_jpms_access(frame, &target)?;
+    check_jpms_class_access(thread, caller, &target)?;
     if !target
         .class_file()
         .access_flags
         .contains(ClassAccessFlags::PUBLIC)
-        && !same_runtime_package(frame.class(), &target)?
+        && !same_runtime_package(caller, &target)?
     {
-        return Err(IllegalAccessError(
-            [frame.class().name(), " cannot access ", target.name()].concat(),
-        )
-        .into());
+        return Err(
+            IllegalAccessError([caller.name(), " cannot access ", target.name()].concat()).into(),
+        );
     }
     let (declaring_class, field) = lookup_field(&target, &name, &field_type)?
         .ok_or_else(|| NoSuchFieldError([target.name(), ".", &name, ":", &descriptor].concat()))?;
-    let protected_receiver = check_access(frame, &declaring_class, &field).await?;
+    let protected_receiver = check_access(thread, caller, &declaring_class, &field).await?;
     let storage = if field.access_flags().contains(FieldAccessFlags::STATIC) {
         let index = declaring_class
             .static_fields()
@@ -338,19 +366,19 @@ fn is_subclass_or_same(class: &Arc<Class>, parent: &Arc<Class>) -> Result<bool> 
 }
 
 async fn check_access(
-    frame: &Frame,
+    thread: &crate::Thread,
+    caller: &Arc<Class>,
     class: &Arc<Class>,
     field: &Field,
 ) -> Result<Option<Arc<Class>>> {
-    let caller = frame.class();
     let flags = field.access_flags();
     if Arc::ptr_eq(caller, class) || flags.contains(FieldAccessFlags::PUBLIC) {
         return Ok(None);
     }
     if flags.contains(FieldAccessFlags::PRIVATE) {
         if same_runtime_package(caller, class)? {
-            let caller_host = nest_host(frame, caller).await?;
-            let field_host = nest_host(frame, class).await?;
+            let caller_host = nest_host(thread, caller).await?;
+            let field_host = nest_host(thread, class).await?;
             if Arc::ptr_eq(&caller_host, &field_host) {
                 return Ok(None);
             }
@@ -373,14 +401,13 @@ async fn check_access(
     .into())
 }
 
-async fn nest_host(frame: &Frame, class: &Arc<Class>) -> Result<Arc<Class>> {
+async fn nest_host(thread: &crate::Thread, class: &Arc<Class>) -> Result<Arc<Class>> {
     for attribute in &class.class_file().attributes {
         if let Attribute::NestHost {
             host_class_index, ..
         } = attribute
         {
-            let host = frame
-                .thread()?
+            let host = thread
                 .load_referenced_class(
                     class,
                     class.constant_pool().try_get_class(*host_class_index)?,

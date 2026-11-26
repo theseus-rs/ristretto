@@ -47,6 +47,7 @@ impl CompiledExecution<'_, '_, '_, '_> {
     pub(super) async fn action(
         &mut self,
         frames: &mut Vec<Frame>,
+        measurement: &mut Option<super::Measurement>,
         action: Action,
     ) -> Result<(), Error> {
         if let Some(class) = action.initializing_class()
@@ -73,6 +74,11 @@ impl CompiledExecution<'_, '_, '_, '_> {
                 if frames.is_empty() {
                     self.execution.report.entry_initialization =
                         super::super::InitializationWork::from_report(&self.execution.report);
+                    *measurement = Some(
+                        self.execution
+                            .recording
+                            .measurement(&mut self.execution.mutator),
+                    );
                 }
                 let frame = self.frame(class, method, arguments, frames.len()).await?;
                 frames.push(frame);

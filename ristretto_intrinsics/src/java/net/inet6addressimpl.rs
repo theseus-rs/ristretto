@@ -138,7 +138,8 @@ async fn do_lookup_all_host_addr<T: Thread + 'static>(
     }
     let inet_addr_class = thread.class("[Ljava/net/InetAddress;").await?;
     let reference = Reference::try_from((inet_addr_class, elements))?;
-    let array_value = Value::new_object(thread.vm()?.garbage_collector(), reference);
+    let array_value =
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?;
     Ok(Some(array_value))
 }
 
@@ -172,7 +173,7 @@ mod tests {
     fn byte_array<V: VM + ?Sized>(vm: &V, bytes: &[i8]) -> Value {
         Value::new_object(
             vm.garbage_collector(),
-            Reference::ByteArray(bytes.to_vec().into_boxed_slice()),
+            Reference::ByteArray(bytes.to_vec().into()),
         )
     }
 

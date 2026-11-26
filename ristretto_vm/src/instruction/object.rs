@@ -7,7 +7,7 @@ use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use crate::{Result, Value};
-use ristretto_classloader::{Class, Object, Reference};
+use ristretto_classloader::{Class, Object, Reference, ReferenceWriteGuardExt};
 use ristretto_gc::Gc;
 use ristretto_gc::sync::RwLock;
 use std::sync::Arc;
@@ -204,39 +204,70 @@ pub(crate) fn aaload(stack: &mut OperandStack) -> Result<()> {
 ///
 /// - [JVMS §6.5.aastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aastore)
 #[inline]
-pub(crate) fn aastore(stack: &mut OperandStack) -> Result<()> {
+pub(crate) async fn aastore(frame: &Frame, stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
         return Err(NullPointerException(None).into());
     };
-    let mut guard = reference.write();
-    let Reference::Array(object_array) = &mut *guard else {
-        return Err(InvalidStackValue {
-            expected: "reference array".to_string(),
-            actual: guard.to_string(),
-        });
-    };
+    let thread = frame.thread()?;
+    store_reference_array(&thread, &reference, index, value).await?;
+    Ok(Continue)
+}
 
-    let array = &mut object_array.elements;
-    let length = array.len();
-    let original_index = index;
-    let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
-        index: original_index,
-        length,
-    })?;
-    // TODO: validate object type is compatible with array type
-    // See: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aastore
-    if let Some(element) = array.get_mut(index) {
-        *element = Value::Object(value);
-    } else {
-        return Err(ArrayIndexOutOfBoundsException {
-            index: original_index,
-            length,
+/// Checked reference-array publication shared by interpreter and compiled helpers.
+/// Array/value owners outlive every await; payload guards never cross resolution.
+pub(crate) async fn store_reference_array(
+    thread: &Thread,
+    reference: &Gc<RwLock<Reference>>,
+    index: i32,
+    value: Option<Gc<RwLock<Reference>>>,
+) -> Result<()> {
+    let class = {
+        let guard = reference.read();
+        let Reference::Array(array) = &*guard else {
+            return Err(InvalidStackValue {
+                expected: "reference array".to_owned(),
+                actual: guard.to_string(),
+            });
+        };
+        reference_array_index(index, array.elements.len())?;
+        array.class.clone()
+    };
+    if let Some(value) = &value {
+        // Resolve the actual component definition, including hidden/sibling-loader
+        // classes. A type test must not initialize either component or value class.
+        let component = thread.array_component_class(&class).await?;
+        if !is_instance_of(thread, value, &component).await? {
+            return Err(crate::JavaError::ArrayStoreException(value.read().class_name()?).into());
         }
-        .into());
     }
+    let mut guard = reference.write();
+    let Reference::Array(array) = &*guard else {
+        return Err(InternalError(
+            "array storage changed during aastore".to_owned(),
+        ));
+    };
+    // Java array class/length are immutable. Native embedding can still replace
+    // a managed value; reject a changed type rather than commit an unchecked edge.
+    if !Arc::ptr_eq(&class, &array.class) {
+        return Err(InternalError(
+            "array class changed during aastore".to_owned(),
+        ));
+    }
+    let slot = reference_array_index(index, array.elements.len())?;
+    let length = array.elements.len();
+    guard
+        .set_array_element(slot, Value::Object(value))
+        .map_err(|_| ArrayIndexOutOfBoundsException { index, length })?;
     Ok(())
+}
+
+fn reference_array_index(index: i32, length: usize) -> Result<usize> {
+    usize::try_from(index)
+        .ok()
+        .filter(|index| *index < length)
+        .ok_or_else(|| ArrayIndexOutOfBoundsException { index, length }.into())
 }
 
 /// # References
@@ -288,8 +319,10 @@ pub(crate) async fn new(
     let thread = frame.thread()?;
     let class = frame.allocation_class(&thread, index).await?;
     // Allocate object with all instance fields zeroed (does NOT call constructor)
-    let object = Object::new(class)?;
-    let reference = Value::new_object(thread.vm()?.garbage_collector(), Reference::Object(object));
+    let object = Object::new_in_async(thread.vm()?.garbage_collector(), class).await?;
+    let reference =
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), Reference::Object(object))
+            .await?;
     stack.push(reference)?;
     Ok(Continue)
 }
@@ -361,7 +394,7 @@ pub(crate) async fn instanceof(
 }
 
 #[inline]
-async fn is_instance_of(
+pub(crate) async fn is_instance_of(
     thread: &Thread,
     object: &Gc<RwLock<Reference>>,
     class: &Arc<Class>,
@@ -392,6 +425,10 @@ async fn is_instance_of(
 
     class.is_assignable_from(thread, &object_class).await
 }
+
+#[cfg(test)]
+#[path = "reference_store_tests.rs"]
+mod reference_store_tests;
 
 #[cfg(test)]
 mod tests {
@@ -536,7 +573,7 @@ mod tests {
         let class = thread.class("java/lang/Object").await?;
         let object = Value::new_object(
             thread.vm()?.garbage_collector(),
-            Reference::ByteArray(vec![42i8].into_boxed_slice()),
+            Reference::ByteArray(vec![42i8].into()),
         );
         let reference = Reference::try_from((class, vec![object.clone()]))?;
         let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
@@ -573,7 +610,7 @@ mod tests {
         let class = thread.class("java/lang/Object").await?;
         let object = Value::new_object(
             thread.vm()?.garbage_collector(),
-            Reference::ByteArray(vec![42i8].into_boxed_slice()),
+            Reference::ByteArray(vec![42i8].into()),
         );
         let reference = Reference::try_from((class, vec![object.clone()]))?;
         let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
@@ -595,7 +632,7 @@ mod tests {
         let class = thread.class("java/lang/Object").await?;
         let object = Value::new_object(
             thread.vm()?.garbage_collector(),
-            Reference::ByteArray(vec![42i8].into_boxed_slice()),
+            Reference::ByteArray(vec![42i8].into()),
         );
         let reference = Reference::try_from((class, vec![object.clone()]))?;
         let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
@@ -622,32 +659,69 @@ mod tests {
 
     #[tokio::test]
     async fn test_aastore() -> Result<()> {
-        let (_vm, thread, _frame) = crate::test::frame().await?;
+        let (_vm, thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let class = thread.class("java/lang/Object").await?;
+        let class = thread.class("[Ljava/lang/Object;").await?;
         let object = Value::new_object(
             thread.vm()?.garbage_collector(),
-            Reference::ByteArray(vec![3i8].into_boxed_slice()),
+            Reference::ByteArray(vec![3i8].into()),
         );
         let reference = Reference::try_from((class, vec![object.clone()]))?;
         let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
         stack.push(object)?;
-        aastore(stack)?;
+        aastore(&frame, stack).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn aastore_rejects_incompatible_value_without_store() -> Result<()> {
+        let (vm, thread, frame) = crate::test::frame().await?;
+        let array_class = thread.class("[Ljava/lang/String;").await?;
+        let array = Value::try_new_object_async(
+            vm.garbage_collector(),
+            Reference::try_from((array_class, vec![Value::Object(None)]))?,
+        )
+        .await?;
+        let class = thread.class("java/lang/Object").await?;
+        let value = Value::try_new_object_async(
+            vm.garbage_collector(),
+            Reference::Object(Object::new_in_async(vm.garbage_collector(), class).await?),
+        )
+        .await?;
+        let mut stack = OperandStack::with_max_size(3);
+        stack.push(array.clone())?;
+        stack.push_int(0)?;
+        stack.push(value)?;
+        let result = aastore(&frame, &mut stack).await;
+        assert!(
+            matches!(
+                result,
+                Err(JavaError(crate::JavaError::ArrayStoreException(_)))
+            ),
+            "{result:?}"
+        );
+        assert!(
+            array
+                .as_class_vec_ref()?
+                .1
+                .first()
+                .is_some_and(Value::is_null)
+        );
         Ok(())
     }
 
     #[tokio::test]
     async fn test_aastore_invalid_value() -> Result<()> {
-        let (_vm, thread, _frame) = crate::test::frame().await?;
+        let (_vm, thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
         let reference = Reference::from(vec![42i32]);
         let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object.clone())?;
         stack.push_int(0)?;
         stack.push(object)?;
-        let result = aastore(stack);
+        let result = aastore(&frame, stack).await;
         assert!(matches!(
             result,
             Err(InvalidStackValue {
@@ -660,19 +734,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_aastore_invalid_index_negative() -> Result<()> {
-        let (_vm, thread, _frame) = crate::test::frame().await?;
+        let (_vm, thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let class = thread.class("java/lang/Object").await?;
+        let class = thread.class("[Ljava/lang/Object;").await?;
         let object = Value::new_object(
             thread.vm()?.garbage_collector(),
-            Reference::ByteArray(vec![3i8].into_boxed_slice()),
+            Reference::ByteArray(vec![3i8].into()),
         );
         let reference = Reference::try_from((class, vec![object.clone()]))?;
         let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(-1)?;
         stack.push(object)?;
-        let result = aastore(stack);
+        let result = aastore(&frame, stack).await;
         assert!(matches!(
             result,
             Err(JavaError(ArrayIndexOutOfBoundsException { index, length }))
@@ -683,19 +757,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_aastore_invalid_index() -> Result<()> {
-        let (_vm, thread, _frame) = crate::test::frame().await?;
+        let (_vm, thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let class = thread.class("java/lang/Object").await?;
+        let class = thread.class("[Ljava/lang/Object;").await?;
         let object = Value::new_object(
             thread.vm()?.garbage_collector(),
-            Reference::ByteArray(vec![3i8].into_boxed_slice()),
+            Reference::ByteArray(vec![3i8].into()),
         );
         let reference = Reference::try_from((class, vec![object.clone()]))?;
         let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(2)?;
         stack.push(object)?;
-        let result = aastore(stack);
+        let result = aastore(&frame, stack).await;
         assert!(matches!(
             result,
             Err(JavaError(ArrayIndexOutOfBoundsException { index, length }))
@@ -706,13 +780,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_aastore_null_pointer() -> Result<()> {
-        let (_vm, _thread, _frame) = crate::test::frame().await?;
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
         let object = Value::Object(None);
         stack.push_object(None)?;
         stack.push_int(0)?;
         stack.push(object)?;
-        let result = aastore(stack);
+        let result = aastore(&frame, stack).await;
         assert!(matches!(result, Err(JavaError(NullPointerException(None)))));
         Ok(())
     }

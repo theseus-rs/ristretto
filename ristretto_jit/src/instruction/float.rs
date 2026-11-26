@@ -1,8 +1,5 @@
-use crate::instruction::ThrowContext;
-use crate::instruction::object::{array_load, array_store};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
-use crate::runtime_helpers::RuntimeHelpers;
 use crate::{Result, jit_value};
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{FloatCC, InstBuilder, Value, types};
@@ -207,50 +204,6 @@ pub(crate) fn fstore_3(
     let value = stack.pop_float(function_builder)?;
     locals.set_float(function_builder, 3, value)?;
     Ok(())
-}
-
-/// # References
-///
-/// - [JVMS §6.5.faload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.faload)
-pub(crate) fn faload(
-    function_builder: &mut FunctionBuilder,
-    stack: &mut OperandStack,
-    helpers: &RuntimeHelpers,
-    context_pointer: Value,
-    throw_context: &ThrowContext<'_>,
-) -> Result<()> {
-    let value = array_load(
-        function_builder,
-        stack,
-        helpers,
-        context_pointer,
-        throw_context,
-        helpers.faload,
-    )?;
-    stack.push_float(function_builder, value)?;
-    Ok(())
-}
-
-/// # References
-///
-/// - [JVMS §6.5.fastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fastore)
-pub(crate) fn fastore(
-    function_builder: &mut FunctionBuilder,
-    stack: &mut OperandStack,
-    helpers: &RuntimeHelpers,
-    context_pointer: Value,
-    throw_context: &ThrowContext<'_>,
-) -> Result<()> {
-    let value = stack.pop_float(function_builder)?;
-    array_store(
-        function_builder,
-        stack,
-        helpers,
-        context_pointer,
-        throw_context,
-        helpers.fastore,
-        value,
-    )
 }
 
 /// # References

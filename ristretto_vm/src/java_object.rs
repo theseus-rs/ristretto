@@ -3,7 +3,7 @@ use crate::Error::InternalError;
 use crate::Result;
 use crate::thread::Thread;
 use ristretto_classfile::{CONSTRUCTOR_NAME, JAVA_8, JAVA_25, JavaStr};
-use ristretto_classloader::{Class, ClassLoader, ClassLoaderType, Object, Reference, Value};
+use ristretto_classloader::{Class, ClassLoader, ClassLoaderType, Object, Value};
 use std::sync::Arc;
 
 /// Trait for converting a Rust value to a Java object.  Converts to objects of the primitive
@@ -152,7 +152,8 @@ impl JavaObject for &str {
         let class = thread.class("java.lang.String").await?;
         let vm = thread.vm()?;
         vm.string_factory()
-            .create_utf8(class, vm.garbage_collector(), self)
+            .create_utf8_async(class, vm.garbage_collector(), self)
+            .await
     }
 }
 
@@ -169,7 +170,8 @@ impl JavaObject for &JavaStr {
         let class = thread.class("java.lang.String").await?;
         let vm = thread.vm()?;
         vm.string_factory()
-            .create_utf16(class, vm.garbage_collector(), utf16)
+            .create_utf16_async(class, vm.garbage_collector(), utf16)
+            .await
     }
 }
 
@@ -278,7 +280,8 @@ async fn to_class_loader_object(thread: &Thread, class_loader: &Arc<ClassLoader>
             ));
         };
         let gc = vm.garbage_collector();
-        let object = Value::new_object(gc, Reference::Object(Object::new(loader_class)?));
+        let instance = Object::new_in_async(gc, loader_class).await?;
+        let object = Value::try_from_object_async(gc, instance).await?;
         let parameters = [object.clone(), name, parent_class_loader, url_class_path];
         Box::pin(thread.execute(&builtin_class, &init_method, &parameters)).await?;
 
@@ -501,11 +504,11 @@ async fn create_boot_unnamed_module(thread: &Thread) -> Result<Value> {
     // - descriptor = null
     let module_class_name = JavaStr::try_from_str("java/lang/Module")?;
     let module_class = thread.load_and_link_class(module_class_name).await?;
-    let module_object = Object::new(module_class)?;
+    let vm = thread.vm()?;
+    let module_object = Object::new_in_async(vm.garbage_collector(), module_class).await?;
     // All fields remain null/default which is correct for an unnamed boot module
 
-    let vm = thread.vm()?;
-    Ok(Value::from_object(vm.garbage_collector(), module_object))
+    Ok(Value::try_from_object_async(vm.garbage_collector(), module_object).await?)
 }
 
 /// Create a minimal named module for a bootstrap class loaded while the VM is using the
@@ -526,11 +529,11 @@ async fn create_named_boot_module(
 
     let module_class_name = JavaStr::try_from_str("java/lang/Module")?;
     let module_class = thread.load_and_link_class(module_class_name).await?;
-    let mut module_object = Object::new(module_class)?;
+    let mut module_object = Object::new_in_async(vm.garbage_collector(), module_class).await?;
     let name = module_name.to_object(thread).await?;
     module_object.set_value_unchecked("name", name)?;
     module_object.set_value_unchecked("loader", Value::Object(None))?;
-    let module = Value::from_object(vm.garbage_collector(), module_object);
+    let module = Value::try_from_object_async(vm.garbage_collector(), module_object).await?;
 
     let mut defined_module = DefinedModule::new(module_name.to_string(), false);
     let packages = vm
@@ -648,15 +651,15 @@ async fn create_unnamed_module(thread: &Thread, class_loader_object: &Value) -> 
     // Instead, we create the object and set the fields directly.
     let module_class_name = JavaStr::try_from_str("java/lang/Module")?;
     let module_class = thread.load_and_link_class(module_class_name).await?;
-    let mut module_object = Object::new(module_class)?;
+    let vm = thread.vm()?;
+    let mut module_object = Object::new_in_async(vm.garbage_collector(), module_class).await?;
 
     // Set the loader field to the class loader
     module_object.set_value_unchecked("loader", class_loader_object.clone())?;
     // layer and descriptor remain null (default)
     // name remains null (unnamed module)
 
-    let vm = thread.vm()?;
-    Ok(Value::from_object(vm.garbage_collector(), module_object))
+    Ok(Value::try_from_object_async(vm.garbage_collector(), module_object).await?)
 }
 
 /// Build a `ProtectionDomain` Java object from a code source URL string.

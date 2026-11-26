@@ -191,7 +191,7 @@ pub(crate) async fn java_error(thread: &Thread, error: Error) -> crate::Error {
         Error::Heap(ristretto_gc::Error::OutOfMemory)
         | Error::Collector(ristretto_gc::canonical::Error::Heap(
             ristretto_gc::Error::OutOfMemory,
-        )) => return JavaError::OutOfMemoryError("Java heap space".into()).into(),
+        )) => return ristretto_gc::Error::OutOfMemory.into(),
         _ => return JavaError::RuntimeException(error.to_string()).into(),
     };
     // These faults carry a class but do not always retain the failing index or
@@ -317,7 +317,7 @@ mod tests {
     -> Result<(), Box<dyn std::error::Error>> {
         let binding = binding()?;
         let collector = GarbageCollector::new();
-        let ordinary = Value::new_object(&collector, vec![31_i32].into());
+        let ordinary = Value::try_new_object(&collector, vec![31_i32].into())?;
         let baseline = collector.managed_bytes();
         let mut call = Box::pin(binding.invoke(&collector, i32::MAX, None));
         assert!(

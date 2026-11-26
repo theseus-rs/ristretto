@@ -111,7 +111,7 @@ fn remove_v8_handle(h_key: i32) -> i64 {
     "java/util/prefs/WindowsPreferences.WindowsRegOpenKey(J[BI)[J",
     GreaterThanOrEqual(JAVA_11)
 )]
-pub fn windows_reg_open_key<T: Thread + 'static>(
+pub async fn windows_reg_open_key<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -125,7 +125,7 @@ pub fn windows_reg_open_key<T: Thread + 'static>(
     let long_array: Vec<i64> = result.to_vec();
     let reference = Reference::from(long_array);
     let vm = thread.vm()?;
-    let value = Value::new_object(vm.garbage_collector(), reference);
+    let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     Ok(Some(value))
 }
 
@@ -155,7 +155,7 @@ pub fn windows_reg_close_key<T: Thread + 'static>(
     "java/util/prefs/WindowsPreferences.WindowsRegCreateKeyEx(J[B)[J",
     GreaterThanOrEqual(JAVA_11)
 )]
-pub fn windows_reg_create_key_ex<T: Thread + 'static>(
+pub async fn windows_reg_create_key_ex<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -168,7 +168,7 @@ pub fn windows_reg_create_key_ex<T: Thread + 'static>(
     let long_array: Vec<i64> = result.to_vec();
     let reference = Reference::from(long_array);
     let vm = thread.vm()?;
-    let value = Value::new_object(vm.garbage_collector(), reference);
+    let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     Ok(Some(value))
 }
 
@@ -215,7 +215,7 @@ pub fn windows_reg_flush_key<T: Thread + 'static>(
     "java/util/prefs/WindowsPreferences.WindowsRegQueryValueEx(J[B)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-pub fn windows_reg_query_value_ex<T: Thread + 'static>(
+pub async fn windows_reg_query_value_ex<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -229,7 +229,7 @@ pub fn windows_reg_query_value_ex<T: Thread + 'static>(
             let byte_array: Vec<i8> = data.into_iter().map(|b| b as i8).collect();
             let reference = Reference::from(byte_array);
             let vm = thread.vm()?;
-            let value = Value::new_object(vm.garbage_collector(), reference);
+            let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
             Ok(Some(value))
         }
         None => Ok(Some(Value::Object(None))),
@@ -296,7 +296,7 @@ pub fn windows_reg_delete_value<T: Thread + 'static>(
     "java/util/prefs/WindowsPreferences.WindowsRegQueryInfoKey(J)[J",
     GreaterThanOrEqual(JAVA_11)
 )]
-pub fn windows_reg_query_info_key<T: Thread + 'static>(
+pub async fn windows_reg_query_info_key<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -306,7 +306,7 @@ pub fn windows_reg_query_info_key<T: Thread + 'static>(
     let long_array: Vec<i64> = result.to_vec();
     let reference = Reference::from(long_array);
     let vm = thread.vm()?;
-    let value = Value::new_object(vm.garbage_collector(), reference);
+    let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     Ok(Some(value))
 }
 
@@ -318,7 +318,7 @@ pub fn windows_reg_query_info_key<T: Thread + 'static>(
     "java/util/prefs/WindowsPreferences.WindowsRegEnumKeyEx(JII)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-pub fn windows_reg_enum_key_ex<T: Thread + 'static>(
+pub async fn windows_reg_enum_key_ex<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -332,7 +332,7 @@ pub fn windows_reg_enum_key_ex<T: Thread + 'static>(
             let byte_array: Vec<i8> = data.into_iter().map(|b| b as i8).collect();
             let reference = Reference::from(byte_array);
             let vm = thread.vm()?;
-            let value = Value::new_object(vm.garbage_collector(), reference);
+            let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
             Ok(Some(value))
         }
         None => Ok(Some(Value::Object(None))),
@@ -347,7 +347,7 @@ pub fn windows_reg_enum_key_ex<T: Thread + 'static>(
     "java/util/prefs/WindowsPreferences.WindowsRegEnumValue(JII)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-pub fn windows_reg_enum_value<T: Thread + 'static>(
+pub async fn windows_reg_enum_value<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -361,7 +361,7 @@ pub fn windows_reg_enum_value<T: Thread + 'static>(
             let byte_array: Vec<i8> = data.into_iter().map(|b| b as i8).collect();
             let reference = Reference::from(byte_array);
             let vm = thread.vm()?;
-            let value = Value::new_object(vm.garbage_collector(), reference);
+            let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
             Ok(Some(value))
         }
         None => Ok(Some(Value::Object(None))),
@@ -606,7 +606,7 @@ fn reg_enum_value(h_key: i64, value_index: i32, max_value_name_length: i32) -> O
     "java/util/prefs/WindowsPreferences.WindowsRegOpenKey(I[BI)[I",
     Equal(JAVA_8)
 )]
-pub fn windows_reg_open_key_v8<T: Thread + 'static>(
+pub async fn windows_reg_open_key_v8<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -620,7 +620,7 @@ pub fn windows_reg_open_key_v8<T: Thread + 'static>(
     let int_array: Vec<i32> = vec![store_v8_handle(result[0]), narrow_handle(result[1])];
     let reference = Reference::from(int_array);
     let vm = thread.vm()?;
-    let value = Value::new_object(vm.garbage_collector(), reference);
+    let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     Ok(Some(value))
 }
 
@@ -641,7 +641,7 @@ pub fn windows_reg_close_key_v8<T: Thread + 'static>(
     "java/util/prefs/WindowsPreferences.WindowsRegCreateKeyEx(I[B)[I",
     Equal(JAVA_8)
 )]
-pub fn windows_reg_create_key_ex_v8<T: Thread + 'static>(
+pub async fn windows_reg_create_key_ex_v8<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -658,7 +658,7 @@ pub fn windows_reg_create_key_ex_v8<T: Thread + 'static>(
     ];
     let reference = Reference::from(int_array);
     let vm = thread.vm()?;
-    let value = Value::new_object(vm.garbage_collector(), reference);
+    let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     Ok(Some(value))
 }
 
@@ -695,7 +695,7 @@ pub fn windows_reg_flush_key_v8<T: Thread + 'static>(
     "java/util/prefs/WindowsPreferences.WindowsRegQueryValueEx(I[B)[B",
     Equal(JAVA_8)
 )]
-pub fn windows_reg_query_value_ex_v8<T: Thread + 'static>(
+pub async fn windows_reg_query_value_ex_v8<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -709,7 +709,7 @@ pub fn windows_reg_query_value_ex_v8<T: Thread + 'static>(
             let byte_array: Vec<i8> = data.into_iter().map(|b| b as i8).collect();
             let reference = Reference::from(byte_array);
             let vm = thread.vm()?;
-            let value = Value::new_object(vm.garbage_collector(), reference);
+            let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
             Ok(Some(value))
         }
         None => Ok(Some(Value::Object(None))),
@@ -762,7 +762,7 @@ pub fn windows_reg_delete_value_v8<T: Thread + 'static>(
     "java/util/prefs/WindowsPreferences.WindowsRegQueryInfoKey(I)[I",
     Equal(JAVA_8)
 )]
-pub fn windows_reg_query_info_key_v8<T: Thread + 'static>(
+pub async fn windows_reg_query_info_key_v8<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -772,7 +772,7 @@ pub fn windows_reg_query_info_key_v8<T: Thread + 'static>(
     let int_array: Vec<i32> = result.iter().map(|&v| narrow_handle(v)).collect();
     let reference = Reference::from(int_array);
     let vm = thread.vm()?;
-    let value = Value::new_object(vm.garbage_collector(), reference);
+    let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     Ok(Some(value))
 }
 
@@ -780,7 +780,7 @@ pub fn windows_reg_query_info_key_v8<T: Thread + 'static>(
     "java/util/prefs/WindowsPreferences.WindowsRegEnumKeyEx(III)[B",
     Equal(JAVA_8)
 )]
-pub fn windows_reg_enum_key_ex_v8<T: Thread + 'static>(
+pub async fn windows_reg_enum_key_ex_v8<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -794,7 +794,7 @@ pub fn windows_reg_enum_key_ex_v8<T: Thread + 'static>(
             let byte_array: Vec<i8> = data.into_iter().map(|b| b as i8).collect();
             let reference = Reference::from(byte_array);
             let vm = thread.vm()?;
-            let value = Value::new_object(vm.garbage_collector(), reference);
+            let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
             Ok(Some(value))
         }
         None => Ok(Some(Value::Object(None))),
@@ -805,7 +805,7 @@ pub fn windows_reg_enum_key_ex_v8<T: Thread + 'static>(
     "java/util/prefs/WindowsPreferences.WindowsRegEnumValue(III)[B",
     Equal(JAVA_8)
 )]
-pub fn windows_reg_enum_value_v8<T: Thread + 'static>(
+pub async fn windows_reg_enum_value_v8<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -819,7 +819,7 @@ pub fn windows_reg_enum_value_v8<T: Thread + 'static>(
             let byte_array: Vec<i8> = data.into_iter().map(|b| b as i8).collect();
             let reference = Reference::from(byte_array);
             let vm = thread.vm()?;
-            let value = Value::new_object(vm.garbage_collector(), reference);
+            let value = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
             Ok(Some(value))
         }
         None => Ok(Some(Value::Object(None))),
@@ -857,7 +857,9 @@ mod tests {
         parameters.push(sub_key_val);
         parameters.push_int(0x2_0019); // KEY_READ
 
-        let result = windows_reg_open_key(thread.clone(), parameters)?.expect("value");
+        let result = windows_reg_open_key(thread.clone(), parameters)
+            .await?
+            .expect("value");
         let handle_val = {
             let result_ref = result.as_reference()?;
             let Reference::LongArray(arr) = &*result_ref else {
@@ -889,7 +891,9 @@ mod tests {
         parameters.push_long(0x8000_0001); // HKEY_CURRENT_USER
         parameters.push(sub_key_val);
 
-        let result = windows_reg_create_key_ex(thread.clone(), parameters)?.expect("value");
+        let result = windows_reg_create_key_ex(thread.clone(), parameters)
+            .await?
+            .expect("value");
         let handle = {
             let result_ref = result.as_reference()?;
             let Reference::LongArray(arr) = &*result_ref else {
@@ -926,7 +930,9 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_long(0x8000_0001); // HKEY_CURRENT_USER
 
-        let result = windows_reg_query_info_key(thread, parameters)?.expect("value");
+        let result = windows_reg_query_info_key(thread, parameters)
+            .await?
+            .expect("value");
         let result_ref = result.as_reference()?;
         let Reference::LongArray(arr) = &*result_ref else {
             panic!("Expected LongArray result");
@@ -952,8 +958,9 @@ mod tests {
         let mut create_params = Parameters::default();
         create_params.push_long(0x8000_0001);
         create_params.push(sub_key_val);
-        let create_result =
-            windows_reg_create_key_ex(thread.clone(), create_params)?.expect("value");
+        let create_result = windows_reg_create_key_ex(thread.clone(), create_params)
+            .await?
+            .expect("value");
         let handle = {
             let create_ref = create_result.as_reference()?;
             if let Reference::LongArray(arr) = &*create_ref {
@@ -980,7 +987,9 @@ mod tests {
         open_params.push_long(0x8000_0001);
         open_params.push(sub_key_val2);
         open_params.push_int(0xf_003f); // KEY_ALL_ACCESS
-        let open_result = windows_reg_open_key(thread.clone(), open_params)?.expect("value");
+        let open_result = windows_reg_open_key(thread.clone(), open_params)
+            .await?
+            .expect("value");
         let handle = {
             let open_ref = open_result.as_reference()?;
             if let Reference::LongArray(arr) = &*open_ref {
@@ -1014,8 +1023,9 @@ mod tests {
         let mut query_params = Parameters::default();
         query_params.push_long(handle);
         query_params.push(qval_name_val);
-        let query_result =
-            windows_reg_query_value_ex(thread.clone(), query_params)?.expect("value");
+        let query_result = windows_reg_query_value_ex(thread.clone(), query_params)
+            .await?
+            .expect("value");
         assert_ne!(
             Value::Object(None),
             query_result,
@@ -1065,7 +1075,9 @@ mod tests {
         parameters.push(sub_key_val);
         parameters.push_int(0x2_0019); // KEY_READ
 
-        let result = windows_reg_open_key_v8(thread.clone(), parameters)?.expect("value");
+        let result = windows_reg_open_key_v8(thread.clone(), parameters)
+            .await?
+            .expect("value");
         let handle = {
             let result_ref = result.as_reference()?;
             let Reference::IntArray(arr) = &*result_ref else {
@@ -1097,7 +1109,9 @@ mod tests {
         parameters.push_int(0x8000_0001u32.cast_signed()); // HKEY_CURRENT_USER
         parameters.push(sub_key_val);
 
-        let result = windows_reg_create_key_ex_v8(thread.clone(), parameters)?.expect("value");
+        let result = windows_reg_create_key_ex_v8(thread.clone(), parameters)
+            .await?
+            .expect("value");
         let handle = {
             let result_ref = result.as_reference()?;
             let Reference::IntArray(arr) = &*result_ref else {
@@ -1133,7 +1147,9 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_int(0x8000_0001u32.cast_signed()); // HKEY_CURRENT_USER
 
-        let result = windows_reg_query_info_key_v8(thread, parameters)?.expect("value");
+        let result = windows_reg_query_info_key_v8(thread, parameters)
+            .await?
+            .expect("value");
         let result_ref = result.as_reference()?;
         let Reference::IntArray(arr) = &*result_ref else {
             panic!("Expected IntArray result");
@@ -1159,8 +1175,9 @@ mod tests {
         let mut create_params = Parameters::default();
         create_params.push_int(0x8000_0001u32.cast_signed());
         create_params.push(make_bytes(sub_key_bytes));
-        let create_result =
-            windows_reg_create_key_ex_v8(thread.clone(), create_params)?.expect("value");
+        let create_result = windows_reg_create_key_ex_v8(thread.clone(), create_params)
+            .await?
+            .expect("value");
         let handle = {
             let create_ref = create_result.as_reference()?;
             if let Reference::IntArray(arr) = &*create_ref {
@@ -1178,7 +1195,9 @@ mod tests {
         open_params.push_int(0x8000_0001u32.cast_signed());
         open_params.push(make_bytes(sub_key_bytes));
         open_params.push_int(0xf_003f); // KEY_ALL_ACCESS
-        let open_result = windows_reg_open_key_v8(thread.clone(), open_params)?.expect("value");
+        let open_result = windows_reg_open_key_v8(thread.clone(), open_params)
+            .await?
+            .expect("value");
         let handle = {
             let open_ref = open_result.as_reference()?;
             if let Reference::IntArray(arr) = &*open_ref {
@@ -1207,8 +1226,9 @@ mod tests {
         let mut query_params = Parameters::default();
         query_params.push_int(handle);
         query_params.push(make_name(b"v8Val\0"));
-        let query_result =
-            windows_reg_query_value_ex_v8(thread.clone(), query_params)?.expect("value");
+        let query_result = windows_reg_query_value_ex_v8(thread.clone(), query_params)
+            .await?
+            .expect("value");
         assert_ne!(Value::Object(None), query_result);
 
         // Enum value (index 0 should yield our value name)
@@ -1216,8 +1236,9 @@ mod tests {
         enum_val_params.push_int(handle);
         enum_val_params.push_int(0);
         enum_val_params.push_int(64);
-        let enum_val_result =
-            windows_reg_enum_value_v8(thread.clone(), enum_val_params)?.expect("value");
+        let enum_val_result = windows_reg_enum_value_v8(thread.clone(), enum_val_params)
+            .await?
+            .expect("value");
         assert_ne!(Value::Object(None), enum_val_result);
 
         // Delete value
@@ -1252,7 +1273,9 @@ mod tests {
         open_params.push_int(0x8000_0001u32.cast_signed());
         open_params.push(sub_key_val);
         open_params.push_int(0x2_0019); // KEY_READ
-        let open_result = windows_reg_open_key_v8(thread.clone(), open_params)?.expect("value");
+        let open_result = windows_reg_open_key_v8(thread.clone(), open_params)
+            .await?
+            .expect("value");
         let handle = {
             let open_ref = open_result.as_reference()?;
             if let Reference::IntArray(arr) = &*open_ref {
@@ -1266,7 +1289,9 @@ mod tests {
         enum_params.push_int(handle);
         enum_params.push_int(0);
         enum_params.push_int(256);
-        let enum_result = windows_reg_enum_key_ex_v8(thread.clone(), enum_params)?.expect("value");
+        let enum_result = windows_reg_enum_key_ex_v8(thread.clone(), enum_params)
+            .await?
+            .expect("value");
         // HKCU\Software almost certainly has at least one subkey, but guard against the
         // (unlikely) empty case.
         let _ = enum_result;

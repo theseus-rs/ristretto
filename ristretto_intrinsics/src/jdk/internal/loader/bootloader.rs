@@ -84,7 +84,7 @@ pub async fn get_system_package_names<T: Thread + 'static>(
 
     let string_class = thread.class("[Ljava/lang/String;").await?;
     let reference = Reference::try_from((string_class, string_objects))?;
-    let package_names = Value::new_object(vm.garbage_collector(), reference);
+    let package_names = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     Ok(Some(package_names))
 }
 
@@ -109,7 +109,7 @@ pub async fn find_resource_as_stream<T: Thread + 'static>(
 
     let vm = thread.vm()?;
     let bytes = bytes.into_iter().map(u8::cast_signed).collect::<Vec<_>>();
-    let bytes = Value::new_object(vm.garbage_collector(), Reference::from(bytes));
+    let bytes = Value::try_new_object_async(vm.garbage_collector(), Reference::from(bytes)).await?;
     let stream = thread
         .object("java/io/ByteArrayInputStream", "[B", &[bytes])
         .await?;

@@ -168,14 +168,34 @@ pub async fn getmntent_0<T: Thread + 'static>(
     };
 
     let gc = vm.garbage_collector();
+    if !matches!(&*entry_value.as_reference()?, Reference::Object(_)) {
+        return Ok(Some(Value::Int(-1)));
+    }
+    let values = [
+        (
+            "name",
+            Value::try_new_object_async(gc, Reference::from(name)).await?,
+        ),
+        (
+            "dir",
+            Value::try_new_object_async(gc, Reference::from(dir)).await?,
+        ),
+        (
+            "fstype",
+            Value::try_new_object_async(gc, Reference::from(fstype)).await?,
+        ),
+        (
+            "opts",
+            Value::try_new_object_async(gc, Reference::from(opts)).await?,
+        ),
+    ];
     let mut guard = entry_value.as_reference_mut()?;
     let Reference::Object(object) = &mut *guard else {
         return Ok(Some(Value::Int(-1)));
     };
-    object.set_value("name", Value::new_object(gc, Reference::from(name)))?;
-    object.set_value("dir", Value::new_object(gc, Reference::from(dir)))?;
-    object.set_value("fstype", Value::new_object(gc, Reference::from(fstype)))?;
-    object.set_value("opts", Value::new_object(gc, Reference::from(opts)))?;
+    for (name, value) in values {
+        object.set_value(name, value)?;
+    }
 
     Ok(Some(Value::Int(0)))
 }

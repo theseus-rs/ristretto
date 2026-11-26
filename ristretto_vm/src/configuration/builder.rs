@@ -80,7 +80,7 @@ impl ConfigurationBuilder {
     /// - Background batch compilation enabled
     /// - Preview features disabled
     /// - Verify mode set to Remote (verify only remote/untrusted classes)
-    /// - Maximum interpreted Java stack size equivalent to 65,536 stored values per thread
+    /// - Maximum Java stack budget equivalent to 65,536 stored values per thread
     /// - Standard output and error streams directed to system stdout/stderr
     #[must_use]
     pub fn new() -> Self {
@@ -195,10 +195,12 @@ impl ConfigurationBuilder {
         self
     }
 
-    /// Set the maximum size in bytes of each interpreted Java stack.
+    /// Set the maximum size in bytes of each Java stack.
     ///
-    /// The size is rounded down to a whole interpreter value slot. Every frame consumes one
-    /// control slot plus its declared local-variable and operand-stack capacities.
+    /// The size is rounded down to a whole stored-value slot. Interpreted and compiled
+    /// frames each consume one control slot plus their declared local-variable and
+    /// operand-stack capacities.
+    /// This logical budget does not measure native machine-stack consumption.
     #[must_use]
     pub fn max_java_stack_size(mut self, max_java_stack_size: usize) -> Self {
         self.max_java_stack_size = max_java_stack_size;

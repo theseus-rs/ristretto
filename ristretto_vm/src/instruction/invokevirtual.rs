@@ -3,7 +3,8 @@ use crate::JavaError::NullPointerException;
 use crate::Result;
 use crate::frame::{ExecutionResult, Frame, MethodCall};
 use crate::instruction::{receiver_class, resolve_method_ref};
-use crate::method_ref_cache::{InvokeKind, ReceiverTarget};
+use crate::intrinsic_methods::IntrinsicMethod;
+use crate::method_ref_cache::{InvokeKind, ReceiverTarget, ResolvedMethodRef};
 use crate::operand_stack::OperandStack;
 use ristretto_classloader::{ResolvedMethod, Value};
 use ristretto_types::JavaError;
@@ -19,8 +20,6 @@ pub(crate) async fn invokevirtual(
     stack: &mut OperandStack,
     method_index: u16,
 ) -> Result<ExecutionResult> {
-    let thread = frame.thread()?;
-
     // Resolve the method with JPMS checks and caching
     let resolution = resolve_method_ref(frame, method_index, InvokeKind::Virtual).await?;
 
@@ -29,6 +28,25 @@ pub(crate) async fn invokevirtual(
     let receiver = parameters
         .first()
         .ok_or_else(|| InternalError("Expected object reference".to_string()))?;
+    let (target, intrinsic) = select_virtual_target(frame, &resolution, receiver).await?;
+    Ok(ExecutionResult::Call(MethodCall {
+        intrinsic: crate::frame::IntrinsicBinding::Resolved(intrinsic),
+        class: target.declaring_class,
+        method: target.method,
+        parameters: parameters.into(),
+        has_return_type: resolution.has_return_type,
+    }))
+}
+
+/// Shared by interpreted and generated calls. Resolve the symbolic method before
+/// entering; receiver null/selection checks occur here, with no payload guard
+/// held across class loading. The cache retains only successful receiver targets.
+pub(crate) async fn select_virtual_target(
+    frame: &Frame,
+    resolution: &ResolvedMethodRef,
+    receiver: &Value,
+) -> Result<(ResolvedMethod, Option<IntrinsicMethod>)> {
+    let thread = frame.thread()?;
     let reference = match receiver {
         Value::Object(Some(reference)) => reference,
         Value::Object(None) => {
@@ -58,13 +76,13 @@ pub(crate) async fn invokevirtual(
             thread.class(&class_name).await?
         };
         if let Some(target) = resolution.dispatch.get(&object_class) {
-            return Ok(ExecutionResult::Call(MethodCall {
-                intrinsic: crate::frame::IntrinsicBinding::Resolved(target.intrinsic),
-                class: target.class.clone(),
-                method: target.method.clone(),
-                parameters: parameters.into(),
-                has_return_type: resolution.has_return_type,
-            }));
+            return Ok((
+                ResolvedMethod {
+                    declaring_class: target.class.clone(),
+                    method: target.method.clone(),
+                },
+                target.intrinsic,
+            ));
         }
         let target = match object_class.select_method(&resolved) {
             Ok(result) => result,
@@ -110,13 +128,13 @@ pub(crate) async fn invokevirtual(
         (target.declaring_class, target.method, intrinsic)
     };
 
-    Ok(ExecutionResult::Call(MethodCall {
-        intrinsic: crate::frame::IntrinsicBinding::Resolved(intrinsic),
-        class,
-        method,
-        parameters: parameters.into(),
-        has_return_type: resolution.has_return_type,
-    }))
+    Ok((
+        ResolvedMethod {
+            declaring_class: class,
+            method,
+        },
+        intrinsic,
+    ))
 }
 
 #[cfg(test)]

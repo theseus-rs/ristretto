@@ -10,6 +10,12 @@ macro_rules! registry {
             LazyLock::new(|| {
                 let mut registry = IntrinsicRegistry::new(&$version);
                 ristretto_intrinsics::register(&mut registry)?;
+                #[cfg(all(
+                    feature = "experimental-pause-recorder",
+                    target_os = "linux",
+                    target_has_atomic = "64"
+                ))]
+                crate::measurement::register(&mut registry)?;
                 Ok(registry)
             });
     };

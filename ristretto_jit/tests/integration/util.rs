@@ -191,86 +191,155 @@ extern "C" fn jit_new_double_array(ctx: *const u8, _bci: i32, count: i32) -> i64
     alloc_primitive_array(ctx, count, size_of::<f64>())
 }
 
-extern "C" fn jit_arraylength(_ctx: *const u8, _bci: i32, array_ptr: i64) -> i32 {
+extern "C" fn jit_arraylength(ctx: *const u8, bci: i32, array_ptr: i64) -> i32 {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     unsafe { *(array_ptr as *const i64) as i32 }
 }
 
-extern "C" fn jit_baload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> i32 {
+extern "C" fn jit_baload(ctx: *const u8, bci: i32, array_ptr: i64, index: i32) -> i32 {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *const i8;
     unsafe { *data.add(index as usize) as i32 }
 }
 
-extern "C" fn jit_bastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: i32) {
+extern "C" fn jit_bastore(ctx: *const u8, bci: i32, array_ptr: i64, index: i32, value: i32) {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *mut i8;
     unsafe { *data.add(index as usize) = value as i8 };
 }
 
-extern "C" fn jit_caload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> i32 {
+extern "C" fn jit_caload(ctx: *const u8, bci: i32, array_ptr: i64, index: i32) -> i32 {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *const u16;
     unsafe { *data.add(index as usize) as i32 }
 }
 
-extern "C" fn jit_castore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: i32) {
+extern "C" fn jit_castore(ctx: *const u8, bci: i32, array_ptr: i64, index: i32, value: i32) {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *mut u16;
     unsafe { *data.add(index as usize) = value as u16 };
 }
 
-extern "C" fn jit_saload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> i32 {
+extern "C" fn jit_saload(ctx: *const u8, bci: i32, array_ptr: i64, index: i32) -> i32 {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *const i16;
     unsafe { *data.add(index as usize) as i32 }
 }
 
-extern "C" fn jit_sastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: i32) {
+extern "C" fn jit_sastore(ctx: *const u8, bci: i32, array_ptr: i64, index: i32, value: i32) {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *mut i16;
     unsafe { *data.add(index as usize) = value as i16 };
 }
 
-extern "C" fn jit_iaload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> i32 {
+extern "C" fn jit_iaload(ctx: *const u8, bci: i32, array_ptr: i64, index: i32) -> i32 {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *const i32;
     unsafe { *data.add(index as usize) }
 }
 
-extern "C" fn jit_iastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: i32) {
+extern "C" fn jit_iastore(ctx: *const u8, bci: i32, array_ptr: i64, index: i32, value: i32) {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *mut i32;
     unsafe { *data.add(index as usize) = value };
 }
 
-extern "C" fn jit_laload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> i64 {
+extern "C" fn jit_laload(ctx: *const u8, bci: i32, array_ptr: i64, index: i32) -> i64 {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *const i64;
     unsafe { *data.add(index as usize) }
 }
 
-extern "C" fn jit_lastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: i64) {
+extern "C" fn jit_lastore(ctx: *const u8, bci: i32, array_ptr: i64, index: i32, value: i64) {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *mut i64;
     unsafe { *data.add(index as usize) = value };
 }
 
-extern "C" fn jit_faload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> f32 {
+extern "C" fn jit_faload(ctx: *const u8, bci: i32, array_ptr: i64, index: i32) -> f32 {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *const f32;
     unsafe { *data.add(index as usize) }
 }
 
-extern "C" fn jit_fastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: f32) {
+extern "C" fn jit_fastore(ctx: *const u8, bci: i32, array_ptr: i64, index: i32, value: f32) {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *mut f32;
     unsafe { *data.add(index as usize) = value };
 }
 
-extern "C" fn jit_daload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> f64 {
+extern "C" fn jit_daload(ctx: *const u8, bci: i32, array_ptr: i64, index: i32) -> f64 {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *const f64;
     unsafe { *data.add(index as usize) }
 }
 
-extern "C" fn jit_dastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: f64) {
+extern "C" fn jit_dastore(ctx: *const u8, bci: i32, array_ptr: i64, index: i32, value: f64) {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *mut f64;
     unsafe { *data.add(index as usize) = value };
 }
 
-extern "C" fn jit_aaload(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32) -> i64 {
+extern "C" fn jit_aaload(ctx: *const u8, bci: i32, array_ptr: i64, index: i32) -> i64 {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return Default::default();
+    }
     let data = (array_ptr as usize + HEADER_SIZE) as *const i64;
     unsafe { *data.add(index as usize) }
 }
 
-extern "C" fn jit_aastore(_ctx: *const u8, _bci: i32, array_ptr: i64, index: i32, value: i64) {
+extern "C" fn jit_aastore(ctx: *const u8, bci: i32, array_ptr: i64, index: i32, value: i64) {
+    if array_ptr == 0 {
+        jit_throw_npe(ctx, bci);
+        return;
+    }
+
     let data = (array_ptr as usize + HEADER_SIZE) as *mut i64;
     unsafe { *data.add(index as usize) = value };
 }
@@ -676,6 +745,11 @@ extern "C" fn jit_pending_exception(ctx: *const u8) -> i64 {
     pending(ctx)
 }
 
+// Backend fixtures use synthetic references. Live VM tests exercise ownership.
+extern "C" fn jit_publish_frame_roots(_ctx: *const u8, _roots: *const i64, _count: i32) -> i32 {
+    1
+}
+
 /// Test-stub semantics: the pending exception's class is the pending exception pointer cast to
 /// u16. Tests that exercise typed handlers should throw an object whose pointer value equals the
 /// `catch_type` CP class index they want to match. `catch_type == 0` is always a catch-all and
@@ -707,6 +781,11 @@ extern "C" fn jit_throw_npe(ctx: *const u8, _bci: i32) {
     unsafe { *test_ctx.pending_exception.get() = -1 };
 }
 
+// Synthetic identity only: actual string/class semantics live in VM tests.
+extern "C" fn jit_load_constant(_ctx: *const u8, _bci: i32, index: i32) -> i64 {
+    i64::from(index)
+}
+
 fn new_helper_symbols() -> Vec<(&'static str, *const u8)> {
     vec![
         ("jit_new", jit_new as *const u8),
@@ -732,10 +811,15 @@ fn new_helper_symbols() -> Vec<(&'static str, *const u8)> {
         ("jit_putfield_float", jit_putfield_float as *const u8),
         ("jit_putfield_double", jit_putfield_double as *const u8),
         ("jit_putfield_object", jit_putfield_object as *const u8),
+        ("jit_load_constant", jit_load_constant as *const u8),
         ("jit_checkcast", jit_checkcast as *const u8),
         ("jit_instanceof", jit_instanceof as *const u8),
         ("jit_athrow", jit_athrow as *const u8),
         ("jit_pending_exception", jit_pending_exception as *const u8),
+        (
+            "jit_publish_frame_roots",
+            jit_publish_frame_roots as *const u8,
+        ),
         (
             "jit_take_pending_exception",
             jit_take_pending_exception as *const u8,

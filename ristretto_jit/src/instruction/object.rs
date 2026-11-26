@@ -1,141 +1,13 @@
 use crate::Error::InternalError;
+use crate::function::activation::RequestKind;
 use crate::instruction::{
-    ThrowContext, emit_bci, emit_null_check, emit_pending_exception_check, single_inst_result,
+    RequestContinuation, ThrowContext, emit_bci, emit_pending_exception_check, single_inst_result,
 };
 use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
-use cranelift::codegen::ir::FuncRef;
 use cranelift::codegen::ir::Value;
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{InstBuilder, StackSlotData, StackSlotKind, types};
-
-/// Emits a call to a runtime helper for loading an element from a GC-managed array.
-/// The helper is called with (`ctx`: ptr, `bci`: i32, `array_ptr`: i64, `index`: i32) and
-/// returns the element value.
-///
-/// A null check is emitted before the call; a null receiver branches to the exception
-/// dispatch with a `NullPointerException` in the pending exception slot. After the helper
-/// returns, a pending-exception check is emitted so a runtime-detected error (e.g. internal
-/// type mismatch surfaced as `InternalError`) is routed to the dispatch block instead of
-/// aborting the host process.
-///
-/// The returned Cranelift `Value` has the type determined by the helper's return signature
-/// and is dominated by the call site, so callers may push it onto the operand stack after
-/// this function returns (i.e. on the post-check continue block).
-pub(crate) fn array_load(
-    function_builder: &mut FunctionBuilder,
-    stack: &mut OperandStack,
-    helpers: &RuntimeHelpers,
-    context_pointer: Value,
-    throw_context: &ThrowContext<'_>,
-    helper: FuncRef,
-) -> crate::Result<Value> {
-    let index = stack.pop_int(function_builder)?;
-    let array_ref = stack.pop_object(function_builder)?;
-    emit_null_check(
-        function_builder,
-        stack,
-        helpers,
-        context_pointer,
-        throw_context,
-        array_ref,
-    )?;
-    let bci = emit_bci(function_builder, throw_context);
-    let call = function_builder
-        .ins()
-        .call(helper, &[context_pointer, bci, array_ref, index]);
-    let value = single_inst_result(function_builder, call)?;
-    emit_pending_exception_check(
-        function_builder,
-        stack,
-        helpers,
-        context_pointer,
-        throw_context,
-    )?;
-    Ok(value)
-}
-
-/// Emits a call to a runtime helper for storing an element into a GC managed array.
-/// The helper is called with (`ctx`: ptr, `bci`: i32, `array_ptr`: i64, `index`: i32, `value`: T).
-///
-/// A null check is emitted before the call; a null receiver branches to the exception
-/// dispatch with a `NullPointerException` in the pending exception slot. After the helper
-/// returns, a pending-exception check is emitted so runtime-detected errors are routed to
-/// the dispatch block instead of aborting the host process.
-pub(crate) fn array_store(
-    function_builder: &mut FunctionBuilder,
-    stack: &mut OperandStack,
-    helpers: &RuntimeHelpers,
-    context_pointer: Value,
-    throw_context: &ThrowContext<'_>,
-    helper: FuncRef,
-    value: Value,
-) -> crate::Result<()> {
-    let index = stack.pop_int(function_builder)?;
-    let array_ref = stack.pop_object(function_builder)?;
-    emit_null_check(
-        function_builder,
-        stack,
-        helpers,
-        context_pointer,
-        throw_context,
-        array_ref,
-    )?;
-    let bci = emit_bci(function_builder, throw_context);
-    function_builder
-        .ins()
-        .call(helper, &[context_pointer, bci, array_ref, index, value]);
-    emit_pending_exception_check(
-        function_builder,
-        stack,
-        helpers,
-        context_pointer,
-        throw_context,
-    )
-}
-
-/// Helper for loading and pushing an int-typed array element onto the stack.
-pub(crate) fn array_load_int(
-    function_builder: &mut FunctionBuilder,
-    stack: &mut OperandStack,
-    helpers: &RuntimeHelpers,
-    context_pointer: Value,
-    throw_context: &ThrowContext<'_>,
-    helper: FuncRef,
-) -> crate::Result<()> {
-    let value = array_load(
-        function_builder,
-        stack,
-        helpers,
-        context_pointer,
-        throw_context,
-        helper,
-    )?;
-    stack.push_int(function_builder, value)?;
-    Ok(())
-}
-
-/// # References
-///
-/// - [JVMS §6.5.aaload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aaload)
-pub(crate) fn aaload(
-    function_builder: &mut FunctionBuilder,
-    stack: &mut OperandStack,
-    helpers: &RuntimeHelpers,
-    context_pointer: Value,
-    throw_context: &ThrowContext<'_>,
-) -> crate::Result<()> {
-    let value = array_load(
-        function_builder,
-        stack,
-        helpers,
-        context_pointer,
-        throw_context,
-        helpers.aaload,
-    )?;
-    stack.push_object(function_builder, value)?;
-    Ok(())
-}
 
 /// # References
 ///
@@ -146,23 +18,31 @@ pub(crate) fn aastore(
     helpers: &RuntimeHelpers,
     context_pointer: Value,
     throw_context: &ThrowContext<'_>,
+    continuation: Option<RequestContinuation<'_>>,
 ) -> crate::Result<()> {
     let value = stack.pop_object(function_builder)?;
     let index = stack.pop_int(function_builder)?;
     let array_ref = stack.pop_object(function_builder)?;
-    emit_null_check(
-        function_builder,
-        stack,
-        helpers,
-        context_pointer,
-        throw_context,
-        array_ref,
-    )?;
     let bci = emit_bci(function_builder, throw_context);
-    function_builder.ins().call(
-        helpers.aastore,
-        &[context_pointer, bci, array_ref, index, value],
-    );
+    let synchronous = |builder: &mut FunctionBuilder| {
+        builder.ins().call(
+            helpers.aastore,
+            &[context_pointer, bci, array_ref, index, value],
+        );
+        Ok(builder.ins().iconst(types::I64, 0))
+    };
+    if let Some(continuation) = continuation {
+        let index = function_builder.ins().sextend(types::I64, index);
+        continuation.emit_bits(
+            function_builder,
+            stack,
+            (RequestKind::ReferenceArrayStore, 0),
+            &[array_ref, index, value],
+            synchronous,
+        )?;
+    } else {
+        synchronous(function_builder)?;
+    }
     emit_pending_exception_check(
         function_builder,
         stack,
@@ -185,15 +65,29 @@ pub(crate) fn new_object(
     context_pointer: Value,
     throw_context: &ThrowContext<'_>,
     cp_class_index: u16,
+    continuation: Option<RequestContinuation<'_>>,
 ) -> crate::Result<()> {
     let bci = emit_bci(function_builder, throw_context);
     let class_index = function_builder
         .ins()
         .iconst(types::I32, i64::from(cp_class_index));
-    let call = function_builder
-        .ins()
-        .call(helpers.new_object, &[context_pointer, bci, class_index]);
-    let result = single_inst_result(function_builder, call)?;
+    let synchronous = |builder: &mut FunctionBuilder| {
+        let call = builder
+            .ins()
+            .call(helpers.new_object, &[context_pointer, bci, class_index]);
+        single_inst_result(builder, call)
+    };
+    let result = if let Some(continuation) = continuation {
+        continuation.emit(
+            function_builder,
+            stack,
+            (RequestKind::NewObject, cp_class_index),
+            &[],
+            synchronous,
+        )?
+    } else {
+        synchronous(function_builder)?
+    };
     stack.push_object(function_builder, result)?;
     emit_pending_exception_check(
         function_builder,
@@ -214,17 +108,31 @@ pub(crate) fn anewarray(
     context_pointer: Value,
     throw_context: &ThrowContext<'_>,
     cp_class_index: u16,
+    continuation: Option<RequestContinuation<'_>>,
 ) -> crate::Result<()> {
     let count = stack.pop_int(function_builder)?;
     let bci = emit_bci(function_builder, throw_context);
     let class_index = function_builder
         .ins()
         .iconst(types::I32, i64::from(cp_class_index));
-    let call = function_builder.ins().call(
-        helpers.anewarray,
-        &[context_pointer, bci, class_index, count],
-    );
-    let result = single_inst_result(function_builder, call)?;
+    let synchronous = |builder: &mut FunctionBuilder| {
+        let call = builder.ins().call(
+            helpers.anewarray,
+            &[context_pointer, bci, class_index, count],
+        );
+        single_inst_result(builder, call)
+    };
+    let result = if let Some(continuation) = continuation {
+        continuation.emit(
+            function_builder,
+            stack,
+            (RequestKind::NewReferenceArray, cp_class_index),
+            &[count],
+            synchronous,
+        )?
+    } else {
+        synchronous(function_builder)?
+    };
     stack.push_object(function_builder, result)?;
     emit_pending_exception_check(
         function_builder,
@@ -238,6 +146,10 @@ pub(crate) fn anewarray(
 /// # References
 ///
 /// - [JVMS §6.5.multianewarray](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray)
+#[expect(
+    clippy::too_many_arguments,
+    reason = "allocation instruction and suspension context"
+)]
 pub(crate) fn multianewarray(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -246,6 +158,7 @@ pub(crate) fn multianewarray(
     throw_context: &ThrowContext<'_>,
     cp_class_index: u16,
     dimensions: u8,
+    continuation: Option<RequestContinuation<'_>>,
 ) -> crate::Result<()> {
     const DIMENSION_ALIGN_SHIFT: u8 = 2; // Each array length is a JVM int.
     if dimensions == 0 {
@@ -263,9 +176,10 @@ pub(crate) fn multianewarray(
     for _ in 0..dimensions {
         popped.push(stack.pop_int(function_builder)?);
     }
+    popped.reverse();
     let ptr_type = function_builder.func.dfg.value_type(context_pointer);
     // The last popped value is the outermost dimension. Store outermost first (index 0).
-    for (i, value) in popped.iter().rev().enumerate() {
+    for (i, value) in popped.iter().enumerate() {
         let offset = i32::try_from(i * size_of::<i32>())
             .map_err(|error| InternalError(format!("{error:?}")))?;
         function_builder
@@ -280,11 +194,24 @@ pub(crate) fn multianewarray(
     let dims_len = function_builder
         .ins()
         .iconst(types::I32, i64::from(dimensions));
-    let call = function_builder.ins().call(
-        helpers.multianewarray,
-        &[context_pointer, bci, class_index, dims_ptr, dims_len],
-    );
-    let result = single_inst_result(function_builder, call)?;
+    let synchronous = |builder: &mut FunctionBuilder| {
+        let call = builder.ins().call(
+            helpers.multianewarray,
+            &[context_pointer, bci, class_index, dims_ptr, dims_len],
+        );
+        single_inst_result(builder, call)
+    };
+    let result = if let Some(continuation) = continuation {
+        continuation.emit(
+            function_builder,
+            stack,
+            (RequestKind::NewMultiArray, cp_class_index),
+            &popped,
+            synchronous,
+        )?
+    } else {
+        synchronous(function_builder)?
+    };
     stack.push_object(function_builder, result)?;
     emit_pending_exception_check(
         function_builder,
@@ -320,16 +247,31 @@ pub(crate) fn checkcast(
     context_pointer: Value,
     throw_context: &ThrowContext<'_>,
     cp_class_index: u16,
+    continuation: Option<RequestContinuation<'_>>,
 ) -> crate::Result<()> {
     let top = stack.pop_object(function_builder)?;
     let bci = emit_bci(function_builder, throw_context);
     let class_index = function_builder
         .ins()
         .iconst(types::I32, i64::from(cp_class_index));
-    function_builder
-        .ins()
-        .call(helpers.checkcast, &[context_pointer, bci, top, class_index]);
-    stack.push_object(function_builder, top)?;
+    let synchronous = |builder: &mut FunctionBuilder| {
+        builder
+            .ins()
+            .call(helpers.checkcast, &[context_pointer, bci, top, class_index]);
+        Ok(top)
+    };
+    let result = if let Some(continuation) = continuation {
+        continuation.emit_bits(
+            function_builder,
+            stack,
+            (RequestKind::CheckCast, cp_class_index),
+            &[top],
+            synchronous,
+        )?
+    } else {
+        synchronous(function_builder)?
+    };
+    stack.push_object(function_builder, result)?;
     emit_pending_exception_check(
         function_builder,
         stack,
@@ -349,17 +291,33 @@ pub(crate) fn instanceof(
     context_pointer: Value,
     throw_context: &ThrowContext<'_>,
     cp_class_index: u16,
+    continuation: Option<RequestContinuation<'_>>,
 ) -> crate::Result<()> {
     let object = stack.pop_object(function_builder)?;
     let bci = emit_bci(function_builder, throw_context);
     let class_index = function_builder
         .ins()
         .iconst(types::I32, i64::from(cp_class_index));
-    let call = function_builder.ins().call(
-        helpers.instanceof,
-        &[context_pointer, bci, object, class_index],
-    );
-    let result = single_inst_result(function_builder, call)?;
+    let synchronous = |builder: &mut FunctionBuilder| {
+        let call = builder.ins().call(
+            helpers.instanceof,
+            &[context_pointer, bci, object, class_index],
+        );
+        let result = single_inst_result(builder, call)?;
+        Ok(builder.ins().uextend(types::I64, result))
+    };
+    let bits = if let Some(continuation) = continuation {
+        continuation.emit_bits(
+            function_builder,
+            stack,
+            (RequestKind::InstanceOf, cp_class_index),
+            &[object],
+            synchronous,
+        )?
+    } else {
+        synchronous(function_builder)?
+    };
+    let result = function_builder.ins().ireduce(types::I32, bits);
     stack.push_int(function_builder, result)?;
     emit_pending_exception_check(
         function_builder,

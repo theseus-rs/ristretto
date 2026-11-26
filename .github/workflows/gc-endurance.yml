@@ -1,0 +1,146 @@
+name: GC endurance
+
+on:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: 'Run duration in seconds (maximum 18000 on hosted runners)'
+        default: '3600'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  endurance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        workers: [0, 1, 4]
+        compact: [false, true]
+        policy: [baseline, candidate]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: rustup toolchain install --no-self-update
+      - name: Build GC workload drivers
+        run: cargo build --release -p ristretto_classloader --example gc_endurance --example gc_recovery_latency
+      - name: Freeze source and workload binaries
+        run: python3 ristretto_gc/validation/provenance.py --binary target/release/examples/gc_endurance target/release/examples/gc_recovery_latency --output "$RUNNER_TEMP/gc-frozen"
+      - name: Delegate isolated measurement budgets
+        run: |
+          GC_BUDGET_PARENT="/sys/fs/cgroup/ristretto-gc-${GITHUB_RUN_ID}"
+          sudo mkdir "$GC_BUDGET_PARENT"
+          sudo sh -c 'echo "+cpu +memory" > "$1/cgroup.subtree_control"' sh "$GC_BUDGET_PARENT"
+          sudo chown -R "$(id -u):$(id -g)" "$GC_BUDGET_PARENT"
+          echo "GC_CGROUP_PARENT=$GC_BUDGET_PARENT" >> "$GITHUB_ENV"
+      - name: Check measurement tooling
+        run: |
+          python3 -B -m unittest discover -s ristretto_gc/validation -p 'test_*.py'
+          python3 -B -m unittest discover -s benchmarks/gc -p 'test_*.py'
+      - name: Check relocation and worker invariants
+        run: cargo test -p ristretto_gc --lib --test compaction --test generational --test weak_references --test diagnostics --test async_recovery --test scheduling --test root_slots --test mark_batches --test contexts --test publication_model --test storage_model --test local_allocation --test preparation --test admission_model --test construction --test legacy_construction --test reference_construction --test clearing_progress --test leaf_progress
+      - name: Check asynchronous string and argument construction and cancellation
+        run: |
+          cargo test -p ristretto_types --lib string_factory::tests
+          cargo test -p ristretto_types --lib rust_value::tests
+      - name: Check asynchronous native allocation under heap exhaustion
+        run: cargo test -p ristretto_intrinsics --lib native_object_and_array_allocations_await_exhausted_heap_recovery
+      - name: Sustained allocation and fragmentation
+        env:
+          RUN_SECONDS: ${{ inputs.seconds || '3600' }}
+          POLICY: ${{ matrix.policy }}
+          WORKERS: ${{ matrix.workers }}
+          COMPACT: ${{ matrix.compact }}
+        run: |
+          test "$RUN_SECONDS" -gt 0 && test "$RUN_SECONDS" -le 18000
+          options=()
+          if [ "$POLICY" = candidate ]; then
+            options=(--concurrent-publication --overlapping-generations --old-collection-interval 4 --independent-phases --region-shards 16 --context-roots --barrier-records 32 --predictive --mark-batch-size 8 --independent-marking --work-stealing --metadata-shards 16 --local-allocation --adaptive-workers --independent-relocation --cost-aware-relocation --relocation-reserve-bytes 1048576)
+          fi
+          python3 ristretto_gc/validation/measure.py --binary "$RUNNER_TEMP/gc-frozen/gc_endurance" --build-provenance "$RUNNER_TEMP/gc-frozen/gc_endurance.provenance.json" --process-memory-mib 2048 --endurance-mode async --seconds "$RUN_SECONDS" --workers "$WORKERS" --rates 10000 --heap-mib 64 --compact "$COMPACT" --repeats 1 "${options[@]}" --output gc-endurance.json
+          python3 ristretto_gc/validation/measure.py --binary "$RUNNER_TEMP/gc-frozen/gc_endurance" --build-provenance "$RUNNER_TEMP/gc-frozen/gc_endurance.provenance.json" --process-memory-mib 2048 --endurance-mode async --seconds 30 --workers "$WORKERS" --rates 10000 --heap-mib 64 --compact "$COMPACT" --repeats 1 --diagnostics "${options[@]}" --output gc-diagnostics.json
+      - name: Allocation recovery and executor latency
+        if: matrix.policy == 'candidate'
+        env:
+          WORKERS: ${{ matrix.workers }}
+          COMPACT: ${{ matrix.compact }}
+        run: |
+          python3 ristretto_gc/validation/measure.py --binary "$RUNNER_TEMP/gc-frozen/gc_recovery_latency" --build-provenance "$RUNNER_TEMP/gc-frozen/gc_recovery_latency.provenance.json" --process-memory-mib 2048 --workload recovery --recovery-mode sync --seconds 30 --workers "$WORKERS" --heap-mib 16 --compact "$COMPACT" --repeats 1 --output gc-recovery-sync.json
+          python3 ristretto_gc/validation/measure.py --binary "$RUNNER_TEMP/gc-frozen/gc_recovery_latency" --build-provenance "$RUNNER_TEMP/gc-frozen/gc_recovery_latency.provenance.json" --process-memory-mib 2048 --workload recovery --recovery-mode async --seconds 30 --workers "$WORKERS" --heap-mib 16 --compact "$COMPACT" --repeats 1 --output gc-recovery-async.json
+          python3 ristretto_gc/validation/measure.py --binary "$RUNNER_TEMP/gc-frozen/gc_recovery_latency" --build-provenance "$RUNNER_TEMP/gc-frozen/gc_recovery_latency.provenance.json" --process-memory-mib 2048 --workload recovery --recovery-mode async --predictive --seconds 30 --workers "$WORKERS" --heap-mib 16 --compact "$COMPACT" --repeats 1 --output gc-recovery-predictive.json
+          python3 ristretto_gc/validation/measure.py --binary "$RUNNER_TEMP/gc-frozen/gc_recovery_latency" --build-provenance "$RUNNER_TEMP/gc-frozen/gc_recovery_latency.provenance.json" --process-memory-mib 2048 --workload recovery --recovery-mode async --root-slots --predictive --seconds 30 --workers "$WORKERS" --heap-mib 16 --compact "$COMPACT" --repeats 1 --output gc-recovery-root-slots.json
+          python3 ristretto_gc/validation/measure.py --binary "$RUNNER_TEMP/gc-frozen/gc_recovery_latency" --build-provenance "$RUNNER_TEMP/gc-frozen/gc_recovery_latency.provenance.json" --process-memory-mib 2048 --workload recovery --recovery-mode async --mark-batch-size 8 --seconds 30 --workers "$WORKERS" --heap-mib 16 --compact "$COMPACT" --repeats 1 --output gc-recovery-mark-batches.json
+          python3 ristretto_gc/validation/measure.py --binary "$RUNNER_TEMP/gc-frozen/gc_recovery_latency" --build-provenance "$RUNNER_TEMP/gc-frozen/gc_recovery_latency.provenance.json" --process-memory-mib 2048 --workload recovery --recovery-mode async --independent-marking --seconds 30 --workers "$WORKERS" --heap-mib 16 --compact "$COMPACT" --repeats 1 --output gc-recovery-independent.json
+          python3 ristretto_gc/validation/measure.py --binary "$RUNNER_TEMP/gc-frozen/gc_recovery_latency" --build-provenance "$RUNNER_TEMP/gc-frozen/gc_recovery_latency.provenance.json" --process-memory-mib 2048 --workload recovery --recovery-mode async --independent-marking --metadata-shards 16 --seconds 30 --workers "$WORKERS" --heap-mib 16 --compact "$COMPACT" --repeats 1 --output gc-recovery-shards.json
+          python3 ristretto_gc/validation/measure.py --binary "$RUNNER_TEMP/gc-frozen/gc_recovery_latency" --build-provenance "$RUNNER_TEMP/gc-frozen/gc_recovery_latency.provenance.json" --process-memory-mib 2048 --workload recovery --recovery-mode async --independent-marking --work-stealing --metadata-shards 16 --seconds 30 --workers "$WORKERS" --heap-mib 16 --compact "$COMPACT" --repeats 1 --output gc-recovery-work-stealing.json
+          python3 ristretto_gc/validation/measure.py --binary "$RUNNER_TEMP/gc-frozen/gc_recovery_latency" --build-provenance "$RUNNER_TEMP/gc-frozen/gc_recovery_latency.provenance.json" --process-memory-mib 2048 --workload recovery --recovery-mode async --context-roots --barrier-records 32 --independent-marking --work-stealing --metadata-shards 16 --seconds 30 --workers "$WORKERS" --heap-mib 16 --compact "$COMPACT" --repeats 1 --output gc-recovery-contexts.json
+          python3 ristretto_gc/validation/measure.py --binary "$RUNNER_TEMP/gc-frozen/gc_recovery_latency" --build-provenance "$RUNNER_TEMP/gc-frozen/gc_recovery_latency.provenance.json" --process-memory-mib 2048 --workload recovery --recovery-mode async --context-roots --barrier-records 32 --predictive --mark-batch-size 8 --independent-marking --work-stealing --metadata-shards 16 --local-allocation --adaptive-workers --independent-relocation --cost-aware-relocation --relocation-reserve-bytes 1048576 --seconds 30 --workers "$WORKERS" --heap-mib 16 --compact "$COMPACT" --repeats 1 --concurrent-publication --overlapping-generations --old-collection-interval 4 --independent-phases --region-shards 16 --output gc-recovery-combined.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: gc-endurance-${{ matrix.workers }}-${{ matrix.compact }}-${{ matrix.policy }}
+          path: |
+            ${{ runner.temp }}/gc-frozen/
+            gc-endurance.json
+            gc-diagnostics.json
+            gc-recovery-sync.json
+            gc-recovery-async.json
+            gc-recovery-predictive.json
+            gc-recovery-root-slots.json
+            gc-recovery-mark-batches.json
+            gc-recovery-independent.json
+            gc-recovery-shards.json
+            gc-recovery-work-stealing.json
+            gc-recovery-contexts.json
+            gc-recovery-combined.json
+            *.runs/
+      - name: Remove measurement budget parent
+        if: always() && env.GC_CGROUP_PARENT != ''
+        run: sudo rmdir "$GC_CGROUP_PARENT"
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust and browser plotting tools
+        run: |
+          rustup toolchain install --no-self-update
+          rustup target add wasm32-unknown-unknown
+          python3 -m venv "$RUNNER_TEMP/gc-browser-python"
+          "$RUNNER_TEMP/gc-browser-python/bin/pip" install matplotlib==3.11.2
+          command -v google-chrome
+      - name: Check browser workload and evidence validation
+        run: |
+          cargo test -p ristretto_gc --example gc_browser
+          python3 -B -m unittest discover -s benchmarks/gc -p 'test_*.py'
+      - name: Build and freeze browser workload
+        run: |
+          cargo build --release --locked -p ristretto_gc --example gc_browser --target wasm32-unknown-unknown
+          python3 ristretto_gc/validation/provenance.py --binary target/wasm32-unknown-unknown/release/examples/gc_browser.wasm --output "$RUNNER_TEMP/gc-browser-frozen"
+      - name: Delegate browser measurement budgets
+        run: |
+          GC_BROWSER_PARENT="/sys/fs/cgroup/ristretto-gc-browser-${GITHUB_RUN_ID}"
+          sudo mkdir "$GC_BROWSER_PARENT"
+          sudo sh -c 'echo "+cpu +memory" > "$1/cgroup.subtree_control"' sh "$GC_BROWSER_PARENT"
+          sudo chown -R "$(id -u):$(id -g)" "$GC_BROWSER_PARENT"
+          echo "GC_BROWSER_PARENT=$GC_BROWSER_PARENT" >> "$GITHUB_ENV"
+      - name: Run actual browser correctness and host-turn screen
+        run: |
+          GC_BROWSER_CPUS=$(python3 -c 'import os; print(",".join(map(str, sorted(os.sched_getaffinity(0))[:2])))')
+          "$RUNNER_TEMP/gc-browser-python/bin/python" benchmarks/gc/browser.py --wasm "$RUNNER_TEMP/gc-browser-frozen/gc_browser.wasm" --output gc-browser-results --cgroup-parent "$GC_BROWSER_PARENT" --cpus "$GC_BROWSER_CPUS" --cpu-quota 1 --rss-mib 1024 --seconds 2 --warmup 1 --rate 5000 --repeats 1 --plot
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: gc-browser-screen
+          path: |
+            ${{ runner.temp }}/gc-browser-frozen/
+            gc-browser-results/
+      - name: Remove browser measurement budget parent
+        if: always() && env.GC_BROWSER_PARENT != ''
+        run: sudo rmdir "$GC_BROWSER_PARENT"

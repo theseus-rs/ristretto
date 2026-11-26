@@ -137,16 +137,17 @@ pub(super) fn nonnull(value: &Value) -> Result<()> {
     }
 }
 
-pub(super) fn bytes<T: Thread>(thread: &T, data: &[u8]) -> Result<Value> {
+pub(super) async fn bytes<T: Thread>(thread: &T, data: &[u8]) -> Result<Value> {
     let vm = thread.vm()?;
-    Ok(Value::new_object(
+    Ok(Value::try_new_object_async(
         vm.garbage_collector(),
         Reference::from(
             data.iter()
                 .map(|v| i8::from_ne_bytes([*v]))
                 .collect::<Vec<_>>(),
         ),
-    ))
+    )
+    .await?)
 }
 
 pub(super) async fn warning<T: Thread>(thread: &T, receiver: &Value, ctx: &Context) -> Result<()> {
@@ -167,7 +168,7 @@ pub(super) async fn warning<T: Thread>(thread: &T, receiver: &Value, ctx: &Conte
 pub(super) async fn output<T: Thread>(thread: &T, receiver: &Value, ctx: &Context) -> Result<()> {
     let data = ctx.codec.lock().output();
     for chunk in data.chunks(4096) {
-        let array = bytes(thread, chunk)?;
+        let array = bytes(thread, chunk).await?;
         thread
             .invoke(
                 WRITER,
@@ -276,15 +277,16 @@ pub(super) struct Input<'a, T: Thread> {
 }
 
 impl<'a, T: Thread> Input<'a, T> {
-    pub fn new(thread: &'a T, receiver: &'a Value) -> Result<Self> {
-        let root = Gc::new(
+    pub async fn new(thread: &'a T, receiver: &'a Value) -> Result<Self> {
+        let root = Gc::try_new_async(
             thread.vm()?.garbage_collector(),
             RwLock::new(Reference::from(vec![0_i8; 4096])),
-        );
+        )
+        .await?;
         Ok(Self {
             thread,
             receiver,
-            buffer: Value::Object(Some(root.clone_gc())),
+            buffer: Value::Object(Some(root.rooted_clone())),
             _buffer_root: root,
             pending: Vec::new(),
             position: 0,

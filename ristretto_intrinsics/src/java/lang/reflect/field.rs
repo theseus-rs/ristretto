@@ -81,10 +81,9 @@ pub async fn get_type_annotation_bytes_0<T: Thread + 'static>(
 
     // Create byte array
     let result = Reference::from(bytes);
-    Ok(Some(Value::new_object(
-        thread.vm()?.garbage_collector(),
-        result,
-    )))
+    Ok(Some(
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), result).await?,
+    ))
 }
 
 #[cfg(test)]

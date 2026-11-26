@@ -49,6 +49,11 @@ pub(crate) fn bastore(stack: &mut OperandStack) -> Result<()> {
         return Err(NullPointerException(None).into());
     };
     let mut guard = reference.write();
+    let value = if matches!(&*guard, Reference::BooleanArray(_)) {
+        value & 1
+    } else {
+        value
+    };
     let (Reference::BooleanArray(array) | Reference::ByteArray(array)) = &mut *guard else {
         return Err(InvalidStackValue {
             expected: "byte or boolean array".to_string(),
@@ -82,6 +87,27 @@ mod test {
     use super::*;
     use crate::Error::JavaError;
     use ristretto_classloader::Value;
+
+    #[tokio::test]
+    async fn bastore_boolean_uses_low_bit() -> Result<()> {
+        let (vm, _thread) = crate::test::thread().await?;
+        let array = Value::new_object(
+            vm.garbage_collector(),
+            Reference::BooleanArray(vec![0].into()),
+        );
+        for value in [2, 3, -1, -2, 128, 255, i32::MIN, i32::MAX] {
+            let mut stack = OperandStack::with_max_size(3);
+            stack.push(array.clone())?;
+            stack.push_int(0)?;
+            stack.push_int(value)?;
+            bastore(&mut stack)?;
+            stack.push(array.clone())?;
+            stack.push_int(0)?;
+            baload(&mut stack)?;
+            assert_eq!(stack.pop_int()?, value & 1);
+        }
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_baload() -> Result<()> {

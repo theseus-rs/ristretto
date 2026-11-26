@@ -120,6 +120,7 @@ async fn cancel_live(
             limits: CompiledLimits::default().execution_limits(),
             report: Report::default(),
             statics: crate::canonical::statics::States::default(),
+            recording: Recording::default(),
         },
         table: table.clone(),
         slice_limit: 100_000,
@@ -197,6 +198,7 @@ async fn cancelling_native_cast_result_releases_its_single_registered_root() -> 
             limits: CompiledLimits::default().execution_limits(),
             report: Report::default(),
             statics: crate::canonical::statics::States::default(),
+            recording: Recording::default(),
         },
         table: table.clone(),
         slice_limit: 100_000,
@@ -231,3 +233,77 @@ async fn cancelling_native_cast_result_releases_its_single_registered_root() -> 
     assert_eq!(budget.used(), 0);
     Ok(())
 }
+
+#[tokio::test]
+async fn one_token_leases_preserve_array_calls_and_return_handoffs() -> Result<(), Error> {
+    let program = Program::from_classfiles([
+        ClassFile::from_bytes(include_bytes!(
+            "../../tests/fixtures/canonical/CanonicalPrimitiveArrayWorkload.class"
+        ))?,
+        ClassFile::from_bytes(include_bytes!(
+            "../../tests/fixtures/canonical/CanonicalPrimitiveArrayWorkload$Holder.class"
+        ))?,
+    ])?;
+    let configuration = Configuration {
+        objects: 16,
+        roots: 48,
+        mutators: 1,
+        helpers: 1,
+        edges_per_object: 1,
+    };
+    let expected = program
+        .run(
+            "CanonicalPrimitiveArrayWorkload",
+            "run",
+            17,
+            configuration,
+            Limits::default(),
+        )
+        .await?
+        .result;
+    let compiled = program.compile()?;
+    let collector = GarbageCollector::new();
+    let budget = Budget::new(configuration.charged_bytes()?);
+    let runtime = Runtime::new(&collector, configuration, &budget)?;
+    let class = program.class_index("CanonicalPrimitiveArrayWorkload")?;
+    let method = program.layout(class)?.class.try_get_method("run", "(I)I")?;
+    let execution = Execution {
+        program: &program,
+        runtime: &runtime,
+        mutator: runtime.mutator()?,
+        helper: runtime.helper()?,
+        limits: Limits::default(),
+        report: Report::default(),
+        recording: Recording::default(),
+        statics: crate::canonical::statics::States::default(),
+    };
+    let table = Rc::new(RefCell::new(Table::with_lease_size(
+        16,
+        64,
+        compiled.roots_per_frame,
+        std::num::NonZeroU64::MIN,
+    )?));
+    let mut execution = CompiledExecution {
+        compiled: &compiled,
+        execution,
+        table: table.clone(),
+        slice_limit: 100_000,
+    };
+    let result = execution
+        .call(class, method, vec![Value::Int(17)], 0)
+        .await?
+        .ok_or(Error::Boundary("missing compiled result"))?
+        .int()?;
+    assert_eq!(result, expected);
+    assert!(table.borrow().leases_installed() > 10);
+    assert_eq!(table.borrow().live_objects(), 0);
+    execution.execution.cleanup(&collector).await?;
+    assert_eq!(collector.managed_bytes(), 0);
+    drop((execution, table));
+    drop(runtime);
+    assert_eq!(budget.used(), 0);
+    Ok(())
+}
+
+#[path = "publication_census_tests.rs"]
+mod publication_census;

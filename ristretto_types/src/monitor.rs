@@ -298,7 +298,7 @@ impl Monitor {
 /// Registry to map Object identities to Monitors.
 #[derive(Debug, Default)]
 pub struct MonitorRegistry {
-    monitors: Mutex<HashMap<usize, Arc<Monitor>>>,
+    monitors: Mutex<HashMap<i64, Arc<Monitor>>>,
 }
 
 impl MonitorRegistry {
@@ -308,7 +308,7 @@ impl MonitorRegistry {
     }
 
     /// Get or create a monitor for the given object identifier.
-    pub fn monitor(&self, object_id: usize) -> Arc<Monitor> {
+    pub fn monitor(&self, object_id: i64) -> Arc<Monitor> {
         let mut monitors = self.monitors.lock();
         monitors
             .entry(object_id)
@@ -317,7 +317,7 @@ impl MonitorRegistry {
     }
 
     /// Cleanup a monitor.
-    pub fn remove(&self, object_id: usize) {
+    pub fn remove(&self, object_id: i64) {
         let mut monitors = self.monitors.lock();
         monitors.remove(&object_id);
     }

@@ -16,6 +16,7 @@ pub async fn fill_in_stack_trace<T: Thread + 'static>(
     let _dummy = usize::try_from(parameters.pop_int()?)?;
     let throwable = parameters.pop()?;
     let vm = thread.vm()?;
+    let collector = vm.garbage_collector();
     let stack_element_class = thread.class("java/lang/StackTraceElement").await?;
     let mut stack_elements = Vec::new();
     for frame in thread.frames().await?.iter().rev() {
@@ -25,7 +26,8 @@ pub async fn fill_in_stack_trace<T: Thread + 'static>(
             continue;
         }
         let class_name = class_name.to_object(&thread).await?;
-        let mut stack_element_object = Object::new(stack_element_class.clone())?;
+        let mut stack_element_object =
+            Object::new_in_async(collector, stack_element_class.clone()).await?;
         stack_element_object.set_value("declaringClass", class_name)?;
 
         if let Some(source_file) = class.source_file() {
@@ -41,17 +43,16 @@ pub async fn fill_in_stack_trace<T: Thread + 'static>(
         let line_number = method.line_number(program_counter);
         stack_element_object.set_value("lineNumber", Value::Int(i32::try_from(line_number)?))?;
 
-        stack_elements.push(Value::new_object(
-            vm.garbage_collector(),
-            Reference::Object(stack_element_object),
-        ));
+        stack_elements.push(
+            Value::try_new_object_async(collector, Reference::Object(stack_element_object)).await?,
+        );
     }
 
     let stack_element_array_class = thread
         .class(["[L", stack_element_class.name(), ";"].concat().as_str())
         .await?;
     let reference = Reference::try_from((stack_element_array_class, stack_elements))?;
-    let stack_trace = Value::new_object(vm.garbage_collector(), reference);
+    let stack_trace = Value::try_new_object_async(collector, reference).await?;
 
     // Create the backtrace
     let _object_class = thread.class("java/lang/Object").await?;
@@ -89,24 +90,23 @@ pub async fn fill_in_stack_trace<T: Thread + 'static>(
         let method_name = method_name_str.to_object(&thread).await?;
         let method_descriptor = method.descriptor().to_object(&thread).await?;
         let program_counter = frame.program_counter();
-        let mut program_counter_value = Object::new(integer_class.clone())?;
+        let mut program_counter_value =
+            Object::new_in_async(collector, integer_class.clone()).await?;
         program_counter_value.set_value("value", Value::Int(i32::try_from(program_counter)?))?;
 
         let frame_info = vec![
             class.to_object(&thread).await?,
             method_name,
             method_descriptor,
-            Value::new_object(
-                vm.garbage_collector(),
-                Reference::Object(program_counter_value),
-            ),
+            Value::try_new_object_async(collector, Reference::Object(program_counter_value))
+                .await?,
         ];
         let reference = Reference::try_from((object_array_class.clone(), frame_info))?;
-        let frame_info_array = Value::new_object(vm.garbage_collector(), reference);
+        let frame_info_array = Value::try_new_object_async(collector, reference).await?;
         backtrace_elements.push(frame_info_array);
     }
     let reference = Reference::try_from((object_array_class, backtrace_elements.clone()))?;
-    let backtrace = Value::new_object(vm.garbage_collector(), reference);
+    let backtrace = Value::try_new_object_async(collector, reference).await?;
     let backtrace_depth = i32::try_from(backtrace_elements.len())?;
 
     {

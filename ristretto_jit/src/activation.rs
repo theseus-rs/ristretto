@@ -1,4 +1,4 @@
-//! Independently own generated scalar state while no native frame is active.
+//! Own generated state while a native frame is absent from the stack.
 use crate::Error::InternalError;
 use crate::{Function, JitValue, Result, Value};
 use ristretto_classfile::attributes::{ArrayType, Instruction};
@@ -13,6 +13,7 @@ pub(crate) struct ContinuationLayout {
     pub requires_context: bool,
     pub call_offset: Option<usize>,
     pub call_capacity: usize,
+    pub requests_only: bool,
 }
 
 impl ContinuationLayout {
@@ -20,7 +21,8 @@ impl ContinuationLayout {
     pub const RESUME_TOKEN: usize = 0;
     pub const FUEL: usize = 1;
     pub const CONTEXT: usize = 2;
-    // The fourth header word is reserved.
+    // Async request dispatch mode, never an owning context pointer.
+    pub const ASYNC_MODE: usize = 3;
     pub const HEADER_WORDS: usize = 4;
     pub const INITIAL_TOKEN: u64 = 0;
     pub const BACKEDGE_TOKEN_BASE: u64 = 1;
@@ -43,19 +45,25 @@ pub(crate) enum RequestKind {
     InvokeSpecial = 1,
     InvokeVirtual = 2,
     InvokeInterface = 3,
+    MonitorEnter = 4,
+    MonitorExit = 5,
     NewObject = 6,
     NewPrimitiveArray = 7,
     NewReferenceArray = 8,
+    NewMultiArray = 9,
     GetStatic = 10,
     PutStatic = 11,
     GetField = 12,
     PutField = 13,
     CheckCast = 14,
+    InstanceOf = 15,
     ReferenceArrayStore = 16,
     ArrayAccess = 17,
+    Constant = 18,
+    ExceptionMatch = 19,
 }
 
-/// Invocation form resolved by the embedding after the native caller returns.
+/// Java invocation form, resolved by the embedding after the native caller returns.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CallKind {
     Static,
@@ -64,7 +72,7 @@ pub enum CallKind {
     Interface,
 }
 
-/// Constant-pool member reference and exact bytecode offset of the parked call.
+/// A pending call. Arguments remain in the activation until completion or cancellation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CallRequest {
     pub kind: CallKind,
@@ -72,20 +80,38 @@ pub struct CallRequest {
     pub index: u16,
 }
 
-/// Allocation resolved by the embedding with no native frame on the stack.
+/// Monitor operation dispatched with no generated frame active.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MonitorKind {
+    Enter,
+    Exit,
+}
+
+/// A monitor request; its one argument is a context-rooted object identity.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MonitorRequest {
+    pub kind: MonitorKind,
+    pub bci: usize,
+}
+
+/// Allocation performed after the generated caller returns. Array sizes live in
+/// the activation's argument cells; a multidimensional request has one per dimension.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AllocationKind {
     Object(u16),
     PrimitiveArray(ArrayType),
     ReferenceArray(u16),
+    MultiArray(u16),
 }
+
+/// Allocation kind and exact bytecode offset for errors and initialization.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AllocationRequest {
     pub kind: AllocationKind,
     pub bci: usize,
 }
-/// Field operation resolved by the host. Static requests require declaring-class
-/// initialization before completion; reference cells remain owning-context tokens.
+
+/// Field instruction dispatched after its generated frame returns.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FieldAccess {
     GetStatic,
@@ -93,9 +119,34 @@ pub enum FieldAccess {
     GetField,
     PutField,
 }
+
+/// `GetStatic` has no outgoing cells; `PutStatic` has one value cell. Instance
+/// accesses add a receiver before any value. Reference cells are opaque tokens;
+/// the embedding must retain their owning roots. Cells are never payload or
+/// static-storage pointers.
+///
+/// Before completing a static request, the embedding must resolve its declaring
+/// class, enforce access/final/type rules, and finish that class's initialization.
+/// The requesting activation stays parked while initializer activations run;
+/// cancellation/error teardown and class initialization state are host-owned.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct FieldRequest {
     pub kind: FieldAccess,
+    pub index: u16,
+    pub bci: usize,
+}
+
+/// Reference type check dispatched after its generated frame returns.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TypeCheckKind {
+    CheckCast,
+    InstanceOf,
+}
+
+/// The outgoing cell contains a context-rooted object identity (or null).
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TypeCheckRequest {
+    pub kind: TypeCheckKind,
     pub index: u16,
     pub bci: usize,
 }
@@ -185,41 +236,51 @@ pub struct ArrayAccessRequest {
     pub bci: usize,
 }
 
-/// Reference-array store; cells are array token, signed index and value token.
+/// Reference-array store; outgoing cells contain array, signed index and value.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ArrayStoreRequest {
     pub bci: usize,
 }
 
-/// Checked reference conversion resolved by the owning embedding.
+/// String or class constant resolved after the generated frame returns.
+/// The request has no arguments; its result must be owned by the runtime context.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum TypeCheckKind {
-    CheckCast,
-}
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TypeCheckRequest {
-    pub kind: TypeCheckKind,
+pub struct ConstantRequest {
     pub index: u16,
     pub bci: usize,
 }
 
-/// A bounded native slice either requests a scheduling boundary or completes.
+/// Typed handler lookup with the throwable owned by the runtime context.
+/// The result is 1 for a match, 0 for a mismatch, or -1 to propagate a resolution error.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ExceptionMatchRequest {
+    pub index: u16,
+    pub bci: usize,
+}
+
+/// Result of one bounded native slice. Yielding preserves the exact next bytecode.
 #[derive(Debug, PartialEq)]
 pub enum ExecutionStep {
     Yielded,
     Call(CallRequest),
+    Monitor(MonitorRequest),
     Allocation(AllocationRequest),
     Field(FieldRequest),
     TypeCheck(TypeCheckRequest),
-    ArrayAccess(ArrayAccessRequest),
+    Constant(ConstantRequest),
+    ExceptionMatch(ExceptionMatchRequest),
     ArrayStore(ArrayStoreRequest),
+    ArrayAccess(ArrayAccessRequest),
     Returned(Option<Value>),
 }
 
-/// Owns generated code, arguments and spilled scalar locals/operands.
-/// Dropping the activation cancels it without re-entering generated code.
-/// Reference identities are opaque tokens. The embedding must keep the same owning
-/// frame context alive across all suspensions, returns and cancellation.
+/// An independent invocation with resumable generated state.
+///
+/// Owns generated code, arguments and continuation storage. No native frame or
+/// borrowed context pointer survives a yield; dropping this value cancels the invocation.
+/// References are raw identities here. Embeddings retain owning arguments and,
+/// for reference-bearing code, the same logical runtime context across all slices.
+/// That context owns the published frame roots until return or cancellation.
 #[derive(Debug)]
 pub struct Activation {
     function: Function,
@@ -231,6 +292,21 @@ pub struct Activation {
 }
 
 impl Activation {
+    /// Suspension BCI: the next bytecode for a loop yield, or the pending call's
+    /// bytecode while awaiting its callee. Absent before entry or after completion.
+    #[must_use]
+    pub fn suspended_bci(&self) -> Option<usize> {
+        if !self.started || self.finished {
+            return None;
+        }
+        let token = *self.state.get(ContinuationLayout::RESUME_TOKEN)?;
+        if token >= ContinuationLayout::CALL_TOKEN_BASE {
+            let (offset, _) = self.call_layout().ok()?;
+            return usize::try_from(*self.state.get(offset + ContinuationLayout::CALL_BCI)?).ok();
+        }
+        usize::try_from(token.checked_sub(ContinuationLayout::BACKEDGE_TOKEN_BASE)?).ok()
+    }
+
     pub(super) fn new(function: &Function, arguments: &[Value]) -> Result<Self> {
         let layout = function.continuation.ok_or_else(|| {
             crate::Error::UnsupportedMethod("function has no continuation ABI".to_owned())
@@ -248,28 +324,31 @@ impl Activation {
             .map(|(index, (argument, expected))| JitValue::argument(argument, *expected, index))
             .collect::<Result<Vec<_>>>()?
             .into_boxed_slice();
+        let mut state = vec![0; layout.words].into_boxed_slice();
+        *state
+            .get_mut(ContinuationLayout::ASYNC_MODE)
+            .ok_or_else(|| InternalError("missing continuation mode".to_owned()))? = 1;
         Ok(Self {
             function: function.clone(),
             arguments,
-            state: vec![0; layout.words].into_boxed_slice(),
+            state,
             started: false,
             finished: false,
             awaiting_call: false,
         })
     }
 
-    /// Byte offset of the next instruction after a yield; absent before entry/after return.
-    #[must_use]
-    pub fn suspended_bci(&self) -> Option<usize> {
-        if !self.started || self.finished {
-            return None;
+    pub(super) fn synchronous_calls(&mut self) -> Result<()> {
+        if self.function.requests_only() {
+            return Err(InternalError(
+                "request-only code requires activation dispatch".to_owned(),
+            ));
         }
-        let token = *self.state.get(ContinuationLayout::RESUME_TOKEN)?;
-        if token >= ContinuationLayout::CALL_TOKEN_BASE {
-            let (offset, _) = self.call_layout().ok()?;
-            return usize::try_from(*self.state.get(offset + ContinuationLayout::CALL_BCI)?).ok();
-        }
-        usize::try_from(token.checked_sub(ContinuationLayout::BACKEDGE_TOKEN_BASE)?).ok()
+        *self
+            .state
+            .get_mut(ContinuationLayout::ASYNC_MODE)
+            .ok_or_else(|| InternalError("missing continuation mode".to_owned()))? = 0;
+        Ok(())
     }
 
     fn call_layout(&self) -> Result<(usize, usize)> {
@@ -328,7 +407,7 @@ impl Activation {
         Ok(NonZeroU32::new(u32::try_from(*remaining)?))
     }
 
-    /// Complete a pending runtime request once. The context must own any reference result. On a Java or embedding error, drop the activation instead of completing it.
+    /// Complete a pending runtime request once. The context must own any reference result or exception.
     /// # Errors
     /// Rejects completion outside the pending-call phase.
     pub fn complete_call(&mut self, bits: i64) -> Result<()> {
@@ -366,6 +445,26 @@ impl Activation {
             RequestKind::InvokeSpecial => call(CallKind::Special),
             RequestKind::InvokeVirtual => call(CallKind::Virtual),
             RequestKind::InvokeInterface => call(CallKind::Interface),
+            RequestKind::MonitorEnter | RequestKind::MonitorExit => {
+                ExecutionStep::Monitor(MonitorRequest {
+                    kind: if matches!(kind, RequestKind::MonitorEnter) {
+                        MonitorKind::Enter
+                    } else {
+                        MonitorKind::Exit
+                    },
+                    bci,
+                })
+            }
+            RequestKind::NewMultiArray => allocation(AllocationKind::MultiArray(index)),
+            RequestKind::InstanceOf => ExecutionStep::TypeCheck(TypeCheckRequest {
+                kind: TypeCheckKind::InstanceOf,
+                index,
+                bci,
+            }),
+            RequestKind::Constant => ExecutionStep::Constant(ConstantRequest { index, bci }),
+            RequestKind::ExceptionMatch => {
+                ExecutionStep::ExceptionMatch(ExceptionMatchRequest { index, bci })
+            }
             RequestKind::NewObject => allocation(AllocationKind::Object(index)),
             RequestKind::NewPrimitiveArray => {
                 let kind = ArrayType::from_bytes(&mut ByteReader::new(&[u8::try_from(index)?]))?;
@@ -391,34 +490,46 @@ impl Activation {
         })
     }
 
-    /// Resume until completion or the specified number of taken backward edges.
-    /// This is a work bound, not a wall-clock bound. A rejected pre-entry check
-    /// leaves the activation resumable; a completed activation cannot be entered again.
+    /// Resume until return, a runtime request, or the selected number of poll edges.
+    /// Taken backward branches and exception-handler entries each consume one unit.
+    /// No bytecode is replayed. The positive budget guarantees forward progress.
     ///
     /// # Errors
-    /// Rejects a completed invocation, insufficient native stack or invalid generated state.
+    /// Returns an error when a runtime context is required, a call is still pending, the invocation completed,
+    /// native stack is insufficient, or the generated return value is invalid.
+    /// Pre-entry rejection leaves the state resumable.
     pub fn resume(&mut self, backedge_budget: NonZeroU32) -> Result<ExecutionStep> {
         self.resume_with_context(backedge_budget, std::ptr::null())
     }
 
-    /// Resume with the owning frame context required by reference-bearing code.
-    /// Its address is used only for this native slice and is forgotten before return.
-    /// The context and its published roots must outlive the activation and result handoff.
+    /// Resume with the embedding's runtime context for this slice.
+    ///
+    /// The context and its published roots must outlive the entire invocation,
+    /// including suspension; its address may change between slices. The pointer
+    /// must satisfy the registered runtime helpers' contract, as in [`Function::execute`].
+    /// It is forgotten before this method returns. Primitive code needs no context.
     ///
     /// # Errors
-    /// Returns the same errors as [`Self::resume`].
+    /// Rejects a missing required context, pending call, completed invocation, insufficient
+    /// native stack, or invalid return value. Rejection before entry preserves state.
     pub fn resume_with_context(
         &mut self,
         backedge_budget: NonZeroU32,
         context: *const u8,
     ) -> Result<ExecutionStep> {
-        if self.awaiting_call {
-            return Err(InternalError("runtime call is still pending".to_owned()));
-        }
         if self.finished {
             return Err(InternalError("invocation already completed".to_owned()));
         }
-        if self.function.cooperation_requires_context() && context.is_null() {
+        if self.awaiting_call {
+            return Err(InternalError("pending call has not completed".to_owned()));
+        }
+        // The synchronous embedding API preserves its opaque-context contract:
+        // a null context is valid only when its registered helpers accept it.
+        // Owning resumable invocations still require an explicit context.
+        if self.function.cooperation_requires_context()
+            && context.is_null()
+            && self.state.get(3) != Some(&0)
+        {
             return Err(InternalError(
                 "continuation requires a runtime context".to_owned(),
             ));
@@ -434,11 +545,22 @@ impl Activation {
             .get_mut(ContinuationLayout::CONTEXT)
             .ok_or_else(|| InternalError("missing context cell".to_owned()))? =
             context as usize as u64;
+        #[cfg(feature = "execution-profile")]
+        if self.started {
+            self.function
+                .resumes
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        } else {
+            self.function
+                .entries
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
         self.started = true;
         let mut result = JitValue::new();
-        // SAFETY: the owning compiler fixes every private offset into this initialized,
-        // aligned allocation, and arguments were validated against its descriptor.
-        // No borrowed pointer or native frame survives this call.
+        // SAFETY: the compiler emits this private continuation ABI only for
+        // resumable bodies. The owning function fixes every offset into this
+        // initialized, aligned storage and validates argument types. References
+        // and the context obey the embedding contract stated above.
         unsafe {
             (self.function.entry_point)(
                 self.arguments.as_ptr(),
@@ -463,9 +585,166 @@ impl Activation {
         {
             let request = self.pending_request()?;
             self.awaiting_call = true;
+            let _ = self.call_arguments()?;
             Ok(request)
         } else {
             Ok(ExecutionStep::Yielded)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[expect(
+        clippy::cast_ptr_alignment,
+        clippy::indexing_slicing,
+        reason = "the fixture activation owns eleven aligned initialized cells"
+    )]
+    unsafe extern "C" fn call_once(
+        _args: *const JitValue,
+        _count: usize,
+        result: *mut JitValue,
+        state: *const u8,
+    ) {
+        // SAFETY: this stub is used only with the eleven-word layout in the test below.
+        unsafe {
+            let cells = std::slice::from_raw_parts_mut(state.cast_mut().cast::<u64>(), 11);
+            if cells[0] == 0 {
+                cells[0] = ContinuationLayout::CALL_TOKEN_BASE + 9;
+                cells[4..11].copy_from_slice(&[0, 9, 5, 2, 0, u64::MAX, 42]);
+            } else {
+                *result = JitValue::from(i64::from_ne_bytes(cells[8].to_ne_bytes()));
+                cells[0] = u64::MAX;
+            }
+        }
+    }
+
+    #[test]
+    fn pending_call_requires_one_completion_and_preserves_argument_bits() -> Result<()> {
+        let mut function = Function::new(call_once, &[]);
+        function.continuation = Some(ContinuationLayout {
+            words: 11,
+            instructions: 1,
+            requires_context: false,
+            call_offset: Some(4),
+            call_capacity: 2,
+            requests_only: false,
+        });
+        let mut activation = function.activation(&[])?;
+        assert!(activation.call_arguments().is_err());
+        assert!(activation.complete_call(0).is_err());
+        assert_eq!(
+            activation.resume(NonZeroU32::MIN)?,
+            ExecutionStep::Call(CallRequest {
+                kind: CallKind::Static,
+                bci: 9,
+                index: 5,
+            })
+        );
+        assert_eq!(activation.suspended_bci(), Some(9));
+        assert_eq!(activation.call_arguments()?, &[-1, 42]);
+        assert!(activation.resume(NonZeroU32::MIN).is_err());
+        activation.complete_call(i64::MIN)?;
+        assert!(activation.complete_call(0).is_err());
+        assert!(activation.call_arguments().is_err());
+        assert_eq!(
+            activation.resume(NonZeroU32::MIN)?,
+            ExecutionStep::Returned(Some(Value::I64(i64::MIN)))
+        );
+        assert_eq!(activation.suspended_bci(), None);
+        #[cfg(feature = "execution-profile")]
+        {
+            assert_eq!(function.execution_count(), 1);
+            assert_eq!(function.resume_count(), 1);
+        }
+        Ok(())
+    }
+
+    #[expect(
+        clippy::cast_ptr_alignment,
+        reason = "the activation owns aligned u64 continuation cells"
+    )]
+    unsafe extern "C" fn complete(
+        _arguments: *const JitValue,
+        _count: usize,
+        result: *mut JitValue,
+        state: *const u8,
+    ) {
+        // SAFETY: only the owning activation below calls this stub with live cells/result.
+        unsafe {
+            *state.cast_mut().cast::<u64>() = u64::MAX;
+            *result = JitValue::from(42_i32);
+        }
+    }
+
+    #[test]
+    fn activation_validates_arguments_and_owns_a_single_completion() -> Result<()> {
+        let mut function = Function::new(complete, &[crate::jit_value::I32]);
+        assert!(function.activation(&[Value::I32(1)]).is_err());
+        function.continuation = Some(ContinuationLayout {
+            words: 4,
+            instructions: 1,
+            requires_context: false,
+            call_offset: None,
+            call_capacity: 0,
+            requests_only: false,
+        });
+        assert!(matches!(
+            function.activation(&[]),
+            Err(crate::Error::InvalidArgumentCount { .. })
+        ));
+        assert!(matches!(
+            function.activation(&[Value::F32(1.0)]),
+            Err(crate::Error::InvalidArgumentType { .. })
+        ));
+        let mut activation = function.activation(&[Value::I32(1)])?;
+        drop(function);
+        assert_eq!(
+            activation.resume(NonZeroU32::MIN)?,
+            ExecutionStep::Returned(Some(Value::I32(42)))
+        );
+        assert!(activation.resume(NonZeroU32::MIN).is_err());
+        #[cfg(feature = "execution-profile")]
+        {
+            assert_eq!(activation.function.execution_count(), 1);
+            assert_eq!(activation.function.resume_count(), 0);
+        }
+        Ok(())
+    }
+
+    #[cfg(all(
+        not(target_family = "wasm"),
+        target_endian = "little",
+        not(any(
+            target_arch = "mips",
+            target_arch = "mips64",
+            target_os = "dragonfly",
+            target_os = "solaris"
+        ))
+    ))]
+    #[test]
+    fn failed_stack_check_leaves_an_activation_resumable() -> Result<()> {
+        let mut function = Function::new(complete, &[]);
+        function.continuation = Some(ContinuationLayout {
+            words: 4,
+            instructions: 1,
+            requires_context: false,
+            call_offset: None,
+            call_capacity: 0,
+            requests_only: false,
+        });
+        function.native_stack_bytes = usize::MAX;
+        let mut activation = function.activation(&[])?;
+        assert!(activation.resume(NonZeroU32::MIN).is_err());
+        assert!(!activation.started);
+        assert_eq!(&*activation.state, &[0, 0, 0, 1]);
+        activation.function.native_stack_bytes = 0;
+        assert_eq!(
+            activation.resume(NonZeroU32::MIN)?,
+            ExecutionStep::Returned(Some(Value::I32(42)))
+        );
+        Ok(())
     }
 }

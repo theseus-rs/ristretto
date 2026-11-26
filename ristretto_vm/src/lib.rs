@@ -65,12 +65,28 @@ mod assignable;
 mod call_site_cache;
 #[cfg(feature = "experimental-canonical-runtime")]
 pub mod canonical;
+#[cfg(all(feature = "experimental-canonical-telemetry", target_has_atomic = "64"))]
+pub mod canonical_telemetry;
 mod compiler;
 mod configuration;
+#[cfg(all(
+    feature = "experimental-execution-measurement",
+    target_os = "linux",
+    target_has_atomic = "64"
+))]
+pub mod execution_measurement;
+#[cfg(feature = "execution-profile")]
+pub mod execution_profile;
 mod field_ref_cache;
 mod frame;
 mod instruction;
 mod intrinsic_methods;
+#[cfg(all(
+    feature = "experimental-pause-recorder",
+    target_os = "linux",
+    target_has_atomic = "64"
+))]
+mod measurement;
 
 pub use intrinsic_methods::{
     AsyncIntrinsicMethod, IntrinsicMethod, MethodRegistry, SyncIntrinsicMethod,
@@ -78,10 +94,12 @@ pub use intrinsic_methods::{
 mod java_object;
 mod jit;
 mod jit_runtime_helpers;
+mod local_scheduler;
 mod local_variables;
 mod method_ref_cache;
 mod module_system;
 pub mod monitor;
+mod native_stack;
 mod operand_stack;
 mod reference_cache;
 mod rust_value;
@@ -106,6 +124,6 @@ pub use ristretto_classloader::{
     Class, ClassLoader, ClassPath, ClassPathEntry, DEFAULT_JAVA_VERSION, Memory, Object, Reference,
     Value,
 };
-pub use ristretto_types::{Error, JavaError, Parameters, Result, RustValue};
+pub use ristretto_types::{Error, JavaError, Parameters, Result, RustValue, ValueConversion};
 pub use thread::Thread;
 pub use vm::VM;

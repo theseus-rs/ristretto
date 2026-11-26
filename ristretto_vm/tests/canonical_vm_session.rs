@@ -41,7 +41,7 @@ fn configuration() -> Configuration {
 async fn existing_ordinary_root_and_parked_second_owner_survive_session_cleanup()
 -> Result<(), Box<dyn std::error::Error>> {
     let collector = GarbageCollector::new();
-    let ordinary = Value::new_object(&collector, vec![19_i32, 23].into());
+    let ordinary = Value::try_new_object(&collector, vec![19_i32, 23].into())?;
     let baseline = collector.managed_bytes();
     let program = program()?;
     let mut parked =
@@ -91,7 +91,7 @@ async fn existing_ordinary_root_and_parked_second_owner_survive_session_cleanup(
 async fn cancelled_and_limited_sessions_refund_only_their_payloads()
 -> Result<(), Box<dyn std::error::Error>> {
     let collector = GarbageCollector::new();
-    let ordinary = Value::new_object(&collector, vec![31_i32].into());
+    let ordinary = Value::try_new_object(&collector, vec![31_i32].into())?;
     let baseline = collector.managed_bytes();
     let program = program()?;
     for prefix in [1, 16, 100] {
@@ -148,7 +148,7 @@ async fn cancelled_and_limited_sessions_refund_only_their_payloads()
 async fn cancelled_invocation_finishes_through_bounded_session_cleanup()
 -> Result<(), Box<dyn std::error::Error>> {
     let collector = GarbageCollector::new();
-    let ordinary = Value::new_object(&collector, vec![29_i32].into());
+    let ordinary = Value::try_new_object(&collector, vec![29_i32].into())?;
     let baseline = collector.managed_bytes();
     let program = program()?;
     let completion = program
@@ -178,14 +178,13 @@ async fn cancelled_invocation_finishes_through_bounded_session_cleanup()
 async fn supplied_collector_payload_limit_is_shared_with_ordinary_allocations()
 -> Result<(), Box<dyn std::error::Error>> {
     let reference: ristretto_classloader::Reference = vec![7_i32; 16].into();
-    // The public ordinary constructor charges inline storage only. Preserve that
-    // scheme, and consume its exact charge before canonical allocation.
-    let ordinary_size = size_of::<ristretto_gc::sync::RwLock<ristretto_classloader::Reference>>();
+    let ordinary_size =
+        ristretto_gc::Gc::allocation_size(&ristretto_gc::sync::RwLock::new(reference.clone()))?;
     let collector = GarbageCollector::with_config(ristretto_gc::Configuration {
         max_heap_bytes: ordinary_size,
         ..Default::default()
     });
-    let ordinary = Value::new_object(&collector, reference);
+    let ordinary = Value::try_new_object(&collector, reference)?;
     let baseline = collector.managed_bytes();
     assert_eq!(baseline, ordinary_size);
     let result = program()?
@@ -210,7 +209,7 @@ async fn compiled_sessions_preserve_ordinary_roots_and_cancel_pending_frames()
 -> Result<(), Box<dyn std::error::Error>> {
     use ristretto_vm::canonical::CompiledLimits;
     let collector = GarbageCollector::new();
-    let ordinary = Value::new_object(&collector, vec![37_i32].into());
+    let ordinary = Value::try_new_object(&collector, vec![37_i32].into())?;
     let baseline = collector.managed_bytes();
     let program = program()?;
     let compiled = program.compile()?;
@@ -285,10 +284,11 @@ async fn compiled_sessions_preserve_ordinary_roots_and_cancel_pending_frames()
         completion.value.released_objects + completion.released_during_cleanup,
         6
     );
+    assert!(completion.value.native_slices > 0);
     assert_eq!(collector.managed_bytes(), baseline);
     assert_eq!(&*ordinary.as_int_vec_ref()?, &[37]);
-    // Public Invocation has no native census. A zero slice budget must reject
-    // this same session path; it cannot silently interpret the method.
+    let profiles = compiled.method_profiles()?;
+    assert!(profiles.iter().any(|p| p.entries > 0 && p.backedges > 0));
     let refused = program
         .with_collector(&collector, configuration(), CLEANUP, async |heap| {
             compiled
@@ -317,7 +317,7 @@ async fn existing_vm_entry_uses_its_actual_collector() -> Result<(), Box<dyn std
             .build()?,
     )
     .await?;
-    let ordinary = Value::new_object(vm.garbage_collector(), vec![41_i32, 43].into());
+    let ordinary = Value::try_new_object(vm.garbage_collector(), vec![41_i32, 43].into())?;
     let program = program()?;
     let result = program
         .with_vm(&vm, configuration(), CLEANUP, async |heap| {
@@ -340,6 +340,7 @@ async fn existing_vm_entry_uses_its_actual_collector() -> Result<(), Box<dyn std
             })
             .await?;
         assert_eq!(result.value.result, 16);
+        assert!(result.value.native_slices > 0);
     }
     assert_eq!(&*ordinary.as_int_vec_ref()?, &[41, 43]);
     Ok(())

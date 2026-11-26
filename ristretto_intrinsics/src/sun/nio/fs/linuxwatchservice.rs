@@ -85,17 +85,20 @@ pub async fn configure_blocking<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/LinuxWatchService.eventOffsets()[I", Any)]
-pub fn event_offsets<T: Thread + 'static>(
+pub async fn event_offsets<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     // struct inotify_event { __s32 wd; __u32 mask; __u32 cookie; __u32 len; char name[]; };
     // offsets: wd=0, mask=4, cookie=8, len=12, name=16
     let array: Box<[i32]> = vec![0i32, 4, 8, 12, 16].into_boxed_slice();
-    Ok(Some(Value::new_object(
-        thread.vm()?.garbage_collector(),
-        Reference::IntArray(array),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(
+            thread.vm()?.garbage_collector(),
+            Reference::IntArray(array.into()),
+        )
+        .await?,
+    ))
 }
 
 #[intrinsic_method("sun/nio/fs/LinuxWatchService.eventSize()I", Any)]
@@ -340,7 +343,7 @@ mod tests {
     #[tokio::test]
     async fn test_event_offsets() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = event_offsets(thread, Parameters::default()).unwrap();
+        let result = event_offsets(thread, Parameters::default()).await.unwrap();
         assert!(result.is_some());
     }
 

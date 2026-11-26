@@ -15,6 +15,7 @@ pub struct Invocation {
     pub allocations: usize,
     pub helper_polls: usize,
     pub released_objects: usize,
+    pub native_slices: usize,
     pub internal_allocations: usize,
     pub static_storage_allocations: usize,
     pub initialized_classes: usize,
@@ -32,6 +33,7 @@ impl Invocation {
             allocations: report.allocations,
             helper_polls: report.helper_polls,
             released_objects: report.released_objects,
+            native_slices: report.native_slices,
             internal_allocations: report.internal_allocations,
             static_storage_allocations: report.static_storage_allocations,
             initialized_classes: report.initialized_classes,
@@ -212,6 +214,7 @@ impl<'p, 'gc> JavaHeap<'p, 'gc> {
             limits,
             report: Report::default(),
             statics: self.statics.attach()?,
+            recording: crate::canonical::recording::Recording::default(),
         })
     }
 
@@ -387,3 +390,7 @@ mod tests {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "canonical_heap_tests.rs"]
+mod outer_cancellation_tests;

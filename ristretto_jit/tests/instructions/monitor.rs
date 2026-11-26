@@ -1,46 +1,27 @@
-// Backend shape fixtures only; both runtime admission gates exclude monitors.
 use crate::util::create_function;
 use ristretto_classfile::attributes::Instruction;
-use ristretto_jit::Result;
+use ristretto_jit::Error;
 
 #[test]
-fn monitorenter() -> Result<()> {
+fn monitorenter_rejects_long_operand() {
     let instructions = vec![
-        Instruction::Aconst_null,
+        Instruction::Lconst_0,
         Instruction::Monitorenter,
         Instruction::Return,
     ];
-    let function = create_function("()V", &instructions)?;
-    let value = function.execute(&[], std::ptr::null())?;
-    assert_eq!(value, None);
-    Ok(())
+    assert!(
+        matches!(create_function("()V", &instructions), Err(Error::InternalError(message)) if message.contains("Expected Reference"))
+    );
 }
 
 #[test]
-fn monitorexit() -> Result<()> {
+fn monitorexit_rejects_long_operand() {
     let instructions = vec![
-        Instruction::Aconst_null,
+        Instruction::Lconst_0,
         Instruction::Monitorexit,
         Instruction::Return,
     ];
-    let function = create_function("()V", &instructions)?;
-    let value = function.execute(&[], std::ptr::null())?;
-    assert_eq!(value, None);
-    Ok(())
-}
-
-#[test]
-fn monitor_operand_must_be_a_reference() {
     assert!(
-        crate::util::create_internal_function(
-            "()V",
-            &[
-                Instruction::Lconst_0,
-                Instruction::Monitorenter,
-                Instruction::Return
-            ],
-            2
-        )
-        .is_err()
+        matches!(create_function("()V", &instructions), Err(Error::InternalError(message)) if message.contains("Expected Reference"))
     );
 }

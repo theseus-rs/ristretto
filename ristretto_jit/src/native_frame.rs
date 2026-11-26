@@ -44,6 +44,10 @@ impl SizeProbe {
         )))
     }
 
+    pub(super) fn slot(&self) -> StackSlot {
+        self.0
+    }
+
     pub(super) fn initialize(&self, builder: &mut FunctionBuilder) {
         let null = builder.ins().iconst(types::I64, 0);
         builder.ins().stack_store(types::I64, null, self.0, 0);
@@ -237,7 +241,6 @@ mod tests {
     fn oversized_native_frames_are_rejected_before_entry() -> std::io::Result<()> {
         let mut command = std::process::Command::new("sh");
         command.args(["-c", "ulimit -c 0; exec \"$@\"", "frame-size-test"]);
-        // Under cross, the host shell needs the same runner as the parent test.
         if let Ok(runner) = std::env::var("CROSS_TARGET_RUNNER") {
             command.args(runner.split_ascii_whitespace());
         }
@@ -247,30 +250,11 @@ mod tests {
             "--ignored",
             "--nocapture",
         ]);
-        command
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped());
-        let mut child = command.spawn()?;
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
-        loop {
-            if child.try_wait()?.is_some() {
-                break;
-            }
-            if std::time::Instant::now() >= deadline {
-                child.kill()?;
-                let _ = child.wait()?;
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "native frame child timed out",
-                ));
-            }
-            std::thread::sleep(std::time::Duration::from_millis(10));
-        }
-        let output = child.wait_with_output()?;
-        assert!(output.status.success(), "{output:?}");
-        assert!(
-            String::from_utf8_lossy(&output.stdout).contains("large native frame recovery passed")
-        );
+        let output =
+            ristretto_test_util::process::run(&mut command, std::time::Duration::from_secs(30))?;
+        output.require_success()?;
+        assert!(output.stdout.contains("large native frame recovery passed"));
+        println!("{}", output.stdout);
         Ok(())
     }
 
@@ -298,11 +282,15 @@ mod tests {
             );
             assert_eq!(observed, 0, "rejected function entered native code");
             let context = (&raw mut observed).cast::<u8>().cast_const();
+            #[cfg(feature = "execution-profile")]
+            assert_eq!(function.execution_count(), 0);
             assert_eq!(
                 stacker::grow(4 * FRAME_BYTES, || function.execute(&arguments, context))?,
                 None
             );
             assert_eq!(observed, 42);
+            #[cfg(feature = "execution-profile")]
+            assert_eq!(function.execution_count(), 1);
             println!(
                 "large native frame recovery passed: {} bytes",
                 function.native_stack_bytes()

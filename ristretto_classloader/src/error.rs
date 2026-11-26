@@ -16,6 +16,9 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 /// operations in the Ristretto JVM implementation.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// A managed allocation failed.
+    #[error(transparent)]
+    GcError(#[from] ristretto_gc::Error),
     /// An error occurred while processing a runtime archive
     #[error("Archive error: {0}")]
     ArchiveError(String),

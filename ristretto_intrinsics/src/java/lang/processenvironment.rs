@@ -28,19 +28,23 @@ pub async fn environ<T: Thread + 'static>(
     let mut values = Vec::new();
     let vm = thread.vm()?;
     let collector = vm.garbage_collector();
-    for (key, value) in std::env::vars() {
+    // Finish the host environment snapshot before any Java allocation can suspend.
+    let environment: Vec<_> = std::env::vars().collect();
+    for (key, value) in environment {
         let key_bytes = mutf8::to_bytes(&key)?;
         let key_bytes: &[i8] = transmute_ref!(key_bytes.as_slice());
-        let key = Value::new_object(collector, Reference::from(key_bytes.to_vec()));
+        let key =
+            Value::try_new_object_async(collector, Reference::from(key_bytes.to_vec())).await?;
         values.push(key);
         let value_bytes = mutf8::to_bytes(&value)?;
         let value_bytes: &[i8] = transmute_ref!(value_bytes.as_slice());
-        let value = Value::new_object(collector, Reference::from(value_bytes.to_vec()));
+        let value =
+            Value::try_new_object_async(collector, Reference::from(value_bytes.to_vec())).await?;
         values.push(value);
     }
     let class = thread.class("[[B").await?;
     let reference = Reference::try_from((class, values))?;
-    let value = Value::new_object(collector, reference);
+    let value = Value::try_new_object_async(collector, reference).await?;
     Ok(Some(value))
 }
 

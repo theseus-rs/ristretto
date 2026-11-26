@@ -184,3 +184,6 @@ async fn native_casts_match_hotspot_and_preserve_reference_identity()
     assert_eq!(rows, 85);
     Ok(())
 }
+
+#[path = "support/canonical_cast_additional.rs"]
+mod additional_regressions;

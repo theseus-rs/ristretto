@@ -79,10 +79,9 @@ pub async fn get_parameters_0<T: Thread + 'static>(
             }
 
             let result = Reference::try_from((parameter_array_class, result_params))?;
-            return Ok(Some(Value::new_object(
-                thread.vm()?.garbage_collector(),
-                result,
-            )));
+            return Ok(Some(
+                Value::try_new_object_async(thread.vm()?.garbage_collector(), result).await?,
+            ));
         }
     }
 
@@ -149,10 +148,9 @@ pub async fn get_type_annotation_bytes_0<T: Thread + 'static>(
     // Create byte array
     let bytes: Vec<i8> = bytes.into_iter().map(u8::cast_signed).collect();
     let result = Reference::from(bytes);
-    Ok(Some(Value::new_object(
-        thread.vm()?.garbage_collector(),
-        result,
-    )))
+    Ok(Some(
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), result).await?,
+    ))
 }
 
 #[cfg(test)]

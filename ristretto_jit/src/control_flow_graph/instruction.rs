@@ -1,7 +1,6 @@
 use crate::Error::{InvalidConstant, InvalidConstantIndex};
 use crate::Result;
-use crate::control_flow_graph::type_stack::TypeStack;
-use crate::local_type::StackType;
+use crate::control_flow_graph::type_stack::{StackType, TypeStack};
 use cranelift::prelude::Type;
 #[cfg(test)]
 use cranelift::prelude::types;
@@ -506,12 +505,12 @@ pub(crate) fn simulate(
             let _ = pop_field_type(stack, &field_type)?;
             let _ = stack.pop_object()?;
         }
-        Instruction::Invokevirtual(method_index) | Instruction::Invokespecial(method_index) => {
+        Instruction::Invokevirtual(method_index) => {
             let (_class_index, name_and_type_index) =
                 constant_pool.try_get_method_ref(*method_index)?;
             invoke(stack, constant_pool, *name_and_type_index, true)?;
         }
-        Instruction::Invokestatic(method_index) => {
+        Instruction::Invokestatic(method_index) | Instruction::Invokespecial(method_index) => {
             let constant = constant_pool.try_get(*method_index)?;
             let (Constant::MethodRef {
                 class_index: _,
@@ -524,7 +523,12 @@ pub(crate) fn simulate(
             else {
                 return Err(InvalidConstantPoolIndexType(*method_index).into());
             };
-            invoke(stack, constant_pool, *name_and_type_index, false)?;
+            invoke(
+                stack,
+                constant_pool,
+                *name_and_type_index,
+                matches!(instruction, Instruction::Invokespecial(_)),
+            )?;
         }
         Instruction::Invokeinterface(method_index, ..) => {
             let (_class_index, name_and_type_index) =

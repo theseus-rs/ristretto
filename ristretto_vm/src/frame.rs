@@ -951,10 +951,6 @@ impl Frame {
                         Ok(()) => cursor += 1,
                         Err(error) => break 'batch Ok(BatchExit::Fault(error)),
                     },
-                    Instruction::Aastore => match aastore(stack) {
-                        Ok(()) => cursor += 1,
-                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
-                    },
                     Instruction::Bastore => match bastore(stack) {
                         Ok(()) => cursor += 1,
                         Err(error) => break 'batch Ok(BatchExit::Fault(error)),
@@ -1517,15 +1513,6 @@ impl Frame {
                             result => break 'batch Ok(BatchExit::Complete(result)),
                         }
                     }
-                    #[cfg(target_family = "wasm")]
-                    Instruction::Newarray(_) => {
-                        break 'batch Ok(BatchExit::Async(instruction.clone()));
-                    }
-                    #[cfg(not(target_family = "wasm"))]
-                    Instruction::Newarray(array_type) => match newarray(self, stack, array_type) {
-                        Ok(()) => cursor += 1,
-                        Err(error) => break 'batch Ok(BatchExit::Fault(error)),
-                    },
                     Instruction::Athrow => match athrow(stack) {
                         Ok(()) => cursor += 1,
                         Err(error) => break 'batch Ok(BatchExit::Fault(error)),
@@ -1540,7 +1527,9 @@ impl Frame {
                     },
                     Instruction::Invokedynamic(_)
                     | Instruction::New(_)
+                    | Instruction::Newarray(_)
                     | Instruction::Anewarray(_)
+                    | Instruction::Aastore
                     | Instruction::Checkcast(_)
                     | Instruction::Instanceof(_)
                     | Instruction::Monitorenter
@@ -1795,17 +1784,16 @@ impl Frame {
             }
             Instruction::Invokedynamic(index) => invokedynamic(self, stack, *index).await,
             Instruction::New(index) => new(self, stack, *index).await,
-            #[cfg(target_family = "wasm")]
             Instruction::Newarray(array_type) => {
-                newarray(self, stack, array_type)?;
-                // The newly allocated array is now rooted on the operand stack.
-                // The frame lock has been released for this instruction boundary.
+                newarray(self, stack, array_type).await?;
+                #[cfg(target_family = "wasm")]
                 if !ristretto_gc::cell::has_guards() {
                     self.thread()?.vm()?.garbage_collector().step();
                 }
                 Ok(ExecutionResult::Continue)
             }
             Instruction::Anewarray(index) => anewarray(self, stack, *index).await,
+            Instruction::Aastore => aastore(self, stack).await,
             Instruction::Athrow => athrow(stack).map(|()| ExecutionResult::Continue),
             Instruction::Checkcast(index) => checkcast(self, stack, *index).await,
             Instruction::Instanceof(index) => instanceof(self, stack, *index).await,

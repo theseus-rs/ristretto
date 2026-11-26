@@ -221,3 +221,6 @@ async fn native_reference_array_quota_failure_does_not_pin_frame_owners()
     assert_eq!(result.catalog_bytes_after_drop, 0);
     Ok(())
 }
+
+#[path = "support/canonical_reference_arrays_additional.rs"]
+mod additional_regressions;

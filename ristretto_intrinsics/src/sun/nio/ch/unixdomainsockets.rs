@@ -244,9 +244,12 @@ fn address_path_bytes(address: &SockAddr) -> Vec<u8> {
     path.get(..end).unwrap_or_default().to_vec()
 }
 
-fn byte_array(vm: &impl VM, bytes: &[u8]) -> Value {
+async fn byte_array(vm: &impl VM, bytes: &[u8]) -> Result<Value> {
     let bytes: Box<[i8]> = bytes.iter().map(|byte| byte.cast_signed()).collect();
-    Value::new_object(vm.garbage_collector(), Reference::ByteArray(bytes))
+    Ok(
+        Value::try_new_object_async(vm.garbage_collector(), Reference::ByteArray(bytes.into()))
+            .await?,
+    )
 }
 
 async fn restore_blocking<V: VM>(vm: &V, fd: i32) -> Result<()> {
@@ -326,11 +329,12 @@ pub async fn accept_0<T: Thread + 'static>(
     let peer_path = peer.as_pathname().map_or_else(Vec::new, path_bytes);
     #[cfg(windows)]
     let peer_path = address_path_bytes(&peer);
+    let peer_address = byte_array(&*vm, &peer_path).await?;
     let (_, mut values) = array.as_class_vec_mut()?;
     let first = values
         .first_mut()
         .ok_or_else(|| InternalError("accept0 address array is empty".to_string()))?;
-    *first = byte_array(&*vm, &peer_path);
+    *first = peer_address;
     Ok(Some(Value::Int(1)))
 }
 
@@ -499,7 +503,7 @@ pub async fn local_address_0<T: Thread + 'static>(
     let path = address.as_pathname().map_or_else(Vec::new, path_bytes);
     #[cfg(windows)]
     let path = address_path_bytes(&address);
-    Ok(Some(byte_array(&*vm, &path)))
+    Ok(Some(byte_array(&*vm, &path).await?))
 }
 
 #[intrinsic_method("sun/nio/ch/UnixDomainSockets.socket0()I", GreaterThanOrEqual(JAVA_17))]

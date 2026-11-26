@@ -1,6 +1,5 @@
 //! Execute source programs with the selected JDK's in-memory source launcher.
 
-use super::run_local;
 use crate::{Error, Result, VM};
 use ristretto_classfile::{JAVA_11, JAVA_22};
 use ristretto_types::JavaObject;
@@ -29,7 +28,9 @@ impl VM {
         S: AsRef<OsStr>,
         O: AsRef<OsStr>,
     {
-        run_local(async {
+        // Source launch composes several nested VM futures. Box once per launch
+        // to keep their combined state off the caller's stack.
+        Box::pin(self.local_scheduler.run(async {
             if self.java_major_version() < JAVA_11.java() {
                 return Err(Error::InternalError(format!(
                     "Source-file launch requires Java {} or later", JAVA_11.java(),
@@ -80,6 +81,6 @@ impl VM {
                 }
                 Err(error) => Err(error),
             }
-        }).await
+        })).await
     }
 }

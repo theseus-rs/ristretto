@@ -348,8 +348,11 @@ pub(super) async fn build_socket_address<T: Thread + 'static>(
     let vm = thread.vm()?;
     #[expect(clippy::cast_possible_wrap)]
     let byte_array: Box<[i8]> = bytes.iter().map(|&byte| byte as i8).collect();
-    let byte_array_value =
-        Value::new_object(vm.garbage_collector(), Reference::ByteArray(byte_array));
+    let byte_array_value = Value::try_new_object_async(
+        vm.garbage_collector(),
+        Reference::ByteArray(byte_array.into()),
+    )
+    .await?;
     let inet_address = if bytes.len() == 16 && scope_id != 0 {
         thread
             .invoke(
@@ -390,12 +393,11 @@ async fn build_socket_address_array<T: Thread + 'static>(
     let mut elements = Vec::with_capacity(addresses.len());
     for (bytes, port, scope_id) in addresses {
         let value = build_socket_address(thread, bytes, port, scope_id).await?;
-        let inner = value.as_reference()?.clone();
-        elements.push(Some(inner));
+        elements.push(value);
     }
     let class = thread.class("[Ljava/net/SocketAddress;").await?;
-    let array = Reference::new_array(vm.garbage_collector(), class, elements);
-    Ok(Value::new_object(vm.garbage_collector(), array))
+    let array = Reference::try_from((class, elements))?;
+    Ok(Value::try_new_object_async(vm.garbage_collector(), array).await?)
 }
 
 #[cfg(target_os = "linux")]

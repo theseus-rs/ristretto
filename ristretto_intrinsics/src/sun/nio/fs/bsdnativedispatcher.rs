@@ -227,7 +227,7 @@ pub async fn fsetattrlist_0<T: Thread + 'static>(
     "sun/nio/fs/BsdNativeDispatcher.fsstatEntry(JLsun/nio/fs/UnixMountEntry;)I",
     Any
 )]
-pub fn fsstat_entry<T: Thread + 'static>(
+pub async fn fsstat_entry<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -242,45 +242,70 @@ pub fn fsstat_entry<T: Thread + 'static>(
 
         let vm = thread.vm()?;
         let state = bsd_state(&*vm)?;
-        let mut iterators = state
-            .fsstat
-            .lock()
-            .map_err(|_| InternalError("fsstat iterator lock poisoned".to_string()))?;
-        let Some(state) = iterators.get_mut(&handle) else {
-            return Ok(Some(Value::Int(-1)));
-        };
-        if state.index >= state.entries.len() {
-            return Ok(Some(Value::Int(-1)));
-        }
+        let (mntonname, mntfromname, fstypename, options) = {
+            let mut iterators = state
+                .fsstat
+                .lock()
+                .map_err(|_| InternalError("fsstat iterator lock poisoned".to_string()))?;
+            let Some(state) = iterators.get_mut(&handle) else {
+                return Ok(Some(Value::Int(-1)));
+            };
+            if state.index >= state.entries.len() {
+                return Ok(Some(Value::Int(-1)));
+            }
 
-        let Some(entry) = state.entries.get(state.index) else {
-            return Ok(Some(Value::Int(-1)));
-        };
-        state.index += 1;
+            let Some(entry) = state.entries.get(state.index) else {
+                return Ok(Some(Value::Int(-1)));
+            };
+            state.index += 1;
 
-        // Extract mount point name, device name, and fs type from statfs
-        #[expect(unsafe_code)]
-        let mntonname = unsafe {
-            std::ffi::CStr::from_ptr(entry.f_mntonname.as_ptr())
-                .to_bytes()
-                .to_vec()
-        };
-        #[expect(unsafe_code)]
-        let mntfromname = unsafe {
-            std::ffi::CStr::from_ptr(entry.f_mntfromname.as_ptr())
-                .to_bytes()
-                .to_vec()
-        };
-        #[expect(unsafe_code)]
-        let fstypename = unsafe {
-            std::ffi::CStr::from_ptr(entry.f_fstypename.as_ptr())
-                .to_bytes()
-                .to_vec()
+            // Extract mount point name, device name, and fs type from statfs
+            #[expect(unsafe_code)]
+            let mntonname = unsafe {
+                std::ffi::CStr::from_ptr(entry.f_mntonname.as_ptr())
+                    .to_bytes()
+                    .to_vec()
+            };
+            #[expect(unsafe_code)]
+            let mntfromname = unsafe {
+                std::ffi::CStr::from_ptr(entry.f_mntfromname.as_ptr())
+                    .to_bytes()
+                    .to_vec()
+            };
+            #[expect(unsafe_code)]
+            let fstypename = unsafe {
+                std::ffi::CStr::from_ptr(entry.f_fstypename.as_ptr())
+                    .to_bytes()
+                    .to_vec()
+            };
+            let options = if entry.f_flags & libc::MNT_RDONLY.cast_unsigned() != 0 {
+                b"ro".to_vec()
+            } else {
+                Vec::new()
+            };
+            (mntonname, mntfromname, fstypename, options)
         };
 
         if !mount_entry.is_null() {
             let gc = vm.garbage_collector();
-
+            let values = [
+                (
+                    "name",
+                    Value::try_new_object_async(gc, Reference::from(mntfromname)).await?,
+                ),
+                (
+                    "dir",
+                    Value::try_new_object_async(gc, Reference::from(mntonname)).await?,
+                ),
+                (
+                    "fstype",
+                    Value::try_new_object_async(gc, Reference::from(fstypename)).await?,
+                ),
+                (
+                    "opts",
+                    Value::try_new_object_async(gc, Reference::from(options)).await?,
+                ),
+            ];
             let mut guard = mount_entry.as_reference_mut()?;
             let Reference::Object(object) = &mut *guard else {
                 return Err(InternalError(
@@ -288,15 +313,9 @@ pub fn fsstat_entry<T: Thread + 'static>(
                 ));
             };
 
-            object.set_value("name", Value::new_object(gc, Reference::from(mntfromname)))?;
-            object.set_value("dir", Value::new_object(gc, Reference::from(mntonname)))?;
-            object.set_value("fstype", Value::new_object(gc, Reference::from(fstypename)))?;
-            let options = if entry.f_flags & libc::MNT_RDONLY.cast_unsigned() != 0 {
-                b"ro".to_vec()
-            } else {
-                Vec::new()
-            };
-            object.set_value("opts", Value::new_object(gc, Reference::from(options)))?;
+            for (name, value) in values {
+                object.set_value(name, value)?;
+            }
         }
 
         Ok(Some(Value::Int(0)))
@@ -381,7 +400,9 @@ pub async fn getmntonname_0<T: Thread + 'static>(
                 .to_vec()
         };
         let gc = vm.garbage_collector();
-        Ok(Some(Value::new_object(gc, Reference::from(mount_name))))
+        Ok(Some(
+            Value::try_new_object_async(gc, Reference::from(mount_name)).await?,
+        ))
     }
     #[cfg(not(target_os = "macos"))]
     {
@@ -389,7 +410,9 @@ pub async fn getmntonname_0<T: Thread + 'static>(
         // Return "/" as default mount point
         let mount_point: Vec<u8> = b"/".to_vec();
         let gc = vm.garbage_collector();
-        Ok(Some(Value::new_object(gc, Reference::from(mount_point))))
+        Ok(Some(
+            Value::try_new_object_async(gc, Reference::from(mount_point)).await?,
+        ))
     }
 }
 
@@ -654,7 +677,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push_long(0); // null handle
         params.push(Value::Object(None)); // null mount entry
-        let result = fsstat_entry(thread, params);
+        let result = fsstat_entry(thread, params).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), Some(Value::Int(-1)));
     }
@@ -662,7 +685,7 @@ mod tests {
     #[tokio::test]
     async fn test_fsstat_entry_default_params() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = fsstat_entry(thread, Parameters::default());
+        let result = fsstat_entry(thread, Parameters::default()).await;
         assert!(matches!(
             result,
             Err(ristretto_types::Error::ParametersUnderflow)

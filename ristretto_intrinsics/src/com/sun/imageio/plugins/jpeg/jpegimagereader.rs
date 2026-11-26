@@ -153,7 +153,7 @@ pub async fn read_image<T: Thread + 'static>(
     if data.is_empty() {
         return Err(support::io_error(thread.as_ref(), "JPEG header has not been read").await);
     }
-    let mut input = support::Input::new(thread.as_ref(), &receiver)?;
+    let mut input = support::Input::new(thread.as_ref(), &receiver).await?;
     let tail = input.image_tail(&mut data).await;
     let finish = input.finish().await;
     tail?;
@@ -266,7 +266,7 @@ pub async fn read_image_header<T: Thread + 'static>(
     let ctx = support::context(thread.as_ref(), id, false).await?;
     let receiver = parameters.pop()?;
     support::nonnull(&receiver)?;
-    let mut input = support::Input::new(thread.as_ref(), &receiver)?;
+    let mut input = support::Input::new(thread.as_ref(), &receiver).await?;
     let header = input.header().await;
     let finish = input.finish().await;
     let header = header?;
@@ -277,7 +277,7 @@ pub async fn read_image_header<T: Thread + 'static>(
     if !tables_only {
         let profile = support::checked(thread.as_ref(), support::icc_profile(&header)).await?;
         let profile = match profile {
-            Some(data) => support::bytes(thread.as_ref(), &data)?,
+            Some(data) => support::bytes(thread.as_ref(), &data).await?,
             None => Value::Object(None),
         };
         let [width, height, color, output, components, _] = info;

@@ -1,5 +1,6 @@
 use crate::Error::{InternalError, InvalidBlockAddress};
 use crate::Result;
+use crate::function::activation::RequestKind;
 use crate::instruction::{ThrowContext, emit_bci};
 use crate::jit_value;
 use crate::operand_stack::OperandStack;
@@ -33,6 +34,16 @@ fn prepare_throw_target(
     if !covers {
         return Ok((throw_context.exception_block, false));
     }
+    if let Some((continuation, _, _)) = throw_context.continuation
+        && let Some(&block) = continuation
+            .exception_dispatch
+            .get(&throw_context.program_counter)
+    {
+        return Ok((
+            block,
+            !function_builder.func.layout.is_block_inserted(block),
+        ));
+    }
     Ok((function_builder.create_block(), true))
 }
 
@@ -62,15 +73,16 @@ fn populate_dispatch_block(
             throw_context.program_counter
         ))
     })?;
-    let covering: Vec<&ExceptionTableEntry> = throw_context
+    let covering: Vec<(usize, &ExceptionTableEntry)> = throw_context
         .exception_table
         .iter()
-        .filter(|entry| entry.range_pc.contains(&pc_u16))
+        .enumerate()
+        .filter(|(_, entry)| entry.range_pc.contains(&pc_u16))
         .collect();
 
     function_builder.switch_to_block(dispatch_block);
 
-    for entry in covering {
+    for (ordinal, entry) in covering {
         let handler_pc = usize::from(entry.handler_pc);
         let handler_block = *throw_context
             .blocks
@@ -91,17 +103,52 @@ fn populate_dispatch_block(
             return Ok(());
         }
 
-        let catch_type = function_builder
-            .ins()
-            .iconst(types::I32, i64::from(entry.catch_type));
-        let call = function_builder
-            .ins()
-            .call(helpers.exception_matches, &[context_pointer, catch_type]);
-        let Some(&matches) = function_builder.inst_results(call).first() else {
-            return Err(InternalError(
-                "exception_matches returned no value".to_string(),
-            ));
+        let synchronous = |builder: &mut FunctionBuilder| -> Result<Value> {
+            let catch_type = builder
+                .ins()
+                .iconst(types::I32, i64::from(entry.catch_type));
+            let call = builder
+                .ins()
+                .call(helpers.exception_matches, &[context_pointer, catch_type]);
+            let matches = crate::instruction::single_inst_result(builder, call)?;
+            Ok(builder.ins().sextend(types::I64, matches))
         };
+        let matches = if let Some((continuation, state, arguments)) = throw_context.continuation {
+            let call = crate::compiler::continuation::CallContinuation {
+                continuation,
+                state,
+            };
+            // A throw discards the source operand stack. The context retains the
+            // pending throwable and the instruction's published live local roots.
+            let mut empty = OperandStack::with_capacity(0);
+            call.emit_at(
+                function_builder,
+                &mut empty,
+                arguments,
+                0,
+                throw_context.program_counter,
+                crate::compiler::continuation::Continuation::exception_site(
+                    throw_context.program_counter,
+                    ordinal,
+                )?,
+                (RequestKind::ExceptionMatch, entry.catch_type),
+                synchronous,
+            )?
+        } else {
+            synchronous(function_builder)?
+        };
+        // Resolution failure replaces the pending throwable and propagates out
+        // of this method; later entries must not catch that replacement here.
+        let failed = function_builder.ins().icmp_imm_s(
+            cranelift::prelude::IntCC::SignedLessThan,
+            matches,
+            0,
+        );
+        let resolved = function_builder.create_block();
+        function_builder
+            .ins()
+            .brif(failed, throw_context.exception_block, &[], resolved, &[]);
+        function_builder.switch_to_block(resolved);
 
         let take_block = function_builder.create_block();
         let next_block = function_builder.create_block();
@@ -146,6 +193,14 @@ pub(crate) fn emit_pending_exception_check(
     context_pointer: Value,
     throw_context: &ThrowContext<'_>,
 ) -> Result<()> {
+    if throw_context
+        .continuation
+        .is_some_and(|(continuation, _, _)| continuation.layout.requests_only)
+    {
+        // Request-only hosts report faults by cancelling the parked activation.
+        // Never link a synchronous exception-slot helper into this ABI.
+        return Ok(());
+    }
     let call = function_builder
         .ins()
         .call(helpers.pending_exception, &[context_pointer]);
@@ -161,6 +216,7 @@ pub(crate) fn emit_pending_exception_check(
     for ty in stack.to_type_vec(function_builder) {
         function_builder.append_block_param(continue_block, ty);
     }
+    stack.inherit_block_references(function_builder, continue_block)?;
 
     let stack_args = stack.as_block_arguments();
     function_builder
@@ -177,7 +233,6 @@ pub(crate) fn emit_pending_exception_check(
         )?;
     }
 
-    stack.inherit_block_references(function_builder, continue_block)?;
     function_builder.switch_to_block(continue_block);
     stack.reset(function_builder)?;
     Ok(())
@@ -204,6 +259,7 @@ pub(crate) fn emit_null_check(
     for ty in stack.to_type_vec(function_builder) {
         function_builder.append_block_param(continue_block, ty);
     }
+    stack.inherit_block_references(function_builder, continue_block)?;
     let stack_args = stack.as_block_arguments();
     function_builder
         .ins()
@@ -229,7 +285,6 @@ pub(crate) fn emit_null_check(
         )?;
     }
 
-    stack.inherit_block_references(function_builder, continue_block)?;
     function_builder.switch_to_block(continue_block);
     stack.reset(function_builder)?;
     Ok(())

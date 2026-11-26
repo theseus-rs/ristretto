@@ -37,6 +37,7 @@ fn execution<'p, 'r, 'gc>(
         limits: Limits::default(),
         report: Report::default(),
         statics: crate::canonical::statics::States::default(),
+        recording: crate::canonical::recording::Recording::default(),
     })
 }
 
@@ -54,7 +55,8 @@ async fn catalog_elements_preserve_aliases_cycles_and_release_every_page() -> Re
         .await?;
     assert_eq!(execution.report.internal_allocations, 2);
     assert_eq!(execution.report.allocations, 3);
-    let bytes = Gc::<Payload>::allocation_size(&Payload::ReferencePage { height: 1 })?;
+    let bytes =
+        CanonicalPayload::<Payload>::allocation_size(&Payload::ReferencePage { height: 1 })?;
     assert_eq!(collector.managed_bytes(), bytes * 3);
     let object = execution.allocate_object(0).await?;
     execution
@@ -117,9 +119,10 @@ async fn exact_payload_charge_and_temporary_root_preflight() -> Result<(), Error
         let budget = Budget::new(configuration.charged_bytes()?);
         let runtime = Runtime::new(&collector, configuration, &budget)?;
         let mut execution = execution(&program, &runtime)?;
-        let required = Gc::<Payload>::allocation_size(&Payload::ReferencePage { height: 1 })?
-            .checked_mul(nodes)
-            .ok_or(Error::Limit("test payload size"))?;
+        let required =
+            CanonicalPayload::<Payload>::allocation_size(&Payload::ReferencePage { height: 1 })?
+                .checked_mul(nodes)
+                .ok_or(Error::Limit("test payload size"))?;
         execution.limits.array_bytes = required
             .checked_add_signed(byte_delta)
             .ok_or(Error::Limit("test byte boundary"))?;
@@ -309,7 +312,8 @@ async fn finite_reference_tree_pending_registration_and_linked_prefix_cancellati
         let budget = Budget::new(configuration.charged_bytes()?);
         let runtime = Runtime::new(&collector, configuration, &budget)?;
         let mut execution = execution(&program, &runtime)?;
-        let unit = Gc::<Payload>::allocation_size(&Payload::ReferencePage { height: 1 })?;
+        let unit =
+            CanonicalPayload::<Payload>::allocation_size(&Payload::ReferencePage { height: 1 })?;
         let mut future = Box::pin(execution.allocate_reference_array(Component::Object, 9));
         let mut context = Context::from_waker(Waker::noop());
         let mut prefix = None;

@@ -41,7 +41,22 @@ fn ldc_string() -> ristretto_jit::Result<()> {
     ];
     let result =
         create_function_with_constant_pool(constant_pool, "()Ljava/lang/String;", &instructions);
-    assert!(result.is_err());
+    let function = result?;
+    let context = crate::util::TestContext::default();
+    let mut activation = function.activation(&[])?;
+    let ristretto_jit::ExecutionStep::Constant(request) =
+        activation.resume_with_context(std::num::NonZeroU32::MIN, context.as_ptr())?
+    else {
+        panic!("missing constant request");
+    };
+    assert_eq!(request.index, constant_index);
+    assert_eq!(request.bci, 0);
+    assert_eq!(activation.call_arguments()?, &[] as &[i64]);
+    activation.complete_call(42)?;
+    assert_eq!(
+        activation.resume_with_context(std::num::NonZeroU32::MIN, context.as_ptr())?,
+        ristretto_jit::ExecutionStep::Returned(Some(Value::Ptr(42)))
+    );
     Ok(())
 }
 
@@ -55,7 +70,22 @@ fn ldc_class() -> ristretto_jit::Result<()> {
     ];
     let result =
         create_function_with_constant_pool(constant_pool, "()Ljava/lang/Object;", &instructions);
-    assert!(result.is_err());
+    let function = result?;
+    let context = crate::util::TestContext::default();
+    let mut activation = function.activation(&[])?;
+    let ristretto_jit::ExecutionStep::Constant(request) =
+        activation.resume_with_context(std::num::NonZeroU32::MIN, context.as_ptr())?
+    else {
+        panic!("missing constant request");
+    };
+    assert_eq!(request.index, constant_index);
+    assert_eq!(request.bci, 0);
+    assert_eq!(activation.call_arguments()?, &[] as &[i64]);
+    activation.complete_call(42)?;
+    assert_eq!(
+        activation.resume_with_context(std::num::NonZeroU32::MIN, context.as_ptr())?,
+        ristretto_jit::ExecutionStep::Returned(Some(Value::Ptr(42)))
+    );
     Ok(())
 }
 
@@ -101,7 +131,22 @@ fn ldc_w_string() -> ristretto_jit::Result<()> {
     let instructions = vec![Instruction::Ldc_w(constant_index), Instruction::Areturn];
     let result =
         create_function_with_constant_pool(constant_pool, "()Ljava/lang/String;", &instructions);
-    assert!(result.is_err());
+    let function = result?;
+    let context = crate::util::TestContext::default();
+    let mut activation = function.activation(&[])?;
+    let ristretto_jit::ExecutionStep::Constant(request) =
+        activation.resume_with_context(std::num::NonZeroU32::MIN, context.as_ptr())?
+    else {
+        panic!("missing constant request");
+    };
+    assert_eq!(request.index, constant_index);
+    assert_eq!(request.bci, 0);
+    assert_eq!(activation.call_arguments()?, &[] as &[i64]);
+    activation.complete_call(42)?;
+    assert_eq!(
+        activation.resume_with_context(std::num::NonZeroU32::MIN, context.as_ptr())?,
+        ristretto_jit::ExecutionStep::Returned(Some(Value::Ptr(42)))
+    );
     Ok(())
 }
 
@@ -112,7 +157,22 @@ fn ldc_w_class() -> ristretto_jit::Result<()> {
     let instructions = vec![Instruction::Ldc_w(constant_index), Instruction::Areturn];
     let result =
         create_function_with_constant_pool(constant_pool, "()Ljava/lang/Object;", &instructions);
-    assert!(result.is_err());
+    let function = result?;
+    let context = crate::util::TestContext::default();
+    let mut activation = function.activation(&[])?;
+    let ristretto_jit::ExecutionStep::Constant(request) =
+        activation.resume_with_context(std::num::NonZeroU32::MIN, context.as_ptr())?
+    else {
+        panic!("missing constant request");
+    };
+    assert_eq!(request.index, constant_index);
+    assert_eq!(request.bci, 0);
+    assert_eq!(activation.call_arguments()?, &[] as &[i64]);
+    activation.complete_call(42)?;
+    assert_eq!(
+        activation.resume_with_context(std::num::NonZeroU32::MIN, context.as_ptr())?,
+        ristretto_jit::ExecutionStep::Returned(Some(Value::Ptr(42)))
+    );
     Ok(())
 }
 

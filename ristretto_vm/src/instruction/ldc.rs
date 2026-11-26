@@ -1,11 +1,13 @@
 use crate::Error::{InvalidConstant, InvalidConstantIndex};
 use crate::Result;
+use crate::Thread;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame, InstructionResult};
 use crate::java_object::JavaObject;
 use crate::operand_stack::OperandStack;
 use ristretto_classfile::{Constant, attributes::Instruction};
-use ristretto_classloader::Value;
+use ristretto_classloader::{Class, Value};
+use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc>
 #[inline]
@@ -67,31 +69,45 @@ pub(crate) async fn load_constant_async(
     stack: &mut OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
-    let constant_pool = frame.class().constant_pool();
+    let value = resolve_reference_constant(frame.thread()?.as_ref(), frame.class(), index).await?;
+    stack.push(value)?;
+    Ok(Continue)
+}
+
+/// Resolve a reference constant without initializing its target class. Both
+/// interpreter and generated requests retain the returned owning value.
+pub(crate) async fn resolve_reference_constant(
+    thread: &Thread,
+    class: &Arc<Class>,
+    index: u16,
+) -> Result<Value> {
+    let constant_pool = class.constant_pool();
     let constant = constant_pool
         .get(index)
         .ok_or_else(|| InvalidConstantIndex(index))?;
 
-    let value = match constant {
+    match constant {
         Constant::String(utf8_index) => {
             let utf8_value = constant_pool.try_get_utf8(*utf8_index)?;
-            let thread = frame.thread()?;
             let vm = thread.vm()?;
             let string_pool = vm.string_pool();
-            string_pool.intern_java_str(&thread, utf8_value).await?
+            string_pool.intern_java_str(thread, utf8_value).await
         }
         Constant::Class(class_index) => {
             let class_name = constant_pool.try_get_utf8(*class_index)?;
-            let thread = frame.thread()?;
             let class = thread
-                .load_referenced_class(frame.class(), class_name)
-                .await?;
-            class.to_object(&thread).await?
+                .load_referenced_class(class, class_name)
+                .await
+                .map_err(|error| match error {
+                    crate::Error::ClassLoaderError(
+                        ristretto_classloader::Error::ClassNotFound(name),
+                    ) => crate::JavaError::NoClassDefFoundError(name).into(),
+                    error => error,
+                })?;
+            class.to_object(thread).await
         }
-        _ => return Err(InvalidConstantIndex(index)),
-    };
-    stack.push(value)?;
-    Ok(Continue)
+        _ => Err(InvalidConstantIndex(index)),
+    }
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc2_w>
@@ -225,6 +241,21 @@ mod test {
         let object = stack.pop_object()?.expect("object");
         let guard = object.read();
         assert_eq!("Class(java.lang.Object)", format!("{guard}"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_missing_class_constant_is_linkage_error() -> Result<()> {
+        let (_vm, _thread, mut frame) = crate::test::frame().await?;
+        let pool = Arc::get_mut(frame.class_mut())
+            .expect("class")
+            .constant_pool_mut();
+        let index = pool.add_class("MissingLdcTarget")?;
+        let mut stack = OperandStack::with_max_size(1);
+        let error = load_constant_async(&frame, &mut stack, index).await;
+        assert!(
+            matches!(error, Err(crate::Error::JavaError(crate::JavaError::NoClassDefFoundError(name))) if name == "MissingLdcTarget")
+        );
         Ok(())
     }
 

@@ -418,3 +418,6 @@ async fn shared_native_context_rejects_foreign_program_and_survives_limit_and_ca
         .await?;
     Ok(())
 }
+
+#[path = "support/canonical_compiled_additional.rs"]
+mod additional_regressions;

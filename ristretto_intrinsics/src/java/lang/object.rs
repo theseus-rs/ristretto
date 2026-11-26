@@ -1,7 +1,7 @@
 use crate::java::lang::thread::{ThreadState, set_thread_status};
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
-use ristretto_classloader::{ObjectArray, Reference, Value};
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Assignable;
 use ristretto_types::Error::InternalError;
@@ -15,14 +15,41 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 use std::time::Duration;
 
+/// Register finalizable instances when Object's constructor successfully completes.
+/// A subclass constructor may subsequently fail; that does not undo finalizability.
+#[intrinsic_method("java/lang/Object.<init>()V", Any)]
+pub async fn init<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let value = parameters.pop()?;
+    register_finalizer(&thread, &value).await?;
+    Ok(None)
+}
+
+async fn register_finalizer<T: Thread + 'static>(thread: &Arc<T>, value: &Value) -> Result<()> {
+    let class = value.as_object_ref()?.class().clone();
+    if let Ok(method) = class.resolve_method("finalize", "()V")
+        && method.declaring_class.name() != "java/lang/Object"
+    {
+        thread
+            .invoke(
+                "java/lang/ref/Finalizer",
+                "register(Ljava/lang/Object;)V",
+                std::slice::from_ref(value),
+            )
+            .await?;
+    }
+    Ok(())
+}
+
 /// Helper to get a stable identifier for an object to use as a monitor key.
 #[must_use]
-pub fn get_monitor_id(reference: &Reference) -> Option<usize> {
-    match reference {
-        Reference::Object(obj) => Some(std::ptr::from_ref(obj) as usize),
-        Reference::Array(arr) => Some(std::ptr::from_ref(arr) as usize),
-        _ => None,
-    }
+pub fn get_monitor_id(
+    reference: &ristretto_gc::Gc<ristretto_gc::sync::RwLock<Reference>>,
+) -> Option<i64> {
+    let id = reference.as_handle_i64();
+    (id != 0).then_some(id)
 }
 
 /// Intrinsic methods for `java/lang/Object.clone()`.
@@ -41,67 +68,40 @@ pub async fn clone<T: Thread + 'static>(
         ));
     };
 
-    let object_to_clone = {
-        let guard = reference.read();
-        if let Reference::Object(object) = &*guard {
-            Some(object.clone())
-        } else {
-            None
-        }
+    let object_class = match &*reference.read() {
+        Reference::Object(object) => Some(object.class().clone()),
+        _ => None,
     };
-
-    if let Some(object) = object_to_clone {
-        let object_class = object.class().clone();
+    if let Some(object_class) = &object_class {
         if object_class.name() == "java/lang/Class" {
-            return Ok(Some(Value::from(reference.clone())));
+            return Ok(Some(Value::from(reference.rooted_clone())));
         }
         let cloneable_class = thread.class("java.lang.Cloneable").await?;
-        let implements_cloneable = cloneable_class
-            .is_assignable_from(&thread, &object_class)
-            .await?;
-        if !implements_cloneable {
-            let class_name = object_class.name();
+        if !cloneable_class
+            .is_assignable_from(&thread, object_class)
+            .await?
+        {
             return Err(CloneNotSupportedException(
-                ["class ", class_name, " does not implement Cloneable"].concat(),
+                [
+                    "class ",
+                    object_class.name(),
+                    " does not implement Cloneable",
+                ]
+                .concat(),
             )
             .into());
         }
-        let value = Value::new_object(
-            thread.vm()?.garbage_collector(),
-            Reference::Object(object.clone()),
-        );
-        return Ok(Some(value));
     }
-
-    let guard = reference.read();
-    let reference = match &*guard {
-        Reference::BooleanArray(array) => Reference::BooleanArray(array.clone()),
-        Reference::ByteArray(array) => Reference::ByteArray(array.clone()),
-        Reference::CharArray(array) => Reference::CharArray(array.clone()),
-        Reference::ShortArray(array) => Reference::ShortArray(array.clone()),
-        Reference::IntArray(array) => Reference::IntArray(array.clone()),
-        Reference::LongArray(array) => Reference::LongArray(array.clone()),
-        Reference::FloatArray(array) => Reference::FloatArray(array.clone()),
-        Reference::DoubleArray(array) => Reference::DoubleArray(array.clone()),
-        Reference::Array(object_array) => {
-            let elements = object_array.elements.clone();
-            let mut cloned_values = Vec::with_capacity(elements.len());
-            for value in elements {
-                if let Value::Object(Some(ref reference)) = value {
-                    cloned_values.push(Value::Object(Some(reference.clone())));
-                } else {
-                    cloned_values.push(value);
-                }
-            }
-            let object_array = ObjectArray {
-                class: object_array.class.clone(),
-                elements: cloned_values.into(),
-            };
-            Reference::Array(object_array)
-        }
-        Reference::Object(object) => Reference::Object(object.clone()),
-    };
-    let value = Value::new_object(thread.vm()?.garbage_collector(), reference);
+    let gc = thread.vm()?.garbage_collector().clone();
+    let size = ristretto_gc::Gc::allocation_size(&*reference)?;
+    gc.make_room_async(size).await?;
+    // Release the source guard before publication can suspend for recovery.
+    // The source handle and copied reference fields retain owning roots.
+    let cloned = reference.read().try_clone()?;
+    let value = Value::try_new_object_async(&gc, cloned).await?;
+    if object_class.is_some() {
+        register_finalizer(&thread, &value).await?;
+    }
     Ok(Some(value))
 }
 
@@ -128,8 +128,7 @@ pub fn hash_code<T: Thread + 'static>(
     let Some(reference) = parameters.pop_reference()? else {
         return Err(InternalError("no object reference defined".to_string()));
     };
-    let guard = reference.read();
-    let hash_code = guard.hash_code() as u64;
+    let hash_code = u64::from_ne_bytes(reference.as_handle_i64().to_ne_bytes());
     #[expect(clippy::cast_possible_truncation)]
     let hash_code = (hash_code ^ (hash_code >> 32)) as u32;
     let hash_code: i32 = zerocopy::transmute!(hash_code);
@@ -148,7 +147,7 @@ pub fn notify<T: Thread + 'static>(
         ));
     };
 
-    if let Some(id) = get_monitor_id(&reference.read()) {
+    if let Some(id) = get_monitor_id(&reference) {
         let vm = thread.vm()?;
         let monitor = vm.monitor_registry().monitor(id);
         monitor.notify(thread.id())?;
@@ -168,7 +167,7 @@ pub fn notify_all<T: Thread + 'static>(
         ));
     };
 
-    if let Some(id) = get_monitor_id(&reference.read()) {
+    if let Some(id) = get_monitor_id(&reference) {
         let vm = thread.vm()?;
         let monitor = vm.monitor_registry().monitor(id);
         monitor.notify_all(thread.id())?;
@@ -212,9 +211,10 @@ pub async fn wait_0<T: Thread + 'static>(
     // termination calls notifyAll() on the Thread object's monitor, so Thread.join() works
     // correctly via the monitor mechanism.
     let vm = thread.vm()?;
-    let monitor_id = { get_monitor_id(&reference.read()) };
+    let monitor_id = { get_monitor_id(&reference) };
     if let Some(id) = monitor_id {
         let monitor = vm.monitor_registry().monitor(id);
+        drop(vm);
         let thread_clone = thread.clone();
         let is_interrupted = move || thread_clone.is_interrupted(false);
 
@@ -261,7 +261,7 @@ mod tests {
 
         // Acquire monitor
         if let Value::Object(Some(ref reference)) = object_value {
-            let monitor_id = get_monitor_id(&reference.read()).expect("monitor id");
+            let monitor_id = get_monitor_id(reference).expect("monitor id");
             let vm = thread.vm()?;
             let monitor = vm.monitor_registry().monitor(monitor_id);
             monitor.acquire(thread.id()).await?;

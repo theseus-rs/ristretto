@@ -7,6 +7,8 @@ mod layout;
 #[path = "canonical_native.rs"]
 pub(crate) mod native;
 mod objects;
+#[path = "canonical_recording.rs"]
+mod recording;
 #[path = "canonical_statics.rs"]
 mod statics;
 pub use heap::{HeapCompletion, Invocation, JavaHeap, JavaThread};
@@ -14,7 +16,7 @@ mod primitive_array;
 mod reference_array;
 use layout::Layout;
 #[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
-pub use objects::{CompiledLimits, CompiledProgram, CompiledThread};
+pub use objects::{CompiledLimits, CompiledMethodProfile, CompiledProgram, CompiledThread};
 pub use objects::{InitializationWork, Limits, Report};
 mod scalar;
 mod value;

@@ -1,6 +1,6 @@
 use crate::Error::{InternalError, InvalidLocalVariableIndex};
 use crate::Result;
-use crate::local_type::StackType;
+use crate::control_flow_graph::StackType;
 use ahash::AHashMap;
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{InstBuilder, Value, Variable, types};

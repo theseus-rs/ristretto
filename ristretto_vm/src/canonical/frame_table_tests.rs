@@ -338,3 +338,84 @@ async fn exhaustion_and_contention_quota_fail_without_publishing_or_retaining_ro
     assert_eq!(budget.used(), 0);
     Ok(())
 }
+
+#[tokio::test]
+async fn unchanged_snapshot_keeps_owners_and_still_rejects_stale_foreign_and_excess_cells()
+-> Result<(), Error> {
+    let collector = GarbageCollector::new();
+    let config = Configuration {
+        objects: 2,
+        roots: 8,
+        mutators: 1,
+        helpers: 1,
+        edges_per_object: 1,
+    };
+    let budget = Budget::new(config.charged_bytes()?);
+    let runtime = Runtime::new(&collector, config, &budget)?;
+    let mut worker = runtime.mutator()?;
+    let mut helper = runtime.helper()?;
+    let mut report = Report::default();
+    let a = {
+        let mut request = worker.allocate(Payload::object(0))?;
+        complete(&mut helper, &mut report, 100_000, || request.poll()).await?
+    };
+    let b = {
+        let mut request = worker.allocate(Payload::object(1))?;
+        complete(&mut helper, &mut report, 100_000, || request.poll()).await?
+    };
+    let mut table = Table::new(2, 1, 4)?;
+    table.install_lease(lease(8).await?)?;
+    let mut frame = table.enter()?;
+    let token_a = ready(table.intern(&mut frame, &a)?)?;
+    let token_b = ready(table.intern(&mut frame, &b)?)?;
+    let original = frame.roots.as_ptr();
+    let before = table.publication_census.get();
+    table.publish(&mut frame, &[token_a, 0, token_b])?;
+    assert_eq!(
+        frame.roots.as_ptr(),
+        original,
+        "unchanged owners are not rebuilt"
+    );
+    assert_eq!(table.publication_census.get().rebound, before.rebound);
+    table.publish(&mut frame, &[token_b, token_a])?;
+    assert_ne!(
+        frame.roots.as_ptr(),
+        original,
+        "changed order takes transactional path"
+    );
+    table.publish(&mut frame, &[token_b, token_b])?;
+    let duplicated = frame.roots.as_ptr();
+    assert_eq!(frame.roots.len(), 2);
+    let owner = &frame
+        .roots
+        .first()
+        .ok_or(Error::Boundary("missing test owner"))?
+        .1;
+    assert_eq!(Rc::strong_count(owner), 2);
+    table.publish(&mut frame, &[0, token_b, token_b, 0])?;
+    assert_eq!(frame.roots.as_ptr(), duplicated);
+    assert!(table.publish(&mut frame, &[token_b, -1]).is_err());
+    assert_eq!(frame.roots.as_ptr(), duplicated);
+    assert_eq!(frame.roots.len(), 2);
+    assert!(frame.replacement.is_empty());
+    table.publish(&mut frame, &[])?;
+    assert!(table.publish(&mut frame, &[0; 5]).is_err());
+    assert!(table.resolve(token_a).is_err());
+    // An external canonical root does not authorize a retired native token.
+    let new_a = ready(table.intern(&mut frame, &a)?)?;
+    assert_ne!(new_a, token_a);
+    assert!(table.publish(&mut frame, &[token_a]).is_err());
+    let mut foreign = Table::new(1, 1, 4)?;
+    foreign.install_lease(lease(2).await?)?;
+    let mut foreign_frame = foreign.enter()?;
+    let foreign_a = ready(foreign.intern(&mut foreign_frame, &a)?)?;
+    // This sequence exactly matches its snapshot, but belongs to another table.
+    assert!(table.publish(&mut foreign_frame, &[foreign_a]).is_err());
+    drop((a, b, frame, foreign_frame));
+    assert_eq!(table.live_objects(), 0);
+    assert_eq!(foreign.live_objects(), 0);
+    reclaim(&mut helper, &collector)?;
+    drop((table, foreign, worker, helper, runtime));
+    assert_eq!(budget.used(), 0);
+    Ok(())
+}

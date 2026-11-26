@@ -1,0 +1,73 @@
+{
+  "vm_delta_manifest_sha256": "e90e1fae7b0cd963c2d9b0dceb53ac268886c3d5c2982222614139950d8c0a09",
+  "vm_full_manifest_sha256": "029b1ff489d0aad24cb5626fbb8c4af775d59dc00dced432e267a1cf6552003c",
+  "production": {
+    "ristretto_vm/CANONICAL_STATIC_STATE.md": "19436a8f2c564d3cd717e96e017d279f97ffb07749d1ebdc18ac60ebdc2b5fb5",
+    "ristretto_vm/src/canonical.rs": "c4dd5d9aee0765c7cffdc2643371bf90da03c16a13215a89907255f5a267edba",
+    "ristretto_vm/src/canonical_statics.rs": "b0c429d1aa8cfab2d03199e96cf18dbe9ca14174a973d68b59bfea60c303f07a"
+  },
+  "imports": {
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticProtocol$A.class": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticProtocol$A.class",
+      "sha256": "647079daa8c6a3a619ce181412bdbf2055c3a5b096079a5acd7d1520abac019b"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticProtocol$B.class": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticProtocol$B.class",
+      "sha256": "41fe9e73c0a69e242d8ee109e5238238ed97cff30e658a41c96686951d1b6b01"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticProtocol$Bad.class": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticProtocol$Bad.class",
+      "sha256": "5f5ded96293298df90b24a9ca0da4cc03e6c326509fc2605e266e723dbde2e70"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticProtocol$Fieldless.class": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticProtocol$Fieldless.class",
+      "sha256": "c99be4381982eb8759dc15aa45690212a96d52ad0e628e149127ab84de740329"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticProtocol$Journal.class": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticProtocol$Journal.class",
+      "sha256": "68a7d4664477d8203eb34474a1e8a794a3b199223b8a3b50f8ef87eb7030ddd4"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticProtocol$Lazy.class": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticProtocol$Lazy.class",
+      "sha256": "6fff9ba6e377edd9120f8e8aad43f1edb699fb85fcb597f5220511910a8ec4ce"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticProtocol$NestedBad.class": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticProtocol$NestedBad.class",
+      "sha256": "80477d42857967cd858e61440c0e4a9772f5f4a08257a9cf524bb0adc744f5c8"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticProtocol.class": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticProtocol.class",
+      "sha256": "b875fdf4c16e474b94d09c755eae7b989640eca2c203a086068938462c65fa5c"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticProtocol.java": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticProtocol.java",
+      "sha256": "c14c4d9c7d5e4641212c89e74ff6f994b63aea881a78cdefdd838a3233fa31c8"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticRootsFull$Node.class": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticRootsFull$Node.class",
+      "sha256": "13c45a126c52110de2616e6711fe9fe4e6dcb0ddefe5cded7566aa4a0177a5fb"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticRootsFull.class": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticRootsFull.class",
+      "sha256": "4c945bd90462a1a0837080dacbfe0cb7afe429d31de11e72c12f5a6b22306741"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticRootsFull.java": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticRootsFull.java",
+      "sha256": "c296dd636e3c886d3daee2d2843dfd3fd15454a49f92d330f353cda2c9cc136c"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticRootsSmall$Node.class": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticRootsSmall$Node.class",
+      "sha256": "e09c8b5268e0f138d033ba70a1dbe86d433bebaa8e6ee24ac7bbf6567af4de83"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticRootsSmall.class": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticRootsSmall.class",
+      "sha256": "981c6150d9e1aa858b5ef00594be4b4232bbc5e1b97642ac22ebf24590bed9ff"
+    },
+    "ristretto_jit/tests/fixtures/canonical_static/CanonicalStaticRootsSmall.java": {
+      "original_path": "ristretto_vm/tests/fixtures/canonical/CanonicalStaticRootsSmall.java",
+      "sha256": "7194d7a66a3e95167529f8a2a2cac10bfcc02d139d9350c82e2378df90b3aec5"
+    }
+  },
+  "scope": "Exact frozen javac fixtures copied as JIT protocol inputs; no VM source imports/edits and no claim of compiled VM static admission.",
+  "vm_checkpoint": "vm-static-roots-v1/checkpoint-r2"
+}

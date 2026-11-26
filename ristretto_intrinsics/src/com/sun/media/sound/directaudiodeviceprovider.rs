@@ -27,7 +27,7 @@ pub async fn n_new_direct_audio_device_info<T: ristretto_types::Thread + 'static
         .class("com/sun/media/sound/DirectAudioDeviceProvider$DirectAudioDeviceInfo")
         .await?;
     let gc = thread.vm()?.garbage_collector().clone();
-    let mut object = Object::new(class)?;
+    let mut object = Object::new_in_async(thread.vm()?.garbage_collector(), class).await?;
     object.set_value_unchecked("index", Value::Int(device_index))?;
     object.set_value_unchecked("deviceID", Value::Int(device_index))?;
     object.set_value_unchecked("maxSimulLines", Value::Int(32))?;
@@ -40,7 +40,7 @@ pub async fn n_new_direct_audio_device_info<T: ristretto_types::Thread + 'static
     let version = thread.intern_string("1.0").await?;
     object.set_value_unchecked("version", version)?;
 
-    Ok(Some(Value::from_object(&gc, object)))
+    Ok(Some(Value::try_from_object_async(&gc, object).await?))
 }
 
 #[cfg(test)]

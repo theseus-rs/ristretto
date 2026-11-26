@@ -58,6 +58,11 @@
     )
 )]
 
+mod array_elements;
+mod reference_write_guard;
+pub use reference_write_guard::ReferenceWriteGuardExt;
+mod card_set;
+pub use array_elements::ArrayElements;
 mod class;
 mod class_loader;
 mod class_loader_type;

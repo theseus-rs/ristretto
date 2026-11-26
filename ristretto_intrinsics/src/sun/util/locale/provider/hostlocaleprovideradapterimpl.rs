@@ -406,7 +406,7 @@ async fn new_string_array<T: Thread + 'static>(thread: &Arc<T>, len: usize) -> R
     let vm = thread.vm()?;
     let elements = vec![Value::Object(None); len];
     let reference = Reference::try_from((class, elements))?;
-    Ok(Value::new_object(vm.garbage_collector(), reference))
+    Ok(Value::try_new_object_async(vm.garbage_collector(), reference).await?)
 }
 
 #[cfg(not(target_os = "linux"))]

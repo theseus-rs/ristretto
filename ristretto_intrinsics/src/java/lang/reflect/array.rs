@@ -11,7 +11,7 @@ use ristretto_types::JavaError::{
 };
 use ristretto_types::Thread;
 use ristretto_types::VM;
-use ristretto_types::array::{allocate_array, allocate_primitive_array};
+use ristretto_types::array::{allocate_array_in_async, allocate_primitive_array_in_async};
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -549,7 +549,6 @@ pub async fn multi_new_array<T: Thread + 'static>(
     }
 
     let array = create_multi_dimensional_array(&thread, &class, &dimensions).await?;
-    let array = Value::new_object(thread.vm()?.garbage_collector(), array);
     Ok(Some(array))
 }
 
@@ -558,12 +557,12 @@ enum ArrayKind {
     Reference(Arc<Class>),
 }
 
-/// Resolve each allocated dimension once, then allocate without async recursion.
+/// Resolve each allocated dimension once; publish parents before allocating children.
 async fn create_multi_dimensional_array<T: Thread + 'static>(
     thread: &T,
     component: &Arc<Class>,
     dimensions: &[i32],
-) -> Result<Reference> {
+) -> Result<Value> {
     let Some((&first_length, remaining_dimensions)) = dimensions.split_first() else {
         return Err(InvalidOperand {
             expected: "non-empty dimensions".to_string(),
@@ -595,7 +594,12 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
     if remaining_dimensions.is_empty()
         && let Some(primitive) = &primitive
     {
-        return allocate_primitive_array(primitive, usize::try_from(first_length)?);
+        let vm = thread.vm()?;
+        let collector = vm.garbage_collector();
+        let reference =
+            allocate_primitive_array_in_async(collector, primitive, usize::try_from(first_length)?)
+                .await?;
+        return Ok(Value::try_new_object_async(collector, reference).await?);
     }
 
     let vm = thread.vm()?;
@@ -603,11 +607,20 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
     if first_length == 0 || remaining_dimensions.is_empty() {
         let class = loader.array_class(component, dimensions.len()).await?;
         let class = thread.resolve_class(&class, false).await?;
-        return Ok(Reference::Array(ObjectArray {
-            class,
-            elements: allocate_array(usize::try_from(first_length)?, Value::Object(None))?
-                .into_boxed_slice(),
-        }));
+        let elements = allocate_array_in_async(
+            vm.garbage_collector(),
+            usize::try_from(first_length)?,
+            Value::Object(None),
+        )
+        .await?;
+        return Ok(Value::try_new_object_async(
+            vm.garbage_collector(),
+            Reference::Array(ObjectArray {
+                class,
+                elements: elements.into(),
+            }),
+        )
+        .await?);
     }
 
     let mut levels = Vec::with_capacity(dimensions.len());
@@ -628,33 +641,50 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
             break;
         }
     }
-    allocate_array_dimensions(thread.vm()?.garbage_collector(), &levels)
+    allocate_array_dimensions(thread.vm()?.garbage_collector(), &levels).await
 }
 
-fn allocate_array_dimensions(
+async fn allocate_array_dimensions(
     collector: &Arc<GarbageCollector>,
     levels: &[(usize, ArrayKind)],
-) -> Result<Reference> {
+) -> Result<Value> {
     let Some(((length, kind), remaining)) = levels.split_first() else {
         return Err(InternalError("Missing array dimension".to_string()));
     };
     let class = match kind {
-        ArrayKind::Primitive(primitive) => return allocate_primitive_array(primitive, *length),
+        ArrayKind::Primitive(primitive) => {
+            let reference =
+                allocate_primitive_array_in_async(collector, primitive, *length).await?;
+            return Ok(Value::try_new_object_async(collector, reference).await?);
+        }
         ArrayKind::Reference(class) => class,
     };
-    let mut elements = allocate_array(*length, Value::Object(None))?;
+    let elements = allocate_array_in_async(collector, *length, Value::Object(None)).await?;
+    let parent = Value::try_new_object_async(
+        collector,
+        Reference::Array(ObjectArray {
+            class: Arc::clone(class),
+            elements: elements.into(),
+        }),
+    )
+    .await?;
     if !remaining.is_empty() {
-        for element in &mut elements {
-            let child = allocate_array_dimensions(collector, remaining)?;
-            *element = Value::new_object(collector, child);
+        for index in 0..*length {
+            let child = Box::pin(allocate_array_dimensions(collector, remaining)).await?;
+            // No managed guard crosses recovery or a recursive await.
+            let mut reference = parent.as_reference_mut()?;
+            let Reference::Array(array) = &mut *reference else {
+                return Err(InternalError(
+                    "Invalid multidimensional array parent".into(),
+                ));
+            };
+            *array
+                .elements
+                .get_mut(index)
+                .ok_or_else(|| InternalError("Missing array slot".into()))? = child;
         }
     }
-    // Fill the final Value buffer directly instead of building and converting a
-    // temporary Vec<Option<Reference>> for every reference array.
-    Ok(Reference::Array(ObjectArray {
-        class: Arc::clone(class),
-        elements: elements.into_boxed_slice(),
-    }))
+    Ok(parent)
 }
 
 #[intrinsic_method(
@@ -685,42 +715,71 @@ pub async fn new_array<T: Thread + 'static>(
     let vm = thread.vm()?;
     let collector = vm.garbage_collector();
     let array = match component.name() {
-        "boolean" => Value::new_object(
-            collector,
-            allocate_primitive_array(&BaseType::Boolean, length)?,
-        ),
-        "byte" => Value::new_object(
-            collector,
-            allocate_primitive_array(&BaseType::Byte, length)?,
-        ),
-        "char" => Value::new_object(
-            collector,
-            allocate_primitive_array(&BaseType::Char, length)?,
-        ),
-        "float" => Value::new_object(
-            collector,
-            allocate_primitive_array(&BaseType::Float, length)?,
-        ),
-        "double" => Value::new_object(
-            collector,
-            allocate_primitive_array(&BaseType::Double, length)?,
-        ),
-        "int" => Value::new_object(collector, allocate_primitive_array(&BaseType::Int, length)?),
-        "long" => Value::new_object(
-            collector,
-            allocate_primitive_array(&BaseType::Long, length)?,
-        ),
-        "short" => Value::new_object(
-            collector,
-            allocate_primitive_array(&BaseType::Short, length)?,
-        ),
+        "boolean" => {
+            Value::try_new_object_async(
+                collector,
+                allocate_primitive_array_in_async(collector, &BaseType::Boolean, length).await?,
+            )
+            .await?
+        }
+        "byte" => {
+            Value::try_new_object_async(
+                collector,
+                allocate_primitive_array_in_async(collector, &BaseType::Byte, length).await?,
+            )
+            .await?
+        }
+        "char" => {
+            Value::try_new_object_async(
+                collector,
+                allocate_primitive_array_in_async(collector, &BaseType::Char, length).await?,
+            )
+            .await?
+        }
+        "float" => {
+            Value::try_new_object_async(
+                collector,
+                allocate_primitive_array_in_async(collector, &BaseType::Float, length).await?,
+            )
+            .await?
+        }
+        "double" => {
+            Value::try_new_object_async(
+                collector,
+                allocate_primitive_array_in_async(collector, &BaseType::Double, length).await?,
+            )
+            .await?
+        }
+        "int" => {
+            Value::try_new_object_async(
+                collector,
+                allocate_primitive_array_in_async(collector, &BaseType::Int, length).await?,
+            )
+            .await?
+        }
+        "long" => {
+            Value::try_new_object_async(
+                collector,
+                allocate_primitive_array_in_async(collector, &BaseType::Long, length).await?,
+            )
+            .await?
+        }
+        "short" => {
+            Value::try_new_object_async(
+                collector,
+                allocate_primitive_array_in_async(collector, &BaseType::Short, length).await?,
+            )
+            .await?
+        }
         _ => {
             let loader = vm.class_loader().read().await.clone();
             let class = loader.array_class(&component, 1).await?;
             let class = thread.resolve_class(&class, false).await?;
-            let reference =
-                Reference::try_from((class, allocate_array(length, Value::Object(None))?))?;
-            Value::new_object(collector, reference)
+            let reference = Reference::try_from((
+                class,
+                allocate_array_in_async(collector, length, Value::Object(None)).await?,
+            ))?;
+            Value::try_new_object_async(collector, reference).await?
         }
     };
 
@@ -998,7 +1057,8 @@ mod tests {
             let component = thread.class(component).await?;
             let reference =
                 create_multi_dimensional_array(&*thread, &component, &dimensions).await?;
-            let Reference::Array(array) = reference else {
+            let guard = reference.as_reference()?;
+            let Reference::Array(array) = &*guard else {
                 panic!("expected reference array");
             };
             assert_eq!(array.class.name(), descriptor);
@@ -1027,7 +1087,7 @@ mod tests {
             ],
         ] {
             assert!(matches!(
-                allocate_array_dimensions(vm.garbage_collector(), &levels),
+                allocate_array_dimensions(vm.garbage_collector(), &levels).await,
                 Err(ristretto_types::Error::JavaError(
                     ristretto_types::JavaError::OutOfMemoryError(_)
                 ))

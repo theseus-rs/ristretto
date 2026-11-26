@@ -81,6 +81,7 @@ windows-sys = { workspace = true, features = [
 ] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
+futures-util = { workspace = true }
 tokio = { workspace = true }
 
 [target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dependencies]

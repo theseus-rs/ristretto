@@ -7,7 +7,7 @@ mod heap;
 mod initialization;
 use super::{
     Budget, CallTarget, Configuration, Error, Execution, GarbageCollector, Limits, Method,
-    MethodAccessFlags, Program, Report, Runtime, Value, exact_symbol, help,
+    MethodAccessFlags, Program, Report, Runtime, Value, exact_symbol,
 };
 pub use heap::CompiledThread;
 use initialization::{Action, Completion};
@@ -23,6 +23,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use super::{Kind, allocation_kind};
+use crate::canonical::recording::{Measurement, Recording};
 
 /// Prepared request-only code. It cannot receive an ordinary VM runtime context.
 #[derive(Debug)]
@@ -31,6 +32,20 @@ pub struct CompiledProgram<'p> {
     functions: Vec<HashMap<String, HashMap<String, Function>>>,
     roots_per_frame: usize,
     running: Cell<bool>,
+    active: Cell<usize>,
+}
+
+/// Actual native counters for one admitted method, including unexecuted methods.
+/// Identities borrow immutable prepared-program metadata. Counters describe this
+/// prepared program's lifetime, not completed invocations or a timed GC window.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CompiledMethodProfile<'p> {
+    pub class: &'p str,
+    pub name: &'p str,
+    pub descriptor: &'p str,
+    pub entries: u64,
+    pub resumes: u64,
+    pub backedges: u64,
 }
 
 /// Native work policy; native slices do not pretend to count interpreted instructions.
@@ -119,10 +134,17 @@ impl Program {
             functions,
             roots_per_frame,
             running: Cell::new(false),
+            active: Cell::new(0),
         })
     }
 }
 
+struct ActiveLease<'a>(&'a Cell<usize>);
+impl Drop for ActiveLease<'_> {
+    fn drop(&mut self) {
+        self.0.set(self.0.get() - 1);
+    }
+}
 struct RunLease<'a>(&'a Cell<bool>);
 impl Drop for RunLease<'_> {
     fn drop(&mut self) {
@@ -130,6 +152,46 @@ impl Drop for RunLease<'_> {
     }
 }
 impl CompiledProgram<'_> {
+    /// Copy method counters at an idle invocation boundary.
+    /// # Errors
+    /// Rejects active invocations, allocation failure or invalid method metadata.
+    pub fn method_profiles(&self) -> Result<Vec<CompiledMethodProfile<'_>>, Error> {
+        if self.active.get() != 0 || self.running.get() {
+            return Err(Error::Boundary("method profile during active invocation"));
+        }
+        let count = self.functions.iter().flat_map(HashMap::values).try_fold(
+            0_usize,
+            |count, overloads| {
+                count
+                    .checked_add(overloads.len())
+                    .ok_or(Error::Limit("method profile count"))
+            },
+        )?;
+        let mut profiles = Vec::new();
+        profiles
+            .try_reserve_exact(count)
+            .map_err(|_| Error::Limit("method profile allocation"))?;
+        for (class, methods) in self.functions.iter().enumerate() {
+            let class = self.program.layout(class)?.class.name();
+            for (name, overloads) in methods {
+                for (descriptor, function) in overloads {
+                    profiles.push(CompiledMethodProfile {
+                        class,
+                        name,
+                        descriptor,
+                        entries: function.execution_count(),
+                        resumes: function.resume_count(),
+                        backedges: function.backedge_count(),
+                    });
+                }
+            }
+        }
+        profiles.sort_unstable_by(|a, b| {
+            (a.class, a.name, a.descriptor).cmp(&(b.class, b.name, b.descriptor))
+        });
+        Ok(profiles)
+    }
+
     /// Run one static (I)I entry on its own canonical heap, including complete cleanup.
     /// # Errors
     /// Reports capability, runtime, ownership and explicit work-limit failures.
@@ -140,6 +202,50 @@ impl CompiledProgram<'_> {
         argument: i32,
         configuration: Configuration,
         limits: CompiledLimits,
+    ) -> Result<Report, Error> {
+        self.run_inner(
+            class,
+            method,
+            argument,
+            configuration,
+            limits,
+            Recording::default(),
+        )
+        .await
+    }
+
+    /// Run with explicit service recording and an entry-body measurement window.
+    /// # Errors
+    /// Returns the same execution and cleanup failures as `run`.
+    #[cfg(feature = "experimental-canonical-telemetry")]
+    pub async fn run_recorded(
+        &self,
+        class: &str,
+        method: &str,
+        argument: i32,
+        configuration: Configuration,
+        limits: CompiledLimits,
+        telemetry: &crate::canonical_telemetry::Telemetry,
+    ) -> Result<Report, Error> {
+        self.run_inner(
+            class,
+            method,
+            argument,
+            configuration,
+            limits,
+            Recording::new(telemetry),
+        )
+        .await
+    }
+
+    async fn run_inner(
+        &self,
+        class: &str,
+        method: &str,
+        argument: i32,
+        configuration: Configuration,
+        limits: CompiledLimits,
+        recording: Recording,
     ) -> Result<Report, Error> {
         if self.running.replace(true) {
             return Err(Error::Boundary("compiled program already running"));
@@ -177,6 +283,7 @@ impl CompiledProgram<'_> {
             limits: limits.execution_limits(),
             report: Report::default(),
             statics: crate::canonical::statics::States::default(),
+            recording,
         };
         let table = Rc::new(RefCell::new(Table::new(
             configuration.objects,
@@ -296,6 +403,15 @@ impl CompiledExecution<'_, '_, '_, '_> {
         if depth != 0 {
             return Err(Error::Boundary("non-root driver invocation"));
         }
+        let active = &self.compiled.active;
+        active.set(
+            active
+                .get()
+                .checked_add(1)
+                .ok_or(Error::Limit("active native invocations"))?,
+        );
+        let _active = ActiveLease(active);
+        let mut measurement = None;
         let mut frames = Vec::new();
         frames
             .try_reserve_exact(self.execution.limits.frames)
@@ -303,6 +419,7 @@ impl CompiledExecution<'_, '_, '_, '_> {
         let result = self
             .drive(
                 &mut frames,
+                &mut measurement,
                 Action::Call {
                     class,
                     method,
@@ -310,7 +427,7 @@ impl CompiledExecution<'_, '_, '_, '_> {
                 },
             )
             .await;
-        match result {
+        let result = match result {
             Ok(value) => Ok(value),
             Err(mut error) => {
                 while let Some(frame) = frames.pop() {
@@ -326,7 +443,11 @@ impl CompiledExecution<'_, '_, '_, '_> {
                 }
                 Err(error)
             }
+        };
+        if let Some(measurement) = measurement {
+            measurement.finish_result(&mut self.execution.mutator, &result);
         }
+        result
     }
 
     #[expect(
@@ -336,12 +457,13 @@ impl CompiledExecution<'_, '_, '_, '_> {
     async fn drive(
         &mut self,
         frames: &mut Vec<Frame>,
+        measurement: &mut Option<Measurement>,
         first: Action,
     ) -> Result<Option<Value>, Error> {
         let mut pending = Some(first);
         loop {
             if let Some(action) = pending.take() {
-                self.action(frames, action).await?;
+                self.action(frames, measurement, action).await?;
                 continue;
             }
             if self.execution.report.native_slices >= self.slice_limit {
@@ -350,7 +472,7 @@ impl CompiledExecution<'_, '_, '_, '_> {
             let frame = frames
                 .last_mut()
                 .ok_or(Error::Boundary("missing compiled frame"))?;
-            help(&mut self.execution.helper, &mut self.execution.report)?;
+            self.execution.poll_helper()?;
             let step = frame
                 .activation
                 .resume_with_context(NonZeroU32::MIN, frame.context.pointer())?;
@@ -365,6 +487,11 @@ impl CompiledExecution<'_, '_, '_, '_> {
                 return Err(error);
             }
             match step {
+                ExecutionStep::Monitor(_)
+                | ExecutionStep::Constant(_)
+                | ExecutionStep::ExceptionMatch(_) => {
+                    return Err(Error::Boundary("request outside canonical admission"));
+                }
                 ExecutionStep::Returned(result) => {
                     let value = match result {
                         None => None,
@@ -774,3 +901,7 @@ async fn result_bits(
 #[cfg(test)]
 #[path = "compiled_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "../canonical_compiled_static_tests.rs"]
+mod static_lifecycle_tests;

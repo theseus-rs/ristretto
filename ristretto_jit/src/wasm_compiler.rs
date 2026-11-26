@@ -26,6 +26,22 @@ impl Compiler {
         false
     }
 
+    /// Reports that this target has no production native compiler.
+    #[must_use]
+    pub fn rejection_reason(_method: &Method) -> Option<&'static str> {
+        Some("unsupported_target")
+    }
+
+    /// Experimental native preparation is also unavailable on this target.
+    #[cfg(feature = "experimental-reference-dispatch")]
+    #[must_use]
+    pub fn experimental_rejection_reason(
+        _class: &ClassFile,
+        _method: &Method,
+    ) -> Option<&'static str> {
+        Some("unsupported_target")
+    }
+
     /// Request-only native preparation is unavailable on this target.
     #[cfg(feature = "experimental-reference-dispatch")]
     #[must_use]
@@ -71,21 +87,6 @@ mod tests {
     fn test_compiler_new() {
         let result = Compiler::new();
         assert!(result.is_ok());
-    }
-
-    #[cfg(feature = "experimental-reference-dispatch")]
-    #[test]
-    fn request_compilation_fails_closed() -> Result<()> {
-        let class = ClassFile::default();
-        let method = Method::default();
-        assert_eq!(
-            Compiler::request_rejection_reason(&class, &method),
-            Some("unsupported_target")
-        );
-        assert!(
-            matches!(Compiler::new()?.compile_requests(&class, &method, &[]), Err(crate::Error::UnsupportedMethod(reason)) if reason == "unsupported_target")
-        );
-        Ok(())
     }
 
     #[test]

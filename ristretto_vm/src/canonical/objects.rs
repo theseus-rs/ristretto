@@ -9,7 +9,7 @@ mod compiled_frame;
 #[path = "frame_table.rs"]
 mod frame_table;
 #[cfg(all(feature = "experimental-canonical-jit", not(target_family = "wasm")))]
-pub use compiled::{CompiledLimits, CompiledProgram, CompiledThread};
+pub use compiled::{CompiledLimits, CompiledMethodProfile, CompiledProgram, CompiledThread};
 
 use super::layout::{Field, ReferenceType, reference_type};
 use super::reference_array::{self, Component};
@@ -19,6 +19,7 @@ use linkage::CallTarget;
 pub(super) use linkage::LinkedMembers;
 mod reference_array_runtime;
 use super::primitive_array::{Element, Kind, PrimitiveArray};
+use super::recording::{Kind as ServiceKind, Operation, Outcome, Recording, SpanId};
 use super::statics::States;
 use super::value::PrimitiveFrameValue;
 use super::{ScalarValue, primitive_array, scalar};
@@ -60,6 +61,8 @@ impl Default for Limits {
 /// Work performed before the entry body, included in the full Report counters.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct InitializationWork {
+    pub instruction_count_available: bool,
+    pub native_slices: usize,
     pub instructions: usize,
     pub allocations: usize,
     pub helper_polls: usize,
@@ -72,6 +75,8 @@ impl InitializationWork {
     pub(super) fn from_report(report: &Report) -> Self {
         Self {
             instructions: report.instructions,
+            instruction_count_available: report.instruction_count_available,
+            native_slices: report.native_slices,
             allocations: report.allocations,
             helper_polls: report.helper_polls,
             reference_reads: report.reference_reads,
@@ -427,6 +432,50 @@ impl Program {
         configuration: Configuration,
         limits: Limits,
     ) -> Result<Report, Error> {
+        self.run_inner(
+            class,
+            method,
+            argument,
+            configuration,
+            limits,
+            Recording::default(),
+        )
+        .await
+    }
+
+    /// Run with explicit service recording; entry initialization is outside the body window.
+    /// # Errors
+    /// Returns the same execution and cleanup failures as `run`.
+    #[cfg(feature = "experimental-canonical-telemetry")]
+    pub async fn run_recorded(
+        &self,
+        class: &str,
+        method: &str,
+        argument: i32,
+        configuration: Configuration,
+        limits: Limits,
+        telemetry: &crate::canonical_telemetry::Telemetry,
+    ) -> Result<Report, Error> {
+        self.run_inner(
+            class,
+            method,
+            argument,
+            configuration,
+            limits,
+            Recording::new(telemetry),
+        )
+        .await
+    }
+
+    async fn run_inner(
+        &self,
+        class: &str,
+        method: &str,
+        argument: i32,
+        configuration: Configuration,
+        limits: Limits,
+        recording: Recording,
+    ) -> Result<Report, Error> {
         let (class, method) = self.entry_method(class, method)?;
         if configuration.mutators != 1
             || configuration.helpers != 1
@@ -452,6 +501,7 @@ impl Program {
             limits,
             report: Report::default(),
             statics: States::default(),
+            recording,
         };
         let result = execution.entry(class, method, argument).await;
         // Release static storage and all frame roots before dedicated cleanup.
@@ -642,24 +692,29 @@ pub(super) struct Execution<'p, 'r, 'gc> {
     pub(super) limits: Limits,
     pub(super) report: Report,
     pub(super) statics: States,
+    pub(super) recording: Recording,
 }
 
+#[cfg(test)]
 pub(super) async fn complete<T>(
     helper: &mut Helper<'_>,
     report: &mut Report,
     limit: usize,
-    mut poll: impl FnMut() -> Result<Poll<T>, ristretto_gc::canonical::Error>,
+    poll: impl FnMut() -> Result<Poll<T>, ristretto_gc::canonical::Error>,
 ) -> Result<T, Error> {
-    for _ in 0..limit {
-        if let Poll::Ready(value) = poll()? {
-            return Ok(value);
-        }
-        help(helper, report)?;
-        tokio::task::yield_now().await;
-    }
-    Err(Error::Limit("request poll"))
+    complete_recorded(
+        helper,
+        report,
+        limit,
+        &Recording::default(),
+        Operation::Maintenance,
+        None,
+        poll,
+    )
+    .await
 }
 
+#[cfg(test)]
 pub(super) fn help(helper: &mut Helper<'_>, report: &mut Report) -> Result<(), Error> {
     let work = helper.poll()?;
     report.helper_polls += 1;
@@ -679,17 +734,41 @@ struct InterpreterFrame {
 }
 
 impl Execution<'_, '_, '_> {
-    async fn allocate_array(&mut self, kind: Kind, length: i32) -> Result<Root<Payload>, Error> {
-        let array =
-            PrimitiveArray::new(kind, length, self.limits.array_bytes).map_err(array_error)?;
-        let mut request = self.mutator.allocate(Payload::Array(array))?;
-        let root = complete(
+    pub(super) fn poll_helper(&mut self) -> Result<(), Error> {
+        help_recorded(
             &mut self.helper,
             &mut self.report,
-            self.limits.request_polls,
-            || request.poll(),
+            &self.recording,
+            Operation::Maintenance,
+            None,
         )
-        .await?;
+    }
+
+    async fn allocate_array(&mut self, kind: Kind, length: i32) -> Result<Root<Payload>, Error> {
+        let recording = self.recording.clone();
+        let span = recording.request(Operation::Allocation);
+        let parent = span.id();
+        let result = async {
+            let array = recording.prepare(Operation::PrimitiveArrayPreparation, parent, || {
+                PrimitiveArray::new(kind, length, self.limits.array_bytes).map_err(array_error)
+            })?;
+            let mut request = recording.prepare(Operation::Allocation, parent, || {
+                self.mutator.allocate_with_edges(Payload::Array(array), 0)
+            })?;
+            complete_recorded(
+                &mut self.helper,
+                &mut self.report,
+                self.limits.request_polls,
+                &recording,
+                Operation::Allocation,
+                parent,
+                || request.poll(),
+            )
+            .await
+        }
+        .await;
+        span.finish_result(&result);
+        let root = result?;
         self.report.allocations += 1;
         self.report.array_allocations += 1;
         Ok(root)
@@ -749,15 +828,29 @@ impl Execution<'_, '_, '_> {
     }
 
     async fn allocate_object(&mut self, class: usize) -> Result<Root<Payload>, Error> {
-        let payload = Payload::object(class);
-        let mut request = self.mutator.allocate(payload)?;
-        let root = complete(
-            &mut self.helper,
-            &mut self.report,
-            self.limits.request_polls,
-            || request.poll(),
-        )
-        .await?;
+        let edges = self.program.layout(class)?.references;
+        let recording = self.recording.clone();
+        let span = recording.request(Operation::Allocation);
+        let parent = span.id();
+        let result = async {
+            let mut request = recording.prepare(Operation::Allocation, parent, || {
+                self.mutator
+                    .allocate_with_edges(Payload::object(class), edges)
+            })?;
+            complete_recorded(
+                &mut self.helper,
+                &mut self.report,
+                self.limits.request_polls,
+                &recording,
+                Operation::Allocation,
+                parent,
+                || request.poll(),
+            )
+            .await
+        }
+        .await;
+        span.finish_result(&result);
+        let root = result?;
         self.report.allocations += 1;
         Ok(root)
     }
@@ -777,15 +870,31 @@ impl Execution<'_, '_, '_> {
                     .integer(index)?
                     .load(Ordering::Relaxed),
             ),
-            Field::Reference { edge, .. } => {
-                let mut request = self.mutator.child::<Payload, Payload>(root, edge)?;
-                let child = complete(
-                    &mut self.helper,
-                    &mut self.report,
-                    self.limits.request_polls,
-                    || request.poll(),
-                )
-                .await?;
+            Field::Reference { edge, target } => {
+                let recording = self.recording.clone();
+                let span = recording.request(Operation::ChildRead);
+                let parent = span.id();
+                let result = async {
+                    let mut request = recording.prepare(Operation::ChildRead, parent, || {
+                        self.mutator.child::<Payload, Payload>(root, edge)
+                    })?;
+                    complete_recorded(
+                        &mut self.helper,
+                        &mut self.report,
+                        self.limits.request_polls,
+                        &recording,
+                        Operation::ChildRead,
+                        parent,
+                        || request.poll(),
+                    )
+                    .await
+                }
+                .await;
+                span.finish_result(&result);
+                let child = result?;
+                if let Some(child) = &child {
+                    self.check_reference(child, target)?;
+                }
                 self.report.reference_reads += 1;
                 Value::Reference(child)
             }
@@ -814,14 +923,27 @@ impl Execution<'_, '_, '_> {
                 if let Some(target) = &target {
                     self.check_reference(target, expected)?;
                 }
-                let mut request = self.mutator.write(root, edge, target.as_ref())?;
-                complete(
-                    &mut self.helper,
-                    &mut self.report,
-                    self.limits.request_polls,
-                    || request.poll(),
-                )
-                .await?;
+                let recording = self.recording.clone();
+                let span = recording.request(Operation::EdgeWrite);
+                let parent = span.id();
+                let result = async {
+                    let mut request = recording.prepare(Operation::EdgeWrite, parent, || {
+                        self.mutator.write(root, edge, target.as_ref())
+                    })?;
+                    complete_recorded(
+                        &mut self.helper,
+                        &mut self.report,
+                        self.limits.request_polls,
+                        &recording,
+                        Operation::EdgeWrite,
+                        parent,
+                        || request.poll(),
+                    )
+                    .await
+                }
+                .await;
+                span.finish_result(&result);
+                result?;
                 self.report.reference_writes += 1;
             }
         }
@@ -834,34 +956,41 @@ impl Execution<'_, '_, '_> {
         method: Arc<Method>,
         argument: i32,
     ) -> Result<Option<Value>, Error> {
+        self.report.instruction_count_available = true;
         let initialized = self.initialize_class(class, 0).await;
         self.report.entry_initialization = InitializationWork::from_report(&self.report);
         initialized?;
-        let pool = self.program.layout(class)?.class.constant_pool();
-        if method
-            .code()
-            .iter()
-            .all(|op| super::integer::admitted(op, pool))
-        {
-            self.report.calls += 1;
-            let remaining = self
-                .limits
-                .instructions
-                .checked_sub(self.report.instructions)
-                .ok_or(Error::Limit("instruction"))?;
-            let (value, count) =
-                super::integer::run_counted(&method, pool, argument, remaining).await?;
-            self.report.instructions += count;
-            Ok(Some(Value::Int(value.int()?)))
-        } else {
-            self.call(class, method, vec![Value::Int(argument)], 0)
-                .await
+        let measurement = self.recording.measurement(&mut self.mutator);
+        let result = async {
+            let pool = self.program.layout(class)?.class.constant_pool();
+            if method
+                .code()
+                .iter()
+                .all(|op| super::integer::admitted(op, pool))
+            {
+                self.report.calls += 1;
+                let remaining = self
+                    .limits
+                    .instructions
+                    .checked_sub(self.report.instructions)
+                    .ok_or(Error::Limit("instruction"))?;
+                let (value, count) =
+                    super::integer::run_counted(&method, pool, argument, remaining).await?;
+                self.report.instructions += count;
+                Ok(Some(Value::Int(value.int()?)))
+            } else {
+                self.call(class, method, vec![Value::Int(argument)], 0)
+                    .await
+            }
         }
+        .await;
+        measurement.finish_result(&mut self.mutator, &result);
+        result
     }
 
-    async fn cleanup(&mut self, collector: &GarbageCollector) -> Result<(), Error> {
+    pub(super) async fn cleanup(&mut self, collector: &GarbageCollector) -> Result<(), Error> {
         for index in 0..self.limits.cleanup_polls {
-            help(&mut self.helper, &mut self.report)?;
+            self.poll_helper()?;
             let bytes = collector.managed_bytes();
             if bytes == 0 {
                 self.report.payload_bytes_after_cleanup = bytes;
@@ -1017,7 +1146,7 @@ impl Execution<'_, '_, '_> {
                 .get(pc)
                 .ok_or_else(|| Error::Invalid("program counter".to_owned()))?;
             self.report.instructions += 1;
-            help(&mut self.helper, &mut self.report)?;
+            self.poll_helper()?;
             if self
                 .report
                 .instructions
@@ -1374,3 +1503,62 @@ fn branch(instruction: &Instruction, stack: &mut Vec<Value>) -> Result<bool, Err
         _ => return Err(Error::Unsupported(format!("bytecode {instruction:?}"))),
     })
 }
+
+pub(super) async fn complete_recorded<T>(
+    helper: &mut Helper<'_>,
+    report: &mut Report,
+    limit: usize,
+    recording: &Recording,
+    operation: Operation,
+    parent: Option<SpanId>,
+    mut poll: impl FnMut() -> Result<Poll<T>, ristretto_gc::canonical::Error>,
+) -> Result<T, Error> {
+    // Preserve the first suspension, including cancellation while publication is
+    // pending. Afterwards amortize executor handoffs over a bounded number of
+    // request/helper pairs. Each Pending still receives exactly one helper step;
+    // the total request limit and the collector's individual work units are unchanged.
+    const REQUEST_POLL_QUANTUM: usize = 16;
+    for index in 0..limit {
+        let span = recording.service(ServiceKind::RequestPoll, operation, parent);
+        let result = poll();
+        span.finish(match &result {
+            Ok(Poll::Ready(_)) => Outcome::Complete,
+            Ok(Poll::Pending) => Outcome::Pending,
+            Err(_) => Outcome::Failed,
+        });
+        if let Poll::Ready(value) = result? {
+            return Ok(value);
+        }
+        help_recorded(helper, report, recording, operation, parent)?;
+        if index.is_multiple_of(REQUEST_POLL_QUANTUM) {
+            tokio::task::yield_now().await;
+        }
+    }
+    Err(Error::Limit("request poll"))
+}
+
+fn help_recorded(
+    helper: &mut Helper<'_>,
+    report: &mut Report,
+    recording: &Recording,
+    operation: Operation,
+    parent: Option<SpanId>,
+) -> Result<(), Error> {
+    let span = recording.service(ServiceKind::HelperPoll, operation, parent);
+    let result = helper.poll();
+    span.finish_result(&result);
+    let work = result?;
+    report.helper_polls += 1;
+    if work == Work::ReleasedObjectSlot {
+        report.released_objects += 1;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+#[path = "../canonical_request_quantum_tests.rs"]
+mod request_quantum_tests;
+
+#[cfg(test)]
+#[path = "../canonical_tests.rs"]
+mod ownership_tests;

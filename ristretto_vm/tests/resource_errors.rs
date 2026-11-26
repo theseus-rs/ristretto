@@ -428,7 +428,7 @@ fn compile_native(options: &Options, home: &Path, library: &Path) -> Result<()> 
         .arg("-o")
         .arg(library)
         .current_dir(&options.output);
-    process::run(&mut command, options.timeout)?.require_success()
+    Ok(process::run(&mut command, options.timeout)?.require_success()?)
 }
 
 fn run_family(

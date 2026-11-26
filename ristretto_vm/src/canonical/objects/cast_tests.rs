@@ -38,6 +38,7 @@ fn execution<'p, 'r, 'gc>(
         limits: Limits::default(),
         report: Report::default(),
         statics: crate::canonical::statics::States::default(),
+        recording: crate::canonical::recording::Recording::default(),
     })
 }
 

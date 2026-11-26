@@ -785,31 +785,23 @@ pub(crate) fn tableswitch(
     program_counter: usize,
     table_switch: &TableSwitch,
 ) -> Result<()> {
-    let index = stack.pop()?;
-    // Create a Switch for efficient jump table generation; Cranelift will optimize it to use
-    // branches, jump tables, or a combination of both
-    let mut switch = Switch::new();
-
-    let pc = i64::try_from(program_counter)?;
-    for (offset_index, &offset) in table_switch.offsets.iter().enumerate() {
-        let target_address = usize::try_from(pc + i64::from(offset))?;
-        let target_block = *blocks
-            .get(&target_address)
-            .ok_or_else(|| InvalidBlockAddress(target_address))?;
-
-        let case_value = i64::from(table_switch.low).saturating_add(i64::try_from(offset_index)?);
-        let case_value = u128::try_from(case_value)?;
-        switch.set_entry(case_value, target_block);
-    }
-
-    let default_address = usize::try_from(pc + i64::from(table_switch.default))?;
-    let default_block = *blocks
-        .get(&default_address)
-        .ok_or_else(|| InvalidBlockAddress(default_address))?;
-
-    switch.emit(function_builder, index, default_block);
-    stack.reset(function_builder)?;
-    Ok(())
+    let cases = table_switch
+        .offsets
+        .iter()
+        .enumerate()
+        .map(|(index, &offset)| {
+            let key = i32::try_from(i64::from(table_switch.low) + i64::try_from(index)?)?;
+            Ok((key, offset))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    emit_switch(
+        function_builder,
+        blocks,
+        stack,
+        program_counter,
+        table_switch.default,
+        cases,
+    )
 }
 
 /// # References
@@ -822,29 +814,58 @@ pub(crate) fn lookupswitch(
     program_counter: usize,
     lookup_switch: &LookupSwitch,
 ) -> Result<()> {
-    let index = stack.pop()?;
-    // Create a Switch for efficient jump table generation; Cranelift will optimize it to use
-    // branches, jump tables, or a combination of both
+    emit_switch(
+        function_builder,
+        blocks,
+        stack,
+        program_counter,
+        lookup_switch.default,
+        lookup_switch
+            .pairs
+            .iter()
+            .map(|(&key, &offset)| (key, offset)),
+    )
+}
+
+/// Cranelift's Switch has no block arguments. Forward through one block per
+/// distinct destination to preserve all operands below the consumed key. Those
+/// SSA values dominate the forwarding blocks; no new reference kinds are needed.
+fn emit_switch(
+    function_builder: &mut FunctionBuilder,
+    blocks: &AHashMap<usize, Block>,
+    stack: &mut OperandStack,
+    program_counter: usize,
+    default: i32,
+    cases: impl IntoIterator<Item = (i32, i32)>,
+) -> Result<()> {
+    let index = stack.pop_int(function_builder)?;
+    let arguments = stack.as_block_arguments();
+    let mut forwarding = std::collections::BTreeMap::new();
+    let mut target = |offset: i32| -> Result<Block> {
+        let address = usize::try_from(i64::try_from(program_counter)? + i64::from(offset))?;
+        let block = *blocks.get(&address).ok_or(InvalidBlockAddress(address))?;
+        if arguments.is_empty() {
+            Ok(block)
+        } else {
+            Ok(*forwarding
+                .entry(address)
+                .or_insert_with(|| function_builder.create_block()))
+        }
+    };
     let mut switch = Switch::new();
-
-    let pc = i64::try_from(program_counter)?;
-    for (case_value, offset) in &lookup_switch.pairs {
-        let target_address = usize::try_from(pc + i64::from(*offset))?;
-        let target_block = *blocks
-            .get(&target_address)
-            .ok_or_else(|| InvalidBlockAddress(target_address))?;
-
-        let case_value = u128::try_from(*case_value)?;
-        switch.set_entry(case_value, target_block);
+    for (key, offset) in cases {
+        // Switch matches unsigned register bits; preserve negative Java int keys
+        // as their exact 32-bit representation rather than converting their sign.
+        let key = u128::from(u32::from_ne_bytes(key.to_ne_bytes()));
+        switch.set_entry(key, target(offset)?);
     }
-
-    let default_address = usize::try_from(pc + i64::from(lookup_switch.default))?;
-    let default_block = *blocks
-        .get(&default_address)
-        .ok_or_else(|| InvalidBlockAddress(default_address))?;
-
+    let default_block = target(default)?;
     switch.emit(function_builder, index, default_block);
-    stack.reset(function_builder)?;
+    for (address, block) in forwarding {
+        let target = *blocks.get(&address).ok_or(InvalidBlockAddress(address))?;
+        function_builder.switch_to_block(block);
+        function_builder.ins().jump(target, &arguments);
+    }
     Ok(())
 }
 

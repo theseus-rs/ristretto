@@ -275,3 +275,6 @@ async fn native_static_arrays_retain_their_actual_element_type_across_entries() 
     assert!(heap.cleanup_polls > 0);
     Ok(())
 }
+
+#[path = "support/canonical_statics_additional.rs"]
+mod additional_regressions;

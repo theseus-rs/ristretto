@@ -277,10 +277,11 @@ pub async fn read_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let random_access_fie = parameters.pop()?;
-    let bytes = Value::new_object(
+    let bytes = Value::try_new_object_async(
         thread.vm()?.garbage_collector(),
         Reference::from(vec![0i8; 1]),
-    );
+    )
+    .await?;
     let mut parameters = Parameters::default();
     parameters.push(random_access_fie);
     parameters.push(bytes.clone());
@@ -487,10 +488,11 @@ pub async fn write_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let byte = i8::from_ne_bytes([parameters.pop_int()?.to_le_bytes()[0]]);
     let random_access_file = parameters.pop()?;
-    let bytes = Value::new_object(
+    let bytes = Value::try_new_object_async(
         thread.vm()?.garbage_collector(),
         Reference::from(vec![byte]),
-    );
+    )
+    .await?;
     let mut parameters = Parameters::default();
     parameters.push(random_access_file);
     parameters.push(bytes);

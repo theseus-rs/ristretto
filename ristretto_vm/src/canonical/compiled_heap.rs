@@ -49,6 +49,23 @@ impl<'p> CompiledProgram<'p> {
     }
 }
 impl CompiledThread<'_, '_, '_, '_> {
+    #[cfg(test)]
+    pub(super) fn publication_census(
+        &self,
+    ) -> Result<super::super::frame_table::PublicationCensus, Error> {
+        let table = self
+            .execution
+            .table
+            .try_borrow()
+            .map_err(|_| Error::Boundary("diagnostic table borrow"))?;
+        if table.live_objects() != 0 {
+            return Err(Error::Boundary(
+                "diagnostic invocation retained frame tokens",
+            ));
+        }
+        Ok(table.publication_census.get())
+    }
+
     /// Observe completed primary-cycle bounds between native Java entries.
     /// # Errors
     /// Reports a busy or contended collector observation.

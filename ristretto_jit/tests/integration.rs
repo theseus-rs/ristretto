@@ -33,6 +33,8 @@ mod instructions {
     mod byte;
     #[path = "../instructions/char.rs"]
     mod char;
+    #[path = "../instructions/continuation.rs"]
+    mod continuation;
     #[path = "../instructions/convert.rs"]
     mod convert;
     #[path = "../instructions/debug.rs"]
@@ -41,6 +43,9 @@ mod instructions {
     mod double;
     #[path = "../instructions/exception.rs"]
     mod exception;
+    #[cfg(feature = "execution-profile")]
+    #[path = "../instructions/execution_profile.rs"]
+    mod execution_profile;
     #[path = "../instructions/field.rs"]
     mod field;
     #[path = "../instructions/float.rs"]

@@ -343,7 +343,11 @@ async fn get_private_lookup(thread: &Thread, caller_class: &Arc<Class>) -> Resul
     // Construct lookup directly with TRUSTED mode (-1) to bypass all access checks
     // The TRUSTED mode (-1) is what IMPL_LOOKUP uses and is required for
     // bootstrap method invocation where the lookup needs access to JDK internals.
-    let mut lookup_instance = ristretto_classloader::Object::new(lookup_class.clone())?;
+    let mut lookup_instance = ristretto_classloader::Object::new_in_async(
+        thread.vm()?.garbage_collector(),
+        lookup_class.clone(),
+    )
+    .await?;
     lookup_instance.set_value("lookupClass", caller_class_object.clone())?;
     // prevLookupClass was added after Java 11; it is absent from older Lookup layouts.
     let _ = lookup_instance.set_value("prevLookupClass", Value::Object(None));
@@ -354,10 +358,7 @@ async fn get_private_lookup(thread: &Thread, caller_class: &Arc<Class>) -> Resul
         caller_class.name()
     );
 
-    Ok(Value::from_object(
-        thread.vm()?.garbage_collector(),
-        lookup_instance,
-    ))
+    Ok(Value::try_from_object_async(thread.vm()?.garbage_collector(), lookup_instance).await?)
 }
 
 /// **For Step 3.2** Resolves a Java class object corresponding to a field type.
@@ -434,7 +435,8 @@ async fn get_method_type(
     }
     let class_array = thread.class("[Ljava/lang/Class;").await?;
     let reference_array = Reference::try_from((class_array, argument_classes))?;
-    let arguments = Value::new_object(thread.vm()?.garbage_collector(), reference_array);
+    let arguments =
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), reference_array).await?;
 
     let method = method_type_class.try_get_method(
         "methodType",
@@ -533,21 +535,29 @@ pub async fn get_method_handle(
     let lookup = if let Ok(impl_lookup) = lookup_class.static_value("IMPL_LOOKUP") {
         if impl_lookup.is_null() {
             // Fallback: create a trusted lookup directly
-            let mut trusted_lookup = ristretto_classloader::Object::new(lookup_class.clone())?;
+            let mut trusted_lookup = ristretto_classloader::Object::new_in_async(
+                thread.vm()?.garbage_collector(),
+                lookup_class.clone(),
+            )
+            .await?;
             trusted_lookup.set_value("lookupClass", class_object.clone())?;
             let _ = trusted_lookup.set_value("prevLookupClass", Value::Object(None));
             trusted_lookup.set_value("allowedModes", Value::Int(-1))?;
-            Value::from_object(thread.vm()?.garbage_collector(), trusted_lookup)
+            Value::try_from_object_async(thread.vm()?.garbage_collector(), trusted_lookup).await?
         } else {
             impl_lookup
         }
     } else {
         // Fallback: create a trusted lookup directly
-        let mut trusted_lookup = ristretto_classloader::Object::new(lookup_class.clone())?;
+        let mut trusted_lookup = ristretto_classloader::Object::new_in_async(
+            thread.vm()?.garbage_collector(),
+            lookup_class.clone(),
+        )
+        .await?;
         trusted_lookup.set_value("lookupClass", class_object.clone())?;
         let _ = trusted_lookup.set_value("prevLookupClass", Value::Object(None));
         trusted_lookup.set_value("allowedModes", Value::Int(-1))?;
-        Value::from_object(thread.vm()?.garbage_collector(), trusted_lookup)
+        Value::try_from_object_async(thread.vm()?.garbage_collector(), trusted_lookup).await?
     };
 
     // 4. Build the Java String and MethodType for the member
@@ -851,10 +861,9 @@ async fn adjust_varargs_static_arguments(
 
             // Convert Values directly to the array (preserving Gc pointers)
             let array_ref = Reference::try_from((array_class, boxed_varargs))?;
-            static_arguments.push(Value::new_object(
-                thread.vm()?.garbage_collector(),
-                array_ref,
-            ));
+            static_arguments.push(
+                Value::try_new_object_async(thread.vm()?.garbage_collector(), array_ref).await?,
+            );
 
             debug!(
                 "adjust_varargs_static_arguments: final static_arguments.len()={}",

@@ -169,7 +169,7 @@ pub async fn get_children_for_node<T: Thread + 'static>(
         values.push(child.to_object(&thread).await?);
     }
     let reference = Reference::try_from((string_class, values))?;
-    let result = Value::new_object(thread.vm()?.garbage_collector(), reference);
+    let result = Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?;
     Ok(Some(result))
 }
 
@@ -242,7 +242,7 @@ pub async fn get_keys_for_node<T: Thread + 'static>(
         values.push(key.to_object(&thread).await?);
     }
     let reference = Reference::try_from((string_class, values))?;
-    let result = Value::new_object(thread.vm()?.garbage_collector(), reference);
+    let result = Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?;
     Ok(Some(result))
 }
 

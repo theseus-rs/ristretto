@@ -15,7 +15,7 @@ use zerocopy::transmute_ref;
 #[derive(Clone, Debug)]
 pub struct ObjectArray {
     pub class: Arc<Class>,
-    pub elements: Box<[Value]>,
+    pub elements: crate::ArrayElements,
 }
 
 impl Eq for ObjectArray {}
@@ -29,19 +29,48 @@ impl PartialEq for ObjectArray {
 /// Represents a reference to an object in the Ristretto VM.
 #[derive(Clone, Debug)]
 pub enum Reference {
-    BooleanArray(Box<[i8]>),
-    ByteArray(Box<[i8]>),
-    CharArray(Box<[u16]>),
-    ShortArray(Box<[i16]>),
-    IntArray(Box<[i32]>),
-    LongArray(Box<[i64]>),
-    FloatArray(Box<[f32]>),
-    DoubleArray(Box<[f64]>),
+    BooleanArray(ristretto_gc::HeapBuffer<i8>),
+    ByteArray(ristretto_gc::HeapBuffer<i8>),
+    CharArray(ristretto_gc::HeapBuffer<u16>),
+    ShortArray(ristretto_gc::HeapBuffer<i16>),
+    IntArray(ristretto_gc::HeapBuffer<i32>),
+    LongArray(ristretto_gc::HeapBuffer<i64>),
+    FloatArray(ristretto_gc::HeapBuffer<f32>),
+    DoubleArray(ristretto_gc::HeapBuffer<f64>),
     Array(ObjectArray),
     Object(Object),
 }
 
 impl Reference {
+    /// Copies an instance or array with fallible backing allocation.
+    /// # Errors
+    /// Returns an allocation error when the payload cannot be copied.
+    pub fn try_clone(&self) -> Result<Self> {
+        fn copy<T: Clone>(source: &[T]) -> Result<ristretto_gc::HeapBuffer<T>> {
+            let mut values = Vec::new();
+            values
+                .try_reserve_exact(source.len())
+                .map_err(|_| ristretto_gc::Error::OutOfMemory)?;
+            values.extend_from_slice(source);
+            Ok(values.into())
+        }
+        Ok(match self {
+            Self::BooleanArray(array) => Self::BooleanArray(copy(array)?),
+            Self::ByteArray(array) => Self::ByteArray(copy(array)?),
+            Self::CharArray(array) => Self::CharArray(copy(array)?),
+            Self::ShortArray(array) => Self::ShortArray(copy(array)?),
+            Self::IntArray(array) => Self::IntArray(copy(array)?),
+            Self::LongArray(array) => Self::LongArray(copy(array)?),
+            Self::FloatArray(array) => Self::FloatArray(copy(array)?),
+            Self::DoubleArray(array) => Self::DoubleArray(copy(array)?),
+            Self::Array(array) => Self::Array(ObjectArray {
+                class: array.class.clone(),
+                elements: array.elements.try_clone()?,
+            }),
+            Self::Object(object) => Self::Object(object.try_clone()?),
+        })
+    }
+
     /// Get the class name of the reference
     ///
     /// # Errors
@@ -687,9 +716,127 @@ impl PartialEq for Reference {
     }
 }
 
-// SAFETY: The array and object variants visit every managed edge. Other variants contain primitive elements. Attachment preserves ownership of these handles.
-#[expect(unsafe_code, reason = "explicit tracing contract for VM storage")]
+// SAFETY: object/reference-array variants trace and convert every strong field;
+// primitive variants have no edges. Existing buffer guards protect relocation.
+#[expect(
+    unsafe_code,
+    reason = "audited Reference ownership and tracing variants"
+)]
 unsafe impl Trace for Reference {
+    fn needs_write_barrier(&self) -> bool {
+        match self {
+            Self::BooleanArray(_)
+            | Self::ByteArray(_)
+            | Self::CharArray(_)
+            | Self::ShortArray(_)
+            | Self::IntArray(_)
+            | Self::LongArray(_)
+            | Self::FloatArray(_)
+            | Self::DoubleArray(_) => false,
+            Self::Object(_) | Self::Array(_) => true,
+        }
+    }
+
+    fn trace_work(&self) -> usize {
+        match self {
+            Self::Object(object) => object.trace_work(),
+            Self::Array(array) => array.elements.len().max(1),
+            _ => 1,
+        }
+    }
+
+    fn prepare(&mut self, heap: &ristretto_gc::region::RegionHeap) -> ristretto_gc::Result<()> {
+        match self {
+            Self::Object(object) => object.prepare(heap),
+            Self::Array(array) => array.elements.prepare(heap),
+            Self::BooleanArray(values) | Self::ByteArray(values) => values.prepare(heap),
+            Self::CharArray(values) => values.prepare(heap),
+            Self::ShortArray(values) => values.prepare(heap),
+            Self::IntArray(values) => values.prepare(heap),
+            Self::LongArray(values) => values.prepare(heap),
+            Self::FloatArray(values) => values.prepare(heap),
+            Self::DoubleArray(values) => values.prepare(heap),
+        }
+    }
+    fn prepare_step(
+        &mut self,
+        heap: &ristretto_gc::region::RegionHeap,
+        bytes: usize,
+    ) -> ristretto_gc::Result<ristretto_gc::TraceProgress> {
+        match self {
+            Self::Object(object) => object.prepare_step(heap, bytes),
+            Self::Array(array) => array.elements.prepare_step(heap, bytes),
+            Self::BooleanArray(values) | Self::ByteArray(values) => {
+                values.prepare_step(heap, bytes)
+            }
+            Self::CharArray(values) => values.prepare_step(heap, bytes),
+            Self::ShortArray(values) => values.prepare_step(heap, bytes),
+            Self::IntArray(values) => values.prepare_step(heap, bytes),
+            Self::LongArray(values) => values.prepare_step(heap, bytes),
+            Self::FloatArray(values) => values.prepare_step(heap, bytes),
+            Self::DoubleArray(values) => values.prepare_step(heap, bytes),
+        }
+    }
+    fn relocation_region(&self, heap: &ristretto_gc::region::RegionHeap) -> Option<u64> {
+        match self {
+            Self::Object(object) => object.relocation_region(heap),
+            Self::Array(array) => array.elements.relocation_region(heap),
+            Self::BooleanArray(values) | Self::ByteArray(values) => values.relocation_region(heap),
+            Self::CharArray(values) => values.relocation_region(heap),
+            Self::ShortArray(values) => values.relocation_region(heap),
+            Self::IntArray(values) => values.relocation_region(heap),
+            Self::LongArray(values) => values.relocation_region(heap),
+            Self::FloatArray(values) => values.relocation_region(heap),
+            Self::DoubleArray(values) => values.relocation_region(heap),
+        }
+    }
+
+    fn compact_step(
+        &mut self,
+        heap: &ristretto_gc::region::RegionHeap,
+        bytes: usize,
+    ) -> ristretto_gc::TraceProgress {
+        match self {
+            Self::Object(object) => object.compact_step(heap, bytes),
+            Self::Array(array) => array.elements.compact_step(heap, bytes),
+            Self::BooleanArray(values) | Self::ByteArray(values) => {
+                values.compact_step(heap, bytes)
+            }
+            Self::CharArray(values) => values.compact_step(heap, bytes),
+            Self::ShortArray(values) => values.compact_step(heap, bytes),
+            Self::IntArray(values) => values.compact_step(heap, bytes),
+            Self::LongArray(values) => values.compact_step(heap, bytes),
+            Self::FloatArray(values) => values.compact_step(heap, bytes),
+            Self::DoubleArray(values) => values.compact_step(heap, bytes),
+        }
+    }
+
+    fn clear_step(&mut self, offset: usize, budget: usize) -> ristretto_gc::TraceProgress {
+        match self {
+            Self::Object(object) => object.clear_step(offset, budget),
+            Self::Array(array) => array.elements.clear_step(offset, budget),
+            _ => ristretto_gc::TraceProgress::Complete,
+        }
+    }
+    fn heap_owner(&self) -> Option<Arc<dyn ristretto_gc::HeapOwner>> {
+        match self {
+            Self::Object(object) => object.heap_owner(),
+            Self::Array(array) => Some(array.class.clone()),
+            _ => None,
+        }
+    }
+
+    unsafe fn attach(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+        // SAFETY: construction protection and the context cover the active variant.
+        unsafe {
+            match self {
+                Self::Object(object) => object.attach(owner),
+                Self::Array(array) => array.elements.attach(owner),
+                _ => self.unroot(owner),
+            }
+        }
+    }
+
     fn trace(&self, collector: &GarbageCollector) {
         match self {
             Reference::Array(object_array) => {
@@ -703,78 +850,126 @@ unsafe impl Trace for Reference {
             _ => {}
         }
     }
+
+    fn trace_step(
+        &self,
+        collector: &GarbageCollector,
+        offset: usize,
+        budget: usize,
+    ) -> ristretto_gc::TraceProgress {
+        match self {
+            Self::Object(object) => object.trace_step(collector, offset, budget),
+            Self::Array(array) => array.elements.trace_step(collector, offset, budget),
+            _ => ristretto_gc::TraceProgress::Complete,
+        }
+    }
+
+    fn external_size(&self) -> usize {
+        match self {
+            Self::Object(object) => object.external_size(),
+            Self::Array(array) => size_of_val(array.elements.as_ref()),
+            Self::BooleanArray(a) | Self::ByteArray(a) => size_of_val(a.as_ref()),
+            Self::CharArray(a) => size_of_val(a.as_ref()),
+            Self::ShortArray(a) => size_of_val(a.as_ref()),
+            Self::IntArray(a) => size_of_val(a.as_ref()),
+            Self::LongArray(a) => size_of_val(a.as_ref()),
+            Self::FloatArray(a) => size_of_val(a.as_ref()),
+            Self::DoubleArray(a) => size_of_val(a.as_ref()),
+        }
+    }
+
+    unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+        // SAFETY: the active variant belongs to the caller's protected owner.
+        unsafe {
+            match self {
+                Self::Object(object) => object.unroot(owner),
+                Self::Array(array) => {
+                    array.elements.unroot(owner);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn root(&mut self) {
+        match self {
+            Self::Object(object) => object.root(),
+            Self::Array(array) => array.elements.root(),
+            _ => {}
+        }
+    }
 }
 
 impl From<Vec<bool>> for Reference {
     fn from(value: Vec<bool>) -> Self {
         let value: Vec<i8> = value.into_iter().map(i8::from).collect();
-        Reference::BooleanArray(value.into_boxed_slice())
+        Reference::BooleanArray(value.into())
     }
 }
 
 impl From<Vec<i8>> for Reference {
     fn from(value: Vec<i8>) -> Self {
-        Reference::ByteArray(value.into_boxed_slice())
+        Reference::ByteArray(value.into())
     }
 }
 
 impl From<Vec<u8>> for Reference {
     fn from(value: Vec<u8>) -> Self {
         let value: &[i8] = transmute_ref!(value.as_slice());
-        Reference::ByteArray(value.to_vec().into_boxed_slice())
+        Reference::ByteArray(value.to_vec().into())
     }
 }
 
 impl From<Vec<char>> for Reference {
     fn from(value: Vec<char>) -> Self {
         let value: Vec<u16> = value.into_iter().map(|v| v as u16).collect();
-        Reference::CharArray(value.into_boxed_slice())
+        Reference::CharArray(value.into())
     }
 }
 
 impl From<Vec<i16>> for Reference {
     fn from(value: Vec<i16>) -> Self {
-        Reference::ShortArray(value.into_boxed_slice())
+        Reference::ShortArray(value.into())
     }
 }
 
 impl From<Vec<u16>> for Reference {
     fn from(value: Vec<u16>) -> Self {
         let value: &[i16] = transmute_ref!(value.as_slice());
-        Reference::ShortArray(value.to_vec().into_boxed_slice())
+        Reference::ShortArray(value.to_vec().into())
     }
 }
 
 impl From<Vec<i32>> for Reference {
     fn from(value: Vec<i32>) -> Self {
-        Reference::IntArray(value.into_boxed_slice())
+        Reference::IntArray(value.into())
     }
 }
 
 impl From<Vec<u32>> for Reference {
     fn from(value: Vec<u32>) -> Self {
         let value: &[i32] = transmute_ref!(value.as_slice());
-        Reference::IntArray(value.to_vec().into_boxed_slice())
+        Reference::IntArray(value.to_vec().into())
     }
 }
 
 impl From<Vec<i64>> for Reference {
     fn from(value: Vec<i64>) -> Self {
-        Reference::LongArray(value.into_boxed_slice())
+        Reference::LongArray(value.into())
     }
 }
 
 impl From<Vec<u64>> for Reference {
     fn from(value: Vec<u64>) -> Self {
         let value: &[i64] = transmute_ref!(value.as_slice());
-        Reference::LongArray(value.to_vec().into_boxed_slice())
+        Reference::LongArray(value.to_vec().into())
     }
 }
 
 impl From<Vec<isize>> for Reference {
     fn from(value: Vec<isize>) -> Self {
         let value: Vec<i64> = value.into_iter().map(|v| v as i64).collect();
-        Reference::LongArray(value.into_boxed_slice())
+        Reference::LongArray(value.into())
     }
 }
 
@@ -782,19 +977,19 @@ impl From<Vec<usize>> for Reference {
     fn from(value: Vec<usize>) -> Self {
         #[expect(clippy::cast_possible_wrap)]
         let value: Vec<i64> = value.into_iter().map(|v| v as i64).collect();
-        Reference::LongArray(value.into_boxed_slice())
+        Reference::LongArray(value.into())
     }
 }
 
 impl From<Vec<f32>> for Reference {
     fn from(value: Vec<f32>) -> Self {
-        Reference::FloatArray(value.into_boxed_slice())
+        Reference::FloatArray(value.into())
     }
 }
 
 impl From<Vec<f64>> for Reference {
     fn from(value: Vec<f64>) -> Self {
-        Reference::DoubleArray(value.into_boxed_slice())
+        Reference::DoubleArray(value.into())
     }
 }
 
@@ -811,7 +1006,7 @@ impl Reference {
             .collect::<Vec<_>>();
         let object_array = ObjectArray {
             class,
-            elements: elements.into_boxed_slice(),
+            elements: elements.into_boxed_slice().into(),
         };
         Reference::Array(object_array)
     }
@@ -819,8 +1014,15 @@ impl Reference {
 
 impl TryFrom<(Arc<Class>, Vec<Value>)> for Reference {
     type Error = crate::Error;
+    fn try_from((class, values): (Arc<Class>, Vec<Value>)) -> Result<Self> {
+        Self::try_from((class, ristretto_gc::HeapBuffer::from(values)))
+    }
+}
 
-    fn try_from(value: (Arc<Class>, Vec<Value>)) -> Result<Self> {
+impl TryFrom<(Arc<Class>, ristretto_gc::HeapBuffer<Value>)> for Reference {
+    type Error = crate::Error;
+
+    fn try_from(value: (Arc<Class>, ristretto_gc::HeapBuffer<Value>)) -> Result<Self> {
         let (class, values) = value;
 
         for value in &values {
@@ -831,7 +1033,7 @@ impl TryFrom<(Arc<Class>, Vec<Value>)> for Reference {
 
         let object_array = ObjectArray {
             class,
-            elements: values.into_boxed_slice(),
+            elements: values.into(),
         };
         Ok(Reference::Array(object_array))
     }
@@ -859,6 +1061,57 @@ mod tests {
     async fn load_class(class: &str) -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
         class_loader.load(JavaStr::try_from_str(class)?).await
+    }
+
+    #[test]
+    fn primitive_write_skips_owner_barrier_but_preserves_relocation_dirtiness() -> Result<()> {
+        use ristretto_gc::{Configuration, Gc, HeapBuffer, TraceProgress};
+        for concurrent in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .compact_heap(true)
+                    .region_layout(8192, 1024)
+                    .max_heap_bytes(65536)
+                    .allocation_threshold(usize::MAX)
+                    .concurrent_publication(concurrent)
+                    .diagnostics(true)
+                    .build(),
+            );
+            let heap = gc.region_heap().expect("region heap");
+            let hole = HeapBuffer::try_with_fn(Some(heap), 2048, |_| Ok(7_i32))?;
+            let values = HeapBuffer::try_with_fn(Some(heap), 2048, |_| Ok(7_i32))?;
+            let root = Gc::try_new(
+                &gc,
+                ristretto_gc::sync::RwLock::new(Reference::IntArray(values)),
+            )?;
+            drop(hole);
+            let before = gc.diagnostics().barrier_record.count;
+            assert!(matches!(
+                (**root).compact_guarded(heap, 4096),
+                TraceProgress::Continue(_)
+            ));
+            root.write().as_int_vec_mut()?.fill(42);
+            let mut complete = false;
+            for _ in 0..64 {
+                if (**root).compact_guarded(heap, 4096) == TraceProgress::Complete {
+                    complete = true;
+                    break;
+                }
+            }
+            assert!(complete);
+            assert!(
+                root.read()
+                    .as_int_vec_ref()?
+                    .iter()
+                    .all(|value| *value == 42)
+            );
+            assert!(heap.statistics().bytes_recopied > 0);
+            assert_eq!(gc.diagnostics().barrier_record.count, before);
+            drop(root);
+            gc.stop()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+        Ok(())
     }
 
     #[test]

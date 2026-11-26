@@ -206,3 +206,79 @@ fn native_foreign_token_fails_publication_before_return() -> Result<(), Error> {
     assert!(context.failed.get());
     Ok(())
 }
+
+#[tokio::test]
+#[expect(
+    unsafe_code,
+    reason = "exercise private callback with a live typed boxed context and valid slice"
+)]
+async fn callback_borrow_conflicts_preserve_prior_frame_owners() -> Result<(), Error> {
+    let collector = GarbageCollector::new();
+    let config = Configuration {
+        objects: 1,
+        roots: 2,
+        mutators: 1,
+        helpers: 1,
+        edges_per_object: 1,
+    };
+    let budget = Budget::new(config.charged_bytes()?);
+    let runtime = Runtime::new(&collector, config, &budget)?;
+    let mut worker = runtime.mutator()?;
+    let mut helper = runtime.helper()?;
+    let mut report = Report::default();
+    let root = {
+        let mut request = worker.allocate(Payload::object(0))?;
+        complete(&mut helper, &mut report, 100_000, || request.poll()).await?
+    };
+    let table = Rc::new(RefCell::new(Table::new(1, 1, 2)?));
+    let context = Context::new(table.clone())?;
+    let ristretto_jit::Value::Ptr(token) = context
+        .export(&Value::Reference(Some(root.clone())), 100_000)
+        .await?
+    else {
+        return Err(Error::Boundary("test reference token"));
+    };
+    let replacement = [token];
+    {
+        let table_borrow = table.borrow_mut();
+        assert_eq!(
+            unsafe { publish_roots(context.pointer(), replacement.as_ptr(), 1) },
+            0
+        );
+        assert!(context.error.take().is_some());
+        assert_eq!(table_borrow.live_objects(), 1);
+    }
+    // Publication failure is sticky. A fresh context independently exercises
+    // the frame-borrow rejection, without clearing production failure state.
+    drop(context);
+    let context = Context::new(table.clone())?;
+    let ristretto_jit::Value::Ptr(token) = context
+        .export(&Value::Reference(Some(root.clone())), 100_000)
+        .await?
+    else {
+        return Err(Error::Boundary("test reference token"));
+    };
+    let replacement = [token];
+    let frame_borrow = context.frame.borrow();
+    assert_eq!(
+        unsafe { publish_roots(context.pointer(), replacement.as_ptr(), 1) },
+        0
+    );
+    assert!(context.error.take().is_some());
+    assert!(table.borrow().resolve(token)?.is_some());
+    drop(frame_borrow);
+    let table_borrow = table.borrow_mut();
+    drop(context);
+    assert_eq!(table_borrow.live_objects(), 0);
+    drop((table_borrow, root));
+    for _ in 0..100_000 {
+        helper.poll()?;
+        if collector.managed_bytes() == 0 {
+            break;
+        }
+    }
+    assert_eq!(collector.managed_bytes(), 0);
+    drop((table, worker, helper, runtime));
+    assert_eq!(budget.used(), 0);
+    Ok(())
+}

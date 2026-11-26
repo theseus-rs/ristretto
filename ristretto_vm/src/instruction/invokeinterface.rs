@@ -6,7 +6,8 @@ use crate::Result;
 use crate::assignable::Assignable;
 use crate::frame::{ExecutionResult, Frame, MethodCall};
 use crate::instruction::{receiver_class, resolve_method_ref};
-use crate::method_ref_cache::{InvokeKind, ReceiverTarget};
+use crate::intrinsic_methods::IntrinsicMethod;
+use crate::method_ref_cache::{InvokeKind, ReceiverTarget, ResolvedMethodRef};
 use crate::operand_stack::OperandStack;
 use ristretto_classloader::{ResolvedMethod, Value};
 
@@ -22,8 +23,6 @@ pub(crate) async fn invokeinterface(
     method_index: u16,
     _count: u8,
 ) -> Result<ExecutionResult> {
-    let thread = frame.thread()?;
-
     // Resolve the interface method with JPMS checks and caching
     let resolution = resolve_method_ref(frame, method_index, InvokeKind::Interface).await?;
 
@@ -31,6 +30,24 @@ pub(crate) async fn invokeinterface(
     let receiver = parameters
         .first()
         .ok_or_else(|| InternalError("Expected object reference".to_string()))?;
+    let (target, intrinsic) = select_interface_target(frame, &resolution, receiver).await?;
+    Ok(ExecutionResult::Call(MethodCall {
+        intrinsic: crate::frame::IntrinsicBinding::Resolved(intrinsic),
+        class: target.declaring_class,
+        method: target.method,
+        parameters: parameters.into(),
+        has_return_type: resolution.has_return_type,
+    }))
+}
+
+/// Shared interface selection after symbolic resolution. The receiver is owned
+/// while array-class loading or interface membership checks can suspend.
+pub(crate) async fn select_interface_target(
+    frame: &Frame,
+    resolution: &ResolvedMethodRef,
+    receiver: &Value,
+) -> Result<(ResolvedMethod, Option<IntrinsicMethod>)> {
+    let thread = frame.thread()?;
     let object_class = if let Some(class) = receiver_class(receiver)? {
         class
     } else {
@@ -41,13 +58,13 @@ pub(crate) async fn invokeinterface(
         thread.class(&class_name).await?
     };
     if let Some(target) = resolution.dispatch.get(&object_class) {
-        return Ok(ExecutionResult::Call(MethodCall {
-            intrinsic: crate::frame::IntrinsicBinding::Resolved(target.intrinsic),
-            class: target.class.clone(),
-            method: target.method.clone(),
-            parameters: parameters.into(),
-            has_return_type: resolution.has_return_type,
-        }));
+        return Ok((
+            ResolvedMethod {
+                declaring_class: target.class.clone(),
+                method: target.method.clone(),
+            },
+            target.intrinsic,
+        ));
     }
 
     // Check object implements interface
@@ -119,11 +136,11 @@ pub(crate) async fn invokeinterface(
         method: resolved_method.clone(),
     });
 
-    Ok(ExecutionResult::Call(MethodCall {
-        intrinsic: crate::frame::IntrinsicBinding::Resolved(intrinsic),
-        class: resolved_class,
-        method: resolved_method,
-        parameters: parameters.into(),
-        has_return_type: resolution.has_return_type,
-    }))
+    Ok((
+        ResolvedMethod {
+            declaring_class: resolved_class,
+            method: resolved_method,
+        },
+        intrinsic,
+    ))
 }

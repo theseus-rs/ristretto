@@ -251,3 +251,6 @@ async fn native_array_limit_failure_preserves_prepared_program_reuse()
         "12",
     )
 }
+
+#[path = "support/canonical_arrays_additional.rs"]
+mod additional_regressions;

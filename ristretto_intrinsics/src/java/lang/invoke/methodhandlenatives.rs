@@ -247,7 +247,8 @@ async fn resolve_method_type<T: Thread + 'static>(
             param_classes.push(class.to_object(thread).await?);
         }
         let reference = Reference::try_from((class_array_class, param_classes))?;
-        let param_array = Value::new_object(thread.vm()?.garbage_collector(), reference);
+        let param_array =
+            Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?;
 
         let method = method_type_class.try_get_method(
             "methodType",
@@ -523,7 +524,7 @@ pub async fn get_member_vm_info<T: Thread + 'static>(
     let object_array_class = thread.class("[Ljava/lang/Object;").await?;
     let values = vec![vmindex, flags];
     let reference = Reference::try_from((object_array_class, values))?;
-    let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
+    let array = Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?;
     Ok(Some(array))
 }
 

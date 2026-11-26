@@ -1609,6 +1609,23 @@ impl PartialEq for Class {
     }
 }
 
+impl ristretto_gc::HeapOwner for Class {
+    fn release_heap_roots(&self) {
+        for value in &self.static_values {
+            let mut value = value
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            if matches!(*value, Value::Object(_)) {
+                *value = Value::Object(None);
+            }
+        }
+        *self
+            .object
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = None;
+    }
+}
+
 #[cfg(test)]
 mod layout_tests;
 
