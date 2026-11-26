@@ -782,7 +782,11 @@ impl RegionHeap {
     }
 
     pub(crate) fn record_pin(&self, id: u64) {
-        let state = lock(self.shard(self.index(id)));
+        // Pin feedback influences the next source choice. The payload's actual
+        // guard excludes copying independently of this advisory observation.
+        let Some(state) = try_lock(self.shard(self.index(id))) else {
+            return;
+        };
         if let Some(plan) = &state.evacuation
             && let Some(region) = state.regions.get(&id)
         {
