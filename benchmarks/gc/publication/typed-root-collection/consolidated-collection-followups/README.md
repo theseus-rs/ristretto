@@ -53,6 +53,13 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Independently claimable callbacks in a parked batch | `c7a4010a` | 251127249 | 9.96× | 10.34× | 35 / 36 |
 | Reuse a caller's completed cleanup counter | `e632db2b` | 251127257 | 9.89× | 10.39× | 35 / 36 |
 | Count only address guards that borrow primary storage | `26f04597` | 251127269 | **10.14×** | **10.57×** | **36 / 36** |
+| Budgeted destruction of string container elements | `65b668aa` | 251127281 | **10.30×** | **10.55×** | **36 / 36** |
+
+## Recovering string container backing at the heap limit
+
+With the native callback thread parked in a Rust destructor, an independent vector of 97 heap-allocated strings and a region-backed buffer of the same length each left an allocation out of memory. Both containers already truncate a bounded number of drop-bearing elements per clearing step. The collector can now distinguish an element whose ordinary destruction is bounded before clearing from a container whose destruction becomes bounded only after clearing. A worker can retire strings a few at a time. Dropping an entire nested vector of strings can visit arbitrarily many elements, and directly dropping a live region buffer can require its registry. Both remain excluded from direct bounded destruction.
+
+Each hard-cap regression passed in 100 fresh processes. The caller obtained a new allocation while the older destructor stayed parked. The region test checked that all occupied backing was returned. All 1,400 repeated processes passed, alongside 963 enabled default native tests (one ignored), 875 all-feature native library tests, 334 WASI library tests and 36 selected WASI integrations. Native and WASI strict Clippy, bare-Wasm checking and local Cargo package verification passed. The complete-collection matrix cleared all 36 conditions against `f1daebeb`, with minimum individual 95% speedup bounds of **10.30× native and 10.55× WASI**. A donor with an arbitrary user destructor still returned out-of-memory on the parent. [Run logs, audit, package checksum and arbitrary-destructor control](bounded-elements-controls.json.gz) · [Per-process collection data](bounded-elements.csv) · [Minimum speedup graph](minimum.svg)
 
 ## Independent reclamation within a parked callback batch
 
