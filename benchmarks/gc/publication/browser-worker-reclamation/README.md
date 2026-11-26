@@ -9,3 +9,5 @@ To reproduce, build and serve the production playground, then run the following 
 ```sh
 node web/scripts/probe-gc-turns.mjs web http://127.0.0.1:4394/ristretto/playground/ result.json --require-worker-progress --require-reclamation
 ```
+
+[Three Chromium runs on the consolidated collector](consolidated-alpha/README.md)
