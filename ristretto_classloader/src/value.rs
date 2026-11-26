@@ -395,7 +395,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `ByteArray`.
-    pub fn as_byte_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i8]>> {
+    pub fn as_byte_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i8], Reference>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_byte_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected byte array".to_string()))
@@ -410,7 +410,7 @@ impl Value {
         unsafe_code,
         reason = "primitive slice preserves the entire empty graph"
     )]
-    pub fn as_byte_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i8]>> {
+    pub fn as_byte_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i8], Reference>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -431,7 +431,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `CharArray`.
-    pub fn as_char_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [u16]>> {
+    pub fn as_char_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [u16], Reference>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_char_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected char array".to_string()))
@@ -446,7 +446,7 @@ impl Value {
         unsafe_code,
         reason = "primitive slice preserves the entire empty graph"
     )]
-    pub fn as_char_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [u16]>> {
+    pub fn as_char_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [u16], Reference>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -467,7 +467,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `ShortArray`.
-    pub fn as_short_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i16]>> {
+    pub fn as_short_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i16], Reference>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_short_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected short array".to_string()))
@@ -482,7 +482,7 @@ impl Value {
         unsafe_code,
         reason = "primitive slice preserves the entire empty graph"
     )]
-    pub fn as_short_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i16]>> {
+    pub fn as_short_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i16], Reference>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -503,7 +503,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `IntArray`.
-    pub fn as_int_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i32]>> {
+    pub fn as_int_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i32], Reference>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_int_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected int array".to_string()))
@@ -518,7 +518,7 @@ impl Value {
         unsafe_code,
         reason = "primitive slice preserves the entire empty graph"
     )]
-    pub fn as_int_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i32]>> {
+    pub fn as_int_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i32], Reference>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -539,7 +539,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `LongArray`.
-    pub fn as_long_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i64]>> {
+    pub fn as_long_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i64], Reference>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_long_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected long array".to_string()))
@@ -554,7 +554,7 @@ impl Value {
         unsafe_code,
         reason = "primitive slice preserves the entire empty graph"
     )]
-    pub fn as_long_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i64]>> {
+    pub fn as_long_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i64], Reference>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -575,7 +575,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `FloatArray`.
-    pub fn as_float_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [f32]>> {
+    pub fn as_float_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [f32], Reference>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_float_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected float array".to_string()))
@@ -590,7 +590,7 @@ impl Value {
         unsafe_code,
         reason = "primitive slice preserves the entire empty graph"
     )]
-    pub fn as_float_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [f32]>> {
+    pub fn as_float_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [f32], Reference>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -611,7 +611,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `DoubleArray`.
-    pub fn as_double_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [f64]>> {
+    pub fn as_double_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [f64], Reference>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_double_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected double array".to_string()))
@@ -626,7 +626,7 @@ impl Value {
         unsafe_code,
         reason = "primitive slice preserves the entire empty graph"
     )]
-    pub fn as_double_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [f64]>> {
+    pub fn as_double_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [f64], Reference>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -647,7 +647,9 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `Reference::Array`
-    pub fn as_class_vec_ref(&self) -> Result<(Arc<Class>, MappedRwLockReadGuard<'_, [Value]>)> {
+    pub fn as_class_vec_ref(
+        &self,
+    ) -> Result<(Arc<Class>, MappedRwLockReadGuard<'_, [Value], Reference>)> {
         let reference = self.as_reference()?;
         let mut class = None;
         let guard = RwLockReadGuard::try_map(reference, |r| {
@@ -673,7 +675,9 @@ impl Value {
         unsafe_code,
         reason = "array slice preserves independent Value ownership"
     )]
-    pub fn as_class_vec_mut(&self) -> Result<(Arc<Class>, MappedRwLockWriteGuard<'_, [Value]>)> {
+    pub fn as_class_vec_mut(
+        &self,
+    ) -> Result<(Arc<Class>, MappedRwLockWriteGuard<'_, [Value], Reference>)> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -707,7 +711,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not an Object.
-    pub fn as_object_ref(&self) -> Result<MappedRwLockReadGuard<'_, Object>> {
+    pub fn as_object_ref(&self) -> Result<MappedRwLockReadGuard<'_, Object, Reference>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_object_ref().ok())
             .map_err(|_| InvalidValueType("Expected object".to_string()))
@@ -718,7 +722,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not an Object.
-    pub fn as_object_mut(&self) -> Result<MappedRwLockWriteGuard<'_, Object>> {
+    pub fn as_object_mut(&self) -> Result<MappedRwLockWriteGuard<'_, Object, Reference>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -736,7 +740,7 @@ impl Value {
     ///
     /// Returns an error if the value is not an object reference or if the reference
     /// is not a primitive array type (i.e., it's an `Object` or object `Array`).
-    pub fn as_bytes(&self) -> Result<MappedRwLockReadGuard<'_, [u8]>> {
+    pub fn as_bytes(&self) -> Result<MappedRwLockReadGuard<'_, [u8], Reference>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, Reference::as_bytes)
             .map_err(|_| InvalidValueType("Expected primitive array".to_string()))
@@ -753,7 +757,7 @@ impl Value {
         unsafe_code,
         reason = "primitive byte view preserves the entire empty graph"
     )]
-    pub fn as_bytes_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [u8]>> {
+    pub fn as_bytes_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [u8], Reference>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();

@@ -9,7 +9,7 @@ mod support;
 use ristretto_gc::cell::{MappedRwLockWriteGuard, RwLock, RwLockWriteGuard};
 use ristretto_gc::{GarbageCollector, Gc, GcWeak, ReferenceKind, Result, Trace, TraceProgress};
 
-fn project(owner: &RwLock<Vec<Gc<u64>>>) -> MappedRwLockWriteGuard<'_, [Gc<u64>]> {
+fn project(owner: &RwLock<Vec<Gc<u64>>>) -> MappedRwLockWriteGuard<'_, [Gc<u64>], Vec<Gc<u64>>> {
     // SAFETY: preparation roots every current handle. Safe Gc construction,
     // cloning and extraction preserve ownership; the slice cannot access the
     // parent's demotion hook or add conditional/custom tracing actions.

@@ -17,7 +17,7 @@ fn finish(gc: &GarbageCollector) -> Result<()> {
 fn collect_while_pinned<T: Copy + Debug + PartialEq>(
     gc: &Arc<GarbageCollector>,
     source: &Value,
-    guard: MappedRwLockWriteGuard<'_, [T]>,
+    guard: MappedRwLockWriteGuard<'_, [T], Reference>,
 ) -> Result<()> {
     let pointer = guard.as_ptr();
     let expected = guard[0];

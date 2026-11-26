@@ -31,11 +31,6 @@ impl Drop for LeaveGuard {
     }
 }
 
-/// Empty marker trait used to type-erase a parent guard while keeping it
-/// alive for the duration of a mapped guard.
-trait Erased {}
-impl<T: ?Sized> Erased for T {}
-
 /// Acquire a poisoned guard's inner value, matching `parking_lot`'s
 /// non-poisoning semantics.
 fn unpoison<G>(result: sync::LockResult<G>) -> G {
@@ -72,14 +67,14 @@ struct Hook<T: ?Sized> {
     trace_covered: trace_certificate::Certificate,
 }
 
-struct PayloadPin {
-    counters: sync::Arc<crate::diagnostics::Counters>,
+struct PayloadPin<'a> {
+    counters: &'a crate::diagnostics::Counters,
     started: Option<std::time::Instant>,
 }
 
-impl PayloadPin {
-    fn start<T: ?Sized>(hook: Option<&Hook<T>>) -> Option<Self> {
-        let counters = hook?.pins.as_ref()?.clone();
+impl<'a> PayloadPin<'a> {
+    fn start<T: ?Sized>(hook: Option<&'a Hook<T>>) -> Option<Self> {
+        let counters = hook?.pins.as_deref()?;
         counters
             .active_payload_guards
             .fetch_add(1, Ordering::Relaxed);
@@ -90,7 +85,7 @@ impl PayloadPin {
     }
 }
 
-impl Drop for PayloadPin {
+impl Drop for PayloadPin<'_> {
     fn drop(&mut self) {
         self.counters.payload_guard_holds.record(self.started);
         self.counters
@@ -198,7 +193,11 @@ impl<T: fmt::Debug + ?Sized> fmt::Debug for RwLock<T> {
 }
 
 // Fields drop in declaration order: unlock before recording the hold interval.
-pub struct RwLockReadGuard<'a, T: ?Sized>(sync::RwLockReadGuard<'a, T>, bool, Option<PayloadPin>);
+pub struct RwLockReadGuard<'a, T: ?Sized>(
+    sync::RwLockReadGuard<'a, T>,
+    bool,
+    Option<PayloadPin<'a>>,
+);
 impl<T: ?Sized> Drop for RwLockReadGuard<'_, T> {
     fn drop(&mut self) {
         debug_assert!(self.2.is_none() || self.1);
@@ -209,7 +208,7 @@ impl<T: ?Sized> Drop for RwLockReadGuard<'_, T> {
 }
 
 impl<'a, T: ?Sized> RwLockReadGuard<'a, T> {
-    pub fn map<U: ?Sized, F>(s: Self, f: F) -> MappedRwLockReadGuard<'a, U>
+    pub fn map<U: ?Sized, F>(s: Self, f: F) -> MappedRwLockReadGuard<'a, U, T>
     where
         F: FnOnce(&T) -> &U,
     {
@@ -220,12 +219,12 @@ impl<'a, T: ?Sized> RwLockReadGuard<'a, T> {
         let projected = unsafe { NonNull::from(f(&*ptr)) };
         MappedRwLockReadGuard {
             ptr: projected,
-            parent: Box::new(s),
+            parent: s,
             _phantom: PhantomData,
         }
     }
 
-    pub fn try_map<U: ?Sized, F>(s: Self, f: F) -> Result<MappedRwLockReadGuard<'a, U>, Self>
+    pub fn try_map<U: ?Sized, F>(s: Self, f: F) -> Result<MappedRwLockReadGuard<'a, U, T>, Self>
     where
         F: FnOnce(&T) -> Option<&U>,
     {
@@ -238,7 +237,7 @@ impl<'a, T: ?Sized> RwLockReadGuard<'a, T> {
                 let projected = NonNull::from(u);
                 Ok(MappedRwLockReadGuard {
                     ptr: projected,
-                    parent: Box::new(s),
+                    parent: s,
                     _phantom: PhantomData,
                 })
             }
@@ -269,7 +268,7 @@ impl<T: ?Sized + fmt::Display> fmt::Display for RwLockReadGuard<'_, T> {
 pub struct RwLockWriteGuard<'a, T: ?Sized>(
     sync::RwLockWriteGuard<'a, T>,
     Option<&'a Hook<T>>,
-    Option<PayloadPin>,
+    Option<PayloadPin<'a>>,
     bool,
     bool,
 );
@@ -305,7 +304,7 @@ impl<'a, T: ?Sized> RwLockWriteGuard<'a, T> {
     pub unsafe fn try_map_trace_empty<U: ?Sized, F>(
         s: Self,
         f: F,
-    ) -> Result<MappedRwLockWriteGuard<'a, U>, Self>
+    ) -> Result<MappedRwLockWriteGuard<'a, U, T>, Self>
     where
         F: FnOnce(&mut T) -> Option<&mut U>,
     {
@@ -333,7 +332,7 @@ impl<'a, T: ?Sized> RwLockWriteGuard<'a, T> {
     pub unsafe fn try_map_trace_rooted<U: ?Sized, F>(
         s: Self,
         f: F,
-    ) -> Result<MappedRwLockWriteGuard<'a, U>, Self>
+    ) -> Result<MappedRwLockWriteGuard<'a, U, T>, Self>
     where
         F: FnOnce(&mut T) -> Option<&mut U>,
     {
@@ -350,7 +349,7 @@ impl<'a, T: ?Sized> RwLockWriteGuard<'a, T> {
                 }
                 Ok(MappedRwLockWriteGuard {
                     ptr: projected,
-                    parent: Box::new(s),
+                    parent: s,
                     _phantom: PhantomData,
                 })
             }
@@ -381,7 +380,7 @@ impl<'a, T: ?Sized> RwLockWriteGuard<'a, T> {
         }
     }
 
-    pub fn map<U: ?Sized, F>(mut s: Self, f: F) -> MappedRwLockWriteGuard<'a, U>
+    pub fn map<U: ?Sized, F>(mut s: Self, f: F) -> MappedRwLockWriteGuard<'a, U, T>
     where
         F: FnOnce(&mut T) -> &mut U,
     {
@@ -391,12 +390,15 @@ impl<'a, T: ?Sized> RwLockWriteGuard<'a, T> {
         let projected = unsafe { NonNull::from(f(&mut *ptr)) };
         MappedRwLockWriteGuard {
             ptr: projected,
-            parent: Box::new(s),
+            parent: s,
             _phantom: PhantomData,
         }
     }
 
-    pub fn try_map<U: ?Sized, F>(mut s: Self, f: F) -> Result<MappedRwLockWriteGuard<'a, U>, Self>
+    pub fn try_map<U: ?Sized, F>(
+        mut s: Self,
+        f: F,
+    ) -> Result<MappedRwLockWriteGuard<'a, U, T>, Self>
     where
         F: FnOnce(&mut T) -> Option<&mut U>,
     {
@@ -408,7 +410,7 @@ impl<'a, T: ?Sized> RwLockWriteGuard<'a, T> {
                 let projected = NonNull::from(u);
                 Ok(MappedRwLockWriteGuard {
                     ptr: projected,
-                    parent: Box::new(s),
+                    parent: s,
                     _phantom: PhantomData,
                 })
             }
@@ -437,16 +439,16 @@ impl<T: ?Sized + fmt::Debug> fmt::Debug for RwLockWriteGuard<'_, T> {
     }
 }
 
-pub struct MappedRwLockReadGuard<'a, T: ?Sized> {
+pub struct MappedRwLockReadGuard<'a, T: ?Sized, P: ?Sized> {
     ptr: NonNull<T>,
     // Field order matters: `ptr` is dropped before `parent` so the lock
     // is released after the projected pointer is no longer accessible.
-    parent: Box<dyn Erased + 'a>,
+    parent: RwLockReadGuard<'a, P>,
     _phantom: PhantomData<&'a T>,
 }
 
-impl<'a, T: ?Sized> MappedRwLockReadGuard<'a, T> {
-    pub fn map<U: ?Sized, F>(s: Self, f: F) -> MappedRwLockReadGuard<'a, U>
+impl<'a, T: ?Sized, P: ?Sized> MappedRwLockReadGuard<'a, T, P> {
+    pub fn map<U: ?Sized, F>(s: Self, f: F) -> MappedRwLockReadGuard<'a, U, P>
     where
         F: FnOnce(&T) -> &U,
     {
@@ -460,7 +462,7 @@ impl<'a, T: ?Sized> MappedRwLockReadGuard<'a, T> {
         }
     }
 
-    pub fn try_map<U: ?Sized, F>(s: Self, f: F) -> Result<MappedRwLockReadGuard<'a, U>, Self>
+    pub fn try_map<U: ?Sized, F>(s: Self, f: F) -> Result<MappedRwLockReadGuard<'a, U, P>, Self>
     where
         F: FnOnce(&T) -> Option<&U>,
     {
@@ -476,7 +478,7 @@ impl<'a, T: ?Sized> MappedRwLockReadGuard<'a, T> {
     }
 }
 
-impl<T: ?Sized> Deref for MappedRwLockReadGuard<'_, T> {
+impl<T: ?Sized, P: ?Sized> Deref for MappedRwLockReadGuard<'_, T, P> {
     type Target = T;
     fn deref(&self) -> &T {
         // SAFETY: parent guard still alive; pointer is valid.
@@ -484,20 +486,20 @@ impl<T: ?Sized> Deref for MappedRwLockReadGuard<'_, T> {
     }
 }
 
-impl<T: ?Sized + fmt::Debug> fmt::Debug for MappedRwLockReadGuard<'_, T> {
+impl<T: ?Sized + fmt::Debug, P: ?Sized> fmt::Debug for MappedRwLockReadGuard<'_, T, P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         (**self).fmt(f)
     }
 }
 
-pub struct MappedRwLockWriteGuard<'a, T: ?Sized> {
+pub struct MappedRwLockWriteGuard<'a, T: ?Sized, P: ?Sized> {
     ptr: NonNull<T>,
-    parent: Box<dyn Erased + 'a>,
+    parent: RwLockWriteGuard<'a, P>,
     _phantom: PhantomData<&'a mut T>,
 }
 
-impl<'a, T: ?Sized> MappedRwLockWriteGuard<'a, T> {
-    pub fn map<U: ?Sized, F>(mut s: Self, f: F) -> MappedRwLockWriteGuard<'a, U>
+impl<'a, T: ?Sized, P: ?Sized> MappedRwLockWriteGuard<'a, T, P> {
+    pub fn map<U: ?Sized, F>(mut s: Self, f: F) -> MappedRwLockWriteGuard<'a, U, P>
     where
         F: FnOnce(&mut T) -> &mut U,
     {
@@ -510,7 +512,10 @@ impl<'a, T: ?Sized> MappedRwLockWriteGuard<'a, T> {
         }
     }
 
-    pub fn try_map<U: ?Sized, F>(mut s: Self, f: F) -> Result<MappedRwLockWriteGuard<'a, U>, Self>
+    pub fn try_map<U: ?Sized, F>(
+        mut s: Self,
+        f: F,
+    ) -> Result<MappedRwLockWriteGuard<'a, U, P>, Self>
     where
         F: FnOnce(&mut T) -> Option<&mut U>,
     {
@@ -526,7 +531,7 @@ impl<'a, T: ?Sized> MappedRwLockWriteGuard<'a, T> {
     }
 }
 
-impl<T: ?Sized> Deref for MappedRwLockWriteGuard<'_, T> {
+impl<T: ?Sized, P: ?Sized> Deref for MappedRwLockWriteGuard<'_, T, P> {
     type Target = T;
     fn deref(&self) -> &T {
         // SAFETY: parent guard still alive; pointer is valid.
@@ -534,14 +539,14 @@ impl<T: ?Sized> Deref for MappedRwLockWriteGuard<'_, T> {
     }
 }
 
-impl<T: ?Sized> DerefMut for MappedRwLockWriteGuard<'_, T> {
+impl<T: ?Sized, P: ?Sized> DerefMut for MappedRwLockWriteGuard<'_, T, P> {
     fn deref_mut(&mut self) -> &mut T {
         // SAFETY: parent guard still alive; pointer is valid for writes.
         unsafe { self.ptr.as_mut() }
     }
 }
 
-impl<T: ?Sized + fmt::Debug> fmt::Debug for MappedRwLockWriteGuard<'_, T> {
+impl<T: ?Sized + fmt::Debug, P: ?Sized> fmt::Debug for MappedRwLockWriteGuard<'_, T, P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         (**self).fmt(f)
     }
@@ -789,7 +794,7 @@ mod tests {
         let owner = Gc::new(&gc, RwLock::new(vec![Some(child)])).into_rooted();
         let mut moved = None;
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let _guard: MappedRwLockWriteGuard<'_, Vec<Option<Gc<u64>>>> =
+            let _guard: MappedRwLockWriteGuard<'_, Vec<Option<Gc<u64>>>, _> =
                 RwLockWriteGuard::map(owner.write(), |value| {
                     moved = Some(std::mem::take(value));
                     panic!("cancel after extracting the whole value");

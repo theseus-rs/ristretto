@@ -184,7 +184,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cell_size = size_of::<ristretto_gc::cell::RwLock<Reference>>();
     let writer_size = size_of::<ristretto_gc::cell::RwLockWriteGuard<'static, Reference>>();
     let mapped_writer_size =
-        size_of::<ristretto_gc::cell::MappedRwLockWriteGuard<'static, [i32]>>();
+        size_of::<ristretto_gc::cell::MappedRwLockWriteGuard<'static, [i32], Reference>>();
     let reference_size = size_of::<Reference>();
     println!(
         "{{\"mode\":\"{mode}\",\"operations\":{operations},\"length\":{length},\"counted\":{counted},\"compact\":{compact},\"contexts\":{contexts},\"elapsed_ns\":{elapsed},\"live_objects\":0,\"bytes_allocated\":0,\"cell_size\":{cell_size},\"writer_size\":{writer_size},\"mapped_writer_size\":{mapped_writer_size},\"reference_size\":{reference_size}}}"
