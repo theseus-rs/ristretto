@@ -108,9 +108,9 @@ pub(crate) fn current(gc: &GarbageCollector) -> Option<Arc<State>> {
     })
 }
 
-/// Borrow only the context's barrier cache without cloning its Arc. The caller
+/// Borrow the current heap context without cloning its Arc. The caller
 /// must not run hooks, enter scopes or wake futures while this TLS borrow is held.
-pub(crate) fn with_barriers<R>(
+pub(crate) fn with_state<R>(
     gc: &GarbageCollector,
     operation: impl FnOnce(&State) -> R,
 ) -> Option<R> {
@@ -123,20 +123,16 @@ pub(crate) fn with_barriers<R>(
     })
 }
 
-/// Borrow the current allocation cache without cloning its Arc. Callers must
-/// not invoke Trace hooks, enter scopes, or wake user futures while this TLS
-/// borrow is held. Cache range operations and atomic credit reservation comply.
-pub(crate) fn with_allocation<R>(
+/// A shared context can have an allocator parked in its range cache. Callers
+/// fall back to the heap allocator when the cached range is unavailable.
+pub(crate) fn try_with_allocation<R>(
     gc: &GarbageCollector,
     operation: impl FnOnce(&mut crate::allocation::Cache) -> R,
 ) -> Option<R> {
-    CURRENT.with(|current| {
-        let current = current.borrow();
-        let context = current
-            .as_ref()
-            .filter(|context| std::ptr::eq(context.collector.as_ptr(), gc))?;
-        Some(operation(&mut lock(&context.allocation)))
+    with_state(gc, |state| {
+        Some(operation(&mut *try_lock(&state.allocation)?))
     })
+    .flatten()
 }
 
 /// Tags are captured under the publication reader. A cycle cannot close with any
@@ -243,30 +239,141 @@ pub(crate) struct State {
     // acknowledgement of a drained record. Every access uses try_lock.
     completed: Mutex<Completed>,
     pub(crate) allocation: Mutex<crate::allocation::Cache>,
+    allocation_credit: AtomicUsize,
+}
+
+// The word holds either prepaid bytes or active space observers. Keeping both
+// in one modification order closes the race between a refill and the first
+// waiting allocation. A guard keeps subsequent refills visible until it drops.
+const OBSERVER_UNIT: usize = crate::allocation::CREDIT.next_power_of_two() * 2;
+const CREDIT_MASK: usize = OBSERVER_UNIT - 1;
+
+#[derive(Debug)]
+pub(crate) struct AllocationInterest(Arc<State>);
+
+impl AllocationInterest {
+    pub(crate) fn belongs_to(&self, state: &State) -> bool {
+        std::ptr::eq(self.0.as_ref(), state)
+    }
+}
+
+impl Drop for AllocationInterest {
+    fn drop(&mut self) {
+        self.0
+            .allocation_credit
+            .fetch_sub(OBSERVER_UNIT, Ordering::AcqRel);
+    }
 }
 
 impl State {
+    pub(crate) fn available_credit(&self) -> usize {
+        self.allocation_credit.load(Ordering::Acquire) & CREDIT_MASK
+    }
+
+    pub(crate) fn observe_allocations(
+        self: Arc<Self>,
+        gc: &GarbageCollector,
+    ) -> crate::Result<AllocationInterest> {
+        let previous = self
+            .allocation_credit
+            .try_update(Ordering::AcqRel, Ordering::Acquire, |word| {
+                (word & !CREDIT_MASK).checked_add(OBSERVER_UNIT)
+            })
+            .map_err(|_| crate::Error::OutOfMemory)?;
+        let interest = AllocationInterest(self);
+        let unused = previous & CREDIT_MASK;
+        if unused != 0 {
+            gc.cancel_allocation(unused);
+        }
+        Ok(interest)
+    }
+
+    fn take_credit(&self, bytes: usize) -> usize {
+        self.allocation_credit
+            .try_update(Ordering::AcqRel, Ordering::Acquire, |available| {
+                (available != 0 && available < OBSERVER_UNIT)
+                    .then_some(available.saturating_sub(bytes))
+            })
+            .unwrap_or(0)
+            .min(bytes)
+    }
+
+    /// Spends existing credit even while another allocator owns the ranges.
+    /// Only the range-cache owner can add a batch. The caller returns unused
+    /// charged bytes after leaving TLS, on either success or failure.
+    pub(crate) fn reserve_cached(
+        &self,
+        gc: &GarbageCollector,
+        size: usize,
+    ) -> Result<usize, usize> {
+        let mut missing = size - self.take_credit(size);
+        if missing == 0 {
+            return Ok(0);
+        }
+        if let Some(_refill) = try_lock(&self.allocation) {
+            // Another refill may have finished after our first attempt. When a
+            // deficit remains here, the cache is empty and only we can refill.
+            missing -= self.take_credit(missing);
+            if missing == 0 {
+                return Ok(0);
+            }
+            let spare = crate::allocation::CREDIT - size;
+            if self.allocation_credit.load(Ordering::Acquire) == 0
+                && gc.reserve_allocation(missing + spare).is_ok()
+            {
+                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                progress_tests::after_batch_charge();
+                // A waiter can register after we charge the batch. Its space
+                // threshold is global, so return spare to the same budget.
+                let cached = self.allocation_credit.compare_exchange(
+                    0,
+                    spare,
+                    Ordering::AcqRel,
+                    Ordering::Acquire,
+                );
+                return Ok(if cached.is_ok() { 0 } else { spare });
+            }
+        }
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        progress_tests::before_exact_allocation();
+        if gc.reserve_allocation(missing).is_ok() {
+            return Ok(0);
+        }
+        // A concurrent refiller may have moved the remaining global headroom
+        // into this context after we bypassed the range cache.
+        let arrived = self.take_credit(missing);
+        missing -= arrived;
+        if missing == 0 || (arrived != 0 && gc.reserve_allocation(missing).is_ok()) {
+            return Ok(0);
+        }
+        Err(size - missing)
+    }
+
     pub(crate) fn release_allocations(&self, gc: &GarbageCollector) {
-        let unused = lock(&self.allocation).take_unused();
-        Self::release_unused(gc, unused);
+        self.release_unused(gc, lock(&self.allocation));
     }
 
     fn try_release_allocations(&self, gc: &GarbageCollector) {
-        let Some(mut cache) = try_lock(&self.allocation) else {
-            // A mutator still owns this bounded unused capacity. It stays charged;
-            // root enumeration and unrelated collection do not depend on release.
-            return;
-        };
-        let unused = cache.take_unused();
-        drop(cache);
-        Self::release_unused(gc, unused);
+        if let Some(cache) = try_lock(&self.allocation) {
+            self.release_unused(gc, cache);
+        }
     }
 
-    fn release_unused(gc: &GarbageCollector, mut unused: crate::allocation::Cache) {
-        let credit = unused.release();
+    fn release_unused(
+        &self,
+        gc: &GarbageCollector,
+        mut cache: MutexGuard<'_, crate::allocation::Cache>,
+    ) {
+        let unused = cache.take_unused();
+        let credit = self
+            .allocation_credit
+            .fetch_and(!CREDIT_MASK, Ordering::AcqRel)
+            & CREDIT_MASK;
+        drop(cache);
         if credit != 0 {
             gc.cancel_allocation(credit);
         }
+        drop(unused);
     }
 
     /// Callers hold publication admission or an authorized phase claim. Reserving
@@ -489,6 +596,7 @@ impl Registry {
             buffer: Mutex::new(Buffer::default()),
             completed: Mutex::new(Completed::default()),
             allocation: Mutex::new(crate::allocation::Cache::default()),
+            allocation_credit: AtomicUsize::new(0),
         });
         let mut states = lock(&self.states);
         states.insert(id, Arc::downgrade(&state));

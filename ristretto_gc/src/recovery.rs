@@ -217,7 +217,8 @@ impl RefundNotifier {
 
 impl GarbageCollector {
     pub(crate) fn observe_space(&self, bytes: usize) -> Result<SpaceObservation<'_>> {
-        let observation = self.recovery.register_observation(bytes)?;
+        let mut observation = self.recovery.register_observation(bytes)?;
+        self.refresh_allocation_interest(&mut observation.context_interest)?;
         // Publish the threshold into the budget's modification order before
         // requesting a cycle. A later refund sees this registration, and
         // credit already available here counts even if stolen before polling.
@@ -229,6 +230,12 @@ impl GarbageCollector {
 }
 
 impl Recovery {
+    #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+    pub(crate) fn with_parked_waiter_index<R>(&self, operation: impl FnOnce() -> R) -> R {
+        let _waiters = lock(&self.waiters);
+        operation()
+    }
+
     pub(crate) fn registered_workers(&self) -> usize {
         self.workers.load(Ordering::Acquire)
     }
@@ -250,6 +257,7 @@ impl Recovery {
             bytes,
             id,
             seen,
+            context_interest: None,
         })
     }
 
@@ -520,6 +528,7 @@ impl Recovery {
 /// migrate a future after notification. Cancellation removes the observation.
 pub(crate) struct SpaceObservation<'a> {
     recovery: &'a Recovery,
+    context_interest: Option<crate::context::AllocationInterest>,
     bytes: usize,
     id: WaiterId,
     seen: Arc<AtomicBool>,
@@ -547,6 +556,7 @@ pub(crate) struct CollectionWait<'a> {
     bytes: Option<usize>,
     // Survives notification/removal and migration until this future observes completion.
     space_seen: Option<Arc<AtomicBool>>,
+    context_interest: Option<&'a mut Option<crate::context::AllocationInterest>>,
     physical: Option<Layout>,
     physical_assisted: bool,
 }
@@ -559,6 +569,7 @@ impl<'a> CollectionWait<'a> {
             id: None,
             bytes: None,
             space_seen: None,
+            context_interest: None,
             physical: None,
             physical_assisted: false,
         }
@@ -567,7 +578,7 @@ impl<'a> CollectionWait<'a> {
     pub(crate) fn for_space(
         gc: &'a GarbageCollector,
         ticket: u64,
-        observation: &SpaceObservation<'_>,
+        observation: &'a mut SpaceObservation<'_>,
     ) -> Self {
         Self {
             gc,
@@ -575,6 +586,7 @@ impl<'a> CollectionWait<'a> {
             id: None,
             bytes: Some(observation.bytes),
             space_seen: Some(observation.seen.clone()),
+            context_interest: Some(&mut observation.context_interest),
             physical: None,
             physical_assisted: false,
         }
@@ -618,6 +630,9 @@ impl Future for CollectionWait<'_> {
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
         let gc = this.gc;
+        if let Some(interest) = this.context_interest.as_deref_mut() {
+            gc.refresh_allocation_interest(interest)?;
+        }
         if let Some(available) = this.ready() {
             gc.recovery.remove(this.ticket, this.id);
             return Poll::Ready(Ok(available));
@@ -1098,7 +1113,7 @@ mod tests {
         );
         gc.reserve_allocation(8)?;
         for released in [4, 8] {
-            let observation = gc.observe_space(8)?;
+            let mut observation = gc.observe_space(8)?;
             // Install the observation before requesting collection. Neither an
             // executor poll nor a waker registration has happened yet.
             let ticket = gc.completed_full_ticket() + 1;
@@ -1106,7 +1121,7 @@ mod tests {
             gc.cancel_allocation(released);
             gc.reserve_allocation(released)?;
             gc.collect_full()?;
-            let mut wait = CollectionWait::for_space(&gc, ticket, &observation);
+            let mut wait = CollectionWait::for_space(&gc, ticket, &mut observation);
             assert!(matches!(
                 Pin::new(&mut wait).poll(&mut Context::from_waker(Waker::noop())),
                 Poll::Ready(Ok(seen)) if seen == (released == 8)
@@ -1190,13 +1205,17 @@ mod tests {
     #[test]
     fn opportunity_at_registration_survives_a_thief_before_the_first_poll() -> Result<()> {
         let gc = GarbageCollector::with_config(Configuration::builder().max_heap_bytes(8).build());
-        let early = gc.observe_space(8)?;
-        let too_large = gc.observe_space(9)?;
+        let mut early = gc.observe_space(8)?;
+        let mut too_large = gc.observe_space(9)?;
         let stolen = gc.reserve_private_bytes(8)?;
-        let late = gc.observe_space(8)?;
+        let mut late = gc.observe_space(8)?;
         let ticket = gc.completed_full_ticket() + 1;
         gc.collect_full()?;
-        for (observation, expected) in [(&early, true), (&too_large, false), (&late, false)] {
+        for (observation, expected) in [
+            (&mut early, true),
+            (&mut too_large, false),
+            (&mut late, false),
+        ] {
             let mut wait = CollectionWait::for_space(&gc, ticket, observation);
             assert!(matches!(
                 Pin::new(&mut wait).poll(&mut Context::from_waker(Waker::noop())),

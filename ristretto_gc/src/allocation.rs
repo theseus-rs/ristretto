@@ -20,7 +20,6 @@ pub(crate) const CREDIT: usize = 4096;
 pub(crate) struct Cache {
     payload: Option<Block>,
     descriptor: Option<Block>,
-    pub(crate) credit: usize,
     pub(crate) hits: u64,
     pub(crate) refills: u64,
 }
@@ -71,14 +70,8 @@ impl Cache {
         Self {
             payload: self.payload.take(),
             descriptor: self.descriptor.take(),
-            credit: std::mem::take(&mut self.credit),
             ..Self::default()
         }
-    }
-
-    pub(crate) fn release(&mut self) -> usize {
-        self.release_ranges();
-        std::mem::take(&mut self.credit)
     }
 
     fn release_ranges(&mut self) {

@@ -1279,7 +1279,7 @@ impl GarbageCollector {
             self.contexts.for_each(|context| {
                 let cache = lock(&context.allocation);
                 snapshot.cached_allocation_bytes += cache.retained_bytes();
-                snapshot.cached_allocation_credit += cache.credit;
+                snapshot.cached_allocation_credit += context.available_credit();
                 snapshot.local_allocation_hits += cache.hits;
                 snapshot.local_allocation_refills += cache.refills;
             });
@@ -1959,8 +1959,9 @@ impl GarbageCollector {
         if let Some(heap) = &self.descriptor_regions
             && layout.size() <= crate::allocation::SMALL
             && layout.align() <= 64
-            && let Some(Ok(block)) =
-                crate::context::with_allocation(self, |cache| cache.allocate(heap, layout, true))
+            && let Some(Ok(block)) = crate::context::try_with_allocation(self, |cache| {
+                cache.allocate(heap, layout, true)
+            })
         {
             return Ok(crate::allocation::Storage::Region(block));
         }
@@ -1990,8 +1991,9 @@ impl GarbageCollector {
             return Ok(None);
         };
         if self.configuration.local_allocation_buffers
-            && let Some(result) =
-                crate::context::with_allocation(self, |cache| cache.allocate(heap, layout, false))
+            && let Some(result) = crate::context::try_with_allocation(self, |cache| {
+                cache.allocate(heap, layout, false)
+            })
         {
             return result.map(Some);
         }
@@ -2952,9 +2954,31 @@ impl GarbageCollector {
             .saturating_sub(self.managed_budget.used())
     }
 
+    pub(crate) fn refresh_allocation_interest(
+        &self,
+        interest: &mut Option<crate::context::AllocationInterest>,
+    ) -> Result<()> {
+        if self.configuration.local_allocation_buffers {
+            let matches = crate::context::with_state(self, |state| {
+                interest
+                    .as_ref()
+                    .is_some_and(|guard| guard.belongs_to(state))
+            })
+            .unwrap_or(interest.is_none());
+            if !matches {
+                // Establish the new interest before releasing the prior context.
+                // Moving between threads with the same context needs no update.
+                *interest = crate::context::current(self)
+                    .map(|state| state.observe_allocations(self))
+                    .transpose()?;
+            }
+        }
+        Ok(())
+    }
+
     fn context_credit(&self, size: usize) -> usize {
         if self.configuration.local_allocation_buffers && size <= crate::allocation::SMALL {
-            crate::context::with_allocation(self, |cache| cache.credit).unwrap_or(0)
+            crate::context::with_state(self, crate::context::State::available_credit).unwrap_or(0)
         } else {
             0
         }
@@ -2975,33 +2999,27 @@ impl GarbageCollector {
     }
 
     pub(crate) fn reserve_bytes(&self, size: usize) -> Result<AllocationReservation<'_>> {
-        let reserved = self.configuration.local_allocation_buffers
+        if self.configuration.local_allocation_buffers
             && size <= crate::allocation::SMALL
-            && crate::context::with_allocation(self, |cache| {
-                if cache.credit < size {
-                    let refill = crate::allocation::CREDIT - cache.credit;
-                    if self.reserve_allocation(refill).is_ok() {
-                        cache.credit += refill;
-                    } else if self.reserve_allocation(size - cache.credit).is_ok() {
-                        cache.credit = size;
+            && let Some(result) =
+                crate::context::with_state(self, |state| state.reserve_cached(self, size))
+        {
+            match result {
+                Ok(unused) => {
+                    if unused != 0 {
+                        self.cancel_allocation(unused);
                     }
+                    return Ok(AllocationReservation {
+                        collector: self,
+                        size,
+                        committed: false,
+                    });
                 }
-                if cache.credit >= size {
-                    cache.credit -= size;
-                    true
-                } else {
-                    false
-                }
-            })
-            .unwrap_or(false);
-        if !reserved {
-            self.reserve_allocation(size)?;
+                Err(unused) if unused != 0 => self.cancel_allocation(unused),
+                Err(_) => {}
+            }
         }
-        Ok(AllocationReservation {
-            collector: self,
-            size,
-            committed: false,
-        })
+        self.reserve_exact_bytes(size)
     }
 
     // A shared ticket can already be in sweep when observation starts. Before
@@ -3040,12 +3058,13 @@ impl GarbageCollector {
             if let Ok(reservation) = self.reserve_bytes(size) {
                 return Ok(reservation);
             }
-            let opportunity = self.observe_space(size)?;
+            let mut opportunity = self.observe_space(size)?;
             let ticket = self.request_space_cycle(empty_cycles);
             let mut observed_space = false;
             loop {
                 observed_space |=
-                    crate::recovery::CollectionWait::for_space(self, ticket, &opportunity).await?;
+                    crate::recovery::CollectionWait::for_space(self, ticket, &mut opportunity)
+                        .await?;
                 if let Ok(reservation) = self.reserve_bytes(size) {
                     return Ok(reservation);
                 }
@@ -3082,8 +3101,7 @@ impl GarbageCollector {
                 .diagnostics
                 .allocation_recovery
                 .measure(self.diagnostics_enabled());
-            let needed = size.saturating_sub(self.context_credit(size));
-            let opportunity = self.observe_space(needed)?;
+            let opportunity = self.observe_space(size)?;
             let ticket = self.request_space_cycle(empty_cycles);
             loop {
                 if size <= self.context_headroom(size) {
@@ -3129,10 +3147,10 @@ impl GarbageCollector {
             if size <= self.context_headroom(size) {
                 return Ok(());
             }
-            let opportunity = self.observe_space(size)?;
+            let mut opportunity = self.observe_space(size)?;
             let ticket = self.request_space_cycle(empty_cycles);
             let offered =
-                crate::recovery::CollectionWait::for_space(self, ticket, &opportunity).await?;
+                crate::recovery::CollectionWait::for_space(self, ticket, &mut opportunity).await?;
             empty_cycles = if offered || opportunity.was_offered() {
                 0
             } else {
@@ -3808,7 +3826,7 @@ impl GarbageCollector {
             }),
             dirty: false,
         };
-        if crate::context::with_barriers(self, |state| state.satisfies(&self.contexts, record))
+        if crate::context::with_state(self, |state| state.satisfies(&self.contexts, record))
             == Some(true)
         {
             return clock.unchanged(snapshot);
@@ -3846,7 +3864,7 @@ impl GarbageCollector {
         if satisfied && clock.unchanged(snapshot) {
             // Cache only after successful certification. Phase changes after this
             // point merely leave a stale epoch key; rollover disables the cache.
-            crate::context::with_barriers(self, |state| state.completed(record));
+            crate::context::with_state(self, |state| state.completed(record));
             true
         } else {
             false

@@ -384,3 +384,36 @@ fn finalizer_diagnostics_unwind_does_not_strand_private_charge() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn partial_context_credit_combines_with_an_independent_refund() -> Result<()> {
+    let batch = crate::allocation::CREDIT;
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .max_heap_bytes(batch + 4)
+            .local_allocation_buffers(true)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
+    let four = gc.reserve_exact_bytes(4)?;
+    let scope = gc.register_context();
+    let pinned = scope.with(|| {
+        [1024, 1024, 1024, 1020]
+            .into_iter()
+            .map(|size| gc.reserve_bytes(size))
+            .collect::<Result<Vec<_>>>()
+    })?;
+    assert_eq!(gc.managed_bytes(), batch + 4);
+    let wait = scope.with(|| gc.observe_space(8))?;
+    assert!(!wait.was_offered());
+    assert_eq!(gc.allocation_headroom(), 4);
+    drop(four);
+    assert!(wait.was_offered());
+    let root = scope.with(|| Gc::try_new(&gc, 42_u64))?;
+    assert_eq!(**root, 42);
+    assert_eq!(gc.managed_bytes(), batch + 4);
+    drop((wait, root, pinned, scope));
+    gc.stop()?;
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
