@@ -12,7 +12,21 @@ mod callback_pages;
 use callback_pages::Pages;
 #[path = "pressure_turn.rs"]
 mod pressure_turn;
-pub(super) use pressure_turn::Turn;
+
+pub(super) struct Turn {
+    dispatch: pressure_turn::Turn,
+    inbox: std::sync::Weak<Inbox<Job>>,
+}
+
+impl Turn {
+    pub(super) fn pending(&self) -> bool {
+        self.dispatch.pending()
+            && self
+                .inbox
+                .upgrade()
+                .is_some_and(|inbox| inbox.jobs.has_available())
+    }
+}
 
 thread_local! {
     // Native workers are owned by exactly one pool generation for their lifetime.
@@ -171,7 +185,12 @@ impl Callbacks {
         }
         let turn = runner.service.request()?;
         let _ = runner.pressure.try_send(());
-        Some(turn)
+        // A peer may take the last job after enrollment, before the pressure
+        // assistant acknowledges the turn. Private jobs keep their charge.
+        Some(Turn {
+            dispatch: turn,
+            inbox: Arc::downgrade(&runner.inbox),
+        })
     }
 
     pub(super) fn wake_pressure(&self) {
@@ -475,9 +494,15 @@ mod tests {
         delayed_pressure(PressureSchedule::Empty)
     }
 
+    #[test]
+    fn a_peer_claiming_the_last_job_completes_an_enrolled_dispatch() -> Result<()> {
+        delayed_pressure(PressureSchedule::LastClaim)
+    }
+
     #[derive(Clone, Copy)]
     enum PressureSchedule {
         Empty,
+        LastClaim,
         Available,
         Cancel,
         Contended,
@@ -495,6 +520,19 @@ mod tests {
             assert!(Instant::now() < deadline);
             thread::yield_now();
         }
+    }
+
+    fn poll_while_service_is_parked<F: Future>(
+        mut request: std::pin::Pin<&mut F>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Option<F::Output> {
+        for _ in 0..2048 {
+            if let std::task::Poll::Ready(result) = request.as_mut().poll(cx) {
+                return Some(result);
+            }
+            thread::yield_now();
+        }
+        None
     }
 
     fn poll_until_dispatch<F: Future>(
@@ -580,20 +618,33 @@ mod tests {
         let mut request = Box::pin(Gc::try_new_async(&heap, 11_u64));
         let mut early =
             poll_until_dispatch(request.as_mut(), &mut cx, &runner.service, 0, deadline);
-        if empty {
+        if empty || matches!(schedule, PressureSchedule::LastClaim) {
             seen.recv_timeout(Duration::from_secs(3))
-                .expect("assistant parked");
-            let closed = matches!(early, Some(Err(crate::Error::OutOfMemory)));
+                .expect("assistant stopped before probing");
+            let last = (!empty).then(|| {
+                assert!(early.is_none() && runner.service.snapshot() > 0);
+                runner.inbox.jobs.claim().expect("last published callback")
+            });
+            early = early.or_else(|| poll_while_service_is_parked(request.as_mut(), &mut cx));
             let turn_count = runner.service.snapshot();
             let charged = heap.managed_bytes();
-            let finished = drops.load(Ordering::Acquire);
+            let destroyed = drops.load(Ordering::Acquire);
             drop(request);
+            if let Some(job) = last {
+                assert!(!job.run());
+            }
             drop(retained);
             allow.send(()).expect("resume assistant");
             resume.send(()).expect("resume primary");
             heap.stop()?;
-            assert!(closed, "empty receiver required another assistant dispatch");
-            assert_eq!((turn_count, charged, finished), (0, cap, 0));
+            assert!(
+                matches!(early, Some(Err(crate::Error::OutOfMemory))),
+                "allocator kept polling a parked assistant with no published job"
+            );
+            assert_eq!(turn_count == 0, empty);
+            assert_eq!((charged, destroyed), (cap, 0));
+            assert_eq!(drops.load(Ordering::Acquire), 1);
+            assert_eq!(heap.managed_bytes(), 0);
             return Ok(());
         }
         if matches!(schedule, PressureSchedule::Cancel) && early.is_none() {

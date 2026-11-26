@@ -45,6 +45,10 @@ impl<T> Page<T> {
 }
 
 impl<T> Page<T> {
+    fn has_available(&self) -> bool {
+        self.claimed.load(Ordering::Relaxed) < self.published.load(Ordering::Acquire)
+    }
+
     fn take(&self) -> Option<T> {
         let mut index = self.claimed.load(Ordering::Relaxed);
         while index < self.published.load(Ordering::Acquire) {
@@ -214,8 +218,15 @@ impl<T> Pages<T> {
     pub(super) fn has_available(&self) -> bool {
         self.lanes.iter().filter_map(OnceLock::get).any(|lane| {
             let page = lane.head.load();
-            page.claimed.load(Ordering::Relaxed) < page.published.load(Ordering::Acquire)
-                || page.next.load().is_some()
+            if page.has_available() {
+                return true;
+            }
+            // A publisher may stop after sealing the old bank but before
+            // publishing its first successor job. Acquiring the link also
+            // orders the final old-bank publication before this recheck.
+            let next = page.next.load();
+            next.as_ref()
+                .is_some_and(|bank| page.has_available() || bank.has_available())
                 || !Arc::ptr_eq(&page, &lane.head.load())
         })
     }
@@ -270,6 +281,22 @@ mod tests {
     use std::sync::mpsc;
     use std::thread;
     use std::time::Duration;
+
+    #[test]
+    fn a_successor_link_becomes_dispatchable_only_after_a_job_is_published() {
+        let jobs = Pages::new(1);
+        jobs.push(0, 1, std::iter::empty());
+        assert_eq!(jobs.claim(), Some(1));
+        let lane = jobs.lanes.first().unwrap().get().unwrap();
+        let next = Page::new(2 * SLOTS);
+        lane.head.load().next.store(Some(next.clone()));
+        *lane.tail.lock() = next;
+        assert!(!jobs.has_available());
+        jobs.push(0, 2, std::iter::empty());
+        assert!(jobs.has_available());
+        assert_eq!(jobs.claim(), Some(2));
+        assert!(!jobs.has_available());
+    }
 
     #[test]
     fn a_cached_consumer_rotates_between_busy_lanes() {
