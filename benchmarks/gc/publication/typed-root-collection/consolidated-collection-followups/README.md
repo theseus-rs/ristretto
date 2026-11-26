@@ -36,6 +36,17 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Root implicit Java monitors across suspension | `480d279a` | 251127012 | **10.03×** | **10.50×** | **36 / 36** |
 | Exact deletion and buffered barrier identity | `e920e1d3` | 251127022 | **10.61×** | **10.65×** | **36 / 36** |
 | Retrace a buffered owner after its graph changes | `559296ae` | 251127105 | **10.10×** | **10.54×** | **36 / 36** |
+| Exact primary remembered directory | `7ae61be7` | 251127106 | 7.93× | 10.43× | 28 / 36 |
+| Bounded scan and isolated marking reservations | `3c49be32` | 251127108 | 8.70× | 10.15× | 28 / 36 |
+| Parked remembered publishers and native worker retries | `b7eb6c4b` | 251127109 | **10.28×** | **10.58×** | **36 / 36** |
+
+## Collection with a parked remembered-set publisher
+
+On the parent, a young collection exhausted 4,096 public steps while a writer held the only remembered shard. Both publication policies completed with the guard released. At `b7eb6c4b` both complete with the writer still parked, preserve the young child of a mature owner and reclaim unrelated garbage. Scans read an immutable directory keyed by the non-recycled object ID. Promotion and retirement can update exact membership while another publisher is stopped. A buffered writer orders its enrollment against young-cycle startup and schedules a fresh traversal when the cursor has already passed. The tests include late address reuse and a stream of new births beyond the scan’s initial cutoff.
+
+All 1,100 forced native processes passed. The native library passed 558 default and 849 all-feature tests. The WASI library passed 327. Strict Clippy, the bare-Wasm build, and Cargo package verification passed. The first two candidates missed eight native collection conditions each. Native two-worker CPU profiles showed increased time in mark-work claims. Retaining some retry delay after a single success restored the complete-collection gate in all 36 conditions. Its lowest individual 95% speedup bounds were 10.278× native and 10.580× WASI across 1,728 processes. [Parked controls, tests, profiles and auditor responses](remembered-progress-controls.json.gz) · [Directory results](remembered-directory.csv) · [Bounded scan results](remembered-reservations.csv) · [Qualified results](remembered-cutoffs.csv)
+
+In a separate native comparison against `559296ae`, the requester slept on its real executor waker and only registered workers performed the collections. Across 576 fresh processes, median complete-collection time with two workers was 0.770–0.952× the parent, depending on shape, publication policy and diagnostics. With one worker, the range was 0.956–1.048×. The one-worker gated mixed workload with diagnostics took 4.8% longer, with a paired 95% interval of 2.5–9.5% longer. The harness used sustained requests with short warmup. Sparse arrivals after a long idle interval and whole-host pause coverage remain open. [Worker-only timing graph](remembered-worker-only.svg) · [Matched fixture, process results and build fingerprints](worker-only-collection.json.gz)
 
 ## Retracing a buffered write after an earlier traversal
 
