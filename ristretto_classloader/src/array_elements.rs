@@ -181,22 +181,25 @@ impl ArrayElements {
         #[cfg(test)]
         self.scan_mutation
             .store(self.mutation, std::sync::atomic::Ordering::Relaxed);
-        let mut has_young = false;
         let card_end = (start / CARD_SIZE + 1)
             .saturating_mul(CARD_SIZE)
             .min(self.values.len());
         let end = start.saturating_add(budget.max(1)).min(card_end);
+        // Only a complete card on an old owner can leave the remembered set.
+        // Every edge still needs tracing, including those after a young child.
+        let mut can_prune = old && end == card_end && start.is_multiple_of(CARD_SIZE);
         if let Some(values) = self.values.get(start..end) {
             for value in values {
                 value.trace(gc);
-                if let Value::Object(Some(reference)) = value
+                if can_prune
+                    && let Value::Object(Some(reference)) = value
                     && gc.is_young_allocation(reference.as_ptr() as usize)
                 {
-                    has_young = true;
+                    can_prune = false;
                 }
             }
         }
-        if old && end == card_end && start.is_multiple_of(CARD_SIZE) && !has_young {
+        if can_prune {
             self.cards
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
