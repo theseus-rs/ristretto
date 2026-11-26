@@ -334,6 +334,111 @@ impl RegionHeap {
 }
 
 #[cfg(not(target_family = "wasm"))]
+std::thread_local! {
+    static PROBE_PUBLICATION: std::cell::Cell<Option<Box<dyn FnOnce()>>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(not(target_family = "wasm"))]
+pub(super) fn before_probe_publication() {
+    if let Some(hook) = PROBE_PUBLICATION.take() {
+        hook();
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn cancelled_probe_releases_unpublished_backing_while_the_registry_is_parked() {
+    use std::sync::mpsc;
+    use std::task::Poll;
+    use std::time::Duration;
+    let heap = RegionHeap::new(1024, 1024, 0);
+    let (ready, reached) = mpsc::channel();
+    let (resume, wait) = mpsc::channel();
+    let (done, finished) = mpsc::channel();
+    std::thread::scope(|scope| {
+        let peer_heap = &heap;
+        let peer = scope.spawn(move || {
+            PROBE_PUBLICATION.set(Some(Box::new(move || {
+                ready.send(()).expect("notify registry owner");
+                wait.recv_timeout(Duration::from_secs(5))
+                    .expect("resume publication");
+            })));
+            let result = AllocationProbe::default().poll(peer_heap, Layout::new::<u64>());
+            done.send(matches!(result, Poll::Pending))
+                .expect("report rollback");
+        });
+        reached
+            .recv_timeout(Duration::from_secs(5))
+            .expect("raw backing reserved");
+        let registry = lock(heap.shard(0));
+        assert_eq!(registry.backing.committed.load(Ordering::Acquire), 1024);
+        assert_eq!(heap.budget.used.load(Ordering::Acquire), 1024);
+        resume.send(()).expect("attempt publication");
+        let rolled_back = finished.recv_timeout(Duration::from_secs(2));
+        let local = registry.backing.committed.load(Ordering::Acquire);
+        let shared = heap.budget.used.load(Ordering::Acquire);
+        assert!(registry.regions.is_empty());
+        drop(registry);
+        peer.join().expect("allocation completed");
+        assert_eq!(rolled_back, Ok(true));
+        assert_eq!((local, shared), (0, 0));
+    });
+    assert_eq!(heap.returned_bytes.load(Ordering::Acquire), 0);
+}
+
+#[test]
+fn probe_reuses_a_returned_peer_range_before_a_parked_registry_resumes() {
+    use std::task::Poll;
+    let heap =
+        RegionHeap::with_shards(1024, 2048, 1024, Budget::with_reserve(2048, 1024), false, 2);
+    let preferred = heap.preferred_shard();
+    let layout = Layout::from_size_align(512, 64).expect("layout");
+    let keep = heap
+        .allocate_selected(layout, None, false, 1 - preferred)
+        .expect("first half");
+    let donor = heap
+        .allocate_selected(layout, None, false, 1 - preferred)
+        .expect("second half");
+    let address = donor.ptr::<u8>().addr();
+    let parked = lock(heap.shard(preferred));
+    let mut probe = AllocationProbe::default();
+    assert!(probe.poll(&heap, layout).is_pending());
+    drop(donor);
+    let Poll::Ready(Ok(reused)) = probe.poll(&heap, layout) else {
+        panic!("free peer range");
+    };
+    assert_eq!(reused.ptr::<u8>().addr(), address);
+    assert_eq!(heap.budget.used.load(Ordering::Acquire), 1024);
+    drop(parked);
+    drop((reused, keep));
+}
+
+#[test]
+fn probe_resumes_alignment_search_after_its_extent_budget() {
+    use std::task::Poll;
+    let heap = RegionHeap::new(1024, 1024, 0);
+    let bytes: Vec<_> = (0..1024)
+        .map(|_| heap.allocate(Layout::new::<u8>(), None).expect("byte"))
+        .collect();
+    let base = bytes.first().expect("populated region").ptr::<u8>().addr();
+    let retained: Vec<_> = bytes
+        .into_iter()
+        .filter(|block| {
+            let offset = block.ptr::<u8>().addr() - base;
+            !(offset < 640 && (1..9).contains(&(offset % 16)) || (960..968).contains(&offset))
+        })
+        .collect();
+    let mut probe = AllocationProbe::default();
+    let layout = Layout::from_size_align(8, 64).expect("aligned request");
+    assert!(probe.poll(&heap, layout).is_pending());
+    let Poll::Ready(Ok(block)) = probe.poll(&heap, layout) else {
+        panic!("aligned late hole");
+    };
+    assert_eq!(block.ptr::<u8>().addr(), base + 960);
+    drop((block, retained));
+}
+
+#[cfg(not(target_family = "wasm"))]
 fn parked_payload_allocation(park_range_map: bool) {
     use std::future::Future;
     use std::sync::mpsc;

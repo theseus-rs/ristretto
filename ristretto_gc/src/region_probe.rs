@@ -97,6 +97,8 @@ impl AllocationProbe {
                 continue;
             };
             if let Ok(fresh) = heap.prepare_region(layout, false, index, state) {
+                #[cfg(all(test, not(target_family = "wasm")))]
+                super::shard_tests::before_probe_publication();
                 let Some(mut state) = try_lock(heap.shard(index)) else {
                     // No Block exists yet. Drop rolls back the unpublished backing
                     // and both credits without waiting for the parked registry.

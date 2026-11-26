@@ -137,6 +137,11 @@ impl<T> HeapBuffer<T> {
             let storage = match collector.poll_payload(layout, &mut probe) {
                 std::task::Poll::Pending => {
                     crate::recovery::yield_once().await;
+                    if crate::cell::has_guards() {
+                        return Err(Error::CollectionPhaseError(
+                            "asynchronous initialization requires released managed guards".into(),
+                        ));
+                    }
                     continue;
                 }
                 std::task::Poll::Ready(Ok(Some(block))) => Ok(Self {
