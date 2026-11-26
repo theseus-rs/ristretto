@@ -208,3 +208,43 @@ impl RememberedGuard<'_> {
         self.set.members.load(Ordering::Relaxed) == 0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn late_removal_preserves_a_new_member_at_the_same_address() {
+        let set = Remembered::new(1);
+        let address = 16;
+        // Thread-local ID leases allow the later birth to have a lower number.
+        let old = ObjectId::from_i64(255);
+        let new = ObjectId::from_i64(4);
+        let parked = set.lock(address);
+        parked.insert(address, old);
+        assert!(set.remove(address, old));
+        set.insert(address, new);
+        // Simulate a former publisher resuming around its validation and cleanup.
+        parked.insert(address, old);
+        assert!(set.remove(address, old));
+        assert!(!set.remove(address, old));
+        let mut scan = RememberedCursor::default();
+        assert!(matches!(set.scan(&mut scan), Scan::Entry(16, id) if id == new));
+        assert!(matches!(set.scan(&mut scan), Scan::Done));
+        assert!(set.remove(address, new));
+        assert!(!set.may_prune());
+    }
+
+    #[test]
+    fn a_stream_of_later_births_does_not_extend_a_young_scan() {
+        let set = Remembered::new(1);
+        set.insert(16, ObjectId::from_i64(1));
+        set.insert(32, ObjectId::from_i64(2));
+        let mut scan = RememberedCursor::default();
+        assert!(matches!(set.scan(&mut scan), Scan::Entry(16, _)));
+        set.insert(48, ObjectId::from_i64(3));
+        assert!(matches!(set.scan(&mut scan), Scan::Entry(32, _)));
+        set.insert(64, ObjectId::from_i64(4));
+        assert!(matches!(set.scan(&mut scan), Scan::Done));
+    }
+}

@@ -658,7 +658,7 @@ fn nested_heap_step_preserves_the_outer_owners_young_edge_witness() -> Result<()
         assert!(
             gc.remembered
                 .lock(root.as_ptr().addr())
-                .contains(&root.as_ptr().addr())
+                .contains(root.as_ptr().addr())
         );
         finish_young(&gc)?;
         assert_eq!(weak.upgrade().as_deref(), Some(&71));

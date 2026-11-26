@@ -2667,7 +2667,15 @@ impl GarbageCollector {
                             continue;
                         }
                         if claimed {
-                            contention_delay = (contention_delay / 2).max(1);
+                            // A single successful unit does not imply that contention
+                            // with the helper holding the next packet has subsided.
+                            // Only failed attempts wait. Continuous useful work runs
+                            // immediately and gradually restores prompt retries.
+                            contention_delay = if gc.configuration.worker_yield_time_us == 0 {
+                                contention_delay.saturating_sub(1).max(1)
+                            } else {
+                                (contention_delay / 2).max(1)
+                            };
                         }
                         let pressure = gc.managed_budget.used()
                             >= gc
@@ -4821,10 +4829,6 @@ impl GarbageCollector {
         self.claim_independent_mark(concurrent, &mut false)
     }
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "claim admission, reservation and handback must stay in order"
-    )]
     fn claim_independent_mark(&self, concurrent: bool, reserved_miss: &mut bool) -> Option<bool> {
         // A new publication can race this hint; the coordinated fallback and
         // the next step still inspect the authoritative phase and work queues.
