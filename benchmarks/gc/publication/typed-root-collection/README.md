@@ -37,16 +37,14 @@ git worktree add --detach "$run/before" f1daebeb277323fa0d5e732ae3853db6b97eac8b
 git worktree add --detach "$run/after" 46ef6e262d5a7ac728c5b4a50281cdba727cdea6
 fixture=ristretto_gc/examples/mark_cycles.rs
 cp "$run/after/$fixture" "$run/before/$fixture"
+builder="$(pwd)/benchmarks/gc/mark_cycles_build.py"
 scripts="$run/after/benchmarks/gc"
 for arm in before after; do
   src="$run/$arm"
-  export CARGO_TARGET_DIR="$run/build-$arm"
-  (cd "$src" && cargo build --locked --release -p ristretto_gc --example mark_cycles)
-  python3 "$scripts/mark_cycles_build.py" --source "$src" --target native \
-    --binary "$CARGO_TARGET_DIR/release/examples/mark_cycles" --output "$run/$arm-native.json"
-  (cd "$src" && cargo build --locked --release -p ristretto_gc --example mark_cycles --target wasm32-wasip2)
-  python3 "$scripts/mark_cycles_build.py" --source "$src" --target wasm \
-    --binary "$CARGO_TARGET_DIR/wasm32-wasip2/release/examples/mark_cycles.wasm" --output "$run/$arm-wasm.json"
+  python3 "$builder" --build --source "$src" --target native \
+    --binary "$run/$arm-native.bin" --output "$run/$arm-native.json"
+  python3 "$builder" --build --source "$src" --target wasm \
+    --binary "$run/$arm-wasm.bin" --output "$run/$arm-wasm.json"
 done
 python3 "$scripts/mark_cycles.py" --before-build "$run/before-native.json" --after-build "$run/after-native.json" \
   --output "$run/results-native" --cpus 4 6 8 --workers 0 2 --shapes tree wide mixed \
