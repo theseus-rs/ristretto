@@ -588,6 +588,47 @@ fn contended_allocation_reclaims_unreachable_peer(worker: bool) {
 }
 
 #[test]
+fn async_allocation_reports_exhaustion_with_an_empty_shard_parked_and_all_backing_live() {
+    use std::future::Future;
+    use std::task::{Context, Poll, Waker};
+    let gc = crate::GarbageCollector::with_config(
+        crate::Configuration::builder()
+            .compact_heap(true)
+            .region_shards(2)
+            .region_layout(1024, 32)
+            .cost_aware_relocation(true)
+            .max_heap_bytes(2048)
+            .relocation_reserve_bytes(1024)
+            .build(),
+    );
+    let heap = gc.region_heap().expect("payload arena");
+    let live = crate::HeapBuffer::try_with_fn(Some(heap), 1024, |_| Ok(3_u8)).expect("live range");
+    let accessible = heap.index(live.relocation_region(heap).expect("regional range"));
+    let parked = lock(heap.shard(1 - accessible));
+    assert_eq!(parked.backing.committed.load(Ordering::Acquire), 0);
+    let before = gc.completed_full_ticket();
+    let mut future = std::pin::pin!(crate::HeapBuffer::try_with_fn_in_async(
+        &gc,
+        32,
+        |_| -> crate::Result<u8> {
+            panic!("no usable physical backing");
+        }
+    ));
+    let mut cx = Context::from_waker(Waker::noop());
+    let result = (0..4096).find_map(|_| match future.as_mut().poll(&mut cx) {
+        Poll::Ready(result) => Some(result),
+        Poll::Pending => None,
+    });
+    drop(parked);
+    assert!(
+        matches!(result, Some(Err(crate::Error::OutOfMemory))),
+        "{result:?}"
+    );
+    assert!(gc.completed_full_ticket() > before);
+    assert_eq!(&*live, &[3_u8; 1024]);
+}
+
+#[test]
 fn probe_resumes_alignment_search_after_its_extent_budget() {
     use std::task::Poll;
     let heap = RegionHeap::new(1024, 1024, 0);
