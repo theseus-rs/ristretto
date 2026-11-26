@@ -536,3 +536,77 @@ async fn primitive_loops_cooperate_through_the_production_gate() -> Result<()> {
     }
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn ordinary_dispatch_compiles_a_volatile_static_long_store() -> Result<()> {
+    use ristretto_classfile::{Field, FieldAccessFlags, FieldType};
+
+    let harness = Harness::new().await?;
+    let name = "ProductionLongStore";
+    let mut pool = ConstantPool::new();
+    let owner = pool.add_class(name)?;
+    let slot = pool.add_field_ref(owner, "value", "J")?;
+    let body = method(
+        &mut pool,
+        "publish",
+        "(J)J",
+        vec![
+            Instruction::Lload_0,
+            Instruction::Putstatic(slot),
+            Instruction::Lload_0,
+            Instruction::Lreturn,
+        ],
+    )?;
+    let field = Field {
+        access_flags: FieldAccessFlags::PUBLIC
+            | FieldAccessFlags::STATIC
+            | FieldAccessFlags::VOLATILE,
+        name_index: pool.add_utf8("value")?,
+        descriptor_index: pool.add_utf8("J")?,
+        field_type: FieldType::parse("J")?,
+        attributes: vec![],
+    };
+    let mut definition = class_from_methods(name, "java/lang/Object", pool, vec![body])?
+        .class_file()
+        .clone();
+    definition.fields = vec![field];
+    let class = register(&harness.thread, Class::from(None, definition)?).await?;
+    let publish = class.try_get_method("publish", "(J)J")?;
+    for bits in [i64::MIN, 0x7abc_fedc_8765_4321, -1] {
+        for thread in [&harness.interpreted_thread, &harness.thread] {
+            class.set_static_value("value", Value::Long(!bits))?;
+            assert_eq!(
+                thread
+                    .execute(&class, &publish, &[Value::Long(bits)])
+                    .await?,
+                Some(Value::Long(bits))
+            );
+            assert_eq!(class.static_value("value")?, Value::Long(bits));
+        }
+    }
+    let function = harness
+        .vm
+        .compiler()
+        .and_then(|compiler| compiler.get_cached(cache_key(&publish)))
+        .flatten()
+        .ok_or_else(|| {
+            InternalError("ordinary volatile long store ran only in the interpreter".into())
+        })?;
+    #[cfg(feature = "execution-profile")]
+    {
+        assert_eq!(function.execution_count(), 3);
+        let profile = harness.vm.execution_profile();
+        let record = profile
+            .methods
+            .iter()
+            .find(|record| record.class == name && record.name == "publish")
+            .ok_or_else(|| InternalError("missing production store record".into()))?;
+        assert_eq!(
+            (record.compiled_entries, record.interpreter_entries),
+            (3, 0)
+        );
+        assert!(record.rejected_bytecode.is_none());
+    }
+    drop(function);
+    Ok(())
+}
