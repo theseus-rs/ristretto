@@ -747,7 +747,9 @@ unsafe impl<T: crate::Trace> crate::Trace for HeapBuffer<T> {
         TraceProgress::Complete
     }
     fn external_size(&self) -> usize {
-        self.capacity() * size_of::<T>()
+        self.capacity()
+            .saturating_mul(size_of::<T>())
+            .saturating_add(T::slice_external_size(self))
     }
     fn prepare(&mut self, heap: &RegionHeap) -> Result<()> {
         Self::prepare(self, heap)

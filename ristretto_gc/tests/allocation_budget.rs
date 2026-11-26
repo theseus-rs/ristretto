@@ -71,7 +71,7 @@ fn nested_container_backing_is_charged_before_admission_and_refunded_after_drop(
     let value = || HeapBuffer::from(vec![Some(String::with_capacity(4096)), None]);
     let buffer = value();
     let expected = buffer.capacity() * size_of::<Option<String>>()
-        + buffer[0].as_ref().map_or(0, String::capacity);
+        + buffer.iter().flatten().map(String::capacity).sum::<usize>();
     assert_eq!(buffer.external_size(), expected);
     let size = Gc::allocation_size(&buffer)?;
     let heap = GarbageCollector::with_config(Configuration::builder().max_heap_bytes(size).build());

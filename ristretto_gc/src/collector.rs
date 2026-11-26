@@ -809,6 +809,19 @@ pub unsafe trait Trace {
         0
     }
 
+    /// Total separately owned storage for the initialized elements of a slice.
+    /// An unrepresentable sum saturates so allocation admission reports exhaustion.
+    #[must_use]
+    fn slice_external_size(items: &[Self]) -> usize
+    where
+        Self: Sized,
+    {
+        items
+            .iter()
+            .map(Self::external_size)
+            .fold(0, usize::saturating_add)
+    }
+
     /// Returns metadata that holds roots with the VM's lifetime.
     fn heap_owner(&self) -> Option<Arc<dyn HeapOwner>> {
         None
@@ -6556,6 +6569,10 @@ impl Drop for GarbageCollector {
 
 // SAFETY: all hooks forward to the present value with the same protected owner.
 unsafe impl<T: Trace> Trace for Option<T> {
+    fn external_size(&self) -> usize {
+        self.as_ref().map_or(0, T::external_size)
+    }
+
     fn has_bounded_drop() -> bool {
         T::has_bounded_drop()
     }
@@ -6688,7 +6705,7 @@ unsafe impl<T: Trace> Trace for Vec<T> {
     fn external_size(&self) -> usize {
         self.capacity()
             .saturating_mul(size_of::<T>())
-            .saturating_add(self.iter().map(Trace::external_size).sum::<usize>())
+            .saturating_add(T::slice_external_size(self))
     }
 }
 
@@ -6732,6 +6749,12 @@ unsafe impl<T: Trace, S: ::std::hash::BuildHasher> Trace for HashSet<T, S> {
 
 // SAFETY: every component is traced and receives the same ownership context.
 unsafe impl<A: Trace, B: Trace> Trace for (A, B) {
+    fn external_size(&self) -> usize {
+        self.0
+            .external_size()
+            .saturating_add(self.1.external_size())
+    }
+
     fn needs_clear() -> bool {
         A::needs_clear() || B::needs_clear()
     }
@@ -6761,6 +6784,13 @@ unsafe impl<A: Trace, B: Trace> Trace for (A, B) {
 
 // SAFETY: every component is traced and receives the same ownership context.
 unsafe impl<A: Trace, B: Trace, C: Trace> Trace for (A, B, C) {
+    fn external_size(&self) -> usize {
+        self.0
+            .external_size()
+            .saturating_add(self.1.external_size())
+            .saturating_add(self.2.external_size())
+    }
+
     fn needs_clear() -> bool {
         A::needs_clear() || B::needs_clear() || C::needs_clear()
     }
@@ -6832,6 +6862,7 @@ macro_rules! impl_trace_primitive {
             unsafe impl Trace for $t {
                 fn may_contain_gc_references() -> bool { false }
                 fn needs_clear() -> bool { false }
+                fn slice_external_size(_: &[Self]) -> usize { 0 }
 
                 fn canonical_payload() -> Option<crate::CanonicalPayload<Self>> {
                     // SAFETY: primitive scalars have no graph, owner, backing or callbacks.
