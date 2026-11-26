@@ -104,6 +104,7 @@ pub(crate) struct TreeRoots {
 pub(crate) enum TreeScan {
     Root(usize, usize),
     Advance(usize),
+    Retry,
     Done,
 }
 
@@ -279,15 +280,42 @@ impl TreeRoots {
         self.with_page(key, |page| {
             let slot = id & (SLOTS - 1);
             let address = page.slots[slot].remove(expected)?;
-            self.live.fetch_sub(1, Ordering::Relaxed);
-            let bit = 1u64 << slot;
-            if page.occupied.release(bit) && key != 0 && !self.pages.load().is_recent(key) {
-                self.retire_empty(key, page);
-            } else if expected.is_some_and(|generation| generation.get() & OWNED_TREE_ROOT != 0) {
-                self.last_owned_vacancy.store(id, Ordering::Relaxed);
-            }
+            self.release_position(id, expected, page);
             Some(address)
         })
+    }
+
+    /// The source remains visible until the scanner vetoes removal or the
+    /// publisher commits coverage. Holding this page never pins a payload.
+    pub(crate) fn remove_covered(
+        &self,
+        root: TreeRoot,
+        covered: impl FnOnce(usize, &dyn Fn() -> bool) -> bool,
+    ) -> bool {
+        self.with_page((root.id >> PAGE_BITS) as u64, |page| {
+            let entry = &page.slots[root.id & (SLOTS - 1)];
+            let address = entry.begin_removal(root.generation)?;
+            if !covered(address, &|| entry.removal_pending(root.generation))
+                || !entry.finish_removal(root.generation)
+            {
+                return None;
+            }
+            self.release_position(root.id, Some(root.generation), page);
+            Some(())
+        })
+        .is_some()
+    }
+
+    fn release_position(&self, id: usize, expected: Option<NonZeroU64>, page: &Arc<Page>) {
+        let key = (id >> PAGE_BITS) as u64;
+        let slot = id & (SLOTS - 1);
+        self.live.fetch_sub(1, Ordering::Relaxed);
+        let bit = 1u64 << slot;
+        if page.occupied.release(bit) && key != 0 && !self.pages.load().is_recent(key) {
+            self.retire_empty(key, page);
+        } else if expected.is_some_and(|generation| generation.get() & OWNED_TREE_ROOT != 0) {
+            self.last_owned_vacancy.store(id, Ordering::Relaxed);
+        }
     }
 
     /// Inspect at most one page per collector work unit. Re-reading a numeric
@@ -314,8 +342,10 @@ impl TreeRoots {
         while bits != 0 {
             let slot = bits.trailing_zeros() as usize;
             bits &= bits - 1;
-            if let Some((_, address)) = page.slots[slot].read() {
-                return TreeScan::Root(base | slot, address);
+            match page.slots[slot].scan() {
+                state::Scan::Root(address) => return TreeScan::Root(base | slot, address),
+                state::Scan::Retry => return TreeScan::Retry,
+                state::Scan::Vacant => {}
             }
         }
         TreeScan::Advance(base | (SLOTS - 1))

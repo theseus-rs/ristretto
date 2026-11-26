@@ -70,3 +70,51 @@ fn independently_prepared_roots_do_not_lose_membership_during_retirement() {
         }
     });
 }
+
+#[test]
+fn a_scanner_can_veto_only_the_exact_tree_removal_it_observes() {
+    loom::model(|| {
+        let entry = Arc::new(Entry::default());
+        let first = NonZeroU64::new(u64::MAX).unwrap();
+        let second = NonZeroU64::new(4).unwrap();
+        entry.publish(first, 10);
+        assert_eq!(entry.begin_removal(first), Some(10));
+        let scanning = entry.clone();
+        let scan = thread::spawn(move || scanning.scan());
+        let committed = entry.removal_pending(first) && entry.finish_removal(first);
+        if committed {
+            entry.publish(second, 20);
+        }
+        match scan.join().unwrap() {
+            state::Scan::Root(address) => assert_eq!(address, if committed { 20 } else { 10 }),
+            state::Scan::Vacant => assert!(committed),
+            state::Scan::Retry => {}
+        }
+        if !committed {
+            assert_eq!(entry.remove(Some(first)), Some(10));
+            entry.publish(second, 20);
+        }
+        assert!(!entry.removal_pending(first) && !entry.finish_removal(first));
+        assert_eq!(entry.remove(Some(first)), None);
+        assert_eq!(entry.read(), Some((second, 20)));
+    });
+}
+
+#[test]
+fn an_admitted_remover_and_a_covered_remover_cannot_both_take_one_generation() {
+    loom::model(|| {
+        let entry = Arc::new(Entry::default());
+        let exact = NonZeroU64::new(OWNED_TREE_ROOT | 7).unwrap();
+        entry.publish(exact, 11);
+        assert_eq!(entry.begin_removal(exact), Some(11));
+        let other = entry.clone();
+        let compatible = thread::spawn(move || other.remove(Some(exact)));
+        let covered = entry.finish_removal(exact);
+        assert_eq!(compatible.join().unwrap(), (!covered).then_some(11));
+        let replacement = NonZeroU64::new(8).unwrap();
+        entry.publish(replacement, 22);
+        assert_eq!(entry.remove(Some(exact)), None);
+        assert!(!entry.finish_removal(exact));
+        assert_eq!(entry.remove(None), Some(22));
+    });
+}

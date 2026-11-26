@@ -639,6 +639,7 @@ thread_local! {
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 thread_local! {
     static COVERED_REMOVAL: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static TREE_DETACH_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static DROP_COVERAGE_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static EXTERNAL_TRACE_EPOCH: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static TYPED_PROPOSALS_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
@@ -650,6 +651,11 @@ pub(super) fn record_covered_removal() {
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn pause_after_tree_detach() {
+    wait_for_constructor_resume(TREE_DETACH_PAUSE.take());
+}
+
+#[cfg(all(test, not(target_family = "wasm"), not(miri)))]
 pub(super) fn pause_after_drop_coverage() {
     wait_for_constructor_resume(DROP_COVERAGE_PAUSE.take());
 }
@@ -955,10 +961,11 @@ fn drop_test_registration(
 fn typed_root_drop_orders_both_winners_against_a_new_full_cycle() -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
-    for storage in [
-        crate::RootStorage::Tree,
-        crate::RootStorage::Slots,
-        crate::RootStorage::Contexts,
+    for (storage, numeric) in [
+        (crate::RootStorage::Tree, true),
+        (crate::RootStorage::Tree, false),
+        (crate::RootStorage::Slots, false),
+        (crate::RootStorage::Contexts, false),
     ] {
         for counted in [false, true] {
             for scan_first in [false, true] {
@@ -980,7 +987,11 @@ fn typed_root_drop_orders_both_winners_against_a_new_full_cycle() -> Result<()> 
                     let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
                     let addr = parent.as_ptr().addr();
                     let handle = parent.as_handle_i64();
-                    let registration = drop_test_registration(&gc, &context, addr);
+                    let registration = if numeric {
+                        crate::roots::Registration::Tree(gc.insert_root(addr))
+                    } else {
+                        drop_test_registration(&gc, &context, addr)
+                    };
                     drop(parent);
                     let (entered, paused) = mpsc::channel();
                     let (resume, wait) = mpsc::channel();
@@ -3919,6 +3930,163 @@ fn parked_root_revocation_allows_peer_reclamation_and_exact_id_reuse() -> Result
         assert_eq!(*parent[0], 13);
         drop((object, parent));
         gc.stop()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn last_tree_root_shades_its_graph_while_the_object_shard_is_parked() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    for concurrent in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .root_storage(crate::RootStorage::Tree)
+                .concurrent_publication(concurrent)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let mut graphs = Vec::new();
+        for value in 0..8_u64 {
+            let child = Gc::try_new(&gc, value)?.into_rooted();
+            let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+            let parent = Gc::try_new(&gc, vec![child])?.into_rooted();
+            graphs.push((parent, weak, value));
+        }
+
+        gc.collect();
+        assert!((0..1024).any(|_| {
+            gc.step();
+            lock(&gc.domain_at(1).cycle).phase == Phase::Roots
+        }));
+        let epoch = gc.domain_at(1).epoch.load(Ordering::Acquire);
+        let unvisited = graphs
+            .iter()
+            .position(|(parent, _, _)| {
+                gc.objects
+                    .lookup(parent.as_ptr() as usize)
+                    .is_some_and(|metadata| !metadata.marked(1, epoch))
+            })
+            .expect("unvisited tree root");
+        let (parent, weak, value) = graphs.swap_remove(unvisited);
+        let address = parent.as_ptr() as usize;
+        let metadata = gc.objects.lookup(address).expect("registered owner");
+
+        let root = gc
+            .roots
+            .matching(address)
+            .pop()
+            .expect("last tree registration");
+        let shard = gc.objects.lock(address);
+        let (entered, reached) = mpsc::channel();
+        let (resume, wait) = mpsc::channel();
+        let (done, completed) = mpsc::channel();
+        let worker = thread::spawn(move || {
+            DROP_COVERAGE_PAUSE.set(Some(ClaimPause {
+                entered,
+                resume: wait,
+            }));
+            drop(parent);
+            done.send(()).expect("announce deletion");
+        });
+        assert!(reached.recv_timeout(Duration::from_secs(3)).is_ok());
+        // A scanner wins the removal intent, forcing the admitted deletion barrier.
+        assert_eq!(
+            gc.roots.scan(root.id - 1),
+            crate::roots::TreeScan::Root(root.id, address)
+        );
+        assert!(resume.send(()).is_ok());
+        let dropped = completed.recv_timeout(Duration::from_secs(3)).is_ok();
+        let strength = metadata.retention(1, epoch);
+        drop(shard);
+        assert!(worker.join().is_ok(), "root deletion panicked");
+        assert!(dropped, "deletion waited for a parked object shard");
+        assert_eq!(strength, Some(Retention::Strong));
+
+        while !gc.step() {}
+        assert_eq!(weak.upgrade().as_deref(), Some(&value));
+        drop(graphs);
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(clippy::unwrap_in_result, reason = "bounded thread schedule")]
+fn parked_tree_deletion_allows_capped_allocation_and_snapshot_completion() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        let scalar = Gc::allocation_size(&0_u64)?;
+        let node = Gc::allocation_size(&Vec::<Gc<u64>>::with_capacity(1))?;
+        let cap = 2 * scalar + node;
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .root_storage(crate::RootStorage::Tree)
+                .concurrent_publication(counted)
+                .max_heap_bytes(cap)
+                .allocation_threshold(usize::MAX)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .build(),
+        );
+        let child = Gc::try_new(&gc, 19_u64)?;
+        let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+        let parent = Gc::try_new(&gc, vec![child.into_rooted()])?.into_rooted();
+        drop(Gc::try_new(&gc, 13_u64)?);
+        assert_eq!(gc.managed_bytes(), cap);
+        let ticket = gc.request_full_cycle();
+        gc.step();
+        assert!(gc.domains[1].active());
+        let (entered, parked) = mpsc::channel();
+        let (resume, wait) = mpsc::channel();
+        let remover = thread::spawn(move || {
+            TREE_DETACH_PAUSE.set(Some(ClaimPause {
+                entered,
+                resume: wait,
+            }));
+            drop(parent);
+        });
+        parked
+            .recv_timeout(Duration::from_secs(3))
+            .expect("tree deletion detached");
+        let heap = gc.clone();
+        let (done, observed) = mpsc::channel();
+        let peer = thread::spawn(move || -> Result<()> {
+            let completed = (0..4096).any(|_| {
+                heap.step();
+                heap.completed_full_ticket() >= ticket
+            });
+            if completed {
+                assert_eq!(weak.upgrade().as_deref(), Some(&19));
+                assert_eq!(heap.managed_bytes(), cap - scalar);
+                let allocation = Gc::try_new(&heap, 23_u64)?;
+                assert_eq!(heap.managed_bytes(), cap);
+                heap.collect_full()?;
+                assert!(weak.upgrade().is_none());
+                assert_eq!(**allocation, 23);
+            }
+            done.send(completed).expect("return peer outcome");
+            Ok(())
+        });
+        let completed = observed.recv_timeout(Duration::from_secs(3));
+        resume.send(()).expect("resume tree deletion");
+        remover.join().expect("remover");
+        peer.join().expect("peer")?;
+        assert_eq!(
+            completed.ok(),
+            Some(true),
+            "peer could not advance while detached"
+        );
+        gc.collect_full()?;
         assert_eq!(gc.managed_bytes(), 0);
     }
     Ok(())
