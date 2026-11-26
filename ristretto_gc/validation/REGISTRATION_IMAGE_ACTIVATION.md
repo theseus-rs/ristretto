@@ -47,7 +47,9 @@ type and current reference decision until its root is published.
 At `d8766145`, ordinary registration held the object shard while inserting
 the descriptor. An immutable three-index image was separately explored as a
 private migration component. The design and model below record that experiment.
-The active collector uses exact slots and phase-certified visibility as described above.
+Commit `eabee970` removed the private image and its model tests. The source and
+test descriptions below refer to its parent revision. The active collector uses
+exact slots and phase-certified visibility as described above.
 
 One `ArcSwap` head owns three immutable `Directory` roots. Preparing an insert,
 exact removal or promotion changes no shared membership. One compare-and-swap

@@ -2509,19 +2509,11 @@ impl GarbageCollector {
         }
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         publication_tests::pause_inside_registration_commit();
-        let key = crate::registration_key::Key {
-            address,
-            id: metadata.id,
-        };
         #[cfg(feature = "experimental-identity-index")]
         let previous_identity = self.identities.get(metadata.id.to_i64().cast_unsigned());
         #[cfg(not(feature = "experimental-identity-index"))]
         let previous_identity = identity.as_ref().err().copied().flatten();
-        key.vacant(crate::registration_key::Observed {
-            object: None,
-            identity: previous_identity,
-            young: false,
-        })?;
+        crate::registration_key::validate(address, metadata.id, previous_identity)?;
         if metadata.birth.indexed() {
             return Err(crate::registration_key::Conflict::AlreadyPresent);
         }
