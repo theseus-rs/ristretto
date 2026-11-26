@@ -46,13 +46,26 @@ impl Harness {
         code: Vec<Instruction>,
         cases: Vec<(Vec<Value>, Value)>,
     ) -> Result<()> {
+        self.check_backedges(name, descriptor, code, cases, 0).await
+    }
+
+    async fn check_backedges(
+        &self,
+        name: &str,
+        descriptor: &str,
+        code: Vec<Instruction>,
+        cases: Vec<(Vec<Value>, Value)>,
+        expected_backedges: u64,
+    ) -> Result<()> {
+        #[cfg(not(feature = "execution-profile"))]
+        let _ = expected_backedges;
         let mut pool = ConstantPool::new();
         let definition = method(&mut pool, "run", descriptor, code)?;
         let class = class_from_methods(name, "java/lang/Object", pool, vec![definition])?;
         let class = register(&self.thread, class).await?;
         let method = class.try_get_method("run", descriptor)?;
         assert!(
-            ristretto_jit::Compiler::can_compile(method.definition()),
+            ristretto_jit::Compiler::can_compile_in(class.class_file(), method.definition()),
             "production gate rejected {name}"
         );
         for (parameters, expected) in &cases {
@@ -75,7 +88,7 @@ impl Harness {
         {
             let calls = u64::try_from(cases.len())?;
             assert_eq!(function.execution_count(), calls, "{name}");
-            assert_eq!(function.backedge_count(), 0, "{name}");
+            assert_eq!(function.backedge_count(), expected_backedges, "{name}");
             for (vm, compiled, interpreted) in
                 [(&self.vm, calls, 0), (&self.interpreted_vm, 0, calls)]
             {
@@ -94,6 +107,66 @@ impl Harness {
         assert!(self.interpreted_vm.configuration().interpreted());
         Ok(())
     }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn null_locals_execute_branches_through_ordinary_dispatch() -> Result<()> {
+    use Instruction::{
+        Aconst_null, Aload_1, Astore_1, Iconst_1, Iconst_m1, Ifle, Ifnonnull, Ifnull, Iinc,
+        Iload_0, Ireturn,
+    };
+    let harness = Harness::new().await?;
+    harness
+        .check_backedges(
+            "NullLoop",
+            "(I)I",
+            vec![
+                Aconst_null,
+                Astore_1,
+                Iload_0,
+                Ifle(12),
+                Iinc(0, -1),
+                Aload_1,
+                Ifnull(-8),
+                Iconst_m1,
+                Ireturn,
+                Iload_0,
+                Ireturn,
+            ],
+            vec![
+                (vec![Value::Int(3)], Value::Int(0)),
+                (vec![Value::Int(-1)], Value::Int(-1)),
+            ],
+            3,
+        )
+        .await?;
+    for (name, store, load) in [
+        ("NullIndexed", Instruction::Astore(6), Instruction::Aload(6)),
+        (
+            "NullWide",
+            Instruction::Astore_w(260),
+            Instruction::Aload_w(260),
+        ),
+    ] {
+        harness
+            .check(
+                name,
+                "()I",
+                vec![
+                    Aconst_null,
+                    store,
+                    load,
+                    Ifnonnull(5),
+                    Iconst_1,
+                    Ireturn,
+                    Iconst_m1,
+                    Ireturn,
+                ],
+                vec![(vec![], Value::Int(1))],
+            )
+            .await?;
+    }
+    Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

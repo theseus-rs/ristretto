@@ -234,11 +234,35 @@ impl Compiler {
                 instruction,
             ));
         }
+        let mut primitive_signature = None;
         instructions
             .iter()
             .find(|instruction| {
                 if Self::is_production_safe_instruction(instruction) {
                     return false;
+                }
+                if Self::is_null_local_instruction(instruction) {
+                    // The remaining admitted instructions cannot introduce a heap
+                    // reference. Check the parameters so null is the only possible
+                    // reference in these verified locals, even across a backedge.
+                    return !*primitive_signature.get_or_insert_with(|| {
+                        class
+                            .and_then(|class| {
+                                class
+                                    .constant_pool
+                                    .try_get_utf8(method.descriptor_index)
+                                    .ok()
+                            })
+                            .and_then(|descriptor| {
+                                FieldType::parse_method_descriptor(descriptor).ok()
+                            })
+                            .is_some_and(|(parameters, result)| {
+                                parameters
+                                    .iter()
+                                    .chain(result.iter())
+                                    .all(|ty| matches!(ty, FieldType::Base(_)))
+                            })
+                    });
                 }
                 // A long store carries only primitive bits through its checked
                 // field request. Keep the ordinary root handoff at this boundary.
@@ -391,24 +415,10 @@ impl Compiler {
                     ),
                     _ => false,
                 }
+                || Self::is_null_local_instruction(instruction)
                 || matches!(
                     instruction,
-                    Instruction::Aconst_null
-                        | Instruction::Aload(_)
-                        | Instruction::Aload_w(_)
-                        | Instruction::Aload_0
-                        | Instruction::Aload_1
-                        | Instruction::Aload_2
-                        | Instruction::Aload_3
-                        | Instruction::Astore(_)
-                        | Instruction::Astore_w(_)
-                        | Instruction::Astore_0
-                        | Instruction::Astore_1
-                        | Instruction::Astore_2
-                        | Instruction::Astore_3
-                        | Instruction::Areturn
-                        | Instruction::Ifnull(_)
-                        | Instruction::Ifnonnull(_)
+                    Instruction::Areturn
                         | Instruction::If_acmpeq(_)
                         | Instruction::If_acmpne(_)
                         | Instruction::New(_)
@@ -1035,6 +1045,27 @@ impl Compiler {
     /// selection separately uses the narrower rootless classification below.
     fn is_production_safe_instruction(instruction: &Instruction) -> bool {
         Self::is_rootless_primitive_instruction(instruction)
+    }
+
+    fn is_null_local_instruction(instruction: &Instruction) -> bool {
+        matches!(
+            instruction,
+            Instruction::Aconst_null
+                | Instruction::Aload(_)
+                | Instruction::Aload_w(_)
+                | Instruction::Aload_0
+                | Instruction::Aload_1
+                | Instruction::Aload_2
+                | Instruction::Aload_3
+                | Instruction::Astore(_)
+                | Instruction::Astore_w(_)
+                | Instruction::Astore_0
+                | Instruction::Astore_1
+                | Instruction::Astore_2
+                | Instruction::Astore_3
+                | Instruction::Ifnull(_)
+                | Instruction::Ifnonnull(_)
+        )
     }
 
     fn is_primitive_branch(instruction: &Instruction) -> bool {
@@ -1740,6 +1771,48 @@ mod tests {
     fn test_compiler_new() {
         let result = Compiler::new();
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn ordinary_null_locals_require_a_primitive_signature_and_no_heap_producer() -> Result<()> {
+        let mut class = ClassFile::default();
+        let owner = class.constant_pool.add_class("ObjectOwner")?;
+        for (descriptor, admitted) in [
+            ("(I)V", true),
+            ("()V", true),
+            ("(Ljava/lang/Object;)V", false),
+            ("([I)V", false),
+            ("()[I", false),
+            ("()", false),
+        ] {
+            let descriptor_index = class.constant_pool.add_utf8(descriptor)?;
+            let body = |source| Method {
+                access_flags: MethodAccessFlags::STATIC,
+                descriptor_index,
+                attributes: vec![Attribute::Code {
+                    name_index: 0,
+                    max_stack: 1,
+                    max_locals: 1,
+                    code: vec![source, Instruction::Astore_0, Instruction::Return],
+                    exception_table: vec![],
+                    attributes: vec![],
+                }],
+                ..Default::default()
+            };
+            let null = body(Instruction::Aconst_null);
+            assert_eq!(
+                Compiler::can_compile_in(&class, &null),
+                admitted,
+                "{descriptor}"
+            );
+            assert!(!Compiler::can_compile(&null));
+            let allocation = body(Instruction::New(owner));
+            assert_eq!(
+                Compiler::rejection_in(&class, &allocation).and_then(|r| r.bytecode),
+                Some((0, Instruction::New(owner).code()))
+            );
+        }
+        Ok(())
     }
 
     #[test]
