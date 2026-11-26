@@ -42,6 +42,24 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Parked native cleanup and independent bounded storage | `a0eba4e2` | 251127124 | **10.39×** | **10.50×** | **36 / 36** |
 | Exact Java Reference fields through hidden subclass members | `cdee5888` | 251127133 | **10.86×** | **10.61×** | **36 / 36** |
 
+## Native allocation while a second host destructor is pending
+
+The published collector can reclaim independent bounded backing while one native destructor is parked. An independent object with an arbitrary Rust destructor can still leave a waiting allocator out of memory. In an experimental version that pledged an opaque donor to a specific waiting allocation before destruction, two full collections finished while the allocation stayed pending behind a nonreturning destructor. The control returned out-of-memory on the same schedule. That experiment remains outside the release source.
+
+A different experiment made each cleanup task available to two native consumers. With both parked and a third destructor queued, collection tickets continued to complete. Releasing one consumer allowed the third destructor to start. A waiting allocation could then spend physically returned bytes, and cancellation preserved the original charge. The published control timed out waiting for the second destructor to enter. In a separate unsynchronized test, the first two-consumer implementation funded the allocation in 411 of 500 independent processes. The other 89 returned out-of-memory.
+
+Each timing below is the median paired ratio of physical collection completion time to the published implementation at `a0eba4e2`, using 15 randomized process pairs for each finalizer count and marking-worker count. Ratios above one took longer.
+
+| Experimental queue | 1 finalizer, 1 worker | 64 finalizers, 1 worker | 1,024 finalizers, 1 worker | 1,024 finalizers, 2 workers |
+| --- | ---: | ---: | ---: | ---: |
+| One queue entry per task | 1.031× | 3.099× | 9.313× | 10.732× |
+| Two queue entries per batch | 1.039× | 1.322× | 2.076× | 2.218× |
+| Batched segmented queue | 1.001× | 1.024× | 1.190× | 1.185× |
+
+All three queue designs remain experiments. Whether a waiting allocation can use an arbitrary donor still depends on when physical destruction finishes relative to its terminal decision. [Patches, schedules, raw process results, build receipts and bootstrap intervals](opaque-cleanup-experiments.json.gz)
+
+![Physical completion ratios for independently claimable native cleanup](opaque-cleanup-cost.svg)
+
 ## Java reference fields hidden by subclasses
 
 A Java subclass of `WeakReference` can declare a strong field named `referent`. On the control, reading the base reference returned the subclass value, and clearing the base reference erased the strong field. HotSpot retained it through two collections. At `cdee5888`, linking resolves the JDK declaration and descriptor once for `referent`, `queue` and `discovered`. Native access and conditional tracing use the same referent slot. Before linking, a class with a JDK Reference ancestor matches the declaring field against the captured field layout by identity.
