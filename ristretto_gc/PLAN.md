@@ -2,6 +2,16 @@
 
 ## Tenfold complete-collection gate
 
+At `ef490d09`, synchronous allocation at the logical heap limit can reclaim
+unreachable storage, including when a registered native worker is parked.
+All 36 complete-collection conditions passed against `f1daebeb`. The weakest
+individual 95% lower speedup bounds were 10.88× native and 10.95× WASI.
+Three contention tests passed in 100 fresh native processes each. A separate
+parked waiter-index test timed out before an unrelated full collection could
+finish. Wake delivery, leased and deferred storage, and integrated VM
+ownership remain on the alpha critical path.
+[Complete-collection data and progress tests](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#synchronous-allocation-recovery).
+
 At `5c05cc39`, ordered enrollment pages reduced full-heap registration and
 cancellation time by 76–83% relative to `a9242931`. With one, 64 and 1,024
 pending allocations, the remaining cost relative to `42c37eb4` was 1.75×,

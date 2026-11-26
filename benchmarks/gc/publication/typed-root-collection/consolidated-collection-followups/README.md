@@ -21,6 +21,15 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Allocation refund observations while a registrar is parked | `42c37eb4` | 251126941 | **10.37×** | **10.73×** | **36 / 36** |
 | Reserve physically released donor charges for waiting allocations | `a9242931` | 251126942 | **10.53×** | **10.63×** | **36 / 36** |
 | Paged enrollment with a helpable commit | `5c05cc39` | 251126945 | **11.01×** | **11.38×** | **36 / 36** |
+| Synchronous recovery at the managed heap limit | `ef490d09` | 251126947 | **10.88×** | **10.95×** | **36 / 36** |
+
+## Synchronous allocation recovery
+
+At `ef490d09`, an 8-byte synchronous allocation can reclaim an unreachable 32-byte donor at the configured heap limit. The single-attempt constructor returns its unpublished value when the heap is full. The recovering constructor roots outgoing edges before helping its own collection ticket. A private donor must release its storage before a waiting allocation can spend the charge. On a single-threaded Wasm host the synchronous constructor drives collection on the calling turn. Callers that need to yield to the host can use the asynchronous constructor.
+
+All 300 fresh native processes passed across three tests covering sleeping synchronous allocators, a parked native collector worker, and asynchronous donor sharing. The tests retained the resulting objects and checked the heap charge. Native passed 505 default library tests and 1,150 all-feature checks. WASI passed 311 library tests and 16 allocation and recovery integration tests. The initial all-feature run exposed a shutdown test reading its flag while a native worker could still own the collector. The verified test waits for destruction before checking finalization. Strict native Clippy, the bare Wasm build and Cargo package verification passed. [Test outcomes, original failures and package identity](sync-recovery-tests.json.gz) · [Paired collection samples](sync-recovery.csv)
+
+A separate native test parked the allocation waiter index. A peer exceeded its one-second deadline to reclaim an unrelated object and finish its ticket. Independent wake delivery and deferred storage retirement remain open.
 
 ## Paged enrollment
 
