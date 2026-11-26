@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build selected features from the workspace's actual Cargo release archives."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -51,23 +52,31 @@ def main():
                             f'features = {json.dumps(sorted(features))} }}')
         # Resolve all in-flight crates at the same versions a coordinated publish would provide.
         manifest.append("[patch.crates-io]")
+        package_set = hashlib.sha256()
         for name in sorted(required):
             package = packages[name]
             directory = f"{name}-{package['version']}"
-            with tarfile.open(archives / (directory + ".crate")) as archive:
+            path = archives / (directory + ".crate")
+            with path.open("rb") as source:
+                package_set.update(hashlib.file_digest(source, "sha256").digest())
+            with tarfile.open(path) as archive:
                 archive.extractall(root, filter="data")
             manifest.append(f'{name} = {{ path = "{directory}" }}')
         (root / "Cargo.toml").write_text("\n".join(manifest) + "\n", encoding="utf-8")
         (root / "src").mkdir()
-        (root / "src/lib.rs").write_text("", encoding="utf-8")
+        libraries = [target["name"] for name in sorted(selected) for target in packages[name]["targets"]
+                     if target["kind"] == ["lib"] or target["kind"] == ["proc-macro"]]
+        (root / "src/lib.rs").write_text("".join(f"use {library} as _;\n" for library in libraries),
+                                          encoding="utf-8")
         # The consumer is new and its dependency manifests are the normalized package versions.
         # Keep the overall workspace's pinned versions wherever their constraints allow them.
         (root / "Cargo.lock").write_bytes((Path(metadata["workspace_root"]) / "Cargo.lock").read_bytes())
         subprocess.run(["cargo", "update", "--workspace", "--manifest-path", root / "Cargo.toml", "--offline"], check=True)
-        # Keep native and cross-target external consumers in separate absolute targets.
+        # Cargo archives normalize file timestamps. Two revisions can have the same
+        # version, filenames and mtimes; only reuse artifacts for identical archives.
         suffix = "packaged-features" if args.target is None else "packaged-features-" + args.target
         build = ["cargo", "build", "--manifest-path", root / "Cargo.toml", "--locked",
-                 "--target-dir", (Path(metadata["target_directory"]) / suffix).resolve()]
+                 "--target-dir", (Path(metadata["target_directory"]) / suffix / package_set.hexdigest()).resolve()]
         if args.target is not None:
             build.extend(["--target", args.target])
         subprocess.run(build, check=True)
