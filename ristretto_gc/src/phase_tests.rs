@@ -135,6 +135,33 @@ mod native {
 
     #[cfg(not(miri))]
     #[test]
+    fn explicit_full_publishes_its_cleanup_request_while_the_cycle_lock_is_parked() -> Result<()> {
+        let gc = collector(true);
+        let cycle = lock(&gc.domains[1].cycle);
+        let (issued, observed) = mpsc::channel();
+        let (start, resume) = mpsc::channel();
+        let heap = gc.clone();
+        let owner = thread::spawn(move || {
+            AFTER_FULL_REQUEST.set(Some(ClaimPause {
+                entered: issued,
+                resume,
+            }));
+            heap.collect_full()
+        });
+        let published = observed.recv_timeout(Duration::from_secs(1));
+        let request_visible = gc.domains[1].requested.load(Ordering::Acquire);
+        drop(cycle);
+        start.send(()).expect("resume explicit caller");
+        owner.join().expect("requesting thread")?;
+        assert!(
+            published.is_ok() && request_visible,
+            "parked cycle blocked request publication"
+        );
+        Ok(())
+    }
+
+    #[cfg(not(miri))]
+    #[test]
     fn synchronous_full_waits_for_its_claimed_cleanup_while_another_full_finishes() -> Result<()> {
         for counted in [false, true] {
             for independent in [false, true] {
