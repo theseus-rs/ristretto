@@ -792,7 +792,8 @@ fn reference_waiters_can_be_woken_by_another_helper_during_a_stalled_wake() {
         release: Mutex::new(resume),
     });
     let mut futures = Vec::new();
-    for _ in 0..2 {
+    let handlers = 130;
+    for _ in 0..handlers {
         let waker = Waker::from(Arc::new(Callback(calls.clone())));
         let mut future = Box::pin(gc.wait_for_pending_references());
         assert!(
@@ -810,10 +811,15 @@ fn reference_waiters_can_be_woken_by_another_helper_during_a_stalled_wake() {
     thread::scope(|scope| {
         scope.spawn(|| gc.notify_progress());
         parked.recv_timeout(Duration::from_secs(10)).unwrap();
+        // The first callback remains parked. The original notification
+        // must reach the remaining pages even after the queue is consumed.
+        let transferred = gc.take_pending_reference::<u64>().unwrap().unwrap();
+        assert_eq!(transferred.identity(), owner.identity());
+        assert!(!gc.has_pending_references());
         gc.notify_progress();
         let delivered = calls.count.load(Ordering::SeqCst);
         release.send(()).unwrap();
-        assert_eq!(delivered, 2);
+        assert_eq!(delivered, handlers);
     });
 }
 
@@ -1532,4 +1538,65 @@ fn retained_phantom_cleanup_respects_each_collection_work_unit() -> Result<()> {
         assert_eq!(gc.statistics()?.live_objects, 0);
     }
     Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn reference_registration_delivery_and_cancellation_survive_a_parked_allocation_index() {
+    use std::future::Future;
+    use std::sync::mpsc;
+    use std::task::{Context, Wake, Waker};
+    use std::time::Duration;
+
+    struct Calls(AtomicUsize);
+    impl Wake for Calls {
+        fn wake(self: Arc<Self>) {
+            self.0.fetch_add(1, Ordering::AcqRel);
+        }
+    }
+    let gc = GarbageCollector::new();
+    let owner = Gc::new(&gc, 19_u64);
+    let target = Gc::new(&gc, 23_u64);
+    let link = GcWeak::new(&target, ReferenceKind::Weak, owner.as_ptr().addr());
+    let (entered, parked) = mpsc::channel();
+    let (resume, release) = mpsc::channel();
+    let (done, finished) = mpsc::channel();
+    thread::scope(|scope| {
+        let heap = &gc;
+        scope.spawn(move || {
+            heap.recovery.with_parked_waiter_index(|| {
+                entered.send(()).unwrap();
+                release.recv_timeout(Duration::from_secs(8)).unwrap();
+            });
+        });
+        parked.recv_timeout(Duration::from_secs(3)).unwrap();
+        scope.spawn(|| {
+            let calls = Arc::new(Calls(AtomicUsize::new(0)));
+            let waker = Waker::from(calls.clone());
+            let mut cx = Context::from_waker(&waker);
+            let mut wait = Box::pin(gc.wait_for_pending_references());
+            assert!(wait.as_mut().poll(&mut cx).is_pending());
+            let mut cancelled = Box::pin(gc.wait_for_pending_references());
+            assert!(cancelled.as_mut().poll(&mut cx).is_pending());
+            drop(cancelled);
+            gc.enqueue_reference(&link.slot);
+            gc.notify_progress();
+            assert!(wait.as_mut().poll(&mut cx).is_ready());
+            assert_eq!(
+                gc.take_pending_reference::<u64>()
+                    .unwrap()
+                    .unwrap()
+                    .identity(),
+                owner.identity()
+            );
+            done.send(calls.0.load(Ordering::Acquire)).unwrap();
+        });
+        let result = finished.recv_timeout(Duration::from_secs(1));
+        resume.send(()).unwrap();
+        assert_eq!(
+            result,
+            Ok(1),
+            "only the active handler must wake before the allocation index resumes"
+        );
+    });
 }

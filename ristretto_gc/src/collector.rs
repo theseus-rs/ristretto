@@ -6119,9 +6119,7 @@ impl GarbageCollector {
     }
 
     fn notify_progress(&self) {
-        if self.has_pending_references() {
-            self.recovery.references_ready();
-        }
+        self.recovery.notify_reference_handlers(self);
         self.recovery.notify_progress(self);
     }
 

@@ -46,9 +46,6 @@ struct Waiters {
     // Other notifiers can take the next wake while a callback is running.
     ready: BTreeMap<(u64, WaiterId), Waiter>,
     delivering: Vec<std::thread::ThreadId>,
-    references: BTreeMap<usize, Waker>,
-    ready_references: BTreeMap<usize, Waker>,
-    reference_turn: bool,
     space: BTreeMap<(usize, WaiterId), u64>,
     physical: BTreeMap<WaiterId, (u64, Layout)>,
     physical_cursor: WaiterId,
@@ -114,6 +111,7 @@ impl Waiters {
 #[derive(Debug, Default)]
 pub(crate) struct Recovery {
     waiters: Mutex<Waiters>,
+    references: reference_wait::ReferenceWaiters,
     observations: arc_swap::ArcSwapOption<Observations>,
     notified: AtomicU64,
     waiting: AtomicUsize,
@@ -436,10 +434,8 @@ impl Recovery {
                 .map_or(usize::MAX, |((bytes, _), _)| *bytes),
             Ordering::Release,
         );
-        self.wake_pending.store(
-            !waiters.ready.is_empty() || !waiters.ready_references.is_empty(),
-            Ordering::Release,
-        );
+        self.wake_pending
+            .store(!waiters.ready.is_empty(), Ordering::Release);
         self.waiting.store(
             waiters.entries.len() + waiters.ready.len(),
             Ordering::Release,
@@ -587,14 +583,7 @@ impl Recovery {
         while self.wake_pending.load(Ordering::Acquire) {
             let next = {
                 let mut waiters = lock(&self.waiters);
-                let reference = !waiters.ready_references.is_empty()
-                    && (waiters.ready.is_empty() || waiters.reference_turn);
-                waiters.reference_turn = !reference;
-                let next = if reference {
-                    waiters.ready_references.pop_first().map(|(_, waker)| waker)
-                } else {
-                    waiters.ready.pop_first().map(|(_, entry)| entry.waker)
-                };
+                let next = waiters.ready.pop_first().map(|(_, entry)| entry.waker);
                 self.update_counts(&waiters);
                 next
             };
