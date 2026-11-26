@@ -1,10 +1,10 @@
-from paired_measurement import sha256
 """Invalid work accounting and incomplete pairs must not produce a favorable graph."""
 import unittest
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from paired_measurement import sha256
 from mark_cycles import INVOCATION_NAME, invocation, summarize, validate, validate_builds
 
 

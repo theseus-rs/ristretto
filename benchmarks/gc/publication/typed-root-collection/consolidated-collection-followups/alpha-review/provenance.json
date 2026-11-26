@@ -1,0 +1,46 @@
+{
+  "baseline": "f1daebeb",
+  "candidate": "8e277a3958870105b69f8dde4f4c2c6f0ff7bf9a",
+  "targets": {
+    "native": {
+      "before_binary_sha256": "844228aabef911e99f21392858bf654d731b8d6cf9af45f2c47a437cf05085af",
+      "after_binary_sha256": "4d6c50fb89d32670ef1a84796e20a7c3a0d705d3d4d5685633463675bf0f82f5",
+      "matched_compiler_controls_sha256": "31c72fafb341196436a9354f17124ed6cd401422111e9ee670e384ace3a89e37",
+      "raw_gzip_sha256": "20e35537e11fff14901e3bf11c19b8a0ac93c9af5cfbfa116d54e1228b8c65df",
+      "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+      "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_gc",
+        "--example",
+        "mark_cycles",
+        "--message-format=json"
+      ]
+    },
+    "wasm": {
+      "before_binary_sha256": "30d022b6a49ad2c0d8f117e4135d05c28332e702a5ba343d39c587dd4766c05b",
+      "after_binary_sha256": "9178bf0d3797936b9fbb2f14c839eb5d77b951a8a752b7e51b43dcedcfb7fb87",
+      "matched_compiler_controls_sha256": "06dcbd4dbd128998129a845161b3ae7d4c735bc893fdd6f8dc98ef8ad456012c",
+      "raw_gzip_sha256": "c981bd041fd6a054d90e4a1886008dd2e418b701d6f1a53032915902d472532c",
+      "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+      "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_gc",
+        "--example",
+        "mark_cycles",
+        "--target",
+        "wasm32-wasip2",
+        "--message-format=json"
+      ]
+    }
+  }
+}

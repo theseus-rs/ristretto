@@ -1,5 +1,8 @@
 # Release the first GC preview through stacked MRs
 
+This document records the earlier restricted source preview. The [alpha release plan](PLAN.md#alpha-collector-and-review-gates) governs the shipping JVM.
+
+
 The release is an **opt-in source prerelease for restricted Java programs**. A user should be able to build from the archive, run the same Java 17 classfiles on the native interpreter, native compiled tier and WASI interpreter, and observe cyclic reclamation. The example must return **64**, allocate **16** objects, leave **zero** payload bytes after cleanup and **zero** catalog bytes after drop. Its compiled execution must report **25** compiled entries and **8** compiled backedges. The rest of the supported Java surface is also part of the milestone. [Java contract](../ristretto_vm/CANONICAL_JAVA.md) · [Runnable example](../ristretto_vm/examples/canonical_java.rs)
 
 ## Source and merge destination

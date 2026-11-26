@@ -1,5 +1,24 @@
 # GC and whole-JVM performance improvement plan
 
+## Alpha collector and review gates
+
+The ordinary JVM collector is the sole shipping heap on native, WASI and the
+browser. The catalog and pool remain a research protocol in
+`ristretto_gc_catalog`. Restricted Java research sessions live in the
+workspace-only `ristretto_vm_research`. The release dependency check resolves
+all features of each shipping entry point and rejects the research path.
+See [the release check](../benchmarks/gc/release/verify_alpha_heap.py).
+
+| Review topic | Decision and outstanding evidence |
+|---|---|
+| Storage, publication and worker defaults | Retain the current defaults while stock-policy workload controls are open. In earlier screens, 16 metadata shards added 0.9–2.5% compact throughput and worsened worker p99.99 by 4.4–22%. Counted publication improved recovery throughput and worsened compact p99.99 by 18.7–40.6%. Four-worker compact allocation fell from 402.0k/s with slots to 391.5k/s with contexts. Independent marking and stealing also had mixed throughput results. Repeat matched stock/native, cooperative WASI, and capped-contention arms before removing active fallback paths. The unused registration image has been removed. [Policy measurements](VALIDATION.md) |
+| Allocation and guards | Mapped guards retain their typed parent inline. Each lock stores one mutation callback and diagnostic pins borrow their counters. The descriptor shrank 24 bytes on x86-64. Combined payload/metadata storage remains open. A prototype must allow payload storage to be reused while a peer retains an inert descriptor. Check both release orders, alignment, exact fits and refunds, panic/cancellation, and a paused registry reader before measuring allocations and retained bytes. [Layout and collection results](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/alpha-review/README.md) |
+| Collector structure | Workers, roots, barriers, reference processing, tracing, cycle coordination and reclamation now have separate modules. The managed lock no longer exposes pseudo-recursive reads or an upgradable guard without an acquisition path. |
+| Whole-JVM throughput | Qualify physical context-local allocation separately from logical credits. Earlier combined buffers improved a 256-byte compact case by 23.9% and raised 4 KiB compact p99.99 from 261.5 to 3,264 µs. Measure common field and array loads/stores and confirm actual compiled entries in the Java hot loop. Static long stores use the ordinary VM continuation, with volatile ordering and Java fault coverage. Reference values live across polls still require owning frame roots and cancellation tests. [Scheduled Java measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/ordinary-static-long/README.md) |
+| Release qualification | Keep deterministic parked-participant progress, ordinary JVM class coverage, browser responsiveness, fixed-rate throughput and scheduled tails against G1/ZGC, three hour-long runs and a 24-hour soak as separate gates. |
+
+
+
 ## Tenfold complete-collection gate
 
 At `0048fdc4`, a second native callback consumer can reclaim an independent arbitrary destructor while the primary is parked and an allocation needs space. Both charges stay live while both destructors are parked, and the requester can report exhaustion. The unsynchronized allocation succeeded in 600/600 fresh candidate processes against 0/600 on the parent. All 36 complete-collection conditions passed. The lowest individual 95% lower speedup bounds were 10.41× native and 10.61× WASI. Paused receiver claims, truly opaque nonreturning cleanup, ordinary JVM ownership, whole-host measurements and sustained-load qualification remain open. [Controls, process results and costs](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#native-allocation-with-an-independent-arbitrary-destructor).
