@@ -81,28 +81,27 @@ fn linux_clock(resolution: bool) -> Option<u64> {
 mod tests {
     use super::*;
 
+    #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
     #[test]
-    #[cfg_attr(
-        not(all(target_family = "wasm", target_os = "unknown")),
-        expect(clippy::panic_in_result_fn)
-    )]
+    #[expect(clippy::panic_in_result_fn)]
     fn monotonic_clock_does_not_use_the_unix_epoch() -> Result<(), Box<dyn std::error::Error>> {
-        #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
-        {
-            let before = monotonic_time_ns();
-            let after = monotonic_time_ns();
-            assert!(before.is_some());
-            assert!(after >= before);
-            // Regression for nanoTime's previous direct SystemTime/UNIX_EPOCH
-            // implementation. No supported host has run since the Unix epoch.
-            let wall = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)?
-                .as_nanos();
-            assert!(u128::from(after.ok_or("monotonic clock unavailable")?) < wall / 2);
-        }
-        #[cfg(all(target_family = "wasm", target_os = "unknown"))]
-        assert_eq!(monotonic_time_ns(), None);
+        let before = monotonic_time_ns();
+        let after = monotonic_time_ns();
+        assert!(before.is_some());
+        assert!(after >= before);
+        // Regression for nanoTime's previous direct SystemTime/UNIX_EPOCH
+        // implementation. No supported host has run since the Unix epoch.
+        let wall = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_nanos();
+        assert!(u128::from(after.ok_or("monotonic clock unavailable")?) < wall / 2);
         Ok(())
+    }
+
+    #[cfg(all(target_family = "wasm", target_os = "unknown"))]
+    #[test]
+    fn bare_wasm_has_no_monotonic_clock() {
+        assert_eq!(monotonic_time_ns(), None);
     }
 
     #[test]
