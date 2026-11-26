@@ -2,6 +2,9 @@
 
 ## Tenfold complete-collection gate
 
+At `480d279a`, synchronized Java methods retain their receiver while waiting for a monitor and through release. The four return/cancellation cases passed on native and WASI. All 1,008 enabled native VM tests passed and three were ignored. The complete-collection comparison passed all 36 conditions, with weakest individual 95% speedup bounds of 10.03× native and 10.50× WASI. Deletion-barrier identity, broader VM boundaries, pause telemetry and sustained comparisons remain open.
+[Synchronized receiver regression and collection measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#synchronized-method-receiver-lifetime).
+
 At `43ad8138`, peers can deliver allocation and ticket notifications across a parked waiter publisher, executor migration, and the last worker’s exit. All 1,700 forced schedules and 36 complete-collection conditions passed. The lowest individual 95% speedup bounds were 10.14× native and 10.81× WASI. The largest queue improved on enrollment and repeat polls, while executor changes at one and 64 waiters still cost more than the parent. Region-backed or finalizable storage, deletion during address reuse, ordinary VM root ownership, and whole-host qualification remain open.
 [Waiter controls, cost intervals and full-cycle measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#allocation-waiters-across-executor-changes-and-worker-exit).
 

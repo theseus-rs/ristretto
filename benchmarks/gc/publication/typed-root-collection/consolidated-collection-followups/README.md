@@ -33,6 +33,13 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Allocation waiters and last-worker exit (withheld experiment) | `53c3f961` | 251126992 | **10.35×** | **10.35×** | **36 / 36** |
 | Cooperative clearing of locked buffers | `d07426d1` | 251127009 | **10.43×** | **10.63×** | **36 / 36** |
 | Executor registration and last-worker exit | `43ad8138` | 251127011 | **10.14×** | **10.81×** | **36 / 36** |
+| Root implicit Java monitors across suspension | `480d279a` | 251127012 | **10.03×** | **10.50×** | **36 / 36** |
+
+## Synchronized method receiver lifetime
+
+On `d65e7802`, ordinary Java dispatch could reclaim the receiver of a synchronized instance method after the method cleared local variable zero, while the Java monitor was still held. The method guard now acquires an owning reference before awaiting monitor entry and releases the monitor before dropping that reference. The test transfers the embedding's sole reference into the call, clears the receiver local, forces two complete collections, and checks acquisition by a second thread and collection after release.
+
+The regression ran on native and WASI for successful return, cancellation while holding the monitor, cancellation while waiting to acquire it, and cancellation after notification but before the next poll. Three existing compiled cooperation tests had assumed their first pending poll always reached a specific Java instruction. On the same executable their result varied by working directory. They now use the executor's waker and verify the class, method, frame depth and bytecode offset before testing ownership across suspension. The integrated native execution-profile VM suite passed 1,008 tests with three ignored. Strict VM Clippy passed. The complete-collection comparison retained the 10× gate across all 36 conditions. [Parent failure, native and WASI verification](method-monitor-verification.json.gz) · [Paired full-cycle samples](method-monitors.csv)
 
 ## Allocation waiters across executor changes and worker exit
 
