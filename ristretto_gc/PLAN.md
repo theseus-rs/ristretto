@@ -11,6 +11,14 @@ reproduced both measured executables. Production integration needs a new
 qualification after applying the reviewed changes. [Graphs, inputs and
 reproduction commands for PR #1233](../benchmarks/gc/publication/typed-root-collection/tenfold-complete/README.md).
 
+The first tenfold collector exceeded the 512 MiB limit during JVM warmup in
+all four fixed-arrival forks. Restricting the mature survivor index to sweeps
+that visit multiple entries brought all four below 461 MiB. The corrected
+experimental collector at de943ebf cleared the same complete-collection gate
+with lowest individual 95% bounds of 10.20× native and 11.62× WASI. The
+end-to-end comparison still favors HotSpot at both measured rates. [Java
+results, individual forks and graph](../benchmarks/gc/publication/typed-root-collection/tenfold-java/README.md).
+
 Continue zero-global-pause work on typed paged-root publication, deferred page
 cleanup and whole-JVM pause attribution. Re-run the scheduled Java comparison
 and the native/Wasm sustained workloads on the integrated implementation.

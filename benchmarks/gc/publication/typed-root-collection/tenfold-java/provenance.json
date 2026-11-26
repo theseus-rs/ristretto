@@ -1,0 +1,139 @@
+{
+  "original": {
+    "created_utc": "2026-11-26T02:39:30Z",
+    "java": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+    "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+    "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+    "java_classes": {
+      "classes/GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+      "classes/GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+      "classes/GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+      "classes/GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+      "classes/GcBench.class": "b4532f8c7186f8505ba38d1edc05d7ee072eec67b490d7382d173cd8a3b4144a",
+      "gc_compare": "242e825ecab4a932fc53584664156f6f7b3db1ed0a243925c7f140d8b2b0fbf9"
+    },
+    "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+    "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5\n",
+    "driver": "3e96ba7d2a28f185de72d6be191dd511f41e8c8c",
+    "runtime_source": "6f9c6f9df734f2157aa655d49e1b7775ba2aa194",
+    "runtime_source_archive_sha256": "9054f17110e57fa408ce495a3304cb52b220671e53f772ca843ee12ebaacc91b",
+    "binary_sha256": "242e825ecab4a932fc53584664156f6f7b3db1ed0a243925c7f140d8b2b0fbf9",
+    "raw_sha256": "bcc3b29a62c6566ce64e8342dfbf7e370b0c42af11a04578aa23781d37366b92",
+    "options": {
+      "runtimes": [
+        "ristretto-candidate-jit",
+        "g1",
+        "zgc"
+      ],
+      "workloads": [
+        "roots"
+      ],
+      "rates": [
+        1000,
+        1500
+      ],
+      "workers": 2,
+      "cpus": [
+        4,
+        6
+      ],
+      "heap_mib": 64,
+      "rss_mib": 512,
+      "cpu_quota": 2.0,
+      "warmup": 5,
+      "seconds": 60,
+      "repeats": 2,
+      "seed": 140913
+    }
+  },
+  "unindexed": {
+    "created_utc": "2026-11-26T02:51:57Z",
+    "java": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+    "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+    "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+    "java_classes": {
+      "classes/GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+      "classes/GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+      "classes/GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+      "classes/GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+      "classes/GcBench.class": "b4532f8c7186f8505ba38d1edc05d7ee072eec67b490d7382d173cd8a3b4144a",
+      "gc_compare": "ffe66b0229091e84967ce389e0a494e492a82187fd75ab67c09624fb32b1f2a2"
+    },
+    "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+    "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5\n",
+    "driver": "3e96ba7d2a28f185de72d6be191dd511f41e8c8c",
+    "runtime_source": "628a9789f8c2b869156f44b1a4d1b36f16b5c341",
+    "runtime_source_archive_sha256": "aeac4e3988efd701fa464d5e57d7895d7f9b41580ab626f188cc6a317f2485c1",
+    "binary_sha256": "ffe66b0229091e84967ce389e0a494e492a82187fd75ab67c09624fb32b1f2a2",
+    "raw_sha256": "e7810e8c22af6e6a131e0a3cf11e380cb76e6bc4e716c94c5d9b1fc14cb5164d",
+    "options": {
+      "runtimes": [
+        "ristretto-candidate-jit"
+      ],
+      "workloads": [
+        "roots"
+      ],
+      "rates": [
+        1000,
+        1500
+      ],
+      "workers": 2,
+      "cpus": [
+        4,
+        6
+      ],
+      "heap_mib": 64,
+      "rss_mib": 512,
+      "cpu_quota": 2.0,
+      "warmup": 5,
+      "seconds": 60,
+      "repeats": 2,
+      "seed": 140913
+    }
+  },
+  "timed": {
+    "created_utc": "2026-11-26T03:01:39Z",
+    "java": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+    "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+    "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+    "java_classes": {
+      "classes/GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+      "classes/GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+      "classes/GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+      "classes/GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+      "classes/GcBench.class": "b4532f8c7186f8505ba38d1edc05d7ee072eec67b490d7382d173cd8a3b4144a",
+      "gc_compare": "55a816052f4b646e6c0f488929b7453e4f5f42529aeaea689a6815d1d1b2cf7a"
+    },
+    "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+    "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5\n",
+    "driver": "3e96ba7d2a28f185de72d6be191dd511f41e8c8c",
+    "runtime_source": "4a7616daa0c113376722b3920caba73ce0fc99d2",
+    "runtime_source_archive_sha256": "8445b128e77f84d90c74e113432053ac3a709abf69a9d7afc0a9f630b7d2ce5a",
+    "binary_sha256": "55a816052f4b646e6c0f488929b7453e4f5f42529aeaea689a6815d1d1b2cf7a",
+    "raw_sha256": "8e1c8350c750dcb6204ee5c0625e4ee43607ed2f134f2911f8aeeb3687e1ea57",
+    "options": {
+      "runtimes": [
+        "ristretto-candidate-jit"
+      ],
+      "workloads": [
+        "roots"
+      ],
+      "rates": [
+        1000,
+        1500
+      ],
+      "workers": 2,
+      "cpus": [
+        4,
+        6
+      ],
+      "heap_mib": 64,
+      "rss_mib": 512,
+      "cpu_quota": 2.0,
+      "warmup": 5,
+      "seconds": 60,
+      "repeats": 2,
+      "seed": 140913
+    }
+  }
+}
