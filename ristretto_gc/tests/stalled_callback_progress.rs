@@ -257,6 +257,117 @@ fn a_parked_first_destructor_does_not_capture_the_rest_of_its_sweep_batch() -> R
 
 struct Ready(mpsc::SyncSender<()>);
 
+#[cfg(not(miri))]
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    reason = "closed channels fail the forced schedule"
+)]
+fn hard_cap_serves_independent_destructors_and_keeps_both_parked_charges() -> Result<()> {
+    fn parked_drop() -> (Arc<Callback>, mpsc::Receiver<()>, mpsc::Sender<()>) {
+        let (entered, started) = mpsc::channel();
+        let (resume, release) = mpsc::channel();
+        let callback = Arc::new(Callback {
+            stage: Stage::Drop,
+            entered,
+            resume: Mutex::new(release),
+            released: AtomicBool::new(false),
+            finalized: AtomicUsize::new(0),
+            cleared: AtomicUsize::new(0),
+            dropped: AtomicUsize::new(0),
+        });
+        (callback, started, resume)
+    }
+
+    for counted in [false, true] {
+        for demand_first in [false, true] {
+            for release_before_decision in [false, true] {
+                let (older, primary_entered, resume_primary) = parked_drop();
+                let (donor, donor_entered, resume_donor) = parked_drop();
+                let first_payload = Payload(older.clone());
+                let charge = Gc::allocation_size(&first_payload)?;
+                let cap = 2 * charge;
+                let heap = GarbageCollector::with_config(
+                    Configuration::builder()
+                        .threads(1)
+                        .max_heap_bytes(cap)
+                        .allocation_threshold(usize::MAX)
+                        .concurrent_publication(counted)
+                        .build(),
+                );
+                let first = Gc::try_new(&heap, first_payload)?;
+                let second = Gc::try_new(&heap, Payload(donor.clone()))?;
+                drop(first);
+                heap.start();
+                heap.collect();
+                primary_entered
+                    .recv_timeout(Duration::from_secs(4))
+                    .expect("older callback entered");
+                let mut allocation = Box::pin(Gc::try_new_async(&heap, 11_u64));
+                let mut cx = Context::from_waker(Waker::noop());
+                if demand_first {
+                    assert!(allocation.as_mut().poll(&mut cx).is_pending());
+                }
+                drop(second);
+                wait_for_registered_worker_sweep(&heap)?;
+                if !demand_first {
+                    // The second object is already retired. Ordinary callback service
+                    // is parked and the logical cap has not yet been contested.
+                    assert_eq!(heap.statistics()?.live_objects, 0);
+                    assert!(matches!(
+                        donor_entered.try_recv(),
+                        Err(mpsc::TryRecvError::Empty)
+                    ));
+                    assert!(allocation.as_mut().poll(&mut cx).is_pending());
+                }
+                let entered = donor_entered.recv_timeout(Duration::from_secs(2));
+                // Release both gates even on a failed schedule.
+                if entered.is_err() {
+                    drop(resume_donor);
+                    drop(resume_primary);
+                    drop(allocation);
+                    heap.stop()?;
+                    panic!("the second native callback did not enter with an active allocation");
+                }
+                assert_eq!(heap.managed_bytes(), cap);
+                let deadline = Instant::now() + Duration::from_secs(4);
+                if release_before_decision {
+                    resume_donor.send(()).expect("release independent donor");
+                    while heap.managed_bytes() == cap {
+                        assert!(Instant::now() < deadline, "no physical refund");
+                        std::thread::yield_now();
+                    }
+                }
+                let result = loop {
+                    if let Poll::Ready(result) = allocation.as_mut().poll(&mut cx) {
+                        break result;
+                    }
+                    assert!(
+                        Instant::now() < deadline,
+                        "allocation awaited a parked destructor"
+                    );
+                    std::thread::yield_now();
+                };
+                assert!(!older.released.load(Ordering::Acquire));
+                if release_before_decision {
+                    assert_eq!(**result?, 11);
+                } else {
+                    assert!(matches!(result, Err(ristretto_gc::Error::OutOfMemory)));
+                    assert_eq!(heap.managed_bytes(), cap);
+                    assert!(!donor.released.load(Ordering::Acquire));
+                }
+                drop(resume_donor);
+                drop(resume_primary);
+                heap.stop()?;
+                assert_eq!(heap.managed_bytes(), 0);
+                assert_eq!(donor.dropped.load(Ordering::Acquire), 1);
+                assert_eq!(older.dropped.load(Ordering::Acquire), 1);
+            }
+        }
+    }
+    Ok(())
+}
+
 #[cfg(all(not(miri), panic = "unwind"))]
 #[test]
 #[expect(
