@@ -311,17 +311,21 @@ impl Slot<'_> {
     fn remove_cached(&self, cache: &mut YoungRetirement) -> (Option<MetadataRef>, Option<Sealed>) {
         let young = self.clear_young(cache);
         let removed = self.page.entry(self.key).and_then(|entry| entry.swap(None));
-        if removed.is_some() {
+        let sealed = self.finish_remove(removed.is_some(), young);
+        (removed, sealed)
+    }
+
+    fn finish_remove(&self, indexed: bool, young: Option<Arc<Bitmap>>) -> Option<Sealed> {
+        if indexed {
             self.head.indexed.fetch_sub(1, Relaxed);
         }
         let last = self.page.occupied.remove(self.key & PAGE_MASK);
-        let sealed = (last || young.is_some()).then(|| Sealed {
+        (last || young.is_some()).then(|| Sealed {
             key: self.key,
             shard: self.head.shard,
             objects: last.then(|| self.page.clone()),
             young,
-        });
-        (removed, sealed)
+        })
     }
 }
 
@@ -612,6 +616,39 @@ impl Objects {
         Some(address)
     }
 
+    /// A proven unaged white can transfer its registry owner directly to
+    /// clearing. Keep the ordinary cursor and retry without effects on a miss.
+    #[cfg(not(feature = "experimental-identity-index"))]
+    pub(crate) fn take_next_white(
+        &self,
+        member: &mut Membership<'_>,
+        cursor: &mut Cursor,
+        epoch: u64,
+        cache: &mut YoungRetirement,
+        revoke: impl FnOnce(usize, &MetadataRef) -> bool,
+    ) -> Option<(MetadataRef, Option<Sealed>)> {
+        let slot = member.slot.as_mut()?;
+        let offset = slot.page.occupied.next((slot.key & PAGE_MASK) + 1)?;
+        let key = (slot.key & !PAGE_MASK) | offset;
+        let address = unpack_key(key, cursor.shard, self.shard_bits);
+        let entry = slot.page.entry(offset)?;
+        let removed = entry.take_if(|m| {
+            if !m.birth.is_live() || m.age.load(Acquire) != 0 || m.marked(1, epoch) {
+                return false;
+            }
+            if !revoke(address, m) {
+                return false;
+            }
+            m.birth.retire();
+            true
+        })?;
+        slot.key = key;
+        member.address = address;
+        cursor.selected(key);
+        let young = slot.clear_young(cache);
+        Some((removed, slot.finish_remove(true, young)))
+    }
+
     pub(crate) fn scan_young(&self, cursor: &mut YoungCursor) -> Scan<()> {
         self.scan_young_with(cursor, || {})
     }
@@ -887,6 +924,54 @@ mod tests {
             objects.scan_sweep(&mut cursor, 1, 4, 2, 2),
             Scan::Done
         ));
+    }
+
+    #[cfg(not(feature = "experimental-identity-index"))]
+    #[test]
+    fn deferred_white_transfer_preserves_selection_and_observes_an_intervening_mark() {
+        use crate::{GarbageCollector, Gc};
+        let gc = GarbageCollector::new();
+        let owner = Gc::new(&gc, 41_u64);
+        let white = gc
+            .metadata_for_address(owner.as_ptr().addr())
+            .expect("descriptor");
+        let objects = Objects::new(1);
+        objects.replace_for_test(8, Some(white.clone()));
+        objects.replace_for_test(16, Some(white.clone()));
+        let mut cursor = Cursor::default();
+        let Scan::Entry(8, SweepEntry::Object(mut member)) =
+            objects.scan_sweep(&mut cursor, 1, 4, 2, 1)
+        else {
+            panic!("first guarded entry");
+        };
+        let mut cache = YoungRetirement::default();
+        let mut selected = None;
+        assert!(
+            objects
+                .take_next_white(&mut member, &mut cursor, 4, &mut cache, |address, m| {
+                    selected = Some((address, m.id));
+                    false
+                })
+                .is_none()
+        );
+        assert_eq!(selected, Some((16, white.id)));
+        assert!(white.birth.is_live());
+        assert_eq!(member.address, 8);
+        white.mark_black(1, 4);
+        assert!(
+            objects
+                .take_next_white(&mut member, &mut cursor, 4, &mut cache, |_, _| panic!(
+                    "marked object reached revocation"
+                ))
+                .is_none()
+        );
+        drop(member);
+        let Scan::Entry(16, SweepEntry::Object(member)) =
+            objects.scan_sweep(&mut cursor, 1, 4, 2, 1)
+        else {
+            panic!("deferred candidate must remain next");
+        };
+        assert_eq!(member.get(&16).expect("surviving identity").id, white.id);
     }
 
     #[test]

@@ -98,6 +98,31 @@ impl Cell {
         self.load().as_ref().cloned()
     }
 
+    /// The live shard excludes retirement and the address reservation excludes
+    /// replacement. Decide while the exact entry is readable, then take it.
+    #[cfg(any(
+        not(feature = "experimental-identity-index"),
+        all(test, not(target_family = "wasm"))
+    ))]
+    pub(super) fn take_if(&self, revoke: impl FnOnce(&MetadataRef) -> bool) -> Option<MetadataRef> {
+        let read = self.load();
+        if !revoke(read.as_ref()?) {
+            return None;
+        }
+        if matches!(read, Read::Primary(_)) && self.state.take_reader() {
+            // The CAS consumed this reader as the unique writer. Its normal
+            // Drop would incorrectly release a reader that no longer exists.
+            std::mem::forget(read);
+            // SAFETY: the writer excludes every reader of this primary slot.
+            let value = unsafe { (*self.primary.get()).take() };
+            self.state.finish_exclusive();
+            value
+        } else {
+            drop(read);
+            self.swap(None)
+        }
+    }
+
     pub(super) fn store(&self, value: Option<MetadataRef>) {
         drop(self.swap(value));
     }
@@ -128,6 +153,48 @@ impl Cell {
 mod tests {
     use super::Cell;
     use crate::{GarbageCollector, Gc};
+
+    #[test]
+    #[expect(clippy::panic_in_result_fn, reason = "verify exact owner transfer")]
+    fn take_if_checks_and_transfers_only_the_current_descriptor() -> crate::Result<()> {
+        let gc = GarbageCollector::new();
+        let first = Gc::try_new(&gc, 7_u64)?.into_rooted();
+        let second = Gc::try_new(&gc, 9_u64)?.into_rooted();
+        let descriptor = |root: &Gc<u64>| {
+            gc.traced_edge(root.as_ptr().addr(), root.identity())
+                .expect("live descriptor")
+        };
+        let cell = Cell::from(Some(descriptor(&first)));
+        assert!(
+            cell.take_if(|entry| entry.id == second.identity())
+                .is_none()
+        );
+        assert_eq!(
+            cell.take_if(|entry| entry.id == first.identity())
+                .expect("sole owner")
+                .id,
+            first.identity()
+        );
+        assert!(cell.load().is_none());
+        cell.store(Some(descriptor(&second)));
+        let parked = cell.load();
+        assert_eq!(
+            cell.take_if(|entry| entry.id == second.identity())
+                .expect("shared owner")
+                .id,
+            second.identity()
+        );
+        cell.store(Some(descriptor(&first)));
+        assert_eq!(
+            parked.as_ref().expect("parked descriptor").id,
+            second.identity()
+        );
+        assert_eq!(
+            cell.load().as_ref().expect("new descriptor").id,
+            first.identity()
+        );
+        Ok(())
+    }
 
     #[test]
     #[expect(clippy::panic_in_result_fn, reason = "assert exact handoff ownership")]

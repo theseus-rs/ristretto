@@ -59,3 +59,47 @@ fn changing_a_slot_excludes_readers_or_hands_cleanup_to_one_owner() {
         }
     });
 }
+
+#[test]
+fn a_sole_reader_can_take_the_slot_while_a_concurrent_reader_remains_safe() {
+    loom::model(|| {
+        let gate = Arc::new(Gate::default());
+        let cell = Arc::new(loom::cell::UnsafeCell::new(19));
+        assert_eq!(gate.read(), ReadMode::Primary);
+        let reader = {
+            let (gate, cell) = (gate.clone(), cell.clone());
+            loom::thread::spawn(move || {
+                if gate.read() == ReadMode::Primary {
+                    cell.with(|p| {
+                        let before = unsafe { *p };
+                        loom::thread::yield_now();
+                        assert_eq!(before, unsafe { *p });
+                    });
+                }
+                if gate.release() {
+                    cell.with_mut(|p| unsafe { *p = 0 });
+                }
+            })
+        };
+        if gate.take_reader() {
+            cell.with_mut(|p| unsafe { *p = 0 });
+            gate.finish_exclusive();
+        } else {
+            assert!(!gate.release());
+            match gate.write() {
+                WriteMode::Exclusive => {
+                    cell.with_mut(|p| unsafe { *p = 0 });
+                    gate.finish_exclusive();
+                }
+                WriteMode::Promote => {
+                    if gate.publish_shared() {
+                        cell.with_mut(|p| unsafe { *p = 0 });
+                    }
+                }
+                WriteMode::Shared => panic!("one writer"),
+            }
+        }
+        reader.join().unwrap();
+        cell.with(|p| assert_eq!(unsafe { *p }, 0));
+    });
+}

@@ -616,7 +616,14 @@ impl GarbageCollector {
     ) -> Unit {
         let index = self.domain_index();
         let mut sealed = SealedPages::default();
-        let removed = {
+        #[cfg_attr(
+            feature = "experimental-identity-index",
+            expect(
+                unused_labels,
+                reason = "the incremental identity index uses the ordinary removal path"
+            )
+        )]
+        let removed = 'selection: {
             if self.contexts.pending.load(Ordering::Acquire) != 0 {
                 return Unit::Busy;
             }
@@ -633,6 +640,40 @@ impl GarbageCollector {
                 }
                 Unit::Busy
             };
+            #[cfg(not(feature = "experimental-identity-index"))]
+            if let Some((member, remembered)) = run.as_mut() {
+                let mut deferred = None;
+                if let Some((metadata, address_page)) = self.objects.take_next_white(
+                    member,
+                    &mut cycle.sweep_object_cursor,
+                    cycle.epoch,
+                    &mut cycle.young_retirement,
+                    |address, metadata| {
+                        // Sample pending mark work after selecting the exact
+                        // white descriptor and before committing retirement.
+                        deferred = self.check_sweep_mark_work();
+                        if deferred.is_some() {
+                            return false;
+                        }
+                        sealed.identity = self.identities.retire(
+                            metadata.id.to_i64().cast_unsigned(),
+                            address,
+                            &mut cycle.identity_cursor,
+                        );
+                        remembered.remove(address);
+                        true
+                    },
+                ) {
+                    sealed.address = address_page;
+                    if sealed.address.is_some() {
+                        drop(run.take());
+                    }
+                    break 'selection Some(metadata);
+                }
+                if let Some(unit) = deferred {
+                    return unit;
+                }
+            }
             let mut retained = None;
             let consecutive = run.take().and_then(|(mut member, remembered)| {
                 let address = self.objects.next_white(
