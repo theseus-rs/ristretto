@@ -85,16 +85,18 @@ fn exercise(stage: Stage, registered: bool, release_donor: bool) -> Result<()> {
         Payload,
         |gc, payload| Ok(Gc::new_with_finalizer(gc, payload)),
         [1, 1],
+        7_u64,
     )
 }
 
-fn exercise_payload<T: Trace + Send + Sync + 'static>(
+fn exercise_payload<T: Trace + Send + Sync + 'static, D: Trace + Send + Sync + 'static>(
     stage: Stage,
     registered: bool,
     release_donor: bool,
     make: impl FnOnce(Arc<Callback>) -> T,
     allocate: impl FnOnce(&Arc<GarbageCollector>, T) -> Result<GcRootGuard<T>>,
     [finalized, cleared]: [usize; 2],
+    donor: D,
 ) -> Result<()> {
     let (entered, ready) = mpsc::channel();
     let (resume, release) = mpsc::channel();
@@ -109,18 +111,18 @@ fn exercise_payload<T: Trace + Send + Sync + 'static>(
     });
     let payload = make(callback.clone());
     let payload_size = Gc::allocation_size(&payload)?;
-    let scalar_size = Gc::allocation_size(&7_u64)?;
+    let donor_size = Gc::allocation_size(&donor)?;
     let gc = GarbageCollector::with_config(Configuration {
         threads: 1,
-        max_heap_bytes: payload_size + scalar_size,
+        max_heap_bytes: payload_size + donor_size,
         allocation_threshold: usize::MAX,
         incremental_step_size: 1,
         max_pause_time_us: 0,
         ..Configuration::default()
     });
     let doomed = allocate(&gc, payload)?;
-    let garbage = Gc::try_new(&gc, 7_u64)?;
-    assert_eq!(gc.managed_bytes(), payload_size + scalar_size);
+    let garbage = Gc::try_new(&gc, donor)?;
+    assert_eq!(gc.managed_bytes(), payload_size + donor_size);
     drop(doomed);
     let first = if registered {
         gc.start();
@@ -171,7 +173,7 @@ fn exercise_payload<T: Trace + Send + Sync + 'static>(
     assert!(progress.collections_started >= 2);
     if release_donor {
         let allocated = result?;
-        assert!(progress.managed_bytes_freed >= scalar_size);
+        assert!(progress.managed_bytes_freed >= donor_size);
         assert_eq!(**allocated, 11);
     } else {
         assert!(matches!(result, Err(ristretto_gc::Error::OutOfMemory)));
@@ -242,6 +244,7 @@ fn ordinary_wrapped_clear_preserves_independent_allocation_progress() -> Result<
         |c| Some(Mutex::new(Payload(c))),
         Gc::try_new,
         [0, 1],
+        7_u64,
     )
 }
 
@@ -258,6 +261,34 @@ fn ordinary_destructor_without_trace_or_clear_preserves_independent_allocation_p
         },
         Gc::try_new,
         [0, 0],
+        7_u64,
+    )
+}
+
+#[cfg(not(miri))]
+#[test]
+fn primitive_buffer_donor_refunds_behind_a_stalled_host_destructor() -> Result<()> {
+    exercise_payload(
+        Stage::Drop,
+        true,
+        true,
+        |c| DropOnly {
+            _payload: Payload(c),
+        },
+        Gc::try_new,
+        [0, 0],
+        vec![5_u8; 256],
+    )?;
+    exercise_payload(
+        Stage::Drop,
+        true,
+        true,
+        |c| DropOnly {
+            _payload: Payload(c),
+        },
+        Gc::try_new,
+        [0, 0],
+        String::from("an independent string backing allocation"),
     )
 }
 
