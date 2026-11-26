@@ -666,8 +666,10 @@ impl<T> Gc<T> {
         unsafe { self.ptr.as_ref() }
     }
 
-    /// Checks the allocation's associated heap without cloning a weak reference.
-    pub(crate) fn belongs_to(&self, collector: &GarbageCollector) -> bool {
+    /// Returns whether this handle is associated with the given collector.
+    /// This checks heap identity without acquiring a root or accessing the payload.
+    #[must_use]
+    pub fn belongs_to(&self, collector: &GarbageCollector) -> bool {
         let source = match &self.owner {
             Owner::Root(root) => Arc::as_ptr(&root.collector),
             Owner::Edge(source) => source.as_ptr(),

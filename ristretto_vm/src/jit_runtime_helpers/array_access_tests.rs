@@ -765,3 +765,49 @@ fn array_accesses_suspend_and_preserve_bits_checks_and_roots() -> Result<()> {
     println!("{}", output.stdout);
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn compiled_array_load_rejects_a_foreign_heap_result() -> Result<()> {
+    let (vm, thread, _) = crate::test::class().await?;
+    let class = fixture(&thread).await?;
+    let foreign = GarbageCollector::new();
+    let child = garbage(&foreign).await?;
+    let child_handle = owner(&child)?.as_handle_i64();
+    let gc = vm.garbage_collector();
+    let array = Value::try_new_object_async(
+        gc,
+        Reference::try_from((
+            thread.class("[Ljava/lang/Object;").await?,
+            vec![child.clone()],
+        ))?,
+    )
+    .await?;
+    let function = install_experimental(&vm, &class, "load_A", &descriptor('A', "load"))?;
+    let args = [owner(&array)?.as_handle_i64(), 0];
+    let context = RuntimeContext::new(gc, &vm, &thread, &class)?;
+    let mut activation = function.activation(&[
+        ristretto_jit::Value::Ptr(args[0]),
+        ristretto_jit::Value::I32(0),
+    ])?;
+    let ExecutionStep::ArrayAccess(request) =
+        activation.resume_with_context(NonZeroU32::MIN, context.as_ptr())?
+    else {
+        return Err(InternalError("missing reference load".to_owned()));
+    };
+    assert_eq!(
+        context
+            .invoke_array_access(request, activation.call_arguments()?)
+            .await?,
+        0
+    );
+    assert!(context.take_pending_exception_owner().is_some());
+    assert_eq!(
+        array_access::synchronous(&context, A::ReferenceLoad, &args),
+        0
+    );
+    assert!(context.take_pending_exception_owner().is_some());
+    assert!(!context.reference_roots.lock().contains_key(&child_handle));
+    assert!(context.into_reference_result(child_handle).is_err());
+    assert_eq!(&*child.as_int_vec_ref()?, &[13]);
+    Ok(())
+}

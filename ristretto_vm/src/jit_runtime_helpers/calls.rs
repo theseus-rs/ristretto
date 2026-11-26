@@ -272,9 +272,7 @@ pub(super) fn encode_result(
             Some(Value::Int(value)),
         ) => i64::from(value),
         (Some(FieldType::Object(_) | FieldType::Array(_)), Some(Value::Object(Some(owner)))) => {
-            let handle = owner.as_handle_i64();
-            ctx.retain_reference_owner(owner.rooted_clone());
-            handle
+            ctx.retain_helper_result(&owner)?
         }
         (kind, result) => {
             return Err(InternalError(format!(

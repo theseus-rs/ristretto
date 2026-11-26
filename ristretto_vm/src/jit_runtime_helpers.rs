@@ -311,26 +311,21 @@ impl RuntimeContext {
     }
 
     /// Keeps a helper result owned until a frame publication discards it or this invocation exits.
-    fn retain_helper_result(&self, gc_ref: &Gc<RwLock<Reference>>) {
-        if self
-            .reference_roots
-            .lock()
-            .contains_key(&gc_ref.as_handle_i64())
-        {
-            return;
+    fn retain_helper_result(&self, reference: &Gc<RwLock<Reference>>) -> Result<i64> {
+        if !reference.belongs_to(self.garbage_collector()) {
+            return Err(InternalError(
+                "compiled reference result belongs to another heap".to_owned(),
+            ));
         }
-        // Prepare ownership before locking: an edge clone can publish a new root.
-        // Owning results share their existing registration instead of adding one.
-        self.retain_reference_owner(gc_ref.rooted_clone());
-    }
-
-    /// The caller supplies an owning handle; replacement cleanup must run unlocked.
-    fn retain_reference_owner(&self, owner: Gc<RwLock<Reference>>) {
-        let previous = self
-            .reference_roots
-            .lock()
-            .insert(owner.as_handle_i64(), owner);
-        drop(previous);
+        let handle = reference.as_handle_i64();
+        if !self.reference_roots.lock().contains_key(&handle) {
+            // Acquiring an edge's root or releasing a replaced owner may run
+            // collection barriers. Both operations belong outside the frame lock.
+            let owner = reference.rooted_clone();
+            let previous = self.reference_roots.lock().insert(handle, owner);
+            drop(previous);
+        }
+        Ok(handle)
     }
 
     /// Replace the invocation's root set after preparing every replacement owner.
@@ -619,10 +614,13 @@ fn alloc_reference(ctx: &RuntimeContext, reference: Reference) -> i64 {
         ctx.garbage_collector(),
         reference,
     )) {
-        Ok(Value::Object(Some(gc_ref))) => {
-            ctx.retain_helper_result(&gc_ref);
-            gc_ref.as_handle_i64()
-        }
+        Ok(Value::Object(Some(gc_ref))) => match ctx.retain_helper_result(&gc_ref) {
+            Ok(handle) => handle,
+            Err(error) => {
+                store_pending_error(ctx, error);
+                0
+            }
+        },
         Ok(_) => 0,
         Err(error) => {
             store_pending_error(ctx, error.into());
@@ -1324,10 +1322,7 @@ fn value_to_f64(value: &Value) -> Result<f64> {
 /// behavior. Null references (`Value::Object(None)`) are returned as `Ok(0)`.
 fn value_to_obj_ptr(ctx: &RuntimeContext, value: &Value) -> Result<i64> {
     match value {
-        Value::Object(Some(gc)) => {
-            ctx.retain_helper_result(gc);
-            Ok(gc.as_handle_i64())
-        }
+        Value::Object(Some(gc)) => ctx.retain_helper_result(gc),
         Value::Object(None) => Ok(0),
         other => Err(InternalError(format!(
             "expected Value::Object, found {other:?}"
@@ -2167,9 +2162,13 @@ extern "C" fn jit_take_pending_exception(context: *const u8) -> i64 {
         let Some(owner) = ctx.take_pending_exception_owner() else {
             return 0;
         };
-        let pending = owner.as_handle_i64();
-        ctx.retain_reference_owner(owner);
-        pending
+        match ctx.retain_helper_result(&owner) {
+            Ok(handle) => handle,
+            Err(error) => {
+                store_pending_error(ctx, error);
+                0
+            }
+        }
     })
 }
 

@@ -76,10 +76,7 @@ async fn publish(ctx: &RuntimeContext, reference: Reference) -> Result<i64> {
 
 fn retain(ctx: &RuntimeContext, value: Value) -> Result<i64> {
     match value {
-        Value::Object(Some(owner)) => {
-            ctx.retain_helper_result(&owner);
-            Ok(owner.as_handle_i64())
-        }
+        Value::Object(Some(owner)) => ctx.retain_helper_result(&owner),
         Value::Object(None) => Ok(0),
         other => Err(InternalError(format!(
             "allocation returned a non-reference: {other:?}"

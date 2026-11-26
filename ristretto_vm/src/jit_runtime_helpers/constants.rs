@@ -33,10 +33,7 @@ impl RuntimeContext {
 
 pub(super) async fn load(ctx: &RuntimeContext, index: u16) -> Result<i64> {
     match crate::instruction::resolve_reference_constant(&ctx.thread, &ctx.class, index).await? {
-        Value::Object(Some(owner)) => {
-            ctx.retain_helper_result(&owner);
-            Ok(owner.as_handle_i64())
-        }
+        Value::Object(Some(owner)) => ctx.retain_helper_result(&owner),
         _ => Err(InternalError(
             "reference constant resolved to a non-reference".to_owned(),
         )),

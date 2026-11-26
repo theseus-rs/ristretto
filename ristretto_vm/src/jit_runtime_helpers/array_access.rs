@@ -19,8 +19,8 @@ impl RuntimeContext {
             Ok(operation) => operation.complete().await,
             Err(error) => Err(error),
         };
-        match result {
-            Ok(value) => Ok(result_bits(self, value)),
+        match result.and_then(|value| result_bits(self, value)) {
+            Ok(bits) => Ok(bits),
             Err(error) => {
                 store_pending_error_async(self, error).await;
                 Ok(0)
@@ -37,8 +37,8 @@ pub(super) fn synchronous(ctx: &RuntimeContext, kind: ArrayAccessKind, arguments
             .try_complete()
             .unwrap_or_else(|| run_async(operation.complete()))
     });
-    match result {
-        Ok(value) => result_bits(ctx, value),
+    match result.and_then(|value| result_bits(ctx, value)) {
+        Ok(bits) => bits,
         Err(error) => {
             store_pending_error(ctx, error);
             0
@@ -46,18 +46,15 @@ pub(super) fn synchronous(ctx: &RuntimeContext, kind: ArrayAccessKind, arguments
     }
 }
 
-fn result_bits(ctx: &RuntimeContext, value: Value) -> i64 {
-    match value {
+fn result_bits(ctx: &RuntimeContext, value: Value) -> Result<i64> {
+    Ok(match value {
         Value::Int(value) => i64::from(value),
         Value::Long(value) => value,
         Value::Float(value) => i64::from(value.to_bits()),
         Value::Double(value) => i64::from_ne_bytes(value.to_bits().to_ne_bytes()),
-        Value::Object(Some(owner)) => {
-            ctx.retain_helper_result(&owner);
-            owner.as_handle_i64()
-        }
+        Value::Object(Some(owner)) => ctx.retain_helper_result(&owner)?,
         _ => 0,
-    }
+    })
 }
 
 struct Operation {

@@ -183,8 +183,8 @@ async fn repeated_helper_results_share_one_owner_and_release_it_on_return() -> R
         edge.unroot();
     };
     for _ in 0..1_000 {
-        ctx.retain_helper_result(&edge);
-        ctx.retain_helper_result(&target);
+        ctx.retain_helper_result(&edge)?;
+        ctx.retain_helper_result(&target)?;
     }
     assert_eq!(ctx.reference_roots.lock().len(), 1);
     drop((target, edge));
@@ -224,8 +224,7 @@ async fn concurrent_helper_result_ownership_keeps_distinct_identities() -> Resul
                     start.wait();
                     for _ in 0..250 {
                         for target in &targets {
-                            ctx.retain_helper_result(target);
-                            ctx.retain_reference_owner(target.rooted_clone());
+                            ctx.retain_helper_result(target)?;
                         }
                     }
                     Ok(())
