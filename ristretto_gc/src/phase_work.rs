@@ -966,7 +966,7 @@ impl GarbageCollector {
 
     fn enqueue_swept(
         &self,
-        metadata: MetadataRef,
+        mut metadata: MetadataRef,
         cycle: &mut Cycle,
         run: &mut Option<crate::index::Membership<'_>>,
     ) {
@@ -980,7 +980,7 @@ impl GarbageCollector {
         self.remembered
             .dirty
             .retire(metadata.id.to_i64().cast_unsigned());
-        if metadata.retire() {
+        if super::ObjectMetadata::retire_swept(&mut metadata) {
             cycle.reclaim.push_back(ReclaimTask::new(metadata));
         } else {
             // Returning the retiring borrow may publish external clearing

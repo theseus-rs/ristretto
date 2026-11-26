@@ -71,6 +71,14 @@ impl StorageState {
         self.0.fetch_or(RETIRED, Ordering::AcqRel) == 0
     }
 
+    /// With the descriptor exclusively owned, no borrower can enter or
+    /// release concurrently. Preserve the same state bits as shared retirement.
+    pub(super) fn retire_unique(&mut self) -> bool {
+        let previous = self.0.load(Ordering::Relaxed);
+        self.0.store(previous | RETIRED, Ordering::Relaxed);
+        previous == 0
+    }
+
     /// Arm exactly once after charging deferred work. If the last borrower
     /// already left, the sweeper itself must publish the ready task.
     pub(super) fn arm_notification(&self) -> bool {

@@ -161,6 +161,30 @@ fn scanner_and_ordinary_reader_transfer_the_last_retired_borrow_once() {
 }
 
 #[test]
+fn private_retirement_preserves_the_first_close_and_any_existing_borrow() {
+    loom::model(|| {
+        for borrowed in [false, true] {
+            let mut state = storage_state::StorageState::default();
+            if borrowed {
+                assert!(state.acquire());
+            }
+            assert_eq!(state.retire_unique(), !borrowed);
+            assert!(!state.retire_unique());
+            assert!(!state.acquire());
+            if borrowed {
+                assert!(!state.destroy_unique());
+                assert!(!state.arm_notification());
+                assert!(state.release());
+            }
+            assert!(state.destroy_unique());
+            assert!(!state.retire_unique());
+            assert!(state.destroyed());
+            assert!(!state.destroy());
+        }
+    });
+}
+
+#[test]
 fn unique_destruction_requires_retired_ready_storage_and_claims_it_once() {
     loom::model(|| {
         let mut state = storage_state::StorageState::default();

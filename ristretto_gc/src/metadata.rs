@@ -327,6 +327,14 @@ impl ObjectMetadata {
         self.storage.retire()
     }
 
+    pub(crate) fn retire_swept(metadata: &mut MetadataRef) -> bool {
+        if let Some(unique) = MetadataRef::get_mut(metadata) {
+            unique.storage.retire_unique()
+        } else {
+            metadata.retire()
+        }
+    }
+
     pub(crate) fn arm_retirement_notification(&self) -> bool {
         self.storage.arm_notification()
     }
