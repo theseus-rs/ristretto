@@ -103,3 +103,18 @@ fn a_sole_reader_can_take_the_slot_while_a_concurrent_reader_remains_safe() {
         cell.with(|p| assert_eq!(unsafe { *p }, 0));
     });
 }
+
+#[test]
+fn a_vacant_observation_cannot_force_the_next_primary_owner_to_promote() {
+    loom::model(|| {
+        let gate = Gate::default();
+        assert_eq!(gate.write(), WriteMode::Exclusive);
+        assert_eq!(gate.read(), ReadMode::Vacant);
+        // The observer is parked before returning its empty result. It never
+        // received a reference to primary storage.
+        gate.finish_exclusive();
+        assert_eq!(gate.read(), ReadMode::Primary);
+        assert!(gate.take_reader(), "a vacant observer kept a primary admission");
+        gate.finish_exclusive();
+    });
+}
