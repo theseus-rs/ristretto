@@ -85,3 +85,54 @@ fn existing_constructor_uses_the_same_budget() -> ristretto_gc::Result<()> {
     assert_eq!(collector.managed_bytes(), 0);
     Ok(())
 }
+
+#[test]
+fn recovering_constructor_reclaims_an_unrooted_donor_at_the_logical_cap() -> ristretto_gc::Result<()>
+{
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .max_heap_bytes(32)
+            .allocation_threshold(usize::MAX)
+            .incremental_step_size(1)
+            .build(),
+    );
+    drop(Gc::try_new(&gc, ((1u64, 2u64), (3u64, 4u64)))?);
+    let before = gc.statistics()?.collections_completed;
+    let Err((Error::OutOfMemory, value)) = Gc::try_new_once(&gc, 23u64) else {
+        panic!("single attempt must return the unpublished value")
+    };
+    assert_eq!(gc.statistics()?.collections_completed, before);
+    assert_eq!(gc.managed_bytes(), 32);
+    let recovered = Gc::try_new(&gc, value)?;
+    assert_eq!(**recovered, 23);
+    assert_eq!(gc.managed_bytes(), 8);
+    drop(recovered);
+    gc.collect_full()?;
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
+
+#[test]
+fn synchronous_recovery_retains_the_unpublished_parents_strong_edge() -> ristretto_gc::Result<()> {
+    let size = Gc::<u64>::allocation_size(&7)?;
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .max_heap_bytes(size + 64)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
+    let child = Gc::try_new(&gc, 7u64)?.into_rooted();
+    let id = child.as_handle_i64();
+    drop(Gc::try_new(
+        &gc,
+        ((0u64, 1u64, 2u64), (3u64, 4u64, 5u64), (6u64, 7u64)),
+    )?);
+    let parent = Gc::try_new(&gc, Some(child))?;
+    let surviving = Gc::<u64>::from_handle_rooted(&gc, id)?;
+    assert_eq!(*surviving, 7);
+    assert_eq!((**parent).as_ref().map(Gc::as_handle_i64), Some(id));
+    drop((parent, surviving));
+    gc.collect_full()?;
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}

@@ -126,6 +126,10 @@ fn unsatisfiable_size_and_managed_guards_do_not_start_recovery() -> Result<()> {
     ));
     let root = Gc::try_new(&gc, ristretto_gc::sync::RwLock::new(7_u64))?;
     let _guard = root.read();
+    assert!(matches!(
+        Gc::try_new(&gc, vec![0_u8; 256 - size_of::<Vec<u8>>()]),
+        Err(Error::OutOfMemory)
+    ));
     gc.make_room(1)?;
     assert!(matches!(gc.make_room(256), Err(Error::OutOfMemory)));
     assert!(matches!(

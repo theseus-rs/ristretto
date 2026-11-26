@@ -644,9 +644,60 @@ impl Drop for ObservationInterest<'_> {
     }
 }
 
+#[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+pub(crate) mod sync_points {
+    use std::cell::Cell;
+    thread_local! {
+        pub(crate) static ENROLLED: Cell<Option<Box<dyn FnOnce()>>> = const { Cell::new(None) };
+        pub(crate) static COVERED: Cell<Option<Box<dyn FnOnce()>>> = const { Cell::new(None) };
+    }
+}
+
+// Synchronous allocation drives the same charged-interest and ticket state as
+// asynchronous allocation. Only a genuinely private donor may need a later
+// physical release; the native caller sleeps on a coalesced wake in that case.
+pub(crate) fn finish_allocation<T>(future: impl Future<Output = Result<T>>) -> Result<T> {
+    #[cfg(not(target_family = "wasm"))]
+    struct Signal(std::sync::mpsc::SyncSender<()>);
+    #[cfg(not(target_family = "wasm"))]
+    impl std::task::Wake for Signal {
+        fn wake(self: Arc<Self>) {
+            self.wake_by_ref();
+        }
+        fn wake_by_ref(self: &Arc<Self>) {
+            let _ = self.0.try_send(());
+        }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    let (waker, ready) = {
+        let (send, receive) = std::sync::mpsc::sync_channel(1);
+        (Waker::from(Arc::new(Signal(send))), receive)
+    };
+    #[cfg(not(target_family = "wasm"))]
+    let mut context = Context::from_waker(&waker);
+    #[cfg(target_family = "wasm")]
+    let mut context = Context::from_waker(Waker::noop());
+    let mut future = std::pin::pin!(future);
+    loop {
+        if let Poll::Ready(result) = future.as_mut().poll(&mut context) {
+            return result;
+        }
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        if let Some(hook) = sync_points::ENROLLED.take() {
+            hook();
+        }
+        #[cfg(not(target_family = "wasm"))]
+        ready
+            .recv()
+            .map_err(|error| Error::SyncError(error.to_string()))?;
+    }
+}
+
 /// A request owns exactly one waiter slot, even when its future migrates executors.
 pub(crate) struct CollectionWait<'a> {
     grant: Option<GrantWatch>,
+    caller_assists: bool,
     gc: &'a GarbageCollector,
     ticket: u64,
     id: Option<WaiterId>,
@@ -663,6 +714,7 @@ impl<'a> CollectionWait<'a> {
     pub(crate) fn new(gc: &'a GarbageCollector, ticket: u64) -> Self {
         Self {
             grant: None,
+            caller_assists: false,
             gc,
             ticket,
             id: None,
@@ -682,6 +734,7 @@ impl<'a> CollectionWait<'a> {
     ) -> Self {
         Self {
             grant: None,
+            caller_assists: false,
             gc,
             ticket,
             id: None,
@@ -705,7 +758,9 @@ impl<'a> CollectionWait<'a> {
         mut self,
         request: &crate::retirement_grants::Request,
         settlement_only: bool,
+        caller_assists: bool,
     ) -> Self {
+        self.caller_assists = caller_assists;
         self.grant = Some(GrantWatch {
             request: request.clone(),
             settlement_only,
@@ -797,7 +852,11 @@ impl Future for CollectionWait<'_> {
             .grant
             .as_ref()
             .is_some_and(|grant| grant.settlement_only && grant.request.private());
-        if settlement_only || gc.recovery.workers.load(Ordering::Acquire) != 0 {
+        let wait_for_donor =
+            settlement_only && !(cfg!(target_family = "wasm") && this.caller_assists);
+        if wait_for_donor
+            || (!this.caller_assists && gc.recovery.workers.load(Ordering::Acquire) != 0)
+        {
             #[cfg(not(target_family = "wasm"))]
             if let Some(bytes) = this.bytes {
                 // Register first, then install delivery and check again. A worker
@@ -809,6 +868,13 @@ impl Future for CollectionWait<'_> {
                     gc.recovery.remove(this.ticket, this.id);
                     return Poll::Ready(Ok(true));
                 }
+            }
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            if this.caller_assists
+                && wait_for_donor
+                && let Some(hook) = sync_points::COVERED.take()
+            {
+                hook();
             }
             return Poll::Pending;
         }

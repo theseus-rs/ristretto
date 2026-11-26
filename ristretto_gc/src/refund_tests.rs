@@ -66,49 +66,87 @@ fn allocate_after_first_poll(
     }
 }
 
+fn capped_heap(counted: bool, independent: bool) -> Arc<GarbageCollector> {
+    GarbageCollector::with_config(
+        Configuration::builder()
+            .metadata_shards(1)
+            .concurrent_publication(counted)
+            .independent_phases(independent)
+            .max_heap_bytes(64)
+            .allocation_threshold(usize::MAX)
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .build(),
+    )
+}
+
+#[expect(
+    clippy::expect_used,
+    reason = "the parked thread owns the donor before the fixture continues"
+)]
+fn park_reaper(
+    gc: &Arc<GarbageCollector>,
+    registered: bool,
+) -> (mpsc::Sender<()>, std::thread::JoinHandle<Result<()>>) {
+    let (entered, parked) = mpsc::channel();
+    let (release, resume) = mpsc::channel();
+    let gc = gc.clone();
+    let worker = std::thread::spawn(move || {
+        let _registration = registered.then(|| crate::recovery::WorkerRegistration::new(&gc));
+        PARK.set(Some((entered, resume)));
+        gc.collect_full()
+    });
+    parked
+        .recv_timeout(Duration::from_secs(5))
+        .expect("storage taken");
+    (release, worker)
+}
+
 #[test]
+fn independent_storage_is_reclaimable_while_a_private_reaper_is_parked() -> Result<()> {
+    recover_with_parked_reaper(false, |gc| {
+        allocate_when_woken(gc, 23, &Barrier::new(1))
+            .expect("independent storage becomes available")
+    })
+}
+
+#[test]
+fn synchronous_constructor_helps_when_the_registered_worker_is_parked() -> Result<()> {
+    recover_with_parked_reaper(true, |gc| Gc::try_new(gc, 23u64))
+}
+
 #[expect(
     clippy::unwrap_in_result,
     clippy::panic_in_result_fn,
+    clippy::expect_used,
     reason = "forced owner suspension"
 )]
-fn independent_storage_is_reclaimable_while_a_private_reaper_is_parked() -> Result<()> {
+fn recover_with_parked_reaper(
+    registered: bool,
+    allocate: impl Fn(&Arc<GarbageCollector>) -> Result<crate::GcRootGuard<u64>>,
+) -> Result<()> {
     for counted in [false, true] {
         for independent in [false, true] {
-            let gc = GarbageCollector::with_config(
-                Configuration::builder()
-                    .metadata_shards(1)
-                    .concurrent_publication(counted)
-                    .independent_phases(independent)
-                    .max_heap_bytes(64)
-                    .allocation_threshold(usize::MAX)
-                    .incremental_step_size(1)
-                    .max_pause_time_us(0)
-                    .build(),
-            );
+            let gc = capped_heap(counted, independent);
             let donor = ((1u64, 2u64), (3u64, 4u64));
             let parked_donor = Gc::try_new(&gc, donor)?;
             let weak = GcWeak::new(&parked_donor, ReferenceKind::Weak, 0);
             let other = Gc::try_new(&gc, donor)?;
             drop(parked_donor);
-            let (entered, parked) = mpsc::channel();
-            let (release, resume) = mpsc::channel();
-            let worker_gc = gc.clone();
-            let worker = std::thread::spawn(move || {
-                PARK.set(Some((entered, resume)));
-                worker_gc.collect_full()
-            });
-            parked
-                .recv_timeout(Duration::from_secs(5))
-                .expect("storage taken");
+            let (release, worker) = park_reaper(&gc, registered);
             assert!(weak.upgrade().is_none());
             assert_eq!(gc.managed_bytes(), 64);
             drop(other);
 
             // One helper must reach and release the second donor without the
             // first reaper. Keep its result rooted while using the exact balance.
-            let first = allocate_when_woken(&gc, 23, &Barrier::new(1))
-                .expect("independent storage becomes available")?;
+            let prior = gc.completed_full_ticket();
+            assert!(matches!(
+                Gc::try_new_once(&gc, 23u64),
+                Err((crate::Error::OutOfMemory, 23))
+            ));
+            assert_eq!(gc.completed_full_ticket(), prior);
+            let first = allocate(&gc)?;
             assert_eq!(gc.managed_bytes(), 40);
             let roots = [
                 first,
@@ -205,29 +243,12 @@ impl<'a> WaitingPeer<'a> {
 fn live_waiters_receive_the_independent_donors_full_charge() -> Result<()> {
     for counted in [false, true] {
         for independent in [false, true] {
-            let gc = GarbageCollector::with_config(
-                Configuration::builder()
-                    .concurrent_publication(counted)
-                    .independent_phases(independent)
-                    .metadata_shards(1)
-                    .max_heap_bytes(64)
-                    .incremental_step_size(1)
-                    .max_pause_time_us(0)
-                    .allocation_threshold(usize::MAX)
-                    .build(),
-            );
+            let gc = capped_heap(counted, independent);
             let donor = ((1u64, 2u64), (3u64, 4u64));
             let a = Gc::try_new(&gc, donor)?;
             let b = Gc::try_new(&gc, donor)?;
             drop(a);
-            let (enter_a, parked_a) = mpsc::channel();
-            let (release_a, resume_a) = mpsc::channel();
-            let heap = gc.clone();
-            let reaper = std::thread::spawn(move || {
-                PARK.set(Some((enter_a, resume_a)));
-                heap.collect_full()
-            });
-            parked_a.recv_timeout(Duration::from_secs(3)).unwrap();
+            let (release_a, reaper) = park_reaper(&gc, false);
             let mut peers: Vec<_> = (1..4).map(|value| WaitingPeer::new(&gc, value)).collect();
             let (enter_b, parked_b) = mpsc::channel();
             let (release_b, resume_b) = mpsc::channel();
@@ -295,6 +316,94 @@ fn live_waiters_receive_the_independent_donors_full_charge() -> Result<()> {
             assert_eq!(values, [Some(1), Some(2), Some(3)]);
             assert_eq!(charged, 64);
             drop(peers);
+            gc.collect_full()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+#[expect(
+    clippy::panic_in_result_fn,
+    clippy::unwrap_in_result,
+    reason = "bound every forced grant handoff"
+)]
+fn synchronous_sleepers_wake_after_a_fully_assigned_private_donor_is_freed() -> Result<()> {
+    use crate::recovery::sync_points;
+    for counted in [false, true] {
+        for independent in [false, true] {
+            let gc = capped_heap(counted, independent);
+            let donor = ((1u64, 2u64), (3u64, 4u64));
+            let a = Gc::try_new(&gc, donor)?;
+            let b = Gc::try_new(&gc, donor)?;
+            drop(a);
+            let (a_release, reaper) = park_reaper(&gc, false);
+            let (enroll, enrolled) = mpsc::channel();
+            let (sleep, sleeping) = mpsc::channel();
+            let (done, results) = mpsc::channel();
+            let barrier = Arc::new(Barrier::new(4));
+            for n in 1u64..4 {
+                let heap = gc.clone();
+                let start = barrier.clone();
+                let enroll = enroll.clone();
+                let sleep = sleep.clone();
+                let done = done.clone();
+                std::thread::spawn(move || {
+                    sync_points::ENROLLED.set(Some(Box::new(move || {
+                        enroll.send(()).unwrap();
+                        start.wait();
+                    })));
+                    sync_points::COVERED.set(Some(Box::new(move || {
+                        sleep.send(()).unwrap();
+                    })));
+                    done.send(Gc::try_new(&heap, n)).unwrap();
+                });
+            }
+            for _ in 1..4 {
+                enrolled.recv_timeout(Duration::from_secs(3)).unwrap();
+            }
+            let (b_enter, b_parked) = mpsc::channel();
+            let (b_release, b_wait) = mpsc::channel();
+            let (last, ready) = mpsc::channel();
+            let (begin, go) = mpsc::channel();
+            let heap = gc.clone();
+            let assisting = std::thread::spawn(move || {
+                PARK.set(Some((b_enter, b_wait)));
+                allocate_after_first_poll(&heap, 0, || {
+                    last.send(()).unwrap();
+                    go.recv().unwrap();
+                })
+            });
+            ready.recv_timeout(Duration::from_secs(3)).unwrap();
+            drop(b);
+            begin.send(()).unwrap();
+            b_parked.recv_timeout(Duration::from_secs(3)).unwrap();
+            gc.collect_full()?;
+            barrier.wait();
+            for _ in 1..4 {
+                sleeping.recv_timeout(Duration::from_secs(3)).unwrap();
+            }
+            assert!(results.try_recv().is_err());
+            assert_eq!(gc.managed_bytes(), 64);
+            assert!(matches!(
+                Gc::try_new(&gc, 4u64),
+                Err(crate::Error::OutOfMemory)
+            ));
+            b_release.send(()).unwrap();
+            let first = assisting.join().unwrap().unwrap()?;
+            let mut roots = Vec::new();
+            for _ in 1..4 {
+                roots.push(results.recv_timeout(Duration::from_secs(3)).unwrap()?);
+            }
+            let mut values: Vec<_> = roots.iter().map(|r| ***r).collect();
+            values.sort_unstable();
+            assert_eq!(values, [1, 2, 3]);
+            assert_eq!(**first, 0);
+            assert_eq!(gc.managed_bytes(), 64);
+            a_release.send(()).unwrap();
+            reaper.join().unwrap()?;
+            drop((first, roots));
             gc.collect_full()?;
             assert_eq!(gc.managed_bytes(), 0);
         }

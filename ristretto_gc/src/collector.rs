@@ -3047,6 +3047,10 @@ impl GarbageCollector {
         self.reserve_exact_bytes(size)
     }
 
+    pub(crate) fn may_recover_bytes(&self, size: usize) -> bool {
+        size <= self.configuration.max_heap_bytes && !crate::cell::has_guards()
+    }
+
     // A shared ticket can already be in sweep when observation starts. Before
     // declaring exhaustion require a full snapshot requested after registration.
     fn request_space_cycle(&self, consecutive_empty: usize) -> u64 {
@@ -3062,6 +3066,18 @@ impl GarbageCollector {
     pub(crate) async fn reserve_bytes_async(
         &self,
         size: usize,
+    ) -> Result<AllocationReservation<'_>> {
+        self.reserve_bytes_with_assistance(size, false).await
+    }
+
+    pub(crate) fn reserve_bytes_blocking(&self, size: usize) -> Result<AllocationReservation<'_>> {
+        crate::recovery::finish_allocation(self.reserve_bytes_with_assistance(size, true))
+    }
+
+    async fn reserve_bytes_with_assistance(
+        &self,
+        size: usize,
+        caller_assists: bool,
     ) -> Result<AllocationReservation<'_>> {
         if size > self.configuration.max_heap_bytes {
             return Err(crate::Error::OutOfMemory);
@@ -3092,7 +3108,7 @@ impl GarbageCollector {
                 // still unavailable until the backing storage is actually freed.
                 let mut opportunity = self.observe_space(size)?;
                 crate::recovery::CollectionWait::for_space(self, u64::MAX, &mut opportunity)
-                    .with_grant(&demand.request, true)
+                    .with_grant(&demand.request, true, caller_assists)
                     .await?;
                 continue;
             }
@@ -3115,7 +3131,7 @@ impl GarbageCollector {
             loop {
                 observed_space |=
                     crate::recovery::CollectionWait::for_space(self, ticket, &mut opportunity)
-                        .with_grant(&demand.request, false)
+                        .with_grant(&demand.request, false, caller_assists)
                         .await?;
                 if let Some(reservation) = demand.take() {
                     return Ok(reservation);
@@ -3147,7 +3163,7 @@ impl GarbageCollector {
         if size <= self.context_headroom(size) {
             return Ok(());
         }
-        if size > self.configuration.max_heap_bytes || crate::cell::has_guards() {
+        if !self.may_recover_bytes(size) {
             return Err(crate::Error::OutOfMemory);
         }
         let mut empty_cycles = 0;

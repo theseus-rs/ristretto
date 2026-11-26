@@ -180,7 +180,9 @@ impl<T> Gc<T> {
     }
 
     /// Fallibly allocates and roots a value within the configured managed heap limit.
-    /// Backing storage is charged through `Trace::external_size`.
+    /// Backing storage is charged through `Trace::external_size`. Under logical
+    /// heap pressure the caller may help collection before retrying publication.
+    /// Use [`Self::try_new_once`] for a single attempt without collection.
     /// # Errors
     /// Returns `OutOfMemory` for heap-limit exhaustion, size overflow, or allocation failure.
     pub fn try_new(collector: &Arc<GarbageCollector>, mut data: T) -> Result<GcRootGuard<T>>
@@ -196,7 +198,19 @@ impl<T> Gc<T> {
                 }
             }
         }
-        Self::publish(collector, data).map_err(|(error, _)| error)
+        let size = Self::allocation_size(&data)?;
+        let reservation = match collector.reserve_bytes(size) {
+            Ok(reservation) => reservation,
+            Err(Error::OutOfMemory) if collector.may_recover_bytes(size) => {
+                // Restore ownership of movable strong fields before helping a
+                // collection with an unpublished value on the caller's stack.
+                data.root();
+                let protected_size = Self::allocation_size(&data)?;
+                collector.reserve_bytes_blocking(protected_size)?
+            }
+            Err(error) => return Err(error),
+        };
+        Self::publish_reserved(collector, data, reservation).map_err(|(error, _)| error)
     }
 
     /// Attempts preparation and publication once, without running collection.
