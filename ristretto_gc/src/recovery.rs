@@ -1172,10 +1172,54 @@ mod tests {
 
     #[cfg(not(target_family = "wasm"))]
     #[test]
+    fn panicking_ticket_waker_leaves_its_ready_peer_dispatchable() {
+        struct Panics;
+        impl std::task::Wake for Panics {
+            fn wake(self: Arc<Self>) {
+                panic!("executor stopped");
+            }
+        }
+        struct Signal(std::sync::mpsc::Sender<()>);
+        impl std::task::Wake for Signal {
+            fn wake(self: Arc<Self>) {
+                let _ = self.0.send(());
+            }
+        }
+        let gc = GarbageCollector::new();
+        let _worker = WorkerRegistration::new(&gc);
+        let mut first = Box::pin(CollectionWait::new(&gc, 2));
+        let mut second = Box::pin(CollectionWait::new(&gc, 3));
+        let waker = Waker::from(Arc::new(Panics));
+        assert!(
+            first
+                .as_mut()
+                .poll(&mut Context::from_waker(&waker))
+                .is_pending()
+        );
+        let (send, recv) = std::sync::mpsc::channel();
+        let waker = Waker::from(Arc::new(Signal(send)));
+        let mut cx = Context::from_waker(&waker);
+        assert!(second.as_mut().poll(&mut cx).is_pending());
+        gc.recovery.callback_failed();
+        let report = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            gc.recovery.notify_progress(&gc)
+        }));
+        assert!(report.is_err());
+        assert_eq!(recv.try_recv(), Ok(()));
+        assert!(matches!(
+            second.as_mut().poll(&mut cx),
+            Poll::Ready(Err(Error::SyncError(_)))
+        ));
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
     fn failed_callback_wakes_waiters_with_unfinished_tickets() {
         struct Signal(std::sync::mpsc::Sender<()>);
         impl std::task::Wake for Signal {
-            fn wake(self: Arc<Self>) { let _ = self.0.send(()); }
+            fn wake(self: Arc<Self>) {
+                let _ = self.0.send(());
+            }
         }
         let gc = GarbageCollector::new();
         let _worker = WorkerRegistration::new(&gc);
@@ -1188,7 +1232,10 @@ mod tests {
         gc.recovery.callback_failed();
         gc.recovery.notify_progress(&gc);
         assert_eq!(rx.try_recv(), Ok(()));
-        assert!(matches!(wait.as_mut().poll(&mut cx), Poll::Ready(Err(Error::SyncError(_)))));
+        assert!(matches!(
+            wait.as_mut().poll(&mut cx),
+            Poll::Ready(Err(Error::SyncError(_)))
+        ));
         assert_eq!(gc.completed_full_ticket(), 0);
     }
 

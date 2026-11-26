@@ -402,6 +402,53 @@ fn callback_panic_refunds_once_and_stop_reports_the_failure() -> Result<()> {
 
 #[cfg(not(miri))]
 #[test]
+fn first_shutdown_finishes_unrelated_reclamation_after_a_callback_failure() -> Result<()> {
+    struct Fails(mpsc::Sender<()>, Mutex<mpsc::Receiver<()>>);
+    // SAFETY: both channels contain host notifications only.
+    unsafe impl Trace for Fails {
+        fn trace(&self, _: &GarbageCollector) {}
+        fn clear_step(&mut self, _: usize, _: usize) -> TraceProgress {
+            self.0.send(()).expect("shutdown observer");
+            let _ = self
+                .1
+                .lock()
+                .expect("callback gate")
+                .recv_timeout(Duration::from_secs(10));
+            panic!("host cleanup failed");
+        }
+    }
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .threads(1)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
+    let (started, parked) = mpsc::channel();
+    let (release, resume) = mpsc::channel();
+    let survivor = Gc::try_new(&gc, 97_u64)?;
+    drop(Gc::try_new(&gc, Fails(started, Mutex::new(resume)))?);
+    gc.start();
+    gc.collect();
+    assert_eq!(parked.recv_timeout(Duration::from_secs(3)), Ok(()));
+    let helper = gc.clone();
+    let stopper = std::thread::spawn(move || helper.stop());
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while gc.registered_workers() != 0 {
+        assert!(Instant::now() < deadline);
+        std::thread::yield_now();
+    }
+    drop(survivor);
+    drop(release);
+    let outcome = stopper
+        .join()
+        .map_err(|_| ristretto_gc::Error::CollectionPhaseError("shutdown panicked".into()))?;
+    assert!(matches!(outcome, Err(ristretto_gc::Error::SyncError(_))));
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
+
+#[cfg(not(miri))]
+#[test]
 fn batched_finalizers_preserve_offsets_and_release_each_physical_charge() -> Result<()> {
     const ITEMS: usize = 64;
     struct Sliced {
