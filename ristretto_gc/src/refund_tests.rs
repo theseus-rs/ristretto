@@ -688,7 +688,6 @@ pub(super) fn before_terminal_close() {
 
 #[test]
 #[expect(
-    clippy::expect_used,
     clippy::panic_in_result_fn,
     reason = "bounded physical-refund schedule"
 )]
@@ -747,7 +746,12 @@ fn terminal_allocation_close_rechecks_backing_released_by_an_independent_owner()
             assert_eq!(gc.managed_bytes(), charge - available);
             let _ = resume.send(());
             assert!(reached.is_ok());
-            let result = peer.join().expect("peer joined").expect("peer completed");
+            let result = peer
+                .join()
+                .map_err(|_| crate::Error::CollectionPhaseError("allocation peer panicked".into()))?
+                .ok_or_else(|| {
+                    crate::Error::CollectionPhaseError("allocation peer timed out".into())
+                })?;
             if available == charge {
                 assert_eq!(**result?, 11);
             } else {
