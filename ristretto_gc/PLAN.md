@@ -32,13 +32,20 @@ median scheduled p99.9 was 2,496 µs for Ristretto, 13 µs for G1 and 17 µs
 for ZGC. [Complete cycles](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/default-instance-fields/cycles/complete-cycles.csv).
 [Java forks and latency distributions](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/reference-cards/README.md).
 
-The native callback-claim candidate passed all 400 isolated allocation and
-reclamation schedules. A delayed pressure assistant can still leave all 128
-peer charges in place when an allocation reaches terminal denial. The probe
-reproduced in 100 of 100 fresh processes. Cheap finalizers took up to 26%
-longer with two workers. Public claim access, pressure-service progress and
-physical refund are separate release checks.
-[Candidate, negative controls and remaining obligation](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/parked-claim-qualification/README.md).
+At `2ec923ac` a terminal native allocator gives the runnable callback assistant
+one acknowledged dispatch opportunity. The delayed-worker parent denied the
+request in 100/100 processes. The ordinary collector now stays pending and
+receives the physical refund in 100/100. All six cheap-finalizer cost intervals
+included parity. Minimum individual 95% complete-collection speedup bounds
+were **10.24× native and 10.12× WASI** across the 36 conditions.
+[Controls, timings and collection graph](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/pressure-service-turn/README.md).
+
+The native receiver can still hide unrelated jobs while a claimant holds its
+mutex. An independently claimable queue with the same dispatch acknowledgment
+passed 400 forced allocation and reclamation runs. It took 32% longer for 64
+cheap finalizers with two workers. Independent claims, pressure-service
+progress and physical refund remain separate release checks.
+[Queue candidate and remaining obligation](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/parked-claim-qualification/README.md).
 
 Default Java instance fields carry zeroes and nulls. Construction and first
 publication now avoid scanning those fields for reference cards and demotions.

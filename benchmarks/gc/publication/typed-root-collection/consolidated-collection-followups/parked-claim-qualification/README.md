@@ -20,3 +20,9 @@ The next validation must cover a demand already visible to a runnable pressure w
 Reproduce with `gzip -dc candidate.patch.gz | git apply` in a clean checkout of `5ba3b207`. Use the [parent hook patch](control.patch.gz) on a separate checkout of the same base, and apply the [pressure-service probe](pressure-cut.patch.gz) on the candidate. Run `cargo test --locked -p ristretto_gc --lib parked_callback_claim`, `cargo test --locked -p ristretto_gc --lib independent_callbacks_remain_available`, and the candidate-only `terminal_allocation_can_close_before_the_runnable_pressure_assistant_claims` test.
 
 [Candidate patch](candidate.patch.gz), [paired claim samples](claim-processes.jsonl.gz), [pressure-service runs](pressure-service-processes.jsonl.gz), [callback fixture](callback_cost.rs), [callback costs](callback-cost.csv), [callback samples](callback-processes.jsonl.gz), [build identities](claim-provenance.json), [all complete-collection conditions](cycles/complete-cycles.csv).
+
+## Follow-up with an acknowledged dispatch
+
+Revision `3ebce7d6` added a pressure-worker acknowledgment to the independently claimable queue. The delayed-worker regression passed, as did all 400 forced before/after-claim schedules. With 64 cheap finalizers and two workers, median full-cycle time was 1.320× the ordinary parent [1.288, 1.368]. With 1,024 finalizers it was 1.123× with one worker and 1.143× with two. The shipping collector takes the acknowledgment independently. The per-slot queue remains experimental pending a cheaper way to let peers claim work around a parked participant.
+
+Apply the [incremental patch](acknowledged-queue.patch.gz) after the original candidate patch above. [Forced claim runs](acknowledged-claims.jsonl.gz), [callback intervals](acknowledged-cost.csv), [raw timings](acknowledged-cost.jsonl.gz), [shipping implementation and controls](../pressure-service-turn/README.md).
