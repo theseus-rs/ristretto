@@ -6187,6 +6187,16 @@ unsafe impl<T: Trace> Trace for Option<T> {
         self.as_ref().is_some_and(Trace::edges_rooted_before_unroot)
     }
 
+    fn needs_clear() -> bool {
+        T::needs_clear()
+    }
+
+    fn clear_step(&mut self, offset: usize, budget: usize) -> TraceProgress {
+        self.as_mut().map_or(TraceProgress::Complete, |value| {
+            value.clear_step(offset, budget)
+        })
+    }
+
     fn may_contain_gc_references() -> bool {
         T::may_contain_gc_references()
     }

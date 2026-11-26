@@ -938,6 +938,38 @@ fn a_busy_payload_registry_does_not_strand_an_unrelated_native_allocation() -> R
 }
 
 #[test]
+#[expect(clippy::panic_in_result_fn, reason = "bounded forced schedule")]
+fn a_busy_optional_payload_registry_does_not_strand_an_unrelated_native_allocation() -> Result<()> {
+    let example: crate::HeapBuffer<u8> = vec![0; 256].into();
+    let size = Gc::allocation_size(&Some(example))?;
+    let ballast = "x".repeat(256);
+    let cap = size + 8 + Gc::allocation_size(&ballast)?;
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .compact_heap(true)
+            .region_shards(1)
+            .region_layout(256, 0)
+            .max_heap_bytes(cap)
+            .allocation_threshold(usize::MAX)
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .build(),
+    );
+    let ballast = Gc::try_new(&gc, ballast)?;
+    let global = Gc::try_new(&gc, 11u64)?;
+    let buffer =
+        crate::HeapBuffer::try_with_fn(gc.region_heap().map(Arc::as_ref), 256, |_| Ok(7u8))?;
+    let regional = Gc::try_new(&gc, Some(buffer))?;
+    assert_eq!(gc.managed_bytes(), cap);
+    assert_eq!(gc.region_heap().unwrap().statistics().occupied_bytes, 256);
+    let root = recover_past_region_return(&gc, global, regional, true)?;
+    drop((root, ballast));
+    gc.collect_full()?;
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
+
+#[test]
 #[expect(
     clippy::panic_in_result_fn,
     clippy::unwrap_in_result,
