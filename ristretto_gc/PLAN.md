@@ -2,6 +2,15 @@
 
 ## Tenfold complete-collection gate
 
+At `42c37eb4`, a parked allocation registrar permits peer enrolment, cancellation
+and spending returned bytes with no completed full ticket. All 36 complete-
+collection conditions passed against `f1daebeb`. The weakest individual 95%
+lower speedup bounds were 10.37× native and 10.73× WASI. In a separate
+comparison with its parent, enrolling and cancelling 64 or 1,024 pending
+allocations took less time. The single-request interval included parity. The
+independent-donor failure persisted in all 400 forced schedules on this revision.
+[Benchmarks, forced schedules and verified package](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md).
+
 At `2b324c42`, allocating and advisory requests register for fitting refunds
 before their first cooperative yield. A forced refund stolen during that yield
 preserves the retry allowance, and immediate cancellation restores context
