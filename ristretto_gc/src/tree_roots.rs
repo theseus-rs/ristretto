@@ -217,7 +217,10 @@ impl TreeRoots {
         {
             return visit(page);
         }
-        visit(self.pages.load().get(key)?)
+        // A suspended callback needs this page only. Holding the directory
+        // view would also retain every unrelated page in that snapshot.
+        let page = self.pages.load().get(key)?.clone();
+        visit(&page)
     }
 
     #[expect(
@@ -300,6 +303,8 @@ impl TreeRoots {
             {
                 return None;
             }
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            crate::collector::pause_after_tree_detach();
             self.release_position(root.id, Some(root.generation), page);
             Some(())
         })
@@ -380,6 +385,38 @@ impl TreeRoots {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(all(not(target_family = "wasm"), not(miri)))]
+    #[test]
+    fn suspended_removal_keeps_only_its_selected_page() {
+        use std::sync::mpsc;
+        use std::time::Duration;
+
+        let roots = Arc::new(TreeRoots::default());
+        let next = AtomicUsize::new(SLOTS);
+        let root = roots.insert(&next, 11);
+        let old_directory = Arc::downgrade(&roots.pages.load_full());
+        let heap = roots.clone();
+        let (entered, parked) = mpsc::channel();
+        let (resume, wait) = mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            heap.remove_covered(root, |address, pending| {
+                assert_eq!(address, 11);
+                entered.send(()).unwrap();
+                wait.recv().unwrap();
+                pending()
+            })
+        });
+        parked.recv_timeout(Duration::from_secs(3)).unwrap();
+        next.store(3 * SLOTS, Ordering::Relaxed);
+        let other = roots.insert(&next, 22);
+        let released = old_directory.upgrade().is_none();
+        resume.send(()).unwrap();
+        assert!(worker.join().unwrap());
+        assert!(released, "parked removal retained the historical directory");
+        assert_eq!(roots.remove(other.id, Some(other.generation)), Some(22));
+        assert_eq!(roots.len(), 0);
+    }
 
     #[test]
     fn bursts_reuse_owned_holes_while_a_manual_root_remains_live() {

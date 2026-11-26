@@ -1,10 +1,12 @@
 //! Selected atomic transitions of the ordinary numeric root registry.
 #![cfg(not(target_family = "wasm"))]
 use loom::sync::Arc;
-use loom::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use loom::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use loom::thread;
 use std::num::NonZeroU64;
 const OWNED_TREE_ROOT: u64 = 1 << 63;
+#[path = "../src/publication_state.rs"]
+mod publication_state;
 #[path = "../src/tree_root_page_state.rs"]
 mod state;
 use state::{Claim, Entry, Occupancy};
@@ -116,5 +118,29 @@ fn an_admitted_remover_and_a_covered_remover_cannot_both_take_one_generation() {
         assert_eq!(entry.remove(Some(exact)), None);
         assert!(!entry.finish_removal(exact));
         assert_eq!(entry.remove(None), Some(22));
+    });
+}
+
+#[test]
+fn new_epoch_scanner_observes_removal_intent_published_through_the_clock() {
+    use publication_state::{Birth, Clock, REVISION};
+
+    loom::model(|| {
+        let entry = Arc::new(Entry::default());
+        let exact = NonZeroU64::new(OWNED_TREE_ROOT | 9).unwrap();
+        entry.publish(exact, 11);
+        let clock = Arc::new(Clock::new(64 * REVISION));
+        let scanning = entry.clone();
+        let phases = clock.clone();
+        let scanner = thread::spawn(move || {
+            assert!(phases.transition(phases.observe().unwrap(), 1, 1));
+            scanning.scan()
+        });
+        let detached = entry.begin_removal(exact).is_some()
+            && matches!(clock.indexed_root(), Birth::Idle)
+            && entry.finish_removal(exact);
+        if scanner.join().unwrap() == state::Scan::Root(11) {
+            assert!(!detached);
+        }
     });
 }

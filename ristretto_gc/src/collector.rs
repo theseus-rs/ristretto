@@ -3360,17 +3360,14 @@ impl GarbageCollector {
             )
         {
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
-            {
-                publication_tests::record_covered_removal();
-                publication_tests::pause_after_tree_detach();
-            }
+            publication_tests::record_covered_removal();
             return;
         }
         let _publication = self.allocation_guard();
         let removed = self.roots.remove(id, generation);
         if let Some(address) = removed {
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
-            publication_tests::pause_after_tree_detach();
+            pause_after_tree_detach();
             if ADOPT {
                 crate::construction::retain(self, address);
             }
@@ -6941,7 +6938,7 @@ mod tests {
 mod reference_tests;
 
 #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
-pub(crate) use publication_tests::pause_while_graph_slot_owned;
+pub(crate) use publication_tests::{pause_after_tree_detach, pause_while_graph_slot_owned};
 #[cfg(test)]
 #[path = "publication_tests.rs"]
 mod publication_tests;
