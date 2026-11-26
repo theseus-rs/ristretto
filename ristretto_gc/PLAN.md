@@ -2,6 +2,17 @@
 
 ## Tenfold complete-collection gate
 
+The latest qualified integrated source at `849b9f31` clears every native and
+WASI cell against `f1daebeb`. Its lowest medians were 10.92× and 12.22×,
+and its lowest individual 95% bounds were 10.19× and 11.96×. Two
+intermediate revisions missed the native gate after the deadline-aware
+registry was integrated. The published follow-up series includes those runs.
+A one-unit poll now removes at most one retained phantom address and a
+parked statistics reader permits root and barrier progress across both phase
+boundaries. The existing progress and sustained-load gates still apply.
+[Collection follow-ups](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md)
+· [Java follow-ups](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/README.md).
+
 The integrated collector at `280ad63d` passed all 36 conditions against
 `f1daebeb` with individual 95% lower bounds of at least 10.69× native and
 10.97× WASI. Each condition used 24 fresh process pairs. A separate Java run
