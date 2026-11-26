@@ -375,11 +375,45 @@ struct Domain {
     trace_ready: AtomicBool,
     weak_phase: AtomicUsize,
     late_references: crate::weak_registry::LateReferences,
+    #[cfg(not(target_family = "wasm"))]
+    pending_full_cleanup: arc_swap::ArcSwapOption<AtomicUsize>,
     request_ticket: AtomicU64,
     completed_ticket: AtomicU64,
 }
 
 impl Domain {
+    fn issue_ticket(&self) -> u64 {
+        self.request_ticket.fetch_add(1, Ordering::AcqRel) + 1
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn enroll_full_cleanup(&self) -> Arc<AtomicUsize> {
+        if let Some(pending) = self.pending_full_cleanup.load_full() {
+            return pending;
+        }
+        // The initial reservation belongs to the full cycle. An already
+        // completed numerical ticket cannot satisfy an enrolment still pending.
+        let fresh = Arc::new(AtomicUsize::new(1));
+        let previous = self
+            .pending_full_cleanup
+            .compare_and_swap(std::ptr::null::<AtomicUsize>(), Some(fresh.clone()));
+        previous.as_ref().cloned().unwrap_or(fresh)
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn capture_full_cleanup(&self, cycle: &mut Cycle) {
+        if self.pending_full_cleanup.load().is_none() {
+            return;
+        }
+        if cycle.active_full_cleanup.is_some() {
+            // A failed phase commit retained its original group. Leave a full
+            // request for the callers who enrolled since the unsuccessful cut.
+            self.publish_request();
+        } else {
+            cycle.active_full_cleanup = self.pending_full_cleanup.swap(None).map(FullCleanup);
+        }
+    }
+
     /// Returns true when a newly published request needs a worker wakeup.
     fn publish_request(&self) -> bool {
         // A repeated request can carry a newer ticket. Keep every publisher
@@ -432,6 +466,8 @@ impl Domain {
             trace_ready: AtomicBool::new(false),
             weak_phase: AtomicUsize::new(0),
             late_references: crate::weak_registry::LateReferences::default(),
+            #[cfg(not(target_family = "wasm"))]
+            pending_full_cleanup: arc_swap::ArcSwapOption::empty(),
             request_ticket: AtomicU64::new(0),
             completed_ticket: AtomicU64::new(0),
         }
@@ -502,9 +538,9 @@ struct FullCleanup(Arc<AtomicUsize>);
 
 #[cfg(not(target_family = "wasm"))]
 impl FullCleanup {
-    fn reserve(count: &Arc<AtomicUsize>) -> Self {
-        count.fetch_add(1, Ordering::Relaxed);
-        Self(count.clone())
+    fn reserve(&self) -> Self {
+        self.0.fetch_add(1, Ordering::Relaxed);
+        Self(self.0.clone())
     }
 }
 
@@ -883,9 +919,7 @@ struct Cycle {
     retry_reference: Option<crate::weak_registry::Entry>,
     ticket: u64,
     #[cfg(not(target_family = "wasm"))]
-    pending_full_cleanup: Option<Arc<AtomicUsize>>,
-    #[cfg(not(target_family = "wasm"))]
-    active_full_cleanup: Option<Arc<AtomicUsize>>,
+    active_full_cleanup: Option<FullCleanup>,
     relocations: VecDeque<(MetadataRef, usize)>,
     relocation_scan_done: bool,
     phantom_retained: BTreeSet<usize>,
@@ -926,8 +960,6 @@ impl Default for Cycle {
             late_reference_turn: false,
             retry_reference: None,
             ticket: 0,
-            #[cfg(not(target_family = "wasm"))]
-            pending_full_cleanup: None,
             #[cfg(not(target_family = "wasm"))]
             active_full_cleanup: None,
             relocations: VecDeque::new(),
@@ -3062,13 +3094,23 @@ impl GarbageCollector {
     }
 
     fn request_full_cycle(&self) -> u64 {
-        let ticket = self.domains[1]
-            .request_ticket
-            .fetch_add(1, Ordering::AcqRel)
-            + 1;
+        let ticket = self.domains[1].issue_ticket();
+        self.publish_full_request();
+        ticket
+    }
+
+    fn publish_full_request(&self) {
         self.domains[1].publish_request();
         self.wake();
-        ticket
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn request_full_cleanup(&self) -> (u64, Arc<AtomicUsize>) {
+        let domain = &self.domains[1];
+        let ticket = domain.issue_ticket();
+        let cleanup = domain.enroll_full_cleanup();
+        self.publish_full_request();
+        (ticket, cleanup)
     }
 
     pub(crate) fn completed_full_ticket(&self) -> u64 {
@@ -3124,16 +3166,7 @@ impl GarbageCollector {
     pub fn collect_full(&self) -> Result<()> {
         #[cfg(not(target_family = "wasm"))]
         if !CleanupScope::contains(self) {
-            // Startup holds this same lock across the ticket cut and successful
-            // activation. Failed starts and old-only cycles leave the group pending.
-            let (ticket, cleanup) = {
-                let mut cycle = lock(&self.domains[1].cycle);
-                let cleanup = cycle
-                    .pending_full_cleanup
-                    .get_or_insert_with(Default::default)
-                    .clone();
-                (self.request_full_cycle(), cleanup)
-            };
+            let (ticket, cleanup) = self.request_full_cleanup();
             self.wait_full_ticket(ticket);
             loop {
                 let jobs = self.callback_jobs.load(Ordering::Acquire);
@@ -5765,6 +5798,10 @@ impl GarbageCollector {
                 return (!self.pending()).then_some(true);
             }
             let full = index == 1;
+            #[cfg(not(target_family = "wasm"))]
+            if full && full_request {
+                self.domain().capture_full_cleanup(&mut cycle);
+            }
             // Capture before publishing any part of the snapshot. A request
             // arriving after this cut leaves the flag set for the next start.
             let ticket = self.domain().request_ticket.load(Ordering::Acquire);
@@ -5785,6 +5822,8 @@ impl GarbageCollector {
             self.domain()
                 .mark_queue
                 .open_graph_inbox(cycle.epoch, cycle.kind == CollectionKind::Old);
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            phase_tests::before_snapshot_commit();
             if !self.commit_phase(observation, true, true, 0) {
                 self.domain().mark_queue.close_graph_inbox();
                 if cycle.kind == CollectionKind::Old {
@@ -5818,10 +5857,6 @@ impl GarbageCollector {
             cycle.cursor = 0;
             cycle.reference_stage = 0;
             cycle.ticket = ticket;
-            #[cfg(not(target_family = "wasm"))]
-            if cycle.kind == CollectionKind::Full {
-                cycle.active_full_cleanup = cycle.pending_full_cleanup.take();
-            }
             cycle.relocations.clear();
             cycle.relocation_scan_done = false;
             debug_assert!(cycle.phantom_retained.is_empty());

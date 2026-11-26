@@ -992,7 +992,7 @@ impl GarbageCollector {
                 if let Some(cleanup) = &cycle.active_full_cleanup
                     && task.metadata.has_cleanup()
                 {
-                    task.full_cleanup = Some(super::FullCleanup::reserve(cleanup));
+                    task.full_cleanup = Some(cleanup.reserve());
                 }
                 task
             };

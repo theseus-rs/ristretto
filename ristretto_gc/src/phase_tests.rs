@@ -7,7 +7,13 @@ use super::*;
 thread_local! {
     static AFTER_FULL_REQUEST: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static BEFORE_SWEEP_HANDOFF: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+    static BEFORE_SNAPSHOT_COMMIT: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static AFTER_ACTIVATION: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn before_snapshot_commit() {
+    pause_once(&BEFORE_SNAPSHOT_COMMIT);
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
@@ -132,6 +138,70 @@ mod native {
     use super::*;
     use std::sync::mpsc;
     use std::time::Duration;
+
+    #[cfg(not(miri))]
+    #[test]
+    fn a_failed_full_start_preserves_both_cleanup_groups() -> Result<()> {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(true)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .diagnostics(true)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let (_, first) = gc.request_full_cleanup();
+        let (_, joined) = gc.request_full_cleanup();
+        assert!(Arc::ptr_eq(&first, &joined));
+        let (before, observed) = mpsc::channel();
+        let (release, resume) = mpsc::channel();
+        let heap = gc.clone();
+        let starter = thread::spawn(move || {
+            BEFORE_SNAPSHOT_COMMIT.set(Some(ClaimPause {
+                entered: before,
+                resume,
+            }));
+            heap.step();
+        });
+        observed
+            .recv_timeout(Duration::from_secs(5))
+            .expect("captured original group");
+        let (new_ticket, later) = gc.request_full_cleanup();
+        assert!(!Arc::ptr_eq(&first, &later));
+        // Change the real counted publication clock after observe and before commit.
+        drop(gc.phase_clock.enter());
+        release.send(()).expect("attempt stale transition");
+        starter.join().expect("starter");
+        assert_eq!(gc.statistics()?.collections_started, 0);
+        assert!(gc.diagnostics().publication_retries > 0);
+        for _ in 0..16384 {
+            if first.load(Ordering::Acquire) == 0 {
+                break;
+            }
+            gc.step();
+        }
+        assert_eq!(first.load(Ordering::Acquire), 0);
+        assert!(gc.completed_full_ticket() >= new_ticket);
+        assert_eq!(
+            later.load(Ordering::Acquire),
+            1,
+            "the numerical ticket covered two requests"
+        );
+        for _ in 0..16384 {
+            if later.load(Ordering::Acquire) == 0 {
+                break;
+            }
+            gc.step();
+        }
+        assert_eq!(
+            later.load(Ordering::Acquire),
+            0,
+            "later group lost its full request"
+        );
+        assert_eq!(gc.statistics()?.full_collections, 2);
+        Ok(())
+    }
 
     #[cfg(not(miri))]
     #[test]
