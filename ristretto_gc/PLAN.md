@@ -18,6 +18,14 @@ the original reaper resumed. The release test must exercise competing waiters,
 retain their successful roots and account for both donors.
 [Forced schedules and process receipts](../benchmarks/gc/publication/compacting-endurance/region-epochs/README.md).
 
+A separate shared-context experiment passed the 10× timing gate but could
+return OOM for 8 bytes while 4,088 prepaid bytes remained in the same
+context. A forced refill between cache lookup and global reservation reproduced
+the failure. Before integrating this path, require the competing allocator to
+consume the refill exactly once and a waiting future to receive a wake when
+the refill makes its reservation possible.
+[Reproduction and timings](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md).
+
 At `74275197`, all three runtimes completed all arrivals. At 1,500/s the
 median scheduled p99.9 was 229.5 µs for Ristretto, 211 µs for G1 and
 156.5 µs for ZGC. Both HotSpot collectors also had lower tails at 1,000/s. The

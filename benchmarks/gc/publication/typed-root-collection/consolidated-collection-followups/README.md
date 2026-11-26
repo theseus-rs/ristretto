@@ -1,6 +1,6 @@
 # Collection performance through the integrated collector revisions
 
-Each revision ran the full 36-condition comparison against the same baseline collector at `f1daebeb`. The table shows the weakest of the individual paired bootstrap 95% lower speedup bounds. Every condition must reach 10×.
+Each revision, including the withheld experiment, ran the full 36-condition comparison against the same baseline collector at `f1daebeb`. The table shows the weakest of the individual paired bootstrap 95% lower speedup bounds. Every condition must reach 10×.
 
 | Collector change | Revision | Schedule seed | Native | WASI | Passing conditions |
 | --- | --- | ---: | ---: | ---: | ---: |
@@ -13,6 +13,9 @@ Each revision ran the full 36-condition comparison against the same baseline col
 | Region evacuation epochs and nonblocking trim probes | `81594aad` | 251126815 | 10.18× | 11.68× | 36 / 36 |
 | Owned source and destination checks during incremental copies | `1bd9360c` | 251126136 | 10.18× | 11.91× | 36 / 36 |
 | Clean buffered edges while the target shard is parked | `74275197` | 251126742 | **10.11×** | **11.78×** | **36 / 36** |
+| Experimental shared allocation credit (withheld) | `4302f9b7` | 251126602 | 10.07× | 11.69× | 36 / 36 |
+
+The shared-credit experiment passed the timing gate and 100 repetitions of the context tests. A separate forced schedule exposed an allocation failure. One peer observed an empty context and bypassed a parked range cache. A second peer refilled the context and retained its 8-byte root. With 4,088 bytes now prepaid, the first peer returned OOM for 8 bytes. The consolidated collector retains the earlier implementation. The diagnostic bundle includes both patches against the recorded base, the test command, and the failing result. [Diagnostic bundle](context-credit-witness.json.gz) · [Process records](context-credit.csv)
 
 At `74275197`, the minimum paired medians were 10.33× native and 11.84× WASI. In 300 separate native processes, a clean buffered edge could be acknowledged with its target shard parked during collector draining, explicit flushing or a mutator's overflow. The collector retained the child graph. A consumer parked after claiming a record still kept its collection ticket open. The parent failed the collector-drain assertion. [Forced schedules and parent failure](barrier-schedules.json.gz)
 
