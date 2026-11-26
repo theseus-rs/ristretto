@@ -35,6 +35,13 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Executor registration and last-worker exit | `43ad8138` | 251127011 | **10.14×** | **10.81×** | **36 / 36** |
 | Root implicit Java monitors across suspension | `480d279a` | 251127012 | **10.03×** | **10.50×** | **36 / 36** |
 | Exact deletion and buffered barrier identity | `e920e1d3` | 251127022 | **10.61×** | **10.65×** | **36 / 36** |
+| Retrace a buffered owner after its graph changes | `559296ae` | 251127105 | **10.10×** | **10.54×** | **36 / 36** |
+
+## Retracing a buffered write after an earlier traversal
+
+An older object can acquire a young child after the collector has traced its fields. On the parent revision, both explicit flushing and collector draining acknowledged that buffered write, then reclaimed the reachable child. Both paths now request a fresh traversal during young strong marking and keep the record pending until the work is visible. The two regressions preserve the child through a young collection and check its reclamation after the owner drops. Five progress and liveness tests passed in 100 fresh native processes each. The default native library passed 554 tests, the all-feature library passed 845 and the WASI library passed 325. Strict Clippy, the bare-Wasm build and Cargo package verification passed.
+
+The complete-collection comparison used 24 process pairs per condition, 1,728 processes in total. The weakest individual 95% speedup bounds against `f1daebeb` were 10.096× native and 10.536× WASI. A separate public young-collection test still exhausts 4,096 steps while the primary remembered-set shard is parked. [Process measurements](buffered-rescan.csv) · [Failing controls, tests, stress runs and read-only audit](buffered-rescan-controls.json.gz)
 
 ## Exact identity during child deletion and deferred marking
 

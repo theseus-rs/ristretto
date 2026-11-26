@@ -2,6 +2,8 @@
 
 ## Tenfold complete-collection gate
 
+At `559296ae`, buffered owner writes schedule a fresh traversal after an earlier trace read the previous fields. Both drain modes retain the young child, and 500 forced processes passed. The 36-condition complete-collection gate passed with weakest individual 95% lower bounds of 10.096× native and 10.536× WASI. Primary remembered-set contention, finalizable storage, VM boundaries and whole-host qualification remain open. [Regression and complete-collection results](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#retracing-a-buffered-write-after-an-earlier-traversal).
+
 At `e920e1d3`, deferred deletion uses the original birth identity, and clean marking and prepared dirty enrollment can progress while the object's shard is parked. All 700 forced schedules and 36 collection conditions passed. The weakest individual 95% speedup bounds were 10.61× native and 10.65× WASI. The native legacy embedded-edge barrier used 60.1% less time. The native unbuffered counted barrier for one repeated handle used 9.4% more. The remaining alpha work includes stalled remembered-set publication, finalizable storage and VM boundaries. Host-wide pauses, sustainable Java performance and endurance remain unqualified.
 [Identity controls, mechanism costs and full-cycle measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#exact-identity-during-child-deletion-and-deferred-marking).
 
