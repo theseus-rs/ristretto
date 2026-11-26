@@ -34,6 +34,17 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Cooperative clearing of locked buffers | `d07426d1` | 251127009 | **10.43×** | **10.63×** | **36 / 36** |
 | Executor registration and last-worker exit | `43ad8138` | 251127011 | **10.14×** | **10.81×** | **36 / 36** |
 | Root implicit Java monitors across suspension | `480d279a` | 251127012 | **10.03×** | **10.50×** | **36 / 36** |
+| Exact deletion and buffered barrier identity | `e920e1d3` | 251127022 | **10.61×** | **10.65×** | **36 / 36** |
+
+## Exact identity during child deletion and deferred marking
+
+At `e920e1d3`, clearing a leased parent shades its original live child even when another thread holds the child's object shard. When the original child has died, clearing its stale reference leaves a later allocation at the same address white. The original failures are documented below. The collector carries the stable object ID in deferred work and in its cache of completed barriers. A caller-protected raw handle captures the real ID when its public write barrier runs. A dirty owner enters the remembered set only when its exact descriptor is still present. The prepared drain can enroll a live owner while its object shard is parked.
+
+The first implementation performed an optional completion check on an unrelated pending allocation and forced that allocation to retry publication. The new test submits stale records during actual publication. It verifies that they are acknowledged, leave remembered membership and certification untouched, and allow the new birth to complete on its first attempt. Seven schedules passed in 700 fresh native processes. The native library passed 552 default and 843 all-feature tests. The full all-feature suite, strict Clippy, 323 WASI library tests, the bare-Wasm build and packaged collector verification also passed. [Controls, tests and audit receipts](deletion-identity-verification.json.gz)
+
+With diagnostics disabled, marking an embedded edge took 60.1% less operation time under native legacy publication and 53.5% less under native counted publication with buffering. Corresponding WASI reductions were 19.8% and 34.3%. On native unbuffered counted publication, repeating a barrier on one ordinary handle took 9.4% longer and the idle handle barrier took 18.7% longer. Checking the exact cached identity before the directory lookup removed most of the first candidate’s 3.40× repeated-handle cost. Each condition used nine paired processes with 100,000 operations per process. All 36 complete-collection conditions exceeded 10× against `f1daebeb`, using a separate 1,728-process comparison. [Per-process full-cycle measurements](deletion-barrier.csv) · [All barrier samples, compiler receipts and pilot results](deletion-barrier-costs.json.gz)
+
+![Elapsed cost ratios and paired 95% intervals for active and idle barriers on native and WASI](deletion-barrier-cost.svg)
 
 ## Synchronized method receiver lifetime
 
@@ -53,9 +64,9 @@ The native cost comparisons use the immediate parent `f1b72c1f`, with one pinned
 
 ![Elapsed time to enroll, repoll or complete an allocation after a refund, relative to the parent at three queue sizes](executor-waiter-cost.svg)
 
-## Outstanding deletion-barrier regressions
+## Deletion-barrier regressions before the identity fix
 
-Two native tests fail at both `f1b72c1f` and `43ad8138`. A callback lease delays the retirement of a parent containing a child reference. In the first test, the original child is physically reclaimed and a fresh allocation receives the same verified address with a different object identity. Dropping the delayed edge marks the new allocation in the next full cycle. In the second test the original child is still present. Under counted publication the parent's clearing thread misses a one-second deadline while another thread holds the child's object shard. The test releases the shard and joins the clearing thread. These cases block integrated-alpha qualification. [Reproducible test patch, command and failing output](deletion-barrier-controls.json.gz)
+Two native tests fail at both `f1b72c1f` and `43ad8138`. A callback lease delays the retirement of a parent containing a child reference. In the first test, the original child is physically reclaimed and a fresh allocation receives the same verified address with a different object identity. Dropping the delayed edge marks the new allocation in the next full cycle. In the second test the original child is still present. Under counted publication the parent's clearing thread misses a one-second deadline while another thread holds the child's object shard. The test releases the shard and joins the clearing thread. These cases passed after the exact-identity change above. [Reproducible test patch, command and failing output](deletion-barrier-controls.json.gz)
 
 ## Cooperative clearing of locked buffers
 

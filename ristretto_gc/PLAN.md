@@ -2,6 +2,9 @@
 
 ## Tenfold complete-collection gate
 
+At `e920e1d3`, deferred deletion uses the original birth identity, and clean marking and prepared dirty enrollment can progress while the object's shard is parked. All 700 forced schedules and 36 collection conditions passed. The weakest individual 95% speedup bounds were 10.61× native and 10.65× WASI. The native legacy embedded-edge barrier used 60.1% less time. The native unbuffered counted barrier for one repeated handle used 9.4% more. The remaining alpha work includes stalled remembered-set publication, finalizable storage and VM boundaries. Host-wide pauses, sustainable Java performance and endurance remain unqualified.
+[Identity controls, mechanism costs and full-cycle measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#exact-identity-during-child-deletion-and-deferred-marking).
+
 At `480d279a`, synchronized Java methods retain their receiver while waiting for a monitor and through release. The four return/cancellation cases passed on native and WASI. All 1,008 enabled native VM tests passed and three were ignored. The complete-collection comparison passed all 36 conditions, with weakest individual 95% speedup bounds of 10.03× native and 10.50× WASI. Deletion-barrier identity, broader VM boundaries, pause telemetry and sustained comparisons remain open.
 [Synchronized receiver regression and collection measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#synchronized-method-receiver-lifetime).
 
