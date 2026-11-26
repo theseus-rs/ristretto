@@ -30,6 +30,8 @@ pub struct MethodExecutionProfile {
     pub name: String,
     pub descriptor: String,
     pub rejection_reason: Option<&'static str>,
+    /// JVM byte offset and opcode for an instruction-level production rejection.
+    pub rejected_bytecode: Option<(usize, u8)>,
     /// Explicit opt-in preparation; the production rejection reason is retained.
     pub experimental_preparation: bool,
     pub compilation_state: &'static str,
@@ -245,6 +247,9 @@ impl Recorder {
                     rejection_reason: ristretto_jit::Compiler::rejection_reason(
                         method.definition(),
                     ),
+                    rejected_bytecode: ristretto_jit::Compiler::rejected_bytecode(
+                        method.definition(),
+                    ),
                     experimental_preparation: false,
                     compilation_state: "not_requested",
                     queued_requests: 0,
@@ -388,6 +393,7 @@ impl Recorder {
                 name: r.data.name.clone(),
                 descriptor: r.data.descriptor.clone(),
                 rejection_reason: r.data.rejection_reason,
+                rejected_bytecode: r.data.rejected_bytecode,
                 experimental_preparation: r.data.experimental_preparation,
                 compilation_state: r.data.compilation_state,
                 queued_requests: r.data.queued_requests,
@@ -662,7 +668,12 @@ mod tests {
             );
         }
         let fallback = fixture(
-            vec![Instruction::Aconst_null, Instruction::Areturn],
+            vec![
+                Instruction::Bipush(7),
+                Instruction::Pop,
+                Instruction::Aconst_null,
+                Instruction::Areturn,
+            ],
             "()Ljava/lang/Object;",
         )?;
         let method = fallback.try_get_method("run", "()Ljava/lang/Object;")?;
@@ -690,6 +701,11 @@ mod tests {
         assert_eq!(fallback.compiled_entries, 0);
         assert_eq!(fallback.interpreter_entries, 1);
         assert_eq!(fallback.rejection_reason, Some("unqualified_instruction"));
+        assert_eq!(
+            fallback.rejected_bytecode,
+            Some((3, Instruction::Aconst_null.code()))
+        );
+        assert_eq!(compiled.rejected_bytecode, None);
         assert!(report.methods.iter().any(|r| r.intrinsic_entries > 0));
         Ok(())
     }
