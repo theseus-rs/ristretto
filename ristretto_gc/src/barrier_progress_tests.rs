@@ -1254,3 +1254,63 @@ fn dirty_owner_debt_can_drain_while_the_young_owner_shard_is_parked() -> Result<
     }
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+fn young_progress_with_remembered_publisher(counted: bool, parked: bool) -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .concurrent_publication(counted)
+            .metadata_shards(1)
+            .promotion_age(1)
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .allocation_threshold(usize::MAX)
+            .full_collection_interval(usize::MAX)
+            .build(),
+    );
+    let owner = Gc::try_new(&gc, crate::cell::RwLock::new(None::<Gc<u64>>))?;
+    gc.collect_full()?;
+    let address = owner.as_ptr().addr();
+    assert!(!gc.is_young_allocation(address));
+    let child = Gc::try_new(&gc, 67_u64)?;
+    let live = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+    *owner.write() = Some(child.into_rooted());
+    assert!(gc.remembered.lock(address).contains(&address));
+    let garbage = Gc::try_new(&gc, 91_u64)?;
+    let dead = crate::GcWeak::new(&garbage, crate::ReferenceKind::Weak, 0);
+    drop(garbage);
+    let before = gc.statistics()?.young_collections;
+    let shard = parked.then(|| gc.remembered.lock(address));
+    let (finished, result) = mpsc::channel();
+    let worker_gc = gc.clone();
+    let worker = thread::spawn(move || {
+        worker_gc.collect_young();
+        let completed = (0..4096).any(|_| worker_gc.step());
+        finished.send(completed).expect("observing helper");
+    });
+    let completed = result.recv_timeout(Duration::from_secs(5));
+    drop(shard);
+    worker.join().expect("young collector helper");
+    assert_eq!(completed, Ok(true), "parked={parked}, counted={counted}");
+    assert_eq!(gc.statistics()?.young_collections, before + 1);
+    assert_eq!(live.upgrade().as_deref(), Some(&67));
+    assert!(dead.upgrade().is_none());
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn young_collection_progress_with_parked_legacy_remembered_publisher() -> Result<()> {
+    young_progress_with_remembered_publisher(false, false)?;
+    young_progress_with_remembered_publisher(false, true)
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn young_collection_progress_with_parked_counted_remembered_publisher() -> Result<()> {
+    young_progress_with_remembered_publisher(true, false)?;
+    young_progress_with_remembered_publisher(true, true)
+}
