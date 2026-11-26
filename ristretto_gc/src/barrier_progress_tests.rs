@@ -640,6 +640,105 @@ fn parked_writer_retains_incoming_root_through_two_young_cycles() -> Result<()> 
     Ok(())
 }
 
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn demoted_vector_edge_survives_a_young_cycle_before_owner_notification() -> Result<()> {
+    struct Edges(Vec<Gc<u64>>, bool);
+
+    // SAFETY: all strong edges delegate tracing and ownership to their vector.
+    unsafe impl Trace for Edges {
+        fn trace(&self, gc: &GarbageCollector) {
+            self.0.trace(gc);
+        }
+
+        fn root(&mut self) {
+            self.0.root();
+        }
+
+        unsafe fn unroot(&mut self, owner: crate::TraceOwner<'_>) {
+            // SAFETY: this exclusive borrow and the actual owner cover all elements.
+            unsafe { self.0.unroot(owner) };
+            pause_before_remembering();
+            assert!(!std::mem::take(&mut self.1), "interrupted demotion");
+        }
+    }
+
+    for counted in [false, true] {
+        for buffer in [0, 4] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .promotion_age(1)
+                    .barrier_buffer_size(buffer)
+                    .allocation_threshold(usize::MAX)
+                    .full_collection_interval(usize::MAX)
+                    .build(),
+            );
+            let parent = Gc::try_new(&gc, crate::cell::RwLock::new(Edges(vec![], false)))?;
+            gc.collect_full()?;
+            generation_tests::finish_young(&gc)?;
+            let address = parent.as_ptr() as usize;
+            assert!(!gc.is_young_allocation(address));
+            assert!(!gc.remembered.lock(address).contains(&address));
+            let child = Gc::try_new(&gc, 42_u64)?.into_rooted();
+            let id = child.identity();
+            let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+            let garbage = Gc::try_new(&gc, 13_u64)?;
+            let victim = crate::GcWeak::new(&garbage, crate::ReferenceKind::Weak, 0);
+            drop(garbage);
+            thread::scope(|scope| -> Result<()> {
+                let (entered, parked) = std::sync::mpsc::channel();
+                let (resume, release) = std::sync::mpsc::channel();
+                let owner = &parent;
+                let writer = scope.spawn(move || {
+                    let mut edges = owner.write();
+                    edges.0.push(child);
+                    BEFORE_REMEMBER.set(Some(ClaimPause {
+                        entered,
+                        resume: release,
+                    }));
+                    drop(edges);
+                });
+                parked
+                    .recv_timeout(std::time::Duration::from_secs(3))
+                    .unwrap();
+                let finished = generation_tests::finish_young(&gc);
+                let alive = weak.upgrade().is_some();
+                let reclaimed = victim.upgrade().is_none();
+                resume.send(()).unwrap();
+                writer.join().unwrap();
+                finished?;
+                assert!(
+                    alive,
+                    "lost child after demotion, before owner notification"
+                );
+                assert!(reclaimed, "a suspended store retained unrelated garbage");
+                Ok(())
+            })?;
+            let witness = parent.read().0[0].rooted_clone();
+            assert_eq!(witness.identity(), id);
+            assert_eq!(*witness, 42);
+            drop(witness);
+            parent.write().0.clear();
+            gc.collect_full()?;
+            assert!(weak.upgrade().is_none());
+
+            let next = Gc::try_new(&gc, 73_u64)?.into_rooted();
+            let id = next.identity();
+            let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let mut edges = parent.write();
+                edges.0.push(next);
+                edges.1 = true;
+            }));
+            assert!(panic.is_err());
+            assert!(!crate::cell::has_guards());
+            generation_tests::finish_young(&gc)?;
+            assert_eq!(parent.read().0[0].rooted_clone().identity(), id);
+        }
+    }
+    Ok(())
+}
+
 #[test]
 fn prepared_field_update_keeps_new_membership_against_a_stale_prune() -> Result<()> {
     for counted in [false, true] {
