@@ -45,6 +45,18 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Buffer reclamation and advisory admission | `113da93b` | 251127151 | **10.40×** | **10.23×** | **36 / 36** |
 | Cooperative regional buffer acquisition | `994e434a` | 251127162 | **10.25×** | **10.44×** | **36 / 36** |
 | Collection with parked regional maintenance | `9e7e3580` | 251127171 | **10.41×** | **10.09×** | **36 / 36** |
+| Exhaustion with an empty parked shard | `e34d1a6a` | 251127182 | **10.22×** | **10.30×** | **36 / 36** |
+| Guarded payload pin feedback | `2f5b3276` | 251127193 | **10.44×** | **10.07×** | **36 / 36** |
+
+## Heap exhaustion and pin feedback with parked registries
+
+With a full, live payload region and an empty parked registry, the previous buffer allocator exhausted 4,096 polls without a decision. The allocator can now read each shard's existing physical backing charge without acquiring its registry. It keeps retrying when skipped backing could contain a fitting range or the shared budget allows fresh backing. Otherwise it can use the ordinary finite recovery policy and report exhaustion. A returned peer extent remains reusable, and an empty parked registry can still open backing once released. Four hundred fresh processes exercised these cases. A parked nonempty shard can still hide whether a range fits.
+
+A separate control held a managed read guard on a regional buffer and parked its registry. The collector waited two seconds in advisory pin recording. It now defers the hint when the registry is unavailable. The payload's read guard continues to exclude copying. A full ticket reclaimed an unrelated scalar before either guard was released and the buffer retained its address and contents under both publication policies. All 100 fresh processes passed. Both source revisions passed the 36-condition timing gate. The latest production code passed 869 all-feature native library tests, 334 WASI library tests and 35 WASI integration tests. [Exhaustion measurements](regional-exhaustion.csv) · [Pin feedback measurements](pin-feedback.csv) · [Controls, suites, audits, and package checksum](regional-exhaustion-controls.json.gz)
+
+One full native run on `e34d1a6a` passed 945 tests with one ignored. In 100 independent repetitions, 97 migration runs saw incomplete destructor counts and 17 generational runs saw indexed survivors after two explicit full collections. An instrumented comparison on `96e5f776` observed seven generational failures in 60 processes. Every survivor in those seven runs matched one of the parents' last child identities. Each had zero remaining callback jobs and retirement tasks at observation, and the next fresh collection removed that child. The observations establish temporary retention for those seven schedules. The diagnostic patch and process output are included in the controls.
+
+The pin-feedback suite also exposed an early-wake test sampling the executor counter immediately upon entering a separate compaction callback. The revised check keeps compaction parked and waits for the executor's actual wake under the existing deadline before polling or cancelling the allocation. Its 200 fresh processes passed. The subsequent native suite still failed the migration and generational assertions.
 
 ## Regional allocation and full collections with a parked registry
 
