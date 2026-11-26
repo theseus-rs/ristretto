@@ -86,12 +86,13 @@ cheap finalizers with two workers. Independent claims, pressure-service
 progress and physical refund remain separate release checks.
 [Queue candidate and remaining obligation](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/parked-claim-qualification/README.md).
 
-One hypothesis for cheaper independent claims is a fixed-size page of jobs
-per publishing native worker. Test whether a claimant parked immediately before
-or after taking one index leaves 128 or 127 peers available across a page
-boundary. Count live pages after the other peers drain while the claimant stays
-parked. Check shutdown during publication, destructor ordering across workers
-and exact-once physical refunds before comparing the six cheap-finalizer costs.
+Linked pages and fixed ring slots both left 128 jobs available before a
+parked claim and 127 afterward. The allocation-at-cap controls also passed,
+across 800 forced runs in total. With 1,024 cheap finalizers and two workers,
+the page trial took 1.195× the shipping elapsed time and the ring with
+overflow took 7.054×. The shipping receiver still needs a way to claim work
+around a parked owner at comparable cost.
+[Queue designs, progress checks and timing intervals](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/native-callback-inboxes/README.md).
 
 Default Java instance fields carry zeroes and nulls. Construction and first
 publication now avoid scanning those fields for reference cards and demotions.

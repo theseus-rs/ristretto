@@ -1,0 +1,47 @@
+{
+  "parent": "9758fe8c40c7e56f2466a68204b49bb50fc9176b",
+  "fixture_sha256": "10e36e25eb033dab59f6785da3e6f7120cb80eedd3d42b8f61a3aeb8f9058e43",
+  "affinity": [
+    4,
+    6,
+    9
+  ],
+  "seed": 251127297,
+  "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+  "profiles": {
+    "opt-level": 3,
+    "codegen-units": 1,
+    "lto": true,
+    "panic": "abort"
+  },
+  "candidates": {
+    "pages": {
+      "parent_exe_sha256": "fc3c8f3932477ed52d904c902f5a89126fc103a74a1a6163222a25cba80cd4a0",
+      "candidate_exe_sha256": "2df8c3a816f5afc4d0451f1156fd1a8bff5a6869b6f7b3379df3df94afa637cd",
+      "patch_sha256": "ae5bc451d2b11390cbe67f8b14f8220f05893f62a0d1546e45226b722857b5de",
+      "unit_tests": {
+        "exe_sha256": "c6487991e3dea953fd95744680dc407467d22cd687c8b5bf66c64e2e11705079",
+        "passed": {
+          "independent_callbacks_remain_available_before_a_parked_claim": 100,
+          "independent_callbacks_remain_available_after_a_parked_claim": 100,
+          "capped_allocation_progresses_before_a_parked_callback_claim": 100,
+          "capped_allocation_progresses_after_a_parked_callback_claim": 100
+        }
+      }
+    },
+    "ring": {
+      "parent_exe_sha256": "fc3c8f3932477ed52d904c902f5a89126fc103a74a1a6163222a25cba80cd4a0",
+      "candidate_exe_sha256": "87ff18783522d3c7d51f827f92fc688690a7a737937002143e8f87b88deb9ec8",
+      "patch_sha256": "d6a23a59487f04fd7cedf082a3485e16df1e32ec66c6213645a5688383b3921c",
+      "unit_tests": {
+        "exe_sha256": "cbe8a5146d2ab574f0f480acf7098a1491c16ab50ecb773a0b00cfb1aad4d91a",
+        "passed": {
+          "independent_callbacks_remain_available_before_a_parked_claim": 100,
+          "independent_callbacks_remain_available_after_a_parked_claim": 100,
+          "capped_allocation_progresses_before_a_parked_callback_claim": 100,
+          "capped_allocation_progresses_after_a_parked_callback_claim": 100
+        }
+      }
+    }
+  }
+}
