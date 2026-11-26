@@ -1,0 +1,672 @@
+{
+  "before": {
+    "revision": "dd877809",
+    "build": {
+      "schema_version": 1,
+      "source_archive_sha256": "f5a38941712435bca4093c8c30add4a33988b920aa8ff2c2937ba1ec0340d9d7",
+      "source_manifest_sha256": "60f2d83e1eb3a0e82234f055115cc68c3510e0770a9beacdd39361f5252907bd",
+      "binary_sha256": "9e459430d1b7994339d106c493dda79c7649d15968d1754c1958589c383d8b72",
+      "binary_name": "program",
+      "target": "native",
+      "features": [
+        "experimental-execution-measurement"
+      ],
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "-p",
+        "ristretto_vm",
+        "--example",
+        "gc_compare",
+        "--no-default-features",
+        "--features",
+        "experimental-execution-measurement",
+        "--message-format=json"
+      ],
+      "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5\n",
+      "source_unchanged": true,
+      "qualification": false
+    },
+    "forks": [
+      {
+        "fixture": "roots-interpreter",
+        "admission": {
+          "schema_version": 1,
+          "run_id": "cb1d7c53-6496-4763-8a35-d9f63419edd0",
+          "fixture": "benchmark",
+          "policy": "candidate",
+          "workload": "roots",
+          "duration_ms": 250,
+          "warmup_ms": 500,
+          "rate": 0,
+          "seed": 7,
+          "heap_mib": 64,
+          "workers": 0,
+          "pause_capacity": 65536,
+          "method_limit": 4096,
+          "watchdog_seconds": 120,
+          "require_compiled": false
+        },
+        "run": {
+          "schema_version": 1,
+          "run_id": "cb1d7c53-6496-4763-8a35-d9f63419edd0",
+          "mode": "native",
+          "command": [
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-interpreter/program",
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-interpreter/classes",
+            "64",
+            "0",
+            "candidate",
+            "roots",
+            "250",
+            "500",
+            "0",
+            "7"
+          ],
+          "watchdog_seconds": 120,
+          "admission_sha256": "2465748cc1b42871cbc48191030e3a3db7df2f930f28995538cf3ba24af78eb2",
+          "host_process_id": 1018266,
+          "exit_code": 0,
+          "launcher_sha256": "c8acc15d6f83e30dc5c9a67c780fed27c52b0a0ccde9e5548961e7ab9cfb18ed",
+          "workload_sha256": "d1e7787bbe91d63832ca8b1768d352dd0f50dae3e44b13791fa0f107a73d5286",
+          "host_executable_sha256": "9e459430d1b7994339d106c493dda79c7649d15968d1754c1958589c383d8b72",
+          "timed_out": false,
+          "launch_plan_sha256": "8c8d4fe922fc7045b4ff15e776910a9cc74f3f4b054d1ddac3c45ed2cb498c3f",
+          "java_receipt_sha256": "3ff3d67e1ec21774f6d48f6ec2957a5526bfb9c988c83269f24697330aeaecb0",
+          "stdout_sha256": "71ce21ad34c9323578ddb39f5f1e4a6d6e86c3bba9511c2eb53a227f770cd9b6",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "launch": {
+          "schema_version": 1,
+          "run_id": "cb1d7c53-6496-4763-8a35-d9f63419edd0",
+          "mode": "native",
+          "host_process_id": 1018266,
+          "command": [
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-interpreter/program",
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-interpreter/classes",
+            "64",
+            "0",
+            "candidate",
+            "roots",
+            "250",
+            "500",
+            "0",
+            "7"
+          ],
+          "host_executable_sha256": "9e459430d1b7994339d106c493dda79c7649d15968d1754c1958589c383d8b72",
+          "binary_sha256": "9e459430d1b7994339d106c493dda79c7649d15968d1754c1958589c383d8b72",
+          "launcher_sha256": "c8acc15d6f83e30dc5c9a67c780fed27c52b0a0ccde9e5548961e7ab9cfb18ed"
+        },
+        "java": {
+          "jdk_home": "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+          "jdk_files": {
+            "bin/java": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+            "bin/javac": "e78a285f4e369cf165f952e3405fc00444199d5ea88d0860edb5b72ad3cb3788",
+            "lib/modules": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83"
+          },
+          "command": [
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10/bin/javac",
+            "--release",
+            "8",
+            "-Xlint:-options",
+            "-d",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-interpreter/classes",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-interpreter/fixture-source/benchmarks/gc/GcBench.java",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-interpreter/fixture-source/benchmarks/gc/GcTelemetry.java"
+          ],
+          "exit_code": 0,
+          "source_files": {
+            "benchmarks/gc/GcBench.java": "e5e380dfc16f15f4e5a73c91a229052dff5e4d69d4fbc7185b71ee145140e0a4",
+            "benchmarks/gc/GcTelemetry.java": "1eee493b0ea56376d9706b6691b2a9d2e9affcfaba98aab5437223254f507898"
+          },
+          "class_files": {
+            "GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+            "GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+            "GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+            "GcBench.class": "b4532f8c7186f8505ba38d1edc05d7ee072eec67b490d7382d173cd8a3b4144a",
+            "GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4"
+          }
+        }
+      },
+      {
+        "fixture": "roots-jit",
+        "admission": {
+          "schema_version": 1,
+          "run_id": "b3c11750-ab87-403e-90df-3b4c14004e52",
+          "fixture": "benchmark",
+          "policy": "candidate-jit",
+          "workload": "roots",
+          "duration_ms": 250,
+          "warmup_ms": 500,
+          "rate": 0,
+          "seed": 7,
+          "heap_mib": 64,
+          "workers": 0,
+          "pause_capacity": 65536,
+          "method_limit": 4096,
+          "watchdog_seconds": 120,
+          "require_compiled": false
+        },
+        "run": {
+          "schema_version": 1,
+          "run_id": "b3c11750-ab87-403e-90df-3b4c14004e52",
+          "mode": "native",
+          "command": [
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-jit/program",
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-jit/classes",
+            "64",
+            "0",
+            "candidate-jit",
+            "roots",
+            "250",
+            "500",
+            "0",
+            "7"
+          ],
+          "watchdog_seconds": 120,
+          "admission_sha256": "9c6d5ee0da04268c1e238056a855fea61f1608781955975307ed9c3706a9e1c0",
+          "host_process_id": 1018267,
+          "exit_code": 0,
+          "launcher_sha256": "c8acc15d6f83e30dc5c9a67c780fed27c52b0a0ccde9e5548961e7ab9cfb18ed",
+          "workload_sha256": "d1e7787bbe91d63832ca8b1768d352dd0f50dae3e44b13791fa0f107a73d5286",
+          "host_executable_sha256": "9e459430d1b7994339d106c493dda79c7649d15968d1754c1958589c383d8b72",
+          "timed_out": false,
+          "launch_plan_sha256": "1a03df0c388ccabec4908e5b25ca2f5c997eac9dd559b45570db3e1ab7187b5b",
+          "java_receipt_sha256": "5ce0bd260caba3a09403a4d79187e93bc4bc58e50670dab8c2d54b28a41dbf0d",
+          "stdout_sha256": "cb7eb9a9fe3807cd61f33562e1a212afb61801b0aea88fbf9e582a220a8bfc8c",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "launch": {
+          "schema_version": 1,
+          "run_id": "b3c11750-ab87-403e-90df-3b4c14004e52",
+          "mode": "native",
+          "host_process_id": 1018267,
+          "command": [
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-jit/program",
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-jit/classes",
+            "64",
+            "0",
+            "candidate-jit",
+            "roots",
+            "250",
+            "500",
+            "0",
+            "7"
+          ],
+          "host_executable_sha256": "9e459430d1b7994339d106c493dda79c7649d15968d1754c1958589c383d8b72",
+          "binary_sha256": "9e459430d1b7994339d106c493dda79c7649d15968d1754c1958589c383d8b72",
+          "launcher_sha256": "c8acc15d6f83e30dc5c9a67c780fed27c52b0a0ccde9e5548961e7ab9cfb18ed"
+        },
+        "java": {
+          "jdk_home": "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+          "jdk_files": {
+            "bin/java": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+            "bin/javac": "e78a285f4e369cf165f952e3405fc00444199d5ea88d0860edb5b72ad3cb3788",
+            "lib/modules": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83"
+          },
+          "command": [
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10/bin/javac",
+            "--release",
+            "8",
+            "-Xlint:-options",
+            "-d",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-jit/classes",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-jit/fixture-source/benchmarks/gc/GcBench.java",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/roots-jit/fixture-source/benchmarks/gc/GcTelemetry.java"
+          ],
+          "exit_code": 0,
+          "source_files": {
+            "benchmarks/gc/GcBench.java": "e5e380dfc16f15f4e5a73c91a229052dff5e4d69d4fbc7185b71ee145140e0a4",
+            "benchmarks/gc/GcTelemetry.java": "1eee493b0ea56376d9706b6691b2a9d2e9affcfaba98aab5437223254f507898"
+          },
+          "class_files": {
+            "GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+            "GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+            "GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+            "GcBench.class": "b4532f8c7186f8505ba38d1edc05d7ee072eec67b490d7382d173cd8a3b4144a",
+            "GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4"
+          }
+        }
+      },
+      {
+        "fixture": "positive",
+        "admission": {
+          "schema_version": 1,
+          "run_id": "0f2d6244-0bb0-487e-b2b7-e04f651b0e98",
+          "fixture": "probe",
+          "policy": "candidate-jit",
+          "workload": "control",
+          "duration_ms": 100,
+          "warmup_ms": 100,
+          "rate": 0,
+          "seed": 7,
+          "heap_mib": 64,
+          "workers": 0,
+          "pause_capacity": 65536,
+          "method_limit": 4096,
+          "watchdog_seconds": 120,
+          "require_compiled": true
+        },
+        "run": {
+          "schema_version": 1,
+          "run_id": "0f2d6244-0bb0-487e-b2b7-e04f651b0e98",
+          "mode": "native",
+          "command": [
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/positive/program",
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/positive/classes",
+            "64",
+            "0",
+            "candidate-jit",
+            "control",
+            "100",
+            "100",
+            "0",
+            "7"
+          ],
+          "watchdog_seconds": 120,
+          "admission_sha256": "f119ad99e115196daff92a2e75bce585f7e316647d4db84837e4d9acd8311c18",
+          "host_process_id": 1018265,
+          "exit_code": 0,
+          "launcher_sha256": "c8acc15d6f83e30dc5c9a67c780fed27c52b0a0ccde9e5548961e7ab9cfb18ed",
+          "workload_sha256": "81dfaf2927412a7b58f69d3fbeea951abd6fee7affb76f64fa98e0217f71a8c6",
+          "host_executable_sha256": "9e459430d1b7994339d106c493dda79c7649d15968d1754c1958589c383d8b72",
+          "timed_out": false,
+          "launch_plan_sha256": "f838cf1323aa056d86adc742cfbd0d5a6aec5107eff339b4361570fe4ade2fa7",
+          "java_receipt_sha256": "768f099131cb8c99c431170d0e06f19595f9d0a42373366d27978ec55a286f9b",
+          "stdout_sha256": "63f896326796a35ca22914fff7e4e6054e68df6cd0a4eefbfaa4b22d097eff3e",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "launch": {
+          "schema_version": 1,
+          "run_id": "0f2d6244-0bb0-487e-b2b7-e04f651b0e98",
+          "mode": "native",
+          "host_process_id": 1018265,
+          "command": [
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/positive/program",
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/positive/classes",
+            "64",
+            "0",
+            "candidate-jit",
+            "control",
+            "100",
+            "100",
+            "0",
+            "7"
+          ],
+          "host_executable_sha256": "9e459430d1b7994339d106c493dda79c7649d15968d1754c1958589c383d8b72",
+          "binary_sha256": "9e459430d1b7994339d106c493dda79c7649d15968d1754c1958589c383d8b72",
+          "launcher_sha256": "c8acc15d6f83e30dc5c9a67c780fed27c52b0a0ccde9e5548961e7ab9cfb18ed"
+        },
+        "java": {
+          "jdk_home": "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+          "jdk_files": {
+            "bin/java": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+            "bin/javac": "e78a285f4e369cf165f952e3405fc00444199d5ea88d0860edb5b72ad3cb3788",
+            "lib/modules": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83"
+          },
+          "command": [
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10/bin/javac",
+            "--release",
+            "8",
+            "-Xlint:-options",
+            "-d",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/positive/classes",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/positive/fixture-source/benchmarks/gc/fixtures/execution_window/GcBench.java",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/positive/fixture-source/benchmarks/gc/GcTelemetry.java"
+          ],
+          "exit_code": 0,
+          "source_files": {
+            "benchmarks/gc/fixtures/execution_window/GcBench.java": "423b67808728da389498cb82da830f81e8a6ae960dcf838cc2a98a3e7ec5bd85",
+            "benchmarks/gc/GcTelemetry.java": "1eee493b0ea56376d9706b6691b2a9d2e9affcfaba98aab5437223254f507898"
+          },
+          "class_files": {
+            "GcBench.class": "f54e614b2db63ac878b54214b2c666495c1d1bd6ea2984962ed8c2a09b89bb98",
+            "GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4"
+          }
+        }
+      }
+    ]
+  },
+  "after": {
+    "revision": "9ad56496",
+    "build": {
+      "schema_version": 1,
+      "source_archive_sha256": "06f39151a1dcbd400d45fe371a4d74285553444ba11ed095c3b45668b311a0e1",
+      "source_manifest_sha256": "5c654152d728c1430e695e092899c9b9c1c96b41048574957baa4f25a3d76d74",
+      "binary_sha256": "2ec6c2f40daae21c4b7c02483781ea804fb64619b12f5089a19297d693dcacf6",
+      "binary_name": "program",
+      "target": "native",
+      "features": [
+        "experimental-execution-measurement"
+      ],
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "-p",
+        "ristretto_vm",
+        "--example",
+        "gc_compare",
+        "--no-default-features",
+        "--features",
+        "experimental-execution-measurement",
+        "--message-format=json"
+      ],
+      "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5\n",
+      "source_unchanged": true,
+      "qualification": false
+    },
+    "forks": [
+      {
+        "fixture": "roots-interpreter",
+        "admission": {
+          "schema_version": 1,
+          "run_id": "1180c957-3451-46bf-9992-6bfe2910c3cd",
+          "fixture": "benchmark",
+          "policy": "candidate",
+          "workload": "roots",
+          "duration_ms": 250,
+          "warmup_ms": 500,
+          "rate": 0,
+          "seed": 7,
+          "heap_mib": 64,
+          "workers": 0,
+          "pause_capacity": 65536,
+          "method_limit": 4096,
+          "watchdog_seconds": 120,
+          "require_compiled": false
+        },
+        "run": {
+          "schema_version": 1,
+          "run_id": "1180c957-3451-46bf-9992-6bfe2910c3cd",
+          "mode": "native",
+          "command": [
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-interpreter/program",
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-interpreter/classes",
+            "64",
+            "0",
+            "candidate",
+            "roots",
+            "250",
+            "500",
+            "0",
+            "7"
+          ],
+          "watchdog_seconds": 120,
+          "admission_sha256": "d591b774638fc96b00f98efeb82743ae8cab01a68ddef6f65b57c2c7f9aa1e52",
+          "host_process_id": 1031937,
+          "exit_code": 0,
+          "launcher_sha256": "c8acc15d6f83e30dc5c9a67c780fed27c52b0a0ccde9e5548961e7ab9cfb18ed",
+          "workload_sha256": "d1e7787bbe91d63832ca8b1768d352dd0f50dae3e44b13791fa0f107a73d5286",
+          "host_executable_sha256": "2ec6c2f40daae21c4b7c02483781ea804fb64619b12f5089a19297d693dcacf6",
+          "timed_out": false,
+          "launch_plan_sha256": "3c166721820e88f528db3cd329ea432a868abcb2744dc5a22fbf411f294f9f8a",
+          "java_receipt_sha256": "4ea55a0032ac9b6ca138952452c2d7661758b422d5ed648889c85fd0f2450bf2",
+          "stdout_sha256": "c1214e098454c9e4f70609e9911f6acc1387c8d8cd14d3747bac382c5b73621f",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "launch": {
+          "schema_version": 1,
+          "run_id": "1180c957-3451-46bf-9992-6bfe2910c3cd",
+          "mode": "native",
+          "host_process_id": 1031937,
+          "command": [
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-interpreter/program",
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-interpreter/classes",
+            "64",
+            "0",
+            "candidate",
+            "roots",
+            "250",
+            "500",
+            "0",
+            "7"
+          ],
+          "host_executable_sha256": "2ec6c2f40daae21c4b7c02483781ea804fb64619b12f5089a19297d693dcacf6",
+          "binary_sha256": "2ec6c2f40daae21c4b7c02483781ea804fb64619b12f5089a19297d693dcacf6",
+          "launcher_sha256": "c8acc15d6f83e30dc5c9a67c780fed27c52b0a0ccde9e5548961e7ab9cfb18ed"
+        },
+        "java": {
+          "jdk_home": "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+          "jdk_files": {
+            "bin/java": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+            "bin/javac": "e78a285f4e369cf165f952e3405fc00444199d5ea88d0860edb5b72ad3cb3788",
+            "lib/modules": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83"
+          },
+          "command": [
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10/bin/javac",
+            "--release",
+            "8",
+            "-Xlint:-options",
+            "-d",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-interpreter/classes",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-interpreter/fixture-source/benchmarks/gc/GcBench.java",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-interpreter/fixture-source/benchmarks/gc/GcTelemetry.java"
+          ],
+          "exit_code": 0,
+          "source_files": {
+            "benchmarks/gc/GcBench.java": "e5e380dfc16f15f4e5a73c91a229052dff5e4d69d4fbc7185b71ee145140e0a4",
+            "benchmarks/gc/GcTelemetry.java": "1eee493b0ea56376d9706b6691b2a9d2e9affcfaba98aab5437223254f507898"
+          },
+          "class_files": {
+            "GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+            "GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+            "GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+            "GcBench.class": "b4532f8c7186f8505ba38d1edc05d7ee072eec67b490d7382d173cd8a3b4144a",
+            "GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4"
+          }
+        }
+      },
+      {
+        "fixture": "roots-jit",
+        "admission": {
+          "schema_version": 1,
+          "run_id": "cc11851b-95d3-4c8b-b355-8e7bb2982ab7",
+          "fixture": "benchmark",
+          "policy": "candidate-jit",
+          "workload": "roots",
+          "duration_ms": 250,
+          "warmup_ms": 500,
+          "rate": 0,
+          "seed": 7,
+          "heap_mib": 64,
+          "workers": 0,
+          "pause_capacity": 65536,
+          "method_limit": 4096,
+          "watchdog_seconds": 120,
+          "require_compiled": false
+        },
+        "run": {
+          "schema_version": 1,
+          "run_id": "cc11851b-95d3-4c8b-b355-8e7bb2982ab7",
+          "mode": "native",
+          "command": [
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-jit/program",
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-jit/classes",
+            "64",
+            "0",
+            "candidate-jit",
+            "roots",
+            "250",
+            "500",
+            "0",
+            "7"
+          ],
+          "watchdog_seconds": 120,
+          "admission_sha256": "311097f68292ecdfa47aed147449f45309ccd12973799f4a3b47f9f032600ff0",
+          "host_process_id": 1031938,
+          "exit_code": 0,
+          "launcher_sha256": "c8acc15d6f83e30dc5c9a67c780fed27c52b0a0ccde9e5548961e7ab9cfb18ed",
+          "workload_sha256": "d1e7787bbe91d63832ca8b1768d352dd0f50dae3e44b13791fa0f107a73d5286",
+          "host_executable_sha256": "2ec6c2f40daae21c4b7c02483781ea804fb64619b12f5089a19297d693dcacf6",
+          "timed_out": false,
+          "launch_plan_sha256": "460ae4ffde99956bde0653b2c27922b9a4e7741e20f3c22034843f46313c2de8",
+          "java_receipt_sha256": "fd18b91ef8f08f54752f6d6bbe568ed1a1c6c1313404a015df82467ddf37ae1e",
+          "stdout_sha256": "f9439623d1e94a6e9989e049a4490b51036b6688dd35c014def7d3aa88d8c859",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "launch": {
+          "schema_version": 1,
+          "run_id": "cc11851b-95d3-4c8b-b355-8e7bb2982ab7",
+          "mode": "native",
+          "host_process_id": 1031938,
+          "command": [
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-jit/program",
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-jit/classes",
+            "64",
+            "0",
+            "candidate-jit",
+            "roots",
+            "250",
+            "500",
+            "0",
+            "7"
+          ],
+          "host_executable_sha256": "2ec6c2f40daae21c4b7c02483781ea804fb64619b12f5089a19297d693dcacf6",
+          "binary_sha256": "2ec6c2f40daae21c4b7c02483781ea804fb64619b12f5089a19297d693dcacf6",
+          "launcher_sha256": "c8acc15d6f83e30dc5c9a67c780fed27c52b0a0ccde9e5548961e7ab9cfb18ed"
+        },
+        "java": {
+          "jdk_home": "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+          "jdk_files": {
+            "bin/java": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+            "bin/javac": "e78a285f4e369cf165f952e3405fc00444199d5ea88d0860edb5b72ad3cb3788",
+            "lib/modules": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83"
+          },
+          "command": [
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10/bin/javac",
+            "--release",
+            "8",
+            "-Xlint:-options",
+            "-d",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-jit/classes",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-jit/fixture-source/benchmarks/gc/GcBench.java",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-roots-jit/fixture-source/benchmarks/gc/GcTelemetry.java"
+          ],
+          "exit_code": 0,
+          "source_files": {
+            "benchmarks/gc/GcBench.java": "e5e380dfc16f15f4e5a73c91a229052dff5e4d69d4fbc7185b71ee145140e0a4",
+            "benchmarks/gc/GcTelemetry.java": "1eee493b0ea56376d9706b6691b2a9d2e9affcfaba98aab5437223254f507898"
+          },
+          "class_files": {
+            "GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+            "GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+            "GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+            "GcBench.class": "b4532f8c7186f8505ba38d1edc05d7ee072eec67b490d7382d173cd8a3b4144a",
+            "GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4"
+          }
+        }
+      },
+      {
+        "fixture": "positive",
+        "admission": {
+          "schema_version": 1,
+          "run_id": "961bbc78-9a74-4643-ab56-5b8a83e4fe39",
+          "fixture": "probe",
+          "policy": "candidate-jit",
+          "workload": "control",
+          "duration_ms": 100,
+          "warmup_ms": 100,
+          "rate": 0,
+          "seed": 7,
+          "heap_mib": 64,
+          "workers": 0,
+          "pause_capacity": 65536,
+          "method_limit": 4096,
+          "watchdog_seconds": 120,
+          "require_compiled": true
+        },
+        "run": {
+          "schema_version": 1,
+          "run_id": "961bbc78-9a74-4643-ab56-5b8a83e4fe39",
+          "mode": "native",
+          "command": [
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-positive/program",
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-positive/classes",
+            "64",
+            "0",
+            "candidate-jit",
+            "control",
+            "100",
+            "100",
+            "0",
+            "7"
+          ],
+          "watchdog_seconds": 120,
+          "admission_sha256": "f1ed154685d01745d12188ed996d1aad7c4960efbc6bb54c35f9a2edb0e8c186",
+          "host_process_id": 1031936,
+          "exit_code": 0,
+          "launcher_sha256": "c8acc15d6f83e30dc5c9a67c780fed27c52b0a0ccde9e5548961e7ab9cfb18ed",
+          "workload_sha256": "81dfaf2927412a7b58f69d3fbeea951abd6fee7affb76f64fa98e0217f71a8c6",
+          "host_executable_sha256": "2ec6c2f40daae21c4b7c02483781ea804fb64619b12f5089a19297d693dcacf6",
+          "timed_out": false,
+          "launch_plan_sha256": "b4d50bfe07bc500c693f03c8f0c1c5f3a008f52e13e0d3c6c951c9745a2ba10e",
+          "java_receipt_sha256": "eeb3b6e74a4561d95e03f93d902e327de35e30e4fc6b1afb7c956d5238a484c2",
+          "stdout_sha256": "4fbe8ec830f31cbfae454126776d5499176740e3202370ea3474faccf797eb54",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "launch": {
+          "schema_version": 1,
+          "run_id": "961bbc78-9a74-4643-ab56-5b8a83e4fe39",
+          "mode": "native",
+          "host_process_id": 1031936,
+          "command": [
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-positive/program",
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-positive/classes",
+            "64",
+            "0",
+            "candidate-jit",
+            "control",
+            "100",
+            "100",
+            "0",
+            "7"
+          ],
+          "host_executable_sha256": "2ec6c2f40daae21c4b7c02483781ea804fb64619b12f5089a19297d693dcacf6",
+          "binary_sha256": "2ec6c2f40daae21c4b7c02483781ea804fb64619b12f5089a19297d693dcacf6",
+          "launcher_sha256": "c8acc15d6f83e30dc5c9a67c780fed27c52b0a0ccde9e5548961e7ab9cfb18ed"
+        },
+        "java": {
+          "jdk_home": "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+          "jdk_files": {
+            "bin/java": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+            "bin/javac": "e78a285f4e369cf165f952e3405fc00444199d5ea88d0860edb5b72ad3cb3788",
+            "lib/modules": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83"
+          },
+          "command": [
+            "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10/bin/javac",
+            "--release",
+            "8",
+            "-Xlint:-options",
+            "-d",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-positive/classes",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-positive/fixture-source/benchmarks/gc/fixtures/execution_window/GcBench.java",
+            "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/timed-hot-loop-dd877809-v1/null-positive/fixture-source/benchmarks/gc/GcTelemetry.java"
+          ],
+          "exit_code": 0,
+          "source_files": {
+            "benchmarks/gc/fixtures/execution_window/GcBench.java": "423b67808728da389498cb82da830f81e8a6ae960dcf838cc2a98a3e7ec5bd85",
+            "benchmarks/gc/GcTelemetry.java": "1eee493b0ea56376d9706b6691b2a9d2e9affcfaba98aab5437223254f507898"
+          },
+          "class_files": {
+            "GcBench.class": "f54e614b2db63ac878b54214b2c666495c1d1bd6ea2984962ed8c2a09b89bb98",
+            "GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4"
+          }
+        }
+      }
+    ]
+  }
+}

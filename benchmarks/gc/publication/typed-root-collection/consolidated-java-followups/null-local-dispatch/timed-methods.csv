@@ -1,0 +1,17 @@
+revision,fixture,method,entries,compiled_entries,interpreted_entries,compiled_backedges,expected_compiled_backedges,reason,byte_offset,opcode
+dd877809,roots-interpreter,GcBench.operation(IJI)I,493,0,493,0,0,unqualified_instruction,38,1
+dd877809,roots-interpreter,GcBench$Histogram.record(J)V,986,0,986,0,,non_static_method,,
+dd877809,roots-interpreter,GcBench$Node.<init>(ILGcBench$Node;)V,7888,0,7888,0,0,non_static_method,,
+dd877809,roots-jit,GcBench.operation(IJI)I,446,0,446,0,0,unqualified_instruction,38,1
+dd877809,roots-jit,GcBench$Histogram.record(J)V,892,0,892,0,,non_static_method,,
+dd877809,roots-jit,GcBench$Node.<init>(ILGcBench$Node;)V,7136,0,7136,0,0,non_static_method,,
+dd877809,positive,GcBench.kernel(I)I,7,7,0,35,35,,,
+dd877809,positive,GcBench.outside(I)I,0,0,0,0,0,,,
+9ad56496,roots-interpreter,GcBench.operation(IJI)I,407,0,407,0,0,unqualified_instruction,51,187
+9ad56496,roots-interpreter,GcBench$Histogram.record(J)V,814,0,814,0,,non_static_method,,
+9ad56496,roots-interpreter,GcBench$Node.<init>(ILGcBench$Node;)V,6512,0,6512,0,0,non_static_method,,
+9ad56496,roots-jit,GcBench.operation(IJI)I,373,0,373,0,0,unqualified_instruction,51,187
+9ad56496,roots-jit,GcBench$Histogram.record(J)V,746,0,746,0,,non_static_method,,
+9ad56496,roots-jit,GcBench$Node.<init>(ILGcBench$Node;)V,5968,0,5968,0,0,non_static_method,,
+9ad56496,positive,GcBench.kernel(I)I,7,7,0,35,35,,,
+9ad56496,positive,GcBench.outside(I)I,0,0,0,0,0,,,

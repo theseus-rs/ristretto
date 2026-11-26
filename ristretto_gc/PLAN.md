@@ -32,6 +32,15 @@ median scheduled p99.9 was 2,496 µs for Ristretto, 13 µs for G1 and 17 µs
 for ZGC. [Complete cycles](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/default-instance-fields/cycles/complete-cycles.csv).
 [Java forks and latency distributions](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/reference-cards/README.md).
 
+The explicit Java window at `9ad56496` observed 373 ordinary roots operations
+with the JIT enabled. All 373 entered the interpreter. Production null-local
+control flow moved the benchmark's first rejection from `aconst_null` at byte
+38 to object allocation at byte 51. The compiled positive control recorded
+seven entries and 35 taken backward branches on each revision. Admit allocation
+and reference-bearing continuations with owning roots across suspension,
+then repeat the timed-window checks before capacity or endurance qualification.
+[Timed method counts and diagnostic forks](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/null-local-dispatch/README.md).
+
 At `2ec923ac` a terminal native allocator gives the runnable callback assistant
 one acknowledged dispatch opportunity. The delayed-worker parent denied the
 request in 100/100 processes. The ordinary collector now stays pending and
