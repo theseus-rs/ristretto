@@ -80,6 +80,7 @@ struct Remaining {
 }
 
 struct Receiver {
+    service: Arc<pressure_turn::Service>,
     submissions: mpsc::Receiver<Submission>,
     remaining: Option<Remaining>,
 }
@@ -110,6 +111,9 @@ impl Receiver {
             };
             if batch.entries.len() == 0 {
                 self.remaining = None;
+                self.service
+                    .unclaimed_batches
+                    .fetch_sub(1, Ordering::AcqRel);
             }
             return Some(job);
         }
@@ -118,7 +122,11 @@ impl Receiver {
         } else {
             self.submissions.try_recv().ok()?
         };
-        if !batch.rest.is_empty() {
+        if batch.rest.is_empty() {
+            self.service
+                .unclaimed_batches
+                .fetch_sub(1, Ordering::AcqRel);
+        } else {
             self.remaining = Some(Remaining {
                 gc: gc.clone(),
                 entries: batch.rest.into_iter(),
@@ -145,6 +153,9 @@ struct Job {
 impl Callbacks {
     pub(super) fn terminal_turn(&self) -> Option<Turn> {
         let runner = self.0.get()?;
+        if runner.service.unclaimed_batches.load(Ordering::Acquire) == 0 {
+            return None;
+        }
         let turn = runner.service.request()?;
         let _ = runner.pressure.try_send(());
         Some(turn)
@@ -178,7 +189,17 @@ impl Callbacks {
             batch,
             origin,
         };
+        // Enroll before publication: even a receiver that immediately takes the
+        // whole batch must discharge an existing count. Failed sends stay local.
+        runner
+            .service
+            .unclaimed_batches
+            .fetch_add(1, Ordering::AcqRel);
         if let Err(mpsc::SendError(submission)) = sender.send(submission) {
+            runner
+                .service
+                .unclaimed_batches
+                .fetch_sub(1, Ordering::AcqRel);
             gc.callback_jobs.fetch_sub(count, Ordering::AcqRel);
             return Some(submission.batch);
         }
@@ -295,7 +316,9 @@ impl Job {
 impl Runner {
     fn spawn(heap: std::sync::Weak<GarbageCollector>) -> std::io::Result<Box<Self>> {
         let (send, submissions) = mpsc::channel();
+        let service = Arc::new(pressure_turn::Service::default());
         let receive = Arc::new(Mutex::new(Receiver {
+            service: service.clone(),
             submissions,
             remaining: None,
         }));
@@ -321,7 +344,6 @@ impl Runner {
         let gate = Arc::new(Mutex::new(None::<PressureGate>));
         #[cfg(all(test, not(miri), panic = "unwind"))]
         let pressure_gate = gate.clone();
-        let service = Arc::new(pressure_turn::Service::default());
         let dispatch = pressure_turn::Assistant(service.clone());
         let assistant = thread::Builder::new()
             .name("gc-pressure-finalizers".into())
@@ -410,8 +432,14 @@ mod tests {
         delayed_pressure(PressureSchedule::Contended)
     }
 
+    #[test]
+    fn parked_callback_with_no_queued_sibling_needs_no_assistant_turn() -> Result<()> {
+        delayed_pressure(PressureSchedule::Empty)
+    }
+
     #[derive(Clone, Copy)]
     enum PressureSchedule {
+        Empty,
         Available,
         Cancel,
         Contended,
@@ -451,13 +479,13 @@ mod tests {
     }
 
     #[expect(
-        clippy::panic_in_result_fn,
-        clippy::unwrap_in_result,
         clippy::expect_used,
-        reason = "bounded service, exact heap charges and physical refund"
+        clippy::unwrap_in_result,
+        reason = "forced primary callback schedule"
     )]
-    fn delayed_pressure(schedule: PressureSchedule) -> Result<()> {
-        use std::task::{Context, Waker};
+    fn parked_primary(
+        donor_size: usize,
+    ) -> Result<(Arc<GarbageCollector>, mpsc::Sender<()>, usize)> {
         let (entered, parked) = mpsc::channel();
         let (resume, release) = mpsc::channel();
         let older = Peer {
@@ -465,9 +493,7 @@ mod tests {
             entered,
             resume: Arc::new(Mutex::new(release)),
         };
-        let drops = Arc::new(AtomicUsize::new(0));
-        let donor = Donor(drops.clone());
-        let cap = Gc::allocation_size(&older)? + Gc::allocation_size(&donor)?;
+        let cap = Gc::allocation_size(&older)? + donor_size;
         let heap = GarbageCollector::with_config(
             Configuration::builder()
                 .max_heap_bytes(cap)
@@ -482,12 +508,27 @@ mod tests {
         parked
             .recv_timeout(Duration::from_secs(3))
             .expect("primary entered");
-        drop(Gc::try_new(&heap, donor)?);
+        Ok((heap, resume, cap))
+    }
+
+    #[expect(
+        clippy::panic_in_result_fn,
+        clippy::unwrap_in_result,
+        clippy::expect_used,
+        reason = "bounded service, exact heap charges and physical refund"
+    )]
+    fn delayed_pressure(schedule: PressureSchedule) -> Result<()> {
+        use std::task::{Context, Waker};
+        let drops = Arc::new(AtomicUsize::new(0));
+        let donor = Donor(drops.clone());
+        let (heap, resume, cap) = parked_primary(Gc::allocation_size(&donor)?)?;
+        let empty = matches!(schedule, PressureSchedule::Empty);
+        let retained = empty.then_some(Gc::try_new(&heap, donor)?);
         let mut cycle = std::pin::pin!(heap.collect_full_async());
         let mut cx = Context::from_waker(Waker::noop());
         let deadline = Instant::now() + Duration::from_secs(4);
         finish_poll(cycle.as_mut(), &mut cx, deadline)?;
-        while heap.callback_jobs.load(Ordering::Acquire) != 2 {
+        while heap.callback_jobs.load(Ordering::Acquire) != if empty { 1 } else { 2 } {
             assert!(Instant::now() < deadline);
             thread::yield_now();
         }
@@ -501,6 +542,22 @@ mod tests {
         let mut request = Box::pin(Gc::try_new_async(&heap, 11_u64));
         let mut early =
             poll_until_dispatch(request.as_mut(), &mut cx, &runner.service, 0, deadline);
+        if empty {
+            seen.recv_timeout(Duration::from_secs(3))
+                .expect("assistant parked");
+            let closed = matches!(early, Some(Err(crate::Error::OutOfMemory)));
+            let turn_count = runner.service.snapshot();
+            let charged = heap.managed_bytes();
+            let finished = drops.load(Ordering::Acquire);
+            drop(request);
+            drop(retained);
+            allow.send(()).expect("resume assistant");
+            resume.send(()).expect("resume primary");
+            heap.stop()?;
+            assert!(closed, "empty receiver required another assistant dispatch");
+            assert_eq!((turn_count, charged, finished), (0, cap, 0));
+            return Ok(());
+        }
         if matches!(schedule, PressureSchedule::Cancel) && early.is_none() {
             drop(request);
             assert!(!heap.grant_registry.has_demand());
@@ -644,6 +701,8 @@ mod tests {
         parked
             .recv_timeout(Duration::from_secs(5))
             .expect("callback parked");
+        let service = &callbacks.0.get().expect("runner").service;
+        assert_eq!(service.unclaimed_batches.load(Ordering::Acquire), 1);
         let pool = callbacks.clone();
         let closer = thread::spawn(move || pool.join());
         let runner = callbacks.0.get().expect("callback runner");
@@ -679,6 +738,7 @@ mod tests {
         start.send(()).expect("release first drop");
         let failed = closer.join().expect("join owner")?;
         assert!(failed, "the second callback's panic must reach shutdown");
+        assert_eq!(service.unclaimed_batches.load(Ordering::Acquire), 0);
         assert_eq!(count.load(Ordering::Acquire), 3);
         assert_eq!(heap.callback_jobs.load(Ordering::Acquire), 0);
         assert_eq!(heap.managed_bytes(), 0);

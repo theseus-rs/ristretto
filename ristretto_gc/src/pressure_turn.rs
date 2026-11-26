@@ -5,6 +5,9 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 #[derive(Debug, Default)]
 pub(super) struct Service {
+    // Includes sends in flight and accepted batches with an unclaimed suffix.
+    // A job already owned by a worker cannot be dispatched by an assistant.
+    pub(super) unclaimed_batches: AtomicUsize,
     requested: AtomicUsize,
     examined: AtomicUsize,
     running: AtomicBool,
