@@ -31,6 +31,11 @@ Each row compares two fresh forks per rate. The table gives the median of their 
 | `ef490d09` | Ristretto | 156.5 | 258.5 | 253.4 |
 | `ef490d09` | G1 | 144.5 | 165.5 | 60.5 |
 | `ef490d09` | ZGC | 102.5 | 133.5 | 106.0 |
+| `8b15e59c` | Ristretto | 405 | 979 | 262.7 |
+| `8b15e59c` | G1 | 6.5 | 286.5 | 72.8 |
+| `8b15e59c` | ZGC | 52.5 | 22.5 | 107.9 |
+
+For `8b15e59c`, an earlier 12-fork run completed but the driver detected that files in its source checkout changed during execution. Its results are excluded from the table. The published repeat used the same frozen executable and a separate checkout pinned to the measured revision. The driver's input hashes and output validation passed. Other development builds and tests were active on the host during the repeat. [Excluded run and integrity receipt](changed-inputs-8b15e59c.json.gz)
 
 The unchanged Java roots workload used a 64 MiB managed heap, two CPUs, a two-CPU quota, a 512 MiB cgroup, a five-second warmup and a 60-second measurement. The [earlier integrated run](../consolidated-java/README.md) reached 397.9 MiB on Ristretto. These short runs characterize latency and memory at fixed demand. Endurance, maximum sustainable throughput and global mutator pauses have separate gates.
 
