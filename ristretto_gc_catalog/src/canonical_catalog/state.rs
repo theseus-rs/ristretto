@@ -344,7 +344,10 @@ impl<R: Record> Attempt<R> {
 
     /// The immutable decision is shared by all helpers. Cancellation does not
     /// release an already installed controller; a subsequent helper does that.
-    #[expect(clippy::must_use_candidate, reason = "a caller can request cancellation without observing the winning decision")]
+    #[expect(
+        clippy::must_use_candidate,
+        reason = "a caller can request cancellation without observing the winning decision"
+    )]
     pub fn cancel(&self) -> bool {
         match decision::choose(self.decision(), CANCEL) {
             Ok(_) => true,
