@@ -125,6 +125,10 @@ impl<V> Directory<V> {
         self.len
     }
 
+    pub(crate) fn last_key(&self) -> Option<u64> {
+        self.root.as_ref().map(|root| root.last)
+    }
+
     pub(crate) fn get(&self, key: u64) -> Option<&V> {
         let mut node = self.root.as_deref()?;
         loop {

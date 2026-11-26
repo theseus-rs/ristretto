@@ -350,6 +350,8 @@ struct State {
     pages: Pages,
     available: BTreeSet<usize>,
     cached_page: Option<usize>,
+    // Next page and inclusive high-water mark for a deferred cleanup pass.
+    repair: Option<(u64, u64)>,
     next_page: usize,
     generation: u64,
     created: u64,
@@ -365,12 +367,15 @@ struct Shard {
     // takes that mutex or retains this map across work units. The current page
     // has its own Arc, so retirement does not invalidate a resumable cursor.
     published: ArcSwap<Pages>,
-    cleanup_pending: AtomicBool,
 }
 
 #[derive(Debug, Default)]
 pub(crate) struct RootSlots {
     shards: [Shard; SHARDS],
+    // Low bits record new deferred removals. High bits record unfinished
+    // sweeps, so a new removal behind a paused cursor starts another pass.
+    repair_mask: AtomicUsize,
+    repair_turn: AtomicUsize,
     overflow: Overflow,
     resident: Arc<AtomicUsize>,
     #[cfg(test)]
@@ -410,12 +415,6 @@ impl RootSlots {
             let Some((shard, mut state)) = self.available_writer(preferred) else {
                 return PreparedSlot::Overflow(self.overflow.reserve(None));
             };
-            let registry = &self.shards[shard];
-            let old_view = if registry.cleanup_pending.swap(false, Ordering::AcqRel) {
-                Self::clean_all(registry, &mut state)
-            } else {
-                None
-            };
             let page_id = if let Some(&id) = state.available.first() {
                 id
             } else if let Some(mut page) = spare.take() {
@@ -443,7 +442,6 @@ impl RootSlots {
                 // System allocation does not hold a shard lock. A racing insertion
                 // can make this spare unnecessary; it is dropped after unlocking.
                 drop(state);
-                drop(old_view);
                 self.finish_deferred(shard);
                 spare = Some(Arc::new(Page::new(&self.resident)));
                 continue;
@@ -492,7 +490,6 @@ impl RootSlots {
                 page,
             };
             drop(state);
-            drop(old_view);
             self.finish_deferred(shard);
             return PreparedSlot::Paged(reservation);
         }
@@ -628,27 +625,70 @@ impl RootSlots {
             drop(state);
             drop(old_view);
         } else {
-            registry.cleanup_pending.store(true, Ordering::Release);
+            self.repair_mask
+                .fetch_or(1 << root.shard(), Ordering::Release);
         }
         // Retry after setting the flag: the writer may have unlocked just before
         // that store. Either this retry or that writer's exit observes the work.
         self.finish_deferred(root.shard());
     }
 
-    fn finish_deferred(&self, shard: usize) {
-        let registry = &self.shards[shard];
-        while registry.cleanup_pending.load(Ordering::Acquire) {
-            let Some(mut state) = Self::try_state(registry) else {
-                return;
-            };
-            let old_view = if registry.cleanup_pending.swap(false, Ordering::AcqRel) {
-                Self::clean_all(registry, &mut state)
-            } else {
-                None
-            };
-            drop(state);
-            drop(old_view);
+    fn finish_deferred(&self, shard: usize) -> bool {
+        let dirty = 1_usize << shard;
+        let active = dirty << SHARDS;
+        if self.repair_mask.load(Ordering::Acquire) & (dirty | active) == 0 {
+            return false;
         }
+        let registry = &self.shards[shard];
+        let Some(mut state) = Self::try_state(registry) else {
+            return false;
+        };
+        if state.repair.is_none() {
+            // Advertise the in-progress pass before acknowledging its request.
+            // Only this shard's writer can clear its active bit.
+            self.repair_mask.fetch_or(active, Ordering::Release);
+            if self.repair_mask.fetch_and(!dirty, Ordering::AcqRel) & dirty != 0 {
+                state.repair = state
+                    .pages
+                    .next_after(None)
+                    .zip(state.pages.last_key())
+                    .map(|((first, _), last)| (first, last));
+            }
+        }
+        let old = if let Some((id, last)) = state.repair {
+            let changed = Self::clean_page(&mut state, page_number(id));
+            state.repair = state
+                .pages
+                .next_after(Some(id))
+                .filter(|(next, _)| *next <= last)
+                .map(|(next, _)| (next, last));
+            changed.then(|| registry.published.swap(Arc::new(state.pages.clone())))
+        } else {
+            None
+        };
+        if state.repair.is_none() {
+            self.repair_mask.fetch_and(!active, Ordering::Release);
+        }
+        drop(state);
+        drop(old);
+        true
+    }
+
+    pub(crate) fn repair_pending(&self) -> bool {
+        self.repair_mask.load(Ordering::Acquire) != 0
+    }
+
+    /// Service at most one accessible shard, rotating under sustained churn.
+    pub(crate) fn repair_step(&self) -> bool {
+        let mask = self.repair_mask.load(Ordering::Acquire);
+        if mask == 0 {
+            return false;
+        }
+        let shards = mask | (mask >> SHARDS);
+        let start = self.repair_turn.fetch_add(1, Ordering::Relaxed) % SHARDS;
+        (0..SHARDS)
+            .map(|n| (start + n) % SHARDS)
+            .any(|shard| shards & (1 << shard) != 0 && self.finish_deferred(shard))
     }
 
     /// At most one root or one page/shard advance per work unit. Page membership
@@ -804,6 +844,53 @@ impl RootSlots {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn idle_collector_repairs_one_page_per_turn_and_revisits_late_removal() {
+        let gc = crate::GarbageCollector::with_config(
+            crate::Configuration::builder()
+                .root_storage(crate::RootStorage::Slots)
+                .threads(0)
+                .build(),
+        );
+        let roots = gc.scanned_slots().expect("fixture uses paged roots");
+        let ids: Vec<_> = (0..SLOTS * 16).map(|_| roots.insert(0x1000)).collect();
+        let shard = &roots.shards[ids[0].shard()];
+        // Page one is kept full until the cursor has passed it. Other pages
+        // lose their roots while the writer is parked.
+        roots.with_all_writers_held(|| {
+            for id in ids.iter().skip(SLOTS * 2) {
+                assert_eq!(roots.remove(*id), Some(0x1000));
+            }
+            assert!(!roots.repair_step());
+        });
+        assert!(roots.repair_pending());
+        for _ in 0..3 {
+            assert!(!gc.step());
+        }
+        assert_eq!(lock(&shard.state).released, 1);
+        roots.with_all_writers_held(|| {
+            for id in &ids[SLOTS..2 * SLOTS] {
+                assert_eq!(roots.remove(*id), Some(0x1000));
+            }
+        });
+        let mut previous = 1;
+        let mut turns = 0;
+        while roots.repair_pending() {
+            assert_eq!(gc.step(), !roots.repair_pending());
+            let released = lock(&shard.state).released;
+            assert!(released == previous || released == previous + 1);
+            previous = released;
+            turns += 1;
+            assert!(turns <= 32);
+        }
+        assert_eq!(previous, 15);
+        for id in &ids[..SLOTS] {
+            assert_eq!(roots.remove(*id), Some(0x1000));
+        }
+        roots.trim_empty();
+        assert_eq!(roots.statistics().resident_pages, 0);
+    }
 
     #[test]
     fn published_page_updates_share_unaffected_pages_with_a_pinned_view() {
