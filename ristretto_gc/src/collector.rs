@@ -4069,15 +4069,30 @@ impl GarbageCollector {
             }
             true
         } else {
+            let mut matching =
+                record
+                    .epochs
+                    .into_iter()
+                    .enumerate()
+                    .filter_map(|(index, epoch)| {
+                        let epoch = epoch?;
+                        let domain = self.domain_at(index);
+                        (domain.active() && domain.epoch.load(Ordering::Acquire) == epoch)
+                            .then_some(index)
+                    });
+            let Some(first) = matching.next() else {
+                return false;
+            };
+            // Publication admission or the buffered record's outstanding debt
+            // covers the epoch. Marking needs a visible descriptor, never a
+            // payload lease or exclusive access to its address shard.
+            let Some(target) = self.objects.lookup(record.address) else {
+                return false;
+            };
             let mut changed = false;
-            for (index, epoch) in record.epochs.into_iter().enumerate() {
-                if epoch.is_some_and(|epoch| {
-                    self.domain_at(index).active()
-                        && self.domain_at(index).epoch.load(Ordering::Acquire) == epoch
-                }) {
-                    let _context = Context::enter(self, index);
-                    changed |= self.shade(record.address);
-                }
+            for index in std::iter::once(first).chain(matching) {
+                let _context = Context::enter(self, index);
+                changed |= self.shade_known(&target);
             }
             changed
         }
@@ -4096,6 +4111,10 @@ impl GarbageCollector {
         let Some(record) = context.pop(&self.contexts) else {
             return false;
         };
+        let _measurement = self
+            .diagnostics
+            .barrier_drain
+            .measure(self.diagnostics_enabled());
         self.apply_buffered_record(context, record);
         true
     }
@@ -4109,17 +4128,15 @@ impl GarbageCollector {
         if let Some(observer) = lock(&self.barrier_claim_observer).take() {
             observer.send(()).expect("barrier claim observer");
         }
-        let _measurement = self
-            .diagnostics
-            .barrier_drain
-            .measure(self.diagnostics_enabled());
+        #[cfg(all(test, not(target_family = "wasm")))]
+        barrier_progress_tests::pause_after_buffer_claim();
         self.apply_barrier(record);
         self.acknowledge_buffered_record(context, record);
     }
 
-    /// Prepare required indexes before removing the record from its context.
-    /// Every acquisition is a try-lock, and a changed top record cancels the
-    /// preparation. The caller owns a context Arc throughout the claim.
+    /// Claim only the sampled record. Dirty-owner enrollment prepares its
+    /// required indexes first. Clean edges need only the visible descriptor.
+    /// A claimed record keeps its pending reservation until its effects publish.
     // Keep this path out of step_inner's code/stack when no context is ready.
     #[inline(never)]
     fn try_apply_buffered_record(&self, context: &crate::context::State) -> bool {
@@ -4130,29 +4147,22 @@ impl GarbageCollector {
             .diagnostics
             .barrier_drain
             .measure(self.diagnostics_enabled());
-        let mut remembered = if record.dirty {
-            let Some(remembered) = self.remembered.try_lock(record.address) else {
+        if !record.dirty {
+            let Some(record) = context.try_pop_matching(&self.contexts, record) else {
                 return false;
             };
-            Some(remembered)
-        } else {
-            None
+            self.apply_buffered_record(context, record);
+            return true;
+        }
+        let Some(mut remembered) = self.remembered.try_lock(record.address) else {
+            return false;
         };
         // If young GC starts after an inactive observation, this remembered
         // shard stays locked through insertion. Its fresh scan cannot pass this
         // owner before the entry is visible, so no immediate owner trace is needed.
-        let needs_metadata = if record.dirty {
-            self.domains[0].active()
-        } else {
-            record.epochs.iter().enumerate().any(|(index, epoch)| {
-                epoch.is_some_and(|epoch| {
-                    self.domain_at(index).active()
-                        && self.domain_at(index).epoch.load(Ordering::Acquire) == epoch
-                })
-            })
-        };
+        let needs_metadata = self.domains[0].active();
         #[cfg(test)]
-        if record.dirty {
+        {
             let pause = lock(&self.barrier_prepare_pause).take();
             if let Some(pause) = pause {
                 pause.entered.send(()).expect("barrier prepared");
@@ -4177,32 +4187,18 @@ impl GarbageCollector {
             return false;
         };
         drop(objects);
-        if let Some(remembered) = &mut remembered {
-            remembered.insert(record.address);
-        }
+        remembered.insert(record.address);
         drop(remembered);
         #[cfg(test)]
         if let Some(observer) = lock(&self.barrier_claim_observer).take() {
             observer.send(()).expect("barrier claim observer");
         }
         let _retention = TraceRetention::enter(self, Retention::Strong);
-        if let Some(metadata) = metadata.as_ref() {
-            if record.dirty {
-                if self.domains[0].active() {
-                    let _context = Context::enter(self, 0);
-                    self.shade_metadata(metadata);
-                }
-            } else {
-                for (index, epoch) in record.epochs.into_iter().enumerate() {
-                    if epoch.is_some_and(|epoch| {
-                        self.domain_at(index).active()
-                            && self.domain_at(index).epoch.load(Ordering::Acquire) == epoch
-                    }) {
-                        let _context = Context::enter(self, index);
-                        self.shade_known(metadata);
-                    }
-                }
-            }
+        if let Some(metadata) = metadata.as_ref()
+            && self.domains[0].active()
+        {
+            let _context = Context::enter(self, 0);
+            self.shade_metadata(metadata);
         }
         self.acknowledge_buffered_record(context, record);
         true
@@ -7418,20 +7414,31 @@ mod tests {
         }
         context.with(|| gc.write_barrier(&root));
         let objects = gc.objects.lock(root.as_ptr() as usize);
+        let (finished, done) = std::sync::mpsc::channel();
         let (claimed, claim) = std::sync::mpsc::channel();
-        *lock(&gc.barrier_claim_observer) = Some(claimed);
-        let flusher = thread::spawn(move || context.flush());
+        let (release, resume) = std::sync::mpsc::channel();
+        let flusher = thread::spawn(move || {
+            barrier_progress_tests::park_next_claim(ClaimPause {
+                entered: claimed,
+                resume,
+            });
+            context.flush();
+            finished.send(()).expect("clean record acknowledged");
+        });
         let claimed = claim.recv_timeout(std::time::Duration::from_secs(10));
         let pending = gc.contexts.pending.load(Ordering::Acquire);
         let publication_free = gc.publication.try_write().is_some();
         gc.step();
         let active = gc.domains[1].active();
         let ticket = gc.completed_full_ticket();
+        assert!(release.send(()).is_ok(), "resume flusher");
+        let without_shard = done.recv_timeout(std::time::Duration::from_secs(2));
         drop(objects);
         flusher
             .join()
             .unwrap_or_else(|error| std::panic::resume_unwind(error));
         assert!(claimed.is_ok());
+        assert_eq!(without_shard, Ok(()));
         assert_eq!(pending, 1);
         assert!(publication_free && active);
         assert_eq!(ticket, 0);

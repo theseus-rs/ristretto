@@ -232,10 +232,10 @@ fn busy_barrier_indexes_leave_the_worker_available_for_ready_reclamation() -> Re
                 assert_eq!(yielded, Ok(false));
                 assert_eq!(progressed, Ok(()));
                 assert!(diagnostics.barrier_drain.count > 0);
-                assert_eq!(diagnostics.barrier_flushed, 0);
+                assert_eq!(diagnostics.barrier_flushed, u64::from(!remembered));
                 assert_eq!(
                     (reclaimed, pending, ticket, active),
-                    (1, 1, initial_ticket, 0)
+                    (1, usize::from(remembered), initial_ticket, 0)
                 );
                 for _ in 0..10000 {
                     if gc.step() {
@@ -406,8 +406,11 @@ fn barrier_application_retains_pending_or_publishes_around_a_busy_queue() -> Res
                 worker.join().expect("barrier drain");
                 observer.join().expect("competing collector");
                 assert!(coordinator_free && publication_free);
-                assert_eq!(claimed, hold_queue);
-                assert_eq!(buffered, !hold_queue);
+                assert!(
+                    claimed,
+                    "clean edge remained unclaimed behind the target shard"
+                );
+                assert!(!buffered);
                 assert_eq!(reclaimed, hold_queue.then_some(true));
                 assert!(drained);
                 assert!(!stalled);
@@ -418,7 +421,7 @@ fn barrier_application_retains_pending_or_publishes_around_a_busy_queue() -> Res
                 );
                 assert_eq!(queued, hold_queue.then_some(Some(1)));
                 assert_eq!(progress, Ok(()));
-                assert_eq!((pending, ticket), if hold_queue { (0, 1) } else { (1, 0) });
+                assert_eq!((pending, ticket), if hold_queue { (0, 1) } else { (0, 0) });
                 for _ in 0..10000 {
                     if gc.step() {
                         break;
@@ -439,7 +442,7 @@ fn barrier_application_retains_pending_or_publishes_around_a_busy_queue() -> Res
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[test]
-fn mutator_overflow_leaves_busy_required_records_for_collector_drain() -> Result<()> {
+fn mutator_overflow_drains_clean_edges_and_preserves_busy_dirty_owners() -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
     for counted in [false, true] {
@@ -485,6 +488,7 @@ fn mutator_overflow_leaves_busy_required_records_for_collector_drain() -> Result
                 });
                 assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 1);
                 let record = context.0.try_peek().expect("required pending record");
+                let next_address = target.as_ptr() as usize;
                 let objects = (!hold_remembered).then(|| gc.objects.lock(address));
                 let remembered = hold_remembered.then(|| gc.remembered.lock(address));
                 let worker_context = context.clone();
@@ -508,7 +512,14 @@ fn mutator_overflow_leaves_busy_required_records_for_collector_drain() -> Result
                     "counted={counted} independent={independent} remembered={hold_remembered}"
                 );
                 assert_eq!(pending, 1);
-                assert_eq!(still_pending, Some(record));
+                let buffered = still_pending.expect("one outstanding record");
+                if hold_remembered {
+                    assert_eq!(buffered, record);
+                } else {
+                    assert_eq!(buffered.address, next_address);
+                    assert!(!buffered.dirty);
+                    assert_eq!(buffered.epochs, record.epochs);
+                }
                 assert_eq!(active, 0);
                 while !gc.step() {}
                 assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
@@ -523,7 +534,7 @@ fn mutator_overflow_leaves_busy_required_records_for_collector_drain() -> Result
                 assert!(weak.upgrade().is_none());
                 assert_eq!(gc.managed_bytes(), 0);
                 println!(
-                    "mutator overflow: counted={counted} independent={independent} remembered={hold_remembered}; pending_preserved=true direct_fallback=true"
+                    "mutator overflow: counted={counted} independent={independent} remembered={hold_remembered}; buffered={still_pending:?}"
                 );
             }
         }
@@ -1138,4 +1149,25 @@ fn a_clean_unreachable_spilled_owner_is_reclaimed_by_the_second_young_collection
         assert_eq!(gc.managed_bytes(), 0);
     }
     Ok(())
+}
+
+#[cfg(not(target_family = "wasm"))]
+thread_local! {
+    static AFTER_CLAIM: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(not(target_family = "wasm"))]
+pub(super) fn park_next_claim(pause: ClaimPause) {
+    AFTER_CLAIM.set(Some(pause));
+}
+
+#[cfg(not(target_family = "wasm"))]
+pub(super) fn pause_after_buffer_claim() {
+    if let Some(pause) = AFTER_CLAIM.take() {
+        pause.entered.send(()).expect("flusher owns record");
+        pause
+            .resume
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("resume flusher");
+    }
 }
