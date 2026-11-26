@@ -39,6 +39,15 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Exact primary remembered directory | `7ae61be7` | 251127106 | 7.93× | 10.43× | 28 / 36 |
 | Bounded scan and isolated marking reservations | `3c49be32` | 251127108 | 8.70× | 10.15× | 28 / 36 |
 | Parked remembered publishers and native worker retries | `b7eb6c4b` | 251127109 | **10.28×** | **10.58×** | **36 / 36** |
+| Parked native cleanup and independent bounded storage | `a0eba4e2` | 251127124 | **10.39×** | **10.50×** | **36 / 36** |
+
+## Native collection during parked cleanup
+
+At `a0eba4e2`, one registered native collector worker can complete a new collection while a host finalizer, ordinary clearing hook or Rust destructor is parked. A waiting allocation recovered an independent scalar, byte vector or optional string at the heap limit. The parked payload kept its full charge until destruction. A control with only live or privately held storage returned out-of-memory. An executor panic during notification no longer consumes a second waiter’s wake. The first shutdown call drains independent storage and reports a caught cleanup error. The WASI collector remains cooperative. A nonreturning host callback on a single-threaded executor can still block that executor.
+
+The first implementation handed off each object separately. With 1,024 cheap registered finalizers this took 64.4% longer with one worker and 54.1% longer with two. Sending an already available, bounded run of cleanup tasks improved that result. Relative to the published source `8f0311bf`, final median time through physical refund fell **28.2% with one worker and 32.4% with two** for 1,024 objects. For 64 objects it fell 20.9% and 22.7%. For one object it rose 1.8% and 2.2%. The two-worker interval included parity. Each of six conditions used 15 randomized process pairs, 16 measured cycles per process and an explicit finalization-count and physical-refund check. [Timing graph](native-cleanup-cost.svg) · [Matched builds, fixture, schedule and process data](native-cleanup-cost.json.gz)
+
+All 23 forced schedules passed in 100 fresh native processes each. The GC library passed 562 default native tests, 853 all-feature native tests and 327 WASI tests. Cargo verified the packaged collector. All 36 complete-collection conditions passed against `f1daebeb` with weakest individual 95% lower bounds of 10.391× native and 10.496× WASI. The ordinary cleanup controls first failed on the earlier sources. An additional test still returns out-of-memory when the independent donor itself needs an arbitrary user destructor queued behind the parked callback. Shared VM roots, native boundaries, process-wide pauses and sustained Java performance also remain open. [Collection samples](native-cleanup.csv) · [Regression controls, stress results and verification](native-cleanup-controls.json.gz)
 
 ## Collection with a parked remembered-set publisher
 
