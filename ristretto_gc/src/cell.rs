@@ -1,5 +1,5 @@
 //! Managed object locks. Mapped guards retain the mutation hook until the last projection drops.
-#![expect(clippy::missing_errors_doc, clippy::must_use_candidate, missing_docs)]
+#![expect(clippy::missing_errors_doc, missing_docs)]
 use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -58,11 +58,18 @@ pub struct RwLock<T: ?Sized> {
     value: sync::RwLock<T>,
 }
 
+enum Mutation<'a> {
+    Begin,
+    Finish {
+        owner: crate::TraceOwner<'a>,
+        prepared: bool,
+    },
+}
+
 struct Hook<T: ?Sized> {
     collector: sync::Weak<crate::GarbageCollector>,
     address: usize,
-    begin_mutation: fn(&mut T),
-    finish_write: fn(&mut T, crate::TraceOwner<'_>, bool),
+    mutation: fn(&mut T, Mutation<'_>),
     pins: Option<sync::Arc<crate::diagnostics::Counters>>,
     trace_covered: trace_certificate::Certificate,
 }
@@ -284,7 +291,13 @@ impl<T: ?Sized> Drop for RwLockWriteGuard<'_, T> {
             // rooted movement detaches it before the cell can escape that owner.
             let owner = unsafe { crate::TraceOwner::new_unchecked(&hook.collector, hook.address) };
             let _depth = LeaveGuard;
-            (hook.finish_write)(&mut self.0, owner, self.3);
+            (hook.mutation)(
+                &mut self.0,
+                Mutation::Finish {
+                    owner,
+                    prepared: self.3,
+                },
+            );
         }
     }
 }
@@ -374,7 +387,7 @@ impl<'a, T: ?Sized> RwLockWriteGuard<'a, T> {
     fn prepare_mutation(&mut self) {
         if !self.3 {
             if let Some(hook) = self.1 {
-                (hook.begin_mutation)(&mut self.0);
+                (hook.mutation)(&mut self.0, Mutation::Begin);
             }
             self.3 = true;
         }
@@ -567,8 +580,11 @@ impl<T: crate::Trace> RwLock<T> {
         self.hook = Some(Hook {
             collector: owner.collector().clone(),
             address: owner.address(),
-            begin_mutation: T::root,
-            finish_write: |value, owner, prepared| {
+            mutation: |value, action| {
+                let Mutation::Finish { owner, prepared } = action else {
+                    value.root();
+                    return;
+                };
                 if T::may_contain_gc_references()
                     && let Some(gc) = owner.collector().upgrade()
                     && !(prepared
