@@ -1,5 +1,8 @@
 # Java latency and memory across integrated collector revisions
 
+[Static long stores and scheduled Java roots latency at 1,000 and 1,500 requests/s](ordinary-static-long/README.md).
+
+
 A 105-process Java roots capacity search at `cdee5888` found that Ristretto could meet the 1 ms scheduled p99.9 limit at 1,000 requests/s in one five-fork run and exceeded it in two confirmation forks. G1 passed the 128,000/s search ceiling. ZGC confirmed a passing 48,000/s and a failing 64,000/s. [Capacity comparison, all process outcomes and graph](roots-capacity/README.md).
 
 At `480d279a` all twelve fresh forks completed their scheduled Java roots requests. At 1,500 requests/s the median scheduled p99.9 was 958 µs for Ristretto, 103.5 µs for G1 and 10 µs for ZGC. [Per-fork measurements, resource limits and graphs](synchronized-methods/README.md).
