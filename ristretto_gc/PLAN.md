@@ -12,6 +12,13 @@ finish. Wake delivery, leased and deferred storage, and integrated VM
 ownership remain on the alpha critical path.
 [Complete-collection data and progress tests](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#synchronous-allocation-recovery).
 
+At the same revision, all three JVMs completed every scheduled Java roots request
+at 1,000/s and 1,500/s in two fresh processes per rate. At 1,500/s the median
+scheduled p99.9 was 258.5 µs for Ristretto, 165.5 µs for G1 and 133.5 µs for
+ZGC. At 1,000/s the corresponding values were 156.5, 144.5 and 102.5 µs. The
+fixed-rate comparison leaves sustainable throughput and superiority open.
+[Java process data and graph](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/README.md).
+
 At `5c05cc39`, ordered enrollment pages reduced full-heap registration and
 cancellation time by 76–83% relative to `a9242931`. With one, 64 and 1,024
 pending allocations, the remaining cost relative to `42c37eb4` was 1.75×,
