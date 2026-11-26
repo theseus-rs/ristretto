@@ -14,6 +14,11 @@ pub(super) enum Unit {
 }
 
 pub(super) enum SweepWork {
+    #[cfg(not(target_family = "wasm"))]
+    CleanupBatch(
+        std::sync::Arc<super::WorkerSignals>,
+        super::native_callbacks::Batch,
+    ),
     PrepareGrant(crate::retirement_grants::Request),
     ReleasePacket(crate::work::Packet),
     Reclaim(
@@ -33,6 +38,20 @@ impl SweepWork {
         counters: &mut WorkCounters,
     ) {
         match self {
+            #[cfg(not(target_family = "wasm"))]
+            Self::CleanupBatch(pool, batch) => {
+                if let Some(batch) = pool.callbacks.send(gc, batch, Some((index, epoch))) {
+                    // A failed handoff must not strand privately captured siblings
+                    // behind a callback that may never return.
+                    for (task, _) in batch.rest {
+                        gc.retired_objects.fetch_add(1, Ordering::AcqRel);
+                        gc.publish_retirement(task);
+                    }
+                    gc.wake();
+                    let (task, budget) = batch.first;
+                    gc.reclaim_swept(task, index, epoch, budget, counters, None);
+                }
+            }
             Self::PrepareGrant(request) => request.prepare(),
             Self::ReleasePacket(packet) => drop(packet),
             Self::Reclaim(task, budget, selection) => {
@@ -559,12 +578,57 @@ impl GarbageCollector {
         }
         Unit::Progress
     }
+    #[cfg(not(target_family = "wasm"))]
+    fn cleanup_batch(&self, cycle: &mut Cycle, work: &mut usize) -> Option<SweepWork> {
+        if self.configuration.max_pause_time_us != 0
+            || *work == 0
+            || cycle.reclaim.len() < 2
+            || cycle.refund_selection.is_some()
+        {
+            return None;
+        }
+        let pool = self.cleanup_pool(&cycle.reclaim.front()?.metadata)?;
+        // Direct-credit donors have no clear, destructor, owner or finalizer.
+        // Leave them visible to the normal selector and never wait for more work.
+        let count = cycle
+            .reclaim
+            .iter()
+            .take(SWEEP_BATCH.min(*work + 1))
+            .take_while(|task| task.metadata.has_cleanup())
+            .count();
+        if count < 2 {
+            return None;
+        }
+        let mut units = *work + 1;
+        let mut prefix = cycle
+            .reclaim
+            .drain(..count)
+            .enumerate()
+            .map(|(index, task)| {
+                let budget = (units / (count - index)).min(task.metadata.trace.budget);
+                units -= budget;
+                (task, budget)
+            });
+        let first = prefix.next()?;
+        let rest = prefix.collect();
+        *work = units;
+        self.retired_ready.fetch_add(count, Ordering::AcqRel);
+        Some(SweepWork::CleanupBatch(
+            pool,
+            super::native_callbacks::Batch { first, rest },
+        ))
+    }
+
     pub(super) fn sweep_unit(
         &self,
         cycle: &mut Cycle,
         work: &mut usize,
         counters: &mut WorkCounters,
     ) -> Unit {
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(batch) = self.cleanup_batch(cycle, work) {
+            return Unit::Sweep(batch);
+        }
         if let Some(task) = cycle.reclaim.front() {
             if cycle.refund_selection.is_none() {
                 cycle.refund_selection = self.grant_registry.capture(&task.metadata);

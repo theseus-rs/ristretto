@@ -324,7 +324,9 @@ fn caller_driven_cleanup_cannot_join_its_own_retirement() -> Result<()> {
     let helper = gc.clone();
     let collector = std::thread::spawn(move || helper.collect_full());
     assert_eq!(rx.recv_timeout(Duration::from_secs(2)), Ok(true));
-    collector.join().expect("caller completed")?;
+    collector
+        .join()
+        .map_err(|_| ristretto_gc::Error::CollectionPhaseError("caller panicked".into()))??;
     gc.stop()?;
     assert_eq!(gc.managed_bytes(), 0);
     Ok(())
@@ -361,6 +363,87 @@ fn callback_panic_refunds_once_and_stop_reports_the_failure() -> Result<()> {
     assert!(matches!(gc.stop(), Err(ristretto_gc::Error::SyncError(_))));
     assert_eq!(destroyed.load(Ordering::Relaxed), 1);
     gc.stop()?;
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
+
+#[cfg(not(miri))]
+#[test]
+fn batched_finalizers_preserve_offsets_and_release_each_physical_charge() -> Result<()> {
+    const ITEMS: usize = 64;
+    struct Sliced {
+        id: usize,
+        offset: usize,
+        initialized: AtomicBool,
+        short: Arc<AtomicBool>,
+        finished: mpsc::Sender<(usize, usize)>,
+    }
+    // SAFETY: the payload contains only counters and a host channel.
+    unsafe impl Trace for Sliced {
+        fn trace(&self, _: &GarbageCollector) {}
+        fn clear_step(&mut self, offset: usize, budget: usize) -> TraceProgress {
+            assert!(self.initialized.load(Ordering::Acquire));
+            assert_eq!(offset, self.offset);
+            assert!((1..=32).contains(&budget));
+            if budget < 32 {
+                self.short.store(true, Ordering::Release);
+            }
+            self.offset = (offset + budget).min(37);
+            if self.offset == 37 {
+                TraceProgress::Complete
+            } else {
+                TraceProgress::Continue(self.offset)
+            }
+        }
+    }
+    impl Finalize for Sliced {
+        fn finalize(&self) {
+            assert!(!self.initialized.swap(true, Ordering::AcqRel));
+        }
+    }
+    impl Drop for Sliced {
+        fn drop(&mut self) {
+            let _ = self.finished.send((self.id, self.offset));
+        }
+    }
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .threads(1)
+            .incremental_step_size(64)
+            .max_pause_time_us(0)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
+    let (tx, rx) = mpsc::channel();
+    let short = Arc::new(AtomicBool::new(false));
+    let roots: Vec<_> = (0..ITEMS)
+        .map(|id| {
+            Gc::new_with_finalizer(
+                &gc,
+                Sliced {
+                    id,
+                    offset: 0,
+                    initialized: AtomicBool::new(false),
+                    short: short.clone(),
+                    finished: tx.clone(),
+                },
+            )
+        })
+        .collect();
+    drop(roots);
+    gc.start();
+    gc.collect();
+    let mut completions = Vec::new();
+    for _ in 0..ITEMS {
+        completions.push(
+            rx.recv_timeout(Duration::from_secs(3))
+                .map_err(|err| ristretto_gc::Error::CollectionPhaseError(err.to_string()))?,
+        );
+    }
+    gc.stop()?;
+    completions.sort_unstable();
+    assert!(completions.into_iter().eq((0..ITEMS).map(|id| (id, 37))));
+    assert!(short.load(Ordering::Acquire));
     assert_eq!(gc.managed_bytes(), 0);
     Ok(())
 }

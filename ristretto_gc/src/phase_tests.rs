@@ -553,6 +553,17 @@ mod native {
 
     #[test]
     fn adaptive_peer_completes_a_fresh_ticket_while_worker_zero_is_parked() -> Result<()> {
+        struct ParkOnWake(mpsc::Sender<Option<usize>>, Mutex<mpsc::Receiver<()>>);
+        impl std::task::Wake for ParkOnWake {
+            fn wake(self: Arc<Self>) {
+                self.0
+                    .send(WORKER.get().map(|(_, index)| index))
+                    .expect("ticket observer");
+                lock(&self.1)
+                    .recv_timeout(Duration::from_secs(10))
+                    .expect("resume worker");
+            }
+        }
         for counted in [false, true] {
             let gc = GarbageCollector::with_config(
                 Configuration::builder()
@@ -564,35 +575,33 @@ mod native {
                     .allocation_threshold(usize::MAX)
                     .build(),
             );
-            let drops = Arc::new(AtomicUsize::new(0));
+            let donor = Gc::try_new(&gc, 37_u64)?;
             let (entered, parked) = mpsc::channel();
             let (release, resume) = mpsc::channel();
-            drop(Gc::try_new(
-                &gc,
-                HeldClear {
-                    entered: Some(entered),
-                    release: Mutex::new(resume),
-                    drops: drops.clone(),
-                },
-            )?);
+            let waker = std::task::Waker::from(Arc::new(ParkOnWake(entered, Mutex::new(resume))));
+            let mut first = std::pin::pin!(crate::recovery::CollectionWait::new(&gc, 1));
             let callback_worker = gc.pacing.as_ref().unwrap().with_sampling_frozen(|| {
                 gc.start();
-                gc.collect();
+                assert!(
+                    Future::poll(first.as_mut(), &mut std::task::Context::from_waker(&waker))
+                        .is_pending()
+                );
+                assert_eq!(gc.request_full_cycle(), 1);
                 parked.recv_timeout(Duration::from_secs(3))
             });
+            drop(donor);
             let ticket = gc.request_full_cycle();
             let start = std::time::Instant::now();
             while gc.completed_full_ticket() < ticket && start.elapsed() < Duration::from_secs(3) {
                 thread::sleep(Duration::from_millis(1));
             }
             let completed = gc.completed_full_ticket() >= ticket;
-            let still_parked = drops.load(Ordering::Relaxed) == 0;
+            let refunded = gc.managed_bytes() == 0;
             release.send(()).expect("resume callback");
             gc.stop()?;
             assert_eq!(callback_worker.unwrap(), Some(0));
             assert!(completed, "standby failed to complete the full collection");
-            assert!(still_parked);
-            assert_eq!(drops.load(Ordering::Relaxed), 1);
+            assert!(refunded, "standby failed to release the independent donor");
             assert_eq!(gc.managed_bytes(), 0);
         }
         Ok(())

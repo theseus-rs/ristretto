@@ -4724,22 +4724,34 @@ impl GarbageCollector {
     }
 
     #[cfg(not(target_family = "wasm"))]
+    fn cleanup_pool(&self, metadata: &ObjectMetadata) -> Option<Arc<WorkerSignals>> {
+        if !metadata.has_cleanup()
+            || WORKER
+                .get()
+                .is_none_or(|(heap, _)| heap != std::ptr::from_ref(self).addr())
+        {
+            return None;
+        }
+        native_callbacks::pool().filter(|pool| !pool.closed.load(Ordering::Acquire))
+    }
+
+    #[cfg(not(target_family = "wasm"))]
     fn offload_cleanup(
         &self,
         task: ReclaimTask,
         budget: usize,
         origin: Option<(usize, u64)>,
     ) -> Option<ReclaimTask> {
-        if task.metadata.has_cleanup()
-            && WORKER
-                .get()
-                .is_some_and(|(heap, _)| heap == std::ptr::from_ref(self).addr())
-            && let Some(pool) = native_callbacks::pool()
-            && !pool.closed.load(Ordering::Acquire)
-        {
-            return pool.callbacks.send(self, task, budget, origin);
-        }
-        Some(task)
+        let Some(pool) = self.cleanup_pool(&task.metadata) else {
+            return Some(task);
+        };
+        let batch = native_callbacks::Batch {
+            first: (task, budget),
+            rest: Vec::new(),
+        };
+        pool.callbacks
+            .send(self, batch, origin)
+            .map(|batch| batch.first.0)
     }
 
     /// Execute a sweep callback with exclusive descriptor ownership and no cycle,
