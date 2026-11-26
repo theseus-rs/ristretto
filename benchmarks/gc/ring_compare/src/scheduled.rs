@@ -9,7 +9,7 @@ use super::{
 };
 use ristretto_classfile::ClassFile;
 use ristretto_gc::clock::{monotonic_clock_name, monotonic_resolution_ns, monotonic_time_ns};
-use ristretto_vm::canonical::{Error, Program};
+use ristretto_vm_research::canonical::{Error, Program};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::path::Path;
@@ -142,7 +142,7 @@ struct Counts {
     native_slices: usize,
 }
 impl Counts {
-    fn add(&mut self, value: &ristretto_vm::canonical::Invocation) -> Result<()> {
+    fn add(&mut self, value: &ristretto_vm_research::canonical::Invocation) -> Result<()> {
         for (total, value) in [
             (&mut self.allocations, value.allocations),
             (&mut self.released_objects, value.released_objects),

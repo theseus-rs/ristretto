@@ -1,0 +1,38 @@
+[package]
+name = "ristretto_vm_research"
+description = "Restricted Java sessions for Ristretto GC research"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+experimental-canonical-runtime = ["ristretto_gc/experimental-canonical-runtime"]
+experimental-canonical-telemetry = ["experimental-canonical-runtime", "ristretto_gc/experimental-canonical-service"]
+experimental-canonical-jit = ["experimental-canonical-runtime", "ristretto_jit/experimental-reference-dispatch", "ristretto_jit/execution-profile"]
+
+[dependencies]
+async-recursion.workspace = true
+ristretto_classfile = { path = "../ristretto_classfile" }
+ristretto_classloader = { path = "../ristretto_classloader", default-features = false }
+ristretto_gc = { path = "../ristretto_gc" }
+ristretto_jit = { path = "../ristretto_jit" }
+ristretto_vm = { path = "../ristretto_vm", default-features = false }
+thiserror.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "sync", "time"] }
+
+[dev-dependencies]
+sha2.workspace = true
+serde_json.workspace = true
+
+[[example]]
+name = "canonical_java"
+required-features = ["experimental-canonical-runtime"]
+
+[[example]]
+name = "canonical_ring_samples"
+required-features = ["experimental-canonical-runtime"]

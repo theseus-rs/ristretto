@@ -1,8 +1,8 @@
 //! Export after the body/cleanup. Events serialize one at a time; no second
 //! full JSON-event array is retained alongside the recorder snapshot.
 use ristretto_gc::service_recorder::{Event, Gap, Kind, Operation, Outcome, SpanId};
-use ristretto_vm::canonical::Report;
-use ristretto_vm::canonical_telemetry::{Capture, CycleCapture, CycleWindow};
+use ristretto_vm_research::canonical::Report;
+use ristretto_vm_research::canonical_telemetry::{Capture, CycleCapture, CycleWindow};
 use serde::Serialize;
 use serde_json::{Value, json};
 use std::io::Write;

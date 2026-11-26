@@ -53,8 +53,8 @@ Java classes. Record the four absolute executable paths for the capture.
 
 ```sh
 export RISTRETTO_GC_BENCH_REVISION=$(git rev-parse HEAD)
-cargo build --locked --release -p ristretto_vm --no-default-features --features experimental-canonical-jit --example canonical_ring_samples
-cargo build --locked --release -p ristretto_vm --no-default-features --features experimental-canonical-runtime --target wasm32-wasip2 --example canonical_ring_samples
+cargo build --locked --release -p ristretto_vm_research --no-default-features --features experimental-canonical-jit --example canonical_ring_samples
+cargo build --locked --release -p ristretto_vm_research --no-default-features --features experimental-canonical-runtime --target wasm32-wasip2 --example canonical_ring_samples
 systemd-run --user --scope -p MemoryMax=1G -p CPUQuota=200% \
   python3 benchmarks/gc/ring/compare.py comparison.json \
   --native target/release/examples/canonical_ring_samples \

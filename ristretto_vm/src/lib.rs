@@ -63,10 +63,6 @@
 
 mod assignable;
 mod call_site_cache;
-#[cfg(feature = "experimental-canonical-runtime")]
-pub mod canonical;
-#[cfg(all(feature = "experimental-canonical-telemetry", target_has_atomic = "64"))]
-pub mod canonical_telemetry;
 mod compiler;
 mod configuration;
 #[cfg(all(

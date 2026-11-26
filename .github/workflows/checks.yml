@@ -36,6 +36,8 @@ jobs:
         run: rustup toolchain install --no-self-update
       - name: Install Linux dependencies
         run: .github/scripts/setup-linux.sh
+      - name: Verify the alpha JVM's collector dependencies
+        run: python3 benchmarks/gc/release/verify_alpha_heap.py
       - name: Check the project
         run: |
           cargo check --workspace --all-targets --all-features

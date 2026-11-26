@@ -3549,6 +3549,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ristretto_vm_research"
+version = "0.35.0"
+dependencies = [
+ "async-recursion",
+ "ristretto_classfile",
+ "ristretto_classloader",
+ "ristretto_gc",
+ "ristretto_jit",
+ "ristretto_vm",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
 name = "runtime_class_loader"
 version = "0.35.0"
 dependencies = [

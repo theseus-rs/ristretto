@@ -4,7 +4,7 @@ mod inputs;
 use counting::{Counts, Snapshot};
 use inputs::{Admission, Inputs};
 use ristretto_classfile::ClassFile;
-use ristretto_vm::canonical::{Program, Report};
+use ristretto_vm_research::canonical::{Program, Report};
 use serde::Serialize;
 use serde_json::json;
 use std::path::PathBuf;

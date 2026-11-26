@@ -3,8 +3,8 @@ mod export;
 mod inputs;
 use inputs::Inputs;
 use ristretto_classfile::ClassFile;
-use ristretto_vm::canonical::Program;
-use ristretto_vm::canonical_telemetry::Telemetry;
+use ristretto_vm_research::canonical::Program;
+use ristretto_vm_research::canonical_telemetry::Telemetry;
 use std::path::PathBuf;
 
 #[tokio::main(flavor = "current_thread")]
