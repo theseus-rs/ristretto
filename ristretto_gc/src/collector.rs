@@ -4700,13 +4700,13 @@ impl GarbageCollector {
     }
 
     #[cfg(not(target_family = "wasm"))]
-    fn offload_finalizer(
+    fn offload_cleanup(
         &self,
         task: ReclaimTask,
         budget: usize,
         origin: Option<(usize, u64)>,
     ) -> Option<ReclaimTask> {
-        if task.metadata.has_finalizer()
+        if task.metadata.has_native_cleanup()
             && WORKER
                 .get()
                 .is_some_and(|(heap, _)| heap == std::ptr::from_ref(self).addr())
@@ -4732,7 +4732,7 @@ impl GarbageCollector {
     ) {
         #[cfg(not(target_family = "wasm"))]
         if selection.is_none() {
-            let Some(owned) = self.offload_finalizer(task, budget, Some((index, epoch))) else {
+            let Some(owned) = self.offload_cleanup(task, budget, Some((index, epoch))) else {
                 return;
             };
             task = owned;
@@ -4825,7 +4825,7 @@ impl GarbageCollector {
         let budget = budget.min(task.metadata.trace.budget);
         #[cfg(not(target_family = "wasm"))]
         if selection.is_none() {
-            let Some(owned) = self.offload_finalizer(task, budget, None) else {
+            let Some(owned) = self.offload_cleanup(task, budget, None) else {
                 return Some(RetirementStep::Progress(false));
             };
             task = owned;
