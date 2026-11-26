@@ -165,8 +165,9 @@ fn a_parked_first_destructor_does_not_capture_the_rest_of_its_sweep_batch() -> R
         entered: mpsc::Sender<()>,
         release: Mutex<mpsc::Receiver<()>>,
         drops: AtomicUsize,
+        per_id: [AtomicUsize; PEERS],
     }
-    struct Peer(Arc<Group>);
+    struct Peer(Arc<Group>, usize);
     // SAFETY: the entire group contains only host scheduling controls.
     unsafe impl Trace for Peer {
         fn trace(&self, _: &GarbageCollector) {}
@@ -182,6 +183,11 @@ fn a_parked_first_destructor_does_not_capture_the_rest_of_its_sweep_batch() -> R
                     .recv_timeout(Duration::from_secs(10))
                     .expect("release the first destructor");
             }
+            self.0
+                .per_id
+                .get(self.1)
+                .expect("peer identity")
+                .fetch_add(1, Ordering::Release);
             self.0.drops.fetch_add(1, Ordering::Release);
         }
     }
@@ -204,10 +210,12 @@ fn a_parked_first_destructor_does_not_capture_the_rest_of_its_sweep_batch() -> R
             entered,
             release: Mutex::new(gate),
             drops: AtomicUsize::new(0),
+            per_id: std::array::from_fn(|_| AtomicUsize::new(0)),
         });
-        for _ in 0..PEERS {
-            drop(Gc::try_new(&gc, Peer(group.clone()))?);
+        for id in 0..PEERS {
+            drop(Gc::try_new(&gc, Peer(group.clone(), id))?);
         }
+        let total_charge = gc.managed_bytes();
         gc.start();
         gc.collect();
         parked
@@ -224,6 +232,12 @@ fn a_parked_first_destructor_does_not_capture_the_rest_of_its_sweep_batch() -> R
             result
         });
         let completed = result.recv_timeout(Duration::from_secs(3));
+        let retained = gc.managed_bytes();
+        let reclaimed_ids = group
+            .per_id
+            .iter()
+            .filter(|n| n.load(Ordering::Acquire) == 1)
+            .count();
         release.send(()).expect("release first callback");
         later.join().expect("independent full")?;
         gc.stop()?;
@@ -232,7 +246,10 @@ fn a_parked_first_destructor_does_not_capture_the_rest_of_its_sweep_batch() -> R
             PEERS - 1,
             "parked destructor stranded independent storage within its batch"
         );
+        assert_eq!(reclaimed_ids, PEERS - 1);
+        assert_eq!(retained * PEERS, total_charge);
         assert_eq!(group.drops.load(Ordering::Acquire), PEERS);
+        assert!(group.per_id.iter().all(|n| n.load(Ordering::Acquire) == 1));
         assert_eq!(gc.managed_bytes(), 0);
     }
     Ok(())

@@ -27,8 +27,8 @@ pub(super) struct Callbacks(OnceBox<Runner>);
 
 #[derive(Debug)]
 struct Runner {
-    send: arc_swap::ArcSwapOption<mpsc::Sender<Job>>,
-    receive: Arc<Mutex<mpsc::Receiver<Job>>>,
+    send: arc_swap::ArcSwapOption<mpsc::Sender<Submission>>,
+    receive: Arc<Mutex<Receiver>>,
     helper_failed: AtomicBool,
     thread: Mutex<Option<thread::JoinHandle<bool>>>,
 }
@@ -36,6 +36,74 @@ struct Runner {
 pub(super) struct Batch {
     pub(super) first: (ReclaimTask, usize),
     pub(super) rest: Vec<(ReclaimTask, usize)>,
+}
+
+struct Submission {
+    gc: Arc<GarbageCollector>,
+    batch: Batch,
+    origin: Option<(usize, u64)>,
+}
+
+struct Remaining {
+    gc: Arc<GarbageCollector>,
+    entries: std::vec::IntoIter<(ReclaimTask, usize)>,
+    origin: Option<(usize, u64)>,
+}
+
+struct Receiver {
+    submissions: mpsc::Receiver<Submission>,
+    remaining: Option<Remaining>,
+}
+
+impl std::fmt::Debug for Receiver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let remaining = self
+            .remaining
+            .as_ref()
+            .map_or(0, |batch| batch.entries.len());
+        f.debug_struct("Receiver")
+            .field("remaining", &remaining)
+            .finish_non_exhaustive()
+    }
+}
+
+impl Receiver {
+    // Many helpers may share a batch. Move exactly one item into the caller's
+    // job while its unclaimed siblings remain accessible behind this guard.
+    fn claim(&mut self, wait: bool) -> Option<Job> {
+        if let Some(batch) = &mut self.remaining {
+            let (task, budget) = batch.entries.next()?;
+            let job = Job {
+                gc: batch.gc.clone(),
+                task,
+                budget,
+                origin: batch.origin,
+            };
+            if batch.entries.len() == 0 {
+                self.remaining = None;
+            }
+            return Some(job);
+        }
+        let Submission { gc, batch, origin } = if wait {
+            self.submissions.recv().ok()?
+        } else {
+            self.submissions.try_recv().ok()?
+        };
+        if !batch.rest.is_empty() {
+            self.remaining = Some(Remaining {
+                gc: gc.clone(),
+                entries: batch.rest.into_iter(),
+                origin,
+            });
+        }
+        let (task, budget) = batch.first;
+        Some(Job {
+            gc,
+            task,
+            budget,
+            origin,
+        })
+    }
 }
 
 struct Job {
@@ -61,29 +129,16 @@ impl Callbacks {
         let Some(sender) = runner.send.load_full() else {
             return Some(batch);
         };
-        // Keep sweep acquisition batched. Publish each callback separately so a
-        // stalled destructor cannot hold the other objects on its private stack.
-        gc.callback_jobs
-            .fetch_add(1 + batch.rest.len(), Ordering::AcqRel);
-        let mut rest = batch.rest.into_iter();
-        let mut next = batch.first;
-        loop {
-            let (task, budget) = next;
-            let job = Job {
-                gc: owner.clone(),
-                task,
-                budget,
-                origin,
-            };
-            if let Err(mpsc::SendError(job)) = sender.send(job) {
-                gc.callback_jobs.fetch_sub(1 + rest.len(), Ordering::AcqRel);
-                return Some(Batch {
-                    first: (job.task, job.budget),
-                    rest: rest.collect(),
-                });
-            }
-            let Some(entry) = rest.next() else { break };
-            next = entry;
+        let count = 1 + batch.rest.len();
+        gc.callback_jobs.fetch_add(count, Ordering::AcqRel);
+        let submission = Submission {
+            gc: owner,
+            batch,
+            origin,
+        };
+        if let Err(mpsc::SendError(submission)) = sender.send(submission) {
+            gc.callback_jobs.fetch_sub(count, Ordering::AcqRel);
+            return Some(submission.batch);
         }
         None
     }
@@ -113,10 +168,12 @@ impl Callbacks {
             return;
         };
         for _ in 0..jobs {
-            let Ok(receiver) = runner.receive.try_lock() else {
+            let Ok(mut receiver) = runner.receive.try_lock() else {
                 break;
             };
-            let Ok(job) = receiver.try_recv() else { break };
+            let Some(job) = receiver.claim(false) else {
+                break;
+            };
             drop(receiver);
             if job.run() {
                 runner.helper_failed.store(true, Ordering::Release);
@@ -179,16 +236,19 @@ impl Job {
 
 impl Runner {
     fn spawn() -> std::io::Result<Box<Self>> {
-        let (send, recv) = mpsc::channel::<Job>();
-        let receive = Arc::new(Mutex::new(recv));
+        let (send, submissions) = mpsc::channel();
+        let receive = Arc::new(Mutex::new(Receiver {
+            submissions,
+            remaining: None,
+        }));
         let queue = receive.clone();
         let thread = thread::Builder::new()
             .name("gc-finalizers".into())
             .spawn(move || {
                 let mut failed = false;
                 loop {
-                    let next = lock(&queue).recv();
-                    let Ok(job) = next else { break };
+                    let next = lock(&queue).claim(true);
+                    let Some(job) = next else { break };
                     failed |= job.run();
                 }
                 failed
