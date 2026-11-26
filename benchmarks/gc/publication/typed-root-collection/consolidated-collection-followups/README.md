@@ -27,6 +27,13 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Per-donor physical claim and lazy grant preparation | `0a7993f0` | 251126959 | **10.17×** | **10.60×** | **36 / 36** |
 | Reference handler registration and independent wake delivery | `93ea1b2b` | 251126972 | **10.76×** | **11.02×** | **36 / 36** |
 | Cooperative regional descriptor and Java array returns | `ed3a9426` | 251126975 | **10.58×** | **10.28×** | **36 / 36** |
+| Cooperative clearing through optional values | `f350e347` | 251126976 | **11.02×** | **10.50×** | **36 / 36** |
+
+## Cooperative clearing through optional values
+
+On the preceding regional collector an `Option<HeapBuffer<u8>>` blocked the registered worker in ordinary destruction, even after an independent global donor became available. At `f350e347`, a present value receives the original clearing offset and budget and retains ownership across a busy or incomplete return. An absent value completes immediately. Eight forced native schedules passed in 100 fresh processes each. The read-only Neon implementation audit confirmed the cursor and ownership forwarding. Native GC suites, WASI collector and recovery tests, the bare-Wasm check, strict Clippy and Cargo package verification passed. The fixed complete-collection comparison cleared all 36 conditions.
+
+The tests cover a direct buffer and an optional buffer. General composite destruction and the allocation-waiter index still require progress work. [All 1,728 process measurements](optional-returns.csv) · [Forced schedules, parent failure and verification](optional-return-tests.json.gz)
 
 ## Cooperative regional descriptor and Java array returns
 

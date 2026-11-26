@@ -2,6 +2,9 @@
 
 ## Tenfold complete-collection gate
 
+At `f350e347`, optional values also forward cooperative clearing. A parked region registry no longer strands an independent donor in the optional-buffer regression. Eight forced schedules passed in 800 fresh processes. All 36 complete-collection conditions cleared 10×, with weakest individual 95% speedup bounds of 11.02× native and 10.50× WASI. The allocation-waiter index, other composite layouts and shared VM ownership remain open.
+[Optional buffer regression and collection measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#cooperative-clearing-through-optional-values).
+
 At `ed3a9426`, native retirement of a regional descriptor or direct Java array buffer can retry its range return while the worker reclaims an independent global donor. Seven contention schedules passed across 700 fresh processes. All 36 complete-collection conditions exceeded 10× against `f1daebeb`, with weakest individual 95% bounds of 10.58× native and 10.28× WASI. A wrapped regional buffer and a parked allocation-waiter index still block independent work. Shared VM roots, native boundaries and compiled execution remain on the integrated alpha critical path.
 [Collection results and remaining schedules](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#cooperative-regional-descriptor-and-java-array-returns).
 
