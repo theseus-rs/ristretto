@@ -3216,6 +3216,26 @@ impl GarbageCollector {
         }
     }
 
+    // Capture one generation of publicly released donors. Later arrivals must not
+    // extend exhaustion. Capture and help are separate units so an async caller
+    // can yield after its deciding collection step and recheck credit and guards.
+    fn help_terminal_releases(
+        &self,
+        released: &mut Option<crate::retirement_grants::ReleasedCheck>,
+    ) -> bool {
+        let Some(check) = released else {
+            *released = Some(self.released_donors.snapshot());
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            crate::refund_tests::terminal_snapshot_captured();
+            return true;
+        };
+        if !check.pending() {
+            return false;
+        }
+        self.reap_retired(false, Some(check));
+        true
+    }
+
     /// Reserve as soon as reclamation makes room, without awaiting the rest of a cycle.
     /// Failed races for headroom do not spend the two completed-cycle recovery budget.
     pub(crate) async fn reserve_bytes_async(
@@ -3257,19 +3277,7 @@ impl GarbageCollector {
                 return Err(crate::Error::OutOfMemory);
             }
             if empty_cycles == 2 {
-                if released.is_none() {
-                    released = Some(self.released_donors.snapshot());
-                    #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
-                    crate::refund_tests::terminal_snapshot_captured();
-                    // The deciding ticket may have used this poll's batch. On
-                    // resume recheck credit, a paid grant and managed guards.
-                    crate::recovery::yield_once().await;
-                    continue;
-                }
-                if let Some(check) = &mut released
-                    && check.pending()
-                {
-                    self.reap_retired(false, Some(check));
+                if self.help_terminal_releases(&mut released) {
                     crate::recovery::yield_once().await;
                     continue;
                 }
@@ -3366,7 +3374,13 @@ impl GarbageCollector {
                 empty_cycles + 1
             };
         }
-        Err(crate::Error::OutOfMemory)
+        let mut released = None;
+        while size > self.context_headroom(size) {
+            if crate::cell::has_guards() || !self.help_terminal_releases(&mut released) {
+                return Err(crate::Error::OutOfMemory);
+            }
+        }
+        Ok(())
     }
 
     /// Checks headroom, returning as soon as enough space is available. At most two consecutive
@@ -3380,11 +3394,19 @@ impl GarbageCollector {
             return Err(crate::Error::OutOfMemory);
         }
         let mut empty_cycles = 0;
+        let mut released = None;
         loop {
             if size <= self.context_headroom(size) {
                 return Ok(());
             }
-            if empty_cycles == 2 || crate::cell::has_guards() {
+            if crate::cell::has_guards() {
+                return Err(crate::Error::OutOfMemory);
+            }
+            if empty_cycles == 2 {
+                if self.help_terminal_releases(&mut released) {
+                    crate::recovery::yield_once().await;
+                    continue;
+                }
                 return Err(crate::Error::OutOfMemory);
             }
             let _measurement = self

@@ -676,6 +676,87 @@ fn terminal_allocation_assists_a_released_donor_past_nonfitting_requests() -> Re
     Ok(())
 }
 
+#[expect(clippy::panic_in_result_fn, reason = "assert forced recovery outcomes")]
+fn advisory_buffer_recovery(blocking: bool) -> Result<()> {
+    for counted in [false, true] {
+        for pledged in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .max_heap_bytes(64)
+                    .allocation_threshold(usize::MAX)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .diagnostics(true)
+                    .build(),
+            );
+            let payload = ((1_u64, 2_u64), (3_u64, 4_u64));
+            let live = Gc::try_new(&gc, payload)?;
+            let donor = Gc::try_new(&gc, payload)?;
+            let prefix: Vec<_> = (0..4096)
+                .map(|_| gc.grant_registry.register(&gc, 40))
+                .collect::<Result<_>>()?;
+            let claimant = pledged
+                .then(|| gc.grant_registry.register(&gc, 32))
+                .transpose()?;
+            release_donor(&gc, donor, true)?;
+            let result = if blocking {
+                crate::HeapBuffer::try_with_fn_in(&gc, 8, |_| Ok(7_u8))
+            } else {
+                let mut future = Box::pin(crate::HeapBuffer::try_with_fn_in_async(&gc, 8, |_| {
+                    Ok(7_u8)
+                }));
+                let ready = Arc::new(Runnable(AtomicBool::new(true)));
+                let waker = Waker::from(ready.clone());
+                let mut completed = None;
+                for _ in 0..20_000 {
+                    assert!(
+                        ready.0.swap(false, Ordering::AcqRel),
+                        "a helper lost its wake"
+                    );
+                    let before = gc.diagnostics().caller_steps.count;
+                    let poll = future.as_mut().poll(&mut Context::from_waker(&waker));
+                    assert!(gc.diagnostics().caller_steps.count <= before + 1);
+                    if let Poll::Ready(value) = poll {
+                        completed = Some(value);
+                        break;
+                    }
+                }
+                completed.ok_or_else(|| {
+                    crate::Error::CollectionPhaseError(
+                        "buffer recovery exhausted its poll budget".into(),
+                    )
+                })?
+            };
+            if let Some(claimant) = claimant {
+                assert!(matches!(result, Err(crate::Error::OutOfMemory)));
+                assert_eq!(gc.managed_bytes(), 64);
+                let reservation = claimant.take().ok_or_else(|| {
+                    crate::Error::CollectionPhaseError("donor was not paid to the claimant".into())
+                })?;
+                drop(reservation);
+            } else {
+                assert_eq!(&*result?, &[7_u8; 8]);
+            }
+            assert_eq!(gc.managed_bytes(), 32);
+            drop((prefix, live));
+            gc.collect_full()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn asynchronous_buffer_preflight_helps_physically_released_donors() -> Result<()> {
+    advisory_buffer_recovery(false)
+}
+
+#[test]
+fn synchronous_buffer_preflight_helps_physically_released_donors() -> Result<()> {
+    advisory_buffer_recovery(true)
+}
+
 #[expect(clippy::expect_used, reason = "bounded forced allocation schedule")]
 pub(super) fn before_terminal_close() {
     if let Some((entered, resume)) = TERMINAL_CLOSE.take() {
