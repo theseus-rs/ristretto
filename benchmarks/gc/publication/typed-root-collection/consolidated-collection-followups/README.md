@@ -10,7 +10,10 @@ Each revision ran the full 36-condition comparison against the same baseline col
 | Deadline-aware cells and buffered dirty-owner publication | `d683da11` | 251126683 | 9.97× | 11.20× | 35 / 36 |
 | Bounded phantom cleanup and shorter phase publication | `899fdc20` | 251126899 | 9.60× | 11.40× | 33 / 36 |
 | Recovery observation, scalar clearing and nursery sweep changes | `849b9f31` | 251126849 | 10.19× | 11.96× | 36 / 36 |
-| Region evacuation epochs and nonblocking trim probes | `81594aad` | 251126815 | **10.18×** | **11.68×** | **36 / 36** |
+| Region evacuation epochs and nonblocking trim probes | `81594aad` | 251126815 | 10.18× | 11.68× | 36 / 36 |
+| Owned source and destination checks during incremental copies | `1bd9360c` | 251126136 | **10.18×** | **11.91×** | **36 / 36** |
+
+Collector `1bd9360c` reached minimum medians of 10.83× native and 12.13× WASI. A separate public-buffer regression parked the source registry during both initial and continued partial copies into a different region. The test timed out on the parent and finished both copies and exact byte checks on this revision.
 
 Collector `81594aad` cleared all 36 conditions with minimum medians of 10.42× native and 11.81× WASI. The core fixture does not enable region compaction. Separate forced tests exercise the new region transitions.
 
@@ -20,6 +23,6 @@ The earlier merged revision at `d683da11` had one interval crossing the gate, on
 
 ![Weakest per-condition confidence bound for each source revision](minimum.svg)
 
-[Per-condition results](summary.json) · [Compiler, source, binary and host provenance](provenance.json) · Ordered process records for [context repair](context.csv), [eight-cell leaves](sparse.csv), [deadline-aware leaves](deadline.csv), [the merge](merged.csv), [phase changes](phase.csv), [recovery and sweep](recovery.csv) and [region transitions](regions.csv).
+[Per-condition results](summary.json) · [Compiler, source, binary and host provenance](provenance.json) · Ordered process records for [context repair](context.csv), [eight-cell leaves](sparse.csv), [deadline-aware leaves](deadline.csv), [the merge](merged.csv), [phase changes](phase.csv), [recovery and sweep](recovery.csv), [region transitions](regions.csv) and [source validation](copy.csv).
 
 Use the [original integrated protocol](../consolidated-complete/README.md) with the candidate revision and seed in the table. The collection benchmark measures elapsed time to mark, sweep and reclaim. The Java application uses time-limited steps and has separate latency and memory measurements.

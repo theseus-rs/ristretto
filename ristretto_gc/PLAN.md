@@ -2,6 +2,15 @@
 
 ## Tenfold complete-collection gate
 
+The latest qualified collector, `1bd9360c`, admits a copy to an available
+destination and continues partial chunks while the source registry is parked.
+Its minimum per-condition 95% speedup bounds against `f1daebeb` were 10.18×
+native and 11.91× WASI over 1,728 fresh processes. Separate one-minute
+compacting trials on `81594aad` met the operation tail limits, while a repeated
+hard-cap recovery regression returned false OOM in 2 of 600 fresh processes.
+[Collection results](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md)
+· [Compaction and hard-cap results](../benchmarks/gc/publication/compacting-endurance/region-epochs/README.md).
+
 The integrated region changes at `81594aad` passed all 36 native and WASI
 collection conditions against `f1daebeb`. Minimum medians were 10.42× and
 11.81×, and the weakest individual 95% lower bounds were 10.18× and
