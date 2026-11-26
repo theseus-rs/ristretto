@@ -76,6 +76,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         interpreted_entries += activity.interpreter_entries;
     }
 
+    let (cleared, full_collections, managed_bytes_freed) = verify_cycle_reclamation(&vm).await?;
+    println!(
+        "{}",
+        serde_json::json!({"result":result, "compiled_entries":compiled_entries,
+        "compiled_backedges":compiled_backedges,"interpreted_entries":interpreted_entries,
+        "cleared_witnesses":cleared, "full_collections":full_collections,
+        "managed_bytes_freed":managed_bytes_freed})
+    );
+    Ok(())
+}
+
+async fn verify_cycle_reclamation(
+    vm: &VM,
+) -> Result<(usize, usize, usize), Box<dyn std::error::Error>> {
+    let gc = vm.garbage_collector();
     // The bootstrap heap stays live. Observe two exact Java objects forming an
     // otherwise unreachable cycle and require a physical refund in this full GC.
     gc.collect_full()?;
@@ -117,12 +132,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .into());
     }
     let cleared = witnesses.iter().filter(|link| link.is_cleared()).count();
-    println!(
-        "{}",
-        serde_json::json!({"result":result, "compiled_entries":compiled_entries,
-        "compiled_backedges":compiled_backedges,"interpreted_entries":interpreted_entries,
-        "cleared_witnesses":cleared, "full_collections":after.full_collections-before.full_collections,
-        "managed_bytes_freed":charge})
-    );
-    Ok(())
+    Ok((
+        cleared,
+        after.full_collections - before.full_collections,
+        charge,
+    ))
 }
