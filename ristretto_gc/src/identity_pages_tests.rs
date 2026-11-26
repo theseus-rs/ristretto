@@ -194,7 +194,7 @@ fn retirement_refreshes_its_cached_page_after_replacement() {
     index.prepare(1).expect("vacant").install(11);
     index.prepare(2).expect("vacant").install(22);
     assert!(index.retire(1, 11, &mut cursor).is_none());
-    assert!(cursor.0.is_some());
+    assert!(cursor.0.iter().any(Option::is_some));
     index.remove(2, 22);
     index.prepare(3).expect("replacement").install(33);
     let sealed = index
@@ -215,4 +215,33 @@ fn cached_identity_pages_do_not_cross_collectors() {
     a.remove(1, 11);
     assert_eq!(b.get(1), Some(22));
     b.remove(1, 22);
+}
+
+#[test]
+fn interleaved_retirement_pages_preserve_identity_on_collision_and_heap_change() {
+    let local = Index::new(1);
+    let peer = Index::new(1);
+    let mut cursor = RetireCursor::default();
+    // Page eight maps to the same cache position as page zero.
+    for page in 0..=8 {
+        let id = page * 64 + 1;
+        local.prepare(id).expect("first slot").install(41);
+        local.prepare(id + 1).expect("second slot").install(42);
+        assert!(local.retire(id, 41, &mut cursor).is_none());
+    }
+    assert_eq!(cursor.0.iter().flatten().count(), 8);
+    peer.prepare(2)
+        .expect("same id, different heap")
+        .install(42);
+    let foreign = peer.retire(2, 42, &mut cursor).expect("last peer slot");
+    peer.unlink(foreign);
+    for page in (0..=8).rev() {
+        let id = page * 64 + 2;
+        assert!(local.retire(id, 41, &mut cursor).is_none());
+        assert_eq!(local.get(id), Some(42));
+        let sealed = local.retire(id, 42, &mut cursor).expect("last local slot");
+        local.unlink(sealed);
+    }
+    assert!(local.heads.iter().all(|head| head.load().len() == 0));
+    assert!(peer.heads.iter().all(|head| head.load().len() == 0));
 }
