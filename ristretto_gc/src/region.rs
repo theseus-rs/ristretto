@@ -314,33 +314,36 @@ impl RegionHeap {
         INDEX.with(|index| *index & (self.states.len() - 1))
     }
 
-    pub(crate) fn allocate(&self, layout: Layout, before: Option<u64>) -> Result<Block> {
-        let result = self.allocate_range(layout, before).map(|mut block| {
-            block.relocation = before.is_some();
+    pub(crate) fn allocate(&self, layout: Layout, source: Option<&Block>) -> Result<Block> {
+        if source.is_some_and(|source| !self.owns(source) || source.len() == 0) {
+            return Err(Error::OutOfMemory);
+        }
+        let result = self.allocate_range(layout, source).map(|mut block| {
+            block.relocation = source.is_some();
             block
         });
-        if before.is_some() && result.is_err() {
+        if source.is_some() && result.is_err() {
             self.destination_failures.fetch_add(1, Ordering::Relaxed);
         }
         result
     }
 
-    fn allocate_range(&self, layout: Layout, before: Option<u64>) -> Result<Block> {
-        let evacuating = if let Some(id) = before {
-            let state = lock(self.shard(self.index(id)));
-            let epoch = self.selection.as_ref().and_then(|s| s.epoch());
-            if let Some(epoch) = epoch
-                && !state
-                    .regions
-                    .get(&id)
-                    .is_some_and(|region| Evacuation::source_at(region, epoch))
-            {
+    fn allocate_range(&self, layout: Layout, source: Option<&Block>) -> Result<Block> {
+        let evacuating = if let Some(source) = source {
+            // A nonempty block owns its range and prevents registry removal.
+            // Validate its current role before admitting a destination.
+            let epoch = self
+                .selection
+                .as_ref()
+                .and_then(|selection| selection.epoch());
+            if epoch.is_some_and(|epoch| !Evacuation::source_at(&source.region, epoch)) {
                 return Err(Error::OutOfMemory);
             }
             epoch.is_some()
         } else {
             false
         };
+        let before = source.map(Block::id);
         let preferred = self.preferred_shard();
         let busy = loop {
             let mut busy = 0_u16;
@@ -565,7 +568,8 @@ impl RegionHeap {
         let Some(selection) = &self.selection else {
             return true;
         };
-        let _source = lock(self.shard(self.index(source.id())));
+        // Both blocks retain their regions. Within one epoch a selected source
+        // cannot be a destination and an assigned destination cannot be selected.
         selection.epoch().is_none_or(|epoch| {
             Evacuation::source_at(&source.region, epoch)
                 && Evacuation::destination_at(&destination.region, epoch)

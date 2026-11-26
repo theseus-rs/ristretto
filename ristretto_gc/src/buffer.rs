@@ -310,13 +310,10 @@ impl<T> HeapBuffer<T> {
             let Storage::Region(source) = &self.storage else {
                 return TraceProgress::Complete;
             };
-            if !heap.owns(source) {
-                return TraceProgress::Complete;
-            }
             let Ok(layout) = Layout::array::<T>(self.length) else {
                 return TraceProgress::Complete;
             };
-            let Ok(destination) = heap.allocate(layout, Some(source.id())) else {
+            let Ok(destination) = heap.allocate(layout, Some(source)) else {
                 return TraceProgress::Complete;
             };
             // One bit per 1 KiB chunk (or per oversized element). Fallible metadata
