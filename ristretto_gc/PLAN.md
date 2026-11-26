@@ -2,6 +2,17 @@
 
 ## Tenfold complete-collection gate
 
+In the latest matched Java run at `81594aad`, Ristretto completed all arrivals
+but both HotSpot collectors had lower scheduled p99.9 at each rate. The
+JIT-enabled diagnostic interpreted every one of 35,891 entries to
+`GcBench.operation`. Its first production rejection was `putstatic` at byte
+27. Pinning the physical reaper before freeing the only 32-byte allocation
+also reproduces terminal OOM for four waiting peers under both publication
+and phase policies. Stable reclamation under contention, execution coverage
+and GC-attributable global-pause evidence remain release requirements.
+[Java latency](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/README.md)
+· [JIT coverage](../benchmarks/gc/publication/typed-root-collection/ordinary-roots-jit-coverage/README.md).
+
 The latest qualified collector, `1bd9360c`, admits a copy to an available
 destination and continues partial chunks while the source registry is parked.
 Its minimum per-condition 95% speedup bounds against `f1daebeb` were 10.18×
