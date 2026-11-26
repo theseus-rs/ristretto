@@ -116,3 +116,7 @@ name = "class_resolution"
 [[bench]]
 harness = false
 name = "strings"
+
+[[example]]
+name = "gc_preview"
+required-features = ["execution-profile"]
