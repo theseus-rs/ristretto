@@ -236,3 +236,38 @@ fn callback_shutdown_cannot_wait_for_itself_and_the_pool_can_restart() -> Result
     }
     Ok(())
 }
+
+#[cfg(not(miri))]
+#[test]
+fn callback_panic_refunds_once_and_stop_reports_the_failure() -> Result<()> {
+    struct Panics(mpsc::Sender<()>, Arc<AtomicUsize>);
+    // SAFETY: channels and the destruction counter contain no managed edges.
+    unsafe impl Trace for Panics {
+        fn trace(&self, _: &GarbageCollector) {}
+
+        fn clear_step(&mut self, _: usize, _: usize) -> TraceProgress {
+            self.0.send(()).expect("failure observer");
+            panic!("test callback panic");
+        }
+    }
+    impl Finalize for Panics {
+        fn finalize(&self) {}
+    }
+    impl Drop for Panics {
+        fn drop(&mut self) {
+            self.1.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+    let gc = GarbageCollector::with_config(Configuration::builder().threads(1).build());
+    let destroyed = Arc::new(AtomicUsize::new(0));
+    let (send, entered) = mpsc::channel();
+    drop(Gc::new_with_finalizer(&gc, Panics(send, destroyed.clone())));
+    gc.start();
+    gc.collect();
+    assert_eq!(entered.recv_timeout(Duration::from_secs(5)), Ok(()));
+    assert!(matches!(gc.stop(), Err(ristretto_gc::Error::SyncError(_))));
+    assert_eq!(destroyed.load(Ordering::Relaxed), 1);
+    gc.stop()?;
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}

@@ -1116,26 +1116,28 @@ pub(crate) fn before_waiter_publication() {
     reason = "bounded native worker and executor schedule"
 )]
 fn sleeping_allocation_finishes_while_an_independent_waiter_is_still_publishing() -> Result<()> {
-    struct Park(Arc<(mpsc::Sender<()>, std::sync::Mutex<mpsc::Receiver<()>>)>);
-    // SAFETY: the finalizer only accesses host-side channels.
-    unsafe impl crate::Trace for Park {
-        fn trace(&self, _: &GarbageCollector) {}
+    // Hold the collector's actual marking callback through the refund. Native
+    // finalizers can run independently while this waiter race is being tested.
+    struct Park {
+        entered: mpsc::Sender<()>,
+        resume: std::sync::Mutex<Option<mpsc::Receiver<()>>>,
     }
-    impl crate::Finalize for Park {
-        fn finalize(&self) {
-            self.0.0.send(()).unwrap();
-            self.0
-                .1
-                .lock()
-                .unwrap()
-                .recv_timeout(Duration::from_secs(10))
-                .unwrap();
+    // SAFETY: the test fixture contains no managed edges.
+    unsafe impl crate::Trace for Park {
+        fn trace(&self, _: &GarbageCollector) {
+            if let Some(resume) = self.resume.lock().unwrap().take() {
+                self.entered.send(()).unwrap();
+                resume.recv_timeout(Duration::from_secs(10)).unwrap();
+            }
         }
     }
     for allocation_writer in [false, true] {
-        let (started, in_finalizer) = mpsc::channel();
+        let (started, in_trace) = mpsc::channel();
         let (finish, release_worker) = mpsc::channel();
-        let payload = Park(Arc::new((started, std::sync::Mutex::new(release_worker))));
+        let payload = Park {
+            entered: started,
+            resume: std::sync::Mutex::new(Some(release_worker)),
+        };
         let cap = Gc::allocation_size(&payload)? + 8;
         let gc = GarbageCollector::with_config(
             Configuration::builder()
@@ -1146,10 +1148,10 @@ fn sleeping_allocation_finishes_while_an_independent_waiter_is_still_publishing(
                 .build(),
         );
         let charge = gc.reserve_private_bytes(8)?;
-        drop(Gc::new_with_finalizer(&gc, payload));
+        let pinned = Gc::try_new(&gc, payload)?;
         gc.start();
         gc.collect();
-        in_finalizer.recv_timeout(Duration::from_secs(3)).unwrap();
+        in_trace.recv_timeout(Duration::from_secs(3)).unwrap();
         let (asleep, sleeping) = mpsc::channel();
         let (entered, parked) = mpsc::channel();
         let (resume, resumed) = mpsc::channel();
@@ -1196,7 +1198,7 @@ fn sleeping_allocation_finishes_while_an_independent_waiter_is_still_publishing(
             .expect("executor returned a value")?;
         assert_eq!(**root, 57);
         assert_eq!(gc.diagnostics().allocation_waiters, 0);
-        drop(root);
+        drop((root, pinned));
         gc.stop()?;
         assert_eq!(gc.managed_bytes(), 0);
     }
