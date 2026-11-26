@@ -194,28 +194,7 @@ impl Object {
         class: &Arc<Class>,
         object_fields: &[Arc<Field>],
     ) -> Result<Option<ReferenceState>> {
-        let mut ancestor = Some(class.clone());
-        let mut kind = None;
-        while let Some(current) = ancestor {
-            kind = match current.name() {
-                "java/lang/ref/SoftReference" => Some(ReferenceKind::Soft),
-                "java/lang/ref/WeakReference" => Some(ReferenceKind::Weak),
-                "java/lang/ref/FinalReference" => Some(ReferenceKind::Final),
-                "java/lang/ref/PhantomReference" => {
-                    Some(if current.class_file().version <= JAVA_8 {
-                        ReferenceKind::PhantomRetained
-                    } else {
-                        ReferenceKind::Phantom
-                    })
-                }
-                _ => None,
-            };
-            if kind.is_some() {
-                break;
-            }
-            ancestor = current.parent()?;
-        }
-        Ok(kind.and_then(|kind| {
+        Ok(class.reference_kind()?.and_then(|kind| {
             object_fields
                 .iter()
                 .position(|field| field.name() == "referent")
