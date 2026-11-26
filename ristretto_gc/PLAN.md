@@ -17,6 +17,22 @@ See [the release check](../benchmarks/gc/release/verify_alpha_heap.py).
 | Whole-JVM throughput | Qualify physical context-local allocation separately from logical credits. Earlier combined buffers improved a 256-byte compact case by 23.9% and raised 4 KiB compact p99.99 from 261.5 to 3,264 µs. Measure common field and array loads/stores and confirm actual compiled entries in the Java hot loop. Static long stores use the ordinary VM continuation, with volatile ordering and Java fault coverage. Reference values live across polls still require owning frame roots and cancellation tests. [Scheduled Java measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/ordinary-static-long/README.md) |
 | Release qualification | Keep deterministic parked-participant progress, ordinary JVM class coverage, browser responsiveness, fixed-rate throughput and scheduled tails against G1/ZGC, three hour-long runs and a 24-hour soak as separate gates. |
 
+At `5ba3b207` the shipping collector passed all 36 complete-collection
+conditions against `f1daebeb`. Minimum individual 95% speedup bounds were
+10.38× native and 10.09× WASI. In the separate Java roots comparison at
+`9a6e0f59`, every runtime completed the offered load. At 1,500 requests/s
+median scheduled p99.9 was 2,496 µs for Ristretto, 13 µs for G1 and 17 µs
+for ZGC. [Complete cycles](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/default-instance-fields/cycles/complete-cycles.csv).
+[Java forks and latency distributions](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/reference-cards/README.md).
+
+The native callback-claim candidate passed all 400 isolated allocation and
+reclamation schedules. A delayed pressure assistant can still leave all 128
+peer charges in place when an allocation reaches terminal denial. The probe
+reproduced in 100 of 100 fresh processes. Cheap finalizers took up to 26%
+longer with two workers. Public claim access, pressure-service progress and
+physical refund are separate release checks.
+[Candidate, negative controls and remaining obligation](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/parked-claim-qualification/README.md).
+
 Default Java instance fields carry zeroes and nulls. Construction and first
 publication now avoid scanning those fields for reference cards and demotions.
 In 64-instance batches with 256 fields, paired median time fell 7% on native

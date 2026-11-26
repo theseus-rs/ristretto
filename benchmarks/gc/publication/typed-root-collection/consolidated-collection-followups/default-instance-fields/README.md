@@ -16,3 +16,5 @@ The fixture times creation and first publication of 64 ordinary Java instances b
 ![Paired instance initialization and publication speedup](collection.svg)
 
 To reproduce, copy [the fixture](default_fields.rs) into `ristretto_classloader/examples/` on each [recorded revision](provenance.json). Build with `cargo build --release --locked -p ristretto_classloader --example default_fields`. On WASI add `--target wasm32-wasip2` and run with Wasmtime. Supply the field count as the single argument. [Native process samples](native-times.jsonl.gz), [WASI process samples](wasm-times.jsonl.gz), [summary CSV](collection.csv).
+
+The integrated production revision `5ba3b207` also passed all 36 established complete-collection conditions against `f1daebeb`. The minimum individual 95% lower speedup bounds were 10.38× native and 10.09× WASI across 1,728 fresh processes. [All conditions](cycles/complete-cycles.csv), [native](cycles/native.jsonl.gz) and [WASI](cycles/wasm.jsonl.gz) samples, [build controls](cycles/cycle-provenance.json).
