@@ -124,21 +124,6 @@ pub(crate) struct Cursor {
     current: Option<Arc<Page>>,
 }
 
-impl Cursor {
-    /// Only immediately after `Scan::Root`: re-read that slot on the next unit.
-    /// Its page remains pinned, but its address/generation may change meanwhile.
-    #[expect(clippy::expect_used, reason = "only a selected root can be retried")]
-    pub(crate) fn retry_root(&mut self) {
-        if self.shard == SHARDS {
-            // Every overflow key is a non-null allocation address. Revisit this
-            // key if it survived, or select its successor if it was removed.
-            self.page = self.page.checked_sub(1).expect("selected overflow key");
-        } else {
-            self.slot = self.slot.checked_sub(1).expect("selected root slot");
-        }
-    }
-}
-
 #[derive(Debug)]
 pub(crate) enum Scan {
     Root(usize),
@@ -810,10 +795,14 @@ mod tests {
         first.publish(0x1000);
         next.publish(0x2000);
         let mut cursor = Cursor::default();
-        while matches!(roots.scan(&mut cursor), Scan::Advance) {}
-        cursor.retry_root();
-        assert!(matches!(roots.scan(&mut cursor), Scan::Root(0x1000)));
-        cursor.retry_root();
+        let first_address = loop {
+            match roots.scan(&mut cursor) {
+                Scan::Root(address) => break Some(address),
+                Scan::Advance => {}
+                Scan::Done => break None,
+            }
+        };
+        assert_eq!(first_address, Some(0x1000));
         assert_eq!(first.take_address(), Some(0x1000));
         roots.finish_overflow(&first);
         assert!(matches!(roots.scan(&mut cursor), Scan::Root(0x2000)));
@@ -953,7 +942,7 @@ mod tests {
     }
 
     #[test]
-    fn retried_root_reads_slot_reuse_and_skips_removal_without_replaying_other_slots() {
+    fn continuing_root_scan_after_slot_reuse_does_not_replay_visited_positions() {
         for selected in [0, SLOTS - 1] {
             let roots = RootSlots::default();
             let ids: Vec<_> = (0..SLOTS).map(|_| roots.insert(0x1000)).collect();
@@ -969,15 +958,12 @@ mod tests {
                 }
             }
             assert_eq!(scanned, selected + 1);
-            cursor.retry_root();
             let old = ids[selected];
             assert_eq!(roots.remove(old), Some(0x1000));
             // Reserve using the same shard hint but publish a different address.
             let replacement = roots.reserve(0x1000).commit(0x2000).id();
             assert_eq!(replacement.location, old.location);
             assert_ne!(replacement.generation, old.generation);
-            assert!(matches!(roots.scan(&mut cursor), Scan::Root(0x2000)));
-            cursor.retry_root();
             assert_eq!(roots.remove(replacement), Some(0x2000));
             let mut remaining = 0;
             for _ in 0..SLOTS + SHARDS + 2 {

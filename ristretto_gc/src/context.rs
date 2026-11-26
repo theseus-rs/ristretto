@@ -420,12 +420,6 @@ pub(crate) struct RootCursor {
     current: Option<Arc<State>>,
 }
 
-impl RootCursor {
-    pub(crate) fn retry_root(&mut self) {
-        self.slots.retry_root();
-    }
-}
-
 pub(crate) enum RootScan {
     Root(usize),
     Advance,
