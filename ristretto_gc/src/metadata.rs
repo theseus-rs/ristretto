@@ -494,13 +494,6 @@ impl ObjectMetadata {
         }
     }
 
-    /// The initial concrete catalog adapter has no graph or shutdown callbacks.
-    /// This does not certify that ordinary Rust destruction is bounded.
-    #[cfg(feature = "experimental-canonical-leaves")]
-    pub(crate) fn canonical_leaf_eligible(&self) -> bool {
-        self.trace.step_fn.is_none() && self.owner.is_none() && self.kind.finalizer.is_none()
-    }
-
     /// Drops the object using the type-safe drop function. This first calls the finalizer (if any),
     /// then properly calls the destructor and deallocates memory. Can only be called once;
     /// subsequent calls are no-ops, guarded by the finalizer claim and destructor take.

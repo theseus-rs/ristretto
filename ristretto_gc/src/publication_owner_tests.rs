@@ -7,10 +7,6 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 #[path = "publication_shared_tests.rs"]
 mod shared;
 
-#[cfg(feature = "experimental-canonical-leaves")]
-#[path = "canonical_leaf_tests.rs"]
-mod canonical_leaf;
-
 struct Leaf(Arc<AtomicUsize>);
 // SAFETY: this value has no outgoing managed references.
 unsafe impl Trace for Leaf {

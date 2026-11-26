@@ -1,5 +1,7 @@
 # Bundled canonical catalog and pool
 
+This historical experiment can be reproduced from the [archived source](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc). The current Java preview uses the [unified JVM heap](../../GC_PREVIEW.md).
+
 These private modules are included in the `ristretto_gc` package and compiled only
 with `experimental-canonical-runtime`. They require no unpublished registry crate
 or sibling validation project. Enabling the feature does not change the ordinary

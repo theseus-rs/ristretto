@@ -1,5 +1,7 @@
 # Passive primary-cycle observation
 
+This historical experiment can be reproduced from the [archived source](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc). The current Java preview uses the [unified JVM heap](../GC_PREVIEW.md).
+
 The opt-in canonical `Mutator::primary_cycles()` copies `PrimaryCycles { lower,
 upper }`: conservative bounds on completed primary-domain full epochs at an
 instant during that call. It does not count reclaimed objects, released slots,

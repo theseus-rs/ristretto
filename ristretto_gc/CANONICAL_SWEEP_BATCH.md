@@ -1,5 +1,7 @@
 # Bounded inventory cleanup and helped allocation publication
 
+This historical experiment can be reproduced from the [archived source](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc). The current Java preview uses the [unified JVM heap](../GC_PREVIEW.md).
+
 This internal experimental policy scans at most eight consecutive root, edge or
 object inventory positions per helper visit. It stops at the first occupied
 position or failed observation and submits at most one copied request. Pending

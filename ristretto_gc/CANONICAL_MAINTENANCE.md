@@ -1,5 +1,7 @@
 # Incremental canonical leaf maintenance
 
+This historical experiment can be reproduced from the [archived source](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc). The current Java preview uses the [unified JVM heap](../GC_PREVIEW.md).
+
 Current scan batching (2026-11-15): the original single-slot scan remains unchanged.
 A separate `ScanBatch` operation examines at most eight slots and stops at the first
 root/target effect. The internal leaf helper selects it. Cursor and effects retain

@@ -8,7 +8,11 @@ const GRAPH: &str = "CanonicalGraphWorkload";
 const NODE: &str = "CanonicalGraphWorkload$Node";
 const CHECKSUM: &str = "(LCanonicalGraphWorkload$Node;LCanonicalGraphWorkload$Node;)I";
 
-#[tokio::main(flavor = "current_thread")]
+#[cfg_attr(target_family = "wasm", tokio::main(flavor = "current_thread"))]
+#[cfg_attr(
+    not(target_family = "wasm"),
+    tokio::main(flavor = "multi_thread", worker_threads = 2)
+)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     let (home, classes, compiled) = match args.as_slice() {
@@ -74,6 +78,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // The bootstrap heap stays live. Observe two exact Java objects forming an
     // otherwise unreachable cycle and require a physical refund in this full GC.
+    gc.collect_full()?;
+    let baseline = gc.managed_bytes();
     let witnesses = {
         let a = vm.object(NODE, "I", &[1]).await?;
         let b = vm.object(NODE, "I", &[2]).await?;
@@ -82,21 +88,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (Value::Object(Some(a)), Value::Object(Some(b))) = (&a, &b) else {
             return Err("expected Java nodes".into());
         };
-        [
+        let links = [
             GcWeak::new(a, ReferenceKind::Weak, 0),
             GcWeak::new(b, ReferenceKind::Weak, 0),
-        ]
+        ];
+        if !links[0].refers_to(a) || !links[1].refers_to(b) {
+            return Err("weak witnesses did not identify both live nodes".into());
+        }
+        links
     };
     let before = gc.statistics()?;
     gc.collect_full()?;
     let after = gc.statistics()?;
+    let charge = before
+        .bytes_managed
+        .checked_sub(baseline)
+        .ok_or("lost managed bytes while creating nodes")?;
+    if charge == 0
+        || after.bytes_managed != baseline
+        || after.managed_bytes_freed - before.managed_bytes_freed != charge
+    {
+        return Err(format!(
+            "cycle repayment mismatch: baseline={baseline} pre={} post={} refunded={}",
+            before.bytes_managed,
+            after.bytes_managed,
+            after.managed_bytes_freed - before.managed_bytes_freed
+        )
+        .into());
+    }
     let cleared = witnesses.iter().filter(|link| link.is_cleared()).count();
     println!(
         "{}",
         serde_json::json!({"result":result, "compiled_entries":compiled_entries,
         "compiled_backedges":compiled_backedges,"interpreted_entries":interpreted_entries,
-        "cleared_witnesses":cleared, "collections_completed":after.collections_completed-before.collections_completed,
-        "bytes_freed":after.bytes_freed-before.bytes_freed})
+        "cleared_witnesses":cleared, "full_collections":after.full_collections-before.full_collections,
+        "managed_bytes_freed":charge})
     );
     Ok(())
 }

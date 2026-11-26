@@ -297,11 +297,6 @@ macro_rules! impl_trace_primitive {
                 fn needs_clear() -> bool { false }
                 fn slice_external_size(_: &[Self]) -> usize { 0 }
 
-                fn canonical_payload() -> Option<crate::CanonicalPayload<Self>> {
-                    // SAFETY: primitive scalars have no graph, owner, backing or callbacks.
-                    Some(unsafe { crate::CanonicalPayload::new() })
-                }
-
                 fn trace_work(&self) -> usize { 1 }
                 fn trace(&self, _collector: &GarbageCollector) {}
             }

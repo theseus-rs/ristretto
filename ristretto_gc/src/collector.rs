@@ -674,15 +674,6 @@ pub unsafe trait Trace {
         true
     }
 
-    /// The explicit audited certificate for exactly this payload type.
-    #[must_use]
-    fn canonical_payload() -> Option<crate::CanonicalPayload<Self>>
-    where
-        Self: Sized,
-    {
-        None
-    }
-
     /// Whether the current value requires an owner-mutation notification after a
     /// managed write. False is valid only when this value has no managed or
     /// conditional edges, and no custom tracing action requires that notification.
@@ -2169,12 +2160,9 @@ impl GarbageCollector {
                 publication_clock: publication_clock.clone(),
                 old_requested: AtomicBool::new(false),
                 old_active: AtomicBool::new(false),
-                managed_budget: Arc::new(
-                    crate::allocation_budget::AllocationBudget::with_collector(
-                        configuration.max_heap_bytes,
-                        this.clone(),
-                    ),
-                ),
+                managed_budget: Arc::new(crate::allocation_budget::AllocationBudget::new(
+                    configuration.max_heap_bytes,
+                )),
                 configuration,
                 statistics: Mutex::new(Statistics::default()),
                 leaves_marked_at_birth: AtomicUsize::new(0),
@@ -2699,11 +2687,12 @@ impl GarbageCollector {
         self.managed_budget.try_charge(size)
     }
 
+    #[cfg(test)]
     pub(crate) fn reserve_private_bytes(
         &self,
         bytes: usize,
     ) -> Result<crate::allocation_budget::Reservation> {
-        self.managed_budget.reserve(bytes)
+        self.managed_budget.reserve(bytes, self.this.clone())
     }
 
     pub(crate) fn signal_grants(&self) {

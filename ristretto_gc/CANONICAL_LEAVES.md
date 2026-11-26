@@ -1,5 +1,7 @@
 # Private leaf ownership in the canonical catalog
 
+This historical experiment can be reproduced from the [archived source](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc). The current Java preview uses the [unified JVM heap](../GC_PREVIEW.md).
+
 The optional `experimental-canonical-leaves` feature connects private GC allocations
 to the catalog experiment and provides internal typed reads through canonical roots.
 Public `Gc` constructors and collection policy do not select it. It exposes no
@@ -117,7 +119,7 @@ Public initial allocation/result transfer, graph tracing/cleanup, scheduling,
 physical/runtime accounting beyond the owning-wrapper census, real allocation policy,
 admitted callers, JIT and full qualification remain open. See
 [validation](VALIDATION.md#concrete-canonical-leaf-ownership-2026-11-14) and the
-[catalog protocol](validation/catalog/catalog-tagged-prototype/README.md).
+[catalog protocol](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-prototype/README.md).
 
 The subsequent [typed-access validation](VALIDATION.md#canonical-leaf-root-access-2026-11-14)
 uses a fresh frozen workspace and build directory, with explicit fixture counts.

@@ -1,5 +1,7 @@
 # Canonical graph edge inventory
 
+This historical experiment can be reproduced from the [archived source](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc). The current Java preview uses the [unified JVM heap](../GC_PREVIEW.md).
+
 The experimental tagged catalog now represents strong graph edges with exact,
 non-owning source/target identities. Edge publication, replacement, removal and
 child-root activation use the existing helpable controller. Full-domain tracing
@@ -68,7 +70,7 @@ E edge capacity, and K total registered mutator/helper quota. Handles do not exp
 raw owning shares; participant requests and handle tokens precede their quota
 owners in destruction order. Stopped destructors therefore remain charged.
 
-The previous [reference census](validation/catalog/catalog-tagged-prototype/REFERENCES.md)
+The previous [reference census](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-prototype/REFERENCES.md)
 bounds two potential private/installed/helped controller families per participant,
 plus the canonical head. Edge requests do not add another family: preparation and
 attempt are successive states, and traversal owns at most one such request. A

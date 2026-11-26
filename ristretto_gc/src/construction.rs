@@ -128,12 +128,6 @@ impl OwnedTokens {
 }
 
 impl<'gc> Detached<'gc> {
-    /// A leaf transfer must not discard an enclosing constructor's protection.
-    #[cfg(feature = "experimental-canonical-leaves")]
-    pub(crate) fn is_empty(&self) -> bool {
-        self.registrations.is_empty() && self.reference_owners.is_empty()
-    }
-
     pub(crate) fn take_owned(&mut self) -> OwnedTokens {
         OwnedTokens {
             registrations: std::mem::take(&mut self.registrations),

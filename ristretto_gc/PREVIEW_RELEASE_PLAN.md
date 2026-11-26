@@ -37,7 +37,7 @@ After C01, C02–C03 and C04–C05 are independently reviewable. C06 takes both 
 | C11 | Read a child into an independent root. | A child remains readable after unlinking. Null, cancelled and wrong-heap reads leave no new root. |
 | C12 | Complete incremental graph traversal and cyclic reclamation through the public Rust API. | Two rooted nodes form a cycle. Removing the last external root lets helper polls reclaim both. Repeat at finite capacity and verify payload and catalog refunds. |
 
-Extract the pool and catalog from `ristretto_gc/validation/catalog/catalog-tagged{,-pool}-prototype`. The GC adapter lives in `publication_owner.rs`, `canonical_leaf*.rs`, `canonical_graph*.rs` and `canonical_api.rs`. Review ownership transfer, memory ordering and reclamation with the relevant model or Miri witness in the MR that introduces the invariant. **C12 is the first useful internal checkpoint** and lets a reviewer evaluate the collector independently of the JVM. [GC caller contract](CANONICAL_API.md) · [Public Rust API tests](tests/canonical_api.rs)
+Extract the pool and catalog from `ristretto_gc/validation/catalog/catalog-tagged{,-pool}-prototype`. The GC adapter lives in `publication_owner.rs`, `canonical_leaf*.rs`, `canonical_graph*.rs` and `canonical_api.rs`. Review ownership transfer, memory ordering and reclamation with the relevant model or Miri witness in the MR that introduces the invariant. **C12 is the first useful internal checkpoint** and lets a reviewer evaluate the collector independently of the JVM. [GC caller contract](CANONICAL_API.md) · [Public Rust API tests](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/tests/canonical_api.rs)
 
 ### Run the published Java subset on native and WASI
 

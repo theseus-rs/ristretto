@@ -3,7 +3,6 @@
     reason = "tests propagate setup errors and assert ownership"
 )]
 use super::*;
-use crate::private_allocation::Allocation;
 use crate::{GcRootGuard, ObjectId};
 
 fn storage<T>(value: T) -> Result<crate::allocation::Initialized<crate::gc::Allocation<T>>> {
@@ -59,21 +58,6 @@ fn cancellation_releases_payload_then_child_root_and_credit() -> Result<()> {
 }
 
 #[test]
-fn unpublished_allocation_can_move_without_publishing_a_pointer() -> Result<()> {
-    let collector = GarbageCollector::with_config(Configuration::builder().threads(1).build());
-    let reservation = collector.reserve_private_bytes(size_of::<u64>())?;
-    let (allocation, _) = Allocation::new(91_u64, reservation)?;
-    let owner = Some(allocation);
-    assert_eq!(collector.statistics()?.live_objects, 0);
-    assert_eq!(collector.root_statistics().compatibility_roots, 0);
-    assert_eq!(collector.statistics()?.bytes_live, 0);
-    assert_eq!(collector.managed_bytes(), size_of::<u64>());
-    drop(owner);
-    assert_eq!(collector.managed_bytes(), 0);
-    Ok(())
-}
-
-#[test]
 fn metadata_cleanup_transfers_payload_ownership_exactly_once() -> Result<()> {
     struct Probe(Arc<AtomicUsize>);
     impl Drop for Probe {
@@ -98,25 +82,6 @@ fn metadata_cleanup_transfers_payload_ownership_exactly_once() -> Result<()> {
     metadata.run_drop_fn();
     drop(metadata);
     assert_eq!(drops.load(Ordering::SeqCst), 1);
-    assert_eq!(collector.managed_bytes(), 0);
-    Ok(())
-}
-
-#[cfg(not(target_family = "wasm"))]
-#[test]
-fn unwinding_payload_still_refunds_its_private_reservation() -> Result<()> {
-    struct Panics;
-    impl Drop for Panics {
-        fn drop(&mut self) {
-            std::panic::panic_any("private payload test unwind");
-        }
-    }
-    let collector = GarbageCollector::with_config(Configuration::builder().threads(1).build());
-    // A ZST still has a destructor. A nonzero reservation proves refund on unwind.
-    let reservation = collector.reserve_private_bytes(17)?;
-    let (allocation, _) = Allocation::new(Panics, reservation)?;
-    let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop(allocation)));
-    assert!(outcome.is_err());
     assert_eq!(collector.managed_bytes(), 0);
     Ok(())
 }

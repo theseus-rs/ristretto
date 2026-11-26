@@ -1861,7 +1861,7 @@ need enforcement and audit before any general writer certificate.
 
 ## Isolated canonical-catalog experiment
 
-The [catalog packages](validation/catalog/README.md) exercise an alternative in
+The [catalog packages](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/README.md) exercise an alternative in
 which a fixed-capacity registry discovers prepared numeric cells and a prepared
 controller operation couples one exact cell effect with both domain counts and
 phase versions. Another helper can complete a stopped operation, and an old helper
@@ -1876,7 +1876,7 @@ ownership, byte budgeting, complete reference floors and the variable work withi
 ArcSwap remain integration requirements. See the linked experiment for commands,
 raw evidence and the six-allocation-per-insertion cost that still needs reduction.
 
-The follow-up [pooled experiment](validation/catalog/catalog-pooled-prototype/README.md)
+The follow-up [pooled experiment](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-pooled-prototype/README.md)
 retains those logical transitions while using fixed control/membership backing.
 Native/WASI, Miri/Tree Borrows, sanitizers and model checks cover the exercised
 ownership rules; all negative controls remain evidence. One numeric lifecycle now
@@ -2222,7 +2222,7 @@ Per-domain root enumeration cannot close Strong after a failed owning observatio
 Unique token Drop posts a durable request; only canonical retirement plus that
 request permits exact slot release. The bounded handle keeps token ownership before
 its quota/catalog lease so target destruction cannot refund backing prematurely.
-See [root authority and quota derivation](validation/catalog/catalog-tagged-prototype/ROOTS.md)
+See [root authority and quota derivation](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-prototype/ROOTS.md)
 and [validation](VALIDATION.md#canonical-root-ownership-2026-11-14).
 
 This is not an actual GcRootGuard or PreparedRecord adapter. Initial private roots,
@@ -2253,6 +2253,6 @@ These are isolated protocol and ownership results. The collector still uses its
 existing runtime path. Graph/cleanup/root-result integration, admitted operations,
 callbacks, JIT and all whole-GC qualification gates remain open. Defaults are unchanged.
 
-[Protocol](validation/catalog/catalog-tagged-prototype/REFERENCES.md) ·
+[Protocol](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-prototype/REFERENCES.md) ·
 [Report and cost graph](../target/gc-implementation/canonical-reference-REPORT.md) ·
 [Verification](../target/gc-implementation/canonical-reference-verification.json).

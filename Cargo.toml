@@ -1,8 +1,4 @@
 [workspace]
-exclude = [
-    "ristretto_gc/validation/catalog/catalog-tagged-prototype",
-    "ristretto_gc/validation/catalog/catalog-tagged-pool-prototype",
-]
 default-members = [
     "ristretto_classfile",
     "ristretto_classloader",
@@ -24,7 +20,6 @@ members = [
     "ristretto_classfile",
     "ristretto_classloader",
     "ristretto_gc",
-    "ristretto_gc_catalog",
     "ristretto_intrinsics",
     "ristretto_jimage",
     "ristretto_java",
@@ -36,7 +31,6 @@ members = [
     "ristretto_test_util",
     "ristretto_types",
     "ristretto_vm",
-    "ristretto_vm_research",
     "web/runner",
 ]
 resolver = "3"

@@ -7,10 +7,6 @@ use crate::metadata::MetadataRef;
 use crate::roots::Registration;
 use std::sync::{Arc, Weak};
 
-#[cfg(feature = "experimental-canonical-leaves")]
-#[path = "canonical_leaf.rs"]
-pub(super) mod canonical_leaf;
-
 pub(super) struct Publication<'gc, T> {
     root: Option<Gc<T>>,
     registration: Option<Registration>,
@@ -144,46 +140,3 @@ mod tests;
 // an admitted handle borrowing the matching live collector.
 #[path = "publication_shared.rs"]
 mod shared;
-
-#[cfg(feature = "experimental-canonical-leaves")]
-pub(super) fn leaf_lifecycle_benchmark(
-    mode: &str,
-    operations: u64,
-    batch: usize,
-) -> crate::Result<String> {
-    canonical_leaf::benchmark::run(mode, operations, batch)
-}
-
-#[cfg(feature = "experimental-canonical-leaves")]
-pub(super) fn graph_lifecycle_benchmark(rounds: u64, capacity: usize) -> crate::Result<String> {
-    canonical_leaf::graph_benchmark::run(rounds, capacity)
-}
-
-#[cfg(feature = "experimental-canonical-leaves")]
-pub(super) fn leaf_contention(
-    mode: &str,
-    actors: usize,
-    helpers: usize,
-    operations: usize,
-    capacity: usize,
-    retained: usize,
-) -> crate::Result<String> {
-    canonical_leaf::contention::run(mode, actors, helpers, operations, capacity, retained)
-}
-
-#[cfg(feature = "experimental-canonical-leaves")]
-pub(super) fn root_alias_benchmark(
-    mode: &str,
-    copies: u64,
-    checkpoint: impl FnMut(&'static str),
-) -> crate::Result<String> {
-    canonical_leaf::graph::alias_benchmark::run(mode, copies, checkpoint)
-}
-
-#[cfg(feature = "experimental-canonical-audit")]
-pub(super) fn root_refund_order(
-    mode: &str,
-    checkpoint: impl FnMut(&'static str, usize),
-) -> crate::Result<()> {
-    canonical_leaf::graph::alias_benchmark::refund_order(mode, checkpoint)
-}

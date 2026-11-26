@@ -1,24 +1,18 @@
 //! Owning managed-payload reservations, independent of allocation-pressure statistics.
 use crate::{Error, Result};
 use std::sync::atomic::{AtomicUsize, Ordering};
+#[cfg(test)]
 use std::sync::{Arc, Weak};
 
 #[derive(Debug)]
 pub(crate) struct AllocationBudget {
-    collector: Weak<crate::GarbageCollector>,
     limit: usize,
     used: AtomicUsize,
 }
 
 impl AllocationBudget {
-    #[cfg(test)]
     pub(crate) fn new(limit: usize) -> Self {
-        Self::with_collector(limit, Weak::new())
-    }
-
-    pub(crate) fn with_collector(limit: usize, collector: Weak<crate::GarbageCollector>) -> Self {
         Self {
-            collector,
             limit,
             used: AtomicUsize::new(0),
         }
@@ -52,9 +46,15 @@ impl AllocationBudget {
         self.used.fetch_add(bytes, Ordering::AcqRel);
     }
 
-    pub(crate) fn reserve(self: &Arc<Self>, bytes: usize) -> Result<Reservation> {
+    #[cfg(test)]
+    pub(crate) fn reserve(
+        self: &Arc<Self>,
+        bytes: usize,
+        collector: Weak<crate::GarbageCollector>,
+    ) -> Result<Reservation> {
         self.try_charge(bytes)?;
         Ok(Reservation {
+            collector,
             budget: self.clone(),
             bytes,
         })
@@ -62,14 +62,17 @@ impl AllocationBudget {
 }
 
 /// A non-clonable charge. Moving it transfers the obligation to refund once.
+#[cfg(test)]
 pub(crate) struct Reservation {
+    collector: Weak<crate::GarbageCollector>,
     budget: Arc<AllocationBudget>,
     bytes: usize,
 }
 
+#[cfg(test)]
 impl Drop for Reservation {
     fn drop(&mut self) {
-        if let Some(collector) = self.budget.collector.upgrade() {
+        if let Some(collector) = self.collector.upgrade() {
             // A private refund makes space available to ordinary allocation waiters.
             collector.cancel_allocation(self.bytes);
         } else {
@@ -89,12 +92,12 @@ mod tests {
     #[test]
     fn failed_and_cancelled_reservations_preserve_exact_credit() -> Result<()> {
         let budget = Arc::new(AllocationBudget::new(8));
-        let first = budget.reserve(5)?;
-        assert!(budget.reserve(4).is_err());
+        let first = budget.reserve(5, Weak::new())?;
+        assert!(budget.reserve(4, Weak::new()).is_err());
         assert_eq!(budget.used(), 5);
         drop(first);
         assert_eq!(budget.used(), 0);
-        let exact = budget.reserve(8)?;
+        let exact = budget.reserve(8, Weak::new())?;
         assert_eq!(budget.used(), 8);
         drop(exact);
         assert_eq!(budget.used(), 0);
@@ -135,8 +138,8 @@ mod tests {
     #[test]
     fn overflow_does_not_wrap_the_budget() -> Result<()> {
         let budget = Arc::new(AllocationBudget::new(usize::MAX));
-        let charge = budget.reserve(usize::MAX)?;
-        assert!(budget.reserve(1).is_err());
+        let charge = budget.reserve(usize::MAX, Weak::new())?;
+        assert!(budget.reserve(1, Weak::new()).is_err());
         assert_eq!(budget.used(), usize::MAX);
         drop(charge);
         assert_eq!(budget.used(), 0);

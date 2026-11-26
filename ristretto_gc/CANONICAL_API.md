@@ -1,5 +1,7 @@
 # Experimental canonical caller API
 
+This historical experiment can be reproduced from the [archived source](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc). The current Java preview uses the [unified JVM heap](../GC_PREVIEW.md).
+
 Enable `experimental-canonical-runtime` to use `ristretto_gc::canonical`. The feature
 exposes the existing graph runtime through transparent wrappers; it does not select
 the VM collector or change ordinary Gc allocation. The current layout reserves
@@ -44,11 +46,11 @@ The API makes no pause, fairness, capacity, latency or sustained-load guarantee.
 
 ## Executed examples and evidence
 
-[The clock-free example](examples/canonical_client_smoke.rs) executes a cyclic graph,
+[The clock-free example](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/examples/canonical_client_smoke.rs) executes a cyclic graph,
 independent/copy-root retention and complete payload/credit cleanup. It ran both as
 a native shared library and as a bare wasm32-unknown-unknown module through Wasmtime;
 the exported `canonical_client_smoke` returns 1 on success and traps on failure.
-[External-client fixtures](tests/canonical_api.rs) also execute on native and WASI.
+[External-client fixtures](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/tests/canonical_api.rs) also execute on native and WASI.
 
 The [report](../target/gc-implementation/canonical-client-REPORT.md) records 686 native
 GC tests (one existing ignore), 379 WASI tests, Clippy, formatting, bare-Wasm checks,

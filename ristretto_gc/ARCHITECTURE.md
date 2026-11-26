@@ -1,10 +1,9 @@
 # Generational collector with optional payload compaction
 
-The [catalog/phase experiments](validation/catalog/README.md) are isolated design
-packages, not part of this runtime architecture. They exercise discoverable
-numeric descriptors and helpable phase/count transitions. Production registration
-still uses the indexes and admission described below; real metadata ownership,
-credits and reference-phase migration remain required.
+All Ristretto Java execution uses this collector. The native worker and
+cooperative WASM driver share the same heap, publication, marking, reference
+processing and reclamation code. See the [Java preview](../GC_PREVIEW.md) for
+the cross-tier functional checks.
 
 Logical reservations transfer to fully constructed metadata before it can become
 visible. The descriptor's existing weak collector link carries that charge;
@@ -1478,7 +1477,7 @@ user destruction.
 
 ## Experimental backing for future catalog states
 
-The isolated [pooled catalog](validation/catalog/catalog-pooled-prototype/README.md)
+The isolated [pooled catalog](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-pooled-prototype/README.md)
 uses fixed backing for immutable operation and membership values. Exact owning
 references prevent slot reuse while a delayed helper can still compare a version.
 This representation is not used by the collector. Its numeric allocation screen

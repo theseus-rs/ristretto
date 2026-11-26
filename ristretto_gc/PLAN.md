@@ -2,12 +2,12 @@
 
 ## Alpha collector and review gates
 
-The ordinary JVM collector is the sole shipping heap on native, WASI and the
-browser. The catalog and pool remain a research protocol in
-`ristretto_gc_catalog`. Restricted Java research sessions live in the
-workspace-only `ristretto_vm_research`. The release dependency check resolves
-all features of each shipping entry point and rejects the research path.
-See [the release check](../benchmarks/gc/release/verify_alpha_heap.py).
+The JVM, source preview and browser engine use the same `GarbageCollector`.
+The separate catalog collector, pool, and restricted Java runtime have been
+retired. The source preview exercises interpreted and compiled Java graph
+operations, weak clearing and physical reclamation on the JVM heap.
+[Preview and migration](../GC_PREVIEW.md) ·
+[Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
 | Review topic | Decision and outstanding evidence |
 |---|---|
@@ -1530,7 +1530,7 @@ This does not transfer initial roots to a shared request or integrate the numeri
 catalog. No milestone or qualification gate is completed by the ownership repair.
 
 Stage D design follow-up (2026-11-14): isolated
-[catalog/phase experiments](validation/catalog/README.md) now couple discoverable
+[catalog/phase experiments](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/README.md) now couple discoverable
 numeric membership, durable work and both domain counts through a prepared,
 helpable operation. Eleven native fixtures, eight models, WASI and both Miri modes
 pass; three broken variants fail. A 60-process allocation-count screen favors
@@ -1540,7 +1540,7 @@ not used by the collector. Real metadata/initial-root ownership, byte budgets,
 the complete reference-floor rules and migration of every admitted operation remain
 required before the current stalled-publisher dependency can be removed.
 
-The subsequent [tagged catalog experiment](validation/catalog/catalog-tagged-prototype/README.md)
+The subsequent [tagged catalog experiment](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-prototype/README.md)
 uses bounded atomic ownership acquisition for all numeric owning links, including
 optional discovery and cells. Acquisition failure preserves Pending requests and
 remains distinct from empty discovery slots. Native/WASI, Miri/Tree Borrows and
@@ -3348,7 +3348,7 @@ cost of about 55% more retained requested backing native / 72% WASI at 16,384
 residents. These are not GC timings or RSS results. Actual metadata/initial roots,
 byte charging and a participant/progress-reserve policy remain prerequisites. No
 runtime admission caller or default changes. See the
-[pooled experiment](validation/catalog/catalog-pooled-prototype/README.md).
+[pooled experiment](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-pooled-prototype/README.md).
 
 
 Stage D tracing follow-up (2026-11-14): the isolated tagged catalog now commits

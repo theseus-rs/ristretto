@@ -1,5 +1,7 @@
 # Canonical runtime measurements — 2026-11-21
 
+This historical experiment can be reproduced from the [archived source](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc). The current Java preview uses the [unified JVM heap](../../GC_PREVIEW.md).
+
 The restricted canonical runtime has four finite G1/ZGC invocation comparisons.
 The first three used a dedicated Ristretto heap for each invocation. The latest
 reuses one heap and mutator context across all warmup and measured calls, with

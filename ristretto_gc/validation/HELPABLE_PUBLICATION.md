@@ -134,7 +134,7 @@ amount of registry, barrier and queue work on native and clockless Wasm.
 ## Integration and qualification gates still open
 
 Multi-descriptor experiment (2026-11-14): the isolated
-[catalog packages](catalog/README.md) add fixed-capacity slot discovery and a
+[catalog packages](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/README.md) add fixed-capacity slot discovery and a
 prepared controller operation coupling an exact cell update with both domains'
 pending counts and phase versions. An installed operation is itself discoverable;
 any helper can apply its immutable effect, certify completion and release the
@@ -170,7 +170,7 @@ measurements, the native <1 ms pause gate, or hour/day qualification.
 
 ## Preallocated state ownership experiment
 
-The [pooled variant](catalog/catalog-pooled-prototype/README.md) supplies fixed
+The [pooled variant](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-pooled-prototype/README.md) supplies fixed
 backing for the numeric controller and membership values. Owning expected pointers
 keep slots unreusable; the final release acquires prior owners, destroys the value,
 and only then advertises free storage. Four exact-state pool models, native
@@ -226,7 +226,7 @@ on another participant's behalf. Initial-root/canonical-state migration is uncha
 
 ## Bounded acquisition candidate (2026-11-14)
 
-The isolated [generation-tagged pool](catalog/catalog-tagged-pool-prototype/README.md)
+The isolated [generation-tagged pool](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-pool-prototype/README.md)
 offers a fixed number of atomic API operations per owning-load/compare attempt.
 Slot generation and reference state change atomically, so a delayed token cannot
 increment a reused value's count. Busy initialization/destruction excludes both
@@ -236,7 +236,7 @@ link count while an expected owner still prevents value destruction.
 
 Native/WASI, Miri/Tree Borrows, sanitizer and exact-state model checks pass. Four
 deliberate faults fail. These are local ownership checks, not a complete pointer
-model. The [tagged catalog follow-up](catalog/catalog-tagged-prototype/README.md)
+model. The [tagged catalog follow-up](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-prototype/README.md)
 now replaces every numeric owning link, including optional discovery and cell
 storage. The previous ArcSwap catalog remains a comparison control.
 

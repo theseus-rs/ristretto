@@ -34,7 +34,7 @@ def check_report(output, compiled):
     for key, value in expected.items():
         if type(fields.get(key)) is not int or fields[key] != value:
             raise ValueError(f"incorrect {key} in JVM report")
-    for key in ("collections_completed", "bytes_freed"):
+    for key in ("full_collections", "managed_bytes_freed"):
         if type(fields.get(key)) is not int or fields[key] <= 0:
             raise ValueError(f"no {key} in JVM report")
     return fields

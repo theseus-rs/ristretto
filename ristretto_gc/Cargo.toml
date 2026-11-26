@@ -16,22 +16,12 @@ workspace = true
 [features]
 # Linux-only bounded publication-gate evidence; not complete pause qualification.
 experimental-pause-recorder = []
-# Catalog migration prototype; measured overhead currently rejects default use.
+# Alternative ordinary identity index; measured overhead currently rejects default use.
 experimental-identity-index = []
 # Compatibility alias: complete-graph projection coverage is always enabled.
 experimental-trace-projections = []
-# Concrete leaf ownership adapter; no public allocation policy selects it yet.
-experimental-canonical-leaves = ["dep:ristretto_gc_catalog"]
-# Explicit incremental caller API; legacy VM/backend selection is unchanged.
-experimental-canonical-runtime = ["experimental-canonical-leaves"]
-# Separate allocator-order instrumentation; never used for timing builds.
-experimental-canonical-audit = ["experimental-canonical-leaves", "ristretto_gc_catalog/experimental-canonical-audit"]
-
-# Fixed-capacity service diagnostics; this does not certify pause coverage.
-experimental-canonical-service = []
 
 [dependencies]
-ristretto_gc_catalog = { path = "../ristretto_gc_catalog", version = "0.35.0", optional = true }
 arc-swap = { workspace = true }
 once_cell = { workspace = true }
 portable-atomic = { workspace = true }
@@ -58,40 +48,3 @@ crate-type = ["cdylib"]
 [[example]]
 name = "gc_browser"
 crate-type = ["cdylib"]
-
-[[example]]
-name = "leaf_lifecycle"
-required-features = ["experimental-canonical-leaves"]
-
-[[example]]
-name = "leaf_lifecycle_counts"
-required-features = ["experimental-canonical-leaves"]
-
-[[example]]
-name = "leaf_contention"
-required-features = ["experimental-canonical-leaves"]
-
-[[example]]
-name = "graph_lifecycle"
-required-features = ["experimental-canonical-leaves"]
-
-[[example]]
-name = "graph_lifecycle_counts"
-required-features = ["experimental-canonical-leaves"]
-
-[[example]]
-name = "root_aliases"
-required-features = ["experimental-canonical-leaves"]
-
-[[example]]
-name = "root_aliases_counts"
-required-features = ["experimental-canonical-leaves"]
-
-[[example]]
-name = "root_refund_order"
-required-features = ["experimental-canonical-audit"]
-
-[[example]]
-name = "canonical_client_smoke"
-crate-type = ["cdylib"]
-required-features = ["experimental-canonical-runtime"]

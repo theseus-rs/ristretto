@@ -6367,7 +6367,7 @@ remain documented limitations.
 
 ## Isolated catalog/phase experiments (2026-11-14)
 
-The [experiment README](validation/catalog/README.md) contains commands and scope
+The [experiment README](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/README.md) contains commands and scope
 for the frozen numeric descriptor prototype: 11 native fixtures, eight models,
 eight WASI fixtures, eight Miri fixtures and eight Tree Borrows fixtures pass.
 The retained tree alternative passes three native fixtures and three models.
@@ -6387,7 +6387,7 @@ Stock and isolated corrected-checker runs are retained, along with five delibera
 protocol/pool mutations. A shared-target reproduction attempt was rejected when a
 negative control unexpectedly passed; the final runner isolates every variant's
 build directory and validates both negative failures. See
-[the runner](../benchmarks/gc/catalog_model_check.py) and
+[the runner](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/benchmarks/gc/catalog_model_check.py) and
 [follow-up evidence](../target/gc-implementation/catalog-pooled-REPORT.md).
 
 Ninety allocation-count processes pass and reproduce the original control counts.
@@ -6568,7 +6568,7 @@ capacity and hour/day qualification remain open. No defaults or release gates ch
 
 ## Generation-tagged owning-link experiment (2026-11-14)
 
-The isolated [tagged pool](validation/catalog/catalog-tagged-pool-prototype/README.md)
+The isolated [tagged pool](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-pool-prototype/README.md)
 combines generation and reference state in one atomic word. Delayed link tokens can
 acquire only their exact live generation; initialization/destruction exclude readers
 and reuse. Owning loads and clones make one acquisition attempt, returning contention
@@ -6600,7 +6600,7 @@ latency, pause, peer-performance or endurance gate is established.
 
 ## Tagged catalog integration (2026-11-14)
 
-The isolated [tagged catalog](validation/catalog/catalog-tagged-prototype/README.md)
+The isolated [tagged catalog](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-prototype/README.md)
 replaces controller, membership and optional discovery links with fallible tagged
 owners, and moves cells into fixed backing. An unresolved installed request returns
 Pending and must be retained; Retry requires evidence that its expected immutable
@@ -6633,7 +6633,7 @@ The evidence also retains three validation limitations and their follow-ups:
   check. Moving that stop after observing an uncertified effect exercises the late
   CAS directly; the unmodified implementation passes and the broken variant fails.
 
-The [cost fixture](validation/catalog/catalog-tagged-cost-prototype/README.md) runs
+The [cost fixture](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-cost-prototype/README.md) runs
 48 counting processes and 112 paired timing processes on frozen native/WASI binaries.
 Counting and timing builds are separate, and validation does not overlap timing.
 Every counting run uses 65,536 lifecycles, exceeding pool wraparound; timings use
@@ -7274,7 +7274,7 @@ controllers, root backing and conservative retained-target reserves increase log
 charge; the [graph](../target/gc-implementation/canonical-root-backing.svg) shows that
 cost. This is an allocator audit, not throughput, latency or RSS evidence. See
 [the report](../target/gc-implementation/canonical-root-REPORT.md) and
-[quota/authority notes](validation/catalog/catalog-tagged-prototype/ROOTS.md).
+[quota/authority notes](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-prototype/ROOTS.md).
 Real roots/reference/traversal authority, admitted callers, callbacks and all
 GC/JIT/peer/capacity/endurance qualification remain open. Defaults are unchanged.
 
@@ -7300,6 +7300,6 @@ These are isolated protocol and ownership results. The collector still uses its
 existing runtime path. Graph/cleanup/root-result integration, admitted operations,
 callbacks, JIT and all whole-GC qualification gates remain open. Defaults are unchanged.
 
-[Protocol](validation/catalog/catalog-tagged-prototype/REFERENCES.md) ·
+[Protocol](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-prototype/REFERENCES.md) ·
 [Report and cost graph](../target/gc-implementation/canonical-reference-REPORT.md) ·
 [Verification](../target/gc-implementation/canonical-reference-verification.json).

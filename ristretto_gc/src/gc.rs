@@ -1103,49 +1103,6 @@ unsafe impl<T: Trace> Trace for Gc<T> {
     }
 }
 
-#[cfg(feature = "experimental-canonical-leaves")]
-pub(crate) fn leaf_lifecycle_benchmark(
-    mode: &str,
-    operations: u64,
-    batch: usize,
-) -> Result<String> {
-    publication_owner::leaf_lifecycle_benchmark(mode, operations, batch)
-}
-
-#[cfg(feature = "experimental-canonical-leaves")]
-pub(crate) fn graph_lifecycle_benchmark(rounds: u64, capacity: usize) -> Result<String> {
-    publication_owner::graph_lifecycle_benchmark(rounds, capacity)
-}
-
-#[cfg(feature = "experimental-canonical-leaves")]
-pub(crate) fn leaf_contention(
-    mode: &str,
-    actors: usize,
-    helpers: usize,
-    operations: usize,
-    capacity: usize,
-    retained: usize,
-) -> Result<String> {
-    publication_owner::leaf_contention(mode, actors, helpers, operations, capacity, retained)
-}
-
-#[cfg(feature = "experimental-canonical-leaves")]
-pub(crate) fn root_alias_benchmark(
-    mode: &str,
-    copies: u64,
-    checkpoint: impl FnMut(&'static str),
-) -> Result<String> {
-    publication_owner::root_alias_benchmark(mode, copies, checkpoint)
-}
-
-#[cfg(feature = "experimental-canonical-audit")]
-pub(crate) fn root_refund_order(
-    mode: &str,
-    checkpoint: impl FnMut(&'static str, usize),
-) -> Result<()> {
-    publication_owner::root_refund_order(mode, checkpoint)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

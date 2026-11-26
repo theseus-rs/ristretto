@@ -1,5 +1,7 @@
 # Controlled leaf contention
 
+This historical experiment can be reproduced from the [archived source](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc). The current Java preview uses the [unified JVM heap](../GC_PREVIEW.md).
+
 ## Current contention results
 
 The frozen v6 recovery matrix finished all 72 scheduled processes. Native

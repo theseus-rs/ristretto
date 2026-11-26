@@ -1,5 +1,7 @@
 # Canonical graph runtime
 
+This historical experiment can be reproduced from the [archived source](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc). The current Java preview uses the [unified JVM heap](../GC_PREVIEW.md).
+
 The [experimental caller API](CANONICAL_API.md) now exposes this typed graph
 runtime outside the GC crate through transparent wrappers. It preserves the existing
 admission/layout bounds and ownership protocol. VM value/layout and execution

@@ -30,17 +30,15 @@ coordinated release.
 export CARGO_BUILD_JOBS=1
 export CARGO_TARGET_DIR="$PWD/../preview-package-target"
 python3 .github/scripts/check-packaged-features.py \
-  ristretto_gc/experimental-canonical-runtime \
-  ristretto_vm/experimental-reference-dispatch \
+  ristretto_gc \
+  ristretto_vm/execution-profile ristretto_vm/experimental-reference-dispatch \
   ristretto_jit/experimental-reference-dispatch
 rustup target add wasm32-wasip2
 python3 .github/scripts/check-packaged-features.py --target wasm32-wasip2 \
-  ristretto_gc/experimental-canonical-runtime \
-  ristretto_vm
+  ristretto_gc \
+  ristretto_vm/execution-profile
 ```
 
-The native consumer includes the shipping VM's reference-dispatch feature. The
-WASI consumer builds the ordinary interpreter. Both also compile the explicitly
-selected GC adapter. The source-archive suites exercise the restricted Java
-session in the workspace-private research crate.
-Native and WASI consumer artifacts use separate absolute target directories.
+The native consumer builds the VM's reference-dispatch feature. The WASI
+consumer builds the interpreter. Both resolve the same GC library. The
+[source preview](../../../GC_PREVIEW.md) exercises both execution tiers.

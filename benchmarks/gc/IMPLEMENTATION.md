@@ -3257,7 +3257,7 @@ Evidence under `target/` is ignored by Git; preserve the source archives, binari
 
 ## Discoverable catalog and phase-operation experiments
 
-The isolated [catalog packages](../../ristretto_gc/validation/catalog/README.md)
+The isolated [catalog packages](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/README.md)
 compare immutable-tree snapshots with a fixed slot registry and prepared descriptor
 operations. Both domain counts, durable work and the cell effect participate in
 one helpable controller transition. Stopped/late helpers, cancellation, slot reuse,
@@ -3287,7 +3287,7 @@ harness pass; generated output directories remain excluded from their own archiv
 
 ## Preallocated catalog state experiment
 
-The [pooled variant](../../ristretto_gc/validation/catalog/catalog-pooled-prototype/README.md)
+The [pooled variant](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-pooled-prototype/README.md)
 replaces per-update control/membership allocation with fixed backing. Owning
 expected references prevent premature reuse; final reference release acquires prior
 owners and delays reuse until destruction completes. Preparation failure and
@@ -3403,7 +3403,7 @@ sanitizers; 12 protocol models, five pool models and nine failing fault variants
 provide scoped evidence. The report retains the initial lost-result regression,
 fence/TSan limitation, timed-out combined model and ineffective first fault schedule.
 
-The [new cost fixture](../../ristretto_gc/validation/catalog/catalog-tagged-cost-prototype/README.md)
+The [new cost fixture](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-tagged-cost-prototype/README.md)
 separates counting and timing binaries. All 48 counter and 112 timing processes
 complete. It removes one allocator request per numeric lifecycle and lowers median
 lifecycle time 51–53% native / 24–25% WASI, while increasing requested setup backing
