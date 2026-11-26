@@ -3,8 +3,9 @@ use crate::GarbageCollector;
 use crate::collector::AllocationReservation;
 use crate::publication_directory::Directory;
 use arc_swap::{ArcSwap, ArcSwapOption};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, LazyLock, Weak};
+use portable_atomic::AtomicU64;
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
+use std::sync::{Arc, OnceLock, Weak};
 
 // A direct Global layout is limited to isize::MAX bytes on both native and
 // Wasm. The two larger sentinels cannot alias a sum of its disjoint shares.
@@ -18,91 +19,251 @@ struct Donation {
     private: AtomicBool,
 }
 
-// CASing a request to this unique Arc permanently ends its registration.
-static CLOSED: LazyLock<Arc<Donation>> = LazyLock::new(|| Arc::new(Donation::default()));
+// Slots are issued once. The publishing CAS supplies the byte count and the
+// winning caller owns the only Demand. Receipts are only touched for a grant.
+const OPEN: u8 = 0;
+const ASSIGNING: u8 = 1;
+const BOUND: u8 = 2;
+const CLOSED: u8 = 3;
 
 #[derive(Debug)]
+struct Entry {
+    bytes: AtomicUsize,
+    stage: AtomicU8,
+    binding: OnceLock<Binding>,
+}
+
+// Receipt storage is separate from membership: a bound entry can retain
+// another entry's receipt without keeping either membership page alive.
+#[derive(Clone, Debug)]
+struct Receipt {
+    bank: Arc<[Donation]>,
+    slot: usize,
+}
+
+impl std::ops::Deref for Receipt {
+    type Target = Donation;
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "the slot belongs to this receipt bank"
+    )]
+    fn deref(&self) -> &Donation {
+        &self.bank[self.slot]
+    }
+}
+
+#[derive(Debug)]
+struct Binding {
+    first: Receipt,
+    retry: ArcSwapOption<Retry>,
+}
+
+#[derive(Debug)]
+struct Retry {
+    spare: Receipt,
+    donor: OnceLock<Receipt>,
+}
+
+impl Binding {
+    fn current(&self) -> Option<Receipt> {
+        match self.retry.load().as_ref() {
+            Some(retry) => retry.donor.get().cloned(),
+            None => Some(self.first.clone()),
+        }
+    }
+}
+
+impl Default for Entry {
+    fn default() -> Self {
+        Self {
+            bytes: AtomicUsize::new(0),
+            stage: AtomicU8::new(OPEN),
+            binding: OnceLock::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct Request {
-    bytes: usize,
-    donor: ArcSwapOption<Donation>,
-    // Prepared on the allocating thread. The sweep coordinator never allocates a receipt.
-    spare: ArcSwapOption<Donation>,
+    page: Arc<Page>,
+    slot: usize,
 }
 
 impl Request {
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "created from the winning page offset"
+    )]
+    fn entry(&self) -> &Entry {
+        &self.page.slots[self.slot]
+    }
+
+    fn bound(&self, ready: impl FnOnce(&Donation) -> bool) -> bool {
+        let entry = self.entry();
+        entry.stage.load(Ordering::Acquire) == BOUND
+            && entry
+                .binding
+                .get()
+                .and_then(Binding::current)
+                .is_some_and(|donor| ready(&donor))
+    }
+
     pub(crate) fn paid(&self) -> bool {
-        self.donor
-            .load()
-            .as_ref()
-            .is_some_and(|d| d.canceled.load(Ordering::Acquire) == PAID)
+        self.bound(|donor| donor.canceled.load(Ordering::Acquire) == PAID)
     }
 
     pub(crate) fn private(&self) -> bool {
-        self.donor
-            .load()
-            .as_ref()
-            .is_some_and(|donor| donor.private.load(Ordering::Acquire))
+        self.bound(|donor| donor.private.load(Ordering::Acquire))
     }
 
     pub(crate) fn waiting(&self) -> bool {
-        self.donor
-            .load()
-            .as_ref()
-            .is_none_or(|d| d.canceled.load(Ordering::Acquire) == ABANDONED)
+        self.entry().stage.load(Ordering::Acquire) == OPEN
+            || self.bound(|donor| donor.canceled.load(Ordering::Acquire) == ABANDONED)
     }
 }
 
-#[derive(Debug, Default)]
-struct Membership {
-    directory: Directory<Weak<Request>>,
-    last_id: u64,
+const PAGE_WIDTH: usize = 32;
+type Pages = Directory<Arc<Page>>;
+
+#[derive(Debug)]
+struct Page {
+    bank: Arc<[Donation]>,
+    slots: [Entry; PAGE_WIDTH],
+    // Includes unissued positions. A page can only be removed after every
+    // position has been committed and its own demand has closed.
+    remaining: AtomicUsize,
+}
+
+impl Page {
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "the final partial page has at most PAGE_WIDTH entries"
+    )]
+    fn new(key: u64) -> Self {
+        Self {
+            bank: Arc::new(std::array::from_fn::<_, PAGE_WIDTH, _>(|_| {
+                Donation::default()
+            })),
+            slots: std::array::from_fn(|_| Entry::default()),
+            remaining: AtomicUsize::new(
+                (u64::MAX - key * PAGE_WIDTH as u64).min(PAGE_WIDTH as u64) as usize,
+            ),
+        }
+    }
 }
 
 #[derive(Debug, Default)]
 pub(crate) struct Registry {
-    entries: ArcSwap<Membership>,
+    pages: ArcSwap<Pages>,
+    // Each increment commits the already linked slot at the prior position.
+    published: AtomicU64,
     active: AtomicUsize,
 }
 
 pub(crate) struct Demand<'a> {
     gc: &'a GarbageCollector,
-    id: u64,
-    pub(crate) request: Arc<Request>,
+    page_key: u64,
+    pub(crate) request: Request,
 }
 
 impl Registry {
+    fn page(&self, position: u64) -> crate::Result<Option<Arc<Page>>> {
+        let key = position / PAGE_WIDTH as u64;
+        let head = self.pages.load();
+        if let Some(page) = head.get(key) {
+            return Ok(Some(page.clone()));
+        }
+        // A stale publisher may still hold an old position after the entire
+        // page was removed. Never resurrect it in a newer directory.
+        if self.published.load(Ordering::Acquire) != position {
+            return Ok(None);
+        }
+        let page = Arc::new(Page::new(key));
+        let (next, _) = head
+            .insert(key, page.clone())
+            .ok_or(crate::Error::OutOfMemory)?;
+        let previous = self.pages.compare_and_swap(&*head, Arc::new(next));
+        Ok(Arc::ptr_eq(&previous, &head).then_some(page))
+    }
+
     pub(crate) fn register<'a>(
         &self,
         gc: &'a GarbageCollector,
         bytes: usize,
     ) -> crate::Result<Demand<'a>> {
-        let request = Arc::new(Request {
-            bytes,
-            donor: ArcSwapOption::empty(),
-            spare: ArcSwapOption::from(Some(Arc::new(Donation::default()))),
-        });
-        let mut head = self.entries.load();
+        self.active.fetch_add(1, Ordering::AcqRel);
+        let result = self.publish(gc, bytes);
+        if result.is_err() {
+            self.active.fetch_sub(1, Ordering::Release);
+        }
+        result
+    }
+
+    #[expect(
+        clippy::indexing_slicing,
+        clippy::cast_possible_truncation,
+        reason = "the remainder is a page offset on every supported target"
+    )]
+    fn publish<'a>(&self, gc: &'a GarbageCollector, bytes: usize) -> crate::Result<Demand<'a>> {
+        // A zero-byte reservation always succeeds in the ordinary budget.
+        let bytes = std::num::NonZeroUsize::new(bytes).ok_or(crate::Error::OutOfMemory)?;
         loop {
-            let id = head
-                .last_id
-                .checked_add(1)
-                .ok_or(crate::Error::OutOfMemory)?;
-            let (directory, _) = head
-                .directory
-                .insert(id, Arc::downgrade(&request))
-                .ok_or(crate::Error::OutOfMemory)?;
-            let current = self.entries.compare_and_swap(
-                &*head,
-                Arc::new(Membership {
-                    directory,
-                    last_id: id,
-                }),
-            );
-            if Arc::ptr_eq(&head, &current) {
-                self.active.fetch_add(1, Ordering::Release);
-                return Ok(Demand { gc, id, request });
+            let position = self.published.load(Ordering::Acquire);
+            let next = position.checked_add(1).ok_or(crate::Error::OutOfMemory)?;
+            let Some(page) = self.page(position)? else {
+                continue;
+            };
+            let index = (position % PAGE_WIDTH as u64) as usize;
+            let ours = page.slots[index]
+                .bytes
+                .compare_exchange(0, bytes.get(), Ordering::AcqRel, Ordering::Acquire)
+                .is_ok();
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            if ours {
+                tests::after_link();
             }
-            head = current;
+            // An enroller paused after linking cannot delay peers. Exactly one
+            // helper commits this position; the owning request remains pinned.
+            let _ = self.published.compare_exchange(
+                position,
+                next,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            );
+            if ours {
+                return Ok(Demand {
+                    gc,
+                    page_key: position / PAGE_WIDTH as u64,
+                    request: Request { page, slot: index },
+                });
+            }
+        }
+    }
+
+    fn release(&self, page_key: u64, page: &Arc<Page>) {
+        if page.remaining.fetch_sub(1, Ordering::AcqRel) == 1 {
+            self.pages.rcu(|head| {
+                let (directory, _) = head.remove(page_key);
+                Arc::new(directory)
+            });
+        }
+        self.active.fetch_sub(1, Ordering::Release);
+    }
+
+    fn selection(&self, collector: Weak<GarbageCollector>, size: usize) -> Selection {
+        // If capture races a registrar, the counter alone determines which
+        // side it falls on. Every position below it is already materialized.
+        let limit = self.published.load(Ordering::Acquire);
+        let pages = self.pages.load_full();
+        Selection {
+            collector,
+            pages,
+            limit,
+            donor: None,
+            cursor: 0,
+            size,
+            remaining: size,
+            settled: false,
         }
     }
 
@@ -110,122 +271,159 @@ impl Registry {
         if self.active.load(Ordering::Acquire) == 0 || !metadata.can_transfer_retired_charge() {
             return None;
         }
-        let entries = self.entries.load_full();
         let size = metadata.size();
         debug_assert!(isize::try_from(size).is_ok());
-        Some(Selection {
-            collector: metadata.collector.clone(),
-            entries,
-            donor: None,
-            cursor: None,
-            size,
-            remaining: size,
-            settled: false,
-        })
+        Some(self.selection(metadata.collector.clone(), size))
     }
 }
 
 impl<'a> Demand<'a> {
     pub(crate) fn take(&self) -> Option<AllocationReservation<'a>> {
-        let current = self.request.donor.load();
-        let donor = current.as_ref()?;
-        let state = donor.canceled.load(Ordering::Acquire);
+        let entry = self.request.entry();
+        if entry.stage.load(Ordering::Acquire) != BOUND {
+            return None;
+        }
+        let binding = entry.binding.get()?;
+        let state = binding.current()?.canceled.load(Ordering::Acquire);
         if state == ABANDONED {
-            let spare = Arc::new(Donation::default());
-            self.request
-                .spare
-                .compare_and_swap(std::ptr::null::<Donation>(), Some(spare));
-            self.request.donor.compare_and_swap(&*current, None);
+            // Only the owner reopens a request. Prepare both the unused
+            // receipt and the next one-shot binding before publishing OPEN.
+            binding.retry.store(Some(Arc::new(Retry {
+                spare: Receipt {
+                    bank: Arc::new([Donation::default()]),
+                    slot: 0,
+                },
+                donor: OnceLock::new(),
+            })));
+            entry.stage.store(OPEN, Ordering::Release);
             return None;
         }
         if state != PAID {
             return None;
         }
-        let previous = self
-            .request
-            .donor
-            .compare_and_swap(&*current, Some(CLOSED.clone()));
-        previous
-            .as_ref()
-            .filter(|old| Arc::ptr_eq(old, donor))
-            .map(|_| AllocationReservation::transferred(self.gc, self.request.bytes))
+        // Only the owning Demand consumes or cancels a bound request.
+        entry.stage.store(CLOSED, Ordering::Release);
+        Some(AllocationReservation::transferred(
+            self.gc,
+            entry.bytes.load(Ordering::Relaxed),
+        ))
     }
 
-    // Races the donor's selection CAS. Only one can commit.
     pub(crate) fn finish_uncovered(&self) -> bool {
         self.request
-            .donor
-            .compare_and_swap(std::ptr::null::<Donation>(), Some(CLOSED.clone()))
-            .is_none()
+            .entry()
+            .stage
+            .compare_exchange(OPEN, CLOSED, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
     }
 }
 
 impl Drop for Demand<'_> {
     fn drop(&mut self) {
-        let registry = &self.gc.grant_registry;
-        if let Some(donor) = self.request.donor.swap(Some(CLOSED.clone()))
-            && !Arc::ptr_eq(&donor, &CLOSED)
+        let entry = self.request.entry();
+        if entry.stage.swap(CLOSED, Ordering::AcqRel) == BOUND
+            && let Some(binding) = entry.binding.get()
+            && let Some(donor) = binding.current()
         {
+            let bytes = entry.bytes.load(Ordering::Relaxed);
             let canceled = donor
                 .canceled
                 .try_update(Ordering::AcqRel, Ordering::Acquire, |old| {
-                    (old < ABANDONED).then(|| old + self.request.bytes)
+                    (old < ABANDONED).then(|| old + bytes)
                 });
             if canceled == Err(PAID) {
-                self.gc.cancel_allocation(self.request.bytes);
+                self.gc.cancel_allocation(bytes);
             }
         }
-        registry.entries.rcu(|head| {
-            let (directory, _) = head.directory.remove(self.id);
-            Arc::new(Membership {
-                directory,
-                last_id: head.last_id,
-            })
-        });
-        registry.active.fetch_sub(1, Ordering::Release);
+        self.gc
+            .grant_registry
+            .release(self.page_key, &self.request.page);
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct Selection {
     collector: Weak<GarbageCollector>,
-    entries: Arc<Membership>,
-    donor: Option<Arc<Donation>>,
+    pages: Arc<Pages>,
+    limit: u64,
+    donor: Option<Receipt>,
     size: usize,
     settled: bool,
-    cursor: Option<u64>,
+    cursor: u64,
     remaining: usize,
 }
 
 impl Selection {
     // The task stays at the front of the public sweep queue through all batches.
+    #[expect(
+        clippy::indexing_slicing,
+        clippy::cast_possible_truncation,
+        clippy::expect_used,
+        reason = "page offsets fit usize and only the exclusive assignment owner initializes a binding"
+    )]
     pub(crate) fn advance(&mut self, budget: &mut usize) -> bool {
         let steps = budget.saturating_add(1).min(32);
         for i in 0..steps {
-            let Some((id, weak)) = self.entries.directory.next_after(self.cursor) else {
+            if self.cursor >= self.limit {
+                return true;
+            }
+            let page_key = self.cursor / PAGE_WIDTH as u64;
+            let Some((key, page)) = self.pages.next_after(page_key.checked_sub(1)) else {
                 return true;
             };
-            self.cursor = Some(id);
+            if key != page_key {
+                self.cursor = key * PAGE_WIDTH as u64;
+                if self.cursor >= self.limit {
+                    return true;
+                }
+            }
+            let slot = (self.cursor % PAGE_WIDTH as u64) as usize;
+            self.cursor += 1;
             if i != 0 {
                 *budget -= 1;
             }
-            if let Some(request) = weak.upgrade()
-                && request.bytes <= self.remaining
-                && request.donor.load().is_none()
+            let entry = &page.slots[slot];
+            let bytes = entry.bytes.load(Ordering::Relaxed);
+            if bytes <= self.remaining
+                && entry
+                    .stage
+                    .compare_exchange(OPEN, ASSIGNING, Ordering::AcqRel, Ordering::Acquire)
+                    .is_ok()
             {
-                if self.donor.is_none() {
-                    self.donor = request.spare.swap(None);
-                }
-                if let Some(donor) = &self.donor
-                    && request
+                // ASSIGNING gives one helper exclusive initialization rights.
+                // Both the default bank and any retry storage are preallocated.
+                if let Some(binding) = entry.binding.get() {
+                    let retry = binding.retry.load();
+                    let retry = retry.as_ref().expect("reopened binding has a retry");
+                    let donor = self.donor.get_or_insert_with(|| retry.spare.clone());
+                    retry
                         .donor
-                        .compare_and_swap(std::ptr::null::<Donation>(), Some(donor.clone()))
-                        .is_none()
+                        .set(donor.clone())
+                        .expect("unique retry assignment");
+                } else {
+                    let donor = self.donor.get_or_insert_with(|| Receipt {
+                        bank: page.bank.clone(),
+                        slot,
+                    });
+                    entry
+                        .binding
+                        .set(Binding {
+                            first: donor.clone(),
+                            retry: ArcSwapOption::empty(),
+                        })
+                        .expect("unique first assignment");
+                }
+                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                tests::before_binding_commit();
+                if entry
+                    .stage
+                    .compare_exchange(ASSIGNING, BOUND, Ordering::AcqRel, Ordering::Acquire)
+                    .is_ok()
                 {
-                    self.remaining -= request.bytes;
+                    self.remaining -= bytes;
                 }
             }
-            if self.remaining == 0 || id == self.entries.last_id {
+            if self.remaining == 0 || self.cursor == self.limit {
                 return true;
             }
         }
@@ -265,104 +463,5 @@ impl Drop for Selection {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::Configuration;
-    use std::future::Future;
-    use std::task::{Context, Wake, Waker};
-
-    // Stand in for the exclusively owned, already charged allocation. The
-    // native integration fixture separately exercises the actual destructor.
-    fn fixture() -> crate::Result<Arc<GarbageCollector>> {
-        let gc = GarbageCollector::with_config(Configuration::builder().max_heap_bytes(32).build());
-        gc.reserve_allocation(32)?;
-        Ok(gc)
-    }
-
-    fn capture(gc: &Arc<GarbageCollector>) -> Selection {
-        Selection {
-            entries: gc.grant_registry.entries.load_full(),
-            collector: Arc::downgrade(gc),
-            donor: None,
-            size: 32,
-            remaining: 32,
-            cursor: None,
-            settled: false,
-        }
-    }
-
-    #[test]
-    #[expect(
-        clippy::panic_in_result_fn,
-        reason = "verify ledger transitions alongside fallible allocations"
-    )]
-    fn cancellations_and_consumption_refund_each_share_once() -> crate::Result<()> {
-        let gc = fixture()?;
-        let early = gc.grant_registry.register(&gc, 8)?;
-        let late = gc.grant_registry.register(&gc, 16)?;
-        let spender = gc.grant_registry.register(&gc, 8)?;
-        let mut selected = capture(&gc);
-        assert!(selected.advance(&mut 31));
-        selected.mark_private();
-        assert!(spender.take().is_none());
-        drop(early);
-        assert_eq!(gc.managed_bytes(), 32);
-        let paid = selected.pay();
-        assert_eq!(paid, 24);
-        gc.cancel_allocation(32 - paid);
-        drop(late);
-        assert_eq!(gc.managed_bytes(), 8);
-        let credit = spender.take().ok_or(crate::Error::OutOfMemory)?;
-        assert!(spender.take().is_none());
-        drop(spender);
-        assert_eq!(gc.managed_bytes(), 8);
-        drop(credit);
-        assert_eq!(gc.managed_bytes(), 0);
-        Ok(())
-    }
-
-    #[derive(Default)]
-    struct Runnable(AtomicBool);
-    impl Wake for Runnable {
-        fn wake(self: Arc<Self>) {
-            self.0.store(true, Ordering::Release);
-        }
-    }
-
-    #[test]
-    #[expect(
-        clippy::panic_in_result_fn,
-        reason = "check poll and accounting results on the same collector"
-    )]
-    fn covered_workerless_waiter_assists_until_the_donor_becomes_private() -> crate::Result<()> {
-        let gc = fixture()?;
-        let first = gc.grant_registry.register(&gc, 8)?;
-        let second = gc.grant_registry.register(&gc, 8)?;
-        let mut selected = capture(&gc);
-        assert!(!selected.advance(&mut 0));
-        let mut opportunity = gc.observe_space(8)?;
-        let mut wait = std::pin::pin!(
-            crate::recovery::CollectionWait::for_space(&gc, u64::MAX, &mut opportunity)
-                .with_grant(&first.request, true)
-        );
-        let runnable = Arc::new(Runnable::default());
-        let waker = Waker::from(runnable.clone());
-        let mut cx = Context::from_waker(&waker);
-        assert!(wait.as_mut().poll(&mut cx).is_pending());
-        assert!(runnable.0.swap(false, Ordering::AcqRel));
-        assert!(selected.advance(&mut 0));
-        selected.mark_private();
-        assert!(wait.as_mut().poll(&mut cx).is_pending());
-        assert!(!runnable.0.load(Ordering::Acquire));
-        drop(selected);
-        gc.recovery.notify_progress(&gc);
-        assert!(wait.as_mut().poll(&mut cx).is_ready());
-        assert!(first.take().is_none());
-        assert!(first.finish_uncovered());
-        drop(second);
-        assert_eq!(gc.managed_bytes(), 32);
-        gc.cancel_allocation(32);
-        assert_eq!(gc.managed_bytes(), 0);
-        Ok(())
-    }
-}
+#[path = "retirement_grants_tests.rs"]
+mod tests;

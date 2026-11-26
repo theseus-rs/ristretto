@@ -20,7 +20,7 @@ type WaiterId = u64;
 
 #[derive(Debug, Clone)]
 struct GrantWatch {
-    request: Arc<crate::retirement_grants::Request>,
+    request: crate::retirement_grants::Request,
     settlement_only: bool,
 }
 
@@ -703,7 +703,7 @@ impl<'a> CollectionWait<'a> {
 
     pub(crate) fn with_grant(
         mut self,
-        request: &Arc<crate::retirement_grants::Request>,
+        request: &crate::retirement_grants::Request,
         settlement_only: bool,
     ) -> Self {
         self.grant = Some(GrantWatch {
