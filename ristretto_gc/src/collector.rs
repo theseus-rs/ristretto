@@ -773,7 +773,7 @@ struct Cycle {
     kind: CollectionKind,
     cursor: usize,
     young_cursor: crate::index::YoungCursor,
-    remembered_cursor: crate::index::Cursor,
+    remembered_cursor: crate::index::RememberedCursor,
     remembered_overflow: crate::index::RememberedOverflow,
     sweep_young_cursor: crate::index::YoungCursor,
     object_cursor: crate::index::Cursor,
@@ -811,7 +811,7 @@ impl Default for Cycle {
             kind: CollectionKind::Full,
             cursor: 0,
             young_cursor: crate::index::YoungCursor::default(),
-            remembered_cursor: crate::index::Cursor::default(),
+            remembered_cursor: crate::index::RememberedCursor::default(),
             remembered_overflow: crate::index::RememberedOverflow::default(),
             sweep_young_cursor: crate::index::YoungCursor::default(),
             object_cursor: crate::index::Cursor::default(),
@@ -1744,17 +1744,21 @@ impl GarbageCollector {
     fn enroll_unbuffered_owner(
         &self,
         address: usize,
-        mut remembered: crate::index::RememberedGuard<'_>,
+        remembered: crate::index::RememberedGuard<'_>,
     ) -> Option<MetadataRef> {
         let _measurement = self
             .diagnostics
             .barrier_record
             .measure(self.diagnostics_enabled());
-        // Sweep unlinks the exact descriptor under this same shard. A storage
-        // pin can outlive registry retirement, but cannot permit address reuse.
+        // A pinned owner can outlive registry unlink. Enrollment and removal
+        // use the never-recycled birth, including if unlink wins this race.
         let metadata = self.objects.lookup(address)?;
         metadata.record_mutation();
-        remembered.insert(address);
+        remembered.insert(address, metadata.id);
+        if self.objects.lookup_identity(address, metadata.id).is_none() {
+            self.remembered.remove(address, metadata.id);
+            return None;
+        }
         Some(metadata)
     }
 
@@ -1807,15 +1811,23 @@ impl GarbageCollector {
     fn rescan_dirty_owner(&self, metadata: &MetadataRef) {
         let young = &self.domains[0];
         if young.active() && young.weak_phase() == 0 && !self.logically_retired(metadata) {
-            let _context = Context::enter(self, 0);
-            // The owner may already have been scanned with its previous fields.
-            // Its outstanding mark alone does not cover this new traversal.
-            metadata.mark(0, young.epoch.load(Ordering::Acquire), Retention::Strong);
-            if metadata.request_dirty_scan() {
-                young
-                    .mark_queue
-                    .push(self.local_queue(), MarkItem::dirty(metadata.clone()));
-            }
+            self.enqueue_dirty_owner(metadata);
+        }
+    }
+
+    fn enqueue_dirty_owner(&self, metadata: &MetadataRef) {
+        let _context = Context::enter(self, 0);
+        // The owner may already have been scanned with its previous fields.
+        // Its outstanding mark alone does not cover this new traversal.
+        metadata.mark(
+            0,
+            self.domains[0].epoch.load(Ordering::Acquire),
+            Retention::Strong,
+        );
+        if metadata.request_dirty_scan() {
+            self.domains[0]
+                .mark_queue
+                .push(self.local_queue(), MarkItem::dirty(metadata.clone()));
         }
     }
 
@@ -3893,12 +3905,12 @@ impl GarbageCollector {
         };
         // Verify identity and version under the remembered shard. A later
         // buffered update publishes a fresh insertion after this removal.
-        if let Some(mut remembered) = self.remembered.try_lock(address)
+        if let Some(_writer) = self.remembered.try_lock(address)
             && objects.get(&address).is_some_and(|metadata| {
                 metadata.id == identity && metadata.mutation.load(Ordering::Acquire) == version
             })
         {
-            remembered.remove(address);
+            self.remembered.remove(address, identity);
         }
     }
 
@@ -4193,11 +4205,11 @@ impl GarbageCollector {
         };
         // The immediate store already advanced this exact owner's version. All
         // physical retirements revoke its birth while holding the same shard.
-        if let Some(mut remembered) = self.remembered.try_lock(record.address) {
+        if let Some(remembered) = self.remembered.try_lock(record.address) {
             if !metadata.birth.is_live() {
                 return false;
             }
-            remembered.insert(record.address);
+            remembered.insert(record.address, metadata.id);
             drop(remembered);
             self.rescan_dirty_owner(metadata);
         } else {
@@ -4214,12 +4226,21 @@ impl GarbageCollector {
     fn apply_barrier(&self, record: crate::context::Record) -> bool {
         let _retention = TraceRetention::enter(self, Retention::Strong);
         if record.dirty {
-            let mut remembered = self.remembered.lock(record.address);
             let Some(metadata) = self.buffered_target(record) else {
                 return false;
             };
-            remembered.insert(record.address);
-            drop(remembered);
+            if self.logically_retired(&metadata) {
+                return false;
+            }
+            if let Some(remembered) = self.remembered.try_lock(record.address) {
+                remembered.insert(record.address, metadata.id);
+            } else {
+                self.remembered.dirty.publish(
+                    metadata.id.to_i64().cast_unsigned(),
+                    record.address,
+                    metadata.mutation.load(Ordering::Acquire),
+                );
+            }
             self.rescan_buffered_owner(&metadata);
             true
         } else {
@@ -4301,23 +4322,12 @@ impl GarbageCollector {
             .diagnostics
             .barrier_drain
             .measure(self.diagnostics_enabled());
-        if !record.dirty {
-            let Some(record) = context.try_pop_matching(&self.contexts, record) else {
-                return false;
-            };
-            self.apply_buffered_record(context, record);
-            return true;
-        }
-        let Some(mut remembered) = self.remembered.try_lock(record.address) else {
-            return false;
-        };
-        // If young GC starts after an inactive observation, this remembered
-        // shard stays locked through insertion. Its fresh scan cannot pass this
-        // owner before the entry is visible, so no immediate owner trace is needed.
-        let needs_metadata = self.domains[0].active();
         #[cfg(test)]
         {
-            let pause = lock(&self.barrier_prepare_pause).take();
+            let pause = record
+                .dirty
+                .then(|| lock(&self.barrier_prepare_pause).take())
+                .flatten();
             if let Some(pause) = pause {
                 pause.entered.send(()).expect("barrier prepared");
                 pause
@@ -4326,40 +4336,23 @@ impl GarbageCollector {
                     .expect("resume barrier preparation");
             }
         }
-        // The remembered shard orders address retirement against enrollment.
-        // The exact descriptor can be read without a second shard or payload lease.
-        let metadata = self.buffered_target(record);
         let Some(record) = context.try_pop_matching(&self.contexts, record) else {
             return false;
         };
-        if metadata.is_some() {
-            remembered.insert(record.address);
-        }
-        drop(remembered);
-        #[cfg(test)]
-        if let Some(observer) = lock(&self.barrier_claim_observer).take() {
-            observer.send(()).expect("barrier claim observer");
-        }
-        let _retention = TraceRetention::enter(self, Retention::Strong);
-        if needs_metadata && let Some(metadata) = metadata.as_ref() {
-            self.rescan_buffered_owner(metadata);
-        }
-        self.acknowledge_buffered_record(context, record);
+        self.apply_buffered_record(context, record);
         true
     }
 
     /// The pending reservation protects this handoff through enqueue. An owner
     /// already marked Strong may have been traced before the buffered write.
     fn rescan_buffered_owner(&self, metadata: &MetadataRef) {
-        let young = &self.domains[0];
-        if !young.active() {
-            return;
-        }
-        if young.weak_phase() == 0 {
-            self.rescan_dirty_owner(metadata);
-        } else {
-            let _context = Context::enter(self, 0);
-            self.shade_metadata(metadata);
+        match self.phase_clock.remembered_stage() {
+            Some(0) => self.enqueue_dirty_owner(metadata),
+            Some(_) => {
+                let _context = Context::enter(self, 0);
+                self.shade_metadata(metadata);
+            }
+            None => {}
         }
     }
 
@@ -5525,7 +5518,7 @@ impl GarbageCollector {
             cycle.relocation_scan_done = false;
             debug_assert!(cycle.phantom_retained.is_empty());
             cycle.young_cursor = crate::index::YoungCursor::default();
-            cycle.remembered_cursor = crate::index::Cursor::default();
+            cycle.remembered_cursor = crate::index::RememberedCursor::default();
             cycle.remembered_overflow = if cycle.kind == CollectionKind::Young {
                 self.remembered.dirty.cursor()
             } else {
@@ -6767,7 +6760,10 @@ mod tests {
             assert!(!gc.remembered.may_prune());
             assert_eq!(gc.claim_mark_batch(&mut tasks, &mut 1), 1);
             gc.trace_mark_batch(&mut tasks, None, &mut WorkCounters::default());
-            gc.remembered.lock(address).insert(address);
+            gc.remembered.lock(address).insert(
+                address,
+                gc.identity_for_address(address).expect("member identity"),
+            );
             assert!(gc.remembered.may_prune());
             assert_eq!(gc.claim_mark_batch(&mut tasks, &mut 1), 1);
             gc.trace_mark_batch(&mut tasks, None, &mut WorkCounters::default());
@@ -7123,7 +7119,10 @@ mod tests {
             metadata
                 .mutation
                 .store(retired.mutation.load(Ordering::Acquire), Ordering::Release);
-            gc.remembered.lock(address).insert(address);
+            gc.remembered.lock(address).insert(
+                address,
+                gc.identity_for_address(address).expect("member identity"),
+            );
             let mut counters = WorkCounters::default();
             assert!(!gc.trace_mark_batch(&mut tasks, now(), &mut counters));
             assert_eq!(counters.marked, 1);

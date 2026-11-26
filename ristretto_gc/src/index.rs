@@ -1,9 +1,10 @@
 //! Independently locked metadata indexes with bounded, resumable enumeration.
 #[cfg(test)]
 use std::collections::BTreeMap;
+#[cfg(test)]
 use std::collections::BTreeSet;
+#[cfg(test)]
 use std::ops::Bound::{Excluded, Unbounded};
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, TryLockError};
 
 #[path = "dirty_owners.rs"]
@@ -140,6 +141,7 @@ pub(crate) enum Scan<V> {
     Done,
 }
 
+#[cfg(test)]
 impl<T> Shards<T> {
     /// Selects at most one entry. A busy shard retains its cursor and yields to a peer.
     #[expect(
@@ -178,6 +180,7 @@ impl<V> Shards<BTreeMap<usize, V>> {
     }
 }
 
+#[cfg(test)]
 impl Shards<BTreeSet<usize>> {
     pub(crate) fn scan(&self, cursor: &mut Cursor) -> Scan<()> {
         self.scan_with(cursor, |set, after| {
@@ -188,96 +191,9 @@ impl Shards<BTreeSet<usize>> {
     }
 }
 
-/// An empty shard can skip optional post-trace pruning. Enumeration and sweep
-/// retirement still acquire the shard and inspect its authoritative set.
-#[derive(Debug)]
-pub(crate) struct Remembered {
-    sets: Shards<BTreeSet<usize>>,
-    pub(crate) dirty: dirty_owners::DirtyOwners,
-    nonempty: AtomicUsize,
-}
-
-impl Remembered {
-    pub(crate) fn new(count: usize) -> Self {
-        Self {
-            sets: Shards::new(count),
-            dirty: dirty_owners::DirtyOwners::default(),
-            nonempty: AtomicUsize::new(0),
-        }
-    }
-
-    fn bit(&self, bucket: usize) -> usize {
-        1 << (bucket & (self.sets.entries.len() - 1))
-    }
-
-    pub(crate) fn may_contain(&self, address: usize) -> bool {
-        self.nonempty.load(Ordering::Relaxed) & self.bit(address_bucket(address)) != 0
-    }
-
-    pub(crate) fn may_prune(&self) -> bool {
-        self.nonempty.load(Ordering::Relaxed) != 0 || self.dirty.initialized()
-    }
-
-    pub(crate) fn lock(&self, address: usize) -> RememberedGuard<'_> {
-        self.lock_bucket(address_bucket(address))
-    }
-
-    pub(crate) fn lock_bucket(&self, bucket: usize) -> RememberedGuard<'_> {
-        RememberedGuard {
-            set: self.sets.lock_bucket(bucket),
-            summary: &self.nonempty,
-            bit: self.bit(bucket),
-        }
-    }
-
-    pub(crate) fn try_lock(&self, address: usize) -> Option<RememberedGuard<'_>> {
-        Some(RememberedGuard {
-            set: self.sets.try_lock(address)?,
-            summary: &self.nonempty,
-            bit: self.bit(address_bucket(address)),
-        })
-    }
-
-    pub(crate) fn scan(&self, cursor: &mut Cursor) -> Scan<()> {
-        self.sets.scan(cursor)
-    }
-
-    pub(crate) fn clear(&self) {
-        self.dirty.clear();
-        for mut set in self.sets.iter() {
-            set.clear();
-        }
-        self.nonempty.store(0, Ordering::Relaxed);
-    }
-}
-
-pub(crate) struct RememberedGuard<'a> {
-    set: MutexGuard<'a, BTreeSet<usize>>,
-    summary: &'a AtomicUsize,
-    bit: usize,
-}
-
-impl std::ops::Deref for RememberedGuard<'_> {
-    type Target = BTreeSet<usize>;
-    fn deref(&self) -> &Self::Target {
-        &self.set
-    }
-}
-impl RememberedGuard<'_> {
-    pub(crate) fn insert(&mut self, address: usize) -> bool {
-        if self.set.is_empty() {
-            self.summary.fetch_or(self.bit, Ordering::Relaxed);
-        }
-        self.set.insert(address)
-    }
-    pub(crate) fn remove(&mut self, address: usize) -> bool {
-        let removed = self.set.remove(&address);
-        if removed && self.set.is_empty() {
-            self.summary.fetch_and(!self.bit, Ordering::Relaxed);
-        }
-        removed
-    }
-}
+#[path = "remembered.rs"]
+mod remembered;
+pub(crate) use remembered::{Remembered, RememberedCursor, RememberedGuard};
 
 #[cfg(test)]
 mod tests {

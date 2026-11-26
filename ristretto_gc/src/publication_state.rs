@@ -107,6 +107,12 @@ impl Clock {
         }
     }
 
+    /// Order an already-published remembered entry against the next cycle's
+    /// initial cursor. Outstanding buffered debt prevents closure of an active epoch.
+    pub(crate) fn remembered_stage(&self) -> Option<usize> {
+        stage(self.state.fetch_or(0, Ordering::SeqCst), 0)
+    }
+
     /// Publish the armed root slot to later cycle starts. An active snapshot
     /// still requires exact strong coverage in each domain before activation.
     pub(crate) fn indexed_root(&self) -> Birth {

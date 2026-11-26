@@ -282,7 +282,7 @@ fn capped_allocation_finishes_while_a_nursery_reader_is_parked() -> Result<()> {
 }
 
 #[test]
-fn promotion_retries_before_changing_age_or_generation_membership() -> Result<()> {
+fn promotion_waits_only_for_the_object_shard_and_preserves_generation_membership() -> Result<()> {
     for concurrent in [false, true] {
         for independent in [false, true] {
             for remembered in [false, true] {
@@ -340,10 +340,12 @@ fn promotion_retries_before_changing_age_or_generation_membership() -> Result<()
                 worker.join().expect("sweeper");
                 yielded.expect("promotion blocked on membership");
                 assert!(coordinator_free && publication_free);
-                assert_eq!(age, 0, "partial promotion escaped a failed lock attempt");
-                assert_eq!(lock(&gc.domains[0].cycle).phase, Phase::Sweep);
-                assert!(gc.objects.contains_young(address));
-                assert!(!gc.remembered.lock(address).contains(&address));
+                assert_eq!(age, usize::from(remembered));
+                if !remembered {
+                    assert_eq!(lock(&gc.domains[0].cycle).phase, Phase::Sweep);
+                }
+                assert_eq!(gc.objects.contains_young(address), !remembered);
+                assert_eq!(gc.remembered.lock(address).contains(&address), remembered);
                 assert_eq!(gc.address_for_identity(root.identity()), Some(address));
                 for _ in 0..10000 {
                     if gc.step() {
@@ -476,11 +478,15 @@ fn held_sweep_index(
         .expect("held index observed");
     let worker_gc = gc.clone();
     let freed = available_drops.clone();
+    let other = blocked_drops.clone();
+    let remembered = matches!(held_index, HeldIndex::Remembered);
     let (finished, completion) = mpsc::channel();
     let worker = thread::spawn(move || {
         for _ in 0..10000 {
             worker_gc.step();
-            if freed.load(Ordering::Acquire) != 0 {
+            if freed.load(Ordering::Acquire) != 0
+                && (!remembered || other.load(Ordering::Acquire) != 0)
+            {
                 break;
             }
         }
@@ -507,12 +513,12 @@ fn held_sweep_index(
     assert_eq!(progress, Ok(1), "unrelated sweep did not progress");
     assert!(coordinator_free && publication_free);
     assert_eq!(active, usize::from(hold_admission));
-    assert_eq!(before_release, 0, "held retirement was skipped");
-    assert!(
-        identity_preserved,
-        "deferred retirement removed its identity"
+    assert_eq!(before_release, usize::from(remembered));
+    assert_eq!(identity_preserved, !remembered);
+    assert_eq!(
+        gc.address_for_identity(id),
+        (!remembered).then_some(blocked_address)
     );
-    assert_eq!(gc.address_for_identity(id), Some(blocked_address));
     gc.collect_full()?;
     assert_eq!(blocked_drops.load(Ordering::Acquire), 1);
     assert_eq!(available_drops.load(Ordering::Acquire), 1);

@@ -5,7 +5,7 @@ use super::*;
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[test]
-fn young_start_cannot_pass_a_dirty_owner_prepared_while_inactive() -> Result<()> {
+fn young_start_retraces_a_dirty_owner_enrolled_after_the_remembered_scan() -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
     for counted in [false, true] {
@@ -68,7 +68,7 @@ fn young_start_cannot_pass_a_dirty_owner_prepared_while_inactive() -> Result<()>
             resume.send(()).expect("resume insertion");
             let applied = worker.join().expect("prepared worker");
             assert!(applied && active);
-            assert_eq!(phase, Phase::Remembered);
+            assert_eq!(phase, Phase::Mark);
             assert_eq!(pending, 1);
             assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
             assert!(gc.remembered.lock(address).contains(&address));
@@ -79,7 +79,7 @@ fn young_start_cannot_pass_a_dirty_owner_prepared_while_inactive() -> Result<()>
                     .get(&address)
                     .expect("old owner")
                     .retention(0, epoch),
-                None
+                Some(Retention::Strong)
             );
             for _ in 0..10000 {
                 // Keep full tracing from independently retaining the child.
@@ -93,7 +93,7 @@ fn young_start_cannot_pass_a_dirty_owner_prepared_while_inactive() -> Result<()>
             let recovered = weak.upgrade().expect("remembered child");
             assert_eq!(*recovered, 42);
             println!(
-                "young start after inactive preparation: counted={counted} independent={independent}; scan_waited=true child_retained=true"
+                "young start after inactive preparation: counted={counted} independent={independent}; scan_passed=true child_retained=true"
             );
             while !gc.step() {}
             drop((parent, recovered, context));
@@ -232,10 +232,10 @@ fn busy_barrier_indexes_leave_the_worker_available_for_ready_reclamation() -> Re
                 assert_eq!(yielded, Ok(false));
                 assert_eq!(progressed, Ok(()));
                 assert!(diagnostics.barrier_drain.count > 0);
-                assert_eq!(diagnostics.barrier_flushed, u64::from(!remembered));
+                assert_eq!(diagnostics.barrier_flushed, 1);
                 assert_eq!(
                     (reclaimed, pending, ticket, active),
-                    (1, usize::from(remembered), initial_ticket, 0)
+                    (1, 0, initial_ticket, 0)
                 );
                 for _ in 0..10000 {
                     if gc.step() {
@@ -443,7 +443,7 @@ fn barrier_application_retains_pending_or_publishes_around_a_busy_queue() -> Res
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[test]
-fn mutator_overflow_drains_clean_edges_and_preserves_busy_dirty_owners() -> Result<()> {
+fn mutator_overflow_drains_clean_and_dirty_edges_with_busy_indexes() -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
     for counted in [false, true] {
@@ -514,12 +514,15 @@ fn mutator_overflow_drains_clean_edges_and_preserves_busy_dirty_owners() -> Resu
                 );
                 assert_eq!(pending, 1);
                 let buffered = still_pending.expect("one outstanding record");
+                assert_eq!(buffered.address, next_address);
+                assert!(!buffered.dirty);
+                assert_eq!(buffered.epochs, record.epochs);
                 if hold_remembered {
-                    assert_eq!(buffered, record);
-                } else {
-                    assert_eq!(buffered.address, next_address);
-                    assert!(!buffered.dirty);
-                    assert_eq!(buffered.epochs, record.epochs);
+                    let mut scan = gc.remembered.dirty.cursor();
+                    assert_eq!(
+                        gc.remembered.dirty.next(&mut scan),
+                        Some((record.identity.to_i64().cast_unsigned(), record.address))
+                    );
                 }
                 assert_eq!(active, 0);
                 while !gc.step() {}

@@ -4,11 +4,6 @@ use super::{
     ReclaimTask, TraceRetention, WorkCounters, now,
 };
 
-type WhiteRun<'a> = (
-    crate::index::Membership<'a>,
-    crate::index::RememberedGuard<'a>,
-);
-
 pub(super) const SWEEP_BATCH: usize = 16;
 
 pub(super) enum Unit {
@@ -385,7 +380,7 @@ impl GarbageCollector {
                 // Promotions are remembered so younger children of survivors remain live.
                 let next = if cycle.kind == CollectionKind::Young {
                     match self.remembered.scan(&mut cycle.remembered_cursor) {
-                        crate::index::Scan::Entry(address, ()) => Some(address),
+                        crate::index::Scan::Entry(address, identity) => Some((address, identity)),
                         crate::index::Scan::Advance => return true,
                         crate::index::Scan::Busy => return false,
                         crate::index::Scan::Done => None,
@@ -393,15 +388,11 @@ impl GarbageCollector {
                 } else {
                     None
                 };
-                if let Some(address) = next {
-                    let Some(objects) = self.objects.try_lock(address) else {
-                        cycle.remembered_cursor.retry_entry();
-                        return false;
-                    };
-                    let metadata = objects.get(&address).cloned();
-                    drop(objects);
-                    if let Some(metadata) = metadata {
+                if let Some((address, identity)) = next {
+                    if let Some(metadata) = self.objects.lookup_identity(address, identity) {
                         self.shade_metadata(&metadata);
+                    } else {
+                        self.remembered.remove(address, identity);
                     }
                     cycle.cursor = address;
                 } else {
@@ -661,7 +652,7 @@ impl GarbageCollector {
         cycle: &mut Cycle,
         work: &mut usize,
         counters: &mut WorkCounters,
-        run: &mut Option<WhiteRun<'gc>>,
+        run: &mut Option<crate::index::Membership<'gc>>,
         #[cfg_attr(feature = "experimental-identity-index", expect(unused_variables))]
         visits: &mut usize,
     ) -> Unit {
@@ -685,7 +676,7 @@ impl GarbageCollector {
                 Unit::Busy
             };
             #[cfg(not(feature = "experimental-identity-index"))]
-            if let Some((member, remembered)) = run.as_mut() {
+            if let Some(member) = run.as_mut() {
                 let mut retired: [Option<MetadataRef>; SWEEP_BATCH] = std::array::from_fn(|_| None);
                 let limit = ((*work).min(*visits) + 1).min(retired.len());
                 let mut deferred = None;
@@ -711,14 +702,6 @@ impl GarbageCollector {
                             address,
                             &mut cycle.identity_cursor,
                         );
-                        // This run admits only age-zero descriptors. Under
-                        // the shard, an unbuffered enrollment always has a
-                        // nonzero mutation version; promotion also changes age.
-                        if self.configuration.barrier_buffer_size != 0
-                            || metadata.mutation.load(Ordering::Acquire) != 0
-                        {
-                            remembered.remove(address);
-                        }
                         true
                     },
                 );
@@ -749,15 +732,13 @@ impl GarbageCollector {
                     return unit;
                 }
             }
-            let mut retained = None;
-            let consecutive = run.take().and_then(|(mut member, remembered)| {
+            let consecutive = run.take().and_then(|mut member| {
                 let address = self.objects.next_white(
                     &mut member,
                     &mut cycle.sweep_object_cursor,
                     index,
                     cycle.epoch,
                 )?;
-                retained = Some(remembered);
                 Some((address, member))
             });
             let selected = if consecutive.is_some() {
@@ -854,11 +835,6 @@ impl GarbageCollector {
                     }
                     let age = previous.saturating_add(1).min(promotion_age);
                     if previous < age && age == promotion_age {
-                        // Acquire every membership lock before changing age or
-                        // cross-generation marks. A retry repeats no side effect.
-                        let Some(mut remembered) = self.remembered.try_lock(address) else {
-                            return retry(cycle);
-                        };
                         self.promotion_snapshot(metadata);
                         // Overcount while promotion is in progress. A scanner
                         // can never certify an uncounted newly mature object.
@@ -869,23 +845,14 @@ impl GarbageCollector {
                             &mut cycle.young_retirement,
                             self.configuration.max_pause_time_us == 0,
                         );
-                        remembered.insert(address);
+                        self.remembered.insert(address, promoted.id);
                         counters.promoted += 1;
-                        drop(remembered);
                         self.publish_old_promotion(&promoted);
                     } else {
                         metadata.age.store(age, Ordering::Release);
                     }
                     None
                 } else {
-                    // Registry removal commits only after every shard is held.
-                    // In particular, an identity must remain resolvable when a
-                    // contended remembered shard defers this retirement.
-                    let Some(mut remembered) =
-                        retained.or_else(|| self.remembered.try_lock(address))
-                    else {
-                        return retry(cycle);
-                    };
                     #[cfg(feature = "experimental-identity-index")]
                     {
                         // One list visit per unit. The sweep cursor preserves the
@@ -913,12 +880,6 @@ impl GarbageCollector {
                         );
                     }
                     let was_mature = previous == promotion_age;
-                    if was_mature
-                        || self.configuration.barrier_buffer_size != 0
-                        || metadata.mutation.load(Ordering::Acquire) != 0
-                    {
-                        remembered.remove(address);
-                    }
                     let (removed, address_page) = objects.retire(&mut cycle.young_retirement);
                     if was_mature && removed.is_some() {
                         cycle.packet_cleanup = Some(0);
@@ -928,7 +889,7 @@ impl GarbageCollector {
                     }
                     sealed.address = address_page;
                     if full_scan && sealed.address.is_none() {
-                        *run = Some((objects, remembered));
+                        *run = Some(objects);
                     }
                     removed
                 }
@@ -948,8 +909,15 @@ impl GarbageCollector {
         &self,
         metadata: MetadataRef,
         cycle: &mut Cycle,
-        run: &mut Option<WhiteRun<'_>>,
+        run: &mut Option<crate::index::Membership<'_>>,
     ) {
+        // Registry unlink has committed. A late publisher can only remove or
+        // install this exact birth, never the occupant of a reused address.
+        if metadata.mutation.load(Ordering::Acquire) != 0
+            || metadata.age.load(Ordering::Acquire) >= self.configuration.promotion_age.max(1)
+        {
+            self.remembered.remove(metadata.ptr().0, metadata.id);
+        }
         self.remembered
             .dirty
             .retire(metadata.id.to_i64().cast_unsigned());
