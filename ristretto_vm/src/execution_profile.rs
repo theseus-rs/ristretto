@@ -237,35 +237,35 @@ impl Recorder {
         let instance = records.len() + 1;
         let record = records
             .entry(Arc::as_ptr(method) as usize)
-            .or_insert_with(|| Record {
-                _method: method.clone(),
-                data: MethodExecutionProfile {
-                    instance,
-                    class: class.name().to_owned(),
-                    name: method.name().to_owned(),
-                    descriptor: method.descriptor().to_owned(),
-                    rejection_reason: ristretto_jit::Compiler::rejection_reason(
-                        method.definition(),
-                    ),
-                    rejected_bytecode: ristretto_jit::Compiler::rejected_bytecode(
-                        method.definition(),
-                    ),
-                    experimental_preparation: false,
-                    compilation_state: "not_requested",
-                    queued_requests: 0,
-                    compilation_attempts: 0,
-                    compilation_successes: 0,
-                    compilation_failures: 0,
-                    compilation_ns: 0,
-                    last_error: None,
-                    interpreter_entries: 0,
-                    intrinsic_entries: 0,
-                    compiled_entries: 0,
-                    compiled_backedges: 0,
-                    compiled_resumes: 0,
-                    generated_code_bytes: 0,
-                },
-                functions: Vec::new(),
+            .or_insert_with(|| {
+                let rejection =
+                    ristretto_jit::Compiler::rejection_in(class.class_file(), method.definition());
+                Record {
+                    _method: method.clone(),
+                    data: MethodExecutionProfile {
+                        instance,
+                        class: class.name().to_owned(),
+                        name: method.name().to_owned(),
+                        descriptor: method.descriptor().to_owned(),
+                        rejection_reason: rejection.map(|r| r.reason),
+                        rejected_bytecode: rejection.and_then(|r| r.bytecode),
+                        experimental_preparation: false,
+                        compilation_state: "not_requested",
+                        queued_requests: 0,
+                        compilation_attempts: 0,
+                        compilation_successes: 0,
+                        compilation_failures: 0,
+                        compilation_ns: 0,
+                        last_error: None,
+                        interpreter_entries: 0,
+                        intrinsic_entries: 0,
+                        compiled_entries: 0,
+                        compiled_backedges: 0,
+                        compiled_resumes: 0,
+                        generated_code_bytes: 0,
+                    },
+                    functions: Vec::new(),
+                }
             });
         update(record);
     }

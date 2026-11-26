@@ -82,6 +82,23 @@ enum Rejection<'a> {
     Instruction(&'static str, &'a [Instruction], &'a Instruction),
 }
 
+impl Rejection<'_> {
+    fn reason(&self) -> &'static str {
+        match self {
+            Self::Method(reason) | Self::Instruction(reason, ..) => reason,
+        }
+    }
+
+    fn bytecode(&self) -> Option<(usize, u8)> {
+        let Self::Instruction(_, code, rejected) = self else {
+            return None;
+        };
+        Instruction::with_offsets(code).find_map(|(offset, instruction)| {
+            std::ptr::eq(instruction, *rejected).then(|| (offset, instruction.code()))
+        })
+    }
+}
+
 impl Compiler {
     /// Creates a new instance of the compiler for the host machine.
     ///
@@ -158,24 +175,36 @@ impl Compiler {
     /// This uses the same gate as [`Self::can_compile`].
     #[must_use]
     pub fn rejection_reason(method: &Method) -> Option<&'static str> {
-        Self::production_rejection(method).map(|rejection| match rejection {
-            Rejection::Method(reason) | Rejection::Instruction(reason, ..) => reason,
-        })
+        Self::production_rejection(None, method).map(|rejection| rejection.reason())
     }
 
-    /// JVM byte offset and opcode responsible for an instruction-level production rejection.
-    /// Method-level restrictions have no bytecode location.
+    /// JVM byte offset and opcode for a restriction identifiable without the declaring class.
     #[must_use]
     pub fn rejected_bytecode(method: &Method) -> Option<(usize, u8)> {
-        let Rejection::Instruction(_, code, rejected) = Self::production_rejection(method)? else {
-            return None;
-        };
-        Instruction::with_offsets(code).find_map(|(offset, instruction)| {
-            std::ptr::eq(instruction, rejected).then(|| (offset, instruction.code()))
+        Self::production_rejection(None, method)?.bytecode()
+    }
+
+    /// Check ordinary dispatch with the declaring constant pool available.
+    #[must_use]
+    pub fn can_compile_in(class: &ClassFile, method: &Method) -> bool {
+        Self::production_rejection(Some(class), method).is_none()
+    }
+
+    /// Diagnose the same classfile-aware policy used by ordinary VM dispatch.
+    #[must_use]
+    pub fn rejection_in(class: &ClassFile, method: &Method) -> Option<crate::CompilationRejection> {
+        Self::production_rejection(Some(class), method).map(|rejection| {
+            crate::CompilationRejection {
+                reason: rejection.reason(),
+                bytecode: rejection.bytecode(),
+            }
         })
     }
 
-    fn production_rejection(method: &Method) -> Option<Rejection<'_>> {
+    fn production_rejection<'m>(
+        class: Option<&ClassFile>,
+        method: &'m Method,
+    ) -> Option<Rejection<'m>> {
         if !method.access_flags.contains(MethodAccessFlags::STATIC) {
             return Some(Rejection::Method("non_static_method"));
         }
@@ -207,7 +236,16 @@ impl Compiler {
         }
         instructions
             .iter()
-            .find(|i| !Self::is_production_safe_instruction(i))
+            .find(|instruction| {
+                if Self::is_production_safe_instruction(instruction) {
+                    return false;
+                }
+                // A long store carries only primitive bits through its checked
+                // field request. Keep the ordinary root handoff at this boundary.
+                !matches!(instruction, Instruction::Putstatic(index) if class
+                    .and_then(|class| Self::static_field_descriptor(class, *index))
+                    .is_some_and(|descriptor| descriptor.as_bytes() == b"J"))
+            })
             .map(|instruction| {
                 Rejection::Instruction("unqualified_instruction", instructions, instruction)
             })
@@ -388,20 +426,21 @@ impl Compiler {
         }
     }
 
+    fn static_field_descriptor<'a>(class: &'a ClassFile<'_>, index: u16) -> Option<&'a JavaStr> {
+        let pool = &class.constant_pool;
+        let (owner, member) = pool.try_get_field_ref(index).ok()?;
+        pool.try_get_class(*owner).ok()?;
+        let (name, descriptor) = pool.try_get_name_and_type(*member).ok()?;
+        if pool.try_get_utf8(*name).ok()?.is_empty() {
+            return None;
+        }
+        pool.try_get_utf8(*descriptor).ok()
+    }
+
     #[cfg(feature = "experimental-reference-dispatch")]
     fn request_static_metadata_valid(class: &ClassFile, index: u16) -> bool {
-        let pool = &class.constant_pool;
-        let Ok((owner, member)) = pool.try_get_field_ref(index) else {
-            return false;
-        };
-        let Ok((name, descriptor)) = pool.try_get_name_and_type(*member) else {
-            return false;
-        };
-        pool.try_get_class(*owner).is_ok()
-            && pool.try_get_utf8(*name).is_ok_and(|name| !name.is_empty())
-            && pool
-                .try_get_utf8(*descriptor)
-                .is_ok_and(|descriptor| FieldType::parse_java_str(descriptor).is_ok())
+        Self::static_field_descriptor(class, index)
+            .is_some_and(|descriptor| FieldType::parse_java_str(descriptor).is_ok())
     }
 
     /// Compiles the given bytecode into native code.
@@ -1701,6 +1740,56 @@ mod tests {
     fn test_compiler_new() {
         let result = Compiler::new();
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn ordinary_long_store_admission_uses_the_declaring_constant_pool() -> Result<()> {
+        let mut class = ClassFile::default();
+        let pool = &mut class.constant_pool;
+        let owner = pool.add_class("Fields")?;
+        let long = pool.add_field_ref(owner, "bits", "J")?;
+        let invalid = [
+            pool.add_field_ref(owner, "count", "I")?,
+            pool.add_field_ref(owner, "reference", "Ljava/lang/Object;")?,
+            pool.add_field_ref(owner, "array", "[J")?,
+            pool.add_field_ref(owner, "", "J")?,
+            pool.add_field_ref(0, "bits", "J")?,
+            pool.add_method_ref(owner, "run", "()J")?,
+            0,
+        ];
+        let method = |index, tail| Method {
+            access_flags: MethodAccessFlags::STATIC,
+            attributes: vec![Attribute::Code {
+                name_index: 0,
+                max_stack: 2,
+                max_locals: 0,
+                code: vec![Instruction::Lconst_0, Instruction::Putstatic(index), tail],
+                exception_table: vec![],
+                attributes: vec![],
+            }],
+            ..Default::default()
+        };
+        let valid = method(long, Instruction::Return);
+        assert!(Compiler::can_compile_in(&class, &valid));
+        assert_eq!(Compiler::rejection_in(&class, &valid), None);
+        assert!(!Compiler::can_compile(&valid));
+        for index in invalid {
+            let body = method(index, Instruction::Return);
+            assert!(!Compiler::can_compile_in(&class, &body));
+            assert_eq!(
+                Compiler::rejection_in(&class, &body),
+                Some(crate::CompilationRejection {
+                    reason: "unqualified_instruction",
+                    bytecode: Some((1, Instruction::Putstatic(index).code())),
+                })
+            );
+        }
+        let next = method(long, Instruction::Aconst_null);
+        assert_eq!(
+            Compiler::rejection_in(&class, &next).and_then(|r| r.bytecode),
+            Some((4, Instruction::Aconst_null.code()))
+        );
+        Ok(())
     }
 
     #[test]
