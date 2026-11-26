@@ -6626,6 +6626,10 @@ unsafe impl<T> Trace for Mutex<T>
 where
     T: Trace,
 {
+    fn has_bounded_cleanup() -> bool {
+        T::has_bounded_cleanup()
+    }
+
     fn needs_clear() -> bool {
         T::needs_clear()
     }
@@ -6677,6 +6681,10 @@ unsafe impl<T> Trace for RwLock<T>
 where
     T: Trace,
 {
+    fn has_bounded_cleanup() -> bool {
+        T::has_bounded_cleanup()
+    }
+
     fn needs_clear() -> bool {
         T::needs_clear()
     }
@@ -6730,6 +6738,10 @@ unsafe impl<T> Trace for crate::sync::Mutex<T>
 where
     T: Trace,
 {
+    fn has_bounded_cleanup() -> bool {
+        T::has_bounded_cleanup()
+    }
+
     fn needs_clear() -> bool {
         T::needs_clear()
     }

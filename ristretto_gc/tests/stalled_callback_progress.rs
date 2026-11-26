@@ -295,6 +295,52 @@ fn primitive_buffer_donor_refunds_behind_a_stalled_host_destructor() -> Result<(
 }
 
 #[cfg(not(miri))]
+mod bounded_lock_donor {
+    use super::*;
+
+    fn check<D: Trace + Send + Sync + 'static>(donor: D) -> Result<()> {
+        exercise_payload(
+            Stage::Drop,
+            true,
+            true,
+            |callback| DropOnly {
+                _payload: Payload(callback),
+            },
+            Gc::try_new,
+            [0, 0],
+            donor,
+        )
+    }
+
+    #[test]
+    fn standard_mutex() -> Result<()> {
+        check(Mutex::new(vec![5_u8; 256]))
+    }
+
+    #[test]
+    fn standard_rwlock() -> Result<()> {
+        check(std::sync::RwLock::new(vec![5_u8; 256]))
+    }
+
+    #[test]
+    fn collector_mutex() -> Result<()> {
+        check(ristretto_gc::sync::Mutex::new(vec![5_u8; 256]))
+    }
+
+    #[test]
+    fn managed_rwlock() -> Result<()> {
+        check(ristretto_gc::sync::RwLock::new(vec![5_u8; 256]))
+    }
+
+    #[test]
+    fn nested() -> Result<()> {
+        check(Some(Mutex::new(ristretto_gc::sync::RwLock::new(
+            String::from("backing"),
+        ))))
+    }
+}
+
+#[cfg(not(miri))]
 #[test]
 fn parked_cleanup_keeps_its_charge_until_physical_release() -> Result<()> {
     for stage in [Stage::Finalize, Stage::Clear, Stage::Drop] {

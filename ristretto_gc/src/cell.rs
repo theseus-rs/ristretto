@@ -620,6 +620,11 @@ impl<T: crate::Trace> RwLock<T> {
 // SAFETY: tracing and relocation use the payload lock. Hooks bind nested values
 // to the actual owner; rooting detaches hooks before unrestricted movement.
 unsafe impl<T: crate::Trace> crate::Trace for RwLock<T> {
+    fn has_bounded_cleanup() -> bool {
+        // Retirement has exclusive access. Dropping the hook only releases GC bookkeeping.
+        T::has_bounded_cleanup()
+    }
+
     fn root(&mut self) {
         self.hook = None;
         self.get_mut().root();
