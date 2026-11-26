@@ -512,3 +512,69 @@ fn retired_bytes_cover_every_unregistered_allocation_until_storage_is_released()
     assert_eq!(gc.diagnostics().retired_bytes, 0);
     Ok(())
 }
+
+#[test]
+fn nested_heap_step_preserves_the_outer_owners_young_edge_witness() -> Result<()> {
+    struct Nested {
+        other: Arc<GarbageCollector>,
+        run: AtomicBool,
+        field: Mutex<Option<Gc<u64>>>,
+    }
+    // SAFETY: the only managed edge is installed already demoted under the
+    // fixture's exclusive control and visited every trace.
+    unsafe impl Trace for Nested {
+        fn trace(&self, gc: &GarbageCollector) {
+            lock(&self.field).trace(gc);
+            if self.run.swap(false, Ordering::AcqRel) {
+                self.other.step();
+            }
+        }
+    }
+    for counted in [false, true] {
+        let make = || {
+            GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .promotion_age(3)
+                    .incremental_step_size(1)
+                    .allocation_threshold(usize::MAX)
+                    .full_collection_interval(usize::MAX)
+                    .build(),
+            )
+        };
+        let gc = make();
+        let other = make();
+        let nested_root = Gc::try_new(&other, Vec::<Gc<u64>>::new())?;
+        let root = Gc::try_new(
+            &gc,
+            Nested {
+                other: other.clone(),
+                run: AtomicBool::new(false),
+                field: Mutex::new(None),
+            },
+        )?;
+        for _ in 0..3 {
+            gc.collect_full()?;
+        }
+        let mut child = Gc::try_new(&gc, 71_u64)?.into_rooted();
+        let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+        // SAFETY: no collection can run between demotion and owner publication.
+        unsafe { child.unroot() };
+        *lock(&root.field) = Some(child);
+        gc.remember(&root);
+        tests::prepare_full_mark(&other);
+        root.run.store(true, Ordering::Release);
+        gc.collect_full()?;
+        assert!(
+            gc.remembered
+                .lock(root.as_ptr().addr())
+                .contains(&root.as_ptr().addr())
+        );
+        finish_young(&gc)?;
+        assert_eq!(weak.upgrade().as_deref(), Some(&71));
+        drop((root, nested_root));
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+    }
+    Ok(())
+}

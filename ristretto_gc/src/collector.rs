@@ -243,6 +243,22 @@ thread_local! {
     static TRACE_RETENTION: std::cell::Cell<Option<(usize, Retention, bool)>> = const { std::cell::Cell::new(None) };
 }
 
+// A trace callback can step another heap on this thread. Restore the
+// suspended callback's observation when the inner trace returns or unwinds.
+struct ScanYoung(bool);
+
+impl ScanYoung {
+    fn enter(seen: bool) -> Self {
+        Self(SCAN_YOUNG.replace(seen))
+    }
+}
+
+impl Drop for ScanYoung {
+    fn drop(&mut self) {
+        SCAN_YOUNG.set(self.0);
+    }
+}
+
 struct TraceRetention(Option<(usize, Retention, bool)>);
 impl TraceRetention {
     fn enter(gc: &GarbageCollector, strength: Retention) -> Self {
@@ -4820,7 +4836,7 @@ impl GarbageCollector {
                 executed += 1;
                 continue;
             }
-            SCAN_YOUNG.set(task.has_young);
+            let _young = ScanYoung::enter(task.has_young);
             let _retention = TraceRetention::callback(self, task.retention);
             task.progress =
                 ObjectMetadata::trace_step(&task.metadata, self, task.offset, task.budget);
