@@ -2,6 +2,8 @@
 //! the exclusive physical destruction claim. Scanning never takes that claim.
 use super::{Arc, ArcSwap, ArcSwapOption, Attempt, Directory, Donation, Registry, Selection};
 use crate::metadata::MetadataRef;
+use portable_atomic::AtomicU64;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[derive(Debug)]
 enum Cursor {
@@ -29,7 +31,7 @@ struct SharedSelection {
 impl SharedSelection {
     fn new(registry: &Registry, metadata: &MetadataRef) -> Self {
         let mut cohort = registry.selection(metadata.collector.clone(), metadata.size());
-        if registry.active.load(super::Ordering::Acquire) == 0 {
+        if registry.active.load(Ordering::Acquire) == 0 {
             cohort.limit = 0;
         }
         Self::from_cohort(cohort)
@@ -57,9 +59,12 @@ impl SharedSelection {
                 Cursor::Done { remaining } => return Some(*remaining),
                 Cursor::Scan { next, remaining } => {
                     if let Some((next, request)) = self.cohort.next_request(*next) {
-                        if request.entry().bytes.load(super::Ordering::Relaxed) <= *remaining
-                            && let Some(attempt) = request.activate()
-                        {
+                        let fits = request.entry().bytes.load(Ordering::Relaxed) <= *remaining
+                            && request.entry().stage.load(Ordering::Acquire) != super::CLOSED;
+                        if fits {
+                            request.prepare();
+                        }
+                        if fits && let Some(attempt) = request.activate() {
                             Cursor::Bind {
                                 next,
                                 remaining: *remaining,
@@ -88,7 +93,7 @@ impl SharedSelection {
                         crate::refund_tests::SelectionPoint::BeforeBinding,
                     );
                     if attempt.generation().claim(&self.donor) {
-                        remaining -= attempt.request.entry().bytes.load(super::Ordering::Relaxed);
+                        remaining -= attempt.request.entry().bytes.load(Ordering::Relaxed);
                     }
                     #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
                     crate::refund_tests::park_selection(
@@ -134,6 +139,15 @@ struct Job {
     selection: ArcSwapOption<SharedSelection>,
 }
 
+impl Job {
+    fn claimed(&self) -> bool {
+        self.selection
+            .load()
+            .as_ref()
+            .is_some_and(|plan| plan.donor.private.load(Ordering::Acquire))
+    }
+}
+
 pub(crate) enum ReleasedWork {
     Progress,
     Claimed(MetadataRef, Selection),
@@ -141,6 +155,8 @@ pub(crate) enum ReleasedWork {
 
 #[derive(Debug, Default)]
 pub(crate) struct ReleasedDonors {
+    published: AtomicBool,
+    after: AtomicU64,
     jobs: ArcSwap<Directory<Arc<Job>>>,
 }
 
@@ -186,7 +202,7 @@ impl ReleasedCheck {
             self.previous = Some(id);
             return Some(ReleasedWork::Progress);
         };
-        if matches!(result, ReleasedWork::Claimed(_, _)) {
+        if expected.claimed() {
             self.previous = Some(id);
         }
         Some(result)
@@ -204,11 +220,18 @@ impl ReleasedDonors {
             metadata,
             selection: ArcSwapOption::empty(),
         });
+        self.published.store(true, Ordering::Release);
         self.jobs.rcu(|jobs| {
             jobs.insert(id, job.clone())
                 .expect("one key per released descriptor")
                 .0
         });
+    }
+
+    // A losing unlink still owns a housekeeping obligation after physical
+    // retirement completes. A quiescent heap must release its snapshot pages.
+    pub(crate) fn has_jobs(&self) -> bool {
+        self.published.load(Ordering::Acquire) && self.jobs.load().len() != 0
     }
 
     pub(crate) fn snapshot(&self) -> ReleasedCheck {
@@ -220,7 +243,11 @@ impl ReleasedDonors {
 
     pub(crate) fn help(&self, registry: &Registry, budget: usize) -> Option<ReleasedWork> {
         let jobs = self.jobs.load();
-        let (key, job) = jobs.next_after(None)?;
+        let after = self.after.load(Ordering::Relaxed);
+        let (key, job) = jobs
+            .next_after(Some(after))
+            .or_else(|| jobs.next_after(None))?;
+        self.after.store(key, Ordering::Relaxed);
         Some(self.help_job(&jobs, key, job, registry, budget))
     }
 
@@ -246,9 +273,16 @@ impl ReleasedDonors {
         };
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         crate::refund_tests::park_selection(crate::refund_tests::SelectionPoint::BeforeClaim);
+        // The per-donor transition elects exactly one physical owner. An
+        // unrelated insertion can delay unlinking but cannot revoke this claim.
+        let won = selection
+            .donor
+            .private
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok();
         let (next, _) = jobs.remove(key);
-        let prior = self.jobs.compare_and_swap(jobs, Arc::new(next));
-        if !Arc::ptr_eq(jobs, &prior) {
+        self.jobs.compare_and_swap(jobs, Arc::new(next));
+        if !won {
             return ReleasedWork::Progress;
         }
         ReleasedWork::Claimed(job.metadata.clone(), selection.settlement(remaining))
@@ -259,8 +293,10 @@ impl ReleasedDonors {
         let mut cursor = None;
         while let Some((id, job)) = jobs.next_after(cursor) {
             cursor = Some(id);
-            job.metadata.run_finalizer();
-            job.metadata.run_drop_fn();
+            if !job.claimed() {
+                job.metadata.run_finalizer();
+                job.metadata.run_drop_fn();
+            }
         }
     }
 }

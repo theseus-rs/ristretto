@@ -5,6 +5,7 @@ use std::sync::{Arc, Barrier, mpsc};
 use std::time::Duration;
 
 thread_local! {
+    static TERMINAL: Cell<bool> = const { Cell::new(false) };
     static SELECTOR: std::cell::RefCell<Option<SelectorGate>> = const { std::cell::RefCell::new(None) };
     static PARK: Cell<Option<(mpsc::Sender<()>, mpsc::Receiver<()>)>> = const { Cell::new(None) };
 }
@@ -492,18 +493,27 @@ fn a_peer_finishes_the_same_released_donor_while_its_selector_is_parked() -> Res
         SelectionPoint::AfterBinding,
         SelectionPoint::BeforeClaim,
     ] {
-        parked_selector_schedule(point, false)?;
+        parked_selector_schedule(point, false, true)?;
     }
     Ok(())
 }
 
 #[test]
 fn cancelling_the_bound_request_before_checkpoint_commit_refunds_once() -> Result<()> {
-    parked_selector_schedule(SelectionPoint::AfterBinding, true)
+    parked_selector_schedule(SelectionPoint::AfterBinding, true, true)
+}
+
+#[test]
+fn ordinary_and_released_donors_stay_public_while_receipt_preparation_is_parked() -> Result<()> {
+    for leased in [false, true] {
+        parked_selector_schedule(SelectionPoint::BeforePrepare, false, leased)?;
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum SelectionPoint {
+    BeforePrepare,
     Progress,
     BeforeBinding,
     AfterBinding,
@@ -518,7 +528,7 @@ type SelectorGate = (SelectionPoint, mpsc::Sender<()>, mpsc::Receiver<()>);
     clippy::unwrap_in_result,
     reason = "bounded interleaving before physical destruction"
 )]
-fn parked_selector_schedule(point: SelectionPoint, cancel_first: bool) -> Result<()> {
+fn parked_selector_schedule(point: SelectionPoint, cancel_first: bool, leased: bool) -> Result<()> {
     for counted in [false, true] {
         for independent in [false, true] {
             let gc = capped_heap(counted, independent);
@@ -526,13 +536,16 @@ fn parked_selector_schedule(point: SelectionPoint, cancel_first: bool) -> Result
             let live = Gc::try_new(&gc, value)?;
             let retiring = Gc::try_new(&gc, value)?;
             let mut peers: Vec<_> = (0..4).map(|v| WaitingPeer::new(&gc, v)).collect();
-            release_donor(&gc, retiring, true)?;
+            release_donor(&gc, retiring, leased)?;
+            if !leased {
+                gc.collect();
+            }
             let (enter, parked) = mpsc::channel();
             let (resume, release) = mpsc::channel();
             let heap = gc.clone();
             let selector = std::thread::spawn(move || {
                 SELECTOR.replace(Some((point, enter, release)));
-                for _ in 0..64 {
+                for _ in 0..4096 {
                     heap.step();
                     if SELECTOR.with_borrow(Option::is_none) {
                         break;
@@ -651,5 +664,112 @@ fn terminal_allocation_assists_a_released_donor_past_nonfitting_requests() -> Re
     drop((prefix, live, root));
     gc.collect_full()?;
     assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
+
+pub(super) fn terminal_snapshot_captured() {
+    TERMINAL.set(true);
+}
+
+#[test]
+#[expect(
+    clippy::panic_in_result_fn,
+    reason = "resume a terminal poll on a different guard and credit state"
+)]
+fn terminal_resume_rechecks_spendable_credit_and_managed_guards() -> Result<()> {
+    for refund in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .max_heap_bytes(64)
+                .diagnostics(true)
+                .incremental_step_size(1)
+                .allocation_threshold(usize::MAX)
+                .max_pause_time_us(0)
+                .build(),
+        );
+        let reservation = gc.reserve_bytes(32)?;
+        let donor = Gc::try_new(&gc, ((1u64, 2u64), (3u64, 4u64)))?;
+        let prefix: Vec<_> = (0..4096)
+            .map(|_| gc.grant_registry.register(&gc, 40))
+            .collect::<Result<_>>()?;
+        release_donor(&gc, donor, true)?;
+        let mut peer = WaitingPeer::new(&gc, 23);
+        TERMINAL.set(false);
+        for _ in 0..10_000 {
+            assert!(peer.poll_when_woken());
+            if TERMINAL.get() {
+                break;
+            }
+        }
+        assert!(
+            TERMINAL.replace(false),
+            "snapshot captured before the guarded poll"
+        );
+        let guard_heap = GarbageCollector::new();
+        let lock = Gc::try_new(&guard_heap, crate::sync::RwLock::new(0u64))?;
+        let guard = (!refund).then(|| lock.read());
+        if refund {
+            drop(reservation);
+        }
+        let steps = gc.diagnostics().caller_steps.count;
+        assert!(peer.poll_when_woken());
+        assert_eq!(gc.diagnostics().caller_steps.count, steps);
+        let result = peer
+            .result
+            .take()
+            .expect("credit or guard decides the resumed poll");
+        if refund {
+            assert_eq!(**result?, 23);
+        } else {
+            assert!(matches!(result, Err(crate::Error::OutOfMemory)));
+        }
+        drop((guard, prefix));
+    }
+    Ok(())
+}
+
+#[test]
+#[expect(
+    clippy::panic_in_result_fn,
+    clippy::unwrap_in_result,
+    reason = "force a concurrent directory publication at the physical claim"
+)]
+fn publishing_a_second_returned_lease_cannot_revoke_the_first_physical_claim() -> Result<()> {
+    let gc = capped_heap(false, false);
+    let value = ((1u64, 2u64), (3u64, 4u64));
+    let first = Gc::try_new(&gc, value)?;
+    let second = Gc::try_new(&gc, value)?;
+    let a = gc.metadata_for_address(first.as_ptr().addr()).unwrap();
+    let b = gc.metadata_for_address(second.as_ptr().addr()).unwrap();
+    let lease_a = crate::metadata::ObjectMetadata::borrow_callback(&a, false).unwrap();
+    let lease_b = crate::metadata::ObjectMetadata::borrow_callback(&b, false).unwrap();
+    drop((first, second));
+    gc.collect_full()?;
+    drop(lease_a);
+    let (enter, parked) = mpsc::channel();
+    let (resume, release) = mpsc::channel();
+    std::thread::scope(|scope| {
+        let heap = &gc;
+        let worker = scope.spawn(move || {
+            SELECTOR.replace(Some((SelectionPoint::BeforeClaim, enter, release)));
+            heap.step();
+        });
+        parked.recv_timeout(Duration::from_secs(3)).unwrap();
+        drop(lease_b);
+        resume.send(()).unwrap();
+        worker.join().unwrap();
+    });
+    assert_eq!(
+        gc.managed_bytes(),
+        32,
+        "the original step still owns and frees its donor"
+    );
+    for _ in 0..32 {
+        if gc.step() {
+            break;
+        }
+    }
+    assert_eq!(gc.managed_bytes(), 0);
+    assert!(!gc.has_released_donor_jobs());
     Ok(())
 }

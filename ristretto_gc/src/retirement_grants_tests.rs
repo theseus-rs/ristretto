@@ -246,3 +246,40 @@ fn repeated_abandonment_never_reuses_a_previous_donors_receipt() -> crate::Resul
     assert_eq!(gc.managed_bytes(), 0);
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(
+    clippy::panic_in_result_fn,
+    clippy::unwrap_in_result,
+    reason = "two ordinary selectors race for the same prepared receipt"
+)]
+fn only_the_winner_of_a_requests_first_claim_can_reuse_its_spare() -> crate::Result<()> {
+    use std::{sync::mpsc, time::Duration};
+    let gc = fixture()?;
+    let first = gc.grant_registry.register(&gc, 16)?;
+    let second = gc.grant_registry.register(&gc, 16)?;
+    let mut a = gc.grant_registry.selection(Arc::downgrade(&gc), 16);
+    let mut b = gc.grant_registry.selection(Arc::downgrade(&gc), 16);
+    let (enter, parked) = mpsc::channel();
+    let (resume, release) = mpsc::channel();
+    let helper = std::thread::spawn(move || {
+        hooks::BIND.set(Some((enter, release)));
+        assert!(a.advance(&mut 8));
+        a
+    });
+    parked.recv_timeout(Duration::from_secs(5)).unwrap();
+    assert!(b.advance(&mut 8));
+    resume.send(()).unwrap();
+    let mut a = helper.join().unwrap();
+    assert_eq!(a.pay(), 16);
+    assert!(
+        first.take().is_none(),
+        "the other donor owns the first request"
+    );
+    drop(second.take().ok_or(crate::Error::OutOfMemory)?);
+    assert_eq!(b.pay(), 16);
+    drop(first.take().ok_or(crate::Error::OutOfMemory)?);
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}

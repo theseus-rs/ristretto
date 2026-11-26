@@ -1056,6 +1056,7 @@ impl GarbageCollector {
     fn pending(&self) -> bool {
         self.remembered.dirty.cleanup_pending()
             || self.retired_ready.load(Ordering::Acquire) != 0
+            || self.released_donors.has_jobs()
             || self
                 .scanned_slots()
                 .is_some_and(crate::roots::RootSlots::repair_pending)
@@ -2720,7 +2721,7 @@ impl GarbageCollector {
             }
         }
         self.collect_full()?;
-        while self.retired_ready.load(Ordering::Acquire) != 0 {
+        while self.retired_ready.load(Ordering::Acquire) != 0 || self.released_donors.has_jobs() {
             self.step();
         }
         for domain in &self.domains {
@@ -3108,12 +3109,13 @@ impl GarbageCollector {
             }
             if empty_cycles == 2 {
                 if released.is_none() {
-                    let mut snapshot = self.released_donors.snapshot();
-                    if snapshot.pending() {
-                        // The final ticket may have used this poll's one GC batch.
-                        crate::recovery::yield_once().await;
-                    }
-                    released = Some(snapshot);
+                    released = Some(self.released_donors.snapshot());
+                    #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                    crate::refund_tests::terminal_snapshot_captured();
+                    // The deciding ticket may have used this poll's batch. On
+                    // resume recheck credit, a paid grant and managed guards.
+                    crate::recovery::yield_once().await;
+                    continue;
                 }
                 if let Some(check) = &mut released
                     && check.pending()
@@ -4504,6 +4506,11 @@ impl GarbageCollector {
         }
     }
 
+    #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+    pub(crate) fn has_released_donor_jobs(&self) -> bool {
+        self.released_donors.has_jobs()
+    }
+
     fn queue_released_storage(&self, metadata: MetadataRef) {
         self.retired_ready.fetch_add(1, Ordering::AcqRel);
         if metadata.can_transfer_retired_charge() {
@@ -4925,6 +4932,7 @@ impl GarbageCollector {
         let context_repair = self.contexts.repairs.step();
         if (global_repair || context_repair)
             && self.retired_ready.load(Ordering::Acquire) == 0
+            && !self.released_donors.has_jobs()
             && !self.domain_has_work(0)
             && !self.domain_has_work(1)
             && self.contexts.pending.load(Ordering::Acquire) == 0
@@ -4933,8 +4941,9 @@ impl GarbageCollector {
         }
         // A delayed borrower cannot hold a collection ticket open. Once released,
         // give its bounded clearing work alternating turns with active cycles.
-        if self.retired_objects.load(Ordering::Acquire) != 0
-            && self.retired_ready.load(Ordering::Acquire) != 0
+        if ((self.retired_objects.load(Ordering::Acquire) != 0
+            && self.retired_ready.load(Ordering::Acquire) != 0)
+            || self.released_donors.has_jobs())
             && (!self.retirement_turn.fetch_xor(true, Ordering::Relaxed)
                 || !self
                     .domains

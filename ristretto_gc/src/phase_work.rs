@@ -19,6 +19,7 @@ pub(super) enum Unit {
 }
 
 pub(super) enum SweepWork {
+    PrepareGrant(crate::retirement_grants::Request),
     ReleasePacket(crate::work::Packet),
     Reclaim(
         ReclaimTask,
@@ -37,6 +38,7 @@ impl SweepWork {
         counters: &mut WorkCounters,
     ) {
         match self {
+            Self::PrepareGrant(request) => request.prepare(),
             Self::ReleasePacket(packet) => drop(packet),
             Self::Reclaim(task, budget, selection) => {
                 gc.reclaim_swept(task, index, epoch, budget, counters, selection);
@@ -576,10 +578,15 @@ impl GarbageCollector {
             if cycle.refund_selection.is_none() {
                 cycle.refund_selection = self.grant_registry.capture(&task.metadata);
             }
-            if let Some(selection) = &mut cycle.refund_selection
-                && !selection.advance(work)
-            {
-                return Unit::Progress;
+            if let Some(selection) = &mut cycle.refund_selection {
+                use crate::retirement_grants::ScanProgress;
+                match selection.scan(work) {
+                    ScanProgress::More => return Unit::Progress,
+                    ScanProgress::Prepare(request) => {
+                        return Unit::Sweep(SweepWork::PrepareGrant(request));
+                    }
+                    ScanProgress::Done => {}
+                }
             }
         }
         let scan_budget = (*work + 1).min(32);

@@ -3,6 +3,7 @@ use crate::GarbageCollector;
 use crate::collector::AllocationReservation;
 use crate::publication_directory::Directory;
 use arc_swap::{ArcSwap, ArcSwapOption};
+use once_cell::race::OnceBox;
 use portable_atomic::AtomicU64;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
@@ -29,6 +30,7 @@ const SEALED: usize = usize::MAX - 2;
 
 #[derive(Debug, Default)]
 struct Generation {
+    spare: Arc<Donation>,
     winner: ArcSwapOption<Donation>,
 }
 
@@ -40,6 +42,12 @@ impl Generation {
         previous
             .as_ref()
             .is_none_or(|winner| Arc::ptr_eq(winner, donor))
+    }
+
+    fn claim_new(&self, donor: &Arc<Donation>) -> bool {
+        self.winner
+            .compare_and_swap(std::ptr::null::<Donation>(), Some(donor.clone()))
+            .is_none()
     }
 
     fn seal(&self) -> Option<Arc<Donation>> {
@@ -61,6 +69,11 @@ impl Generation {
 struct Entry {
     bytes: AtomicUsize,
     stage: AtomicU8,
+    generations: OnceBox<Generations>,
+}
+
+#[derive(Debug, Default)]
+struct Generations {
     first: Generation,
     retry: ArcSwapOption<Generation>,
 }
@@ -79,7 +92,9 @@ struct Attempt {
 
 impl Attempt {
     fn generation(&self) -> &Generation {
-        self.retry.as_deref().unwrap_or(&self.request.entry().first)
+        self.retry
+            .as_deref()
+            .unwrap_or_else(|| &self.request.generations().first)
     }
 }
 
@@ -92,10 +107,32 @@ impl Request {
         &self.page.slots[self.slot]
     }
 
+    // All competing helpers may construct a candidate. OnceBox publishes one
+    // allocation and has no initializer lock that a parked preparer can retain.
+    pub(crate) fn prepare(&self) {
+        if self.entry().generations.get().is_some() {
+            return;
+        }
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        crate::refund_tests::park_selection(crate::refund_tests::SelectionPoint::BeforePrepare);
+        self.entry().generations.get_or_init(Box::default);
+    }
+
+    #[expect(
+        clippy::expect_used,
+        reason = "generation storage is published before activating a request"
+    )]
+    fn generations(&self) -> &Generations {
+        self.entry()
+            .generations
+            .get()
+            .expect("active generation storage")
+    }
+
     fn attempt(&self) -> Attempt {
         Attempt {
             request: self.clone(),
-            retry: self.entry().retry.load_full(),
+            retry: self.generations().retry.load_full(),
         }
     }
 
@@ -293,7 +330,7 @@ impl<'a> Demand<'a> {
         if state == ABANDONED {
             // Only the live demand can reopen its current attempt.
             self.request
-                .entry()
+                .generations()
                 .retry
                 .store(Some(Arc::new(Generation::default())));
             return None;
@@ -358,6 +395,12 @@ pub(crate) struct Selection {
     remaining: usize,
 }
 
+pub(crate) enum ScanProgress {
+    More,
+    Done,
+    Prepare(Request),
+}
+
 impl Selection {
     #[expect(
         clippy::cast_possible_truncation,
@@ -382,35 +425,53 @@ impl Selection {
         ))
     }
 
+    #[cfg(test)]
     pub(crate) fn advance(&mut self, budget: &mut usize) -> bool {
+        loop {
+            match self.scan(budget) {
+                ScanProgress::More => return false,
+                ScanProgress::Done => return true,
+                ScanProgress::Prepare(request) => request.prepare(),
+            }
+        }
+    }
+
+    pub(crate) fn scan(&mut self, budget: &mut usize) -> ScanProgress {
         let steps = budget.saturating_add(1).min(32);
         for i in 0..steps {
             let Some((next, request)) = self.next_request(self.cursor) else {
-                return true;
+                return ScanProgress::Done;
             };
+            let entry = request.entry();
+            let bytes = entry.bytes.load(Ordering::Relaxed);
+            if bytes <= self.remaining && entry.stage.load(Ordering::Acquire) != CLOSED {
+                if entry.generations.get().is_none() {
+                    return ScanProgress::Prepare(request);
+                }
+                if let Some(attempt) = request.activate() {
+                    let generation = attempt.generation();
+                    if generation.winner.load().is_none() {
+                        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                        tests::before_binding_commit();
+                        let donor = self.donor.as_ref().unwrap_or(&generation.spare);
+                        // Two ordinary selectors racing the first slot propose
+                        // the same spare. Only its successful NULL CAS owns it.
+                        if generation.claim_new(donor) {
+                            self.donor = Some(donor.clone());
+                            self.remaining -= bytes;
+                        }
+                    }
+                }
+            }
             self.cursor = next;
             if i != 0 {
                 *budget -= 1;
             }
-            let bytes = request.entry().bytes.load(Ordering::Relaxed);
-            if bytes <= self.remaining
-                && let Some(attempt) = request.activate()
-                && attempt.generation().winner.load().is_none()
-            {
-                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
-                tests::before_binding_commit();
-                let donor = self
-                    .donor
-                    .get_or_insert_with(|| Arc::new(Donation::default()));
-                if attempt.generation().claim(donor) {
-                    self.remaining -= bytes;
-                }
-            }
             if self.remaining == 0 || self.cursor == self.limit {
-                return true;
+                return ScanProgress::Done;
             }
         }
-        false
+        ScanProgress::More
     }
 
     pub(crate) fn mark_private(&self) {
