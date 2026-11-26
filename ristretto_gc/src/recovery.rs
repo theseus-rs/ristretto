@@ -215,13 +215,26 @@ impl RefundNotifier {
     }
 }
 
+impl GarbageCollector {
+    pub(crate) fn observe_space(&self, bytes: usize) -> Result<SpaceObservation<'_>> {
+        let observation = self.recovery.register_observation(bytes)?;
+        // Publish the threshold into the budget's modification order before
+        // requesting a cycle. A later refund sees this registration, and
+        // credit already available here counts even if stolen before polling.
+        if bytes <= self.headroom_after_registration() {
+            observation.seen.store(true, Ordering::Release);
+        }
+        Ok(observation)
+    }
+}
+
 impl Recovery {
     pub(crate) fn registered_workers(&self) -> usize {
         self.workers.load(Ordering::Acquire)
     }
 
     /// Install before requesting a cycle, including before the first future poll.
-    pub(crate) fn observe_space(&self, bytes: usize) -> Result<SpaceObservation<'_>> {
+    fn register_observation(&self, bytes: usize) -> Result<SpaceObservation<'_>> {
         let seen = Arc::new(AtomicBool::new(false));
         let mut observations = lock(&self.observations);
         observations.next_id = observations
@@ -1085,7 +1098,7 @@ mod tests {
         );
         gc.reserve_allocation(8)?;
         for released in [4, 8] {
-            let observation = gc.recovery.observe_space(8)?;
+            let observation = gc.observe_space(8)?;
             // Install the observation before requesting collection. Neither an
             // executor poll nor a waker registration has happened yet.
             let ticket = gc.completed_full_ticket() + 1;
@@ -1112,8 +1125,8 @@ mod tests {
         use std::time::Duration;
         let gc = GarbageCollector::with_config(Configuration::builder().max_heap_bytes(8).build());
         let charge = gc.reserve_private_bytes(8)?;
-        let fits = gc.recovery.observe_space(8)?;
-        let large = gc.recovery.observe_space(9)?;
+        let fits = gc.observe_space(8)?;
+        let large = gc.observe_space(9)?;
         std::thread::scope(|scope| {
             let parked = lock(&gc.recovery.waiters);
             let (done, recv) = mpsc::channel();
@@ -1176,10 +1189,30 @@ mod tests {
     }
 
     #[test]
+    fn opportunity_at_registration_survives_a_thief_before_the_first_poll() -> Result<()> {
+        let gc = GarbageCollector::with_config(Configuration::builder().max_heap_bytes(8).build());
+        let early = gc.observe_space(8)?;
+        let too_large = gc.observe_space(9)?;
+        let stolen = gc.reserve_private_bytes(8)?;
+        let late = gc.observe_space(8)?;
+        let ticket = gc.completed_full_ticket() + 1;
+        gc.collect_full()?;
+        for (observation, expected) in [(&early, true), (&too_large, false), (&late, false)] {
+            let mut wait = CollectionWait::for_space(&gc, ticket, observation);
+            assert!(matches!(
+                Pin::new(&mut wait).poll(&mut Context::from_waker(Waker::noop())),
+                Poll::Ready(Ok(actual)) if actual == expected
+            ));
+        }
+        drop(stolen);
+        Ok(())
+    }
+
+    #[test]
     fn cancelling_an_unpolled_space_observation_removes_it() -> Result<()> {
         let recovery = Recovery::default();
-        let small = recovery.observe_space(4)?;
-        let large = recovery.observe_space(8)?;
+        let small = recovery.register_observation(4)?;
+        let large = recovery.register_observation(8)?;
         drop(small);
         assert_eq!(recovery.minimum_observation.load(Ordering::Acquire), 8);
         recovery.record_headroom(4);

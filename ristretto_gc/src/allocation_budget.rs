@@ -31,7 +31,6 @@ impl AllocationBudget {
     /// Publish waiter registration into the same modification order as refunds.
     /// A later release acquires that registration; an earlier refund is visible
     /// in the returned charge. An acquire-only load would allow both sides to miss.
-    #[cfg(not(target_family = "wasm"))]
     pub(crate) fn used_after_registration(&self) -> usize {
         self.used.fetch_or(0, Ordering::AcqRel)
     }
@@ -100,6 +99,37 @@ mod tests {
         drop(exact);
         assert_eq!(budget.used(), 0);
         Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn a_refund_and_a_new_observer_cannot_both_miss_the_registration() {
+        use loom::sync::Arc;
+        use loom::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+        loom::model(|| {
+            let used = Arc::new(AtomicUsize::new(2));
+            let registered = Arc::new(AtomicBool::new(false));
+            let observed = Arc::new(AtomicBool::new(false));
+            let refund = {
+                let (used, registered, observed) =
+                    (used.clone(), registered.clone(), observed.clone());
+                loom::thread::spawn(move || {
+                    used.fetch_sub(2, Ordering::AcqRel);
+                    if registered.load(Ordering::Acquire) {
+                        observed.store(true, Ordering::Release);
+                    }
+                    // A thief takes half the space. A later two-byte request
+                    // cannot use the earlier offer.
+                    used.fetch_add(1, Ordering::AcqRel);
+                })
+            };
+            registered.store(true, Ordering::Release);
+            let charge = used.fetch_or(0, Ordering::AcqRel);
+            refund.join().expect("refund finished");
+            if charge != 1 {
+                assert!(charge == 0 || observed.load(Ordering::Acquire));
+            }
+        });
     }
 
     #[test]

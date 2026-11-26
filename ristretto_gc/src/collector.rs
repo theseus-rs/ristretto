@@ -2928,7 +2928,6 @@ impl GarbageCollector {
         }
     }
 
-    #[cfg(not(target_family = "wasm"))]
     pub(crate) fn headroom_after_registration(&self) -> usize {
         self.configuration
             .max_heap_bytes
@@ -3029,7 +3028,7 @@ impl GarbageCollector {
             if let Ok(reservation) = self.reserve_bytes(size) {
                 return Ok(reservation);
             }
-            let opportunity = self.recovery.observe_space(size)?;
+            let opportunity = self.observe_space(size)?;
             let ticket = self.request_space_cycle(empty_cycles);
             let mut observed_space = false;
             loop {
@@ -3072,7 +3071,7 @@ impl GarbageCollector {
                 .allocation_recovery
                 .measure(self.diagnostics_enabled());
             let needed = size.saturating_sub(self.context_credit(size));
-            let opportunity = self.recovery.observe_space(needed)?;
+            let opportunity = self.observe_space(needed)?;
             let ticket = self.request_space_cycle(empty_cycles);
             loop {
                 if size <= self.context_headroom(size) {
@@ -3118,7 +3117,7 @@ impl GarbageCollector {
             if size <= self.context_headroom(size) {
                 return Ok(());
             }
-            let opportunity = self.recovery.observe_space(size)?;
+            let opportunity = self.observe_space(size)?;
             let ticket = self.request_space_cycle(empty_cycles);
             let offered =
                 crate::recovery::CollectionWait::for_space(self, ticket, &opportunity).await?;
