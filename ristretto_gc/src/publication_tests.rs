@@ -295,6 +295,65 @@ fn dynamic_leaf_writes_preserve_hooks_and_later_reference_publication() -> Resul
     Ok(())
 }
 
+#[test]
+fn removing_a_white_edge_during_marking_survives_an_empty_write_finish() -> Result<()> {
+    struct MaybeEdge(Option<Gc<u64>>);
+
+    // SAFETY: the only edge is traced and rooted. The empty variant has no
+    // demotion work, notification or relocation hooks.
+    unsafe impl Trace for MaybeEdge {
+        fn root(&mut self) {
+            self.0.root();
+        }
+        fn trace(&self, gc: &GarbageCollector) {
+            self.0.trace(gc);
+        }
+        unsafe fn unroot(&mut self, owner: crate::TraceOwner<'_>) {
+            // SAFETY: the exclusive guard covers the optional managed edge.
+            unsafe { Trace::unroot(&mut self.0, owner) };
+        }
+        fn can_skip_unroot_after_write(&self) -> bool {
+            self.0.is_none()
+        }
+    }
+
+    for concurrent in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .allocation_threshold(usize::MAX)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .concurrent_publication(concurrent)
+                .build(),
+        );
+        let child = Gc::try_new(&gc, 17_u64)?;
+        let address = child.as_ptr() as usize;
+        let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+        let parent = Gc::try_new(
+            &gc,
+            crate::cell::RwLock::new(MaybeEdge(Some(child.into_rooted()))),
+        )?;
+        gc.phase_clock.disable_certification();
+        gc.collect();
+        assert!((0..1024).any(|_| {
+            gc.step();
+            lock(&gc.domains[1].cycle).phase == Phase::Mark
+        }));
+        let metadata = gc.metadata_for_address(address).expect("registered child");
+        assert!(!metadata.marked(1, gc.domains[1].epoch.load(Ordering::Acquire)));
+        parent.write().0 = None;
+        assert!((0..1024).any(|_| gc.step()));
+        assert!(!gc.pending());
+        assert_eq!(weak.upgrade().as_deref(), Some(&17));
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+        drop((parent, metadata));
+        gc.stop()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
+
 #[cfg(not(target_family = "wasm"))]
 #[test]
 fn leaf_write_hooks_finish_while_the_legacy_publication_writer_is_held() -> Result<()> {
