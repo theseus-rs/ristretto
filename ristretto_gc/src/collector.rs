@@ -3969,12 +3969,11 @@ impl GarbageCollector {
         if satisfied && clock.unchanged(snapshot) {
             // Cache only after successful certification. Phase changes after this
             // point merely leave a stale epoch key; rollover disables the cache.
-            crate::context::with_state(self, |state| {
-                state.completed(crate::context::Record {
-                    identity: metadata.id,
-                    ..record
-                })
-            });
+            let record = crate::context::Record {
+                identity: metadata.id,
+                ..record
+            };
+            crate::context::with_state(self, |state| state.completed(record));
             true
         } else {
             false
