@@ -5,9 +5,16 @@ use std::sync::{Arc, Barrier, mpsc};
 use std::time::Duration;
 
 thread_local! {
+    static REGION_RETURN: Cell<Option<mpsc::Sender<()>>> = const { Cell::new(None) };
     static TERMINAL: Cell<bool> = const { Cell::new(false) };
     static SELECTOR: std::cell::RefCell<Option<SelectorGate>> = const { std::cell::RefCell::new(None) };
     static PARK: Cell<Option<(mpsc::Sender<()>, mpsc::Receiver<()>)>> = const { Cell::new(None) };
+}
+
+pub(crate) fn before_region_return() {
+    if let Some(entered) = REGION_RETURN.take() {
+        let _ = entered.send(());
+    }
 }
 
 #[expect(clippy::expect_used, reason = "bounded forced schedule")]
@@ -771,5 +778,88 @@ fn publishing_a_second_returned_lease_cannot_revoke_the_first_physical_claim() -
     }
     assert_eq!(gc.managed_bytes(), 0);
     assert!(!gc.has_released_donor_jobs());
+    Ok(())
+}
+
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    clippy::panic_in_result_fn,
+    reason = "bounded forced schedule"
+)]
+fn a_busy_descriptor_registry_does_not_strand_an_unrelated_native_allocation() -> Result<()> {
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .local_allocation_buffers(true)
+            .region_shards(1)
+            .max_heap_bytes(24)
+            .allocation_threshold(usize::MAX)
+            .diagnostics(true)
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .build(),
+    );
+    let global = Gc::try_new(&gc, 11_u64)?;
+    let context = gc.register_context();
+    let regional = context.with(|| Gc::try_new(&gc, 13_u64))?;
+    let keep = context.with(|| Gc::try_new(&gc, 17_u64))?;
+    assert_eq!(gc.managed_bytes(), 24);
+    assert_eq!(gc.diagnostics().descriptor_occupied_bytes, 16);
+    let global_meta = gc.metadata_for_address(global.as_ptr().addr()).unwrap();
+    let region_meta = gc.metadata_for_address(regional.as_ptr().addr()).unwrap();
+    let global_lease =
+        crate::metadata::ObjectMetadata::borrow_callback(&global_meta, false).unwrap();
+    let region_lease =
+        crate::metadata::ObjectMetadata::borrow_callback(&region_meta, false).unwrap();
+    drop((global, regional));
+    gc.collect_full()?;
+    assert_eq!(gc.managed_bytes(), 24);
+    let (entered, parked) = mpsc::channel();
+    let (resume, release) = mpsc::channel();
+    let (at_region, attempted) = mpsc::channel();
+    let finished = AtomicBool::new(false);
+    let recovered = std::thread::scope(|scope| {
+        let heap = &gc;
+        scope.spawn(move || {
+            heap.with_parked_descriptor_registry(|| {
+                entered.send(()).unwrap();
+                release.recv_timeout(Duration::from_secs(8)).unwrap();
+            })
+        });
+        parked.recv_timeout(Duration::from_secs(3)).unwrap();
+        drop(region_lease);
+        let done = &finished;
+        scope.spawn(move || {
+            let _worker = crate::recovery::WorkerRegistration::new(heap);
+            REGION_RETURN.set(Some(at_region));
+            while !done.load(Ordering::Acquire) {
+                heap.step();
+                std::thread::yield_now();
+            }
+        });
+        let observed = attempted.recv_timeout(Duration::from_secs(3));
+        let mut peer = WaitingPeer::new(&gc, 23);
+        peer.poll_until_parked();
+        drop(global_lease);
+        let deadline = Instant::now() + Duration::from_secs(1);
+        while peer.result.is_none() && Instant::now() < deadline {
+            peer.poll_when_woken();
+            std::thread::yield_now();
+        }
+        let recovered = peer.result.take();
+        finished.store(true, Ordering::Release);
+        resume.send(()).unwrap();
+        assert!(
+            observed.is_ok(),
+            "worker must attempt returning regional storage"
+        );
+        recovered
+    });
+    let root =
+        recovered.expect("unrelated global allocation must finish before registry release")?;
+    assert_eq!(**root, 23);
+    drop((root, keep, context));
+    gc.collect_full()?;
+    assert_eq!(gc.managed_bytes(), 0);
     Ok(())
 }

@@ -4507,6 +4507,13 @@ impl GarbageCollector {
     }
 
     #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+    pub(crate) fn with_parked_descriptor_registry(&self, work: impl FnOnce()) {
+        if let Some(heap) = &self.descriptor_regions {
+            heap.with_parked_registry(work);
+        }
+    }
+
+    #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
     pub(crate) fn has_released_donor_jobs(&self) -> bool {
         self.released_donors.has_jobs()
     }

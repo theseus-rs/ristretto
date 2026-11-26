@@ -1024,6 +1024,8 @@ impl Drop for Block {
     fn drop(&mut self) {
         // Always acquire the registry before the range map, as allocation does.
         // The weak link permits buffers to outlive their heap without a cycle.
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        crate::refund_tests::before_region_return();
         let state = self.region.state.upgrade();
         let mut state = state.as_ref().map(|state| lock(state));
         let previous = self.region.largest_free();
