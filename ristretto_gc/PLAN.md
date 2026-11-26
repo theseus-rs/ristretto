@@ -2,13 +2,21 @@
 
 ## Tenfold complete-collection gate
 
+The integrated collector at `280ad63d` passed all 36 conditions against
+`f1daebeb` with individual 95% lower bounds of at least 10.69× native and
+10.97× WASI. Each condition used 24 fresh process pairs. A separate Java run
+completed every request at 1,000 and 1,500 requests/s. Both HotSpot collectors
+had lower median scheduled p99.9. Work continues on reclamation under
+contention, global-pause coverage and sustained-load qualification.
+[Integrated collection results](../benchmarks/gc/publication/typed-root-collection/consolidated-complete/README.md)
+· [Java results](../benchmarks/gc/publication/typed-root-collection/consolidated-java/README.md).
+
 The experiment at a3fef08c cleared 10× against f1daebeb in every collection
 condition on the qualified host. Over 24 randomized pairs in each of 36 cells,
 the minimum native median and individual 95% lower bound were 10.98× and
 10.23×. WASI reached 11.44× and 11.34×. All 1,728 processes passed, including
 mixed-cycle physical refunds. Independent builds of the published source
-reproduced both measured executables. Production integration needs a new
-qualification after applying the reviewed changes. [Graphs, inputs and
+reproduced both measured executables. The integrated follow-up results are recorded above. [Graphs, inputs and
 reproduction commands for PR #1233](../benchmarks/gc/publication/typed-root-collection/tenfold-complete/README.md).
 
 The first tenfold collector exceeded the 512 MiB limit during JVM warmup in
