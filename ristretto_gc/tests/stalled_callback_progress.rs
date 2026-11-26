@@ -173,14 +173,29 @@ fn exercise_payload<T: Trace + Send + Sync + 'static, D: Trace + Send + Sync + '
     assert!(progress.collections_started >= 2);
     if release_donor {
         let allocated = result?;
-        assert!(progress.managed_bytes_freed >= donor_size);
+        // Physical headroom is visible as soon as the allocation is funded.
+        // Each worker flushes its cumulative work counters after its step.
+        assert_eq!(
+            progress.bytes_managed,
+            payload_size + Gc::allocation_size(&11_u64)?
+        );
         assert_eq!(**allocated, 11);
     } else {
         assert!(matches!(result, Err(ristretto_gc::Error::OutOfMemory)));
+        assert_eq!(progress.bytes_managed, payload_size + donor_size);
         assert_eq!(progress.managed_bytes_freed, 0);
     }
     drop(retained);
     gc.stop()?;
+    let replacement_charge = if release_donor {
+        Gc::allocation_size(&11_u64)?
+    } else {
+        0
+    };
+    assert_eq!(
+        gc.statistics()?.managed_bytes_freed,
+        payload_size + donor_size + replacement_charge
+    );
     assert_eq!(callback.finalized.load(Ordering::Relaxed), finalized);
     assert_eq!(callback.cleared.load(Ordering::Relaxed), cleared);
     assert_eq!(callback.dropped.load(Ordering::Relaxed), 1);
