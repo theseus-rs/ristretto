@@ -324,3 +324,11 @@ fn a_retired_source_keeps_its_release_accounting_after_the_epoch_ends() {
     assert_eq!(released.evacuation_bytes_released, 1024);
     assert_eq!(released.shared_committed_bytes, 0);
 }
+
+#[cfg(not(target_family = "wasm"))]
+impl RegionHeap {
+    pub(crate) fn with_parked_registry(&self, work: impl FnOnce()) {
+        let _guard = lock(self.shard(0));
+        work();
+    }
+}

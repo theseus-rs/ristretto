@@ -101,6 +101,57 @@ mod native {
     use std::time::Duration;
 
     #[test]
+    fn a_compact_step_returns_while_the_trim_registry_is_parked() -> Result<()> {
+        for counted in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .compact_heap(true)
+                    .region_shards(2)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let root = Gc::try_new(&gc, 42_u64)?;
+            gc.collect();
+            for _ in 0..10_000 {
+                if lock(&gc.domains[1].cycle).phase == Phase::Compact {
+                    break;
+                }
+                gc.step();
+            }
+            assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Compact);
+            thread::scope(|scope| {
+                let (done, recv) = mpsc::channel();
+                let peer = &gc;
+                gc.region_heap()
+                    .expect("payload arena")
+                    .with_parked_registry(|| {
+                        scope.spawn(move || {
+                            for _ in 0..64 {
+                                peer.coordinated_step(false);
+                            }
+                            done.send(()).expect("completed polls");
+                        });
+                        recv.recv_timeout(Duration::from_secs(3))
+                            .expect("a trim poll waited for the parked region");
+                        assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Compact);
+                        let id = gc.add_root(&root);
+                        gc.write_barrier(&root);
+                        gc.remove_root_by_id(id);
+                    });
+            });
+            gc.collect_full()?;
+            assert_eq!(**root, 42);
+            drop(root);
+            gc.collect_full()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+        Ok(())
+    }
+
+    #[test]
     fn phase_statistics_do_not_park_unrelated_root_and_edge_publication() -> Result<()> {
         for starting in [true, false] {
             let gc = GarbageCollector::with_config(

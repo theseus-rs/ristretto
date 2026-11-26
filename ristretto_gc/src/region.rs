@@ -656,8 +656,12 @@ impl RegionHeap {
 
     /// Inspects at most `budget` regions, releasing empty ones. Returns true at the end of a pass.
     pub fn trim(&self, budget: usize) -> bool {
-        let mut index = lock(&self.trim_shard);
-        let mut state = lock(self.shard(*index));
+        self.trim_available(budget).unwrap_or(false)
+    }
+
+    fn trim_available(&self, budget: usize) -> Option<bool> {
+        let mut index = try_lock(&self.trim_shard)?;
+        let mut state = try_lock(self.shard(*index))?;
         for _ in 0..budget {
             let next = state
                 .regions
@@ -677,10 +681,10 @@ impl RegionHeap {
                 *index += 1;
                 if *index == self.states.len() {
                     *index = 0;
-                    return true;
+                    return Some(true);
                 }
                 drop(state);
-                state = lock(self.shard(*index));
+                state = try_lock(self.shard(*index))?;
                 continue;
             };
             state.trim_cursor = id;
@@ -688,10 +692,10 @@ impl RegionHeap {
                 // Backing deallocation can block in the system allocator.
                 drop(state);
                 drop(region);
-                state = lock(self.shard(*index));
+                state = try_lock(self.shard(*index))?;
             }
         }
-        false
+        Some(false)
     }
 
     /// Returns physical occupancy and relocation counters.
