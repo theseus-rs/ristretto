@@ -23,6 +23,10 @@ collection comparisons still cleared 10×. The native and WASI minimum individua
 lower bounds at `3d882623` were 10.30× and 12.21×. The forced deletion of a
 white child passed under both publication policies, including on WASI and Miri.
 [Write costs, collection intervals and snapshot trials](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/primitive-writes/README.md)
+At the same candidate, every scheduled Java roots request finished, but
+Ristretto's median scheduled p99.9 remained 3,648 µs at 1,000/s and 5,632 µs at
+1,500/s. One 1,500/s process reached 327,680 µs.
+[Java results and G1/ZGC comparison](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/primitive-writes/README.md)
 
 
 
