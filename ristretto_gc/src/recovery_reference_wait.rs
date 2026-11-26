@@ -1,7 +1,7 @@
 //! Reference handlers register before checking the linked pending queue. A
 //! broadcast records the last eligible ticket on each page. Cancellation and
 //! delivery compete for the same ticket before moving its callback.
-use super::{GarbageCollector, Poll, Recovery};
+use super::{GarbageCollector, Poll, Recovery, WakeFailures};
 use arc_swap::{ArcSwap, ArcSwapOption};
 use once_cell::race::OnceBox;
 use portable_atomic::AtomicU64;
@@ -231,7 +231,7 @@ impl Directory {
         }
     }
 
-    fn deliver(&self) {
+    fn deliver(&self, failures: &mut WakeFailures) {
         let Some(notice) = self.ready.load_full() else {
             return;
         };
@@ -245,7 +245,7 @@ impl Directory {
                     && ticket.get() <= *cutoff
                     && let Some(waker) = self.take(page, index, ticket)
                 {
-                    waker.wake();
+                    failures.deliver(|| waker.wake());
                 }
             }
         }
@@ -302,7 +302,11 @@ impl Recovery {
         .await;
     }
 
-    pub(crate) fn notify_reference_handlers(&self, gc: &GarbageCollector) {
+    pub(super) fn notify_reference_handlers(
+        &self,
+        gc: &GarbageCollector,
+        failures: &mut WakeFailures,
+    ) {
         if gc.has_pending_references()
             && self.references.enrolled.fetch_or(false, Ordering::AcqRel)
             && let Some(directory) = self.references.directory.get()
@@ -314,7 +318,7 @@ impl Recovery {
             && let Some(_delivery) = Delivery::enter(directory)
         {
             while directory.ready.load().is_some() {
-                directory.deliver();
+                directory.deliver(failures);
             }
         }
     }
@@ -335,6 +339,32 @@ mod tests {
     }
 
     #[test]
+    fn panicking_reference_handler_does_not_consume_a_peers_wake() {
+        struct Panics;
+        impl Wake for Panics {
+            fn wake(self: Arc<Self>) {
+                panic!("executor stopped");
+            }
+        }
+        let directory = Directory::default();
+        let first = directory.register(&Waker::from(Arc::new(Panics)));
+        let healthy = Arc::new(Count::default());
+        let second = directory.register(&Waker::from(healthy.clone()));
+        assert!(Arc::ptr_eq(first.page(), second.page()));
+        directory.ready.store(Some(Arc::new(Broadcast(vec![(
+            second.page().clone(),
+            second.ticket.get(),
+        )]))));
+        let mut failures = WakeFailures::default();
+        directory.deliver(&mut failures);
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| failures.finish())).is_err()
+        );
+        assert_eq!(healthy.0.load(Ordering::Acquire), 1);
+        assert!(directory.ready.load().is_none());
+    }
+
+    #[test]
     fn old_broadcast_and_cancel_cannot_take_a_reused_reference_slot() {
         let directory = Directory::default();
         let first_waker = Arc::new(Count::default());
@@ -342,7 +372,7 @@ mod tests {
         let first = directory.register(&Waker::from(first_waker.clone()));
         let notice = Arc::new(Broadcast(vec![(first.page().clone(), first.ticket.get())]));
         directory.ready.store(Some(notice.clone()));
-        directory.deliver();
+        directory.deliver(&mut WakeFailures::default());
         assert_eq!(first_waker.0.load(Ordering::Acquire), 1);
 
         let second = directory.register(&Waker::from(second_waker.clone()));
@@ -352,7 +382,7 @@ mod tests {
         drop(first);
         // A helper retains the original cutoff across a complete slot reuse.
         directory.ready.store(Some(notice));
-        directory.deliver();
+        directory.deliver(&mut WakeFailures::default());
         assert_eq!(second_waker.0.load(Ordering::Acquire), 0);
         assert!(
             directory

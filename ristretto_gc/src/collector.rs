@@ -2829,7 +2829,7 @@ impl GarbageCollector {
         }
         let _shutdown = CleanupScope::enter(self);
         #[cfg(not(target_family = "wasm"))]
-        {
+        let cleanup_failed = {
             let (workers, generation) = {
                 let mut workers = lock(&self.collector_thread);
                 let generation = self.worker_signals.swap(None);
@@ -2846,9 +2846,11 @@ impl GarbageCollector {
                     .join()
                     .map_err(|_| crate::Error::SyncError("collector worker panicked".into()))?;
             }
-            if let Some(generation) = generation {
-                generation.callbacks.join()?;
-            }
+            let cleanup_failed = if let Some(generation) = generation {
+                generation.callbacks.join()?
+            } else {
+                false
+            };
             let notifier = {
                 let _workers = lock(&self.collector_thread);
                 (self.recovery.registered_workers() == 0)
@@ -2859,7 +2861,8 @@ impl GarbageCollector {
                 notifier.close();
                 notifier.join();
             }
-        }
+            cleanup_failed
+        };
         self.collect_full()?;
         while self.retired_ready.load(Ordering::Acquire) != 0 || self.released_donors.has_jobs() {
             self.step();
@@ -2879,6 +2882,12 @@ impl GarbageCollector {
         });
         if let Some(heap) = &self.descriptor_regions {
             while !heap.trim(64) {}
+        }
+        #[cfg(not(target_family = "wasm"))]
+        if cleanup_failed {
+            return Err(crate::Error::SyncError(
+                "collector callback panicked".into(),
+            ));
         }
         Ok(())
     }
@@ -6274,8 +6283,7 @@ impl GarbageCollector {
     }
 
     fn notify_progress(&self) {
-        self.recovery.notify_reference_handlers(self);
-        self.recovery.notify_progress(self);
+        self.recovery.notify_gc_progress(self);
     }
 
     /// Pointer used by the compiled runtime context.

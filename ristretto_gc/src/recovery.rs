@@ -86,6 +86,25 @@ thread_local! {
     static DELIVERING: std::cell::RefCell<Vec<usize>> = const { std::cell::RefCell::new(Vec::new()) };
 }
 
+// A wake transfers ownership to arbitrary executor code. Preserve its first
+// panic while continuing to deliver the other already-published notifications.
+#[derive(Default)]
+struct WakeFailures(Option<Box<dyn std::any::Any + Send>>);
+
+impl WakeFailures {
+    fn deliver(&mut self, wake: impl FnOnce()) {
+        if let Err(panic) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(wake)) {
+            self.0.get_or_insert(panic);
+        }
+    }
+
+    fn finish(self) {
+        if let Some(panic) = self.0 {
+            std::panic::resume_unwind(panic);
+        }
+    }
+}
+
 struct DeliveryGuard(usize);
 
 impl DeliveryGuard {
@@ -284,13 +303,16 @@ impl Recovery {
     }
 
     #[cfg(not(target_family = "wasm"))]
-    pub(crate) fn callback_failed(&self) {
+    pub(crate) fn callback_failed(&self) -> bool {
         // Unfinished tickets must repoll even when the failure returned no useful space.
-        self.workers.rcu(|workers| Workers {
-            exit: workers.exit.saturating_add(u64::from(!workers.failed)),
-            failed: true,
-            ..**workers
-        });
+        !self
+            .workers
+            .rcu(|workers| Workers {
+                exit: workers.exit.saturating_add(u64::from(!workers.failed)),
+                failed: true,
+                ..**workers
+            })
+            .failed
     }
 
     fn worker_failed(&self) -> bool {
@@ -577,7 +599,21 @@ impl Recovery {
 
     /// Called after releasing all collector locks. A parked index writer can
     /// retain an old snapshot but cannot exclude classification or delivery.
+    #[cfg(any(test, not(target_family = "wasm")))]
     pub(crate) fn notify_progress(&self, gc: &GarbageCollector) {
+        let mut failures = WakeFailures::default();
+        self.notify_waiters(gc, &mut failures);
+        failures.finish();
+    }
+
+    pub(crate) fn notify_gc_progress(&self, gc: &GarbageCollector) {
+        let mut failures = WakeFailures::default();
+        self.notify_reference_handlers(gc, &mut failures);
+        self.notify_waiters(gc, &mut failures);
+        failures.finish();
+    }
+
+    fn notify_waiters(&self, gc: &GarbageCollector, failures: &mut WakeFailures) {
         self.prepare_notifications(gc);
         if !self.used.load(Ordering::Acquire) {
             return;
@@ -598,7 +634,7 @@ impl Recovery {
                 let deliver = w.wake_pending();
                 drop(w);
                 if deliver {
-                    self.deliver_ready();
+                    self.deliver_ready(failures);
                 }
                 return;
             }
@@ -653,7 +689,7 @@ impl Recovery {
                 .fetch_add(early, Ordering::Relaxed);
         }
         self.check_physical_waiters(gc, &mut candidates);
-        self.deliver_ready();
+        self.deliver_ready(failures);
     }
 
     fn check_physical_waiters(
@@ -694,7 +730,7 @@ impl Recovery {
         self.notify_progress(gc);
     }
 
-    fn deliver_ready(&self) {
+    fn deliver_ready(&self, failures: &mut WakeFailures) {
         let Some(_delivery) = DeliveryGuard::enter(self) else {
             return;
         };
@@ -705,7 +741,7 @@ impl Recovery {
                 wake_progress_tests::after_callback_claim();
             }
             if let Some(waker) = ready.and_then(|ready| ready.take(self)) {
-                Arc::unwrap_or_clone(waker).wake();
+                failures.deliver(|| Arc::unwrap_or_clone(waker).wake());
             }
         }
     }
@@ -1202,7 +1238,7 @@ mod tests {
         assert!(second.as_mut().poll(&mut cx).is_pending());
         gc.recovery.callback_failed();
         let report = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            gc.recovery.notify_progress(&gc)
+            gc.recovery.notify_progress(&gc);
         }));
         assert!(report.is_err());
         assert_eq!(recv.try_recv(), Ok(()));

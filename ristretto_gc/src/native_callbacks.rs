@@ -28,7 +28,7 @@ pub(super) struct Callbacks(OnceBox<Runner>);
 #[derive(Debug)]
 struct Runner {
     send: arc_swap::ArcSwapOption<mpsc::Sender<Job>>,
-    thread: Mutex<Option<thread::JoinHandle<crate::Result<()>>>>,
+    thread: Mutex<Option<thread::JoinHandle<bool>>>,
 }
 
 pub(super) struct Batch {
@@ -71,7 +71,7 @@ impl Callbacks {
         None
     }
 
-    pub(super) fn join(&self) -> crate::Result<()> {
+    pub(super) fn join(&self) -> crate::Result<bool> {
         if let Some(runner) = self.0.get() {
             // Disconnect after the pool stops. A sender already holding its own
             // handle can finish publication; the receiver drains all accepted jobs.
@@ -79,12 +79,12 @@ impl Callbacks {
             if let Some(handle) = lock(&runner.thread).take()
                 && handle.thread().id() != thread::current().id()
             {
-                handle.join().map_err(|_| {
+                return handle.join().map_err(|_| {
                     crate::Error::SyncError("collector callback worker panicked".into())
-                })??;
+                });
             }
         }
-        Ok(())
+        Ok(false)
     }
 }
 
@@ -123,7 +123,12 @@ impl Job {
                 .is_err()
             {
                 failed = true;
-                gc.recovery.callback_failed();
+                if gc.recovery.callback_failed() {
+                    // Waiters on unfinished tickets can now observe failure.
+                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        gc.notify_progress();
+                    }));
+                }
                 gc.wake();
             }
         }
@@ -144,13 +149,7 @@ impl Runner {
                 while let Ok(job) = recv.recv() {
                     failed |= job.run();
                 }
-                if failed {
-                    Err(crate::Error::SyncError(
-                        "collector callback panicked".into(),
-                    ))
-                } else {
-                    Ok(())
-                }
+                failed
             })?;
         Ok(Box::new(Self {
             send: arc_swap::ArcSwapOption::from(Some(Arc::new(send))),
