@@ -1434,6 +1434,12 @@ impl GarbageCollector {
                 .stage(i)
                 .and_then(|_| self.domain_at(i).mark_queue.birth_epoch())
         });
+        // The same phase flags can recur in a later cycle. Bind them to the
+        // captured queue owners before sampling marks; the final validation
+        // then covers both the mark reads and any root proposals.
+        if !self.phase_clock.same_phases(&snapshot) {
+            return None;
+        }
         let mut eligible = true;
         let mut linked = false;
         let mature = self.configuration.promotion_age.max(1);
@@ -1449,6 +1455,8 @@ impl GarbageCollector {
             let exempt = epoch.old_only && young;
             let marked = self.visible_mark(metadata, index, epoch.number);
             if stage != 0 && !exempt && !marked {
+                #[cfg(test)]
+                publication_tests::inspect_rejected_root(self);
                 eligible = false;
                 break;
             }

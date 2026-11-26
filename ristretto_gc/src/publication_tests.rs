@@ -551,9 +551,66 @@ type ObservedBirthProbe = fn(&GarbageCollector, &ObjectMetadata);
 type PendingBirthProbe = fn(&GarbageCollector, &MetadataRef);
 
 thread_local! {
+    static REJECTED_ROOT_PROBE: std::cell::Cell<Option<fn(&GarbageCollector)>> = const { std::cell::Cell::new(None) };
     static LINKED_GRAPH_PROBE: std::cell::Cell<Option<fn(&GarbageCollector)>> = const { std::cell::Cell::new(None) };
     static OBSERVED_ACTIVATION_PROBE: std::cell::Cell<Option<ObservedBirthProbe>> = const { std::cell::Cell::new(None) };
     static PENDING_BIRTH_PROBE: std::cell::Cell<Option<PendingBirthProbe>> = const { std::cell::Cell::new(None) };
+}
+
+pub(super) fn inspect_rejected_root(gc: &GarbageCollector) {
+    if let Some(probe) = REJECTED_ROOT_PROBE.take() {
+        probe(gc);
+    }
+}
+
+#[test]
+fn typed_root_cannot_reject_a_live_child_using_two_different_full_epochs() -> Result<()> {
+    fn reach_sweep(gc: &GarbageCollector) {
+        assert!((0..8192).any(|_| {
+            gc.step();
+            lock(&gc.domains[1].cycle).phase == Phase::Sweep
+        }));
+    }
+    for counted in [false, true] {
+        for conservative in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .allocation_threshold(usize::MAX)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .concurrent_publication(counted)
+                    .build(),
+            );
+            let child = Gc::try_new(&gc, 17_u64)?;
+            let address = child.as_ptr().addr();
+            let metadata = gc.objects.lookup(address).unwrap();
+            let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+            if conservative {
+                gc.phase_clock.disable_certification();
+            }
+            gc.request_full_cycle();
+            reach_sweep(&gc);
+            let old_phase = gc.phase_clock.indexed_root();
+            assert!((0..8192).any(|_| gc.step()));
+            gc.request_full_cycle();
+            assert!((0..8192).any(|_| {
+                gc.step();
+                gc.domains[1].active() && gc.domains[1].weak_phase() == 0
+            }));
+            let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+            assert!(!metadata.marked(1, epoch));
+            let record = crate::roots::RootSlots::default().prepare_typed_attempt(address);
+            REJECTED_ROOT_PROBE.set(Some(reach_sweep));
+            let decision = gc.certify_root_attempt(old_phase, &metadata, &record);
+            if REJECTED_ROOT_PROBE.take().is_some() {
+                reach_sweep(&gc);
+            }
+            assert_eq!(metadata.retention(1, epoch), Some(Retention::Strong));
+            assert_ne!(decision, Some(false));
+            assert_eq!(parent[0].rooted_clone().identity(), metadata.id);
+        }
+    }
+    Ok(())
 }
 
 pub(super) fn inspect_linked_graph(gc: &GarbageCollector) {
