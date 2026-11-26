@@ -79,14 +79,15 @@ async fn lifecycle(concurrent: bool, workers: usize, mixed: bool) -> Result<()> 
             .execute(&call_class, &method, &[] as &[Value])
             .await
     });
-    assert!(
-        execution
-            .as_mut()
-            .poll(&mut Context::from_waker(Waker::noop()))
-            .is_pending()
-    );
-    assert_eq!(thread.frames()?.len(), if mixed { 2 } else { 1 });
-    assert_eq!(thread.current_frame()?.program_counter(), 7);
+    static_call_tests::suspend_at(
+        execution.as_mut(),
+        &thread,
+        &class,
+        "run",
+        if mixed { 2 } else { 1 },
+        7,
+    )
+    .await?;
     let observed = class.static_value("observed")?;
     let Value::Object(Some(owner)) = &observed else {
         return Err(InternalError(

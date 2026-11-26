@@ -136,6 +136,41 @@ pub(crate) async fn vm_with_workers(
     Ok((vm, thread))
 }
 
+/// Drive any earlier asynchronous VM work with the real task waker. Stop on
+/// the first suspension at the requested Java instruction, before resuming it.
+pub(super) async fn suspend_at(
+    mut execution: std::pin::Pin<&mut impl Future<Output = Result<Option<Value>>>>,
+    thread: &Thread,
+    class: &Arc<Class>,
+    method: &str,
+    depth: usize,
+    pc: usize,
+) -> Result<()> {
+    use std::task::Poll;
+
+    std::future::poll_fn(|cx| {
+        if let Poll::Ready(result) = execution.as_mut().poll(cx) {
+            result?;
+            return Poll::Ready(Err(InternalError(format!(
+                "invocation returned before {method} at PC {pc}"
+            ))));
+        }
+        let frames = thread.frames()?;
+        assert!(frames.len() <= depth, "passed {method} at PC {pc}");
+        if frames.len() == depth
+            && frames.last().is_some_and(|frame| {
+                Arc::ptr_eq(frame.class(), class)
+                    && frame.method().name() == method
+                    && frame.program_counter() == pc
+            })
+        {
+            return Poll::Ready(Ok(()));
+        }
+        Poll::Pending
+    })
+    .await
+}
+
 pub(crate) async fn register(thread: &Thread, class: Arc<Class>) -> Result<Arc<Class>> {
     // Opt-in export lets HotSpot verify and execute exactly the same class files.
     if let Some(directory) = std::env::var_os("RISTRETTO_JIT_CALL_FIXTURES") {

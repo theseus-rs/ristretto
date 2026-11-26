@@ -212,14 +212,7 @@ async fn cancel_call(
             .execute(&call_class, &method, &[] as &[Value])
             .await
     });
-    assert!(
-        execution
-            .as_mut()
-            .poll(&mut Context::from_waker(Waker::noop()))
-            .is_pending()
-    );
-    assert_eq!(thread.frames()?.len(), 1);
-    assert_eq!(thread.current_frame()?.program_counter(), 8);
+    suspend_at(execution.as_mut(), &thread, &class, "caller", 1, 8).await?;
     let observed = class.static_value("observed")?;
     let weak = ristretto_gc::GcWeak::new(
         reference_owner(&observed)?,
