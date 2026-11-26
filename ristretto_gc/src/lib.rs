@@ -64,11 +64,6 @@ mod recovery;
 #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
 mod refund_tests;
 pub mod region;
-#[expect(
-    dead_code,
-    reason = "registry migration component awaits coupled phase/root activation"
-)]
-mod registration_image;
 mod registration_key;
 mod relocation;
 mod relocation_history;

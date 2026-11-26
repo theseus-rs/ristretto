@@ -479,7 +479,7 @@ mod imp {
 
 pub use crate::cell::{
     MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard,
-    RwLockUpgradableReadGuard, RwLockWriteGuard,
+    RwLockWriteGuard,
 };
 pub use imp::{
     MappedMutexGuard, Mutex, MutexGuard, RecursiveRwLock, RecursiveRwLockReadGuard,

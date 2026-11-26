@@ -113,10 +113,6 @@ impl<T> RwLock<T> {
 }
 
 impl<T: ?Sized> RwLock<T> {
-    pub fn read_recursive(&self) -> RwLockReadGuard<'_, T> {
-        self.read()
-    }
-
     pub fn read(&self) -> RwLockReadGuard<'_, T> {
         let guard = try_unpoison(self.value.try_read()).unwrap_or_else(|| {
             let gc = self.hook.as_ref().and_then(|hook| hook.collector.upgrade());
@@ -546,31 +542,6 @@ impl<T: ?Sized> DerefMut for MappedRwLockWriteGuard<'_, T> {
 }
 
 impl<T: ?Sized + fmt::Debug> fmt::Debug for MappedRwLockWriteGuard<'_, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        (**self).fmt(f)
-    }
-}
-
-/// Upgradable read guards aren't natively provided by `std::sync`. Since
-/// no caller in the workspace currently uses them on wasm, this is a
-/// thin wrapper around a write guard that preserves the `upgrade` API.
-pub struct RwLockUpgradableReadGuard<'a, T: ?Sized>(sync::RwLockWriteGuard<'a, T>);
-
-impl<'a, T: ?Sized> RwLockUpgradableReadGuard<'a, T> {
-    pub fn upgrade(s: Self) -> RwLockWriteGuard<'a, T> {
-        enter_guard();
-        RwLockWriteGuard(s.0, None, None, false, false)
-    }
-}
-
-impl<T: ?Sized> Deref for RwLockUpgradableReadGuard<'_, T> {
-    type Target = T;
-    fn deref(&self) -> &T {
-        &self.0
-    }
-}
-
-impl<T: ?Sized + fmt::Debug> fmt::Debug for RwLockUpgradableReadGuard<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         (**self).fmt(f)
     }
