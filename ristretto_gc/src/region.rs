@@ -7,6 +7,10 @@ use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 
+#[path = "region_probe.rs"]
+mod probe;
+pub(crate) use probe::AllocationProbe;
+
 #[path = "evacuation.rs"]
 mod evacuation;
 use crate::collector::try_lock;
@@ -86,6 +90,18 @@ struct State {
 }
 
 impl State {
+    fn record_allocation(&mut self, block: &Block, previous: usize, remaining: usize) {
+        let id = block.id();
+        self.occupied += block.len();
+        self.available.remove(&(previous, id));
+        if remaining != 0 {
+            self.available.insert((remaining, id));
+        }
+        if let Some(plan) = &mut self.evacuation {
+            plan.destination(&block.region);
+        }
+    }
+
     /// Unregister empty backing without releasing its physical charge. An escaped
     /// range owner can still retain it; `Region::drop` accounts for the actual free.
     fn remove_region(&mut self, id: u64, only_selected: bool) -> Option<Arc<Region>> {
@@ -204,6 +220,32 @@ impl Drop for Reservation {
                 .committed
                 .fetch_sub(self.bytes, Ordering::AcqRel);
         }
+    }
+}
+
+// Raw backing has no allocated Block until its registry accepts publication.
+// Discarding it can release both reservations without taking either region lock.
+struct PreparedRegion {
+    region: Arc<Region>,
+    reservation: Reservation,
+}
+
+impl PreparedRegion {
+    fn publish(mut self, layout: Layout, state: &mut State) -> Result<Block> {
+        let (block, remaining) = self.region.allocate(layout).ok_or(Error::OutOfMemory)?;
+        let id = self.region.id;
+        if remaining != 0 {
+            state.available.insert((remaining, id));
+        }
+        state.registered += self.region.layout.size();
+        state.occupied += layout.size();
+        self.region.registered.store(true, Ordering::Release);
+        if let Some(plan) = &mut state.evacuation {
+            plan.destination(&self.region);
+        }
+        state.regions.insert(id, self.region);
+        self.reservation.bytes = 0;
+        Ok(block)
     }
 }
 
@@ -445,16 +487,8 @@ impl RegionHeap {
             {
                 continue;
             }
-            if let Some(block) = region.allocate(layout) {
-                let remaining = block.region.largest_free();
-                state.occupied += layout.size();
-                state.available.remove(&(largest, id));
-                if remaining != 0 {
-                    state.available.insert((remaining, id));
-                }
-                if let Some(plan) = &mut state.evacuation {
-                    plan.destination(&block.region);
-                }
+            if let Some((block, remaining)) = region.allocate(layout) {
+                state.record_allocation(&block, largest, remaining);
                 return Some(block);
             }
         }
@@ -488,6 +522,17 @@ impl RegionHeap {
         if before.is_some() && !evacuating {
             return Err(Error::OutOfMemory);
         }
+        let fresh = self.prepare_region(layout, evacuating, index, state)?;
+        fresh.publish(layout, &mut lock(self.shard(index)))
+    }
+
+    fn prepare_region(
+        &self,
+        layout: Layout,
+        evacuating: bool,
+        index: usize,
+        mut state: MutexGuard<'_, State>,
+    ) -> Result<PreparedRegion> {
         let size = self.region_size.max(layout.size());
         let limit = if evacuating {
             self.limit
@@ -505,7 +550,7 @@ impl RegionHeap {
                 used.checked_add(size).filter(|total| *total <= limit)
             })
             .map_err(|_| Error::OutOfMemory)?;
-        let mut reservation = Reservation {
+        let reservation = Reservation {
             totals: state.backing.clone(),
             bytes: size,
         };
@@ -526,21 +571,10 @@ impl RegionHeap {
             track_relocation,
             size > self.region_size,
         )?);
-        let block = region.allocate(layout).ok_or(Error::OutOfMemory)?;
-        let mut state = lock(self.shard(index));
-        let remaining = region.largest_free();
-        if remaining != 0 {
-            state.available.insert((remaining, id));
-        }
-        state.regions.insert(id, region);
-        state.registered += size;
-        state.occupied += layout.size();
-        block.region.registered.store(true, Ordering::Release);
-        if let Some(plan) = &mut state.evacuation {
-            plan.destination(&block.region);
-        }
-        reservation.bytes = 0;
-        Ok(block)
+        Ok(PreparedRegion {
+            region,
+            reservation,
+        })
     }
 
     pub(crate) fn owns(&self, block: &Block) -> bool {
@@ -902,22 +936,35 @@ impl Region {
         self.occupied.load(Ordering::Acquire)
     }
 
-    fn largest_free(&self) -> usize {
-        lock(&self.free).by_size.last().map_or(0, |(size, _)| *size)
+    fn aligned_offset(&self, layout: Layout, start: usize, length: usize) -> Option<usize> {
+        let base = self.ptr.as_ptr().addr();
+        let address = base.checked_add(start)?;
+        let aligned =
+            (address.checked_add(layout.align() - 1)? & !(layout.align() - 1)).checked_sub(base)?;
+        (aligned.checked_add(layout.size())? <= start.checked_add(length)?).then_some(aligned)
     }
 
-    fn allocate(self: &Arc<Self>, layout: Layout) -> Option<Block> {
+    fn allocate(self: &Arc<Self>, layout: Layout) -> Option<(Block, usize)> {
         let mut free = lock(&self.free);
         let (start, length, aligned) =
             free.by_size
                 .range((layout.size(), 0)..)
-                .find_map(|(length, start)| {
-                    let absolute = (self.ptr.as_ptr() as usize).checked_add(*start)?;
-                    let aligned = absolute.checked_add(layout.align() - 1)? & !(layout.align() - 1);
-                    let aligned = aligned.checked_sub(self.ptr.as_ptr() as usize)?;
-                    let end = aligned.checked_add(layout.size())?;
-                    (end <= start.checked_add(*length)?).then_some((*start, *length, aligned))
+                .find_map(|&(length, start)| {
+                    self.aligned_offset(layout, start, length)
+                        .map(|at| (start, length, at))
                 })?;
+        let block = self.take_range(&mut free, layout, start, length, aligned);
+        Some((block, free.by_size.last().map_or(0, |(n, _)| *n)))
+    }
+
+    fn take_range(
+        self: &Arc<Self>,
+        free: &mut FreeRanges,
+        layout: Layout,
+        start: usize,
+        length: usize,
+        aligned: usize,
+    ) -> Block {
         free.remove(start);
         if aligned > start {
             free.insert(start, aligned - start);
@@ -927,13 +974,13 @@ impl Region {
             free.insert(end, start + length - end);
         }
         self.occupied.fetch_add(layout.size(), Ordering::Release);
-        Some(Block {
+        Block {
             region: self.clone(),
             offset: aligned,
             length: layout.size(),
             relocation: false,
             returned: false,
-        })
+        }
     }
 
     fn release(&self, free: &mut FreeRanges, offset: usize, length: usize) {

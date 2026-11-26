@@ -2122,6 +2122,24 @@ impl GarbageCollector {
         crate::allocation::Storage::global(layout)
     }
 
+    pub(crate) fn poll_payload(
+        &self,
+        layout: std::alloc::Layout,
+        probe: &mut crate::allocation::PayloadProbe,
+    ) -> std::task::Poll<Result<Option<crate::region::Block>>> {
+        let Some(heap) = self.regions.as_ref().filter(|_| layout.size() != 0) else {
+            return std::task::Poll::Ready(Ok(None));
+        };
+        if self.configuration.local_allocation_buffers
+            && let Some(result) = crate::context::try_with_allocation(self, |cache| {
+                cache.poll_payload(heap, layout, probe)
+            })
+        {
+            return result.map_ok(Some);
+        }
+        probe.exact.poll(heap, layout).map_ok(Some)
+    }
+
     pub(crate) fn allocate_payload(
         &self,
         layout: std::alloc::Layout,

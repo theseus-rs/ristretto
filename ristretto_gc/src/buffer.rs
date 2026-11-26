@@ -132,8 +132,22 @@ impl<T> HeapBuffer<T> {
         let layout = Layout::array::<T>(length).map_err(|_| Error::OutOfMemory)?;
         collector.make_room_async(layout.size()).await?;
         let mut retry = crate::recovery::PhysicalRetry::default();
+        let mut probe = crate::allocation::PayloadProbe::default();
         loop {
-            match Self::try_empty_in(collector, length) {
+            let storage = match collector.poll_payload(layout, &mut probe) {
+                std::task::Poll::Pending => {
+                    crate::recovery::yield_once().await;
+                    continue;
+                }
+                std::task::Poll::Ready(Ok(Some(block))) => Ok(Self {
+                    storage: Storage::Region(block),
+                    length: 0,
+                    copying: None,
+                }),
+                std::task::Poll::Ready(Ok(None)) => Self::try_empty(None, length),
+                std::task::Poll::Ready(Err(error)) => Err(error),
+            };
+            match storage {
                 Ok(mut buffer) => {
                     let chunk_elements = (64 * 1024 / size_of::<T>().max(1)).max(1);
                     while buffer.length < length {

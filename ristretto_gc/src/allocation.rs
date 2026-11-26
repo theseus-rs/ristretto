@@ -1,5 +1,5 @@
 //! Bounded context-local allocation ranges and typed descriptor ownership.
-use crate::region::{Block, RegionHeap};
+use crate::region::{AllocationProbe, Block, RegionHeap};
 use crate::{Error, Result};
 use portable_atomic::AtomicU64;
 use std::alloc::{Layout, alloc, dealloc};
@@ -10,6 +10,7 @@ use std::sync::atomic::{
     Ordering::{Acquire, Relaxed, Release},
 };
 use std::sync::{Arc, Mutex, Weak};
+use std::task::Poll;
 
 pub(crate) const CHUNK: usize = 16 * 1024;
 pub(crate) const SMALL: usize = 1024;
@@ -24,7 +25,61 @@ pub(crate) struct Cache {
     pub(crate) refills: u64,
 }
 
+/// A suspended allocation owns search positions only; cache tails remain owned
+/// by the context that supplied them, including across executor migration.
+#[derive(Default)]
+pub(crate) struct PayloadProbe {
+    pub(crate) exact: AllocationProbe,
+    refill: AllocationProbe,
+}
+
 impl Cache {
+    fn try_return_tail(tail: &mut Option<Block>) -> bool {
+        if tail.as_mut().is_some_and(|block| !block.try_return()) {
+            return false;
+        }
+        *tail = None;
+        true
+    }
+
+    pub(crate) fn poll_payload(
+        &mut self,
+        heap: &RegionHeap,
+        layout: Layout,
+        probe: &mut PayloadProbe,
+    ) -> Poll<Result<Block>> {
+        if layout.size() <= SMALL && layout.align() <= 64 {
+            if let Some(block) = self
+                .payload
+                .as_mut()
+                .and_then(|tail| tail.take_prefix(layout))
+            {
+                self.hits += 1;
+                return Poll::Ready(Ok(block));
+            }
+            if Self::try_return_tail(&mut self.payload) {
+                let chunk = Layout::from_size_align(CHUNK, 64).map_err(|_| Error::OutOfMemory)?;
+                if let Poll::Ready(Ok(mut block)) = probe.refill.poll(heap, chunk) {
+                    let first = block.take_prefix(layout).ok_or(Error::OutOfMemory)?;
+                    self.payload = Some(block);
+                    self.refills += 1;
+                    return Poll::Ready(Ok(first));
+                }
+            }
+        }
+        let result = probe.exact.poll(heap, layout);
+        if matches!(&result, Poll::Ready(Err(_)))
+            && (self.payload.is_some() || self.descriptor.is_some())
+        {
+            // Either a tail was returned, or its registry remains busy. Probe
+            // again without an owned reservation after giving the executor a turn.
+            Self::try_return_tail(&mut self.payload);
+            Self::try_return_tail(&mut self.descriptor);
+            return Poll::Pending;
+        }
+        result
+    }
+
     pub(crate) fn allocate(
         &mut self,
         heap: &RegionHeap,
