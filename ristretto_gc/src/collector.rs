@@ -3061,8 +3061,8 @@ impl GarbageCollector {
         }
     }
 
-    /// Records an ordinary allocation's logical live bytes and allocation debt.
-    /// Private/canonical reservations use their ownership-bound budget separately.
+    /// Records a published allocation's logical live bytes and allocation debt.
+    /// Private reservations are charged to the managed budget before publication.
     pub fn record_allocation(&self, size: usize) {
         self.record_published_bytes(size);
         self.record_allocation_debt(size);
@@ -3106,7 +3106,7 @@ impl GarbageCollector {
     /// quiescence, completed collection, absence of roots, or that another actor
     /// cannot reserve bytes immediately afterward. Callers must establish their
     /// own ownership/lifecycle conditions before treating it as cleanup evidence.
-    /// The value excludes catalog/runtime backing and host allocator overhead.
+    /// The value excludes host allocator overhead and JVM storage outside the managed budget.
     #[must_use]
     pub fn managed_bytes(&self) -> usize {
         self.managed_budget.used()

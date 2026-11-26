@@ -16,7 +16,7 @@ finalizer/diagnostic unwind reaches payload cleanup and that payload/diagnostic
 unwind still refunds the released storage. Normal sweep and deferred reclamation
 validate and borrow the collector for refund; private cleanup uses the weak link.
 The borrowed path rejects a foreign heap before claiming storage. Initial roots still
-belong to the synchronous construction scope; catalog migration remains open.
+belong to the synchronous construction scope.
 
 ## Specification contract
 
@@ -225,8 +225,7 @@ allocates no link states, while replacing a head allocates a new header. Another
 helper can complete an insertion before or after its original publisher stops,
 and delayed CAS attempts cannot replay it after retirement. The feature is off
 by default. Its historical comparison used the earlier mutex-backed map. Collection
-results differed by target and worker policy. [Its protocol and limits](PUBLICATION.md#experimental-owning-identity-index)
-are prerequisites for further catalog work, not a qualified publication replacement.
+results differed by target and worker policy. [Identity index protocol and limits](PUBLICATION.md#experimental-owning-identity-index).
 
 With `compact_heap(true)`, Java instance fields, reference-array elements, and all primitive-array elements reside in `HeapBuffer` ranges within a portable `RegionHeap`. Descriptors, locks, class metadata, and arbitrary Rust `Gc<T>` values remain pinned. Default configuration retains host-backed payloads. Region allocation uses aligned disjoint ranges and coalescing free lists. An index of the largest free range in each region narrows allocation candidates before checking alignment. Backing allocation and deallocation run outside the registry mutex, with physical credits reserved until the operation finishes. This requires neither virtual-memory remapping nor pointer tagging.
 
@@ -1475,11 +1474,9 @@ elements also need no destructor. Elements with destructors still clear in bound
 batches. This removes redundant handoff work without skipping managed edges or
 user destruction.
 
-## Experimental backing for future catalog states
+## Archived catalog experiment
 
-The isolated [pooled catalog](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-pooled-prototype/README.md)
-uses fixed backing for immutable operation and membership values. Exact owning
-references prevent slot reuse while a delayed helper can still compare a version.
-This representation is not used by the collector. Its numeric allocation screen
-trades lower system-allocation traffic for more retained backing; actual heap
-credits, initial-root transfer and a progress reserve remain integration work.
+The retired catalog used fixed backing for immutable membership and operation
+records. Holding an old version delayed reuse of its slot. The allocation
+screen reported fewer system allocations and more retained backing.
+[Archived pool and measurements](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_gc/validation/catalog/catalog-pooled-prototype/README.md).

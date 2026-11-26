@@ -21,15 +21,10 @@ individual deadline counts and response histogram bounds alongside the graph.
 python3 benchmarks/gc/plot_capacity_points.py PEER_PLAN_DIR RISTRETTO_PLAN_DIR --output NEW_REPORT_DIR
 ```
 
-The separate [canonical leaf contention driver](../../ristretto_gc/CANONICAL_CONTENTION.md)
-uses real typed values, retained roots and finite slots. `leaf_contention.py run`
-requires `--binary`, `--provenance`, `--sources`, `--cases`, `--output` and `--cpus`;
-WASI also needs `--wasmtime`. The cases JSON specifies `mode`, `actors`, `helpers`,
-`operations_per_actor`, `capacity` and `retained`. `report --output DIR --plot`
-revalidates raw evidence and writes CSV/SVG/PNG progress counts. Its
-[78-process report](../../target/gc-implementation/canonical-contention-REPORT.md)
-preserves an initial watchdog failure and does not qualify throughput, latency or
-sustained load. All comparison/whole-JVM gates below remain separate.
+The alpha preview runs Java graph, weak-reference and reclamation checks on
+the JVM collector across native interpreted, native compiled and WASI tiers.
+The retired catalog's finite-slot contention measurements are historical.
+[Unified JVM checks](../../GC_PREVIEW.md) · [Historical leaf contention study](../../ristretto_gc/CANONICAL_CONTENTION.md).
 
 These are **end-to-end runtime measurements**, including interpreter/JIT execution
 and instrumentation. They are not isolated GC-speed rankings. `ristretto-baseline`

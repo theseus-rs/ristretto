@@ -165,7 +165,7 @@ pub(crate) struct ObjectMetadata {
     storage: storage_state::StorageState,
     // Installing this link transfers the reservation's logical charge. It stays
     // charged until this descriptor destroys its payload, even before publication
-    // or after removal from the catalog. Old MetadataRefs alone retain no charge.
+    // or after removal from the object registry. Old MetadataRefs alone retain no charge.
     pub(crate) collector: Weak<crate::GarbageCollector>,
     pub(crate) mutation: AtomicUsize,
     pub(crate) id: crate::ObjectId,

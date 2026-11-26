@@ -205,16 +205,6 @@ pending, flushed, and overflow counts. Root page statistics include detached
 contexts' cumulative allocation/release counts. These options remain experimental.
 See [PUBLICATION.md](PUBLICATION.md) for the default gate and experimental counted publication protocol.
 
-The optional `experimental-canonical-leaves` feature provides an internal
-[private allocation ownership adapter](CANONICAL_LEAVES.md) for the canonical
-catalog, including an internal [allocation transaction](CANONICAL_ALLOCATION.md),
-durable cancellation, typed rooted results and incremental
-[leaf maintenance](CANONICAL_MAINTENANCE.md). An internal
-[heap-bound runtime owner](CANONICAL_RUNTIME.md) ties participants and reads to one
-catalog and reserves bounded owning-wrapper storage at setup. Public backend
-selection, automatic slot retry, scheduling, graphs and whole-GC qualification
-remain open; defaults are unchanged.
-
 Runtime UTF-8/UTF-16 string construction now awaits recovery and writes directly to
 managed payloads, yielding during encoding scans and initialization. Runtime object,
 module, thread, and bootstrap construction also use asynchronous publication in the

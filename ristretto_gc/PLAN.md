@@ -1129,12 +1129,10 @@ execution, eleven checker tests and a real overflow rejection. Source, executabl
 bytecode and launch receipts are retained outside build storage in
 `ristretto-gc-evidence/integration-service-v1/`. That earlier schema has no
 completed-cycle accounting; the current observer/schema update is described above.
-Global pause coverage remains incomplete. Keep the
-restricted runtime preview, integrated VM alpha and performance-qualified beta
-as separate release candidates: the alpha requires the compiled canonical path;
-the beta additionally requires short-load/resource/coverage/pause gates. Final
-release still requires J5/H endurance qualification. No default backend changes
-or performance/superiority claims follow from these correctness checkpoints.
+These checkpoints predated the retirement of the catalog heap. The alpha now
+uses the shared JVM collector across all three preview tiers. Global pause
+coverage and J5/H endurance qualification remain open.
+[Current release gates](#alpha-collector-and-review-gates).
 
 
 Canonical caller API follow-up (2026-11-15): `experimental-canonical-runtime`
