@@ -87,6 +87,37 @@ class ExecutionWindowTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 validate(value, 16, "probe", 7, True)
 
+    def test_roots_backedges_follow_actual_compiled_operation_entries(self):
+        for compiled in (0, 1, 2):
+            value = fixture()
+            methods = value["interval"]["methods"]
+            methods[0].update(name="operation", descriptor="(IJI)I", compiled_entries=compiled,
+                              compiled_backedges=32 * compiled, interpreter_entries=2 - compiled)
+            methods[1].update({"class": "GcBench$Histogram", "name": "record", "descriptor": "(J)V",
+                               "compiled_entries": 4})
+            methods.append({**methods[1], "class": "GcBench$Node", "name": "<init>",
+                            "descriptor": "(ILGcBench$Node;)V", "instance": 3, "compiled_entries": 32})
+            value["retained_code_bytes"] = 300
+            if compiled == 0:
+                methods[0].update(rejection_reason="unqualified_instruction", rejected_bytecode=[38, 1],
+                                  compiled_before_start=False, code_bytes_at_start=0, code_bytes_at_end=0)
+            with self.subTest(compiled=compiled):
+                result = validate(value, 16, "roots", 2)
+                self.assertEqual(compiled == 2, result["required_call_coverage_compiled"])
+                row = result["required_methods"][0]
+                self.assertEqual(32 * compiled, row["expected_compiled_backedges"])
+                self.assertEqual(methods[0].get("rejected_bytecode"), row["rejected_bytecode"])
+                methods[0]["compiled_backedges"] += 1
+                with self.assertRaises(ValueError):
+                    validate(value, 16, "roots", 2)
+
+    def test_unusable_rejection_locations_fail_validation(self):
+        for rejection in ([True, 1], [38, -1], [38, 256], [65535, 1], [1], "38:1"):
+            value = fixture()
+            value["interval"]["methods"][0]["rejected_bytecode"] = rejection
+            with self.subTest(rejection=rejection), self.assertRaisesRegex(ValueError, "rejected bytecode"):
+                validate(value, 16, "probe", 7)
+
     def test_duplicate_raw_keys_packets_and_missing_packet_reject(self):
         for stdout in ('CAP {"x":1,"x":2}', 'CAP {}\nCAP {}', ''):
             with self.assertRaises(ValueError):

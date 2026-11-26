@@ -34,7 +34,11 @@ EXECUTION_WINDOW_CAPTURE=/absolute/evidence/execution-window-probe \
 to 100 ms plus 100 ms warmup and are only finite functional diagnostics. The
 checker reconciles measured operation entries, histogram entries and (for the
 roots fixture) node constructor entries against completed Java work. It reports
-fallback explicitly. `--require-compiled` rejects fallback and compilation that
+the observed rejection reason, bytecode offset and opcode when available. Each
+compiled roots operation must take exactly 32 backward branches, one for each
+of 16 node constructions and 16 visits. The control and array paths have zero.
+The oracle checks mixed interpreter/compiled dispatch against the number of
+compiled calls. `--require-compiled` rejects fallback and compilation that
 was not ready at the start. It never treats a compiled counter as CPU share.
 
 The separate count-bounded probe uses ordinary VM dispatch and the same Java

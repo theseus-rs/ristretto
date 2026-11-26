@@ -75,26 +75,41 @@ def validate(capture, elapsed_ns, fixture, completed, require_compiled=False):
     if fixture == "probe":
         if integer(completed, "completed probe calls", 1) != 7:
             raise ValueError("probe completion ground truth changed")
-        required = [(('GcBench', 'kernel', '(I)I'), 7, 35),
+        required = [(('GcBench', 'kernel', '(I)I'), 7, 5),
                     (('GcBench', 'outside', '(I)I'), 0, 0)]
     elif fixture in {"control", "allocation", "roots", "mixed"}:
         integer(completed, "completed operations", 1)
-        required = [(('GcBench', 'operation', '(IJI)I'), completed, None),
+        # Each roots operation constructs 16 nodes, then visits all 16. Every
+        # completed iteration of either loop takes one Java backward branch.
+        # The control and array paths in this method have only forward branches.
+        required = [(('GcBench', 'operation', '(IJI)I'), completed, 32 if fixture == "roots" else 0),
                     (('GcBench$Histogram', 'record', '(J)V'), 2 * completed, None)]
         if fixture == "roots":
-            required.append((('GcBench$Node', '<init>', '(ILGcBench$Node;)V'), 16 * completed, None))
+            required.append((('GcBench$Node', '<init>', '(ILGcBench$Node;)V'), 16 * completed, 0))
     else:
         raise ValueError("unsupported fixture ground truth")
     rows = []
     compiled_complete = True
-    for identity, entries, backedges in required:
+    for identity, entries, backedges_per_call in required:
         found = identities.get(identity, [])
         if len(found) != 1:
             raise ValueError(f"missing/ambiguous required method: {identity}")
         method = found[0]
+        rejection = method.get("rejected_bytecode")
+        if rejection is not None and not (
+                isinstance(rejection, list) and len(rejection) == 2
+                and type(rejection[0]) is int and 0 <= rejection[0] < 65535
+                and type(rejection[1]) is int and 0 <= rejection[1] <= 255):
+            raise ValueError(f"invalid rejected bytecode for {identity}")
         total = sum(method[key] for key in ("compiled_entries", "interpreter_entries", "intrinsic_entries"))
         if total != entries:
             raise ValueError(f"measurement entries disagree with completed Java work: {identity}")
+        expected_backedges = None
+        if backedges_per_call is not None:
+            expected_backedges = backedges_per_call * method["compiled_entries"]
+            if method["compiled_backedges"] != expected_backedges:
+                raise ValueError(f"compiled backedges for {identity}: expected {expected_backedges}, "
+                                 f"observed {method['compiled_backedges']}")
         compiled = (method["compiled_entries"] == entries and not method["interpreter_entries"]
                     and not method["intrinsic_entries"] and method["compiled_before_start"]
                     and not method["compilation_attempts"] and not method["compilation_failures"]
@@ -104,14 +119,15 @@ def validate(capture, elapsed_ns, fixture, completed, require_compiled=False):
             if method["compiled_backedges"] or method.get("compiled_resumes", 0):
                 raise ValueError("outside-only method executed inside measurement")
         else:
-            if backedges is not None and compiled and method["compiled_backedges"] != backedges:
-                raise ValueError("compiled probe backedges disagree with Java loop ground truth")
             compiled_complete &= compiled
         rows.append({"method": list(identity), "expected_entries": entries,
                      "compiled_observed": method["compiled_entries"],
                      "interpreter_observed": method["interpreter_entries"],
                      "intrinsic_observed": method["intrinsic_entries"],
+                     "expected_compiled_backedges": expected_backedges,
                      "compiled_backedges": method["compiled_backedges"],
+                     "rejection_reason": method.get("rejection_reason"),
+                     "rejected_bytecode": rejection,
                      "ready_compiled_for_required_calls": compiled})
     if require_compiled and not compiled_complete:
         raise ValueError("required measured calls were not ready and wholly compiled")
