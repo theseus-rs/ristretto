@@ -338,19 +338,54 @@ impl RegionHeap {
             false
         };
         let preferred = self.preferred_shard();
-        let mut busy = 0_u16;
-        // Look for existing space in every shard before allocating new backing.
-        // A busy preferred shard does not block an available unrelated shard.
-        for offset in 0..self.states.len() {
-            let index = (preferred + offset) & (self.states.len() - 1);
-            let Ok(mut state) = self.shard(index).try_lock() else {
-                busy |= 1 << index;
-                continue;
-            };
-            if let Some(block) = Self::allocate_existing(layout, before, evacuating, &mut state) {
-                return Ok(block);
+        let busy = loop {
+            let mut busy = 0_u16;
+            // Look for existing space in every shard before allocating new backing.
+            // A busy preferred shard does not block an available unrelated shard.
+            for offset in 0..self.states.len() {
+                let index = (preferred + offset) & (self.states.len() - 1);
+                let mut state = match self.shard(index).try_lock() {
+                    Ok(state) => state,
+                    Err(std::sync::TryLockError::Poisoned(error)) => error.into_inner(),
+                    Err(std::sync::TryLockError::WouldBlock) => {
+                        busy |= 1 << index;
+                        continue;
+                    }
+                };
+                if let Some(block) = Self::allocate_existing(layout, before, evacuating, &mut state)
+                {
+                    return Ok(block);
+                }
             }
-        }
+            // Ordinary allocation can open backing on an accessible registry while a
+            // peer is parked. Probe existing holes first, and leave relocation's
+            // source and destination selection unchanged.
+            if before.is_none() && busy != 0 {
+                for offset in 0..self.states.len() {
+                    let index = (preferred + offset) & (self.states.len() - 1);
+                    if let Ok(state) = self.shard(index).try_lock() {
+                        if let Ok(block) =
+                            self.allocate_with_state(layout, None, false, index, state)
+                        {
+                            return Ok(block);
+                        }
+                        // At the shared cap a skipped shard may still have a hole.
+                        break;
+                    }
+                }
+            }
+            #[cfg(not(target_family = "wasm"))]
+            if before.is_none() && busy != 0 && self.states.len() > 1 {
+                // There may be no backing credit until a block is dropped. Waiting
+                // on a particular busy shard would miss holes returned to its peers.
+                // Back off with no registry lock held, then recheck all registries.
+                #[cfg(test)]
+                shard_tests::record_contended_retry();
+                std::thread::sleep(std::time::Duration::from_micros(100));
+                continue;
+            }
+            break busy;
+        };
         // Contention is not evidence of exhaustion. Recheck skipped shards once
         // before reserving backing or returning OOM; never hold two shard locks.
         for index in 0..self.states.len() {
@@ -408,7 +443,17 @@ impl RegionHeap {
         evacuating: bool,
         index: usize,
     ) -> Result<Block> {
-        let mut state = lock(self.shard(index));
+        self.allocate_with_state(layout, before, evacuating, index, lock(self.shard(index)))
+    }
+
+    fn allocate_with_state(
+        &self,
+        layout: Layout,
+        before: Option<u64>,
+        evacuating: bool,
+        index: usize,
+        mut state: MutexGuard<'_, State>,
+    ) -> Result<Block> {
         // Another allocator may have returned space since the bounded probe.
         if let Some(block) = Self::allocate_existing(layout, before, evacuating, &mut state) {
             return Ok(block);
@@ -432,10 +477,11 @@ impl RegionHeap {
             return Err(Error::OutOfMemory);
         }
         let id = state.next;
-        state.next = id
+        let next = id
             .checked_add(self.states.len() as u64)
             .ok_or(Error::OutOfMemory)?;
         let backing = self.budget.reserve(size, evacuating)?;
+        state.next = next;
         state.committed = committed;
         let track_relocation = state.evacuation.is_some();
         // Reserve before releasing the lock so concurrent allocations cannot exceed
