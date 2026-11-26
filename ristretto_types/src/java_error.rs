@@ -142,6 +142,9 @@ pub enum JavaError {
     /// - [IncompatibleClassChangeError](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/IncompatibleClassChangeError.html)
     #[error("{0}")]
     IncompatibleClassChangeError(String),
+    /// The resolved target of a Java `new` instruction is abstract or an interface.
+    #[error("{0}")]
+    InstantiationError(String),
     /// `IndexOutOfBoundsException`
     ///
     /// # References
@@ -295,6 +298,7 @@ impl JavaError {
             JavaError::IllegalMonitorStateException(_) => "java.lang.IllegalMonitorStateException",
             JavaError::IllegalArgumentException(_) => "java.lang.IllegalArgumentException",
             JavaError::IncompatibleClassChangeError(_) => "java.lang.IncompatibleClassChangeError",
+            JavaError::InstantiationError(_) => "java.lang.InstantiationError",
             JavaError::IndexOutOfBoundsException { .. } => "java.lang.IndexOutOfBoundsException",
             JavaError::InterruptedException(_) => "java.lang.InterruptedException",
             JavaError::InterruptedIoException(_) => "java.io.InterruptedIOException",
@@ -528,6 +532,13 @@ mod tests {
         let error = JavaError::IncompatibleClassChangeError("foo".to_string());
         assert_eq!(error.class_name(), "java.lang.IncompatibleClassChangeError");
         assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
+    fn test_instantiation_error() {
+        let error = JavaError::InstantiationError("AbstractTarget".to_string());
+        assert_eq!(error.class_name(), "java.lang.InstantiationError");
+        assert_eq!(error.message(), "AbstractTarget");
     }
 
     #[test]

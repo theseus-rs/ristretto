@@ -2,7 +2,7 @@
 use super::{
     Arc, BaseType, Class, InternalError, NegativeArraySizeException, Object, Ordering, Reference,
     Result, RuntimeContext, Value, allocate_array_in_async, allocate_primitive_array_in_async,
-    build_multianewarray, resolve_class_ref_async, resolve_class_ref_no_init_async,
+    build_multianewarray, resolve_allocation_class, resolve_class_ref_no_init_async,
     set_top_frame_pc, store_pending_error_async,
 };
 use ristretto_classfile::attributes::ArrayType;
@@ -99,7 +99,7 @@ pub(super) async fn primitive_array(
 }
 
 pub(super) async fn object(ctx: &RuntimeContext, index: u16) -> Result<i64> {
-    let class = resolve_class_ref_async(ctx, index).await?;
+    let class = resolve_allocation_class(ctx, index).await?;
     let object = Object::new_in_async(ctx.garbage_collector(), class).await?;
     publish(ctx, Reference::Object(object)).await
 }

@@ -7,6 +7,7 @@ use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use crate::{Result, Value};
+use ristretto_classfile::ClassAccessFlags;
 use ristretto_classloader::{Class, Object, Reference, ReferenceWriteGuardExt};
 use ristretto_gc::Gc;
 use ristretto_gc::sync::RwLock;
@@ -325,6 +326,18 @@ pub(crate) async fn new(
             .await?;
     stack.push(reference)?;
     Ok(Continue)
+}
+
+/// Check the resolved target before `new` can run its class initializer (JVMS §6.5).
+pub(crate) fn check_new_target(class: &Class) -> Result<()> {
+    if class
+        .class_file()
+        .access_flags
+        .intersects(ClassAccessFlags::ABSTRACT | ClassAccessFlags::INTERFACE)
+    {
+        return Err(crate::JavaError::InstantiationError(class.name().to_owned()).into());
+    }
+    Ok(())
 }
 
 /// # References

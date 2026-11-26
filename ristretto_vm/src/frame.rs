@@ -369,6 +369,7 @@ impl Frame {
         }
         let name = self.class.constant_pool().try_get_class(index)?;
         let class = thread.load_referenced_class(&self.class, name).await?;
+        crate::instruction::check_new_target(&class)?;
         thread.initialize_class(&class).await?;
         if self.allocation_class.get().is_none() && matches!(class.is_initialized(), Ok(true)) {
             let _ = self.allocation_class.set((index, class.clone()));

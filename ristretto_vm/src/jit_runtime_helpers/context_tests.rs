@@ -19,6 +19,77 @@ fn caller(target: &str) -> Result<(Arc<Class>, u16, u16)> {
     Ok((class, class_index, field_index))
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn new_rejects_abstract_and_interface_targets_before_class_initialization() -> Result<()> {
+    use ristretto_classfile::attributes::{Attribute, Instruction};
+    use ristretto_classfile::{ClassAccessFlags, MethodAccessFlags};
+    use ristretto_classloader::InitializationState;
+
+    let (vm, thread, mut frame) = crate::test::frame().await?;
+    let pool = Arc::get_mut(frame.class_mut())
+        .expect("private caller")
+        .constant_pool_mut();
+    let targets = [
+        (
+            "AbstractNewTarget",
+            pool.add_class("AbstractNewTarget")?,
+            ClassAccessFlags::ABSTRACT,
+        ),
+        (
+            "InterfaceNewTarget",
+            pool.add_class("InterfaceNewTarget")?,
+            ClassAccessFlags::ABSTRACT | ClassAccessFlags::INTERFACE,
+        ),
+    ];
+    let ctx = RuntimeContext::new(vm.garbage_collector(), &vm, &thread, frame.class())?;
+    for (name, index, flags) in targets {
+        let mut pool = ConstantPool::new();
+        let class = Class::from(
+            None,
+            ClassFile {
+                this_class: pool.add_class(name)?,
+                super_class: pool.add_class("java/lang/Object")?,
+                access_flags: ClassAccessFlags::PUBLIC | flags,
+                methods: vec![ristretto_classfile::Method {
+                    access_flags: MethodAccessFlags::STATIC,
+                    name_index: pool.add_utf8("<clinit>")?,
+                    descriptor_index: pool.add_utf8("()V")?,
+                    attributes: vec![Attribute::Code {
+                        name_index: pool.add_utf8("Code")?,
+                        max_stack: 1,
+                        max_locals: 0,
+                        code: vec![Instruction::Aconst_null, Instruction::Athrow],
+                        exception_table: vec![],
+                        attributes: vec![],
+                    }],
+                }],
+                constant_pool: pool,
+                ..Default::default()
+            },
+        )?;
+        thread.register_class(class.clone()).await?;
+        let mut stack = crate::OperandStack::with_max_size(1);
+        let interpreted = crate::instruction::new(&frame, &mut stack, index).await;
+        assert!(
+            matches!(interpreted, Err(JavaError(crate::JavaError::InstantiationError(target))) if target == name)
+        );
+        assert!(stack.is_empty());
+        let compiled_request = allocations::object(&ctx, index).await;
+        assert!(
+            matches!(compiled_request, Err(JavaError(crate::JavaError::InstantiationError(target))) if target == name)
+        );
+        stack.push_int(0)?;
+        crate::instruction::anewarray(&frame, &mut stack, index).await?;
+        assert!(stack.pop_object()?.is_some());
+        assert_ne!(allocations::reference_array(&ctx, index, 0).await?, 0);
+        assert_eq!(
+            class.initialization_state()?,
+            InitializationState::NotInitialized
+        );
+    }
+    Ok(())
+}
+
 async fn target(thread: &Thread, name: &str) -> Result<Arc<Class>> {
     let mut constant_pool = ConstantPool::default();
     let this_class = constant_pool.add_class(name)?;
@@ -623,14 +694,14 @@ async fn shared_resolution_does_not_publish_recursive_initialization_as_complete
     let (caller, class_index, field_index) = caller(target.name())?;
     let first = RuntimeContext::new(vm.garbage_collector(), &vm, &thread, &caller)?;
     target.begin_initialization(thread.id())?;
-    resolve_class_ref(&first, class_index)?;
+    resolve_allocation_class_sync(&first, class_index)?;
     resolve_field_ref_static(&first, field_index)?;
     assert!(!target.is_initialized()?);
     let other_thread = Thread::new(&Arc::downgrade(&vm), thread.id() + 1);
     let second = RuntimeContext::new(vm.garbage_collector(), &vm, &other_thread, &caller)?;
     let third = RuntimeContext::new(vm.garbage_collector(), &vm, &other_thread, &caller)?;
     let mut class_waiter =
-        tokio::task::spawn_blocking(move || resolve_class_ref(&second, class_index));
+        tokio::task::spawn_blocking(move || resolve_allocation_class_sync(&second, class_index));
     let mut field_waiter =
         tokio::task::spawn_blocking(move || resolve_field_ref_static(&third, field_index));
     let class_blocked = tokio::time::timeout(Duration::from_millis(30), &mut class_waiter)

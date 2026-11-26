@@ -1182,8 +1182,9 @@ fn set_top_frame_pc(ctx: &RuntimeContext, bci: i32) {
     }
 }
 
-async fn resolve_class_ref_async(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<Class>> {
+async fn resolve_allocation_class(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<Class>> {
     let class = resolve_class_ref_no_init_async(ctx, cp_index).await?;
+    crate::instruction::check_new_target(&class)?;
     if !class.is_initialized()? {
         ctx.thread.initialize_class(&class).await?;
     }
@@ -1191,8 +1192,8 @@ async fn resolve_class_ref_async(ctx: &RuntimeContext, cp_index: u16) -> Result<
 }
 
 #[cfg(test)]
-fn resolve_class_ref(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<Class>> {
-    run_async(resolve_class_ref_async(ctx, cp_index))
+fn resolve_allocation_class_sync(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<Class>> {
+    run_async(resolve_allocation_class(ctx, cp_index))
 }
 
 /// Resolve a class reference WITHOUT triggering `<clinit>`. JVMS §5.5 lists only
