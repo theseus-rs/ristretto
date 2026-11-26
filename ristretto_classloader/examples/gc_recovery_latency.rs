@@ -177,10 +177,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     gc.stop()?;
     gc.collect_full()?;
     let statistics = gc.statistics()?;
-    let regions = gc
-        .region_heap()
-        .map(|heap| heap.statistics())
-        .unwrap_or_default();
+    let regions = gc.region_heap().map_or_default(|heap| heap.statistics());
     assert_eq!(statistics.live_objects, 0);
     assert_eq!(regions.shared_committed_bytes, 0);
     let final_roots = gc.root_statistics();
