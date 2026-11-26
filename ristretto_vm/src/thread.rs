@@ -87,26 +87,39 @@ impl Drop for InstructionBudget<'_> {
     }
 }
 
+/// Ordinary frames pay only for the optional pointer. A synchronized method
+/// keeps its receiver or class mirror rooted until after monitor release.
+#[derive(Debug, Default)]
+pub(crate) struct MonitorGuard(Option<Box<MethodMonitor>>);
+
 #[derive(Debug)]
-pub(crate) struct MonitorGuard {
-    monitor: Option<Arc<ristretto_types::monitor::Monitor>>,
+struct MethodMonitor {
+    monitor: Arc<ristretto_types::monitor::Monitor>,
     thread_id: u64,
+    _object: Value,
 }
 
 impl MonitorGuard {
-    pub(crate) fn new(
-        monitor: Option<Arc<ristretto_types::monitor::Monitor>>,
+    pub(crate) fn held(
+        monitor: Arc<ristretto_types::monitor::Monitor>,
         thread_id: u64,
+        object: Value,
     ) -> Self {
-        Self { monitor, thread_id }
+        Self(Some(Box::new(MethodMonitor {
+            monitor,
+            thread_id,
+            _object: object,
+        })))
+    }
+
+    fn is_held(&self) -> bool {
+        self.0.is_some()
     }
 }
 
-impl Drop for MonitorGuard {
+impl Drop for MethodMonitor {
     fn drop(&mut self) {
-        if let Some(monitor) = self.monitor.take() {
-            let _ = monitor.release(self.thread_id);
-        }
+        let _ = self.monitor.release(self.thread_id);
     }
 }
 
@@ -243,7 +256,7 @@ impl JavaStack {
             state: Some(state),
             slots,
             has_return_type,
-            monitor: MonitorGuard::new(None, thread.id),
+            monitor: MonitorGuard::default(),
         });
         #[cfg(feature = "execution-profile")]
         vm.execution_recorder.interpreted(&class, &method);
@@ -1446,38 +1459,39 @@ impl Thread {
         class: &Arc<Class>,
         method: &Arc<Method>,
         parameters: &[Value],
-    ) -> Result<Option<Arc<ristretto_types::monitor::Monitor>>> {
+    ) -> Result<MonitorGuard> {
         if !method
             .access_flags()
             .contains(MethodAccessFlags::SYNCHRONIZED)
         {
-            return Ok(None);
+            return Ok(MonitorGuard::default());
         }
-        let monitor_id = if method.is_static() {
+        let owner = if method.is_static() {
             let mirror = match class.object()? {
                 Some(mirror) => mirror,
                 None => Box::pin(class.to_object(self)).await?,
             };
-            if let Value::Object(Some(reference)) = mirror {
-                get_monitor_id(&reference)
-            } else {
+            let Value::Object(Some(reference)) = mirror else {
                 return Err(InternalError(
                     "Invalid synchronized class mirror".to_owned(),
                 ));
-            }
+            };
+            reference.try_rooted_clone()?
         } else if let Some(Value::Object(Some(reference))) = parameters.first() {
-            get_monitor_id(reference)
+            reference.try_rooted_clone()?
         } else {
-            None
+            return Ok(MonitorGuard::default());
         };
-        if let Some(id) = monitor_id {
-            let vm = self.vm()?;
-            let monitor = vm.monitor_registry().monitor(id);
-            monitor.acquire(self.id).await?;
-            Ok(Some(monitor))
-        } else {
-            Ok(None)
-        }
+        let Some(id) = get_monitor_id(&owner) else {
+            return Ok(MonitorGuard::default());
+        };
+        let monitor = self.vm()?.monitor_registry().monitor(id);
+        monitor.acquire(self.id).await?;
+        Ok(MonitorGuard::held(
+            monitor,
+            self.id,
+            Value::Object(Some(owner)),
+        ))
     }
 
     /// Add a new frame to the thread and invoke the method. To invoke a method on an object
@@ -1543,14 +1557,13 @@ impl Thread {
         crate::native_stack::check_entry()?;
         let vm = self.vm()?;
 
-        let sync_monitor = self
+        let monitor_guard = self
             .acquire_sync_monitor(
                 &call.class,
                 &call.method,
                 call.parameters.as_slice(caller.as_deref())?,
             )
             .await?;
-        let monitor_guard = MonitorGuard::new(sync_monitor, self.id);
 
         #[cfg(feature = "experimental-canonical-runtime")]
         if call.method.is_native()
@@ -1566,7 +1579,7 @@ impl Thread {
             let argument = arguments.pop_int()?;
             #[cfg(feature = "execution-profile")]
             vm.execution_recorder.intrinsic(&call.class, &call.method);
-            let monitor = monitor_guard.monitor.is_some().then_some(monitor_guard);
+            let monitor = monitor_guard.is_held().then_some(monitor_guard);
             let result = binding
                 .invoke(vm.garbage_collector(), argument, monitor)
                 .await;
@@ -1767,7 +1780,7 @@ impl Thread {
                 }
                 BatchExit::Complete(ExecutionResult::Return(value)) => {
                     // Release monitors and log results outside the stack lock.
-                    if debug || entry.monitor.monitor.is_some() {
+                    if debug || entry.monitor.is_held() {
                         return Ok(InterpreterExit::Boundary(BatchExit::Complete(
                             ExecutionResult::Return(value),
                         )));
@@ -2201,6 +2214,10 @@ impl ristretto_types::Thread for Thread {
         })
     }
 }
+
+#[cfg(all(test, any(not(target_family = "wasm"), target_os = "wasi")))]
+#[path = "synchronized_method_tests.rs"]
+mod synchronized_method_tests;
 
 #[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
@@ -2783,7 +2800,7 @@ mod tests {
                 frame,
                 FrameState::default(),
                 false,
-                MonitorGuard::new(Some(monitor.clone()), thread.id()),
+                MonitorGuard::held(monitor.clone(), thread.id(), Value::Object(None)),
             )?;
         }
 

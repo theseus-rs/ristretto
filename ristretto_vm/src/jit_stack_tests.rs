@@ -248,15 +248,14 @@ async fn recursive_overflow(concurrent: bool, modes: [bool; 3], synchronized: bo
     let functions = install_recursive(&vm, &class, modes)?;
     let even = class.try_get_method("even", "(I[I)[I")?;
     let caught = class.try_get_method("caught", "(I[I)Ljava/lang/Throwable;")?;
-    let monitor = thread.acquire_sync_monitor(&class, &even, &[]).await?;
+    let acquired = thread.acquire_sync_monitor(&class, &even, &[]).await?;
+    let monitor = acquired.0.as_ref().map(|guard| guard.monitor.clone());
     assert_eq!(
         monitor.is_some(),
         synchronized,
         "synchronized method needs a monitor"
     );
-    if let Some(monitor) = &monitor {
-        assert!(monitor.release(thread.id())?);
-    }
+    drop(acquired);
     let array = Value::try_new_object_async(gc, Reference::IntArray(vec![77].into())).await?;
     let weak = ristretto_gc::GcWeak::new(reference(&array)?, ristretto_gc::ReferenceKind::Weak, 0);
     let normal = thread
@@ -611,11 +610,14 @@ async fn native_recursion(
     let even = class.try_get_method("even", "(I[I)[I")?;
     let native_even = class.try_get_method("nativeEven", "(I[I)[I")?;
     let native_caught = class.try_get_method("nativeCaught", "(I[I)Ljava/lang/Throwable;")?;
-    let monitor = thread
-        .acquire_sync_monitor(class, &even, &[])
-        .await?
-        .ok_or_else(|| InternalError("missing recursive monitor".to_owned()))?;
-    assert!(monitor.release(thread.id())?);
+    let acquired = thread.acquire_sync_monitor(class, &even, &[]).await?;
+    let monitor = acquired
+        .0
+        .as_ref()
+        .ok_or_else(|| InternalError("missing recursive monitor".to_owned()))?
+        .monitor
+        .clone();
+    drop(acquired);
     let array = Value::try_new_object_async(gc, Reference::IntArray(vec![99].into())).await?;
     let weak = ristretto_gc::GcWeak::new(reference(&array)?, ristretto_gc::ReferenceKind::Weak, 0);
     let argument_monitor = vm.monitor_registry().monitor(
@@ -803,12 +805,9 @@ async fn execute_synchronously(
         .compile(class, method)
         .await?
         .ok_or_else(|| InternalError("missing native fixture".to_owned()))?;
-    let monitor = MonitorGuard::new(
-        thread
-            .acquire_sync_monitor(class, method, parameters)
-            .await?,
-        thread.id(),
-    );
+    let monitor = thread
+        .acquire_sync_monitor(class, method, parameters)
+        .await?;
     {
         let mut stack = thread.stack.write();
         stack.check_capacity(Frame::stack_slots_for(method)?, class, method)?;

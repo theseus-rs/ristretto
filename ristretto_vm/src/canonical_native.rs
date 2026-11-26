@@ -236,7 +236,11 @@ mod tests {
     -> Result<(), Box<dyn std::error::Error>> {
         let monitor = Arc::new(ristretto_types::monitor::Monitor::new());
         monitor.acquire(1).await?;
-        let guard = MonitorGuard::new(Some(monitor.clone()), 1);
+        let guard = MonitorGuard::held(
+            monitor.clone(),
+            1,
+            ristretto_classloader::Value::Object(None),
+        );
         let (entered, started) = tokio::sync::oneshot::channel();
         let (release, parked) = std::sync::mpsc::channel::<()>();
         let mut call = Box::pin(run_on_worker(Some(guard), move || async move {
@@ -284,7 +288,11 @@ mod tests {
                 tokio::time::timeout(Duration::from_secs(10), started).await??;
                 let monitor = Arc::new(ristretto_types::monitor::Monitor::new());
                 monitor.acquire(1).await?;
-                let guard = MonitorGuard::new(Some(monitor.clone()), 1);
+                let guard = MonitorGuard::held(
+                    monitor.clone(),
+                    1,
+                    ristretto_classloader::Value::Object(None),
+                );
                 let (ran, observed) = tokio::sync::oneshot::channel();
                 let mut call = Box::pin(run_on_worker(Some(guard), move || async move {
                     let _ = ran.send(());
