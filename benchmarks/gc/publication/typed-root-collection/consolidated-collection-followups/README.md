@@ -40,6 +40,16 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Bounded scan and isolated marking reservations | `3c49be32` | 251127108 | 8.70× | 10.15× | 28 / 36 |
 | Parked remembered publishers and native worker retries | `b7eb6c4b` | 251127109 | **10.28×** | **10.58×** | **36 / 36** |
 | Parked native cleanup and independent bounded storage | `a0eba4e2` | 251127124 | **10.39×** | **10.50×** | **36 / 36** |
+| Exact Java Reference fields through hidden subclass members | `cdee5888` | 251127133 | **10.86×** | **10.61×** | **36 / 36** |
+
+## Java reference fields hidden by subclasses
+
+A Java subclass of `WeakReference` can declare a strong field named `referent`. On the control, reading the base reference returned the subclass value, and clearing the base reference erased the strong field. HotSpot retained it through two collections. At `cdee5888`, linking resolves the JDK declaration and descriptor once for `referent`, `queue` and `discovered`. Native access and conditional tracing use the same referent slot. Before linking, a class with a JDK Reference ancestor matches the declaring field against the captured field layout by identity.
+
+The Java 8 and 25 tests delivered both discovered references to their registered queue with the subclass fields intact. The Java 25 fixture also matched HotSpot in the WASI launcher for get, identity comparison, clear and retention through collection. All 104 repeated processes passed across the native Java fixtures, WASI launcher and native/WASI class layouts. The native execution-profile VM suite passed 1,008 tests with three ignored, and the native classloader passed 751 with nine ignored. The existing reference lifecycle test also passed on five JDK versions across 40 collector configurations. Strict native and WASI Clippy and the bare-Wasm VM check passed. [Oracle, process receipts and build fingerprints](java-reference-fields-tests.json.gz)
+
+The 1,728 fresh complete-collection processes passed all 36 conditions against `f1daebeb`. The lowest individual 95% lower speedup bounds were 10.86× native and 10.61× WASI. This measurement covers the collector fixture. Whole-host pauses, hard-cap recovery with arbitrary destructors, and sustainable JVM performance remain open. [Per-process collection timings](java-reference-fields.csv) · [Source and binary provenance](provenance.json)
+
 
 ## Native collection during parked cleanup
 
