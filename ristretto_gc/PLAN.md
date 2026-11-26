@@ -2,6 +2,9 @@
 
 ## Tenfold complete-collection gate
 
+At `89c0f698`, a compiled helper returning a retired same-heap edge reports a VM error before caching the reference. The parent panicked on the same input. All 36 complete-collection conditions cleared 10×, with weakest individual 95% speedup bounds of 10.77× native and 10.59× WASI. Allocation-waiter progress, shared VM ownership, native boundaries and broader compiled coverage remain open.
+[Retired-edge regression and measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#retired-same-heap-compiled-helper-results).
+
 At `8b15e59c`, compiled Java helper results validate the owning heap before publishing a reference into the VM frame cache. On the parent a generated array load returned a foreign heap's child. Both helper entry points now reject it and retain the original foreign value. The native VM suite passed 1,006 tests with three ignored, and all 36 collection conditions exceeded 10×.
 [Generated array control and measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#compiled-helper-result-heap-ownership).
 

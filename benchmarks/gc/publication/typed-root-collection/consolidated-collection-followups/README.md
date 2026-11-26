@@ -29,6 +29,13 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Cooperative regional descriptor and Java array returns | `ed3a9426` | 251126975 | **10.58×** | **10.28×** | **36 / 36** |
 | Cooperative clearing through optional values | `f350e347` | 251126976 | **11.02×** | **10.50×** | **36 / 36** |
 | Compiled helper-result heap ownership | `8b15e59c` | 251126980 | **10.65×** | **10.29×** | **36 / 36** |
+| Reject retired same-heap compiled helper results | `89c0f698` | 251126985 | **10.77×** | **10.59×** | **36 / 36** |
+
+## Retired same-heap compiled helper results
+
+A same-heap edge can retain an object's identity after collection reclaims its payload. On `8b15e59c`, passing such an edge through a compiled helper result panicked during promotion. At `89c0f698`, a failed promotion returns a VM error and leaves the compiled frame cache empty. An already rooted value can share its owning root. Promoting an edge requires the live allocation to match both its address and its identity.
+
+The native VM library suite passed 1,007 tests with three ignored. The native all-feature GC suite, 319 WASI GC library tests, bare-Wasm build check, strict Clippy, and GC crate packaging passed. The weakest individual 95% lower speedup bounds across all 36 collection conditions were 10.77× native and 10.59× WASI against `f1daebeb`. [Matched collection samples](vm-retired-edge.csv) · [Regression, read-only audit and verification](compiled-retired-edge.json.gz)
 
 ## Compiled helper-result heap ownership
 
