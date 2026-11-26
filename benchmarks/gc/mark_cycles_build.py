@@ -41,7 +41,7 @@ def build_controls(messages, source, collector_id):
     """Compare the actual compiled closure when the workspace membership changes."""
     manifest = tomllib.loads((source / 'Cargo.toml').read_text())
     workspace = manifest['workspace']
-    for field in ('members', 'default-members'):
+    for field in ('members', 'default-members', 'exclude'):
         workspace.pop(field, None)
     lock = tomllib.loads((source / 'Cargo.lock').read_text())
     registry_packages = [pkg for pkg in lock['package'] if 'source' in pkg]

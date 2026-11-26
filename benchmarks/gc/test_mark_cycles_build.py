@@ -24,6 +24,8 @@ class CompilerReceiptTests(unittest.TestCase):
             expected = fingerprint()
             manifest.write_text(manifest.read_text().replace('["gc"]', '["gc", "research"]'))
             self.assertEqual(fingerprint(), expected)
+            manifest.write_text(manifest.read_text().replace("[workspace]", '[workspace]\nexclude = ["archived"]'))
+            self.assertEqual(fingerprint(), expected)
             self.assertNotEqual(fingerprint(features=[]), expected)
             self.assertIsNone(fingerprint(package_id="path+file:///outside#dep"))
             original = manifest.read_text()
