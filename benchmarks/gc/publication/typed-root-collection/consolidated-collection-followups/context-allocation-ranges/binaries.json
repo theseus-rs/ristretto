@@ -1,0 +1,18 @@
+{
+  "combined": {
+    "binary_sha256": "693d0ee453f672cbaab961163769df27481fc2715ed334e11a01e0b8c573ea8a",
+    "patched_collector_sha256": "83919f96730417c58c220fcf891ca1826e82a344185e29780e6f454aab1b5682"
+  },
+  "physical": {
+    "binary_sha256": "aab2dd954de41e9c5df3eaf145510fdfd5254cc151767c773263f6b49601d54d",
+    "patched_collector_sha256": "aef7fa9983754c4dfd15d7e8fbe8a5a68bba229ff0ec13bd9da61cd309f86f2a"
+  },
+  "credit": {
+    "binary_sha256": "deed9645554d8250360128216fedb7529e4eca4df37d9b9103e9e29ffe4c4704",
+    "patched_collector_sha256": "2a2c839590538e1288f716956517011c7a0e8a3015b39e2124d44d009afc52f9"
+  },
+  "neither": {
+    "binary_sha256": "c17fd776ea9ffc7856bbe5d4a9abc4d9a7498431e0411ee6653fec165b212359",
+    "patched_collector_sha256": "cc1ca77c83fd27269247bc9d93d44b68b30d017cad6a9e7d41a1da0f82c7c29e"
+  }
+}

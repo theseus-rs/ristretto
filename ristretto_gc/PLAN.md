@@ -17,6 +17,13 @@ See [the release check](../benchmarks/gc/release/verify_alpha_heap.py).
 | Whole-JVM throughput | Qualify physical context-local allocation separately from logical credits. Earlier combined buffers improved a 256-byte compact case by 23.9% and raised 4 KiB compact p99.99 from 261.5 to 3,264 µs. Measure common field and array loads/stores and confirm actual compiled entries in the Java hot loop. Static long stores use the ordinary VM continuation, with volatile ordering and Java fault coverage. Reference values live across polls still require owning frame roots and cancellation tests. [Scheduled Java measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/ordinary-static-long/README.md) |
 | Release qualification | Keep deterministic parked-participant progress, ordinary JVM class coverage, browser responsiveness, fixed-rate throughput and scheduled tails against G1/ZGC, three hour-long runs and a 24-hour soak as separate gates. |
 
+The physical context allocation paths and logical credit were isolated in
+80 native recovery processes. With 256-byte payloads the physical-only arm
+completed 299,765 allocations/s at 334 µs p99.99. With both paths disabled
+it completed 389,688/s at 86 µs. Three of the forty 4 KiB processes
+encountered out-of-memory. The combined switch remains opt-in.
+[Factorial controls and all outcomes](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/context-allocation-ranges/README.md).
+
 At `5ba3b207` the shipping collector passed all 36 complete-collection
 conditions against `f1daebeb`. Minimum individual 95% speedup bounds were
 10.38× native and 10.09× WASI. In the separate Java roots comparison at
