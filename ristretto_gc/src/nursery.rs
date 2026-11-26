@@ -17,6 +17,9 @@ use std::sync::{Arc, MutexGuard, OnceLock};
 
 const WORD: usize = 64;
 const WORDS: usize = 64;
+const LEAF_SLOTS: usize = 8;
+type AddressLeaf = [OnceLock<Cell>; LEAF_SLOTS];
+type AddressWord = [OnceBox<AddressLeaf>; WORD / LEAF_SLOTS];
 const PAGE_SIZE: usize = WORD * WORDS;
 const PAGE_MASK: usize = PAGE_SIZE - 1;
 
@@ -191,7 +194,7 @@ impl Bitmap {
 #[derive(Debug)]
 struct Page {
     occupied: Bitmap,
-    chunks: [OnceBox<[OnceLock<Cell>; WORD]>; WORDS],
+    chunks: [OnceBox<AddressWord>; WORDS],
 }
 
 #[expect(
@@ -207,15 +210,18 @@ impl Page {
     }
 
     fn entry(&self, key: usize) -> Option<&Cell> {
-        self.chunks[(key & PAGE_MASK) / WORD].get()?[key % WORD].get()
+        let word = self.chunks[(key & PAGE_MASK) / WORD].get()?;
+        word[(key % WORD) / LEAF_SLOTS].get()?[key % LEAF_SLOTS].get()
     }
 
     fn vacant_cell(&self, key: usize) -> &OnceLock<Cell> {
         // A concurrent initializer prepares its own private chunk. Readers and
         // other publishers never wait for a stalled chunk allocator.
-        let chunk = self.chunks[(key & PAGE_MASK) / WORD]
-            .get_or_init(|| Box::new([const { OnceLock::new() }; WORD]));
-        &chunk[key % WORD]
+        let word = self.chunks[(key & PAGE_MASK) / WORD]
+            .get_or_init(|| Box::new([const { OnceBox::new() }; WORD / LEAF_SLOTS]));
+        let leaf = word[(key % WORD) / LEAF_SLOTS]
+            .get_or_init(|| Box::new([const { OnceLock::new() }; LEAF_SLOTS]));
+        &leaf[key % LEAF_SLOTS]
     }
 }
 
@@ -933,8 +939,10 @@ impl Objects {
             head.indexed.store(0, Relaxed);
             let mut after = None;
             while let Some((key, page)) = pages.next_after(after) {
-                for chunk in page.chunks.iter().filter_map(OnceBox::get) {
-                    entries.extend(chunk.iter().filter_map(|entry| entry.get()?.swap(None)));
+                for word in page.chunks.iter().filter_map(OnceBox::get) {
+                    for leaf in word.iter().filter_map(OnceBox::get) {
+                        entries.extend(leaf.iter().filter_map(|entry| entry.get()?.swap(None)));
+                    }
                 }
                 after = Some(key);
             }
@@ -1073,6 +1081,27 @@ mod tests {
 
     fn update(objects: &Objects, address: usize, present: bool) {
         objects.set_young_for_test(address, present);
+    }
+
+    #[test]
+    fn sparse_address_words_allocate_only_the_selected_cell_leaves() {
+        let page = Page::new(0);
+        let offsets = [0, 7, 8, 63, 64, PAGE_SIZE - 1];
+        for key in offsets {
+            page.vacant_cell(key).get_or_init(|| Cell::from(None));
+            assert!(page.entry(key).is_some());
+        }
+        assert!(page.entry(1).is_none());
+        assert!(page.entry(9).is_none());
+        assert!(page.entry(16).is_none());
+        let words: Vec<_> = page.chunks.iter().filter_map(OnceBox::get).collect();
+        assert_eq!(words.len(), 3);
+        let leaves = words
+            .iter()
+            .flat_map(|word| word.iter())
+            .filter(|leaf| leaf.get().is_some())
+            .count();
+        assert_eq!(leaves, 5);
     }
 
     #[test]
