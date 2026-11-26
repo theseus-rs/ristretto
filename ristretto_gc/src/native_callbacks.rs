@@ -397,7 +397,6 @@ mod tests {
 
     #[test]
     #[expect(
-        clippy::expect_used,
         clippy::panic_in_result_fn,
         clippy::unwrap_in_result,
         reason = "bounded service, exact heap charges and physical refund"
