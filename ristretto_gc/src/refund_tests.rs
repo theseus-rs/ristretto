@@ -219,6 +219,14 @@ impl<'a> WaitingPeer<'a> {
         }
     }
 
+    fn poll_until_parked(&mut self) {
+        for _ in 0..2048 {
+            if !self.poll_when_woken() {
+                break;
+            }
+        }
+    }
+
     fn poll_when_woken(&mut self) -> bool {
         if self.result.is_some() || !self.runnable.0.swap(false, Ordering::AcqRel) {
             return false;
@@ -235,12 +243,63 @@ impl<'a> WaitingPeer<'a> {
 }
 
 #[test]
+fn live_waiters_receive_the_independent_donors_full_charge() -> Result<()> {
+    check_independent_donor(DonorSchedule::Direct)
+}
+
+#[test]
+fn live_waiters_share_an_independent_donor_after_its_callback_lease_ends() -> Result<()> {
+    check_independent_donor(DonorSchedule::Leased)
+}
+
+#[test]
+fn waiters_can_enroll_after_lease_release_before_the_first_reaper_claim() -> Result<()> {
+    check_independent_donor(DonorSchedule::EnrollAfterLease)
+}
+
+#[derive(Clone, Copy)]
+enum DonorSchedule {
+    Direct,
+    Leased,
+    EnrollAfterLease,
+}
+
 #[expect(
     clippy::panic_in_result_fn,
+    clippy::unwrap_used,
+    reason = "the bounded schedule holds an exact registered donor"
+)]
+fn release_donor<T: crate::Trace + 'static>(
+    gc: &GarbageCollector,
+    donor: crate::GcRootGuard<T>,
+    leased: bool,
+) -> Result<()> {
+    let metadata = leased.then(|| gc.metadata_for_address(donor.as_ptr().addr()).unwrap());
+    let lease = metadata
+        .as_ref()
+        .map(|metadata| crate::metadata::ObjectMetadata::borrow_callback(metadata, false).unwrap());
+    drop(donor);
+    if leased {
+        let ticket = gc.completed_full_ticket();
+        gc.collect_full()?;
+        assert!(gc.completed_full_ticket() > ticket);
+        assert_eq!(gc.managed_bytes(), 64);
+    }
+    drop(lease);
+    Ok(())
+}
+
+#[expect(
+    clippy::panic_in_result_fn,
+    clippy::unwrap_used,
+    clippy::expect_used,
     clippy::unwrap_in_result,
     reason = "forced refund timing"
 )]
-fn live_waiters_receive_the_independent_donors_full_charge() -> Result<()> {
+fn check_independent_donor(schedule: DonorSchedule) -> Result<()> {
+    let leased = !matches!(schedule, DonorSchedule::Direct);
+    let enroll_after_lease = matches!(schedule, DonorSchedule::EnrollAfterLease);
+    let mut premature_results = Vec::new();
     for counted in [false, true] {
         for independent in [false, true] {
             let gc = capped_heap(counted, independent);
@@ -249,7 +308,16 @@ fn live_waiters_receive_the_independent_donors_full_charge() -> Result<()> {
             let b = Gc::try_new(&gc, donor)?;
             drop(a);
             let (release_a, reaper) = park_reaper(&gc, false);
-            let mut peers: Vec<_> = (1..4).map(|value| WaitingPeer::new(&gc, value)).collect();
+            let enroll = || {
+                (1..4)
+                    .map(|value| WaitingPeer::new(&gc, value))
+                    .collect::<Vec<_>>()
+            };
+            let mut peers = if enroll_after_lease {
+                Vec::new()
+            } else {
+                enroll()
+            };
             let (enter_b, parked_b) = mpsc::channel();
             let (release_b, resume_b) = mpsc::channel();
             let (enrolled, first_poll) = mpsc::channel();
@@ -263,7 +331,10 @@ fn live_waiters_receive_the_independent_donors_full_charge() -> Result<()> {
                 })
             });
             first_poll.recv_timeout(Duration::from_secs(3)).unwrap();
-            drop(b);
+            release_donor(&gc, b, leased)?;
+            if enroll_after_lease {
+                peers = enroll();
+            }
             permit.send(()).unwrap();
             parked_b.recv_timeout(Duration::from_secs(3)).unwrap();
             let ticket = gc.completed_full_ticket();
@@ -271,18 +342,14 @@ fn live_waiters_receive_the_independent_donors_full_charge() -> Result<()> {
             assert!(gc.completed_full_ticket() > ticket);
             // A late request has no claim on either privately owned donor.
             let mut late = WaitingPeer::new(&gc, 4);
-            for _ in 0..2048 {
-                if !late.poll_when_woken() {
-                    break;
-                }
-            }
+            late.poll_until_parked();
             for peer in &mut peers {
-                for _ in 0..2048 {
-                    if !peer.poll_when_woken() {
-                        break;
-                    }
-                }
+                peer.poll_until_parked();
             }
+            let terminal_oom = peers
+                .iter()
+                .filter(|peer| matches!(peer.result, Some(Err(crate::Error::OutOfMemory))))
+                .count();
             let all_pending = peers.iter().all(|peer| peer.result.is_none());
             let before_release = gc.managed_bytes();
             release_b.send(()).unwrap();
@@ -306,20 +373,25 @@ fn live_waiters_receive_the_independent_donors_full_charge() -> Result<()> {
             let charged = gc.managed_bytes();
             release_a.send(()).unwrap();
             reaper.join().unwrap()?;
-            assert!(
-                all_pending,
-                "covered requests must wait for physical deallocation"
-            );
+            if !all_pending {
+                premature_results.push((counted, independent, terminal_oom, values.clone()));
+            }
             assert!(matches!(late.result, Some(Err(crate::Error::OutOfMemory))));
             assert_eq!(before_release, 64);
             assert_eq!(**designated?, 0);
-            assert_eq!(values, [Some(1), Some(2), Some(3)]);
-            assert_eq!(charged, 64);
+            if all_pending {
+                assert_eq!(values, [Some(1), Some(2), Some(3)]);
+                assert_eq!(charged, 64);
+            }
             drop(peers);
             gc.collect_full()?;
             assert_eq!(gc.managed_bytes(), 0);
         }
     }
+    assert!(
+        premature_results.is_empty(),
+        "early terminal results before physical release (counted, independent, OOMs, retained peer values), leased={leased}: {premature_results:?}"
+    );
     Ok(())
 }
 
