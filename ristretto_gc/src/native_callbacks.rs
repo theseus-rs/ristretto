@@ -261,3 +261,144 @@ impl Runner {
         }))
     }
 }
+
+#[cfg(all(test, not(miri), panic = "unwind"))]
+mod tests {
+    use super::*;
+    use crate::{Configuration, Gc, Result, Trace};
+    use std::sync::atomic::AtomicUsize;
+    use std::time::{Duration, Instant};
+
+    struct Peer {
+        count: Arc<AtomicUsize>,
+        entered: mpsc::Sender<()>,
+        resume: Arc<Mutex<mpsc::Receiver<()>>>,
+    }
+    // SAFETY: the callback controls have no managed edges.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for Peer {
+        fn trace(&self, _: &GarbageCollector) {}
+        fn clear_step(&mut self, _: usize, _: usize) -> TraceProgress {
+            assert_ne!(
+                self.count.load(Ordering::Acquire),
+                1,
+                "intentional second clearing failure"
+            );
+            TraceProgress::Complete
+        }
+    }
+    #[expect(
+        clippy::expect_used,
+        reason = "the first destructor participates in the forced shutdown schedule"
+    )]
+    impl Drop for Peer {
+        fn drop(&mut self) {
+            if self.count.fetch_add(1, Ordering::AcqRel) == 0 {
+                self.entered.send(()).expect("first drop observer");
+                lock(&self.resume)
+                    .recv_timeout(Duration::from_secs(5))
+                    .expect("resume first drop");
+            }
+        }
+    }
+
+    #[test]
+    #[expect(
+        clippy::panic_in_result_fn,
+        clippy::unwrap_in_result,
+        reason = "a closed schedule channel fails the forced shutdown test"
+    )]
+    fn disconnection_drains_the_accepted_suffix_after_its_first_callback_parks() -> Result<()> {
+        let heap = GarbageCollector::with_config(
+            Configuration::builder()
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let count = Arc::new(AtomicUsize::new(0));
+        let (entered, parked) = mpsc::channel();
+        let (start, resume) = mpsc::channel();
+        let resume = Arc::new(Mutex::new(resume));
+        for _ in 0..3 {
+            drop(Gc::try_new(
+                &heap,
+                Peer {
+                    count: count.clone(),
+                    entered: entered.clone(),
+                    resume: resume.clone(),
+                },
+            )?);
+        }
+        // Capture three real swept tasks before submitting a single channel message.
+        heap.collect();
+        let mut captured = Vec::new();
+        for _ in 0..16_384 {
+            heap.step();
+            let mut cycle = lock(&heap.domains[1].cycle);
+            captured.extend(cycle.reclaim.drain(..).map(|task| (task, 1)));
+            if captured.len() == 3 {
+                break;
+            }
+        }
+        assert_eq!(captured.len(), 3);
+        heap.retired_ready.fetch_add(3, Ordering::AcqRel);
+        let callbacks = Arc::new(Callbacks::default());
+        let mut captured = captured.into_iter();
+        assert!(
+            callbacks
+                .send(
+                    &heap,
+                    Batch {
+                        first: captured.next().expect("first task"),
+                        rest: captured.collect(),
+                    },
+                    None
+                )
+                .is_none()
+        );
+        parked
+            .recv_timeout(Duration::from_secs(5))
+            .expect("callback parked");
+        let pool = callbacks.clone();
+        let closer = thread::spawn(move || pool.join());
+        let runner = callbacks.0.get().expect("callback runner");
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while runner.send.load().is_some() {
+            assert!(Instant::now() < deadline);
+            thread::yield_now();
+        }
+        {
+            let receiver = lock(&runner.receive);
+            // ArcSwap may have published None just before its displaced sender
+            // drops. Observe the channel's own disconnection while the first task is parked.
+            loop {
+                match receiver.submissions.try_recv() {
+                    Err(mpsc::TryRecvError::Disconnected) => break,
+                    Err(mpsc::TryRecvError::Empty) => {
+                        assert!(Instant::now() < deadline);
+                        thread::yield_now();
+                    }
+                    Ok(_) => panic!("the test submitted exactly one batch"),
+                }
+            }
+            assert_eq!(
+                receiver
+                    .remaining
+                    .as_ref()
+                    .expect("accepted suffix")
+                    .entries
+                    .len(),
+                2
+            );
+        }
+        start.send(()).expect("release first drop");
+        let failed = closer.join().expect("join owner")?;
+        assert!(failed, "the second callback's panic must reach shutdown");
+        assert_eq!(count.load(Ordering::Acquire), 3);
+        assert_eq!(heap.callback_jobs.load(Ordering::Acquire), 0);
+        assert_eq!(heap.managed_bytes(), 0);
+        heap.stop()?;
+        Ok(())
+    }
+}
