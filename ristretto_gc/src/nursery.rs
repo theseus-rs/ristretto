@@ -7,6 +7,7 @@ use crate::publication_directory::Directory;
 use arc_swap::ArcSwap;
 use once_cell::race::OnceBox;
 use portable_atomic::AtomicU64;
+use std::collections::BTreeMap;
 use std::ops::Deref;
 use std::sync::atomic::{
     AtomicUsize,
@@ -142,7 +143,20 @@ impl Bitmap {
         (self.words[offset / WORD].fetch_and(!bit, AcqRel) & bit != 0).then(|| self.unpin())
     }
 
+    /// Retire exactly the set bits in one physical word. An allocator can
+    /// independently hold a pin before publishing a new bit into this word.
+    fn remove_mask(&self, word: usize, mask: u64) -> bool {
+        let prior = self.words[word].fetch_and(!mask, AcqRel);
+        let removed = (prior & mask).count_ones() as usize;
+        removed != 0 && self.users.fetch_sub(removed, AcqRel) == removed
+    }
+
     fn next(&self, start: usize) -> Option<usize> {
+        self.next_word(start)
+            .map(|(base, bits)| base + bits.trailing_zeros() as usize)
+    }
+
+    fn next_word(&self, start: usize) -> Option<(usize, u64)> {
         let first = start / WORD;
         if first >= WORDS {
             return None;
@@ -160,7 +174,7 @@ impl Bitmap {
             };
             let bits = self.words[word].load(Acquire) & mask;
             if bits != 0 {
-                return Some(word * WORD + bits.trailing_zeros() as usize);
+                return Some((word * WORD, bits));
             }
             candidates &= candidates - 1;
         }
@@ -339,8 +353,48 @@ impl Drop for Slot<'_> {
     }
 }
 
+/// Only promotion under the live-operation shard installs an owner here.
+#[derive(Debug, Default)]
+pub(crate) struct MatureWords(BTreeMap<usize, Box<MatureWord>>);
+
+#[derive(Debug)]
+struct MatureWord {
+    occupied: u64,
+    entries: [Option<MetadataRef>; WORD],
+}
+
+#[expect(
+    clippy::indexing_slicing,
+    reason = "slot offset is reduced modulo WORD"
+)]
+impl MatureWords {
+    fn insert(&mut self, key: usize, metadata: &MetadataRef) {
+        let word = self.0.entry(key / WORD).or_insert_with(|| {
+            Box::new(MatureWord {
+                occupied: 0,
+                entries: std::array::from_fn(|_| None),
+            })
+        });
+        let offset = key % WORD;
+        word.occupied |= 1 << offset;
+        word.entries[offset] = Some(metadata.clone());
+    }
+
+    fn remove(&mut self, key: usize) {
+        let Some(word) = self.0.get_mut(&(key / WORD)) else {
+            return;
+        };
+        let offset = key % WORD;
+        word.entries[offset] = None;
+        word.occupied &= !(1 << offset);
+        if word.occupied == 0 {
+            self.0.remove(&(key / WORD));
+        }
+    }
+}
+
 pub(crate) struct Membership<'a> {
-    _guard: MutexGuard<'a, ()>,
+    mature: MutexGuard<'a, MatureWords>,
     slot: Option<Slot<'a>>,
     metadata: Option<MetadataRef>,
     address: usize,
@@ -362,8 +416,9 @@ impl Membership<'_> {
             .filter(|m| *address == self.address && m.birth.visible())
     }
 
-    pub(crate) fn promote(&self, cache: &mut YoungRetirement) -> Option<Sealed> {
+    pub(crate) fn promote(&mut self, cache: &mut YoungRetirement) -> Option<Sealed> {
         let slot = self.slot.as_ref()?;
+        self.mature.insert(slot.key, self.metadata.as_ref()?);
         let page = slot.clear_young(cache)?;
         Some(Sealed {
             key: slot.key,
@@ -380,6 +435,11 @@ impl Membership<'_> {
         cache: &mut YoungRetirement,
     ) -> (Option<MetadataRef>, Option<Sealed>) {
         if let Some(metadata) = self.metadata.take() {
+            if metadata.age.load(Acquire) != 0
+                && let Some(slot) = &self.slot
+            {
+                self.mature.remove(slot.key);
+            }
             metadata.birth.retire();
         }
         self.slot
@@ -410,13 +470,13 @@ impl YoungCursor {
 
 #[derive(Debug)]
 pub(crate) struct Objects {
-    guards: Shards<()>,
+    guards: Shards<MatureWords>,
     shard_bits: u32,
     pages: Box<[Head]>,
 }
 
 impl Deref for Objects {
-    type Target = Shards<()>;
+    type Target = Shards<MatureWords>;
     fn deref(&self) -> &Self::Target {
         &self.guards
     }
@@ -468,7 +528,11 @@ impl Objects {
         page.entry(key)?.load_full().filter(|m| m.birth.visible())
     }
 
-    fn membership<'a>(&'a self, address: usize, guard: MutexGuard<'a, ()>) -> Membership<'a> {
+    fn membership<'a>(
+        &'a self,
+        address: usize,
+        guard: MutexGuard<'a, MatureWords>,
+    ) -> Membership<'a> {
         let head = self.head(address);
         let key = packed_key(address, self.shard_bits);
         let pages = head.pages.load();
@@ -480,7 +544,7 @@ impl Objects {
         });
         let metadata = slot.as_ref().and_then(|s| s.page.entry(key)?.load_full());
         Membership {
-            _guard: guard,
+            mature: guard,
             slot,
             metadata,
             address,
@@ -500,11 +564,15 @@ impl Objects {
         cursor: &mut Cursor,
         read: impl FnOnce(&MetadataRef) -> R,
     ) -> Scan<R> {
-        self.scan_page(cursor, |metadata, _, _, _, guard| {
-            let result = read(metadata);
-            drop(guard);
-            result
-        })
+        self.scan_page(
+            cursor,
+            || false,
+            |metadata, _, _, _, guard| {
+                let result = read(metadata);
+                drop(guard);
+                result
+            },
+        )
     }
 
     // All reads in a batch use the same live-operation guard. New births
@@ -512,7 +580,14 @@ impl Objects {
     fn scan_page<'a, R>(
         &'a self,
         cursor: &mut Cursor,
-        read: impl FnOnce(&MetadataRef, &Arc<Page>, usize, &mut Cursor, MutexGuard<'a, ()>) -> R,
+        mature_covered: impl FnOnce() -> bool,
+        read: impl FnOnce(
+            &MetadataRef,
+            &Arc<Page>,
+            usize,
+            &mut Cursor,
+            MutexGuard<'a, MatureWords>,
+        ) -> R,
     ) -> Scan<R> {
         if !cursor.begin(self.pages.len()) {
             return Scan::Done;
@@ -521,7 +596,28 @@ impl Objects {
             cursor.rotate();
             return Scan::Busy;
         };
-        match Self::next(&self.pages[cursor.shard].pages, cursor, None, || {}) {
+        let head = &self.pages[cursor.shard];
+        // A constructor installs nursery membership before publishing its cell.
+        // This shard excludes both a local promotion and a live removal between
+        // the certificate check and selection. Both sources use the same packed
+        // address cursor, so invalidation resumes at the first unvisited entry.
+        let next = if mature_covered() {
+            match Self::next(&head.young, cursor, None, || {}) {
+                Scan::Entry(key, _) => {
+                    let pages = head.pages.load();
+                    let Some(page) = pages.get((key & !PAGE_MASK) as u64) else {
+                        return Scan::Advance;
+                    };
+                    Scan::Entry(key, page.clone())
+                }
+                Scan::Advance => Scan::Advance,
+                Scan::Busy => Scan::Busy,
+                Scan::Done => Scan::Done,
+            }
+        } else {
+            Self::next(&head.pages, cursor, None, || {})
+        };
+        match next {
             Scan::Entry(key, page) => {
                 let entry = page.entry(key).map(Cell::load);
                 if let Some(metadata) = entry
@@ -553,43 +649,65 @@ impl Objects {
         epoch: u64,
         promotion_age: usize,
         limit: usize,
+        coverage_current: impl FnOnce() -> bool,
     ) -> Scan<SweepEntry<'_>> {
         let survivor =
             |m: &MetadataRef| m.age.load(Acquire) == promotion_age && m.marked(domain, epoch);
-        self.scan_page(cursor, |metadata, page, key, cursor, guard| {
-            if !survivor(metadata) {
-                return SweepEntry::Object(Membership {
-                    _guard: guard,
-                    metadata: Some(metadata.clone()),
-                    address: unpack_key(key, cursor.shard, self.shard_bits),
-                    slot: Some(Slot {
-                        head: &self.pages[cursor.shard],
-                        page: page.clone(),
-                        key,
-                        reserved: false,
-                    }),
-                });
-            }
-            let mut offset = key & PAGE_MASK;
-            let mut count = 1;
-            while count < limit {
-                let Some(next) = page.occupied.next(offset + 1) else {
-                    break;
-                };
-                let Some(entry) = page.entry(next) else { break };
-                if !entry
-                    .load()
-                    .as_ref()
-                    .is_some_and(|m| m.birth.is_live() && survivor(m))
-                {
-                    break;
+        self.scan_page(
+            cursor,
+            coverage_current,
+            |metadata, page, key, cursor, guard| {
+                if !survivor(metadata) {
+                    return SweepEntry::Object(Membership {
+                        mature: guard,
+                        metadata: Some(metadata.clone()),
+                        address: unpack_key(key, cursor.shard, self.shard_bits),
+                        slot: Some(Slot {
+                            head: &self.pages[cursor.shard],
+                            page: page.clone(),
+                            key,
+                            reserved: false,
+                        }),
+                    });
                 }
-                cursor.selected((key & !PAGE_MASK) | next);
-                offset = next;
-                count += 1;
-            }
-            SweepEntry::Survivors(count)
-        })
+                // Promotion and removal of every cached slot use this shard.
+                let base = key & !PAGE_MASK;
+                let mut start = (key & PAGE_MASK) + 1;
+                let mut count = 1;
+                'words: while count < limit {
+                    let Some((word, mut bits)) = page.occupied.next_word(start) else {
+                        break;
+                    };
+                    let cached = guard.0.get(&((base | word) / WORD));
+                    while bits != 0 {
+                        let bit = bits.trailing_zeros() as usize;
+                        let next = word + bit;
+                        let survives = if let Some(m) = cached.and_then(|w| w.entries[bit].as_ref())
+                        {
+                            m.marked(domain, epoch)
+                        } else {
+                            page.entry(next).is_some_and(|entry| {
+                                entry
+                                    .load()
+                                    .as_ref()
+                                    .is_some_and(|m| m.birth.is_live() && survivor(m))
+                            })
+                        };
+                        if !survives {
+                            break 'words;
+                        }
+                        cursor.selected(base | next);
+                        count += 1;
+                        if count == limit {
+                            break 'words;
+                        }
+                        bits &= bits - 1;
+                    }
+                    start = word + WORD;
+                }
+                SweepEntry::Survivors(count)
+            },
+        )
     }
 
     /// Reuse the guarded address page for a consecutive white entry. Leave
@@ -619,34 +737,76 @@ impl Objects {
     /// A proven unaged white can transfer its registry owner directly to
     /// clearing. Keep the ordinary cursor and retry without effects on a miss.
     #[cfg(not(feature = "experimental-identity-index"))]
-    pub(crate) fn take_next_white(
+    pub(crate) fn take_white_word(
         &self,
         member: &mut Membership<'_>,
         cursor: &mut Cursor,
         epoch: u64,
-        cache: &mut YoungRetirement,
-        revoke: impl FnOnce(usize, &MetadataRef) -> bool,
-    ) -> Option<(MetadataRef, Option<Sealed>)> {
-        let slot = member.slot.as_mut()?;
-        let offset = slot.page.occupied.next((slot.key & PAGE_MASK) + 1)?;
-        let key = (slot.key & !PAGE_MASK) | offset;
-        let address = unpack_key(key, cursor.shard, self.shard_bits);
-        let entry = slot.page.entry(offset)?;
-        let removed = entry.take_if(|m| {
-            if !m.birth.is_live() || m.age.load(Acquire) != 0 || m.marked(1, epoch) {
-                return false;
+        output: &mut [Option<MetadataRef>],
+        mut revoke: impl FnMut(usize, &MetadataRef) -> bool,
+    ) -> (usize, Option<Sealed>) {
+        let Some(slot) = member.slot.as_mut() else {
+            return (0, None);
+        };
+        let Some((word_base, mut candidates)) =
+            slot.page.occupied.next_word((slot.key & PAGE_MASK) + 1)
+        else {
+            return (0, None);
+        };
+        let base = slot.key & !PAGE_MASK;
+        let mut mask = 0;
+        let mut count = 0;
+        for destination in output {
+            if candidates == 0 {
+                break;
             }
-            if !revoke(address, m) {
-                return false;
-            }
-            m.birth.retire();
-            true
-        })?;
-        slot.key = key;
-        member.address = address;
-        cursor.selected(key);
-        let young = slot.clear_young(cache);
-        Some((removed, slot.finish_remove(true, young)))
+            let offset = word_base + candidates.trailing_zeros() as usize;
+            let key = base | offset;
+            let address = unpack_key(key, cursor.shard, self.shard_bits);
+            let Some(entry) = slot.page.entry(offset) else {
+                break;
+            };
+            let Some(removed) = entry.take_if(|m| {
+                if !m.birth.is_live()
+                    || m.age.load(Acquire) != 0
+                    || m.marked(1, epoch)
+                    || !revoke(address, m)
+                {
+                    return false;
+                }
+                m.birth.retire();
+                true
+            }) else {
+                break;
+            };
+            *destination = Some(removed);
+            mask |= candidates.isolate_lowest_one();
+            candidates &= candidates - 1;
+            slot.key = key;
+            member.address = address;
+            cursor.selected(key);
+            count += 1;
+        }
+        if count == 0 {
+            return (0, None);
+        }
+        // All selected births have been revoked. Keep their object reservations
+        // until the nursery update is complete, so reuse cannot lose a new bit.
+        let word = word_base / WORD;
+        let directory = slot.head.young.load();
+        let young = directory
+            .get(base as u64)
+            .filter(|page| page.remove_mask(word, mask))
+            .cloned();
+        slot.head.indexed.fetch_sub(count, Relaxed);
+        let last = slot.page.occupied.remove_mask(word, mask);
+        let sealed = (last || young.is_some()).then(|| Sealed {
+            key: slot.key,
+            shard: slot.head.shard,
+            objects: last.then(|| slot.page.clone()),
+            young,
+        });
+        (count, sealed)
     }
 
     pub(crate) fn scan_young(&self, cursor: &mut YoungCursor) -> Scan<()> {
@@ -759,6 +919,7 @@ impl Objects {
     pub(crate) fn drain(&self) -> Vec<MetadataRef> {
         let mut entries = Vec::new();
         for head in &self.pages {
+            self.guards.lock_bucket(head.shard).0.clear();
             let pages = head.pages.swap(Arc::default());
             head.young.store(Arc::default());
             head.indexed.store(0, Relaxed);
@@ -787,7 +948,8 @@ impl Objects {
     // long as either synthetic index is present, exactly like a reservation.
     #[cfg(test)]
     fn edit_for_test(&self, address: usize, edit: impl FnOnce(&Slot<'_>)) {
-        let point = self.lock(address);
+        let mut point = self.lock(address);
+        point.mature.remove(packed_key(address, self.shard_bits));
         let mut slot = self.reserve(address).or(point.slot).expect("address slot");
         slot.reserved = false;
         edit(&slot);
@@ -908,7 +1070,8 @@ mod tests {
         }
         let mut cursor = Cursor::default();
         for (address, count) in [(8, 2), (24, 1), (32, 0), (40, 0), (48, 1)] {
-            let Scan::Entry(actual, entry) = objects.scan_sweep(&mut cursor, 1, 4, 2, 2) else {
+            let Scan::Entry(actual, entry) = objects.scan_sweep(&mut cursor, 1, 4, 2, 2, || false)
+            else {
                 panic!("expected sweep entry");
             };
             assert_eq!(actual, address);
@@ -921,57 +1084,9 @@ mod tests {
             }
         }
         assert!(matches!(
-            objects.scan_sweep(&mut cursor, 1, 4, 2, 2),
+            objects.scan_sweep(&mut cursor, 1, 4, 2, 2, || false),
             Scan::Done
         ));
-    }
-
-    #[cfg(not(feature = "experimental-identity-index"))]
-    #[test]
-    fn deferred_white_transfer_preserves_selection_and_observes_an_intervening_mark() {
-        use crate::{GarbageCollector, Gc};
-        let gc = GarbageCollector::new();
-        let owner = Gc::new(&gc, 41_u64);
-        let white = gc
-            .metadata_for_address(owner.as_ptr().addr())
-            .expect("descriptor");
-        let objects = Objects::new(1);
-        objects.replace_for_test(8, Some(white.clone()));
-        objects.replace_for_test(16, Some(white.clone()));
-        let mut cursor = Cursor::default();
-        let Scan::Entry(8, SweepEntry::Object(mut member)) =
-            objects.scan_sweep(&mut cursor, 1, 4, 2, 1)
-        else {
-            panic!("first guarded entry");
-        };
-        let mut cache = YoungRetirement::default();
-        let mut selected = None;
-        assert!(
-            objects
-                .take_next_white(&mut member, &mut cursor, 4, &mut cache, |address, m| {
-                    selected = Some((address, m.id));
-                    false
-                })
-                .is_none()
-        );
-        assert_eq!(selected, Some((16, white.id)));
-        assert!(white.birth.is_live());
-        assert_eq!(member.address, 8);
-        white.mark_black(1, 4);
-        assert!(
-            objects
-                .take_next_white(&mut member, &mut cursor, 4, &mut cache, |_, _| panic!(
-                    "marked object reached revocation"
-                ))
-                .is_none()
-        );
-        drop(member);
-        let Scan::Entry(16, SweepEntry::Object(member)) =
-            objects.scan_sweep(&mut cursor, 1, 4, 2, 1)
-        else {
-            panic!("deferred candidate must remain next");
-        };
-        assert_eq!(member.get(&16).expect("surviving identity").id, white.id);
     }
 
     #[test]

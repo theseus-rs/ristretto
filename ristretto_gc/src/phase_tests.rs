@@ -41,7 +41,7 @@ fn a_busy_sole_sweep_skips_the_duplicate_probe_and_preserves_other_domain_turns(
         assert_eq!(gc.next_domain.load(Ordering::Relaxed), before);
         gc.collect_young();
         gc.step();
-        assert_ne!(gc.next_domain.load(Ordering::Relaxed), before);
+        assert!(gc.next_domain.load(Ordering::Relaxed) != before);
         drop(guard);
         for _ in 0..10000 {
             if gc.step() {
@@ -77,10 +77,10 @@ fn roots_reference_slots_and_sweep_entries_progress_with_the_coordinator_held() 
             assert_eq!(lock(&gc.domains[1].cycle).phase, phase);
             let before = gc.diagnostics().independent_phase_steps;
             let coordinator = lock(&gc.coordinator);
-            assert!(matches!(
-                gc.independent_phase_step(false),
-                phase_work::PhaseStep::Worked(_)
-            ));
+            assert!(
+                gc.independent_phase_step(false)
+                    .is_ok_and(|step| step.is_some())
+            );
             assert_eq!(gc.diagnostics().independent_phase_steps, before + 1);
             drop(coordinator);
             while !gc.step() {}
@@ -405,7 +405,7 @@ mod native {
     }
 
     #[test]
-    fn independent_root_read_retries_a_contended_entry_without_retaining_admission() -> Result<()> {
+    fn independent_root_read_advances_past_a_parked_object_shard() -> Result<()> {
         for concurrent in [false, true] {
             let gc = collector(concurrent);
             let first = Gc::try_new(&gc, 7_u64)?;
@@ -420,7 +420,7 @@ mod native {
             let (finished, result) = mpsc::channel();
             let worker = thread::spawn(move || {
                 finished
-                    .send(worker_gc.independent_phase_step(false))
+                    .send(worker_gc.independent_phase_step(false).ok().flatten())
                     .expect("root observer");
             });
             let yielded = result.recv_timeout(Duration::from_secs(1));
@@ -431,11 +431,11 @@ mod native {
             );
             drop(objects);
             worker.join().expect("root scan");
-            assert_eq!(yielded, Ok(phase_work::PhaseStep::Worked(false)));
+            assert_eq!(yielded, Ok(Some(false)));
             assert!(coordinator_free && admission_free);
-            assert_eq!(lock(&gc.domains[1].cycle).cursor, cursor);
+            assert!(lock(&gc.domains[1].cycle).cursor > cursor);
             gc.collect_full()?;
-            let recovered = weak.upgrade().expect("retried graph survived");
+            let recovered = weak.upgrade().expect("scanned graph survived");
             assert_eq!(*recovered[0], 42);
             drop((recovered, first, root));
             gc.stop()?;

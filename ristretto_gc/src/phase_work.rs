@@ -1,7 +1,7 @@
 //! Bounded per-domain work; only global phase transitions need the coordinator.
 use super::{
-    CollectionKind, Context, Cycle, GarbageCollector, MetadataRef, Ordering, Phase, ReclaimTask,
-    TraceRetention, WorkCounters, now,
+    CollectionKind, Context, Cycle, GarbageCollector, MatureCoverage, MetadataRef, Ordering, Phase,
+    ReclaimTask, TraceRetention, WorkCounters, now,
 };
 
 type WhiteRun<'a> = (
@@ -11,13 +11,6 @@ type WhiteRun<'a> = (
 
 pub(super) const SWEEP_BATCH: usize = 16;
 
-#[derive(Debug, PartialEq, Eq)]
-pub(super) enum PhaseStep {
-    Fallback,
-    CycleBusy(usize),
-    Worked(bool),
-}
-
 pub(super) enum Unit {
     Progress,
     Busy,
@@ -26,6 +19,7 @@ pub(super) enum Unit {
 }
 
 pub(super) enum SweepWork {
+    ReleasePacket(crate::work::Packet),
     Reclaim(ReclaimTask, usize),
     Unlink(SealedPages),
 }
@@ -39,6 +33,7 @@ impl SweepWork {
         counters: &mut WorkCounters,
     ) {
         match self {
+            Self::ReleasePacket(packet) => drop(packet),
             Self::Reclaim(task, budget) => gc.reclaim_swept(task, index, epoch, budget, counters),
             Self::Unlink(pages) => pages.unlink(gc),
         }
@@ -77,7 +72,6 @@ impl SealedPages {
 
 pub(super) enum ContextUnit {
     Progress,
-    Busy,
     Cleanup(crate::context::ContextCleanup),
 }
 
@@ -86,9 +80,9 @@ impl GarbageCollector {
         clippy::too_many_lines,
         reason = "one budget for independent domain units"
     )]
-    pub(super) fn independent_phase_step(&self, concurrent: bool) -> PhaseStep {
+    pub(super) fn independent_phase_step(&self, concurrent: bool) -> Result<Option<bool>, usize> {
         if !self.configuration.independent_phases {
-            return PhaseStep::Fallback;
+            return Ok(None);
         }
         let preferred = self.next_domain.load(Ordering::Relaxed) % 2;
         let terminal =
@@ -103,9 +97,7 @@ impl GarbageCollector {
             }
         });
         let context = Context::enter(self, index);
-        let Ok(cycle) = self.domain().cycle.try_lock() else {
-            return PhaseStep::CycleBusy(index);
-        };
+        let cycle = self.domain().cycle.try_lock().map_err(|_| index)?;
         let started = now();
         let cpu_started = (concurrent && self.diagnostics_enabled())
             .then(crate::diagnostics::thread_cpu_ns)
@@ -132,10 +124,6 @@ impl GarbageCollector {
                         ContextUnit::Progress => {
                             progressed = true;
                             continue;
-                        }
-                        ContextUnit::Busy => {
-                            progressed = true;
-                            break;
                         }
                         ContextUnit::Cleanup(cleanup) => {
                             drop(cycle);
@@ -211,7 +199,7 @@ impl GarbageCollector {
             progressed
         };
         if !progressed {
-            return PhaseStep::Fallback;
+            return Ok(None);
         }
         let measurement = if concurrent {
             &self.diagnostics.worker_steps
@@ -229,7 +217,7 @@ impl GarbageCollector {
         self.record_step(started, cpu_started, concurrent, &mut counters);
         drop(measurement);
         self.notify_progress();
-        PhaseStep::Worked(!self.pending())
+        Ok(Some(!self.pending()))
     }
 
     pub(super) fn context_root_unit(&self, cycle: &mut Cycle) -> ContextUnit {
@@ -239,10 +227,7 @@ impl GarbageCollector {
             .then(|| self.allocation_guard());
         match self.contexts.scan(&mut cycle.context_cursor) {
             crate::context::RootScan::Root(address) => {
-                if self.try_shade(address).is_none() {
-                    cycle.context_cursor.retry_root();
-                    return ContextUnit::Busy;
-                }
+                self.shade_registered_root(address);
             }
             crate::context::RootScan::Advance => {}
             crate::context::RootScan::Done => cycle.phase = Phase::RootSlots,
@@ -302,10 +287,7 @@ impl GarbageCollector {
                     .map(|roots| roots.scan(&mut cycle.root_cursor))
                 {
                     Some(crate::roots::Scan::Root(address)) => {
-                        if self.try_shade(address).is_none() {
-                            cycle.root_cursor.retry_root();
-                            return false;
-                        }
+                        self.shade_registered_root(address);
                     }
                     Some(crate::roots::Scan::Advance) => {}
                     Some(crate::roots::Scan::Done) | None => cycle.phase = Phase::Roots,
@@ -313,9 +295,7 @@ impl GarbageCollector {
             }
             Phase::Roots => match self.roots.scan(cycle.cursor) {
                 crate::roots::TreeScan::Root(id, address) => {
-                    if self.try_shade(address).is_none() {
-                        return false;
-                    }
+                    self.shade_registered_root(address);
                     cycle.cursor = id;
                 }
                 crate::roots::TreeScan::Retry => return false,
@@ -377,6 +357,16 @@ impl GarbageCollector {
                 }
             }
             Phase::Remembered => {
+                if let Some((id, address)) =
+                    self.remembered.dirty.next(&mut cycle.remembered_overflow)
+                {
+                    if let Some(metadata) = self.objects.lookup(address)
+                        && metadata.id.to_i64().cast_unsigned() == id
+                    {
+                        self.shade_metadata(&metadata);
+                    }
+                    return true;
+                }
                 // Promotions are remembered so younger children of survivors remain live.
                 let next = if cycle.kind == CollectionKind::Young {
                     match self.remembered.scan(&mut cycle.remembered_cursor) {
@@ -582,20 +572,32 @@ impl GarbageCollector {
         let _admission = (self.configuration.independent_phases
             && self.publication_clock.is_some())
         .then(|| self.allocation_guard());
+        if matches!(cycle.mature_coverage, MatureCoverage::Unchecked) {
+            cycle.mature_coverage = if cycle.kind == CollectionKind::Full
+                && !self.configuration.overlapping_generations
+                && self.configuration.old_collection_interval == 0
+            {
+                self.mature_census.coverage()
+            } else {
+                MatureCoverage::Incomplete
+            };
+        }
         let limit = if self.configuration.max_pause_time_us == 0 {
             SWEEP_BATCH
         } else {
             1
         };
         let mut run = None;
-        for visit in 0..limit {
-            if visit != 0 {
+        let mut visits = limit;
+        while visits != 0 {
+            if visits != limit {
                 if *work == 0 {
                     return Unit::Progress;
                 }
                 *work -= 1;
             }
-            match self.sweep_one(cycle, work, counters, &mut run) {
+            visits -= 1;
+            match self.sweep_one(cycle, work, counters, &mut run, &mut visits) {
                 Unit::Progress => {}
                 Unit::Boundary if !cycle.reclaim.is_empty() => return Unit::Progress,
                 next => return next,
@@ -622,17 +624,11 @@ impl GarbageCollector {
         work: &mut usize,
         counters: &mut WorkCounters,
         run: &mut Option<WhiteRun<'gc>>,
+        visits: &mut usize,
     ) -> Unit {
         let index = self.domain_index();
         let mut sealed = SealedPages::default();
-        #[cfg_attr(
-            feature = "experimental-identity-index",
-            expect(
-                unused_labels,
-                reason = "the incremental identity index uses the ordinary removal path"
-            )
-        )]
-        let removed = 'selection: {
+        let removed = {
             if self.contexts.pending.load(Ordering::Acquire) != 0 {
                 return Unit::Busy;
             }
@@ -651,15 +647,22 @@ impl GarbageCollector {
             };
             #[cfg(not(feature = "experimental-identity-index"))]
             if let Some((member, remembered)) = run.as_mut() {
+                let mut retired: [Option<MetadataRef>; SWEEP_BATCH] = std::array::from_fn(|_| None);
+                let limit = (*work).min(*visits) + 1;
                 let mut deferred = None;
-                if let Some((metadata, address_page)) = self.objects.take_next_white(
+                let (count, page) = self.objects.take_white_word(
                     member,
                     &mut cycle.sweep_object_cursor,
                     cycle.epoch,
-                    &mut cycle.young_retirement,
+                    &mut retired[..limit],
                     |address, metadata| {
-                        // Sample pending mark work after selecting the exact
-                        // white descriptor and before committing retirement.
+                        if sealed.identity.is_some() {
+                            return false;
+                        }
+                        if self.contexts.pending.load(Ordering::Acquire) != 0 {
+                            deferred = Some(Unit::Busy);
+                            return false;
+                        }
                         deferred = self.check_sweep_mark_work();
                         if deferred.is_some() {
                             return false;
@@ -672,12 +675,24 @@ impl GarbageCollector {
                         remembered.remove(address);
                         true
                     },
-                ) {
-                    sealed.address = address_page;
-                    if sealed.address.is_some() {
+                );
+                if count != 0 {
+                    *work -= count - 1;
+                    *visits -= count - 1;
+                    sealed.address = page;
+                    if sealed.address.is_some() || deferred.is_some() {
                         drop(run.take());
                     }
-                    break 'selection Some(metadata);
+                    for metadata in retired.into_iter().flatten() {
+                        self.enqueue_swept(metadata, cycle, run);
+                    }
+                    // A deferred candidate has no effects and remains next. A
+                    // structural cleanup from this prefix must be handed out.
+                    return if sealed.address.is_some() || sealed.identity.is_some() {
+                        sealed.into_unit()
+                    } else {
+                        deferred.unwrap_or(Unit::Progress)
+                    };
                 }
                 if let Some(unit) = deferred {
                     return unit;
@@ -723,6 +738,7 @@ impl GarbageCollector {
                     cycle.epoch,
                     self.configuration.promotion_age.max(1),
                     limit,
+                    || self.mature_census.current(cycle.mature_coverage),
                 ) {
                     crate::index::Scan::Entry(
                         address,
@@ -747,6 +763,16 @@ impl GarbageCollector {
                 return unit;
             }
             let Some((address, mut objects)) = selected else {
+                if let Some(cursor) = &mut cycle.packet_cleanup {
+                    match self.domain_at(1).mark_queue.take_cache_entry(cursor) {
+                        crate::index::Scan::Entry(_, packet) => {
+                            return Unit::Sweep(SweepWork::ReleasePacket(packet));
+                        }
+                        crate::index::Scan::Advance => return Unit::Progress,
+                        crate::index::Scan::Done => cycle.packet_cleanup = None,
+                        crate::index::Scan::Busy => return Unit::Busy,
+                    }
+                }
                 #[cfg(feature = "experimental-identity-index")]
                 return if self.identities.cleanup_step(&mut cycle.identity_cleanup) {
                     Unit::Boundary
@@ -783,12 +809,16 @@ impl GarbageCollector {
                             return retry(cycle);
                         };
                         self.promotion_snapshot(metadata);
+                        // Overcount while promotion is in progress. A scanner
+                        // can never certify an uncounted newly mature object.
+                        self.mature_census.promotions.fetch_add(1, Ordering::AcqRel);
                         metadata.age.store(age, Ordering::Release);
+                        let promoted = metadata.clone();
                         sealed.address = objects.promote(&mut cycle.young_retirement);
                         remembered.insert(address);
                         counters.promoted += 1;
                         drop(remembered);
-                        self.publish_old_promotion(metadata);
+                        self.publish_old_promotion(&promoted);
                     } else {
                         metadata.age.store(age, Ordering::Release);
                     }
@@ -829,7 +859,14 @@ impl GarbageCollector {
                         );
                     }
                     remembered.remove(address);
+                    let was_mature = previous == promotion_age;
                     let (removed, address_page) = objects.retire(&mut cycle.young_retirement);
+                    if was_mature && removed.is_some() {
+                        cycle.packet_cleanup = Some(0);
+                        self.mature_census
+                            .retirements
+                            .fetch_add(1, Ordering::AcqRel);
+                    }
                     sealed.address = address_page;
                     if full_scan && sealed.address.is_none() {
                         *run = Some((objects, remembered));
@@ -841,23 +878,35 @@ impl GarbageCollector {
             }
         };
         if let Some(metadata) = removed {
-            // The byte debt belongs to the retired descriptor, independent of
-            // which queue or callback currently owns its clearing progress.
-            self.retired_bytes
-                .fetch_add(metadata.size(), Ordering::AcqRel);
-            if metadata.retire() {
-                cycle.reclaim.push_back(ReclaimTask {
-                    metadata,
-                    offset: 0,
-                    finalized: false,
-                });
-            } else {
-                // Returning the retiring borrow may publish external clearing
-                // work. Do not retain page or remembered guards for that handoff.
-                drop(run.take());
-                self.defer_retirement(metadata);
-            }
+            self.enqueue_swept(metadata, cycle, run);
         }
         sealed.into_unit()
+    }
+
+    fn enqueue_swept(
+        &self,
+        metadata: MetadataRef,
+        cycle: &mut Cycle,
+        run: &mut Option<WhiteRun<'_>>,
+    ) {
+        self.remembered
+            .dirty
+            .retire(metadata.id.to_i64().cast_unsigned());
+        // The byte debt belongs to the retired descriptor, independent of
+        // which queue or callback currently owns its clearing progress.
+        self.retired_bytes
+            .fetch_add(metadata.size(), Ordering::AcqRel);
+        if metadata.retire() {
+            cycle.reclaim.push_back(ReclaimTask {
+                metadata,
+                offset: 0,
+                finalized: false,
+            });
+        } else {
+            // Returning the retiring borrow may publish external clearing
+            // work. Do not retain page or remembered guards for that handoff.
+            drop(run.take());
+            self.defer_retirement(metadata);
+        }
     }
 }

@@ -240,7 +240,7 @@ thread_local! {
     static CONTEXT: std::cell::Cell<Option<(usize, usize)>> = const { std::cell::Cell::new(None) };
     static WORKER: std::cell::Cell<Option<(usize, usize)>> = const { std::cell::Cell::new(None) };
     static SCAN_YOUNG: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
-    static TRACE_RETENTION: std::cell::Cell<Option<(usize, Retention, bool)>> = const { std::cell::Cell::new(None) };
+    static TRACE_RETENTION: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 // A trace callback can step another heap on this thread. Restore the
@@ -259,14 +259,34 @@ impl Drop for ScanYoung {
     }
 }
 
-struct TraceRetention(Option<(usize, Retention, bool)>);
+// Only compare the heap address for identity. No pointer is reconstructed.
+const _: () = assert!(align_of::<GarbageCollector>() >= 8);
+struct TraceRetention(usize);
 impl TraceRetention {
+    const RESERVED: usize = 4;
+
+    fn current(gc: &GarbageCollector) -> Option<(Retention, bool)> {
+        let state = TRACE_RETENTION.get();
+        if state & !7 != std::ptr::from_ref(gc).addr() {
+            return None;
+        }
+        let strength = match state & 3 {
+            0 => Retention::Strong,
+            1 => Retention::Final,
+            _ => Retention::Phantom,
+        };
+        Some((strength, state & Self::RESERVED != 0))
+    }
+
     fn enter(gc: &GarbageCollector, strength: Retention) -> Self {
-        Self(TRACE_RETENTION.replace(Some((std::ptr::from_ref(gc) as usize, strength, false))))
+        Self(TRACE_RETENTION.replace(std::ptr::from_ref(gc).addr() | strength as usize))
     }
 
     fn callback(gc: &GarbageCollector, strength: Retention) -> Self {
-        Self(TRACE_RETENTION.replace(Some((std::ptr::from_ref(gc) as usize, strength, true))))
+        Self(
+            TRACE_RETENTION
+                .replace(std::ptr::from_ref(gc).addr() | strength as usize | Self::RESERVED),
+        )
     }
 }
 impl Drop for TraceRetention {
@@ -380,23 +400,27 @@ pub enum TraceProgress {
     Busy,
 }
 
-/// Claimed tasks remain counted in `in_flight`, including tasks not yet executed.
-struct MarkTask {
-    metadata: MetadataRef,
-    retention: Retention,
-    offset: usize,
-    version: usize,
-    has_young: bool,
-    budget: usize,
-    // Busy also represents a task returned without execution at the time limit.
-    progress: TraceProgress,
-}
-
 #[cfg(test)]
 #[derive(Debug)]
 struct ClaimPause {
     entered: std::sync::mpsc::Sender<()>,
     resume: std::sync::mpsc::Receiver<()>,
+}
+
+/// Constructed only by the batch executor while it owns an in-flight
+/// reservation for the non-overlapping full epoch.
+pub(crate) struct ReservedFullScan {
+    epoch: u64,
+    mature: usize,
+}
+
+impl ReservedFullScan {
+    pub(crate) fn covers(&self, gc: &GarbageCollector, metadata: &ObjectMetadata) -> bool {
+        std::ptr::eq(metadata.collector.as_ptr(), gc)
+            && metadata.age.load(Ordering::Acquire) >= self.mature
+            && metadata.retention(1, self.epoch) == Some(Retention::Strong)
+            && metadata.birth.is_live()
+    }
 }
 
 /// Exclusive ownership of an unregistered descriptor, including clear progress.
@@ -625,6 +649,41 @@ pub unsafe trait Trace {
     }
 }
 
+// Each allocation has a non-reusable positive identity and is promoted and
+// retired at most once. A Strong transition on a LIVE mature descriptor is
+// unique in a pinned full epoch, including after a weaker discovery.
+#[derive(Default, Debug)]
+struct MatureCensus {
+    promotions: AtomicU64,
+    retirements: AtomicU64,
+    strong: AtomicU64,
+}
+
+#[derive(Clone, Copy, Debug)]
+enum MatureCoverage {
+    Unchecked,
+    Incomplete,
+    Complete(u64),
+}
+
+impl MatureCensus {
+    fn coverage(&self) -> MatureCoverage {
+        let promotions = self.promotions.load(Ordering::Acquire);
+        let retired = self.retirements.load(Ordering::Acquire);
+        if promotions != 0
+            && promotions.checked_sub(retired) == Some(self.strong.load(Ordering::Acquire))
+        {
+            MatureCoverage::Complete(promotions)
+        } else {
+            MatureCoverage::Incomplete
+        }
+    }
+
+    fn current(&self, proof: MatureCoverage) -> bool {
+        matches!(proof, MatureCoverage::Complete(p) if p == self.promotions.load(Ordering::Acquire))
+    }
+}
+
 /// A collection can reclaim either the young generation or the entire heap.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CollectionKind {
@@ -660,9 +719,12 @@ struct Cycle {
     cursor: usize,
     young_cursor: crate::index::YoungCursor,
     remembered_cursor: crate::index::Cursor,
+    remembered_overflow: crate::index::RememberedOverflow,
     sweep_young_cursor: crate::index::YoungCursor,
     object_cursor: crate::index::Cursor,
     sweep_object_cursor: crate::index::Cursor,
+    mature_coverage: MatureCoverage,
+    packet_cleanup: Option<usize>,
     young_retirement: crate::index::YoungRetirement,
     #[cfg(not(feature = "experimental-identity-index"))]
     identity_cursor: crate::identity_pages::RetireCursor,
@@ -694,9 +756,12 @@ impl Default for Cycle {
             cursor: 0,
             young_cursor: crate::index::YoungCursor::default(),
             remembered_cursor: crate::index::Cursor::default(),
+            remembered_overflow: crate::index::RememberedOverflow::default(),
             sweep_young_cursor: crate::index::YoungCursor::default(),
             object_cursor: crate::index::Cursor::default(),
             sweep_object_cursor: crate::index::Cursor::default(),
+            mature_coverage: MatureCoverage::Unchecked,
+            packet_cleanup: None,
             young_retirement: crate::index::YoungRetirement::default(),
             #[cfg(not(feature = "experimental-identity-index"))]
             identity_cursor: crate::identity_pages::RetireCursor::default(),
@@ -779,6 +844,7 @@ pub struct GarbageCollector {
     typed_slots: once_cell::race::OnceBox<crate::roots::RootSlots>,
     next_root_id: AtomicUsize,
     objects: crate::index::Objects,
+    mature_census: MatureCensus,
     #[cfg(feature = "experimental-identity-index")]
     identities: crate::identity_index::Index,
     #[cfg(not(feature = "experimental-identity-index"))]
@@ -945,15 +1011,9 @@ impl GarbageCollector {
             self.shade_metadata(metadata);
         }
     }
-    fn domain_has_work(&self, index: usize) -> bool {
-        let domain = self.domain_at(index);
-        domain.active()
-            || domain.requested.load(Ordering::Acquire)
-            || (index == 1 && self.old_requested.load(Ordering::Acquire))
-    }
-
     fn pending(&self) -> bool {
-        self.retired_ready.load(Ordering::Acquire) != 0
+        self.remembered.dirty.cleanup_pending()
+            || self.retired_ready.load(Ordering::Acquire) != 0
             || self.old_requested.load(Ordering::Acquire)
             || self
                 .domains
@@ -1587,29 +1647,86 @@ impl GarbageCollector {
         }
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         barrier_progress_tests::pause_before_remembering();
+        self.enroll_unbuffered_owner(address, self.remembered.lock(address))
+            .is_some()
+    }
+
+    fn enroll_unbuffered_owner(
+        &self,
+        address: usize,
+        mut remembered: crate::index::RememberedGuard<'_>,
+    ) -> Option<MetadataRef> {
         let _measurement = self
             .diagnostics
             .barrier_record
             .measure(self.diagnostics_enabled());
-        let mut remembered = self.remembered.lock(address);
         // Sweep unlinks the exact descriptor under this same shard. A storage
         // pin can outlive registry retirement, but cannot permit address reuse.
-        let Some(metadata) = self.objects.lookup(address) else {
-            return false;
-        };
+        let metadata = self.objects.lookup(address)?;
         metadata.record_mutation();
         remembered.insert(address);
-        true
+        Some(metadata)
     }
 
     pub(crate) fn remember_address(&self, address: usize) {
         let _publication = self.allocation_guard();
+        if self.configuration.barrier_buffer_size == 0 {
+            if let Some(remembered) = self.remembered.try_lock(address) {
+                if let Some(metadata) = self.enroll_unbuffered_owner(address, remembered) {
+                    self.rescan_dirty_owner(&metadata);
+                }
+            } else if let Some(metadata) = self.objects.lookup(address) {
+                self.remember_contended_owner(&metadata);
+            }
+            return;
+        }
         if let Some(metadata) = self.objects.lock(address).get(&address) {
             metadata.record_mutation();
         } else {
             return;
         }
         self.barrier(address, true);
+    }
+
+    /// Called under publication admission. A future young cycle sees the
+    /// directory; an already-started strong snapshot may have passed the owner.
+    fn remember_contended_owner(&self, metadata: &MetadataRef) {
+        let _measurement = self
+            .diagnostics
+            .barrier_record
+            .measure(self.diagnostics_enabled());
+        let id = metadata.id.to_i64().cast_unsigned();
+        let address = metadata.ptr().0;
+        // Admission pins phase transitions. A terminal white identity can
+        // never publish a new version after sweep has removed its membership.
+        if self
+            .objects
+            .lookup(address)
+            .is_none_or(|current| current.id != metadata.id)
+            || self.logically_retired(metadata)
+        {
+            return;
+        }
+        let version = metadata.record_mutation();
+        self.remembered.dirty.publish(id, address, version);
+        self.rescan_dirty_owner(metadata);
+    }
+
+    /// Ordinary stores can reach either index on consecutive writes. Publish
+    /// their active snapshot debt under the same admission as enrollment.
+    fn rescan_dirty_owner(&self, metadata: &MetadataRef) {
+        let young = &self.domains[0];
+        if young.active() && young.weak_phase() == 0 && !self.logically_retired(metadata) {
+            let _context = Context::enter(self, 0);
+            // The owner may already have been scanned with its previous fields.
+            // Its outstanding mark alone does not cover this new traversal.
+            metadata.mark(0, young.epoch.load(Ordering::Acquire), Retention::Strong);
+            if metadata.request_dirty_scan() {
+                young
+                    .mark_queue
+                    .push(self.local_queue(), MarkItem::dirty(metadata.clone()));
+            }
+        }
     }
 
     /// Creates a collector with default configuration.
@@ -1715,6 +1832,7 @@ impl GarbageCollector {
                 relocation_claims: configuration
                     .independent_relocation
                     .then(|| Box::new(RwLock::new(()))),
+                mature_census: MatureCensus::default(),
                 objects: crate::index::Objects::new(configuration.metadata_shards),
                 #[cfg(feature = "experimental-identity-index")]
                 identities: crate::identity_index::Index::new(4096),
@@ -2401,7 +2519,7 @@ impl GarbageCollector {
                             for _ in 0..contention_delay {
                                 std::hint::spin_loop();
                             }
-                            contention_delay = (contention_delay * 2).min(512);
+                            contention_delay = (contention_delay * 2).min(16384);
                         }
                         let pacing = gc.pacing.as_ref().map_or(
                             gc.configuration.worker_yield_time_us,
@@ -3360,17 +3478,14 @@ impl GarbageCollector {
             )
         {
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
-            {
-                publication_tests::record_covered_removal();
-                publication_tests::pause_after_tree_detach();
-            }
+            publication_tests::record_covered_removal();
             return;
         }
         let _publication = self.allocation_guard();
         let removed = self.roots.remove(id, generation);
         if let Some(address) = removed {
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
-            publication_tests::pause_after_tree_detach();
+            pause_after_tree_detach();
             if ADOPT {
                 crate::construction::retain(self, address);
             }
@@ -3433,10 +3548,8 @@ impl GarbageCollector {
     }
 
     fn trace_retention(&self) -> Retention {
-        let inherited = TRACE_RETENTION
-            .get()
-            .filter(|(gc, _, _)| *gc == std::ptr::from_ref(self) as usize)
-            .map_or(Retention::Strong, |(_, strength, _)| strength);
+        let inherited =
+            TraceRetention::current(self).map_or(Retention::Strong, |(strength, _)| strength);
         inherited.max(Retention::at_phase(self.domain().weak_phase()))
     }
 
@@ -3498,11 +3611,19 @@ impl GarbageCollector {
             .is_some_and(|metadata| self.shade_known(&metadata))
     }
 
-    /// A root enumerator retains its position when the object shard is busy.
-    /// The caller still protects the successful read-to-shade operation.
-    fn try_shade(&self, address: usize) -> Option<bool> {
-        let metadata = self.objects.try_lock(address)?.get(&address).cloned();
-        Some(metadata.is_some_and(|metadata| self.shade_known(&metadata)))
+    /// The phase unit orders its root read and shade against closure. Resolve
+    /// only visible metadata; shading never borrows the target payload.
+    fn shade_registered_root(&self, address: usize) {
+        if let Some(metadata) = self.objects.lookup(address) {
+            let mature_full = self.domain_index() == 1
+                && self.domain().weak_phase() == 0
+                && !self.is_young_metadata(&metadata)
+                && self.trace_retention() == Retention::Strong;
+            if self.shade_known(&metadata) && mature_full {
+                // A mature full root has no receiving-young publication.
+                self.mature_census.strong.fetch_add(1, Ordering::Relaxed);
+            }
+        }
     }
 
     /// The caller protects registration/phase ordering; this path does not wait
@@ -3539,7 +3660,15 @@ impl GarbageCollector {
     ) {
         // Pruning is optional. Keep the entry if either shard is busy, so a
         // suspended shard owner cannot strand an in-flight mark task.
-        if has_young || version == usize::MAX || !self.remembered.may_contain(address) {
+        if has_young || version == usize::MAX {
+            return;
+        }
+        // A write after the scan began either has a newer directory version,
+        // or will publish it after our CAS. Ignore a lost optional prune.
+        self.remembered
+            .dirty
+            .try_remove(identity.to_i64().cast_unsigned(), version);
+        if !self.remembered.may_contain(address) {
             return;
         }
         let Some(objects) = self.objects.try_lock(address) else {
@@ -4103,10 +4232,10 @@ impl GarbageCollector {
         count: usize,
         edges: impl Iterator<Item = Option<&'a MetadataRef>>,
     ) -> usize {
-        let Some((owner, retention, true)) = TRACE_RETENTION.get() else {
+        let Some((retention, true)) = TraceRetention::current(self) else {
             return 0;
         };
-        if owner != std::ptr::from_ref(self) as usize || self.domain_index() != 1 {
+        if self.domain_index() != 1 {
             return 0;
         }
         let full = &self.domains[1];
@@ -4117,15 +4246,36 @@ impl GarbageCollector {
         let mature = self.configuration.promotion_age.max(1);
         let epoch = full.epoch.load(Ordering::Acquire);
         let strength = retention.max(Retention::at_phase(phase));
-        full.mark_queue
-            .append_mature(self.local_queue(), count, edges, |m| {
-                if !std::ptr::eq(m.collector.as_ptr(), self)
-                    || m.age.load(Ordering::Acquire) < mature
+        let mut fresh = 0;
+        let handled = full.mark_queue.append_mature(
+            self.local_queue(),
+            count,
+            if strength == Retention::Strong {
+                epoch
+            } else {
+                0
+            },
+            edges,
+            |m, known_mature| {
+                // A cached group owns the exact eight immutable descriptors and
+                // was first admitted by this heap after their last promotion.
+                if !known_mature
+                    && (!std::ptr::eq(m.collector.as_ptr(), self)
+                        || m.age.load(Ordering::Acquire) < mature)
                 {
                     return None;
                 }
-                Some(m.birth.is_live() && m.mark(1, epoch, strength))
-            })
+                let changed = m.birth.is_live() && m.mark(1, epoch, strength);
+                fresh += u64::from(changed);
+                Some(changed)
+            },
+        );
+        if strength == Retention::Strong && fresh != 0 {
+            self.mature_census
+                .strong
+                .fetch_add(fresh, Ordering::Relaxed);
+        }
+        handled
     }
 
     pub(crate) fn mark_object(&self, ptr: SafePtr, identity: crate::ObjectId) {
@@ -4357,16 +4507,15 @@ impl GarbageCollector {
         self.step_inner(false).unwrap_or(false)
     }
 
-    fn claim_mark_batch(&self, tasks: &mut [Option<MarkTask>; 8], remaining: &mut usize) -> usize {
-        let mut claim = crate::work::Claim::default();
+    fn claim_mark_batch(&self, claim: &mut crate::work::Claim, remaining: &mut usize) -> usize {
         self.domain().mark_queue.claim_into(
             self.local_queue(),
             self.configuration.mark_batch_size,
             remaining,
-            &mut claim,
+            claim,
         );
         #[cfg(test)]
-        if claim.items.iter().any(Option::is_some) {
+        if claim.count() != 0 {
             let pause = lock(&self.mark_claim_pause).take();
             if let Some(pause) = pause {
                 pause.entered.send(()).expect("claim entered");
@@ -4377,86 +4526,28 @@ impl GarbageCollector {
             }
         }
         if self.diagnostics_enabled() {
-            self.diagnostics
-                .mark_stolen
-                .fetch_add(claim.stolen as u64, Ordering::Relaxed);
-            self.diagnostics
-                .mark_queue_misses
-                .fetch_add(claim.misses as u64, Ordering::Relaxed);
-        }
-        let mut count = 0;
-        for (task, claimed) in tasks
-            .iter_mut()
-            .zip(claim.items.iter_mut().map(Option::take))
-        {
-            let Some((item, budget)) = claimed else {
-                continue;
-            };
-            debug_assert!(
-                self.domain_index() != 1
-                    || !self.old_collection_active()
-                    || item.metadata.age.load(Ordering::Acquire)
-                        >= self.configuration.promotion_age.max(1),
-                "old-core queue contains an allocation that is still young"
-            );
-            let version = item
-                .version
-                .unwrap_or_else(|| item.metadata.mutation.load(Ordering::Acquire));
-            *task = Some(MarkTask {
-                retention: self
-                    .visible_retention(
-                        &item.metadata,
-                        self.domain_index(),
-                        self.domain().epoch.load(Ordering::Acquire),
-                    )
-                    .unwrap_or(Retention::Phantom),
-                metadata: item.metadata,
-                offset: item.offset,
-                version,
-                has_young: item.has_young,
-                budget,
-                progress: TraceProgress::Busy,
-            });
-            count += 1;
-        }
-        count
-    }
-
-    fn publish_mark_batch(&self, tasks: &mut [Option<MarkTask>; 8], counters: &mut WorkCounters) {
-        for task in tasks.iter_mut().filter_map(Option::take) {
-            match task.progress {
-                TraceProgress::Complete => {
-                    counters.marked += 1;
-                    self.prune_remembered(
-                        task.metadata.trace.ptr as usize,
-                        task.metadata.id,
-                        task.version,
-                        task.has_young,
-                    );
-                }
-                TraceProgress::Continue(_) | TraceProgress::Busy => {
-                    let offset = if let TraceProgress::Continue(next) = task.progress {
-                        next
-                    } else {
-                        task.offset
-                    };
-                    self.domain().mark_queue.push(
-                        self.local_queue(),
-                        MarkItem {
-                            metadata: task.metadata,
-                            offset,
-                            version: Some(task.version),
-                            has_young: task.has_young,
-                        },
-                    );
-                }
+            if claim.stolen != 0 {
+                self.diagnostics
+                    .mark_stolen
+                    .fetch_add(claim.stolen as u64, Ordering::Relaxed);
+            }
+            if claim.misses != 0 {
+                self.diagnostics
+                    .mark_queue_misses
+                    .fetch_add(claim.misses as u64, Ordering::Relaxed);
             }
         }
+        claim.count()
     }
 
     /// A successful independent step never reacquires the coordinator. Reservations
     /// remain outstanding until all continuations and statistics have been published.
+    #[cfg(test)]
     fn independent_mark_step(&self, concurrent: bool) -> Option<bool> {
+        self.claim_independent_mark(concurrent, &mut false)
+    }
+
+    fn claim_independent_mark(&self, concurrent: bool, reserved_miss: &mut bool) -> Option<bool> {
         // A new publication can race this hint; the coordinated fallback and
         // the next step still inspect the authoritative phase and work queues.
         if self
@@ -4512,12 +4603,20 @@ impl GarbageCollector {
         }
         let context = Context::enter(self, index);
         let mut remaining = self.configuration.incremental_step_size.max(1);
-        let mut tasks = std::array::from_fn(|_| None);
+        let mut tasks = crate::work::Claim::default();
         let cpu_started = (concurrent && self.diagnostics_enabled())
             .then(crate::diagnostics::thread_cpu_ns)
             .flatten();
         let count = self.claim_mark_batch(&mut tasks, &mut remaining);
         if count == 0 {
+            let other = self.domain_at(1 - index);
+            // There is already a live reservation in precisely the generation
+            // we just probed. A coordinator cannot close it. A new request or
+            // published continuation is reconsidered by the next helper call.
+            *reserved_miss = self.domain().in_flight.load(Ordering::Acquire) != 0
+                && !other.active()
+                && !other.requested.load(Ordering::Acquire)
+                && !(index == 0 && self.old_requested.load(Ordering::Acquire));
             return None;
         }
         self.next_domain.fetch_add(1, Ordering::Relaxed);
@@ -4532,8 +4631,7 @@ impl GarbageCollector {
         .measure_from(self.diagnostics_enabled(), started);
         let mut counters = WorkCounters::default();
         loop {
-            let stalled = self.trace_mark_batch(&mut tasks, started);
-            self.publish_mark_batch(&mut tasks, &mut counters);
+            let stalled = self.trace_mark_batch(&mut tasks, started, &mut counters);
             if stalled || remaining == 0 {
                 break;
             }
@@ -4543,7 +4641,8 @@ impl GarbageCollector {
             {
                 break;
             }
-            tasks = std::array::from_fn(|_| None);
+            tasks.stolen = 0;
+            tasks.misses = 0;
             // A reservation from this step is still outstanding. The interlock means neither generation can
             // close marking, so further claims need no phase lock or epoch recheck.
             let count = self.claim_mark_batch(&mut tasks, &mut remaining);
@@ -4569,6 +4668,13 @@ impl GarbageCollector {
     }
 
     fn step_inner(&self, concurrent: bool) -> Option<bool> {
+        if self.remembered.dirty.cleanup_pending() {
+            self.remembered.dirty.cleanup_step(|id, address| {
+                self.objects
+                    .lookup(address)
+                    .is_some_and(|metadata| metadata.id.to_i64().cast_unsigned() == id)
+            });
+        }
         // A delayed borrower cannot hold a collection ticket open. Once released,
         // give its bounded clearing work alternating turns with active cycles.
         if self.retired_objects.load(Ordering::Acquire) != 0
@@ -4590,16 +4696,29 @@ impl GarbageCollector {
         {
             return Some(progress);
         }
-        let result = self
-            .independent_mark_step(concurrent)
-            .or_else(|| self.independent_relocation_step(concurrent))
-            .or_else(|| match self.independent_phase_step(concurrent) {
-                phase_work::PhaseStep::Worked(progress) => Some(progress),
-                // A coordinator turn would try the same held mutex. A request
-                // racing this hint is reconsidered on the very next step.
-                phase_work::PhaseStep::CycleBusy(index) if !self.domain_has_work(1 - index) => None,
-                _ => self.coordinated_step(concurrent),
-            });
+        let mut waiting = false;
+        let result = if let Some(progress) = self.claim_independent_mark(concurrent, &mut waiting) {
+            Some(progress)
+        } else if waiting {
+            None
+        } else {
+            self.independent_relocation_step(concurrent).or_else(|| {
+                match self.independent_phase_step(concurrent) {
+                    Ok(Some(progress)) => Some(progress),
+                    Err(index)
+                        if {
+                            let other = self.domain_at(1 - index);
+                            !other.active()
+                                && !other.requested.load(Ordering::Acquire)
+                                && !(index == 0 && self.old_requested.load(Ordering::Acquire))
+                        } =>
+                    {
+                        None
+                    }
+                    _ => self.coordinated_step(concurrent),
+                }
+            })
+        };
         // A producer may park after linking while still holding the coordinator.
         // Another ordinary worker or caller can deliver that visible notification.
         if result.is_none() && self.has_pending_references() {
@@ -4824,57 +4943,161 @@ impl GarbageCollector {
         Some(!self.pending())
     }
 
-    /// Runs a fixed-size batch without the coordinator. Return unexecuted tasks unchanged.
+    /// Finish each claim directly from its queue item. No callback runs under
+    /// a phase lock, and the existing reservation covers every publication.
     fn trace_mark_batch(
         &self,
-        tasks: &mut [Option<MarkTask>; 8],
+        claim: &mut crate::work::Claim,
         started: Option<std::time::Instant>,
+        counters: &mut WorkCounters,
     ) -> bool {
-        let mut executed = 0;
+        let index = self.domain_index();
+        let domain = self.domain_at(index);
+        let epoch = domain.epoch.load(Ordering::Acquire);
+        let lane = self.local_queue();
+        let ordinary = !self.configuration.overlapping_generations
+            && self.configuration.old_collection_interval == 0;
+        let full = (ordinary && index == 1).then_some(ReservedFullScan {
+            epoch,
+            mature: self.configuration.promotion_age.max(1),
+        });
+        let may_prune = self.remembered.may_prune();
+        let mut executed = 0_u64;
+        let mut deferred = 0_u64;
         let mut busy = false;
-        for task in tasks.iter_mut().flatten() {
-            if executed != 0
-                && let Some(started) = started
-                && self.configuration.max_pause_time_us != 0
-                && started.elapsed().as_micros() >= u128::from(self.configuration.max_pause_time_us)
-            {
-                break;
-            }
-            // A declared leaf has no outgoing graph to inspect. Completing its
-            // existing claim still performs normal mark/accounting/closure work;
-            // it needs neither payload access nor a storage lease or scan lock.
-            if task.metadata.trace.step_fn.is_none() {
-                task.progress = TraceProgress::Complete;
+        let verified = full.is_some() && claim.strong_packet(epoch);
+        let expired = || {
+            self.configuration.max_pause_time_us != 0
+                && started.is_some_and(|time| {
+                    time.elapsed().as_micros() >= u128::from(self.configuration.max_pause_time_us)
+                })
+        };
+        if verified
+            && !may_prune
+            && let Some((packet, last_budget)) = claim.take_packet()
+        {
+            let _young = ScanYoung::enter(false);
+            let _strong = TraceRetention::callback(self, Retention::Strong);
+            packet.for_each(last_budget, |metadata, budget| {
+                if busy || deferred != 0 || (executed != 0 && expired()) {
+                    deferred += 1;
+                    domain
+                        .mark_queue
+                        .push(lane, MarkItem::fresh(metadata.clone()));
+                    return;
+                }
+                // Verified packets contain only fresh work. Dirty state, offset and
+                // remembered-version lookup become relevant only on a continuation.
+                let progress =
+                    ObjectMetadata::trace_ordinary(metadata, self, full.as_ref(), true, 0, budget);
                 executed += 1;
-                continue;
-            }
-            let _young = ScanYoung::enter(task.has_young);
-            let _retention = TraceRetention::callback(self, task.retention);
-            task.progress =
-                ObjectMetadata::trace_step(&task.metadata, self, task.offset, task.budget);
-            task.has_young = SCAN_YOUNG.get();
-            executed += 1;
-            if task.progress == TraceProgress::Busy {
-                busy = true;
-                break;
-            }
+                if progress == TraceProgress::Complete {
+                    counters.marked += 1;
+                } else {
+                    let mut next = MarkItem::fresh(metadata.clone());
+                    next.version = Some(usize::MAX);
+                    next.has_young = SCAN_YOUNG.get();
+                    if let TraceProgress::Continue(offset) = progress {
+                        next.offset = offset;
+                    }
+                    busy = progress == TraceProgress::Busy;
+                    domain.mark_queue.push(lane, next);
+                }
+            });
+        } else {
+            claim.for_each(|mut item, budget| {
+                if busy || deferred != 0 || (executed != 0 && expired()) {
+                    deferred += 1;
+                    domain.mark_queue.push(lane, item.owned());
+                    return;
+                }
+                debug_assert!(
+                    index != 1
+                        || !self.old_collection_active()
+                        || item.metadata.age.load(Ordering::Acquire)
+                            >= self.configuration.promotion_age.max(1)
+                );
+                if item.dirty_scan && item.version.is_none() {
+                    item.metadata.begin_dirty_scan();
+                }
+                let version = item.version.unwrap_or_else(|| {
+                    if may_prune {
+                        item.metadata.mutation.load(Ordering::Acquire)
+                    } else {
+                        usize::MAX
+                    }
+                });
+                let progress = if item.metadata.trace.step_fn.is_some() {
+                    let _young = ScanYoung::enter(item.has_young);
+                    let _retention = {
+                        let strength = if verified {
+                            Retention::Strong
+                        } else {
+                            self.visible_retention(&item.metadata, index, epoch)
+                                .unwrap_or(Retention::Phantom)
+                        };
+                        TraceRetention::callback(self, strength)
+                    };
+                    let result = if ordinary {
+                        ObjectMetadata::trace_ordinary(
+                            &item.metadata,
+                            self,
+                            full.as_ref(),
+                            verified,
+                            item.offset,
+                            budget,
+                        )
+                    } else {
+                        ObjectMetadata::trace_step(&item.metadata, self, item.offset, budget)
+                    };
+                    item.has_young = SCAN_YOUNG.get();
+                    result
+                } else {
+                    TraceProgress::Complete
+                };
+                executed += 1;
+                if progress == TraceProgress::Complete {
+                    counters.marked += 1;
+                    if version != usize::MAX {
+                        self.prune_remembered(
+                            item.metadata.ptr().0,
+                            item.metadata.id,
+                            version,
+                            item.has_young,
+                        );
+                    }
+                    if item.dirty_scan && item.metadata.finish_dirty_scan() {
+                        domain
+                            .mark_queue
+                            .push(lane, MarkItem::dirty(item.metadata.into_owned()));
+                    }
+                } else {
+                    if let TraceProgress::Continue(offset) = progress {
+                        item.offset = offset;
+                    }
+                    busy = progress == TraceProgress::Busy;
+                    item.version = Some(version);
+                    domain.mark_queue.push(lane, item.owned());
+                }
+            });
         }
-        let deferred = tasks.iter().flatten().count() - executed;
         if self.diagnostics_enabled() {
             self.diagnostics
                 .mark_batches
                 .fetch_add(1, Ordering::Relaxed);
             self.diagnostics
                 .trace_tasks
-                .fetch_add(executed as u64, Ordering::Relaxed);
-            if self.domain_index() == 1 && self.old_collection_active() {
+                .fetch_add(executed, Ordering::Relaxed);
+            if index == 1 && self.old_collection_active() {
                 self.diagnostics
                     .old_trace_tasks
-                    .fetch_add(executed as u64, Ordering::Relaxed);
+                    .fetch_add(executed, Ordering::Relaxed);
             }
-            self.diagnostics
-                .trace_deferred
-                .fetch_add(deferred as u64, Ordering::Relaxed);
+            if deferred != 0 {
+                self.diagnostics
+                    .trace_deferred
+                    .fetch_add(deferred, Ordering::Relaxed);
+            }
             if busy {
                 self.diagnostics.trace_busy.fetch_add(1, Ordering::Relaxed);
             }
@@ -4909,7 +5132,10 @@ impl GarbageCollector {
                 self.terminal_priority(index) && domain.weak_phase() != 0
             });
         let index = terminal.unwrap_or_else(|| {
-            if self.domain_has_work(preferred) {
+            if self.domain_at(preferred).active()
+                || self.domain_at(preferred).requested.load(Ordering::Acquire)
+                || (preferred == 1 && self.old_requested.load(Ordering::Acquire))
+            {
                 preferred
             } else {
                 1 - preferred
@@ -5000,6 +5226,11 @@ impl GarbageCollector {
                 }
                 return Some(false);
             }
+            if index == 1 {
+                self.mature_census.strong.store(0, Ordering::Release);
+                cycle.mature_coverage = MatureCoverage::Unchecked;
+                cycle.packet_cleanup = None;
+            }
             cycle.phase = if cycle.kind == CollectionKind::Old {
                 Phase::OldHandoff
             } else if self.configuration.root_storage == crate::RootStorage::Contexts
@@ -5021,6 +5252,11 @@ impl GarbageCollector {
             cycle.phantom_retained.clear();
             cycle.young_cursor = crate::index::YoungCursor::default();
             cycle.remembered_cursor = crate::index::Cursor::default();
+            cycle.remembered_overflow = if cycle.kind == CollectionKind::Young {
+                self.remembered.dirty.cursor()
+            } else {
+                crate::index::RememberedOverflow::default()
+            };
             cycle.sweep_young_cursor = crate::index::YoungCursor::default();
             cycle.object_cursor = crate::index::Cursor::default();
             cycle.sweep_object_cursor = crate::index::Cursor::default();
@@ -5085,7 +5321,6 @@ impl GarbageCollector {
                     }
                     Phase::ContextRoots => match self.context_root_unit(&mut cycle) {
                         phase_work::ContextUnit::Progress => {}
-                        phase_work::ContextUnit::Busy => break,
                         phase_work::ContextUnit::Cleanup(cleanup) => {
                             drop(cycle);
                             drop(coordinator);
@@ -5108,7 +5343,7 @@ impl GarbageCollector {
                             .configuration
                             .independent_phases
                             .then(|| self.allocation_guard());
-                        let mut tasks = std::array::from_fn(|_| None);
+                        let mut tasks = crate::work::Claim::default();
                         let mut remaining = work + 1;
                         let count = self.claim_mark_batch(&mut tasks, &mut remaining);
                         if count != 0 {
@@ -5120,8 +5355,7 @@ impl GarbageCollector {
                             drop(claim_admission);
                             drop(cycle);
                             drop(coordinator);
-                            let stalled = self.trace_mark_batch(&mut tasks, started);
-                            self.publish_mark_batch(&mut tasks, &mut counters);
+                            let stalled = self.trace_mark_batch(&mut tasks, started, &mut counters);
                             // Another worker can close the epoch as soon as the last
                             // reservation is released. Publish completed mark work first.
                             if counters.marked != 0 {
@@ -6437,20 +6671,17 @@ mod tests {
             // this synthetic index alias; only the queued identity may be used.
             gc.objects.replace_for_test(address, Some(metadata.clone()));
             let context = Context::enter(&gc, 1);
-            let mut tasks = std::array::from_fn(|_| None);
+            let mut tasks = crate::work::Claim::default();
             assert_eq!(gc.claim_mark_batch(&mut tasks, &mut 1), 1);
-            assert_eq!(tasks[0].as_ref().expect("claim").metadata.id, retired.id);
-            assert!(!gc.trace_mark_batch(&mut tasks, now()));
-            assert_eq!(
-                tasks[0].as_ref().expect("claim").progress,
-                TraceProgress::Complete
-            );
-            // A stale completed scan must not remove the replacement's remembered
-            // entry, even when both allocations happen to have the same version.
-            let version = tasks[0].as_ref().expect("claim").version;
-            metadata.mutation.store(version, Ordering::Release);
+            let record = &tasks.items[0].as_ref().expect("claim").0;
+            assert_eq!(record.metadata.id, retired.id);
+            metadata
+                .mutation
+                .store(retired.mutation.load(Ordering::Acquire), Ordering::Release);
             gc.remembered.lock(address).insert(address);
-            gc.publish_mark_batch(&mut tasks, &mut WorkCounters::default());
+            let mut counters = WorkCounters::default();
+            assert!(!gc.trace_mark_batch(&mut tasks, now(), &mut counters));
+            assert_eq!(counters.marked, 1);
             assert!(gc.remembered.lock(address).contains(&address));
             if address != replacement_address {
                 gc.objects.replace_for_test(address, None);
@@ -6941,7 +7172,7 @@ mod tests {
 mod reference_tests;
 
 #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
-pub(crate) use publication_tests::pause_while_graph_slot_owned;
+pub(crate) use publication_tests::{pause_after_tree_detach, pause_while_graph_slot_owned};
 #[cfg(test)]
 #[path = "publication_tests.rs"]
 mod publication_tests;

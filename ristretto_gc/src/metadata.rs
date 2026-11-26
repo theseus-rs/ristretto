@@ -86,28 +86,32 @@ mod direct_marks;
 ///
 /// This struct contains the pointer to the object, its size, manages the marked state, provides
 /// type-safe dropping functionality, and supports finalizers.
+#[repr(C)]
 pub(crate) struct ObjectMetadata {
-    pub(crate) direct_marks: direct_marks::DirectMarks,
-    pub(crate) id: crate::ObjectId,
-    size: usize,
-    logical_size: usize,
-    pub(crate) birth: BirthVisibility,
-    drop_fn: Mutex<DropFn>,
-    kind: &'static Kind,
-    finalized: AtomicBool,
+    // Keep the callback, mark words and scanner admission on adjacent words.
     pub(crate) trace: TracePtr,
     epochs: [MarkWord; 2],
     pub(crate) age: AtomicUsize,
-    pub(crate) old_birth: AtomicU64,
-    pub(crate) mutation: AtomicUsize,
-    // Discovery must not turn old descriptor snapshots into managed roots.
-    // The matching strong owner lives only in the payload destruction record.
-    pub(crate) owner: Option<Weak<dyn crate::HeapOwner>>,
+    pub(crate) birth: BirthVisibility,
+    scanning: AtomicBool,
+    storage: storage_state::StorageState,
     // Installing this link transfers the reservation's logical charge. It stays
     // charged until this descriptor destroys its payload, even before publication
     // or after removal from the catalog. Old MetadataRefs alone retain no charge.
     pub(crate) collector: Weak<crate::GarbageCollector>,
-    storage: storage_state::StorageState,
+    pub(crate) mutation: AtomicUsize,
+    pub(crate) id: crate::ObjectId,
+    pub(crate) old_birth: AtomicU64,
+    pub(crate) direct_marks: direct_marks::DirectMarks,
+    size: usize,
+    logical_size: usize,
+    drop_fn: Mutex<DropFn>,
+    kind: &'static Kind,
+    finalized: AtomicBool,
+    dirty_scan: AtomicU8,
+    // Discovery must not turn old descriptor snapshots into managed roots.
+    // The matching strong owner lives only in the payload destruction record.
+    pub(crate) owner: Option<Weak<dyn crate::HeapOwner>>,
     pub(crate) relocation: Option<Box<crate::relocation_history::History>>,
 }
 
@@ -142,12 +146,30 @@ impl Drop for DestroyPayload<'_> {
 impl ObjectMetadata {
     /// A delayed scan must never observe its version again after a write.
     /// At saturation only this allocation loses optional remembered pruning.
-    pub(crate) fn record_mutation(&self) {
-        let _ = self
-            .mutation
+    pub(crate) fn record_mutation(&self) -> usize {
+        self.mutation
             .try_update(Ordering::Release, Ordering::Relaxed, |version| {
                 version.checked_add(1)
-            });
+            })
+            .map_or(usize::MAX, |previous| previous + 1)
+    }
+
+    // Bit zero requests a complete young traversal. Bit one belongs to the
+    // single tagged task from its first claim through its last continuation.
+    // Repeated writers reserve at most one successor while a trace is running.
+    pub(crate) fn request_dirty_scan(&self) -> bool {
+        self.dirty_scan.fetch_or(1, Ordering::AcqRel) == 0
+    }
+
+    pub(crate) fn begin_dirty_scan(&self) {
+        let previous = self.dirty_scan.swap(2, Ordering::AcqRel);
+        debug_assert_eq!(previous, 1);
+    }
+
+    pub(crate) fn finish_dirty_scan(&self) -> bool {
+        let previous = self.dirty_scan.fetch_and(!2, Ordering::AcqRel);
+        debug_assert!(matches!(previous, 2 | 3));
+        previous == 3
     }
 
     pub(crate) fn is_type<T: 'static>(&self) -> bool {
@@ -190,6 +212,46 @@ impl ObjectMetadata {
             return crate::TraceProgress::Complete;
         };
         match Self::borrow_callback(metadata, true) {
+            Ok(_lease) => step(metadata.trace.ptr, gc, offset, budget),
+            Err(progress) => progress,
+        }
+    }
+
+    /// All ordinary graph callbacks on this heap use this gate. The full
+    /// reservation protects a LIVE, strongly marked mature payload from the
+    /// only domain that can retire it. Young sweeps cannot detach mature
+    /// storage. Other callers retain an ordinary storage borrow.
+    pub(crate) fn trace_ordinary(
+        metadata: &MetadataRef,
+        gc: &crate::GarbageCollector,
+        full: Option<&crate::collector::ReservedFullScan>,
+        verified_group: bool,
+        offset: usize,
+        budget: usize,
+    ) -> crate::TraceProgress {
+        let Some(step) = metadata.trace.step_fn else {
+            return crate::TraceProgress::Complete;
+        };
+        if metadata
+            .scanning
+            .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+            .is_err()
+        {
+            return crate::TraceProgress::Busy;
+        }
+        struct Scanning<'a>(&'a AtomicBool);
+        impl Drop for Scanning<'_> {
+            fn drop(&mut self) {
+                self.0.store(false, Ordering::Release);
+            }
+        }
+        let _scanning = Scanning(&metadata.scanning);
+        if (verified_group || full.is_some_and(|reservation| reservation.covers(gc, metadata)))
+            && metadata.storage.open()
+        {
+            return step(metadata.trace.ptr, gc, offset, budget);
+        }
+        match Self::borrow_callback(metadata, false) {
             Ok(_lease) => step(metadata.trace.ptr, gc, offset, budget),
             Err(progress) => progress,
         }
@@ -276,6 +338,8 @@ impl ObjectMetadata {
                 }
             },
             finalized: AtomicBool::new(false),
+            dirty_scan: AtomicU8::new(0),
+            scanning: AtomicBool::new(false),
             trace,
             direct_marks: direct_marks::DirectMarks::default(),
             epochs: std::array::from_fn(|_| MarkWord::default()),

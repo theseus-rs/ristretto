@@ -3323,6 +3323,7 @@ dependencies = [
  "dirs 7.0.0",
  "filetime",
  "flate2",
+ "futures-util",
  "getrandom 0.3.4",
  "jiff",
  "js-sys",
@@ -3407,7 +3408,9 @@ dependencies = [
  "ahash",
  "cranelift",
  "indexmap",
+ "portable-atomic",
  "ristretto_classfile",
+ "ristretto_test_util",
  "stacker",
  "thiserror 2.0.21",
  "zerocopy",
@@ -3475,6 +3478,7 @@ dependencies = [
 name = "ristretto_test_util"
 version = "0.35.0"
 dependencies = [
+ "serde",
  "tempfile",
 ]
 
@@ -3484,6 +3488,7 @@ version = "0.35.0"
 dependencies = [
  "ahash",
  "bitflags 2.13.2",
+ "futures-util",
  "portable-atomic",
  "ristretto_classfile",
  "ristretto_classloader",
@@ -3518,10 +3523,13 @@ dependencies = [
  "ristretto_jit",
  "ristretto_macros",
  "ristretto_resolver",
+ "ristretto_test_util",
  "ristretto_types",
  "serde",
  "serde_json",
  "sha2",
+ "smallvec",
+ "stacker",
  "sysinfo",
  "tempfile",
  "thiserror 2.0.21",

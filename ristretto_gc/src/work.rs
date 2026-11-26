@@ -2,6 +2,7 @@
 use crate::metadata::MetadataRef;
 use arc_swap::ArcSwapOption;
 use once_cell::race::OnceBox;
+use std::borrow::Cow;
 use std::collections::{LinkedList, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
@@ -11,13 +12,162 @@ const LOCAL_LIMIT: usize = 256;
 const FRESH_SEGMENT_LIMIT: usize = 4096 / size_of::<MetadataRef>();
 
 #[derive(Debug)]
-pub(crate) struct MarkItem {
+pub(crate) struct MarkItem<M = MetadataRef> {
     // Keep the exact allocation identity even if its descriptor address is reused.
     // This Arc owns metadata only; callbacks must acquire a storage lease.
-    pub(crate) metadata: MetadataRef,
+    pub(crate) metadata: M,
     pub(crate) offset: usize,
     pub(crate) version: Option<usize>,
     pub(crate) has_young: bool,
+    pub(crate) dirty_scan: bool,
+}
+
+impl<M> MarkItem<M> {
+    fn map<N>(self, convert: impl FnOnce(M) -> N) -> MarkItem<N> {
+        MarkItem {
+            metadata: convert(self.metadata),
+            offset: self.offset,
+            version: self.version,
+            has_young: self.has_young,
+            dirty_scan: self.dirty_scan,
+        }
+    }
+}
+
+impl MarkItem<Cow<'_, MetadataRef>> {
+    pub(crate) fn owned(self) -> MarkItem {
+        self.map(Cow::into_owned)
+    }
+}
+
+pub(crate) type Packet = Arc<Group>;
+#[derive(Debug)]
+pub(crate) struct Group {
+    targets: [MetadataRef; 8],
+    budgets: [u8; 8],
+    prefix: [u16; 9],
+}
+
+impl Group {
+    fn new(targets: [&MetadataRef; 8]) -> Self {
+        let budgets = targets.map(|m| m.trace.budget.clamp(1, 32) as u8);
+        let mut prefix = [0; 9];
+        for (index, budget) in budgets.iter().enumerate() {
+            prefix[index + 1] = prefix[index] + u16::from(*budget);
+        }
+        Self {
+            targets: targets.map(Clone::clone),
+            budgets,
+            prefix,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct Visit {
+    packet: Packet,
+    start: u8,
+    end: u8,
+    // Zero means the general retention and storage checks are still required.
+    strong_epoch: u64,
+}
+impl Visit {
+    fn len(&self) -> usize {
+        usize::from(self.end - self.start)
+    }
+
+    pub(crate) fn for_each(&self, last_budget: u8, mut visit: impl FnMut(&MetadataRef, usize)) {
+        for (i, target) in self.targets().iter().enumerate() {
+            let index = i + usize::from(self.start);
+            let budget = if last_budget != 0 && index + 1 == usize::from(self.end) {
+                last_budget
+            } else {
+                self.packet.budgets[index]
+            };
+            visit(target, usize::from(budget));
+        }
+    }
+
+    fn targets(&self) -> &[MetadataRef] {
+        &self.packet.targets[usize::from(self.start)..usize::from(self.end)]
+    }
+}
+
+const PACKET_SEGMENT: usize = 64;
+
+#[derive(Debug, Default)]
+struct Packets {
+    front: VecDeque<Visit>,
+    #[expect(
+        clippy::linkedlist,
+        reason = "a sealed segment never moves previous segments under the queue lock"
+    )]
+    rest: LinkedList<VecDeque<Visit>>,
+}
+impl Packets {
+    fn is_empty(&self) -> bool {
+        self.front.is_empty()
+    }
+    fn front_mut(&mut self) -> Option<&mut Visit> {
+        self.front.front_mut()
+    }
+    fn capacity(&self) -> usize {
+        self.front.capacity() + self.rest.iter().map(VecDeque::capacity).sum::<usize>()
+    }
+    fn push_back(&mut self, value: Visit) {
+        if self.rest.is_empty() && self.front.len() < PACKET_SEGMENT {
+            self.front.push_back(value);
+            return;
+        }
+        if self
+            .rest
+            .back()
+            .is_none_or(|tail| tail.len() == PACKET_SEGMENT)
+        {
+            self.rest.push_back(VecDeque::with_capacity(PACKET_SEGMENT));
+        }
+        self.rest
+            .back_mut()
+            .expect("writable packet segment")
+            .push_back(value);
+    }
+    fn pop_front(&mut self) -> Option<Visit> {
+        let item = self.front.pop_front()?;
+        if self.front.is_empty()
+            && let Some(next) = self.rest.pop_front()
+        {
+            self.front = next;
+        }
+        Some(item)
+    }
+}
+
+const CACHE_BUCKETS: usize = 64;
+type CacheBucket = Box<[Option<std::sync::Weak<Group>>; 16]>;
+type OwnerBucket = [ArcSwapOption<Group>; 16];
+#[derive(Debug)]
+struct Owners {
+    buckets: [OnceBox<OwnerBucket>; CACHE_BUCKETS],
+    allocated: portable_atomic::AtomicU64,
+}
+impl Default for Owners {
+    fn default() -> Self {
+        Self {
+            buckets: [const { OnceBox::new() }; CACHE_BUCKETS],
+            allocated: portable_atomic::AtomicU64::new(0),
+        }
+    }
+}
+impl Owners {
+    fn install(&self, index: usize, packet: Packet) {
+        let word = index / 16;
+        let bucket = self.buckets[word]
+            .get_or_init(|| Box::new(std::array::from_fn(|_| ArcSwapOption::empty())));
+        bucket[index % 16].store(Some(packet));
+        if self.allocated.load(Ordering::Relaxed) & (1 << word) == 0 {
+            self.allocated.fetch_or(1 << word, Ordering::Release);
+        }
+    }
 }
 
 impl MarkItem {
@@ -27,12 +177,28 @@ impl MarkItem {
             offset: 0,
             version: None,
             has_young: false,
+            dirty_scan: false,
         }
+    }
+
+    pub(crate) fn dirty(metadata: MetadataRef) -> Self {
+        Self {
+            dirty_scan: true,
+            ..Self::fresh(metadata)
+        }
+    }
+
+    fn compact_fresh(&self) -> bool {
+        self.version.is_none() && !self.dirty_scan
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Queue {
+    packets: Packets,
+    packet_items: usize,
+    groups: [Option<CacheBucket>; CACHE_BUCKETS],
+    prefer_scalar: bool,
     fresh: VecDeque<MetadataRef>,
     // Seal whole buffers so growing the injector never copies an unbounded
     // backlog under its queue lock. Reuse one emptied buffer.
@@ -46,16 +212,126 @@ struct Queue {
     current: VecDeque<MarkItem>,
 }
 
+impl Default for Queue {
+    fn default() -> Self {
+        Self {
+            packets: Packets::default(),
+            packet_items: 0,
+            groups: std::array::from_fn(|_| None),
+            prefer_scalar: false,
+            fresh: VecDeque::new(),
+            full: LinkedList::new(),
+            buffered: 0,
+            spare: VecDeque::new(),
+            current: VecDeque::new(),
+        }
+    }
+}
+
 impl Queue {
     fn len(&self) -> usize {
-        self.fresh.len() + self.buffered + self.current.len()
+        self.fresh.len() + self.buffered + self.current.len() + self.packet_items
     }
 
     fn capacity(&self) -> usize {
         self.current.capacity()
+            + self.packets.capacity() * 8
             + self.fresh.capacity()
             + self.spare.capacity()
             + self.full.iter().map(VecDeque::capacity).sum::<usize>()
+    }
+
+    fn cached_targets(&self, targets: &[Option<&MetadataRef>; 8]) -> Option<Packet> {
+        let key = targets[0]?.id.to_i64().cast_unsigned() >> 3;
+        let index = (key as usize) & (CACHE_BUCKETS * 16 - 1);
+        let packet = self.groups[index / 16].as_ref()?[index % 16]
+            .as_ref()?
+            .upgrade()?;
+        packet
+            .targets
+            .iter()
+            .zip(targets)
+            .all(|(known, target)| target.is_some_and(|m| MetadataRef::ptr_eq(known, m)))
+            .then_some(packet)
+    }
+
+    fn push_packet(&mut self, packet: Packet, strong_epoch: u64) {
+        self.packets.push_back(Visit {
+            packet,
+            start: 0,
+            end: 8,
+            strong_epoch,
+        });
+        self.packet_items += 8;
+    }
+
+    fn publish_group(
+        &mut self,
+        owners: &Owners,
+        fresh: &[Option<&MetadataRef>; 8],
+        count: usize,
+        strong_epoch: u64,
+    ) {
+        if count == 8 {
+            let targets = fresh.map(|m| m.expect("complete group"));
+            let key = targets[0].id.to_i64().cast_unsigned() >> 3;
+            let index = (key as usize) & (CACHE_BUCKETS * 16 - 1);
+            let bucket = self.groups[index / 16]
+                .get_or_insert_with(|| Box::new(std::array::from_fn(|_| None)));
+            let slot = &mut bucket[index % 16];
+            // This path installs a group only when the exact early cache
+            // lookup missed. The queue retains a weak reference after sweep.
+            let packet = Arc::new(Group::new(targets));
+            *slot = Some(Arc::downgrade(&packet));
+            owners.install(index, packet.clone());
+            self.push_packet(packet, strong_epoch);
+        } else {
+            for metadata in fresh.iter().take(count).flatten() {
+                self.push_fresh((*metadata).clone());
+            }
+        }
+    }
+
+    fn claim_group(&mut self, result: &mut Claim, limit: usize, remaining: &mut usize) -> bool {
+        let Some(front) = self.packets.front_mut() else {
+            return false;
+        };
+        let start = usize::from(front.start);
+        let end = usize::from(front.end).min(start + limit);
+        if end == start || *remaining == 0 {
+            return false;
+        }
+        let base = front.packet.prefix[start];
+        let cost = usize::from(front.packet.prefix[end] - base);
+        let (end, last_budget) = if cost <= *remaining {
+            *remaining -= cost;
+            (end, 0)
+        } else {
+            // Prefixes are strictly increasing. Only the last item in a
+            // truncated claim can receive less than its constructor's budget.
+            let allowed = base + *remaining as u16;
+            let index =
+                start + front.packet.prefix[start + 1..=end].partition_point(|&p| p < allowed);
+            let tail = (allowed - front.packet.prefix[index]) as u8;
+            *remaining = 0;
+            (index + 1, tail)
+        };
+        let count = end - start;
+        let split = end as u8;
+        let visit = if split == front.end {
+            self.packets.pop_front().expect("claimed packet")
+        } else {
+            let start = std::mem::replace(&mut front.start, split);
+            Visit {
+                packet: front.packet.clone(),
+                start,
+                end: split,
+                strong_epoch: front.strong_epoch,
+            }
+        };
+        self.packet_items -= count;
+        result.packet = Some((visit, last_budget));
+        true
     }
 
     fn push_fresh(&mut self, metadata: MetadataRef) {
@@ -117,6 +393,7 @@ impl Queue {
 #[derive(Debug, Default)]
 #[repr(align(64))]
 struct Local {
+    owners: Owners,
     queue: Mutex<Queue>,
     victim: AtomicUsize,
     // Updated under the queue lock. Zero can bypass that lock only when the
@@ -262,9 +539,55 @@ pub(crate) struct MarkQueues {
 
 #[derive(Default)]
 pub(crate) struct Claim {
+    packet: Option<(Visit, u8)>,
     pub(crate) items: [Option<(MarkItem, usize)>; 8],
     pub(crate) stolen: usize,
     pub(crate) misses: usize,
+}
+
+impl Claim {
+    pub(crate) fn strong_packet(&self, epoch: u64) -> bool {
+        epoch != 0
+            && self
+                .packet
+                .as_ref()
+                .is_some_and(|(visit, _)| visit.strong_epoch == epoch)
+    }
+
+    pub(crate) fn take_packet(&mut self) -> Option<(Visit, u8)> {
+        self.packet.take()
+    }
+
+    pub(crate) fn count(&self) -> usize {
+        if let Some((visit, _)) = &self.packet {
+            return visit.len();
+        }
+        self.items.iter().flatten().count()
+    }
+
+    pub(crate) fn for_each(
+        &mut self,
+        mut visit: impl FnMut(MarkItem<Cow<'_, MetadataRef>>, usize),
+    ) {
+        if let Some((packet, last_budget)) = self.packet.take() {
+            packet.for_each(last_budget, |target, budget| {
+                visit(
+                    MarkItem {
+                        metadata: Cow::Borrowed(target),
+                        offset: 0,
+                        version: None,
+                        has_young: false,
+                        dirty_scan: false,
+                    },
+                    budget,
+                );
+            });
+            return;
+        }
+        for (item, budget) in self.items.iter_mut().filter_map(Option::take) {
+            visit(item.map(Cow::Owned), budget);
+        }
+    }
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -427,7 +750,7 @@ impl MarkQueues {
     }
 
     pub(crate) fn push(&self, local: usize, item: MarkItem) {
-        if item.version.is_none() {
+        if item.compact_fresh() {
             self.push_fresh(local, item.metadata.ptr().0, item.metadata);
         } else if let Err(item) = self.try_push_any(local, item) {
             self.fallback.push(item);
@@ -453,8 +776,9 @@ impl MarkQueues {
         &self,
         local: usize,
         limit: usize,
+        strong_epoch: u64,
         edges: impl Iterator<Item = Option<&'a MetadataRef>>,
-        mut mark: impl FnMut(&MetadataRef) -> Option<bool>,
+        mut mark: impl FnMut(&MetadataRef, bool) -> Option<bool>,
     ) -> usize {
         let local = local % self.queues.len();
         // A group can use the same destinations as a scalar push. Select the
@@ -473,13 +797,28 @@ impl MarkQueues {
                 continue;
             }
             let mut handled = 0;
-            for edge in edges {
+            let mut targets = [None; 8];
+            let mut count = 0;
+            let mut source_edges = edges.take(limit.min(8));
+            let inputs: [_; 8] = std::array::from_fn(|_| source_edges.next().flatten());
+            let cached = queue.cached_targets(&inputs);
+            for edge in inputs {
                 let Some(metadata) = edge else { break };
-                let Some(fresh) = mark(metadata) else { break };
+                let Some(fresh) = mark(metadata, cached.is_some()) else {
+                    break;
+                };
                 if fresh {
-                    queue.push_fresh(metadata.clone());
+                    targets[count] = Some(metadata);
+                    count += 1;
                 }
                 handled += 1;
+            }
+            if count == 8
+                && let Some(packet) = cached
+            {
+                queue.push_packet(packet, strong_epoch);
+            } else {
+                queue.publish_group(&self.queues[source].owners, &targets, count, strong_epoch);
             }
             self.queues[source]
                 .queued
@@ -517,7 +856,7 @@ impl MarkQueues {
                 Err(item) => item,
             };
         }
-        let item = if item.version.is_none() {
+        let item = if item.compact_fresh() {
             MarkItem::fresh(item.metadata)
         } else {
             item
@@ -534,10 +873,10 @@ impl MarkQueues {
         if local != 0 && queue.len() >= LOCAL_LIMIT {
             return Err(item);
         }
-        if item.version.is_some() {
-            queue.current.push_back(item);
-        } else {
+        if item.compact_fresh() {
             queue.push_fresh(item.metadata);
+        } else {
+            queue.current.push_back(item);
         }
         self.queues[local]
             .queued
@@ -640,6 +979,9 @@ impl MarkQueues {
         {
             return;
         }
+        if *remaining == 0 {
+            return;
+        }
         let start = self.queues[local].victim.load(Ordering::Relaxed) % self.queues.len();
         let sources = std::iter::once(local)
             .chain((local != 0).then_some(0))
@@ -664,6 +1006,32 @@ impl MarkQueues {
                 }
             };
             let steal = source != local;
+            // Keep a suffix available to another helper when a thief parks
+            // inside its first user trace. A final item remains stealable.
+            let limit = if steal {
+                limit.min(queue.len().div_ceil(2))
+            } else {
+                limit
+            }
+            .clamp(1, 8);
+            let other = queue.len() != queue.packet_items;
+            let packet_turn = !other || !queue.prefer_scalar;
+            queue.prefer_scalar = !queue.packets.is_empty() && packet_turn;
+            if packet_turn
+                && !queue.packets.is_empty()
+                && queue.claim_group(result, limit, remaining)
+            {
+                self.queues[source]
+                    .queued
+                    .store(queue.len(), Ordering::Release);
+                if steal {
+                    result.stolen = result.count();
+                    self.queues[local]
+                        .victim
+                        .store(source + 1, Ordering::Relaxed);
+                }
+                return;
+            }
             let mut count = 0;
             for slot in result.items.iter_mut().take(limit.clamp(1, 8)) {
                 if *remaining == 0 {
@@ -785,7 +1153,44 @@ impl MarkQueues {
         )
     }
 
+    pub(crate) fn take_cache_entry(&self, cursor: &mut usize) -> crate::index::Scan<Packet> {
+        let index = *cursor;
+        let Some(local) = self.queues.get(index / (CACHE_BUCKETS * 16)) else {
+            return crate::index::Scan::Done;
+        };
+        let bucket = index / 16 % CACHE_BUCKETS;
+        let mask = local.owners.allocated.load(Ordering::Acquire) & (u64::MAX << bucket);
+        if mask & (1 << bucket) == 0 {
+            let next = mask.trailing_zeros() as usize;
+            *cursor += (next - bucket) * 16 - index % 16;
+            return crate::index::Scan::Advance;
+        }
+        *cursor += 1;
+        let packet = local.owners.buckets[bucket]
+            .get()
+            .and_then(|slots| slots[index % 16].swap(None));
+        packet.map_or(crate::index::Scan::Advance, |p| {
+            crate::index::Scan::Entry(index, p)
+        })
+    }
+
+    fn release_caches(&self) {
+        let mut cursor = 0;
+        while !matches!(self.take_cache_entry(&mut cursor), crate::index::Scan::Done) {}
+    }
+
+    #[cfg(test)]
+    pub(crate) fn cached_groups(&self) -> usize {
+        self.queues
+            .iter()
+            .flat_map(|lane| lane.owners.buckets.iter().filter_map(OnceBox::get))
+            .flat_map(|bucket| bucket.iter())
+            .filter(|slot| slot.load().is_some())
+            .count()
+    }
+
     pub(crate) fn trim_empty(&self) {
+        self.release_caches();
         for local in &self.queues {
             let mut queue = lock(&local.queue);
             if queue.len() == 0 {
@@ -797,6 +1202,7 @@ impl MarkQueues {
     }
 
     pub(crate) fn clear(&self) {
+        self.release_caches();
         self.close_graph_inbox();
         for local in &self.queues {
             let mut queue = lock(&local.queue);
@@ -840,6 +1246,10 @@ mod tests {
     use crate::metadata::ObjectMetadata;
 
     fn item(offset: usize, version: Option<usize>) -> MarkItem {
+        budgeted_item(offset, version, 1)
+    }
+
+    fn budgeted_item(offset: usize, version: Option<usize>, budget: usize) -> MarkItem {
         let layout = crate::gc::Allocation::<u64>::layout();
         let storage = crate::allocation::Storage::global(layout).expect("fixture storage");
         // SAFETY: the storage has the complete descriptor's size and alignment.
@@ -851,12 +1261,62 @@ mod tests {
             layout.size(),
             crate::ObjectId::allocate().expect("fixture identity"),
         );
-        metadata.trace.budget = 1;
+        metadata.trace.budget = budget;
         MarkItem {
             metadata: MetadataRef::new(metadata),
             offset,
             version,
             has_young: true,
+            dirty_scan: false,
+        }
+    }
+
+    #[test]
+    fn group_budget_matches_scalar_assignments_for_every_slice() {
+        for costs in [[1, 2, 5, 4, 13, 8, 31, 32], [32; 8]] {
+            let edges = costs.map(|cost| budgeted_item(0, None, cost).metadata);
+            let packet = Arc::new(Group::new(edges.each_ref()));
+            let mut queue = Queue::default();
+            for start in 0..8 {
+                for limit in 0..=8 {
+                    for allowance in 0..=257 {
+                        queue.packets.push_back(Visit {
+                            packet: packet.clone(),
+                            start: start as u8,
+                            end: 8,
+                            strong_epoch: 17,
+                        });
+                        queue.packet_items = 8 - start;
+                        let mut left = allowance;
+                        let mut expected = Vec::new();
+                        for (i, &cost) in costs.iter().enumerate().skip(start).take(limit) {
+                            if left == 0 {
+                                break;
+                            }
+                            let assigned = left.min(cost);
+                            expected.push((edges[i].id, assigned));
+                            left -= assigned;
+                        }
+                        let mut remaining = allowance;
+                        let mut claim = Claim::default();
+                        assert_eq!(
+                            queue.claim_group(&mut claim, limit, &mut remaining),
+                            !expected.is_empty()
+                        );
+                        let mut got = Vec::new();
+                        claim.for_each(|item, budget| got.push((item.metadata.id, budget)));
+                        assert_eq!(got, expected);
+                        assert_eq!(remaining, left);
+                        assert_eq!(queue.packet_items, 8 - start - expected.len());
+                        if let Some(suffix) = queue.packets.pop_front() {
+                            assert_eq!(usize::from(suffix.start), start + expected.len());
+                            assert_eq!(suffix.end, 8);
+                        } else {
+                            assert_eq!(start + expected.len(), 8);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -868,25 +1328,52 @@ mod tests {
         let injector = lock(&queues.queues[0].queue);
         let peer = lock(&queues.queues[2].queue);
         assert_eq!(
-            queues.append_mature(1, edges.len(), edges.iter().map(Some), |_| panic!(
+            queues.append_mature(1, edges.len(), 0, edges.iter().map(Some), |_, _| panic!(
                 "no destination"
             )),
             0
         );
         drop(peer);
         assert_eq!(
-            queues.append_mature(1, edges.len(), edges.iter().map(Some), |_| Some(true)),
+            queues.append_mature(1, edges.len(), 0, edges.iter().map(Some), |_, _| Some(true)),
             edges.len()
         );
-        let mut peer = lock(&queues.queues[2].queue);
-        for edge in edges {
-            assert_eq!(
-                peer.pop(false).expect("published edge").metadata.id,
-                edge.id
-            );
-        }
-        assert!(peer.pop(false).is_none());
+        let mut claim = queues.claim(2, 8, &mut 8);
+        let mut found = Vec::new();
+        claim.for_each(|item, _| found.push(item.metadata.id));
+        assert_eq!(found, edges.map(|edge| edge.id));
         drop((injector, local));
+    }
+
+    #[test]
+    fn parked_remote_claim_leaves_its_packet_suffix_and_last_item_stealable() {
+        let queues = MarkQueues::new(2, 1);
+        let edges: [_; 8] = std::array::from_fn(|_| item(0, None).metadata);
+        assert_eq!(
+            queues.append_mature(0, 8, 37, edges.iter().map(Some), |_, _| Some(true)),
+            8
+        );
+        let mut claims = Vec::new();
+        for (worker, allowance, expected) in [(1, 8, 4), (2, 1, 1), (1, 8, 2), (2, 8, 1)] {
+            assert_eq!(queues.try_is_empty(), Some(false));
+            let mut remaining = allowance;
+            let claim = queues.claim(worker, 8, &mut remaining);
+            assert_eq!(claim.stolen, expected);
+            assert_eq!(claim.count(), expected);
+            assert!(claim.strong_packet(37));
+            assert!(!claim.strong_packet(38));
+            assert_eq!(remaining, allowance - expected);
+            claims.push(claim);
+        }
+        assert_eq!(queues.try_is_empty(), Some(true));
+        let mut found = Vec::new();
+        for claim in &mut claims {
+            claim.for_each(|item, budget| {
+                assert_eq!(budget, 1);
+                found.push(item.metadata.id);
+            });
+        }
+        assert_eq!(found, edges.map(|edge| edge.id));
     }
 
     #[test]

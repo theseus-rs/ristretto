@@ -50,10 +50,6 @@ impl Gate {
     }
 
     /// The caller owns one primary reader and is the sole authorized writer.
-    #[cfg(any(
-        not(feature = "experimental-identity-index"),
-        all(test, not(target_family = "wasm"))
-    ))]
     pub(super) fn take_reader(&self) -> bool {
         self.0
             .compare_exchange(1, WRITER, Ordering::AcqRel, Ordering::Relaxed)

@@ -194,7 +194,7 @@ fn retirement_refreshes_its_cached_page_after_replacement() {
     index.prepare(1).expect("vacant").install(11);
     index.prepare(2).expect("vacant").install(22);
     assert!(index.retire(1, 11, &mut cursor).is_none());
-    assert!(cursor.0.is_some());
+    assert!(cursor.0.iter().any(Option::is_some));
     index.remove(2, 22);
     index.prepare(3).expect("replacement").install(33);
     let sealed = index

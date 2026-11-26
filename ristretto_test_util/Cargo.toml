@@ -16,3 +16,6 @@ workspace = true
 
 [target.'cfg(not(all(target_family = "wasm", target_os = "unknown")))'.dependencies]
 tempfile = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+serde = { workspace = true, features = ["derive"] }

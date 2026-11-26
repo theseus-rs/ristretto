@@ -15,6 +15,7 @@ workspace = true
 
 [dependencies]
 ahash = { workspace = true }
+portable-atomic = { workspace = true, optional = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.35.0" }
 thiserror = { workspace = true }
 zerocopy = { workspace = true, features = ["derive"] }
@@ -26,5 +27,9 @@ stacker = { workspace = true }
 [dev-dependencies]
 indexmap = { workspace = true }
 
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+ristretto_test_util = { path = "../ristretto_test_util", version = "0.35.0" }
+
 [features]
+execution-profile = ["dep:portable-atomic"]
 experimental-reference-dispatch = []

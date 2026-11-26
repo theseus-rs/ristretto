@@ -1,4 +1,8 @@
 [workspace]
+exclude = [
+    "ristretto_gc/validation/catalog/catalog-tagged-prototype",
+    "ristretto_gc/validation/catalog/catalog-tagged-pool-prototype",
+]
 default-members = [
     "ristretto_classfile",
     "ristretto_classloader",

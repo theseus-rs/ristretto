@@ -3,7 +3,12 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::ops::Bound::{Excluded, Unbounded};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, TryLockError};
+
+#[path = "dirty_owners.rs"]
+mod dirty_owners;
+pub(crate) use dirty_owners::Cursor as RememberedOverflow;
 
 #[path = "nursery.rs"]
 mod nursery;
@@ -188,28 +193,29 @@ impl Shards<BTreeSet<usize>> {
 #[derive(Debug)]
 pub(crate) struct Remembered {
     sets: Shards<BTreeSet<usize>>,
-    nonempty: Box<[std::sync::atomic::AtomicBool]>,
+    pub(crate) dirty: dirty_owners::DirtyOwners,
+    nonempty: AtomicUsize,
 }
 
 impl Remembered {
     pub(crate) fn new(count: usize) -> Self {
         Self {
             sets: Shards::new(count),
-            nonempty: (0..shard_count(count)).map(|_| false.into()).collect(),
+            dirty: dirty_owners::DirtyOwners::default(),
+            nonempty: AtomicUsize::new(0),
         }
     }
 
-    #[expect(
-        clippy::indexing_slicing,
-        reason = "the index is masked by the power-of-two shard count"
-    )]
-    fn hint(&self, bucket: usize) -> &std::sync::atomic::AtomicBool {
-        &self.nonempty[bucket & (self.nonempty.len() - 1)]
+    fn bit(&self, bucket: usize) -> usize {
+        1 << (bucket & (self.sets.entries.len() - 1))
     }
 
     pub(crate) fn may_contain(&self, address: usize) -> bool {
-        self.hint(address_bucket(address))
-            .load(std::sync::atomic::Ordering::Relaxed)
+        self.nonempty.load(Ordering::Relaxed) & self.bit(address_bucket(address)) != 0
+    }
+
+    pub(crate) fn may_prune(&self) -> bool {
+        self.nonempty.load(Ordering::Relaxed) != 0 || self.dirty.initialized()
     }
 
     pub(crate) fn lock(&self, address: usize) -> RememberedGuard<'_> {
@@ -219,14 +225,16 @@ impl Remembered {
     pub(crate) fn lock_bucket(&self, bucket: usize) -> RememberedGuard<'_> {
         RememberedGuard {
             set: self.sets.lock_bucket(bucket),
-            hint: self.hint(bucket),
+            summary: &self.nonempty,
+            bit: self.bit(bucket),
         }
     }
 
     pub(crate) fn try_lock(&self, address: usize) -> Option<RememberedGuard<'_>> {
         Some(RememberedGuard {
             set: self.sets.try_lock(address)?,
-            hint: self.hint(address_bucket(address)),
+            summary: &self.nonempty,
+            bit: self.bit(address_bucket(address)),
         })
     }
 
@@ -235,16 +243,18 @@ impl Remembered {
     }
 
     pub(crate) fn clear(&self) {
-        for (mut set, hint) in self.sets.iter().zip(&self.nonempty) {
+        self.dirty.clear();
+        for mut set in self.sets.iter() {
             set.clear();
-            hint.store(false, std::sync::atomic::Ordering::Relaxed);
         }
+        self.nonempty.store(0, Ordering::Relaxed);
     }
 }
 
 pub(crate) struct RememberedGuard<'a> {
     set: MutexGuard<'a, BTreeSet<usize>>,
-    hint: &'a std::sync::atomic::AtomicBool,
+    summary: &'a AtomicUsize,
+    bit: usize,
 }
 
 impl std::ops::Deref for RememberedGuard<'_> {
@@ -256,14 +266,14 @@ impl std::ops::Deref for RememberedGuard<'_> {
 impl RememberedGuard<'_> {
     pub(crate) fn insert(&mut self, address: usize) -> bool {
         if self.set.is_empty() {
-            self.hint.store(true, std::sync::atomic::Ordering::Relaxed);
+            self.summary.fetch_or(self.bit, Ordering::Relaxed);
         }
         self.set.insert(address)
     }
     pub(crate) fn remove(&mut self, address: usize) -> bool {
         let removed = self.set.remove(&address);
         if removed && self.set.is_empty() {
-            self.hint.store(false, std::sync::atomic::Ordering::Relaxed);
+            self.summary.fetch_and(!self.bit, Ordering::Relaxed);
         }
         removed
     }

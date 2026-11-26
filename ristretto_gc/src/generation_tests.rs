@@ -514,6 +514,68 @@ fn retired_bytes_cover_every_unregistered_allocation_until_storage_is_released()
 }
 
 #[test]
+fn mature_coverage_distinguishes_duplicate_edges_from_a_white_mature_object() -> Result<()> {
+    for counted in [false, true] {
+        for white_mature in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .promotion_age(2)
+                    .root_storage(crate::RootStorage::Slots)
+                    .allocation_threshold(usize::MAX)
+                    .full_collection_interval(usize::MAX)
+                    .build(),
+            );
+            let mut children = Vec::new();
+            for value in 0..32_u64 {
+                let edge = Gc::try_new(&gc, value)?.into_rooted();
+                children.push(edge.clone());
+                children.push(edge);
+            }
+            let root = Gc::try_new(&gc, children)?;
+            let old = Gc::try_new(&gc, 111_u64)?;
+            let old_weak = crate::GcWeak::new(&old, crate::ReferenceKind::Weak, 0);
+            gc.collect_full()?;
+            gc.collect_full()?;
+            assert!(!gc.is_young_allocation(old.as_ptr() as usize));
+            let old = if white_mature {
+                drop(old);
+                None
+            } else {
+                Some(old)
+            };
+            let baseline = gc.managed_bytes();
+            let dead = Gc::try_new(&gc, 222_u64)?;
+            let weak = crate::GcWeak::new(&dead, crate::ReferenceKind::Weak, 0);
+            drop(dead);
+            gc.collect_full()?;
+            let proof = lock(&gc.domains[1].cycle).mature_coverage;
+            assert_eq!(
+                matches!(proof, MatureCoverage::Complete(_)),
+                !white_mature,
+                "{proof:?}"
+            );
+            assert_eq!(root.iter().map(|edge| **edge).sum::<u64>(), 992);
+            assert!(weak.upgrade().is_none());
+            assert_eq!(old_weak.upgrade().is_none(), white_mature);
+            assert_eq!(
+                gc.managed_bytes(),
+                baseline
+                    - if white_mature {
+                        Gc::allocation_size(&111_u64)?
+                    } else {
+                        0
+                    }
+            );
+            drop((root, old));
+            gc.collect_full()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn nested_heap_step_preserves_the_outer_owners_young_edge_witness() -> Result<()> {
     struct Nested {
         other: Arc<GarbageCollector>,
@@ -575,6 +637,41 @@ fn nested_heap_step_preserves_the_outer_owners_young_edge_witness() -> Result<()
         drop((root, nested_root));
         gc.collect_full()?;
         assert!(weak.upgrade().is_none());
+    }
+    Ok(())
+}
+
+#[test]
+fn retiring_a_promoted_graph_releases_cached_groups_while_a_small_root_survives() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .threads(0)
+                .concurrent_publication(counted)
+                .allocation_threshold(usize::MAX)
+                .promotion_age(1)
+                .independent_marking(true)
+                .independent_phases(true)
+                .mark_batch_size(8)
+                .max_pause_time_us(0)
+                .build(),
+        );
+        let keep = Gc::try_new(&gc, 77_u64)?;
+        let floor = gc.managed_bytes();
+        let mut edges = Vec::new();
+        for value in 0..128_u64 {
+            edges.push(Gc::try_new(&gc, value)?.into_rooted());
+        }
+        let graph = Gc::try_new(&gc, edges)?;
+        for _ in 0..3 {
+            gc.collect_full()?;
+        }
+        assert!(gc.domains[1].mark_queue.cached_groups() > 0);
+        drop(graph);
+        gc.collect_full()?;
+        assert_eq!(gc.domains[1].mark_queue.cached_groups(), 0);
+        assert_eq!(gc.managed_bytes(), floor);
+        assert_eq!(**keep, 77);
     }
     Ok(())
 }
