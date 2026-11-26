@@ -660,13 +660,9 @@ async fn ordinary_static_long_store_reports_a_missing_field_from_compiled_code()
     Ok(())
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn compiled_volatile_long_store_publishes_an_earlier_plain_store_to_a_java_peer() -> Result<()>
-{
+async fn register_long_handoff(thread: &Thread) -> Result<Arc<Class>> {
     use ristretto_classfile::{Field, FieldAccessFlags, FieldType};
 
-    const BITS: i64 = 0x7abc_fedc_8765_4321;
-    let harness = Harness::new().await?;
     let name = "ProductionLongHandoff";
     let mut pool = ConstantPool::new();
     let owner = pool.add_class(name)?;
@@ -720,7 +716,15 @@ async fn compiled_volatile_long_store_publishes_an_earlier_plain_store_to_a_java
     .class_file()
     .clone();
     definition.fields = fields;
-    let class = register(&harness.thread, Class::from(None, definition)?).await?;
+    register(thread, Class::from(None, definition)?).await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn compiled_volatile_long_store_publishes_an_earlier_plain_store_to_a_java_peer() -> Result<()>
+{
+    const BITS: i64 = 0x7abc_fedc_8765_4321;
+    let harness = Harness::new().await?;
+    let class = register_long_handoff(&harness.thread).await?;
     harness.thread.initialize_class(&class).await?;
     let peer = Thread::new(&Arc::downgrade(&harness.vm), harness.thread.id() + 1);
     let observed_class = class.clone();
@@ -747,7 +751,7 @@ async fn compiled_volatile_long_store_publishes_an_earlier_plain_store_to_a_java
                 {
                     Some(Value::Long(1)) => break,
                     Some(Value::Long(0)) if std::time::Instant::now() < deadline => {
-                        std::thread::yield_now()
+                        std::thread::yield_now();
                     }
                     other => {
                         return Err(InternalError(format!(
