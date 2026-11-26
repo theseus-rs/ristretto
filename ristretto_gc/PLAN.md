@@ -52,6 +52,13 @@ context. A forced refill between cache lookup and global reservation reproduced
 the failure. The corrected shared-interest path and its wake-driven tests are recorded above.
 [Reproduction and timings](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md).
 
+At `b041f0c3`, all three JVMs completed every scheduled Java roots request in two
+fresh forks per rate. At 1,000/s, median scheduled p99.9 was 132 µs for
+Ristretto, 166 µs for G1 and 140.5 µs for ZGC. At 1,500/s the corresponding
+tails were 259, 137 and 127.5 µs. Peak cgroup memory across both rates was
+255.6 MiB for Ristretto, 62.4 MiB for G1 and 96.7 MiB for ZGC.
+[Process records, distributions and graph](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/README.md).
+
 At `74275197`, all three runtimes completed all arrivals. At 1,500/s the
 median scheduled p99.9 was 229.5 µs for Ristretto, 211 µs for G1 and
 156.5 µs for ZGC. Both HotSpot collectors also had lower tails at 1,000/s. The
