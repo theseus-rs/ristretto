@@ -416,6 +416,17 @@ fn probe_reuses_a_returned_peer_range_before_a_parked_registry_resumes() {
 #[cfg(not(target_family = "wasm"))]
 #[test]
 fn workerless_allocation_reclaims_an_unreachable_peer_range_before_registry_release() {
+    contended_allocation_reclaims_unreachable_peer(false);
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn native_worker_reclaims_an_unreachable_peer_range_before_registry_release() {
+    contended_allocation_reclaims_unreachable_peer(true);
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn contended_allocation_reclaims_unreachable_peer(worker: bool) {
     use std::future::Future;
     use std::sync::mpsc;
     use std::task::{Context, Poll, Waker};
@@ -423,6 +434,7 @@ fn workerless_allocation_reclaims_an_unreachable_peer_range_before_registry_rele
 
     let gc = crate::GarbageCollector::with_config(
         crate::Configuration::builder()
+            .threads(1)
             .region_shards(2)
             .compact_heap(true)
             .cost_aware_relocation(true)
@@ -436,12 +448,15 @@ fn workerless_allocation_reclaims_an_unreachable_peer_range_before_registry_rele
     let source = heap.index(buffer.relocation_region(heap).expect("regional donor"));
     let root = crate::Gc::try_new(&gc, buffer).expect("publish donor");
     assert_eq!(heap.statistics().shared_committed_bytes, 1024);
-    assert_eq!(gc.registered_workers(), 0);
-    drop(root);
+    if worker {
+        gc.start();
+    }
+    assert_eq!(gc.registered_workers(), usize::from(worker));
 
     let (send, recv) = mpsc::channel();
     std::thread::scope(|scope| {
         let parked = lock(heap.shard(1 - source));
+        drop(root);
         let gc = &gc;
         scope.spawn(move || {
             let mut future =
@@ -449,20 +464,30 @@ fn workerless_allocation_reclaims_an_unreachable_peer_range_before_registry_rele
                     Ok(3_u8)
                 }));
             let mut cx = Context::from_waker(Waker::noop());
+            let mut completed = None;
             for _ in 0..4096 {
                 if let Poll::Ready(result) = future.as_mut().poll(&mut cx) {
-                    send.send(
-                        result.map(|buf| buf.iter().copied().map(usize::from).sum::<usize>()),
-                    )
-                    .expect("report completion");
-                    return;
+                    completed =
+                        Some(result.map(|buf| buf.iter().copied().map(usize::from).sum::<usize>()));
+                    break;
+                }
+                if worker {
+                    std::thread::yield_now();
                 }
             }
+            send.send(completed)
+                .expect("report allocation after 4,096 polls");
         });
         let before_release = recv.recv_timeout(Duration::from_secs(3));
         drop(parked);
-        assert!(matches!(before_release, Ok(Ok(768))), "{before_release:?}");
+        assert!(
+            matches!(before_release, Ok(Some(Ok(768)))),
+            "{before_release:?}"
+        );
     });
+    if worker {
+        gc.stop().expect("worker shutdown");
+    }
 }
 
 #[test]
