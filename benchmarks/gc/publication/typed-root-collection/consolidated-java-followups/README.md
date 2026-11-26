@@ -1,5 +1,7 @@
 # Java latency and memory across integrated collector revisions
 
+At `480d279a` all twelve fresh forks completed their scheduled Java roots requests. At 1,500 requests/s the median scheduled p99.9 was 958 µs for Ristretto, 103.5 µs for G1 and 10 µs for ZGC. [Per-fork measurements, resource limits and graphs](synchronized-methods/README.md).
+
 Each row compares two fresh forks per rate. The table gives the median of their scheduled-response p99.9 values and the highest cgroup memory across both rates. Each runtime completed every offered request.
 
 | Ristretto revision in campaign | Runtime | 1,000/s p99.9 (µs) | 1,500/s p99.9 (µs) | Peak memory (MiB) |
