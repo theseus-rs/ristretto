@@ -371,6 +371,7 @@ struct MarkTask {
     offset: usize,
     version: usize,
     has_young: bool,
+    dirty_scan: bool,
     budget: usize,
     // Busy also represents a task returned without execution at the time limit.
     progress: TraceProgress,
@@ -644,6 +645,7 @@ struct Cycle {
     cursor: usize,
     young_cursor: crate::index::YoungCursor,
     remembered_cursor: crate::index::Cursor,
+    remembered_overflow: crate::index::RememberedOverflow,
     sweep_young_cursor: crate::index::YoungCursor,
     object_cursor: crate::index::Cursor,
     sweep_object_cursor: crate::index::Cursor,
@@ -678,6 +680,7 @@ impl Default for Cycle {
             cursor: 0,
             young_cursor: crate::index::YoungCursor::default(),
             remembered_cursor: crate::index::Cursor::default(),
+            remembered_overflow: crate::index::RememberedOverflow::default(),
             sweep_young_cursor: crate::index::YoungCursor::default(),
             object_cursor: crate::index::Cursor::default(),
             sweep_object_cursor: crate::index::Cursor::default(),
@@ -929,7 +932,8 @@ impl GarbageCollector {
         }
     }
     fn pending(&self) -> bool {
-        self.retired_ready.load(Ordering::Acquire) != 0
+        self.remembered.dirty.cleanup_pending()
+            || self.retired_ready.load(Ordering::Acquire) != 0
             || self.old_requested.load(Ordering::Acquire)
             || self
                 .domains
@@ -1563,29 +1567,37 @@ impl GarbageCollector {
         }
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         barrier_progress_tests::pause_before_remembering();
-        self.enroll_unbuffered_owner(address)
+        self.enroll_unbuffered_owner(address, self.remembered.lock(address))
+            .is_some()
     }
 
-    fn enroll_unbuffered_owner(&self, address: usize) -> bool {
+    fn enroll_unbuffered_owner(
+        &self,
+        address: usize,
+        mut remembered: crate::index::RememberedGuard<'_>,
+    ) -> Option<MetadataRef> {
         let _measurement = self
             .diagnostics
             .barrier_record
             .measure(self.diagnostics_enabled());
-        let mut remembered = self.remembered.lock(address);
         // Sweep unlinks the exact descriptor under this same shard. A storage
         // pin can outlive registry retirement, but cannot permit address reuse.
-        let Some(metadata) = self.objects.lookup(address) else {
-            return false;
-        };
+        let metadata = self.objects.lookup(address)?;
         metadata.record_mutation();
         remembered.insert(address);
-        true
+        Some(metadata)
     }
 
     pub(crate) fn remember_address(&self, address: usize) {
         let _publication = self.allocation_guard();
         if self.configuration.barrier_buffer_size == 0 {
-            self.enroll_unbuffered_owner(address);
+            if let Some(remembered) = self.remembered.try_lock(address) {
+                if let Some(metadata) = self.enroll_unbuffered_owner(address, remembered) {
+                    self.rescan_dirty_owner(&metadata);
+                }
+            } else if let Some(metadata) = self.objects.lookup(address) {
+                self.remember_contended_owner(&metadata);
+            }
             return;
         }
         if let Some(metadata) = self.objects.lock(address).get(&address) {
@@ -1594,6 +1606,47 @@ impl GarbageCollector {
             return;
         }
         self.barrier(address, true);
+    }
+
+    /// Called under publication admission. A future young cycle sees the
+    /// directory; an already-started strong snapshot may have passed the owner.
+    fn remember_contended_owner(&self, metadata: &MetadataRef) {
+        let _measurement = self
+            .diagnostics
+            .barrier_record
+            .measure(self.diagnostics_enabled());
+        let id = metadata.id.to_i64().cast_unsigned();
+        let address = metadata.ptr().0;
+        // Admission pins phase transitions. A terminal white identity can
+        // never publish a new version after sweep has removed its membership.
+        if self
+            .objects
+            .lookup(address)
+            .is_none_or(|current| current.id != metadata.id)
+            || self.logically_retired(metadata)
+        {
+            return;
+        }
+        let version = metadata.record_mutation();
+        self.remembered.dirty.publish(id, address, version);
+        self.rescan_dirty_owner(metadata);
+    }
+
+    /// Ordinary stores can reach either index on consecutive writes. Publish
+    /// their active snapshot debt under the same admission as enrollment.
+    fn rescan_dirty_owner(&self, metadata: &MetadataRef) {
+        let young = &self.domains[0];
+        if young.active() && young.weak_phase() == 0 && !self.logically_retired(metadata) {
+            let _context = Context::enter(self, 0);
+            // The owner may already have been scanned with its previous fields.
+            // Its outstanding mark alone does not cover this new traversal.
+            metadata.mark(0, young.epoch.load(Ordering::Acquire), Retention::Strong);
+            if metadata.request_dirty_scan() {
+                young
+                    .mark_queue
+                    .push(self.local_queue(), MarkItem::dirty(metadata.clone()));
+            }
+        }
     }
 
     /// Creates a collector with default configuration.
@@ -3484,7 +3537,15 @@ impl GarbageCollector {
     ) {
         // Pruning is optional. Keep the entry if either shard is busy, so a
         // suspended shard owner cannot strand an in-flight mark task.
-        if has_young || version == usize::MAX || !self.remembered.may_contain(address) {
+        if has_young || version == usize::MAX {
+            return;
+        }
+        // A write after the scan began either has a newer directory version,
+        // or will publish it after our CAS. Ignore a lost optional prune.
+        self.remembered
+            .dirty
+            .try_remove(identity.to_i64().cast_unsigned(), version);
+        if !self.remembered.may_contain(address) {
             return;
         }
         let Some(objects) = self.objects.try_lock(address) else {
@@ -4336,6 +4397,9 @@ impl GarbageCollector {
                         >= self.configuration.promotion_age.max(1),
                 "old-core queue contains an allocation that is still young"
             );
+            if item.dirty_scan && item.version.is_none() {
+                item.metadata.begin_dirty_scan();
+            }
             let version = item
                 .version
                 .unwrap_or_else(|| item.metadata.mutation.load(Ordering::Acquire));
@@ -4351,6 +4415,7 @@ impl GarbageCollector {
                 offset: item.offset,
                 version,
                 has_young: item.has_young,
+                dirty_scan: item.dirty_scan,
                 budget,
                 progress: TraceProgress::Busy,
             });
@@ -4370,6 +4435,11 @@ impl GarbageCollector {
                         task.version,
                         task.has_young,
                     );
+                    if task.dirty_scan && task.metadata.finish_dirty_scan() {
+                        self.domain()
+                            .mark_queue
+                            .push(self.local_queue(), MarkItem::dirty(task.metadata));
+                    }
                 }
                 TraceProgress::Continue(_) | TraceProgress::Busy => {
                     let offset = if let TraceProgress::Continue(next) = task.progress {
@@ -4384,6 +4454,7 @@ impl GarbageCollector {
                             offset,
                             version: Some(task.version),
                             has_young: task.has_young,
+                            dirty_scan: task.dirty_scan,
                         },
                     );
                 }
@@ -4506,6 +4577,13 @@ impl GarbageCollector {
     }
 
     fn step_inner(&self, concurrent: bool) -> Option<bool> {
+        if self.remembered.dirty.cleanup_pending() {
+            self.remembered.dirty.cleanup_step(|id, address| {
+                self.objects
+                    .lookup(address)
+                    .is_some_and(|metadata| metadata.id.to_i64().cast_unsigned() == id)
+            });
+        }
         // A delayed borrower cannot hold a collection ticket open. Once released,
         // give its bounded clearing work alternating turns with active cycles.
         if self.retired_objects.load(Ordering::Acquire) != 0
@@ -4949,6 +5027,11 @@ impl GarbageCollector {
             cycle.phantom_retained.clear();
             cycle.young_cursor = crate::index::YoungCursor::default();
             cycle.remembered_cursor = crate::index::Cursor::default();
+            cycle.remembered_overflow = if cycle.kind == CollectionKind::Young {
+                self.remembered.dirty.cursor()
+            } else {
+                crate::index::RememberedOverflow::default()
+            };
             cycle.sweep_young_cursor = crate::index::YoungCursor::default();
             cycle.object_cursor = crate::index::Cursor::default();
             cycle.sweep_object_cursor = crate::index::Cursor::default();

@@ -121,6 +121,10 @@ impl<V> Node<V> {
 }
 
 impl<V> Directory<V> {
+    pub(crate) fn last_key(&self) -> Option<u64> {
+        self.root.as_ref().map(|node| node.last)
+    }
+
     pub(crate) fn len(&self) -> usize {
         self.len
     }

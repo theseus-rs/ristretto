@@ -740,63 +740,242 @@ fn mutation_version_saturation_disables_optional_pruning_for_that_owner() -> Res
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[test]
-fn ordinary_vector_write_enrolls_a_mature_owner_while_its_object_shard_is_parked() -> Result<()> {
+fn ordinary_vector_write_enrolls_a_mature_owner_while_either_shard_is_parked() -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
     for counted in [false, true] {
+        for object in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .promotion_age(3)
+                    .allocation_threshold(usize::MAX)
+                    .full_collection_interval(usize::MAX)
+                    .build(),
+            );
+            let owner = Gc::try_new(&gc, crate::cell::RwLock::new(Vec::<Gc<u64>>::new()))?;
+            for _ in 0..3 {
+                gc.collect_full()?;
+            }
+            let address = owner.as_ptr() as usize;
+            assert!(!gc.is_young_allocation(address));
+            generation_tests::finish_young(&gc)?;
+            assert!(!gc.remembered.lock(address).contains(&address));
+            let child = Gc::try_new(&gc, 43_u64)?.into_rooted();
+            let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+            let victim = Gc::try_new(&gc, 17_u64)?;
+            let garbage = crate::GcWeak::new(&victim, crate::ReferenceKind::Weak, 0);
+            drop(victim);
+            thread::scope(|scope| {
+                let (entered, parked) = mpsc::channel();
+                let (go, wait) = mpsc::channel();
+                let (done, observed) = mpsc::channel();
+                let parent = &owner;
+                let writer = scope.spawn(move || {
+                    let mut value = parent.write();
+                    value.push(child);
+                    entered.send(()).unwrap();
+                    wait.recv().unwrap();
+                    drop(value);
+                    done.send(()).unwrap();
+                });
+                parked.recv_timeout(Duration::from_secs(3)).unwrap();
+                let objects = object.then(|| gc.objects.lock(address));
+                let remembered = (!object).then(|| gc.remembered.lock(address));
+                go.send(()).unwrap();
+                let completed = observed.recv_timeout(Duration::from_secs(3)).is_ok();
+                drop((objects, remembered));
+                writer.join().unwrap();
+                assert!(
+                    completed,
+                    "dirty publication waited for a parked owner shard"
+                );
+            });
+            for _ in 0..2 {
+                generation_tests::finish_young(&gc)?;
+                assert_eq!(weak.upgrade().as_deref(), Some(&43));
+            }
+            assert!(gc.is_young_allocation(owner.read()[0].as_ptr() as usize));
+            assert!(garbage.upgrade().is_none());
+            drop(owner);
+            gc.collect_full()?;
+            assert!(weak.upgrade().is_none());
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
+
+struct SplitField {
+    edge: Mutex<Option<Gc<u64>>>,
+    scans: AtomicUsize,
+    split: AtomicBool,
+    busy: AtomicBool,
+}
+// SAFETY: the fixture serializes edge installation and publishes its dirty
+// owner before granting the collector any further steps.
+unsafe impl Trace for SplitField {
+    fn trace(&self, gc: &GarbageCollector) {
+        if gc.domain_index() == 0 {
+            self.scans.fetch_add(1, Ordering::Relaxed);
+        }
+        lock(&self.edge).trace(gc);
+    }
+
+    fn trace_step(&self, gc: &GarbageCollector, offset: usize, _: usize) -> TraceProgress {
+        if offset == 0 {
+            self.trace(gc);
+            if self.split.load(Ordering::Acquire) {
+                return TraceProgress::Continue(1);
+            }
+        } else if self.busy.swap(false, Ordering::AcqRel) {
+            return TraceProgress::Busy;
+        }
+        TraceProgress::Complete
+    }
+}
+
+#[test]
+fn a_late_contended_dirty_owner_is_retraced_even_if_already_strong() -> Result<()> {
+    for (counted, contended) in [(false, false), (true, false), (false, true), (true, true)] {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .concurrent_publication(counted)
-                .promotion_age(3)
+                .promotion_age(2)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
                 .allocation_threshold(usize::MAX)
                 .full_collection_interval(usize::MAX)
                 .build(),
         );
-        let owner = Gc::try_new(&gc, crate::cell::RwLock::new(Vec::<Gc<u64>>::new()))?;
-        for _ in 0..3 {
-            gc.collect_full()?;
-        }
+        let owner = Gc::try_new(
+            &gc,
+            SplitField {
+                edge: Mutex::default(),
+                scans: AtomicUsize::new(0),
+                split: AtomicBool::new(false),
+                busy: AtomicBool::new(false),
+            },
+        )?;
+        gc.collect_full()?;
+        gc.collect_full()?;
         let address = owner.as_ptr() as usize;
         assert!(!gc.is_young_allocation(address));
-        generation_tests::finish_young(&gc)?;
-        assert!(!gc.remembered.lock(address).contains(&address));
-        let child = Gc::try_new(&gc, 43_u64)?.into_rooted();
+        let meta = gc.objects.lookup(address).expect("registered owner");
+        let mut child = Gc::try_new(&gc, 79_u64)?.into_rooted();
+        let target = gc
+            .objects
+            .lookup(child.as_ptr() as usize)
+            .expect("registered child");
         let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
-        let victim = Gc::try_new(&gc, 17_u64)?;
-        let garbage = crate::GcWeak::new(&victim, crate::ReferenceKind::Weak, 0);
-        drop(victim);
-        thread::scope(|scope| {
-            let (entered, parked) = mpsc::channel();
-            let (go, wait) = mpsc::channel();
-            let (done, observed) = mpsc::channel();
-            let parent = &owner;
-            let writer = scope.spawn(move || {
-                let mut value = parent.write();
-                value.push(child);
-                entered.send(()).unwrap();
-                wait.recv().unwrap();
-                drop(value);
-                done.send(()).unwrap();
-            });
-            parked.recv_timeout(Duration::from_secs(3)).unwrap();
-            let shard = gc.objects.lock(address);
-            go.send(()).unwrap();
-            let completed = observed.recv_timeout(Duration::from_secs(3)).is_ok();
-            drop(shard);
-            writer.join().unwrap();
-            assert!(
-                completed,
-                "dirty publication waited for the owner object shard"
-            );
-        });
-        for _ in 0..2 {
-            generation_tests::finish_young(&gc)?;
-            assert_eq!(weak.upgrade().as_deref(), Some(&43));
+        // SAFETY: the test drives this young cycle only through the owner's
+        // first mark callback. It installs the edge before weak closure/sweep.
+        unsafe { child.unroot() };
+        gc.remember(&owner);
+        let before = owner.scans.load(Ordering::Relaxed);
+        gc.collect_young();
+        assert!((0..4096).any(|_| {
+            gc.step();
+            owner.scans.load(Ordering::Relaxed) > before
+        }));
+        let epoch = gc.domains[0].epoch.load(Ordering::Acquire);
+        assert_eq!(gc.domains[0].weak_phase(), 0);
+        assert_eq!(meta.retention(0, epoch), Some(Retention::Strong));
+        assert!(!target.marked(0, epoch));
+        owner.split.store(true, Ordering::Release);
+        owner.busy.store(true, Ordering::Release);
+        meta.mutation.store(usize::MAX, Ordering::Release);
+        {
+            let _parked = gc.remembered.lock(address);
+            for _ in 0..1024 {
+                gc.remember(&owner);
+            }
         }
-        assert!(gc.is_young_allocation(owner.read()[0].as_ptr() as usize));
-        assert!(garbage.upgrade().is_none());
+        assert!((0..4096).any(|_| {
+            gc.step();
+            owner.scans.load(Ordering::Relaxed) == before + 2
+        }));
+        assert!(!target.marked(0, epoch));
+        *lock(&owner.edge) = Some(child);
+        {
+            let _parked = contended.then(|| gc.remembered.lock(address));
+            for _ in 0..1024 {
+                gc.remember(&owner);
+            }
+        }
+        assert!((0..4096).any(|_| gc.step()));
+        assert_eq!(weak.upgrade().as_deref(), Some(&79));
+        assert_eq!(owner.scans.load(Ordering::Relaxed), before + 3);
         drop(owner);
         gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+        assert!(
+            gc.remembered
+                .dirty
+                .next(&mut gc.remembered.dirty.cursor())
+                .is_none()
+        );
+        let _admission = gc.allocation_guard();
+        gc.remember_contended_owner(&meta);
+        assert!(
+            gc.remembered
+                .dirty
+                .next(&mut gc.remembered.dirty.cursor())
+                .is_none()
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn a_stale_overflow_identity_does_not_retain_an_address_replacement() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let old = Gc::try_new(&gc, 3_u64)?;
+        let id = old.identity().to_i64().cast_unsigned();
+        drop(old);
+        gc.collect_full()?;
+        let replacement = Gc::try_new(&gc, 5_u64)?;
+        assert_ne!(id, replacement.identity().to_i64().cast_unsigned());
+        let weak = crate::GcWeak::new(&replacement, crate::ReferenceKind::Weak, 0);
+        gc.remembered
+            .dirty
+            .publish(id, replacement.as_ptr() as usize, 1);
+        drop(replacement);
+        generation_tests::finish_young(&gc)?;
+        assert!(weak.upgrade().is_none());
+        assert!(gc.remembered.dirty.try_remove(id, usize::MAX));
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
+
+#[test]
+fn a_clean_unreachable_spilled_owner_is_reclaimed_by_the_second_young_collection() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .promotion_age(4)
+                .allocation_threshold(usize::MAX)
+                .full_collection_interval(usize::MAX)
+                .build(),
+        );
+        let owner = Gc::try_new(&gc, 53_u64)?;
+        let address = owner.as_ptr() as usize;
+        let weak = crate::GcWeak::new(&owner, crate::ReferenceKind::Weak, 0);
+        {
+            let _parked = gc.remembered.lock(address);
+            gc.remember(&owner);
+        }
+        drop(owner);
+        generation_tests::finish_young(&gc)?;
+        generation_tests::finish_young(&gc)?;
         assert!(weak.upgrade().is_none());
         assert_eq!(gc.managed_bytes(), 0);
     }
