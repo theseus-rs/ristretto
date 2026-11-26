@@ -410,6 +410,7 @@ mod tests {
         delayed_pressure(PressureSchedule::Contended)
     }
 
+    #[derive(Clone, Copy)]
     enum PressureSchedule {
         Available,
         Cancel,
