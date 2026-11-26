@@ -1476,3 +1476,60 @@ fn private_reference_append_cannot_complete_a_handler_wait() -> Result<()> {
     assert!(!gc.has_pending_references());
     Ok(())
 }
+
+#[test]
+fn retained_phantom_cleanup_respects_each_collection_work_unit() -> Result<()> {
+    const TARGETS: usize = 1024;
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .allocation_threshold(usize::MAX)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .build(),
+        );
+        let mut references = Vec::new();
+        for value in 0..TARGETS {
+            let target = Gc::try_new(&gc, value)?;
+            references.push(GcWeak::new(&target, ReferenceKind::PhantomRetained, 0));
+            if value == 0 {
+                references.push(GcWeak::new(&target, ReferenceKind::PhantomRetained, 0));
+            }
+        }
+        gc.collect();
+        let mut previous = 0_usize;
+        let mut high = 0;
+        for _ in 0..100_000 {
+            let cleanup = previous > 0 && lock(&gc.domains[1].cycle).phase == Phase::Compact;
+            // A live publisher prevents a boundary commit, but cannot postpone
+            // bounded disposal of the preceding phantom decisions.
+            let admission = cleanup.then(|| gc.allocation_guard());
+            let finished = gc.step();
+            drop(admission);
+            let remaining = lock(&gc.domains[1].cycle).phantom_retained.len();
+            if cleanup {
+                assert_eq!(previous - remaining, 1);
+            }
+            assert!(previous.saturating_sub(remaining) <= 1);
+            high = high.max(remaining);
+            previous = remaining;
+            if finished {
+                break;
+            }
+        }
+        assert_eq!(gc.completed_full_ticket(), 1);
+        assert_eq!(high, TARGETS);
+        assert_eq!(previous, 0, "cycle must drain its retained address set");
+        assert!(
+            references
+                .iter()
+                .all(|r| r.slot.activated.load(Ordering::Acquire))
+        );
+        assert_eq!(gc.statistics()?.live_objects, TARGETS);
+        drop(references);
+        gc.collect_full()?;
+        assert_eq!(gc.statistics()?.live_objects, 0);
+    }
+    Ok(())
+}

@@ -5338,7 +5338,7 @@ impl GarbageCollector {
             cycle.ticket = self.domain().request_ticket.load(Ordering::Acquire);
             cycle.relocations.clear();
             cycle.relocation_scan_done = false;
-            cycle.phantom_retained.clear();
+            debug_assert!(cycle.phantom_retained.is_empty());
             cycle.young_cursor = crate::index::YoungCursor::default();
             cycle.remembered_cursor = crate::index::Cursor::default();
             cycle.remembered_overflow = if cycle.kind == CollectionKind::Young {
@@ -5618,6 +5618,12 @@ impl GarbageCollector {
                         }
                     }
                     Phase::Compact => {
+                        // Stage five can reopen marking, but it cannot revisit
+                        // phantom discovery. Charge this cycle for its own set
+                        // before taking the final publication writer.
+                        if cycle.phantom_retained.pop_first().is_some() {
+                            continue;
+                        }
                         if let Some(heap) = &self.regions {
                             if let Some(queues) = &self.domain().relocations {
                                 let window = self.configuration.threads.clamp(1, 16) * 16;
