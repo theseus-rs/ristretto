@@ -69,10 +69,11 @@ pub(crate) struct Sealed {
     page: Arc<Page>,
 }
 
-/// One numeric page per ongoing sweep. A failed exact clear always retries in
-/// the current directory, including after another domain sealed the old page.
+/// A sweep visits addresses in shard order and may alternate between numeric pages.
+/// Cache eight such pages. A failed exact clear retries in the current directory,
+/// including after another domain sealed the old page.
 #[derive(Default, Debug)]
-pub(crate) struct RetireCursor(Option<(u64, Arc<Page>)>);
+pub(crate) struct RetireCursor([Option<(u64, Arc<Page>)>; 8]);
 
 /// Reading an identity grants no access to its address or the managed payload.
 #[derive(Debug)]
@@ -204,13 +205,14 @@ impl Index {
             return None;
         }
         let (head, key, offset) = self.locate(id);
-        if let Some((prior, page)) = &cursor.0
+        let slot = cursor.0.get_mut(usize::from(key.to_le_bytes()[0]) % 8)?;
+        if let Some((prior, page)) = slot.as_ref()
             && *prior == key
             && Arc::ptr_eq(&self.owner, &page.owner)
             && let Some(empty) = page.clear(offset, address)
         {
             return if empty {
-                cursor.0.take().map(|(key, page)| Sealed { key, page })
+                slot.take().map(|(key, page)| Sealed { key, page })
             } else {
                 None
             };
@@ -218,13 +220,13 @@ impl Index {
         let pages = head.load();
         let page = pages.get(key)?;
         if page.clear(offset, address)? {
-            cursor.0 = None;
+            *slot = None;
             Some(Sealed {
                 key,
                 page: page.clone(),
             })
         } else {
-            cursor.0 = Some((key, page.clone()));
+            *slot = Some((key, page.clone()));
             None
         }
     }
