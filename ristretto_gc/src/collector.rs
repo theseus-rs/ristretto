@@ -6622,10 +6622,10 @@ mod tests {
         let signals = gc.worker_signals.load_full().expect("worker pool");
         let wait_until = |condition: &dyn Fn() -> bool| {
             let start = std::time::Instant::now();
-            while !condition() && start.elapsed() < std::time::Duration::from_secs(5) {
+            while !condition() {
+                assert!(start.elapsed() < std::time::Duration::from_secs(5));
                 thread::yield_now();
             }
-            assert!(condition());
         };
         wait_until(&|| {
             signals

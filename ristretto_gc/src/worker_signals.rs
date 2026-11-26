@@ -59,11 +59,11 @@ impl Signal {
     }
 
     pub(super) fn wait(&self) {
-        #[cfg(test)]
-        self.waiting.store(true, Ordering::Release);
         // A Trace callback may consume its thread's park token. Only this
         // check acknowledges demand, immediately before returning to the worker.
         while !self.pending.swap(false, Ordering::AcqRel) {
+            #[cfg(test)]
+            self.waiting.store(true, Ordering::Release);
             #[cfg(target_os = "linux")]
             thread::park();
             #[cfg(not(target_os = "linux"))]
