@@ -1,4 +1,4 @@
-//! Preserve roots released by synchronous construction hooks without retaining
+//! Preserve roots released by synchronous construction or mutation hooks without retaining
 //! publication admission across arbitrary callbacks or system allocation.
 use crate::GarbageCollector;
 use crate::roots::Registration;
@@ -15,6 +15,7 @@ thread_local! {
 pub(crate) struct Roots<'gc> {
     collector: &'gc GarbageCollector,
     previous: Cell<*const ()>,
+    construction: bool,
     registrations: RefCell<Vec<Registration>>,
     // Temporary roots protect referents while a per-slot pending count excludes
     // decisions. A stalled hook owns no collector-wide publication admission.
@@ -26,9 +27,41 @@ impl<'gc> Roots<'gc> {
         Self {
             collector,
             previous: Cell::new(std::ptr::null()),
+            construction: true,
             registrations: RefCell::new(Vec::new()),
             reference_owners: RefCell::new(Vec::new()),
         }
+    }
+
+    /// Transfer exact owning registrations released by a mutation hook through
+    /// enrollment of the already-published owner. A parked hook holds no admission.
+    pub(crate) fn finish_write(
+        collector: &'gc GarbageCollector,
+        address: usize,
+        demote: impl FnOnce() -> bool,
+    ) {
+        struct Notification<'a> {
+            collector: &'a GarbageCollector,
+            address: usize,
+            required: bool,
+        }
+        impl Drop for Notification<'_> {
+            fn drop(&mut self) {
+                if self.required {
+                    self.collector.remember_address(self.address);
+                }
+            }
+        }
+        let mut roots = Self::new(collector);
+        roots.construction = false;
+        let _scope = roots.enter();
+        // Drop order also protects partially demoted custom graphs on unwind.
+        let mut notification = Notification {
+            collector,
+            address,
+            required: true,
+        };
+        notification.required = demote();
     }
 
     /// The borrow keeps this stack location stable until the scope restores TLS.
@@ -178,7 +211,7 @@ impl Drop for Scope<'_, '_> {
 /// admission. A replacement registration closes that gap before admission ends.
 /// Each replacement has a fresh ID; repeated removals cannot alias its cleanup.
 pub(crate) fn retain(collector: &GarbageCollector, address: usize) {
-    with_roots(collector, |roots| {
+    with_roots(collector, true, |roots| {
         if let Some(id) = collector.retain_construction_root(address) {
             roots
                 .registrations
@@ -191,7 +224,7 @@ pub(crate) fn retain(collector: &GarbageCollector, address: usize) {
 /// The last owning handle transfers its existing registration rather than
 /// removing/reinserting it. The registration stays visible throughout the hook.
 pub(crate) fn defer_owned(collector: &GarbageCollector, id: &Registration) -> bool {
-    with_roots(collector, |roots| {
+    with_roots(collector, false, |roots| {
         roots.registrations.borrow_mut().push(id.clone());
     })
 }
@@ -200,7 +233,7 @@ pub(crate) fn defer_owned(collector: &GarbageCollector, id: &Registration) -> bo
 /// reuse the complete vector backing instead of allocating and cloning each token.
 /// Only synchronous scope exit adopts into TLS; detached cleanup never does.
 fn adopt_batch(collector: &GarbageCollector, registrations: &mut Vec<Registration>) -> bool {
-    with_roots(collector, |roots| {
+    with_roots(collector, false, |roots| {
         let mut destination = roots.registrations.borrow_mut();
         if destination.is_empty() {
             *destination = std::mem::take(registrations);
@@ -219,7 +252,7 @@ pub(crate) fn protect_reference_owner(
     collector: &GarbageCollector,
     slot: &Arc<crate::weak::WeakSlot>,
 ) {
-    with_roots(collector, |roots| {
+    with_roots(collector, true, |roots| {
         if roots
             .reference_owners
             .borrow()
@@ -247,14 +280,18 @@ pub(crate) fn protect_reference_owner(
     });
 }
 
-fn with_roots(collector: &GarbageCollector, operation: impl FnOnce(&Roots<'_>)) -> bool {
+fn with_roots(
+    collector: &GarbageCollector,
+    construction_only: bool,
+    operation: impl FnOnce(&Roots<'_>),
+) -> bool {
     let mut current = CURRENT.get();
     while !current.is_null() {
         // SAFETY: enter borrows the stack Roots until Scope::drop restores the
         // previous pointer. Scopes cannot migrate, and nested scopes keep every
         // predecessor alive. This reference never escapes this synchronous call.
         let roots = unsafe { &*current.cast::<Roots<'_>>() };
-        if std::ptr::eq(roots.collector, collector) {
+        if std::ptr::eq(roots.collector, collector) && (!construction_only || roots.construction) {
             operation(roots);
             return true;
         }

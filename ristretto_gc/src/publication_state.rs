@@ -113,6 +113,12 @@ impl Clock {
         self.indexed_birth(true)
     }
 
+    /// Check the phase sample after capturing the active epoch owners. The
+    /// caller still validates those owners after using any epoch-local data.
+    pub(crate) fn same_phases(&self, snapshot: &Snapshot) -> bool {
+        self.state.load(Ordering::SeqCst) & PHASE_MASK == snapshot.0 & PHASE_MASK
+    }
+
     /// The caller holds each active epoch's owning identity and must validate
     /// them after this operation. Unrelated publisher stamps do not change
     /// those identities. A linked traversal invalidates an earlier empty sample.
