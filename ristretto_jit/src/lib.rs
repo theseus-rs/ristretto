@@ -152,6 +152,16 @@ mod wasm_compiler;
 ))]
 pub use compiler::Compiler;
 pub use error::{Error, Result};
+
+/// The production compiler's first reason for leaving a method interpreted.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CompilationRejection {
+    /// Stable restriction used by the VM execution profiler.
+    pub reason: &'static str,
+    /// Original JVM byte offset and opcode when an instruction was rejected.
+    pub bytecode: Option<(usize, u8)>,
+}
+
 pub use function::{
     Activation, AllocationKind, AllocationRequest, ArrayAccessKind, ArrayAccessRequest,
     ArrayStoreRequest, CallKind, CallRequest, ConstantRequest, ExceptionMatchRequest,

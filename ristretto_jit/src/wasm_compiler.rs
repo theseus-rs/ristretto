@@ -26,6 +26,24 @@ impl Compiler {
         false
     }
 
+    /// Cooperative targets execute Java in the interpreter.
+    #[must_use]
+    pub fn can_compile_in(_class: &ClassFile, method: &Method) -> bool {
+        Self::can_compile(method)
+    }
+
+    /// Report the native compiler's absence to the VM profiler.
+    #[must_use]
+    pub fn rejection_in(
+        _class: &ClassFile,
+        method: &Method,
+    ) -> Option<crate::CompilationRejection> {
+        Self::rejection_reason(method).map(|reason| crate::CompilationRejection {
+            reason,
+            bytecode: None,
+        })
+    }
+
     /// Reports that this target has no production native compiler.
     #[must_use]
     pub fn rejection_reason(_method: &Method) -> Option<&'static str> {

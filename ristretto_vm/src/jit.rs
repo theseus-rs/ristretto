@@ -26,7 +26,7 @@ const BATCH_SIZE: usize = 5;
 const BATCH_TIMEOUT_MS: u64 = 10;
 
 /// Derives a cache key from the method pointer without allocating a string.
-fn cache_key(method: &Arc<Method>) -> usize {
+pub(crate) fn cache_key(method: &Arc<Method>) -> usize {
     Arc::as_ptr(method) as usize
 }
 
@@ -237,7 +237,7 @@ impl Compiler {
         let definition = method.definition();
 
         // Fast-fail: skip methods that contain unsupported instructions
-        let function = if ristretto_jit::Compiler::can_compile(definition) {
+        let function = if ristretto_jit::Compiler::can_compile_in(class.class_file(), definition) {
             let class_file = class.class_file();
             let symbols = jit_runtime_helpers::symbols();
             #[cfg(feature = "execution-profile")]
@@ -436,7 +436,10 @@ fn process_compilation_batch(
             let definition = request.method.definition();
 
             // Fast-fail: skip methods that contain unsupported instructions
-            let function = if ristretto_jit::Compiler::can_compile(definition) {
+            let function = if ristretto_jit::Compiler::can_compile_in(
+                request.class.class_file(),
+                definition,
+            ) {
                 let class_file = request.class.class_file();
                 let symbols = jit_runtime_helpers::symbols();
                 #[cfg(feature = "execution-profile")]
