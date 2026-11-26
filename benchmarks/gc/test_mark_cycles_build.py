@@ -4,10 +4,35 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from mark_cycles_build import compiled_example
+from mark_cycles_build import build_controls, compiled_example
 
 
 class CompilerReceiptTests(unittest.TestCase):
+    def test_controls_distinguish_profile_dependencies_and_compiler_features(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            manifest = root / "Cargo.toml"
+            lock = root / "Cargo.lock"
+            manifest.write_text('[workspace]\nmembers = ["gc"]\n[profile.release]\nlto = true\n')
+            lock.write_text('[[package]]\nname = "atom"\nversion = "1"\nsource = "registry+url"\nchecksum = "a"\n')
+            item = dict(reason="compiler-artifact", package_id="registry+url#atom@1",
+                        target=dict(name="atom", kind=["lib"]), features=["fast"], profile={})
+
+            def fingerprint(**changes):
+                return build_controls(json.dumps({**item, **changes}), root, "gc")
+
+            expected = fingerprint()
+            manifest.write_text(manifest.read_text().replace('["gc"]', '["gc", "research"]'))
+            self.assertEqual(fingerprint(), expected)
+            self.assertNotEqual(fingerprint(features=[]), expected)
+            self.assertIsNone(fingerprint(package_id="path+file:///outside#dep"))
+            original = manifest.read_text()
+            manifest.write_text(original.replace("true", "false"))
+            self.assertNotEqual(fingerprint(), expected)
+            manifest.write_text(original)
+            lock.write_text(lock.read_text().replace('checksum = "a"', 'checksum = "b"'))
+            self.assertNotEqual(fingerprint(), expected)
+
     def test_accepts_only_the_fresh_library_and_example_from_one_package(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
