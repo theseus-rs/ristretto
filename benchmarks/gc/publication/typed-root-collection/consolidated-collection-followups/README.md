@@ -20,6 +20,13 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Observe a fitting refund before the first allocation yield | `2b324c42` | 251126939 | **10.09×** | **11.62×** | **36 / 36** |
 | Allocation refund observations while a registrar is parked | `42c37eb4` | 251126941 | **10.37×** | **10.73×** | **36 / 36** |
 | Reserve physically released donor charges for waiting allocations | `a9242931` | 251126942 | **10.53×** | **10.63×** | **36 / 36** |
+| Paged enrollment with a helpable commit | `5c05cc39` | 251126945 | **11.01×** | **11.38×** | **36 / 36** |
+
+## Paged enrollment
+
+At `5c05cc39`, the collector commits interests in chronological order. A peer can commit a linked slot while its owner is stopped. A donor sees precisely the positions below its cutoff and retains the original request order through cancellation. Cancellation during assignment leaves the full share available to a later request. Both forced races and the four-allocator test passed in 100 fresh processes each. The original four-allocator fixture passed in all 1,800 fresh processes. The native default library suite passed 503 tests, the native all-feature suite passed 1,146, and the WASI library suite passed 311. The bare Wasm build, strict native Clippy and verified Cargo package passed. [Schedules, process outcomes and build identities](paged-enrollment-tests.json.gz)
+
+The allocation benchmark ran all three revisions on the same core with randomized order in 32 fresh process triples at each queue size. Relative to the first donor-grant revision, the time for registration and cancellation fell to 0.24× at one pending request, 0.17× at 64 and 0.17× at 1,024. Relative to the earlier revision without donor funding the corresponding ratios were 1.75×, 1.83× and 1.30×. Each process submitted and cancelled 32,768 futures against an already full heap. Actual collection had a separate 24-pair schedule per condition. Weakest median collection speedups were 11.69× native and 12.00× WASI. [Allocation cost and 95% intervals](paged-enrollment-cost.svg) · [Collection processes](enrollment-pages.csv) · [Validation and allocation samples](paged-enrollment-tests.json.gz)
 
 ## Allocation recovery with an independent donor
 

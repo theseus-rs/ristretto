@@ -2,6 +2,18 @@
 
 ## Tenfold complete-collection gate
 
+At `5c05cc39`, ordered enrollment pages reduced full-heap registration and
+cancellation time by 76–83% relative to `a9242931`. With one, 64 and 1,024
+pending allocations, the remaining cost relative to `42c37eb4` was 1.75×,
+1.83× and 1.30×. A peer can commit a stopped registrar's fully initialized
+position. The donor cutoff excludes later enrollments. All 36 complete-
+collection conditions passed against `f1daebeb`, with weakest individual 95%
+lower speedup bounds of 11.01× native and 11.38× WASI. The original
+1,800-process contention campaign and 400 forced four-allocator schedules
+passed. Synchronous cap recovery, deferred storage retirement, and wake
+delivery with a parked waiter index still need qualification.
+[Three-way timings, races and collection results](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#paged-enrollment).
+
 At `a9242931`, four asynchronous allocations sharing an independent 32-byte
 donor retained their eligibility across fresh collection tickets. All 400 forced
 native schedules passed, as did all 1,800 fresh processes replaying the earlier
