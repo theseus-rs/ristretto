@@ -43,6 +43,18 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Exact Java Reference fields through hidden subclass members | `cdee5888` | 251127133 | **10.86×** | **10.61×** | **36 / 36** |
 | Terminal refund and bounded lock cleanup | `43ffb7cc` | 251127142 | **10.34×** | **10.29×** | **36 / 36** |
 | Buffer reclamation and advisory admission | `113da93b` | 251127151 | **10.40×** | **10.23×** | **36 / 36** |
+| Cooperative regional buffer acquisition | `994e434a` | 251127162 | **10.25×** | **10.44×** | **36 / 36** |
+| Collection with parked regional maintenance | `9e7e3580` | 251127171 | **10.41×** | **10.09×** | **36 / 36** |
+
+## Regional allocation and full collections with a parked registry
+
+The first poll of an async buffer acquisition used to wait for the registry or free-range map. The new search retains only cursor keys across polls, visits up to 32 existing candidates per call, and tries accessible registries for fresh backing. A failed publication returns unpublished backing and restores both physical reservations. Under pressure, a workerless poll can help one collection step while it keeps looking for a returned range. The first version stayed pending for 4,096 polls with an unreachable donor in the accessible shard. Its replacement passed the forced case with zero and one registered native worker in 100 fresh processes.
+
+Two full collections now finish while an unrelated region registry remains parked. Each generation scans accessible payload and descriptor registries for empty backing. The deferred shard keeps its physical charge until a later pass can release it. Cost-aware evacuation ranks only complete candidate indexes from the active epoch. A directed check parks an old candidate through sampling, unlocks it before ranking, and confirms that it is eligible again next epoch. All 600 fresh regional test processes passed. The latest candidate passed 575 default and 866 all-feature native library tests, 332 WASI library tests, 35 WASI integration tests, strict native and WASI Clippy, bare-Wasm checking, and local Cargo package verification. [First acquisition comparison](regional-polls.csv) · [Regional maintenance comparison](regional-phases.csv) · [Controls, individual runs and package checksum](regional-progress-controls.json.gz)
+
+The complete default native suite passed 941 tests, failed two and ignored one. At this revision the context-migration test counted 1,352 of 2,000 destructors after two explicit collections. The generational test found two indexed objects. These assertions observe different stages of reclamation. Clearing a retired parent's references can mark a child during a later snapshot. The failing run did not record the survivors' identities. In a separate foreground callback experiment, all 100 parked-callback processes reclaimed the 32 queued independent objects, but three of 100 migration runs still saw incomplete destructor counts. That experiment remains outside this revision.
+
+If a parked shard could hold a fitting range, the async allocator can continue repolling. The tests and collection measurements here do not establish a bounded exhaustion decision for every parked-shard configuration. The full-collection performance fixture uses the established noncompacting configuration; the separate forced schedules exercise regional compaction.
 
 ## Returning buffer storage to waiting allocations
 
