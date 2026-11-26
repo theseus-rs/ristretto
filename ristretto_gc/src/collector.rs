@@ -2854,6 +2854,18 @@ impl GarbageCollector {
         self.reserve_bytes_with_assistance(size, false).await
     }
 
+    #[cfg(not(target_family = "wasm"))]
+    fn terminal_callback_turn(&self) -> Option<native_callbacks::Turn> {
+        if self.callback_jobs.load(Ordering::Acquire) == 0 {
+            return None;
+        }
+        self.worker_signals
+            .load()
+            .as_ref()?
+            .callbacks
+            .terminal_turn()
+    }
+
     pub(crate) fn reserve_bytes_blocking(&self, size: usize) -> Result<AllocationReservation<'_>> {
         crate::recovery::finish_allocation(self.reserve_bytes_with_assistance(size, true))
     }
@@ -2877,6 +2889,8 @@ impl GarbageCollector {
         if let Some(pool) = self.worker_signals.load().as_ref() {
             pool.callbacks.wake_pressure();
         }
+        #[cfg(not(target_family = "wasm"))]
+        let mut terminal_service = None;
         let mut empty_cycles = 0;
         let mut released = None;
         loop {
@@ -2893,6 +2907,22 @@ impl GarbageCollector {
                 if self.help_terminal_releases(&mut released) {
                     crate::recovery::yield_once().await;
                     continue;
+                }
+                #[cfg(not(target_family = "wasm"))]
+                {
+                    // Enroll once per demand and keep checking real funds on each
+                    // poll. A running destructor, unavailable worker or empty
+                    // queue cannot extend the wait for the user callback to return.
+                    let turn =
+                        terminal_service.get_or_insert_with(|| self.terminal_callback_turn());
+                    if turn.as_ref().is_some_and(native_callbacks::Turn::pending) {
+                        crate::recovery::yield_once().await;
+                        continue;
+                    }
+                    if turn.take().is_some() {
+                        empty_cycles = 1;
+                        continue;
+                    }
                 }
                 #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
                 crate::refund_tests::before_terminal_close();

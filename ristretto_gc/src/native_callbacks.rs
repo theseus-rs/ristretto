@@ -7,6 +7,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
+#[path = "pressure_turn.rs"]
+mod pressure_turn;
+pub(super) use pressure_turn::Turn;
+
 thread_local! {
     // Native workers are owned by exactly one pool generation for their lifetime.
     static POOL: std::cell::OnceCell<std::sync::Weak<super::WorkerSignals>> = const { std::cell::OnceCell::new() };
@@ -25,10 +29,27 @@ pub(super) fn pool() -> Option<Arc<super::WorkerSignals>> {
 #[derive(Debug, Default)]
 pub(super) struct Callbacks(OnceBox<Runner>);
 
+#[cfg(all(test, not(miri), panic = "unwind"))]
+type PressureGate = (mpsc::SyncSender<()>, mpsc::Receiver<()>);
+
+#[cfg(all(test, not(miri), panic = "unwind"))]
+#[expect(clippy::expect_used, reason = "bounded pressure-worker schedule")]
+fn pause_pressure(gate: &Mutex<Option<PressureGate>>) {
+    if let Some((entered, release)) = lock(gate).take() {
+        entered.send(()).expect("observer");
+        release
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .expect("resume service");
+    }
+}
+
 #[derive(Debug)]
 struct Runner {
     send: arc_swap::ArcSwapOption<mpsc::Sender<Submission>>,
     receive: Arc<Mutex<Receiver>>,
+    #[cfg(all(test, not(miri), panic = "unwind"))]
+    pressure_gate: Arc<Mutex<Option<PressureGate>>>,
+    service: Arc<pressure_turn::Service>,
     helper_failed: AtomicBool,
     pressure: mpsc::SyncSender<()>,
     closing: Arc<AtomicBool>,
@@ -122,6 +143,13 @@ struct Job {
 }
 
 impl Callbacks {
+    pub(super) fn terminal_turn(&self) -> Option<Turn> {
+        let runner = self.0.get()?;
+        let turn = runner.service.request()?;
+        let _ = runner.pressure.try_send(());
+        Some(turn)
+    }
+
     pub(super) fn wake_pressure(&self) {
         if let Some(runner) = self.0.get() {
             let _ = runner.pressure.try_send(());
@@ -166,6 +194,7 @@ impl Callbacks {
             // handle can finish publication; the receiver drains all accepted jobs.
             runner.send.store(None);
             runner.closing.store(true, Ordering::Release);
+            runner.service.stop();
             let _ = runner.pressure.try_send(());
             if let Some(handles) = lock(&runner.threads).take() {
                 let mut failed = false;
@@ -288,24 +317,44 @@ impl Runner {
         let queue = receive.clone();
         // Only an allocation at the logical cap activates the second consumer.
         // Its queue token is advisory. Ownership and refunds stay with Job::run.
+        #[cfg(all(test, not(miri), panic = "unwind"))]
+        let gate = Arc::new(Mutex::new(None::<PressureGate>));
+        #[cfg(all(test, not(miri), panic = "unwind"))]
+        let pressure_gate = gate.clone();
+        let service = Arc::new(pressure_turn::Service::default());
+        let dispatch = pressure_turn::Assistant(service.clone());
         let assistant = thread::Builder::new()
             .name("gc-pressure-finalizers".into())
             .spawn(move || {
+                let dispatch = dispatch;
                 let mut failed = false;
                 while requested.recv().is_ok() && !stopping.load(Ordering::Acquire) {
+                    #[cfg(all(test, not(miri), panic = "unwind"))]
+                    pause_pressure(&gate);
                     loop {
-                        // Do not keep the heap alive while the primary is asleep
-                        // holding the receiver lock or while waiting for another signal.
+                        // Hold the heap only to check demand. A sleeping assistant
+                        // does not keep the collector alive.
+                        let turn = dispatch.0.snapshot();
                         if stopping.load(Ordering::Acquire)
                             || !heap
                                 .upgrade()
                                 .is_some_and(|gc| gc.grant_registry.has_demand())
                         {
+                            dispatch.0.examined(turn);
                             break;
                         }
-                        let next = lock(&queue).claim(false);
-                        let Some(job) = next else { break };
+                        // An idle primary can be asleep inside the receiver.
+                        // Report this probe without waiting for its mutex.
+                        let next =
+                            super::try_lock(&queue).and_then(|mut receiver| receiver.claim(false));
+                        let Some(job) = next else {
+                            dispatch.0.examined(turn);
+                            break;
+                        };
+                        dispatch.0.running(true);
+                        dispatch.0.examined(turn);
                         failed |= job.run();
+                        dispatch.0.running(false);
                     }
                 }
                 failed
@@ -316,6 +365,9 @@ impl Runner {
         Ok(Box::new(Self {
             send: arc_swap::ArcSwapOption::from(Some(Arc::new(send))),
             receive,
+            #[cfg(all(test, not(miri), panic = "unwind"))]
+            pressure_gate,
+            service,
             helper_failed: AtomicBool::new(false),
             pressure,
             closing,
@@ -330,6 +382,119 @@ mod tests {
     use crate::{Configuration, Gc, Result, Trace};
     use std::sync::atomic::AtomicUsize;
     use std::time::{Duration, Instant};
+
+    struct Donor(Arc<AtomicUsize>);
+    // SAFETY: the counter has no managed edges.
+    #[expect(unsafe_code)]
+    unsafe impl Trace for Donor {
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+    impl Drop for Donor {
+        fn drop(&mut self) {
+            self.0.fetch_add(1, Ordering::Release);
+        }
+    }
+
+    #[test]
+    #[expect(
+        clippy::expect_used,
+        clippy::panic_in_result_fn,
+        clippy::unwrap_in_result,
+        reason = "bounded service, exact heap charges and physical refund"
+    )]
+    fn terminal_allocation_observes_pressure_service_before_denial() -> Result<()> {
+        use std::task::{Context, Poll, Waker};
+        let (entered, parked) = mpsc::channel();
+        let (resume, release) = mpsc::channel();
+        let older = Peer {
+            count: Arc::new(AtomicUsize::new(0)),
+            entered,
+            resume: Arc::new(Mutex::new(release)),
+        };
+        let drops = Arc::new(AtomicUsize::new(0));
+        let donor = Donor(drops.clone());
+        let cap = Gc::allocation_size(&older)? + Gc::allocation_size(&donor)?;
+        let heap = GarbageCollector::with_config(
+            Configuration::builder()
+                .max_heap_bytes(cap)
+                .threads(1)
+                .allocation_threshold(usize::MAX)
+                .max_pause_time_us(0)
+                .build(),
+        );
+        drop(Gc::try_new(&heap, older)?);
+        heap.start();
+        heap.collect();
+        parked
+            .recv_timeout(Duration::from_secs(3))
+            .expect("primary entered");
+        drop(Gc::try_new(&heap, donor)?);
+        let mut cycle = std::pin::pin!(heap.collect_full_async());
+        let mut cx = Context::from_waker(Waker::noop());
+        let deadline = Instant::now() + Duration::from_secs(4);
+        loop {
+            if let Poll::Ready(result) = cycle.as_mut().poll(&mut cx) {
+                result?;
+                break;
+            }
+            assert!(Instant::now() < deadline);
+            thread::yield_now();
+        }
+        while heap.callback_jobs.load(Ordering::Acquire) != 2 {
+            assert!(Instant::now() < deadline);
+            thread::yield_now();
+        }
+        let pool = heap.worker_signals.load_full().expect("pool");
+        let runner = pool.callbacks.0.get().expect("runner");
+        let (notified, seen) = mpsc::sync_channel(1);
+        let (allow, assistant) = mpsc::channel();
+        *lock(&runner.pressure_gate) = Some((notified, assistant));
+        let mut request = std::pin::pin!(Gc::try_new_async(&heap, 11_u64));
+        let early = loop {
+            if let Poll::Ready(result) = request.as_mut().poll(&mut cx) {
+                break Some(result);
+            }
+            if runner.service.snapshot() != 0 {
+                break None;
+            }
+            assert!(Instant::now() < deadline);
+            thread::yield_now();
+        };
+        seen.recv_timeout(Duration::from_secs(3))
+            .expect("assistant saw demand");
+        let pending = early.is_none();
+        let charged = heap.managed_bytes();
+        let before = drops.load(Ordering::Acquire);
+        allow.send(()).expect("resume assistant");
+        let result = if let Some(result) = early {
+            result
+        } else {
+            // Re-poll only once the donor has been destroyed and its charge refunded.
+            while heap.callback_jobs.load(Ordering::Acquire) == 2 {
+                assert!(Instant::now() < deadline);
+                thread::yield_now();
+            }
+            loop {
+                if let Poll::Ready(result) = request.as_mut().poll(&mut cx) {
+                    break result;
+                }
+                assert!(Instant::now() < deadline);
+                thread::yield_now();
+            }
+        };
+        resume.send(()).expect("resume primary");
+        let value = result.map(|value| **value);
+        heap.stop()?;
+        assert!(
+            pending,
+            "allocation closed before the pressure worker could dispatch"
+        );
+        assert_eq!((charged, before), (cap, 0));
+        assert_eq!(value?, 11);
+        assert_eq!(drops.load(Ordering::Acquire), 1);
+        assert_eq!(heap.managed_bytes(), 0);
+        Ok(())
+    }
 
     struct Peer {
         count: Arc<AtomicUsize>,
