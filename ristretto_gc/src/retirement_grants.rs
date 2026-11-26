@@ -5,7 +5,7 @@ use crate::publication_directory::Directory;
 use arc_swap::{ArcSwap, ArcSwapOption};
 use portable_atomic::AtomicU64;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
-use std::sync::{Arc, OnceLock, Weak};
+use std::sync::{Arc, Weak};
 
 // A direct Global layout is limited to isize::MAX bytes on both native and
 // Wasm. The two larger sentinels cannot alias a sum of its disjoint shares.
@@ -19,74 +19,68 @@ struct Donation {
     private: AtomicBool,
 }
 
-// Slots are issued once. The publishing CAS supplies the byte count and the
-// winning caller owns the only Demand. Receipts are only touched for a grant.
+// Unselected entries close with one atomic operation. After the first selector
+// arrives, each attempt keeps its irrevocable winner even if the owner cancels.
+// A reopened request installs a fresh generation, so an old helper cannot bind it.
 const OPEN: u8 = 0;
-const ASSIGNING: u8 = 1;
-const BOUND: u8 = 2;
-const CLOSED: u8 = 3;
+const ACTIVE: u8 = 1;
+const CLOSED: u8 = 2;
+const SEALED: usize = usize::MAX - 2;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
+struct Generation {
+    winner: ArcSwapOption<Donation>,
+}
+
+impl Generation {
+    fn claim(&self, donor: &Arc<Donation>) -> bool {
+        let previous = self
+            .winner
+            .compare_and_swap(std::ptr::null::<Donation>(), Some(donor.clone()));
+        previous
+            .as_ref()
+            .is_none_or(|winner| Arc::ptr_eq(winner, donor))
+    }
+
+    fn seal(&self) -> Option<Arc<Donation>> {
+        if let Some(winner) = self.winner.load_full() {
+            return Some(winner);
+        }
+        let closed = Donation {
+            canceled: AtomicUsize::new(SEALED),
+            ..Donation::default()
+        };
+        let previous = self
+            .winner
+            .compare_and_swap(std::ptr::null::<Donation>(), Some(Arc::new(closed)));
+        previous.as_ref().cloned()
+    }
+}
+
+#[derive(Debug, Default)]
 struct Entry {
     bytes: AtomicUsize,
     stage: AtomicU8,
-    binding: OnceLock<Binding>,
-}
-
-// Receipt storage is separate from membership: a bound entry can retain
-// another entry's receipt without keeping either membership page alive.
-#[derive(Clone, Debug)]
-struct Receipt {
-    bank: Arc<[Donation]>,
-    slot: usize,
-}
-
-impl std::ops::Deref for Receipt {
-    type Target = Donation;
-    #[expect(
-        clippy::indexing_slicing,
-        reason = "the slot belongs to this receipt bank"
-    )]
-    fn deref(&self) -> &Donation {
-        &self.bank[self.slot]
-    }
-}
-
-#[derive(Debug)]
-struct Binding {
-    first: Receipt,
-    retry: ArcSwapOption<Retry>,
-}
-
-#[derive(Debug)]
-struct Retry {
-    spare: Receipt,
-    donor: OnceLock<Receipt>,
-}
-
-impl Binding {
-    fn current(&self) -> Option<Receipt> {
-        match self.retry.load().as_ref() {
-            Some(retry) => retry.donor.get().cloned(),
-            None => Some(self.first.clone()),
-        }
-    }
-}
-
-impl Default for Entry {
-    fn default() -> Self {
-        Self {
-            bytes: AtomicUsize::new(0),
-            stage: AtomicU8::new(OPEN),
-            binding: OnceLock::new(),
-        }
-    }
+    first: Generation,
+    retry: ArcSwapOption<Generation>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Request {
     page: Arc<Page>,
     slot: usize,
+}
+
+#[derive(Debug, Clone)]
+struct Attempt {
+    request: Request,
+    retry: Option<Arc<Generation>>,
+}
+
+impl Attempt {
+    fn generation(&self) -> &Generation {
+        self.retry.as_deref().unwrap_or(&self.request.entry().first)
+    }
 }
 
 impl Request {
@@ -98,27 +92,46 @@ impl Request {
         &self.page.slots[self.slot]
     }
 
-    fn bound(&self, ready: impl FnOnce(&Donation) -> bool) -> bool {
-        let entry = self.entry();
-        entry.stage.load(Ordering::Acquire) == BOUND
-            && entry
-                .binding
-                .get()
-                .and_then(Binding::current)
-                .is_some_and(|donor| ready(&donor))
+    fn attempt(&self) -> Attempt {
+        Attempt {
+            request: self.clone(),
+            retry: self.entry().retry.load_full(),
+        }
+    }
+
+    fn activate(&self) -> Option<Attempt> {
+        match self
+            .entry()
+            .stage
+            .compare_exchange(OPEN, ACTIVE, Ordering::AcqRel, Ordering::Acquire)
+        {
+            Ok(_) | Err(ACTIVE) => Some(self.attempt()),
+            _ => None,
+        }
+    }
+
+    fn donor(&self) -> Option<Arc<Donation>> {
+        if self.entry().stage.load(Ordering::Acquire) != ACTIVE {
+            return None;
+        }
+        self.attempt().generation().winner.load_full()
     }
 
     pub(crate) fn paid(&self) -> bool {
-        self.bound(|donor| donor.canceled.load(Ordering::Acquire) == PAID)
+        self.donor()
+            .is_some_and(|d| d.canceled.load(Ordering::Acquire) == PAID)
     }
 
     pub(crate) fn private(&self) -> bool {
-        self.bound(|donor| donor.private.load(Ordering::Acquire))
+        self.donor()
+            .is_some_and(|d| d.private.load(Ordering::Acquire))
     }
 
     pub(crate) fn waiting(&self) -> bool {
-        self.entry().stage.load(Ordering::Acquire) == OPEN
-            || self.bound(|donor| donor.canceled.load(Ordering::Acquire) == ABANDONED)
+        self.entry().stage.load(Ordering::Acquire) != CLOSED
+            && self
+                .donor()
+                .is_none_or(|d| d.canceled.load(Ordering::Acquire) == ABANDONED)
     }
 }
 
@@ -127,7 +140,6 @@ type Pages = Directory<Arc<Page>>;
 
 #[derive(Debug)]
 struct Page {
-    bank: Arc<[Donation]>,
     slots: [Entry; PAGE_WIDTH],
     // Includes unissued positions. A page can only be removed after every
     // position has been committed and its own demand has closed.
@@ -141,9 +153,6 @@ impl Page {
     )]
     fn new(key: u64) -> Self {
         Self {
-            bank: Arc::new(std::array::from_fn::<_, PAGE_WIDTH, _>(|_| {
-                Donation::default()
-            })),
             slots: std::array::from_fn(|_| Entry::default()),
             remaining: AtomicUsize::new(
                 (u64::MAX - key * PAGE_WIDTH as u64).min(PAGE_WIDTH as u64) as usize,
@@ -279,57 +288,53 @@ impl Registry {
 
 impl<'a> Demand<'a> {
     pub(crate) fn take(&self) -> Option<AllocationReservation<'a>> {
-        let entry = self.request.entry();
-        if entry.stage.load(Ordering::Acquire) != BOUND {
-            return None;
-        }
-        let binding = entry.binding.get()?;
-        let state = binding.current()?.canceled.load(Ordering::Acquire);
+        let donor = self.request.donor()?;
+        let state = donor.canceled.load(Ordering::Acquire);
         if state == ABANDONED {
-            // Only the owner reopens a request. Prepare both the unused
-            // receipt and the next one-shot binding before publishing OPEN.
-            binding.retry.store(Some(Arc::new(Retry {
-                spare: Receipt {
-                    bank: Arc::new([Donation::default()]),
-                    slot: 0,
-                },
-                donor: OnceLock::new(),
-            })));
-            entry.stage.store(OPEN, Ordering::Release);
+            // Only the live demand can reopen its current attempt.
+            self.request
+                .entry()
+                .retry
+                .store(Some(Arc::new(Generation::default())));
             return None;
         }
         if state != PAID {
             return None;
         }
-        // Only the owning Demand consumes or cancels a bound request.
-        entry.stage.store(CLOSED, Ordering::Release);
+        self.request.entry().stage.store(CLOSED, Ordering::Release);
         Some(AllocationReservation::transferred(
             self.gc,
-            entry.bytes.load(Ordering::Relaxed),
+            self.request.entry().bytes.load(Ordering::Relaxed),
         ))
     }
 
     pub(crate) fn finish_uncovered(&self) -> bool {
-        self.request
-            .entry()
+        let entry = self.request.entry();
+        match entry
             .stage
             .compare_exchange(OPEN, CLOSED, Ordering::AcqRel, Ordering::Acquire)
-            .is_ok()
+        {
+            Ok(_) => true,
+            Err(ACTIVE) if self.request.attempt().generation().seal().is_none() => {
+                entry.stage.store(CLOSED, Ordering::Release);
+                true
+            }
+            _ => false,
+        }
     }
 }
 
 impl Drop for Demand<'_> {
     fn drop(&mut self) {
         let entry = self.request.entry();
-        if entry.stage.swap(CLOSED, Ordering::AcqRel) == BOUND
-            && let Some(binding) = entry.binding.get()
-            && let Some(donor) = binding.current()
+        if entry.stage.swap(CLOSED, Ordering::AcqRel) == ACTIVE
+            && let Some(donor) = self.request.attempt().generation().seal()
         {
             let bytes = entry.bytes.load(Ordering::Relaxed);
             let canceled = donor
                 .canceled
                 .try_update(Ordering::AcqRel, Ordering::Acquire, |old| {
-                    (old < ABANDONED).then(|| old + bytes)
+                    (old < SEALED).then(|| old + bytes)
                 });
             if canceled == Err(PAID) {
                 self.gc.cancel_allocation(bytes);
@@ -346,7 +351,7 @@ pub(crate) struct Selection {
     collector: Weak<GarbageCollector>,
     pages: Arc<Pages>,
     limit: u64,
-    donor: Option<Receipt>,
+    donor: Option<Arc<Donation>>,
     size: usize,
     settled: bool,
     cursor: u64,
@@ -354,72 +359,50 @@ pub(crate) struct Selection {
 }
 
 impl Selection {
-    // The task stays at the front of the public sweep queue through all batches.
     #[expect(
-        clippy::indexing_slicing,
         clippy::cast_possible_truncation,
-        clippy::expect_used,
-        reason = "page offsets fit usize and only the exclusive assignment owner initializes a binding"
+        reason = "the remainder is a page offset"
     )]
+    fn next_request(&self, cursor: u64) -> Option<(u64, Request)> {
+        if cursor >= self.limit {
+            return None;
+        }
+        let key = cursor / PAGE_WIDTH as u64;
+        let (found, page) = self.pages.next_after(key.checked_sub(1))?;
+        let position = cursor.max(found * PAGE_WIDTH as u64);
+        if position >= self.limit {
+            return None;
+        }
+        Some((
+            position + 1,
+            Request {
+                page: page.clone(),
+                slot: (position % PAGE_WIDTH as u64) as usize,
+            },
+        ))
+    }
+
     pub(crate) fn advance(&mut self, budget: &mut usize) -> bool {
         let steps = budget.saturating_add(1).min(32);
         for i in 0..steps {
-            if self.cursor >= self.limit {
-                return true;
-            }
-            let page_key = self.cursor / PAGE_WIDTH as u64;
-            let Some((key, page)) = self.pages.next_after(page_key.checked_sub(1)) else {
+            let Some((next, request)) = self.next_request(self.cursor) else {
                 return true;
             };
-            if key != page_key {
-                self.cursor = key * PAGE_WIDTH as u64;
-                if self.cursor >= self.limit {
-                    return true;
-                }
-            }
-            let slot = (self.cursor % PAGE_WIDTH as u64) as usize;
-            self.cursor += 1;
+            self.cursor = next;
             if i != 0 {
                 *budget -= 1;
             }
-            let entry = &page.slots[slot];
-            let bytes = entry.bytes.load(Ordering::Relaxed);
+            let bytes = request.entry().bytes.load(Ordering::Relaxed);
             if bytes <= self.remaining
-                && entry
-                    .stage
-                    .compare_exchange(OPEN, ASSIGNING, Ordering::AcqRel, Ordering::Acquire)
-                    .is_ok()
+                && let Some(attempt) = request.activate()
+                && attempt.generation().winner.load().is_none()
             {
-                // ASSIGNING gives one helper exclusive initialization rights.
-                // Both the default bank and any retry storage are preallocated.
-                if let Some(binding) = entry.binding.get() {
-                    let retry = binding.retry.load();
-                    let retry = retry.as_ref().expect("reopened binding has a retry");
-                    let donor = self.donor.get_or_insert_with(|| retry.spare.clone());
-                    retry
-                        .donor
-                        .set(donor.clone())
-                        .expect("unique retry assignment");
-                } else {
-                    let donor = self.donor.get_or_insert_with(|| Receipt {
-                        bank: page.bank.clone(),
-                        slot,
-                    });
-                    entry
-                        .binding
-                        .set(Binding {
-                            first: donor.clone(),
-                            retry: ArcSwapOption::empty(),
-                        })
-                        .expect("unique first assignment");
-                }
                 #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
                 tests::before_binding_commit();
-                if entry
-                    .stage
-                    .compare_exchange(ASSIGNING, BOUND, Ordering::AcqRel, Ordering::Acquire)
-                    .is_ok()
-                {
+                let donor = self
+                    .donor
+                    .get_or_insert_with(|| Arc::new(Donation::default()));
+                if attempt.generation().claim(donor) {
                     self.remaining -= bytes;
                 }
             }
@@ -465,3 +448,7 @@ impl Drop for Selection {
 #[cfg(test)]
 #[path = "retirement_grants_tests.rs"]
 mod tests;
+
+#[path = "released_donors.rs"]
+mod released;
+pub(crate) use released::{ReleasedCheck, ReleasedDonors, ReleasedWork};

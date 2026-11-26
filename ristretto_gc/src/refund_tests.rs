@@ -5,6 +5,7 @@ use std::sync::{Arc, Barrier, mpsc};
 use std::time::Duration;
 
 thread_local! {
+    static SELECTOR: std::cell::RefCell<Option<SelectorGate>> = const { std::cell::RefCell::new(None) };
     static PARK: Cell<Option<(mpsc::Sender<()>, mpsc::Receiver<()>)>> = const { Cell::new(None) };
 }
 
@@ -480,5 +481,150 @@ fn synchronous_sleepers_wake_after_a_fully_assigned_private_donor_is_freed() -> 
             assert_eq!(gc.managed_bytes(), 0);
         }
     }
+    Ok(())
+}
+
+#[test]
+fn a_peer_finishes_the_same_released_donor_while_its_selector_is_parked() -> Result<()> {
+    for point in [
+        SelectionPoint::Progress,
+        SelectionPoint::BeforeBinding,
+        SelectionPoint::AfterBinding,
+        SelectionPoint::BeforeClaim,
+    ] {
+        parked_selector_schedule(point, false)?;
+    }
+    Ok(())
+}
+
+#[test]
+fn cancelling_the_bound_request_before_checkpoint_commit_refunds_once() -> Result<()> {
+    parked_selector_schedule(SelectionPoint::AfterBinding, true)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum SelectionPoint {
+    Progress,
+    BeforeBinding,
+    AfterBinding,
+    BeforeClaim,
+}
+
+type SelectorGate = (SelectionPoint, mpsc::Sender<()>, mpsc::Receiver<()>);
+
+#[expect(
+    clippy::panic_in_result_fn,
+    clippy::unwrap_used,
+    clippy::unwrap_in_result,
+    reason = "bounded interleaving before physical destruction"
+)]
+fn parked_selector_schedule(point: SelectionPoint, cancel_first: bool) -> Result<()> {
+    for counted in [false, true] {
+        for independent in [false, true] {
+            let gc = capped_heap(counted, independent);
+            let value = ((1u64, 2u64), (3u64, 4u64));
+            let live = Gc::try_new(&gc, value)?;
+            let retiring = Gc::try_new(&gc, value)?;
+            let mut peers: Vec<_> = (0..4).map(|v| WaitingPeer::new(&gc, v)).collect();
+            release_donor(&gc, retiring, true)?;
+            let (enter, parked) = mpsc::channel();
+            let (resume, release) = mpsc::channel();
+            let heap = gc.clone();
+            let selector = std::thread::spawn(move || {
+                SELECTOR.replace(Some((point, enter, release)));
+                for _ in 0..64 {
+                    heap.step();
+                    if SELECTOR.with_borrow(Option::is_none) {
+                        break;
+                    }
+                }
+            });
+            parked.recv_timeout(Duration::from_secs(3)).unwrap();
+            if cancel_first {
+                drop(peers.remove(0));
+            }
+            for _ in 0..2048 {
+                gc.step();
+                for peer in &mut peers {
+                    peer.poll_when_woken();
+                }
+                if peers.iter().all(|p| p.result.is_some()) {
+                    break;
+                }
+            }
+            let outcomes: Vec<_> = peers
+                .iter()
+                .map(|p| {
+                    p.result
+                        .as_ref()
+                        .and_then(|r| r.as_ref().ok())
+                        .map(|v| ***v)
+                })
+                .collect();
+            let charged = gc.managed_bytes();
+            resume.send(()).unwrap();
+            selector.join().unwrap();
+            let expected = if cancel_first {
+                vec![Some(1), Some(2), Some(3)]
+            } else {
+                vec![Some(0), Some(1), Some(2), Some(3)]
+            };
+            assert_eq!(
+                outcomes, expected,
+                "survivors must spend this donor before the first selector resumes"
+            );
+            assert_eq!(charged, if cancel_first { 56 } else { 64 });
+            assert_eq!(
+                gc.managed_bytes(),
+                charged,
+                "stale helpers cannot refund twice"
+            );
+            drop(peers);
+            drop(live);
+            gc.collect_full()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
+
+#[expect(clippy::expect_used, reason = "bounded selector suspension")]
+pub(super) fn park_selection(point: SelectionPoint) {
+    let gate = SELECTOR.with_borrow_mut(|slot| {
+        if slot.as_ref().is_some_and(|(at, _, _)| *at == point) {
+            slot.take()
+        } else {
+            None
+        }
+    });
+    if let Some((_, entered, release)) = gate {
+        entered.send(()).expect("announce selector gate");
+        release
+            .recv_timeout(Duration::from_secs(5))
+            .expect("resume selector");
+    }
+}
+
+#[test]
+#[expect(
+    clippy::panic_in_result_fn,
+    reason = "a returned donor covers the final waiter after a long prefix"
+)]
+fn terminal_allocation_assists_a_released_donor_past_nonfitting_requests() -> Result<()> {
+    let gc = capped_heap(false, false);
+    let value = ((1u64, 2u64), (3u64, 4u64));
+    let live = Gc::try_new(&gc, value)?;
+    let retiring = Gc::try_new(&gc, value)?;
+    let prefix: Vec<_> = (0..4096)
+        .map(|_| gc.grant_registry.register(&gc, 40))
+        .collect::<Result<_>>()?;
+    release_donor(&gc, retiring, true)?;
+    let root = allocate_when_woken(&gc, 23, &Barrier::new(1))
+        .expect("active helper must finish the cutoff")?;
+    assert_eq!(**root, 23);
+    assert_eq!(gc.managed_bytes(), 40);
+    drop((prefix, live, root));
+    gc.collect_full()?;
+    assert_eq!(gc.managed_bytes(), 0);
     Ok(())
 }

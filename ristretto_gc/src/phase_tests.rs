@@ -683,13 +683,13 @@ mod native {
                 assert_eq!(gc.diagnostics().retired_objects, 2);
                 drop(lease);
                 let worker_gc = gc.clone();
-                let worker = thread::spawn(move || worker_gc.reap_retired(false));
+                let worker = thread::spawn(move || worker_gc.reap_retired(false, None));
                 entered_rx
                     .recv_timeout(Duration::from_secs(10))
                     .expect("held retired callback");
                 assert!(gc.coordinator.try_lock().is_ok());
                 drop(other_lease);
-                assert!(gc.reap_retired(false).is_some());
+                assert!(gc.reap_retired(false, None).is_some());
                 assert_eq!(gc.diagnostics().retired_bytes, metadata.size());
                 // A stalled retired callback must allow new full cycles as well.
                 for _ in 0..3 {

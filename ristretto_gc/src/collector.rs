@@ -443,14 +443,6 @@ struct ReclaimTask {
     finalized: bool,
 }
 
-/// A returned lease can fund requests enrolled before the first reaper claim.
-/// Preserve this cutoff across bounded selection steps.
-#[derive(Debug)]
-struct DeferredReclaim {
-    task: ReclaimTask,
-    selection: Option<crate::retirement_grants::Selection>,
-}
-
 /// Accumulate useful work without taking the statistics mutex for every object.
 #[derive(Default)]
 struct WorkCounters {
@@ -901,11 +893,13 @@ pub struct GarbageCollector {
     phase_clock: Arc<publication_state::Clock>,
     publication_clock: Option<Arc<publication_state::Clock>>,
     coordinator: Mutex<()>,
-    retired: arc_swap::ArcSwapOption<crate::publication_queue::Queue<DeferredReclaim>>,
+    retired: arc_swap::ArcSwapOption<crate::publication_queue::Queue<ReclaimTask>>,
     retired_objects: AtomicUsize,
     retired_bytes: AtomicUsize,
     retired_ready: AtomicUsize,
     retirement_turn: AtomicBool,
+    released_donors: crate::retirement_grants::ReleasedDonors,
+    released_turn: AtomicBool,
     barrier_turn: AtomicBool,
     #[cfg(test)]
     barrier_claim_observer: Mutex<Option<std::sync::mpsc::Sender<()>>>,
@@ -1941,6 +1935,8 @@ impl GarbageCollector {
                 retired_bytes: AtomicUsize::new(0),
                 retired_ready: AtomicUsize::new(0),
                 retirement_turn: AtomicBool::new(false),
+                released_donors: crate::retirement_grants::ReleasedDonors::default(),
+                released_turn: AtomicBool::new(false),
                 barrier_turn: AtomicBool::new(false),
                 #[cfg(test)]
                 barrier_claim_observer: Mutex::new(None),
@@ -2807,8 +2803,9 @@ impl GarbageCollector {
         for metadata in &objects {
             metadata.run_drop_fn();
         }
+        self.released_donors.cleanup();
         if let Some(queue) = self.retired.load_full() {
-            while let Some(DeferredReclaim { task, .. }) = queue.pop() {
+            while let Some(task) = queue.pop() {
                 task.metadata.run_finalizer();
                 task.metadata.run_drop_fn();
             }
@@ -3098,6 +3095,7 @@ impl GarbageCollector {
         }
         let demand = self.grant_registry.register(self, size)?;
         let mut empty_cycles = 0;
+        let mut released = None;
         loop {
             if let Some(reservation) = demand.take() {
                 return Ok(reservation);
@@ -3109,6 +3107,11 @@ impl GarbageCollector {
                 return Err(crate::Error::OutOfMemory);
             }
             if empty_cycles == 2 {
+                let check = released.get_or_insert_with(|| self.released_donors.snapshot());
+                if self.reap_retired(false, Some(check)).is_some() {
+                    crate::recovery::yield_once().await;
+                    continue;
+                }
                 if demand.finish_uncovered() {
                     return Err(crate::Error::OutOfMemory);
                 }
@@ -4493,31 +4496,29 @@ impl GarbageCollector {
 
     fn queue_released_storage(&self, metadata: MetadataRef) {
         self.retired_ready.fetch_add(1, Ordering::AcqRel);
-        self.publish_retirement(DeferredReclaim {
-            task: ReclaimTask {
+        if metadata.can_transfer_retired_charge() {
+            self.released_donors.publish(metadata);
+        } else {
+            self.publish_retirement(ReclaimTask {
                 metadata,
                 offset: 0,
                 finalized: false,
-            },
-            selection: None,
-        });
+            });
+        }
     }
 
     /// Publish a continuation before releasing the current callback's ready count.
     fn queue_clearing(&self, metadata: MetadataRef, offset: usize, finalized: bool) {
         self.retired_objects.fetch_add(1, Ordering::AcqRel);
         self.retired_ready.fetch_add(1, Ordering::AcqRel);
-        self.publish_retirement(DeferredReclaim {
-            task: ReclaimTask {
-                metadata,
-                offset,
-                finalized,
-            },
-            selection: None,
+        self.publish_retirement(ReclaimTask {
+            metadata,
+            offset,
+            finalized,
         });
     }
 
-    fn publish_retirement(&self, task: DeferredReclaim) {
+    fn publish_retirement(&self, task: ReclaimTask) {
         if let Some(queue) = self.retired.load().as_ref() {
             queue.push(task);
             return;
@@ -4526,7 +4527,7 @@ impl GarbageCollector {
         // owns private storage and cannot prevent another producer installing a queue.
         let queue = Arc::new(crate::publication_queue::Queue::new());
         let previous = self.retired.compare_and_swap(
-            std::ptr::null::<crate::publication_queue::Queue<DeferredReclaim>>(),
+            std::ptr::null::<crate::publication_queue::Queue<ReclaimTask>>(),
             Some(queue.clone()),
         );
         previous.as_ref().unwrap_or(&queue).push(task);
@@ -4642,7 +4643,11 @@ impl GarbageCollector {
 
     /// One bounded clearing unit, excluding unrelated leased allocations. Ready
     /// entries stay charged through callbacks and continuation publication.
-    fn reap_retired(&self, concurrent: bool) -> Option<bool> {
+    fn reap_retired(
+        &self,
+        concurrent: bool,
+        check: Option<&mut crate::retirement_grants::ReleasedCheck>,
+    ) -> Option<bool> {
         // Popping transfers exclusive descriptor ownership to this call. It has
         // already been removed from every generation's registry, so neither the
         // coordinator nor a generation cursor protects this callback's storage.
@@ -4656,31 +4661,46 @@ impl GarbageCollector {
             &self.diagnostics.caller_steps
         }
         .measure(self.diagnostics_enabled());
-        let mut deferred = self.retired.load().as_ref()?.pop()?;
-        let mut budget = self.configuration.incremental_step_size.clamp(1, 32);
+        let budget = self.configuration.incremental_step_size.clamp(1, 32);
+        let queued = || self.retired.load().as_ref()?.pop().map(|task| (task, None));
+        let prefer_queue = check.is_none() && self.released_turn.fetch_xor(true, Ordering::Relaxed);
+        let mut task = if prefer_queue { queued() } else { None };
         let mut counters = WorkCounters::default();
-        if deferred.selection.is_none() && !deferred.task.finalized {
-            deferred.selection = self.grant_registry.capture(&deferred.task.metadata);
-        }
-        if let Some(selection) = &mut deferred.selection {
-            let mut remaining = budget - 1;
-            if !selection.advance(&mut remaining) {
-                // The outstanding byte, object and ready counts belong to the
-                // task across batches. A new epoch can resume it from this FIFO.
-                self.publish_retirement(deferred);
-                self.record_step(started, cpu_started, concurrent, &mut counters);
-                drop(measurement);
-                self.notify_progress();
-                return Some(false);
+        if task.is_none() {
+            let released = match check {
+                Some(check) => {
+                    Some(check.step(&self.released_donors, &self.grant_registry, budget)?)
+                }
+                None => self.released_donors.help(&self.grant_registry, budget),
+            };
+            match released {
+                Some(crate::retirement_grants::ReleasedWork::Progress) => {
+                    self.record_step(started, cpu_started, concurrent, &mut counters);
+                    drop(measurement);
+                    self.notify_progress();
+                    return Some(false);
+                }
+                Some(crate::retirement_grants::ReleasedWork::Claimed(metadata, selection)) => {
+                    task = Some((
+                        ReclaimTask {
+                            metadata,
+                            offset: 0,
+                            finalized: false,
+                        },
+                        Some(selection),
+                    ));
+                }
+                None => task = queued(),
             }
-            selection.mark_private();
-            budget = remaining + 1;
         }
-        let ReclaimTask {
-            mut metadata,
-            offset,
-            finalized,
-        } = deferred.task;
+        let (
+            ReclaimTask {
+                mut metadata,
+                offset,
+                finalized,
+            },
+            selection,
+        ) = task?;
         self.retired_objects.fetch_sub(1, Ordering::AcqRel);
         let budget = budget.min(metadata.trace.budget);
         let progress = self.clear_retired(
@@ -4689,7 +4709,7 @@ impl GarbageCollector {
             finalized,
             budget,
             &mut counters,
-            deferred.selection,
+            selection,
         );
         if progress == TraceProgress::Complete {
             self.retired_ready.fetch_sub(1, Ordering::AcqRel);
@@ -4700,13 +4720,10 @@ impl GarbageCollector {
                 offset
             };
             self.retired_objects.fetch_add(1, Ordering::AcqRel);
-            self.publish_retirement(DeferredReclaim {
-                task: ReclaimTask {
-                    metadata,
-                    offset,
-                    finalized: true,
-                },
-                selection: None,
+            self.publish_retirement(ReclaimTask {
+                metadata,
+                offset,
+                finalized: true,
             });
         }
         self.record_step(started, cpu_started, concurrent, &mut counters);
@@ -4913,7 +4930,7 @@ impl GarbageCollector {
                     .domains
                     .iter()
                     .any(|domain| domain.active() || domain.requested.load(Ordering::Acquire)))
-            && let Some(done) = self.reap_retired(concurrent)
+            && let Some(done) = self.reap_retired(concurrent, None)
         {
             return Some(done);
         }
