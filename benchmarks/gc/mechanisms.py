@@ -61,7 +61,7 @@ def main():
     parser.add_argument("--operations", type=int, default=100000)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--plot", action="store_true")
-    parser.add_argument("--workloads", nargs="+", choices=["control", "allocation", "leaf_allocation", "owning_allocation", "cell_allocation", "construction_batches", "nested_write", "roots", "clones", "guard_clones", "edge_clones", "unroot", "handles", "weak", "pending_poll", "pending_transfer", "barrier", "barrier4", "barrier16", "barrier64", "overwrite", "leaf_write"],
+    parser.add_argument("--workloads", nargs="+", choices=["control", "allocation", "leaf_allocation", "owning_allocation", "cell_allocation", "construction_batches", "nested_write", "roots", "clones", "guard_clones", "edge_clones", "unroot", "handles", "weak", "pending_poll", "pending_transfer", "barrier", "barrier_idle", "traced_barrier", "traced_barrier_idle", "barrier4", "barrier16", "barrier64", "overwrite", "leaf_write"],
                         default=["control", "allocation", "roots", "barrier", "overwrite"])
     parser.add_argument("--policies", nargs="+", choices=["baseline", "counted", "contexts", "local", "candidate"],
                         default=["baseline", "counted", "contexts", "local", "candidate"])

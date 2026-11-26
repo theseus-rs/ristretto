@@ -48,6 +48,14 @@ fn run(workload: &str, policy: &str, operations: u64, diagnostics: bool) -> Resu
     let resident = Gc::try_new(&gc, 42_u64)?;
     // Borrow the guard's heap edge so root acquisition measures a registration.
     let edge: &Gc<u64> = &resident;
+    let traced = matches!(workload, "traced_barrier" | "traced_barrier_idle")
+        .then(|| Gc::try_new(&gc, vec![edge.rooted_clone()]))
+        .transpose()?;
+    // An embedded reference carries the graph's descriptor on supported heaps.
+    let edge = traced
+        .as_ref()
+        .and_then(|graph| graph.first())
+        .unwrap_or(edge);
     let working_set = match workload {
         "barrier4" => 4,
         "barrier16" => 16,
@@ -87,7 +95,14 @@ fn run(workload: &str, policy: &str, operations: u64, diagnostics: bool) -> Resu
             // Keep strong tracing active throughout a barrier batch. No background
             // workers: this lane isolates publication from concurrent drain costs.
             if working_set != 0
-                || ["barrier", "overwrite", "leaf_write", "nested_write"].contains(&workload)
+                || [
+                    "barrier",
+                    "traced_barrier",
+                    "overwrite",
+                    "leaf_write",
+                    "nested_write",
+                ]
+                .contains(&workload)
             {
                 gc.collect();
                 assert!(!gc.step());
@@ -195,7 +210,7 @@ fn run(workload: &str, policy: &str, operations: u64, diagnostics: bool) -> Resu
                         };
                         checksum += black_box(*root);
                     }
-                    "barrier" => {
+                    "barrier" | "barrier_idle" | "traced_barrier" | "traced_barrier_idle" => {
                         gc.write_barrier(black_box(edge));
                         checksum += black_box(**edge);
                     }
@@ -243,7 +258,9 @@ fn run(workload: &str, policy: &str, operations: u64, diagnostics: bool) -> Resu
     let wall_ns = wall.elapsed().as_nanos();
     assert_eq!(checksum, operations * 42);
     let d = gc.diagnostics();
-    drop((edges, leaf, nested, weak, shared, owner, resident, context));
+    drop((
+        edges, traced, leaf, nested, weak, shared, owner, resident, context,
+    ));
     gc.stop()?;
     assert_eq!(gc.statistics()?.live_objects, 0);
     assert_eq!(gc.managed_bytes(), 0);
@@ -305,6 +322,9 @@ fn validate(workload: &str, policy: &str, operations: u64) {
             "handles",
             "weak",
             "barrier",
+            "barrier_idle",
+            "traced_barrier",
+            "traced_barrier_idle",
             "barrier4",
             "barrier16",
             "barrier64",
