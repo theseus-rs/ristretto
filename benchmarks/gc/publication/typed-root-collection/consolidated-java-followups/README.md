@@ -1,4 +1,4 @@
-# Java latency and memory across address-registry revisions
+# Java latency and memory across integrated collector revisions
 
 Each row compares two fresh forks per rate. The table gives the median of their scheduled-response p99.9 values and the highest cgroup memory across both rates. Each runtime completed every offered request.
 
@@ -13,6 +13,9 @@ Each row compares two fresh forks per rate. The table gives the median of their 
 | `d683da11` | Ristretto | 160.5 | 413 | 249.6 |
 | `d683da11` | G1 | 2.5 | 90.5 | 71.9 |
 | `d683da11` | ZGC | 6.5 | 189.5 | 98.8 |
+| `40e19ae0` | Ristretto | 170.5 | 241 | 255.1 |
+| `40e19ae0` | G1 | 95.5 | 131.5 | 74.3 |
+| `40e19ae0` | ZGC | 7 | 72.5 | 102.9 |
 
 The unchanged Java roots workload used a 64 MiB managed heap, two CPUs, a two-CPU quota, a 512 MiB cgroup, a five-second warmup and a 60-second measurement. The [earlier integrated run](../consolidated-java/README.md) reached 397.9 MiB on Ristretto. These short runs characterize latency and memory at fixed demand. Endurance, maximum sustainable throughput and global mutator pauses have separate gates.
 
