@@ -55,6 +55,7 @@ impl std::ops::Deref for EdgeToken {
 }
 impl EdgeToken {
     /// Raw experiment only; bounded facade ownership must not escape its quota.
+    #[must_use]
     pub fn try_share(&self) -> Option<Owned<EdgeSlot>> {
         share(&self.slot)
     }
@@ -191,6 +192,7 @@ impl EdgeCreation {
 }
 impl<R: Record> Catalog<R> {
     /// Setup-only inventory reservation. All inventories are absent by default.
+    #[must_use]
     pub fn with_edge_capacities(
         mut self,
         slots: usize,
@@ -224,6 +226,7 @@ impl<R: Record> Catalog<R> {
 
     /// Setup-only geometry. Publication enforces placement before traversal can
     /// trust this range; no source or participant can later change the degree.
+    #[must_use]
     pub fn with_source_edge_degree(mut self, degree: usize) -> Self {
         assert_eq!(
             Arc::strong_count(&self.owner),
@@ -267,6 +270,7 @@ impl<R: Record> Catalog<R> {
             .is_some_and(|range| range.contains(&edge))
     }
 
+    #[must_use]
     pub fn edge_backing_bytes(slots: usize, backing: usize, states: usize) -> Option<usize> {
         if slots == 0 {
             return Some(0);

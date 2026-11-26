@@ -25,10 +25,12 @@ pub struct EdgeKey {
     slot: usize,
 }
 impl EdgeKey {
+    #[must_use]
     pub fn identity(self) -> u64 {
         self.identity
     }
 
+    #[must_use]
     pub fn slot(self) -> usize {
         self.slot
     }
@@ -61,6 +63,7 @@ pub struct EdgeHandle<R: Payload = ()> {
     lease: EdgeLease<R>,
 }
 impl<R: Payload> EdgeHandle<R> {
+    #[must_use]
     pub fn key(&self) -> EdgeKey {
         key(&self.lease.owner, &self.token)
     }

@@ -49,10 +49,6 @@ impl<R: Record> Root<R> {
         }
     }
 
-    #[expect(
-        clippy::unused_self,
-        reason = "the Q=0 preview preserves the root observation interface"
-    )]
     pub fn is_internal(&self) -> bool {
         false
     }
@@ -103,6 +99,7 @@ impl<R: Record> RootToken<R> {
     }
 
     /// Raw experiment only; bounded handles do not expose owning root shares.
+    #[must_use]
     pub fn try_share(&self) -> Option<Owned<Root<R>>> {
         share(&self.root)
     }
@@ -240,6 +237,7 @@ impl<R: Record> RootCreation<R> {
 }
 
 impl<R: Record> Catalog<R> {
+    #[must_use]
     pub fn with_record_root_capacities_and_limit(
         capacity: usize,
         controls: usize,
@@ -265,6 +263,7 @@ impl<R: Record> Catalog<R> {
         catalog
     }
 
+    #[must_use]
     pub fn record_root_backing_bytes(
         capacity: usize,
         controls: usize,

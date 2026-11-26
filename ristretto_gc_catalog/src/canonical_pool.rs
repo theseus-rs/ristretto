@@ -36,6 +36,7 @@ pub struct AllocationFailure<T> {
 /// Requested Arc backing for the frozen Rust 1.99 layout: two atomic usize
 /// counters followed by T. This is audited against allocator requests on each
 /// target; it is not a stable standard-library layout guarantee or an RSS bound.
+#[must_use]
 pub fn arc_requested_bytes<T>() -> Option<usize> {
     Some(
         Layout::new::<[AtomicUsize; ARC_REF_COUNTS]>()

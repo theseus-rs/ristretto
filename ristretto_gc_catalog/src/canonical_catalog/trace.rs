@@ -5,12 +5,12 @@
 )]
 use super::{Domain, Phase};
 
-pub(crate) const YOUNG_DOMAIN: usize = 0;
+pub const YOUNG_DOMAIN: usize = 0;
 pub(crate) const OLD_DOMAIN: usize = 1;
-pub(crate) const DOMAIN_COUNT: usize = 2;
-pub(crate) const NO_TICKET: u64 = 0;
+pub const DOMAIN_COUNT: usize = 2;
+pub const NO_TICKET: u64 = 0;
 
-pub(crate) const STRONG_FLOOR: u8 = 0;
+pub const STRONG_FLOOR: u8 = 0;
 const FINAL_FLOORS: std::ops::RangeInclusive<u8> = 1..=2;
 const PHANTOM_FLOORS: std::ops::RangeInclusive<u8> = 3..=4;
 pub const RETIREMENT_FLOOR: u8 = 5;
@@ -23,6 +23,7 @@ pub enum DomainMode {
     Old,
 }
 impl DomainMode {
+    #[must_use]
     pub fn collects(self, generation: Generation) -> bool {
         match self {
             Self::Inactive => false,
@@ -47,6 +48,7 @@ pub enum TraceRetention {
     Phantom,
 }
 impl TraceRetention {
+    #[must_use]
     pub fn at_floor(floor: u8) -> Option<Self> {
         match floor {
             STRONG_FLOOR => Some(Self::Strong),
@@ -67,6 +69,7 @@ pub struct TraceMark {
     pub phantom_decided: bool,
 }
 impl TraceMark {
+    #[must_use]
     pub fn unmarked(epoch: u64) -> Self {
         Self {
             epoch,
@@ -77,15 +80,18 @@ impl TraceMark {
         }
     }
 
+    #[must_use]
     pub fn retention_at(self, epoch: u64) -> Option<TraceRetention> {
         (self.epoch == epoch).then_some(self.retention).flatten()
     }
 
     /// Birth exemption is physical liveness, not earlier strong/final reachability.
+    #[must_use]
     pub fn marked(self, epoch: u64) -> bool {
         self.epoch == epoch && (self.born || self.retention.is_some())
     }
 
+    #[must_use]
     pub fn marked_before(self, epoch: u64, include_final: bool) -> bool {
         self.retention_at(epoch).is_some_and(|strength| {
             strength
@@ -121,6 +127,7 @@ impl std::ops::Deref for TraceState {
     }
 }
 impl TraceState {
+    #[must_use]
     pub fn unmarked(phase: Phase) -> Self {
         Self {
             generation: Generation::Young,
@@ -158,6 +165,7 @@ impl TraceState {
         Ok((state, phase))
     }
 
+    #[must_use]
     pub fn logically_retired(self, phase: Phase) -> bool {
         phase.domains.iter().enumerate().any(|(index, domain)| {
             domain.mode.collects(self.generation)
@@ -166,6 +174,7 @@ impl TraceState {
         })
     }
 
+    #[must_use]
     pub fn reference_live(self, domain: Domain, index: usize, include_final: bool) -> bool {
         domain.mode != DomainMode::Inactive
             && self.marks.get(index).is_some_and(|mark| {

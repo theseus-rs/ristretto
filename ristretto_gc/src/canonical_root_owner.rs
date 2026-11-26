@@ -2,8 +2,8 @@
 //! allocated before bounded polling; published ownership is immutable.
 use super::LeafRecord;
 use crate::canonical_catalog as gc_catalog;
-use crate::canonical_pool::arc_requested_bytes;
 use gc_catalog::bounded::RootHandle;
+use ristretto_gc_catalog::arc_requested_bytes;
 use std::ops::Deref;
 use std::sync::Arc;
 

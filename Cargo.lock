@@ -3286,10 +3286,18 @@ dependencies = [
  "once_cell",
  "parking_lot 0.13.0",
  "portable-atomic",
+ "ristretto_gc_catalog",
  "test-log",
  "thiserror 2.0.21",
  "tracing",
  "triomphe",
+]
+
+[[package]]
+name = "ristretto_gc_catalog"
+version = "0.35.0"
+dependencies = [
+ "loom",
 ]
 
 [[package]]

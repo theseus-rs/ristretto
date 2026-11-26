@@ -24,6 +24,7 @@ members = [
     "ristretto_classfile",
     "ristretto_classloader",
     "ristretto_gc",
+    "ristretto_gc_catalog",
     "ristretto_intrinsics",
     "ristretto_jimage",
     "ristretto_java",

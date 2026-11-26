@@ -20,10 +20,12 @@ pub struct RootKey {
     slot: usize,
 }
 impl RootKey {
+    #[must_use]
     pub fn identity(self) -> u64 {
         self.identity
     }
 
+    #[must_use]
     pub fn slot(self) -> usize {
         self.slot
     }
@@ -49,16 +51,19 @@ impl<R: Payload> RootHandle<R> {
         Self { token, lease }
     }
 
+    #[must_use]
     pub fn key(&self) -> RootKey {
         key(&self.lease.owner, &self.token)
     }
 
     /// Compare the exact non-reused catalog identity without acquiring an owner.
+    #[must_use]
     pub fn belongs_to(&self, catalog: &CatalogHandle<R>) -> bool {
         self.lease.owner.identity == catalog.identity
     }
 
     /// The token retains this exact root and target through slot reuse.
+    #[must_use]
     pub fn target_slot(&self) -> usize {
         self.token.target_slot()
     }
@@ -74,6 +79,7 @@ impl<R: Payload> RootHandle<R> {
             .root_is_stably_live_in(&self.token, context)
     }
 
+    #[must_use]
     pub fn observe(&self) -> RootObservation {
         observation(&self.lease.owner, &self.token)
     }
@@ -86,6 +92,7 @@ impl<R: Payload> RootHandle<R> {
     /// still retains the token/target; a subsequent call observes Retired. No
     /// owning membership load or pool share escapes, so this adds no independent
     /// retained owner to the root/participant capacity bound.
+    #[must_use]
     pub fn borrow_live_record(&self) -> Option<&R> {
         (self.token.status() == RootStatus::Live).then(|| self.token.record())
     }

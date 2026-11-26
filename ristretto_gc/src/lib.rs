@@ -25,10 +25,8 @@ mod buffer;
 #[cfg(feature = "experimental-canonical-runtime")]
 mod canonical_adapter;
 #[cfg(feature = "experimental-canonical-leaves")]
-pub(crate) mod canonical_catalog;
+pub(crate) use ristretto_gc_catalog::canonical_catalog;
 mod canonical_payload;
-#[cfg(feature = "experimental-canonical-leaves")]
-pub(crate) mod canonical_pool;
 pub mod cell;
 pub mod clock;
 mod collector;

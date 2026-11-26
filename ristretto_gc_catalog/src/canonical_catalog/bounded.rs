@@ -220,46 +220,57 @@ impl Capacities {
         Ok(())
     }
 
+    #[must_use]
     pub fn edge_slots(self) -> usize {
         self.edge_slots
     }
 
+    #[must_use]
     pub fn edge_pools(self) -> (usize, usize) {
         (self.edge_cells, self.edge_states)
     }
 
+    #[must_use]
     pub fn reference_slots(self) -> usize {
         self.reference_slots
     }
 
+    #[must_use]
     pub fn reference_pools(self) -> (usize, usize) {
         (self.reference_cells, self.reference_states)
     }
 
+    #[must_use]
     pub fn root_slots(self) -> usize {
         self.root_slots
     }
 
+    #[must_use]
     pub fn root_pool(self) -> usize {
         self.root_cells
     }
 
+    #[must_use]
     pub fn registry(self) -> usize {
         self.registry
     }
 
+    #[must_use]
     pub fn participants(self) -> usize {
         self.mutators + self.helpers
     }
 
+    #[must_use]
     pub fn mutators(self) -> usize {
         self.mutators
     }
 
+    #[must_use]
     pub fn helpers(self) -> usize {
         self.helpers
     }
 
+    #[must_use]
     pub fn pools(self) -> (usize, usize, usize) {
         (self.controls, self.memberships, self.cells)
     }
@@ -274,6 +285,7 @@ impl Capacities {
         Ok(self)
     }
 
+    #[must_use]
     pub fn generation_limit(self) -> u64 {
         self.generation_limit
     }
@@ -415,7 +427,7 @@ impl<R: Payload> BoundedCatalog<R> {
         )
     }
 
-    pub(crate) fn record_cell_occupied(&self, index: usize) -> Option<bool> {
+    pub fn record_cell_occupied(&self, index: usize) -> Option<bool> {
         self.raw.record_cell_occupied(index)
     }
 
@@ -526,10 +538,12 @@ pub struct RecordKey {
     slot: usize,
 }
 impl RecordKey {
+    #[must_use]
     pub fn identity(self) -> u64 {
         self.identity
     }
 
+    #[must_use]
     pub fn slot(self) -> usize {
         self.slot
     }

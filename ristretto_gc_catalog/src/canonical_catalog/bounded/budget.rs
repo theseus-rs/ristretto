@@ -67,22 +67,27 @@ impl Footprint {
         })
     }
 
+    #[must_use]
     pub fn backing(self) -> usize {
         self.backing
     }
 
+    #[must_use]
     pub fn participants(self) -> usize {
         self.participants
     }
 
+    #[must_use]
     pub fn root_tokens(self) -> usize {
         self.root_tokens
     }
 
+    #[must_use]
     pub fn edge_tokens(self) -> usize {
         self.edge_tokens
     }
 
+    #[must_use]
     pub fn total(self) -> usize {
         self.total
     }

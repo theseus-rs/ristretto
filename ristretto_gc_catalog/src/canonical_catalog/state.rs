@@ -34,7 +34,7 @@ pub(crate) use roots::root_barrier_plan;
 pub use roots::{Root, RootCreation, RootPrepareError, RootStatus, RootToken};
 use roots::{RootEffect, RootRegistry};
 const MAX_PREPARATION_POLLS: usize = 24;
-pub(crate) const UNPUBLISHED: u8 = 0;
+pub const UNPUBLISHED: u8 = 0;
 pub(crate) const PUBLISHED: u8 = 1;
 const UNDECIDED: u8 = 0;
 const COMMIT: u8 = 1;
@@ -207,6 +207,7 @@ pub struct Snapshot<R: Record = ()> {
     head: Owned<Control<R>>,
 }
 impl<R: Record> Snapshot<R> {
+    #[must_use]
     pub fn phase(&self) -> Phase {
         self.head.phase()
     }
@@ -343,6 +344,7 @@ impl<R: Record> Attempt<R> {
 
     /// The immutable decision is shared by all helpers. Cancellation does not
     /// release an already installed controller; a subsequent helper does that.
+    #[expect(clippy::must_use_candidate, reason = "a caller can request cancellation without observing the winning decision")]
     pub fn cancel(&self) -> bool {
         match decision::choose(self.decision(), CANCEL) {
             Ok(_) => true,
@@ -545,6 +547,7 @@ pub struct Catalog<R: Record = ()> {
 impl<R: Record> Catalog<R> {
     /// Requested heap backing; the inline Catalog value belongs to its caller.
     /// Arc headers use the pool's frozen-toolchain layout calculation.
+    #[must_use]
     pub fn record_backing_bytes(
         capacity: usize,
         controls: usize,
@@ -563,6 +566,7 @@ impl<R: Record> Catalog<R> {
             .checked_add(Pool::<Cell<R>>::requested_backing_bytes(cells)?)
     }
 
+    #[must_use]
     pub fn with_record_capacities_and_limit(
         capacity: usize,
         control_capacity: usize,
