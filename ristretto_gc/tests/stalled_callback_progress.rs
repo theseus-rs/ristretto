@@ -65,6 +65,81 @@ impl Drop for Payload {
     }
 }
 
+#[test]
+fn explicit_collection_reclaims_queued_objects_while_an_older_drop_is_parked() -> Result<()> {
+    struct Counted(Arc<AtomicUsize>);
+    // SAFETY: this fixture owns only a host-side destructor counter.
+    unsafe impl Trace for Counted {
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+    impl Drop for Counted {
+        fn drop(&mut self) {
+            self.0.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .threads(1)
+                .concurrent_publication(counted)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let (entered, started) = mpsc::channel();
+        let (resume, release) = mpsc::channel();
+        let callback = Arc::new(Callback {
+            stage: Stage::Drop,
+            entered,
+            resume: Mutex::new(release),
+            released: AtomicBool::new(false),
+            finalized: AtomicUsize::new(0),
+            cleared: AtomicUsize::new(0),
+            dropped: AtomicUsize::new(0),
+        });
+        drop(Gc::try_new(&gc, Payload(callback.clone()))?);
+        gc.start();
+        gc.collect();
+        started
+            .recv_timeout(Duration::from_secs(5))
+            .expect("older destructor started");
+        let drops = Arc::new(AtomicUsize::new(0));
+        for _ in 0..32 {
+            drop(Gc::try_new(&gc, Counted(drops.clone()))?);
+        }
+        // A registered native worker retires the second group. Only the original
+        // callback runner is parked, and no address lease protects this group.
+        gc.collect();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while gc.statistics()?.live_objects != 0 {
+            assert!(
+                Instant::now() < deadline,
+                "worker did not unlink independent donors"
+            );
+            std::thread::yield_now();
+        }
+        let (send, recv) = mpsc::channel();
+        let (completed, still_parked) = std::thread::scope(|scope| {
+            let gc = gc.clone();
+            let drops = drops.clone();
+            scope.spawn(move || {
+                send.send(gc.collect_full().map(|()| drops.load(Ordering::Acquire)))
+                    .expect("report fresh explicit collection");
+            });
+            let result = recv.recv_timeout(Duration::from_secs(3));
+            let parked = !callback.released.load(Ordering::Acquire);
+            resume.send(()).expect("release older destructor");
+            (result, parked)
+        });
+        gc.stop()?;
+        assert!(still_parked);
+        assert_eq!(completed.expect("independent ticket completed")?, 32);
+        assert_eq!(drops.load(Ordering::Acquire), 32);
+        assert_eq!(callback.dropped.load(Ordering::Acquire), 1);
+    }
+    Ok(())
+}
+
 struct Ready(mpsc::SyncSender<()>);
 
 impl Wake for Ready {
