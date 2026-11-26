@@ -338,6 +338,7 @@ mod tests {
         }
     }
 
+    #[cfg(panic = "unwind")]
     #[test]
     fn panicking_reference_handler_does_not_consume_a_peers_wake() {
         struct Panics;
