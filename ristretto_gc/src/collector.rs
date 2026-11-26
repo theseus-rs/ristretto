@@ -1865,7 +1865,12 @@ impl GarbageCollector {
                     .independent_relocation
                     .then(|| Box::new(RwLock::new(()))),
                 mature_census: MatureCensus::default(),
-                objects: crate::index::Objects::new(configuration.metadata_shards),
+                // Batched sweeps traverse consecutive cells. Deadline-limited
+                // single-entry visits can use smaller leaves for sparse heaps.
+                objects: crate::index::Objects::with_sparse_cells(
+                    configuration.metadata_shards,
+                    configuration.max_pause_time_us != 0,
+                ),
                 #[cfg(feature = "experimental-identity-index")]
                 identities: crate::identity_index::Index::new(4096),
                 #[cfg(not(feature = "experimental-identity-index"))]

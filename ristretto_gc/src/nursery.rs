@@ -17,6 +17,9 @@ use std::sync::{Arc, MutexGuard, OnceLock};
 
 const WORD: usize = 64;
 const WORDS: usize = 64;
+const LEAF_SLOTS: usize = 8;
+type AddressLeaf = [OnceLock<Cell>; LEAF_SLOTS];
+type AddressWord = [OnceBox<AddressLeaf>; WORD / LEAF_SLOTS];
 const PAGE_SIZE: usize = WORD * WORDS;
 const PAGE_MASK: usize = PAGE_SIZE - 1;
 
@@ -191,7 +194,13 @@ impl Bitmap {
 #[derive(Debug)]
 struct Page {
     occupied: Bitmap,
-    chunks: [OnceBox<[OnceLock<Cell>; WORD]>; WORDS],
+    chunks: AddressChunks,
+}
+
+#[derive(Debug)]
+enum AddressChunks {
+    Dense([OnceBox<[OnceLock<Cell>; WORD]>; WORDS]),
+    Sparse([OnceBox<AddressWord>; WORDS]),
 }
 
 #[expect(
@@ -199,23 +208,45 @@ struct Page {
     reason = "key is split into masked word and slot offsets"
 )]
 impl Page {
-    fn new(offset: usize) -> Self {
+    fn new(offset: usize, sparse: bool) -> Self {
         Self {
             occupied: Bitmap::new(offset),
-            chunks: [const { OnceBox::new() }; WORDS],
+            chunks: if sparse {
+                AddressChunks::Sparse([const { OnceBox::new() }; WORDS])
+            } else {
+                AddressChunks::Dense([const { OnceBox::new() }; WORDS])
+            },
         }
     }
 
     fn entry(&self, key: usize) -> Option<&Cell> {
-        self.chunks[(key & PAGE_MASK) / WORD].get()?[key % WORD].get()
+        let word = (key & PAGE_MASK) / WORD;
+        let slot = key % WORD;
+        match &self.chunks {
+            AddressChunks::Dense(words) => words[word].get()?[slot].get(),
+            AddressChunks::Sparse(words) => {
+                words[word].get()?[slot / LEAF_SLOTS].get()?[slot % LEAF_SLOTS].get()
+            }
+        }
     }
 
     fn vacant_cell(&self, key: usize) -> &OnceLock<Cell> {
-        // A concurrent initializer prepares its own private chunk. Readers and
-        // other publishers never wait for a stalled chunk allocator.
-        let chunk = self.chunks[(key & PAGE_MASK) / WORD]
-            .get_or_init(|| Box::new([const { OnceLock::new() }; WORD]));
-        &chunk[key % WORD]
+        // Racing initializers only prepare private storage. The winning word
+        // and each installed cell retain their address for the page lifetime.
+        let word = (key & PAGE_MASK) / WORD;
+        let slot = key % WORD;
+        match &self.chunks {
+            AddressChunks::Dense(words) => {
+                &words[word].get_or_init(|| Box::new([const { OnceLock::new() }; WORD]))[slot]
+            }
+            AddressChunks::Sparse(words) => {
+                let leaves = words[word]
+                    .get_or_init(|| Box::new([const { OnceBox::new() }; WORD / LEAF_SLOTS]));
+                let leaf = leaves[slot / LEAF_SLOTS]
+                    .get_or_init(|| Box::new([const { OnceLock::new() }; LEAF_SLOTS]));
+                &leaf[slot % LEAF_SLOTS]
+            }
+        }
     }
 }
 
@@ -479,6 +510,7 @@ impl YoungCursor {
 #[derive(Debug)]
 pub(crate) struct Objects {
     guards: Shards<MatureWords>,
+    sparse_cells: bool,
     shard_bits: u32,
     pages: Box<[Head]>,
 }
@@ -492,8 +524,14 @@ impl Deref for Objects {
 
 #[expect(clippy::indexing_slicing, reason = "shard and page offsets are masked")]
 impl Objects {
+    #[cfg(test)]
     pub(crate) fn new(count: usize) -> Self {
+        Self::with_sparse_cells(count, false)
+    }
+
+    pub(crate) fn with_sparse_cells(count: usize, sparse_cells: bool) -> Self {
         Self {
+            sparse_cells,
             guards: Shards::new(count),
             shard_bits: shard_count(count).ilog2(),
             pages: (0..shard_count(count))
@@ -512,7 +550,9 @@ impl Objects {
     pub(crate) fn reserve(&self, address: usize) -> Option<Slot<'_>> {
         let head = self.head(address);
         let key = packed_key(address, self.shard_bits);
-        let page = reserve(&head.pages, key, Page::new)?;
+        let page = reserve(&head.pages, key, |offset| {
+            Page::new(offset, self.sparse_cells)
+        })?;
         Some(Slot {
             head,
             page,
@@ -933,8 +973,22 @@ impl Objects {
             head.indexed.store(0, Relaxed);
             let mut after = None;
             while let Some((key, page)) = pages.next_after(after) {
-                for chunk in page.chunks.iter().filter_map(OnceBox::get) {
-                    entries.extend(chunk.iter().filter_map(|entry| entry.get()?.swap(None)));
+                let mut drain = |cells: &[OnceLock<Cell>]| {
+                    entries.extend(cells.iter().filter_map(|slot| slot.get()?.swap(None)));
+                };
+                match &page.chunks {
+                    AddressChunks::Dense(words) => {
+                        for word in words.iter().filter_map(OnceBox::get) {
+                            drain(word);
+                        }
+                    }
+                    AddressChunks::Sparse(words) => {
+                        for word in words.iter().filter_map(OnceBox::get) {
+                            for leaf in word.iter().filter_map(OnceBox::get) {
+                                drain(leaf);
+                            }
+                        }
+                    }
                 }
                 after = Some(key);
             }
@@ -1073,6 +1127,30 @@ mod tests {
 
     fn update(objects: &Objects, address: usize, present: bool) {
         objects.set_young_for_test(address, present);
+    }
+
+    #[test]
+    fn sparse_address_words_allocate_only_the_selected_cell_leaves() {
+        let page = Page::new(0, true);
+        let offsets = [0, 7, 8, 63, 64, PAGE_SIZE - 1];
+        for key in offsets {
+            page.vacant_cell(key).get_or_init(|| Cell::from(None));
+            assert!(page.entry(key).is_some());
+        }
+        assert!(page.entry(1).is_none());
+        assert!(page.entry(9).is_none());
+        assert!(page.entry(16).is_none());
+        let AddressChunks::Sparse(chunks) = &page.chunks else {
+            panic!("sparse page expected")
+        };
+        let words: Vec<_> = chunks.iter().filter_map(OnceBox::get).collect();
+        assert_eq!(words.len(), 3);
+        let leaves = words
+            .iter()
+            .flat_map(|word| word.iter())
+            .filter(|leaf| leaf.get().is_some())
+            .count();
+        assert_eq!(leaves, 5);
     }
 
     #[test]
