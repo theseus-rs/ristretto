@@ -1,0 +1,33 @@
+{
+  "source": {
+    "parent": "aa5ee6f028dfd472bd2d8a154f05906bfd758510",
+    "candidate": "1ab5aa7a3527b10bd965b3be6ec778b685a15cb3"
+  },
+  "benchmark_sha256": "5becd78fb2799dc511e16105d2a16d4b5e4897968893834ce5e2c1d5515cc4ab",
+  "binaries": {
+    "parent-native": "f36c4b6cbc39a4f362f268a5d29528e10d588872f8bcdd39b09b4518e351b570",
+    "parent-wasm": "bb0cecfde449dc67699535c925d6e19cca7e564ef91c26e38909c8afd278ff7d",
+    "candidate-native": "f05f1e81096e6322ee5f5520a62fd22f07ffcca15369a3c1102a67cb4eb82ed8",
+    "candidate-wasm": "b229aa63cc8c7582333373c7b2a586871fb0b4e2bdb171df3ba26e7d3e366f78"
+  },
+  "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5\n",
+  "wasmtime_sha256": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8",
+  "settings": {
+    "objects_per_batch": 64,
+    "fields_per_instance": [
+      0,
+      8,
+      256
+    ],
+    "warmup": 3,
+    "timed_cycles": 16,
+    "repeats": 24,
+    "threads": 0,
+    "seed": 261126854,
+    "cpus": {
+      "native": 8,
+      "wasm": 10
+    }
+  },
+  "interval": "paired candidate/parent median, 10000 bootstrap resamples of the 24 fresh process pairs, seed 42"
+}
