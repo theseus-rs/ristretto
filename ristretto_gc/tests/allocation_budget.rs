@@ -65,6 +65,61 @@ fn element_retirement_requires_bounded_destruction_before_clearing() {
 }
 
 #[test]
+fn nested_container_backing_is_charged_before_admission_and_refunded_after_drop()
+-> ristretto_gc::Result<()> {
+    use ristretto_gc::HeapBuffer;
+    let value = || HeapBuffer::from(vec![Some(String::with_capacity(4096)), None]);
+    let buffer = value();
+    let expected = buffer.capacity() * size_of::<Option<String>>()
+        + buffer.iter().flatten().map(String::capacity).sum::<usize>();
+    assert_eq!(buffer.external_size(), expected);
+    let size = Gc::allocation_size(&buffer)?;
+    let heap = GarbageCollector::with_config(Configuration::builder().max_heap_bytes(size).build());
+    let root = Gc::try_new(&heap, buffer)?;
+    assert_eq!(heap.managed_bytes(), size);
+    assert!(matches!(
+        Gc::try_new_once(&heap, value()),
+        Err((Error::OutOfMemory, _))
+    ));
+    drop(root);
+    heap.collect_full()?;
+    assert_eq!(heap.managed_bytes(), 0);
+    let insufficient =
+        GarbageCollector::with_config(Configuration::builder().max_heap_bytes(size - 1).build());
+    assert!(matches!(
+        Gc::try_new_once(&insufficient, value()),
+        Err((Error::OutOfMemory, _))
+    ));
+    Ok(())
+}
+
+#[test]
+fn nested_storage_size_overflow_is_rejected_before_reservation() {
+    struct Large(usize);
+    // SAFETY: this accounting fixture has no managed edges.
+    #[expect(unsafe_code)]
+    unsafe impl Trace for Large {
+        fn trace(&self, _: &GarbageCollector) {}
+        fn external_size(&self) -> usize {
+            self.0
+        }
+    }
+    let values = || vec![Large(usize::MAX), Large(1)];
+    assert!(matches!(
+        Gc::allocation_size(&values()),
+        Err(Error::OutOfMemory)
+    ));
+    assert!(matches!(
+        Gc::allocation_size(&ristretto_gc::HeapBuffer::from(values())),
+        Err(Error::OutOfMemory)
+    ));
+    assert!(matches!(
+        Gc::allocation_size(&(Some(Large(usize::MAX)), Large(1))),
+        Err(Error::OutOfMemory)
+    ));
+}
+
+#[test]
 fn limit_failure_and_success_refund_once_after_destruction() -> ristretto_gc::Result<()> {
     let collector = GarbageCollector::with_config(
         Configuration::builder()
