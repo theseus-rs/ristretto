@@ -1565,29 +1565,6 @@ impl Thread {
             )
             .await?;
 
-        #[cfg(feature = "experimental-canonical-runtime")]
-        if call.method.is_native()
-            && let Some(binding) = vm.canonical_native.get()
-            && binding.matches(&call.class, &call.method)
-        {
-            let mut arguments = call.parameters.into_parameters(caller)?;
-            if arguments.len() != 1 {
-                return Err(InternalError(
-                    "canonical native binding expects one int".into(),
-                ));
-            }
-            let argument = arguments.pop_int()?;
-            #[cfg(feature = "execution-profile")]
-            vm.execution_recorder.intrinsic(&call.class, &call.method);
-            let monitor = monitor_guard.is_held().then_some(monitor_guard);
-            let result = binding
-                .invoke(vm.garbage_collector(), argument, monitor)
-                .await;
-            return match result {
-                Ok(value) => Ok(DispatchResult::Completed(Some(Value::Int(value)))),
-                Err(error) => Err(crate::canonical::native::java_error(self, error).await),
-            };
-        }
         self.dispatch_ordinary_method(vm, call, caller, monitor_guard)
             .await
     }
