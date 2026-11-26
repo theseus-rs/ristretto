@@ -2399,10 +2399,8 @@ mod tests {
         let (vm, thread, class) = test::class().await?;
         let collector = vm.garbage_collector();
         let context = RuntimeContext::new(collector, &vm, &thread, &class)?;
-        let array = Value::Object(Some(gc_ref_from_ptr(
-            &context,
-            alloc_reference(&context, Reference::from(vec![42_i8])),
-        )?));
+        let array_handle = alloc_reference(&context, Reference::from(vec![42_i8]));
+        let array = Value::Object(Some(gc_ref_from_ptr(&context, array_handle)?));
         let sentinel = Value::Object(Some(gc_ref_from_ptr(&context, context.sentinel_throwable)?));
         let mut context = Some(context);
         for cycle in 0..2 {
