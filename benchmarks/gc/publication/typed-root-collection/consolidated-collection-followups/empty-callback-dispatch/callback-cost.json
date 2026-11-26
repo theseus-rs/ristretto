@@ -1,0 +1,59 @@
+{
+  "parent": "19cf2f46",
+  "candidate": "6af915cb",
+  "binary_sha256": {
+    "parent": "fc9c531cfc35b1b3ad21ee69547e180dfad0f50ba0e8dbeff9510428ce7298fe",
+    "screened": "e810448b95046c05d4ed5a48841f66170bb5148561ae1caa3146961af285170e",
+    "final": "e810448b95046c05d4ed5a48841f66170bb5148561ae1caa3146961af285170e"
+  },
+  "results": [
+    {
+      "count": 1,
+      "workers": 1,
+      "arm": "candidate",
+      "median": 0.9999754575826978,
+      "low": 0.9945317933894573,
+      "high": 1.0086865565196719
+    },
+    {
+      "count": 1,
+      "workers": 2,
+      "arm": "candidate",
+      "median": 1.004277580353605,
+      "low": 0.9831153411966211,
+      "high": 1.0209423468197014
+    },
+    {
+      "count": 64,
+      "workers": 1,
+      "arm": "candidate",
+      "median": 0.9813245077167361,
+      "low": 0.9689027099067081,
+      "high": 0.99942908117752
+    },
+    {
+      "count": 64,
+      "workers": 2,
+      "arm": "candidate",
+      "median": 0.9948724937025243,
+      "low": 0.9262073897497021,
+      "high": 1.0202466419550633
+    },
+    {
+      "count": 1024,
+      "workers": 1,
+      "arm": "candidate",
+      "median": 0.9847539665106352,
+      "low": 0.929852659371698,
+      "high": 1.0285913068606571
+    },
+    {
+      "count": 1024,
+      "workers": 2,
+      "arm": "candidate",
+      "median": 1.0228883832517208,
+      "low": 0.9917146458582804,
+      "high": 1.0474499555724284
+    }
+  ]
+}
