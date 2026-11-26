@@ -41,10 +41,18 @@ struct Waiters {
     physical_cursor: WaiterId,
 }
 
-#[derive(Debug, Default)]
+// Registrations between two refunds can share one maximum: no earlier offer
+// exists in an open group. Each request still compares its exact byte count.
+#[derive(Debug)]
+struct RefundGroup {
+    minimum: AtomicUsize,
+    maximum: AtomicUsize,
+}
+
+#[derive(Debug)]
 struct Observations {
-    next_id: WaiterId,
-    entries: BTreeMap<(usize, WaiterId), Arc<AtomicBool>>,
+    current: Arc<RefundGroup>,
+    earlier: arc_swap::ArcSwapOption<Vec<std::sync::Weak<RefundGroup>>>,
 }
 
 impl Waiters {
@@ -81,13 +89,12 @@ impl Waiters {
 #[derive(Debug, Default)]
 pub(crate) struct Recovery {
     waiters: Mutex<Waiters>,
-    observations: Mutex<Observations>,
+    observations: arc_swap::ArcSwapOption<Observations>,
     notified: AtomicU64,
     waiting: AtomicUsize,
     wake_pending: AtomicBool,
     physical_waiting: AtomicUsize,
     minimum_bytes: AtomicUsize,
-    minimum_observation: AtomicUsize,
     observing: AtomicUsize,
     workers: AtomicUsize,
     failed: AtomicBool,
@@ -223,7 +230,7 @@ impl GarbageCollector {
         // requesting a cycle. A later refund sees this registration, and
         // credit already available here counts even if stolen before polling.
         if bytes <= self.headroom_after_registration() {
-            observation.seen.store(true, Ordering::Release);
+            observation.offered_at_registration = true;
         }
         Ok(observation)
     }
@@ -242,56 +249,94 @@ impl Recovery {
 
     /// Install before requesting a cycle, including before the first future poll.
     fn register_observation(&self, bytes: usize) -> Result<SpaceObservation<'_>> {
-        let seen = Arc::new(AtomicBool::new(false));
-        let mut observations = lock(&self.observations);
-        observations.next_id = observations
-            .next_id
-            .checked_add(1)
-            .filter(|id| *id != WaiterId::MAX)
-            .ok_or(Error::OutOfMemory)?;
-        let id = observations.next_id;
-        observations.entries.insert((bytes, id), seen.clone());
-        self.update_observation_minimum(&observations);
+        self.observing.fetch_add(1, Ordering::AcqRel);
+        let interest = ObservationInterest(self);
+        let mut previous = self.observations.load();
+        let group = loop {
+            #[cfg(all(test, not(target_family = "wasm")))]
+            observer_progress_tests::before_publication();
+            if let Some(table) = previous.as_ref() {
+                let group = &table.current;
+                if bytes < group.minimum.load(Ordering::Relaxed) {
+                    group.minimum.fetch_min(bytes, Ordering::Relaxed);
+                }
+                if group.maximum.load(Ordering::Acquire) == 0 {
+                    break group.clone();
+                }
+            }
+            let group = Arc::new(RefundGroup {
+                minimum: AtomicUsize::new(bytes),
+                maximum: AtomicUsize::new(0),
+            });
+            let mut earlier = Vec::new();
+            if let Some(table) = previous.as_ref() {
+                let history = table.earlier.load();
+                let live = history
+                    .iter()
+                    .flat_map(|list| list.iter())
+                    .filter(|group| group.strong_count() != 0);
+                earlier
+                    .try_reserve_exact(
+                        live.clone()
+                            .count()
+                            .checked_add(1)
+                            .ok_or(Error::OutOfMemory)?,
+                    )
+                    .map_err(|_| Error::OutOfMemory)?;
+                earlier.extend(live.cloned());
+                earlier.push(Arc::downgrade(&table.current));
+            }
+            let updated = Arc::new(Observations {
+                current: group.clone(),
+                earlier: arc_swap::ArcSwapOption::from(
+                    (!earlier.is_empty()).then(|| Arc::new(earlier)),
+                ),
+            });
+            let actual = self
+                .observations
+                .compare_and_swap(&*previous, Some(updated));
+            if actual.as_ref().map(Arc::as_ptr) == previous.as_ref().map(Arc::as_ptr) {
+                break group;
+            }
+            previous = actual;
+        };
         Ok(SpaceObservation {
-            recovery: self,
+            _interest: interest,
+            group,
             bytes,
-            id,
-            seen,
+            offered_at_registration: false,
+            seen: None,
             context_interest: None,
         })
     }
 
-    fn update_observation_minimum(&self, observations: &Observations) {
-        self.minimum_observation.store(
-            observations
-                .entries
-                .first_key_value()
-                .map_or(usize::MAX, |((bytes, _), _)| *bytes),
-            Ordering::Release,
-        );
-        self.observing
-            .store(observations.entries.len(), Ordering::Release);
-    }
-
-    /// Use headroom at the refund's atomic linearization point, before a competing
-    /// reservation can consume it. This records an opportunity, not owned credit.
-    /// No waker or other user callback runs while collector locks are held.
+    /// Capture one set of registered groups. A registrar that arrives after
+    /// sealing starts a new group. Prior requests retain their own maxima
+    /// through cancellation, ticket changes, and concurrent directory updates.
     pub(crate) fn record_headroom(&self, available: usize) {
-        if self.observing.load(Ordering::Acquire) == 0
-            || available < self.minimum_observation.load(Ordering::Acquire)
-        {
+        if available == 0 || self.observing.load(Ordering::Acquire) == 0 {
             return;
         }
-        let mut observations = lock(&self.observations);
-        while let Some((&key, _)) = observations.entries.first_key_value() {
-            if key.0 > available {
-                break;
+        let snapshot = self.observations.load();
+        if let Some(table) = snapshot.as_ref() {
+            // The first fitting positive maximum closes this group and
+            // records the opportunity in the same atomic operation.
+            if available >= table.current.minimum.load(Ordering::Acquire) {
+                table
+                    .current
+                    .maximum
+                    .fetch_max(available, Ordering::Release);
             }
-            if let Some(seen) = observations.entries.remove(&key) {
-                seen.store(true, Ordering::Release);
+            #[cfg(all(test, not(target_family = "wasm")))]
+            observer_progress_tests::after_refund_snapshot();
+            if let Some(earlier) = table.earlier.load().as_ref() {
+                for old in earlier.iter().filter_map(std::sync::Weak::upgrade) {
+                    if available > old.maximum.load(Ordering::Relaxed) {
+                        old.maximum.fetch_max(available, Ordering::Release);
+                    }
+                }
             }
         }
-        self.update_observation_minimum(&observations);
     }
 
     fn register(
@@ -527,24 +572,39 @@ impl Recovery {
 /// Independent of waker registration: an executor may delay the first poll or
 /// migrate a future after notification. Cancellation removes the observation.
 pub(crate) struct SpaceObservation<'a> {
-    recovery: &'a Recovery,
+    _interest: ObservationInterest<'a>,
+    group: Arc<RefundGroup>,
     context_interest: Option<crate::context::AllocationInterest>,
     bytes: usize,
-    id: WaiterId,
-    seen: Arc<AtomicBool>,
+    offered_at_registration: bool,
+    seen: Option<Arc<AtomicBool>>,
 }
 
 impl SpaceObservation<'_> {
     pub(crate) fn was_offered(&self) -> bool {
-        self.seen.load(Ordering::Acquire)
+        self.offered_at_registration
+            || self
+                .seen
+                .as_ref()
+                .is_some_and(|seen| seen.load(Ordering::Acquire))
+            || self.group.maximum.load(Ordering::Acquire) >= self.bytes
     }
 }
 
-impl Drop for SpaceObservation<'_> {
+struct ObservationInterest<'a>(&'a Recovery);
+
+impl Drop for ObservationInterest<'_> {
     fn drop(&mut self) {
-        let mut observations = lock(&self.recovery.observations);
-        observations.entries.remove(&(self.bytes, self.id));
-        self.recovery.update_observation_minimum(&observations);
+        // Capture the directory before relinquishing this interest. A new
+        // enrolment can share its current group or install a newer directory.
+        // Neither can join the earlier groups of this captured directory.
+        let snapshot = self.0.observations.load();
+        if self.0.observing.fetch_sub(1, Ordering::AcqRel) == 1
+            && let Some(table) = snapshot.as_ref()
+            && table.earlier.load().is_some()
+        {
+            table.earlier.store(None);
+        }
     }
 }
 
@@ -557,6 +617,7 @@ pub(crate) struct CollectionWait<'a> {
     // Survives notification/removal and migration until this future observes completion.
     space_seen: Option<Arc<AtomicBool>>,
     context_interest: Option<&'a mut Option<crate::context::AllocationInterest>>,
+    refund_group: Option<&'a RefundGroup>,
     physical: Option<Layout>,
     physical_assisted: bool,
 }
@@ -570,6 +631,7 @@ impl<'a> CollectionWait<'a> {
             bytes: None,
             space_seen: None,
             context_interest: None,
+            refund_group: None,
             physical: None,
             physical_assisted: false,
         }
@@ -585,8 +647,16 @@ impl<'a> CollectionWait<'a> {
             ticket,
             id: None,
             bytes: Some(observation.bytes),
-            space_seen: Some(observation.seen.clone()),
+            space_seen: Some(
+                observation
+                    .seen
+                    .get_or_insert_with(|| {
+                        Arc::new(AtomicBool::new(observation.offered_at_registration))
+                    })
+                    .clone(),
+            ),
             context_interest: Some(&mut observation.context_interest),
+            refund_group: Some(&observation.group),
             physical: None,
             physical_assisted: false,
         }
@@ -616,7 +686,13 @@ impl<'a> CollectionWait<'a> {
             Some(
                 self.space_seen
                     .as_ref()
-                    .is_some_and(|seen| seen.load(Ordering::Acquire)),
+                    .is_some_and(|seen| seen.load(Ordering::Acquire))
+                    || self
+                        .refund_group
+                        .zip(self.bytes)
+                        .is_some_and(|(group, bytes)| {
+                            group.maximum.load(Ordering::Acquire) >= bytes
+                        }),
             )
         } else {
             None
@@ -1226,7 +1302,7 @@ mod tests {
         }
         gc.cancel_allocation(8);
         assert_eq!(gc.recovery.observing.load(Ordering::Acquire), 0);
-        assert!(lock(&gc.recovery.observations).entries.is_empty());
+        assert_eq!(gc.recovery.observing.load(Ordering::Acquire), 0);
         Ok(())
     }
 
@@ -1280,20 +1356,20 @@ mod tests {
                 .is_pending()
         );
         std::thread::scope(|scope| {
-            let parked = lock(&gc.recovery.observations);
-            let (sent, received) = mpsc::channel();
-            let collector = &gc;
-            scope.spawn(move || {
-                drop(cancelled);
-                collector.collect_full().expect("full cycle completes");
-                let ready = completed
-                    .as_mut()
-                    .poll(&mut Context::from_waker(Waker::noop()));
-                let _ = sent.send(ready.is_ready());
+            observer_progress_tests::while_registration_is_parked(&gc, || {
+                let (sent, received) = mpsc::channel();
+                let collector = &gc;
+                scope.spawn(move || {
+                    drop(cancelled);
+                    collector.collect_full().expect("full cycle completes");
+                    let ready = completed
+                        .as_mut()
+                        .poll(&mut Context::from_waker(Waker::noop()));
+                    let _ = sent.send(ready.is_ready());
+                });
+                let progress = received.recv_timeout(Duration::from_secs(2));
+                assert_eq!(progress, Ok(true));
             });
-            let progress = received.recv_timeout(Duration::from_secs(2));
-            drop(parked);
-            assert_eq!(progress, Ok(true));
         });
         assert_eq!(gc.recovery.waiter_count(), 0);
         drop(worker);
@@ -1324,17 +1400,44 @@ mod tests {
     }
 
     #[test]
+    fn registrations_share_only_future_refunds_and_apply_their_own_thresholds() -> Result<()> {
+        let recovery = Recovery::default();
+        let small = recovery.register_observation(4)?;
+        let big = recovery.register_observation(8)?;
+        assert!(Arc::ptr_eq(&small.group, &big.group));
+        recovery.record_headroom(4);
+        let later = recovery.register_observation(4)?;
+        assert!(!Arc::ptr_eq(&small.group, &later.group));
+        assert!(small.was_offered());
+        assert!(!big.was_offered());
+        assert!(!later.was_offered());
+        drop(small);
+        recovery.record_headroom(8);
+        assert!(big.was_offered());
+        assert!(later.was_offered());
+        drop((big, later));
+        assert!(
+            recovery
+                .observations
+                .load()
+                .as_ref()
+                .is_none_or(|table| table.earlier.load().is_none())
+        );
+        Ok(())
+    }
+
+    #[test]
     fn cancelling_an_unpolled_space_observation_removes_it() -> Result<()> {
         let recovery = Recovery::default();
         let small = recovery.register_observation(4)?;
         let large = recovery.register_observation(8)?;
         drop(small);
-        assert_eq!(recovery.minimum_observation.load(Ordering::Acquire), 8);
         recovery.record_headroom(4);
-        assert!(!large.seen.load(Ordering::Acquire));
+        assert!(!large.was_offered());
         drop(large);
         assert_eq!(recovery.observing.load(Ordering::Acquire), 0);
-        assert!(lock(&recovery.observations).entries.is_empty());
+        let next = recovery.register_observation(4)?;
+        assert!(!next.was_offered());
         Ok(())
     }
 }
@@ -1345,3 +1448,7 @@ mod wake_progress_tests;
 
 #[path = "recovery_reference_wait.rs"]
 mod reference_wait;
+
+#[cfg(all(test, not(target_family = "wasm")))]
+#[path = "recovery_observer_progress_tests.rs"]
+mod observer_progress_tests;
