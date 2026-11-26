@@ -397,12 +397,37 @@ mod tests {
 
     #[test]
     fn terminal_allocation_observes_pressure_service_before_denial() -> Result<()> {
-        delayed_pressure(false)
+        delayed_pressure(PressureSchedule::Available)
     }
 
     #[test]
     fn cancelled_terminal_dispatch_leaves_a_subsequent_allocation_eligible() -> Result<()> {
-        delayed_pressure(true)
+        delayed_pressure(PressureSchedule::Cancel)
+    }
+
+    #[test]
+    fn a_contended_callback_receiver_cannot_hold_terminal_allocation_open() -> Result<()> {
+        delayed_pressure(PressureSchedule::Contended)
+    }
+
+    enum PressureSchedule {
+        Available,
+        Cancel,
+        Contended,
+    }
+
+    fn finish_poll<F: Future>(
+        mut future: std::pin::Pin<&mut F>,
+        cx: &mut std::task::Context<'_>,
+        deadline: Instant,
+    ) -> F::Output {
+        loop {
+            if let std::task::Poll::Ready(result) = future.as_mut().poll(cx) {
+                return result;
+            }
+            assert!(Instant::now() < deadline);
+            thread::yield_now();
+        }
     }
 
     fn poll_until_dispatch<F: Future>(
@@ -430,8 +455,8 @@ mod tests {
         clippy::expect_used,
         reason = "bounded service, exact heap charges and physical refund"
     )]
-    fn delayed_pressure(cancel_first: bool) -> Result<()> {
-        use std::task::{Context, Poll, Waker};
+    fn delayed_pressure(schedule: PressureSchedule) -> Result<()> {
+        use std::task::{Context, Waker};
         let (entered, parked) = mpsc::channel();
         let (resume, release) = mpsc::channel();
         let older = Peer {
@@ -460,27 +485,22 @@ mod tests {
         let mut cycle = std::pin::pin!(heap.collect_full_async());
         let mut cx = Context::from_waker(Waker::noop());
         let deadline = Instant::now() + Duration::from_secs(4);
-        loop {
-            if let Poll::Ready(result) = cycle.as_mut().poll(&mut cx) {
-                result?;
-                break;
-            }
-            assert!(Instant::now() < deadline);
-            thread::yield_now();
-        }
+        finish_poll(cycle.as_mut(), &mut cx, deadline)?;
         while heap.callback_jobs.load(Ordering::Acquire) != 2 {
             assert!(Instant::now() < deadline);
             thread::yield_now();
         }
         let pool = heap.worker_signals.load_full().expect("pool");
         let runner = pool.callbacks.0.get().expect("runner");
+        let contended = matches!(schedule, PressureSchedule::Contended);
+        let receiver = contended.then(|| lock(&runner.receive));
         let (notified, seen) = mpsc::sync_channel(1);
         let (allow, assistant) = mpsc::channel();
         *lock(&runner.pressure_gate) = Some((notified, assistant));
         let mut request = Box::pin(Gc::try_new_async(&heap, 11_u64));
         let mut early =
             poll_until_dispatch(request.as_mut(), &mut cx, &runner.service, 0, deadline);
-        if cancel_first && early.is_none() {
+        if matches!(schedule, PressureSchedule::Cancel) && early.is_none() {
             drop(request);
             assert!(!heap.grant_registry.has_demand());
             let preceding = runner.service.snapshot();
@@ -503,18 +523,17 @@ mod tests {
             result
         } else {
             // Re-poll only once the donor has been destroyed and its charge refunded.
-            while heap.callback_jobs.load(Ordering::Acquire) == 2 {
+            while !contended && heap.callback_jobs.load(Ordering::Acquire) == 2 {
                 assert!(Instant::now() < deadline);
                 thread::yield_now();
             }
-            loop {
-                if let Poll::Ready(result) = request.as_mut().poll(&mut cx) {
-                    break result;
-                }
-                assert!(Instant::now() < deadline);
-                thread::yield_now();
-            }
+            finish_poll(request.as_mut(), &mut cx, deadline)
         };
+        if contended {
+            assert_eq!(heap.managed_bytes(), cap);
+            assert_eq!(drops.load(Ordering::Acquire), 0);
+        }
+        drop(receiver);
         resume.send(()).expect("resume primary");
         let value = result.map(|value| **value);
         heap.stop()?;
@@ -523,7 +542,11 @@ mod tests {
             "allocation closed before the pressure worker could dispatch"
         );
         assert_eq!((charged, before), (cap, 0));
-        assert_eq!(value?, 11);
+        if contended {
+            assert!(matches!(value, Err(crate::Error::OutOfMemory)));
+        } else {
+            assert_eq!(value?, 11);
+        }
         assert_eq!(drops.load(Ordering::Acquire), 1);
         assert_eq!(heap.managed_bytes(), 0);
         Ok(())
