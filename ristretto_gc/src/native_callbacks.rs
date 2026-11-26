@@ -396,12 +396,41 @@ mod tests {
     }
 
     #[test]
+    fn terminal_allocation_observes_pressure_service_before_denial() -> Result<()> {
+        delayed_pressure(false)
+    }
+
+    #[test]
+    fn cancelled_terminal_dispatch_leaves_a_subsequent_allocation_eligible() -> Result<()> {
+        delayed_pressure(true)
+    }
+
+    fn poll_until_dispatch<F: Future>(
+        mut request: std::pin::Pin<&mut F>,
+        cx: &mut std::task::Context<'_>,
+        service: &pressure_turn::Service,
+        earlier: usize,
+        deadline: Instant,
+    ) -> Option<F::Output> {
+        loop {
+            if let std::task::Poll::Ready(result) = request.as_mut().poll(cx) {
+                return Some(result);
+            }
+            if service.snapshot() > earlier {
+                return None;
+            }
+            assert!(Instant::now() < deadline);
+            thread::yield_now();
+        }
+    }
+
     #[expect(
         clippy::panic_in_result_fn,
         clippy::unwrap_in_result,
+        clippy::expect_used,
         reason = "bounded service, exact heap charges and physical refund"
     )]
-    fn terminal_allocation_observes_pressure_service_before_denial() -> Result<()> {
+    fn delayed_pressure(cancel_first: bool) -> Result<()> {
         use std::task::{Context, Poll, Waker};
         let (entered, parked) = mpsc::channel();
         let (resume, release) = mpsc::channel();
@@ -448,17 +477,22 @@ mod tests {
         let (notified, seen) = mpsc::sync_channel(1);
         let (allow, assistant) = mpsc::channel();
         *lock(&runner.pressure_gate) = Some((notified, assistant));
-        let mut request = std::pin::pin!(Gc::try_new_async(&heap, 11_u64));
-        let early = loop {
-            if let Poll::Ready(result) = request.as_mut().poll(&mut cx) {
-                break Some(result);
-            }
-            if runner.service.snapshot() != 0 {
-                break None;
-            }
-            assert!(Instant::now() < deadline);
-            thread::yield_now();
-        };
+        let mut request = Box::pin(Gc::try_new_async(&heap, 11_u64));
+        let mut early =
+            poll_until_dispatch(request.as_mut(), &mut cx, &runner.service, 0, deadline);
+        if cancel_first && early.is_none() {
+            drop(request);
+            assert!(!heap.grant_registry.has_demand());
+            let preceding = runner.service.snapshot();
+            request = Box::pin(Gc::try_new_async(&heap, 11_u64));
+            early = poll_until_dispatch(
+                request.as_mut(),
+                &mut cx,
+                &runner.service,
+                preceding,
+                deadline,
+            );
+        }
         seen.recv_timeout(Duration::from_secs(3))
             .expect("assistant saw demand");
         let pending = early.is_none();
