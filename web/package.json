@@ -28,7 +28,7 @@
     "fflate": "0.8.3"
   },
   "devDependencies": {
-    "@bytecodealliance/jco-transpile": "0.12.1",
+    "@bytecodealliance/jco-transpile": "0.24.0",
     "@playwright/test": "1.63.0",
     "@types/node": "25.3.0",
     "prettier": "3.9.6",

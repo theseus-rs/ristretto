@@ -54,7 +54,7 @@ if (!process.argv.includes('--child')) {
       if (event.type === 'phase' || event.type === 'error' || event.type === 'output')
         console.log(target, event);
     });
-    engine.execute({
+    await engine.execute({
       id: 1,
       action,
       language: target.startsWith('scala') ? 'scala' : target,

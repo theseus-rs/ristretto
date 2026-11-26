@@ -45,6 +45,8 @@ struct Request {
     class_name: String,
     source: String,
     #[serde(default)]
+    measure_collections: bool,
+    #[serde(default)]
     language: Language,
     #[serde(default)]
     scala_version: Option<String>,
@@ -187,6 +189,7 @@ async fn execute(
     emit(&json!({"id": id, "type": "compiled", "classes": classes.len()}))?;
     // Drop the compiler VM before starting the user's VM to reduce peak memory.
     drop(compiler);
+    let mut done = json!({"id": id, "type": "done"});
     if request.action == Action::Run {
         emit(&json!({"id": id, "type": "phase", "phase": "running"}))?;
         let memory = Memory::new("playground");
@@ -196,11 +199,26 @@ async fn execute(
             .class_path(ClassPath::new(vec![ClassPathEntry::Memory(memory)]))
             .build()?;
         let vm = VM::new(config).await?;
+        let collector = vm.garbage_collector();
+        let before = request
+            .measure_collections
+            .then(|| collector.statistics())
+            .transpose()?;
         if let Err(error) = vm.invoke_main(&[] as &[&str]).await {
             return report_vm_error(id, &vm, error).await;
         }
+        if let Some(before) = before {
+            let after = collector.statistics()?;
+            done["gc"] = json!({
+                "completed": after.collections_completed.checked_sub(before.collections_completed).ok_or("collection counter decreased")?,
+                "objectsSwept": after.objects_swept.checked_sub(before.objects_swept).ok_or("sweep counter decreased")?,
+                "bytesFreed": after.bytes_freed.checked_sub(before.bytes_freed).ok_or("refund counter decreased")?,
+                "liveBytesBefore": before.bytes_live,
+                "liveBytesAfter": after.bytes_live,
+            });
+        }
     }
-    emit(&json!({"id": id, "type": "done"}))?;
+    emit(&done)?;
     Ok(())
 }
 
@@ -473,6 +491,9 @@ async fn execute_jshell(
     Ok(())
 }
 
+#[cfg(any(test, target_family = "wasm"))]
+mod host_turn;
+
 #[cfg(target_family = "wasm")]
 #[expect(
     unsafe_code,
@@ -484,20 +505,74 @@ async fn execute_jshell(
 )]
 mod component {
     wit_bindgen::generate!({ path: "wit", world: "playground" });
+    use std::cell::RefCell;
+    use std::future::Future;
+    use std::pin::Pin;
+
+    type RequestFuture = Pin<Box<dyn Future<Output = ()>>>;
     struct Engine;
     thread_local! {
-        static RUNTIME: Result<tokio::runtime::Runtime, std::io::Error> = tokio::runtime::Builder::new_current_thread()
-            .enable_all().build();
+        static REQUEST: RefCell<Option<RequestFuture>> = const { RefCell::new(None) };
+        static RUNTIME: Result<tokio::runtime::Runtime, std::io::Error> = super::host_turn::runtime();
     }
     impl Guest for Engine {
-        fn execute(request: String) {
-            RUNTIME.with(|runtime| match runtime {
-                Ok(runtime) => runtime.block_on(super::handle_request(request.as_bytes())),
-                Err(error) => {
-                    let _result = super::emit(&serde_json::json!({"id": 0, "type": "error", "message": error.to_string()}));
+        fn start_request(request: String) -> bool {
+            REQUEST.with(|slot| {
+                let Ok(mut slot) = slot.try_borrow_mut() else {
+                    return false;
+                };
+                if slot.is_some() {
+                    return false;
                 }
+                *slot = Some(Box::pin(async move {
+                    super::handle_request(request.as_bytes()).await
+                }));
+                true
+            })
+        }
+
+        fn poll_request() -> bool {
+            REQUEST.with(|slot| {
+                let Ok(mut slot) = slot.try_borrow_mut() else { return false };
+                let Some(request) = slot.as_mut() else { return true };
+                let finished = RUNTIME.with(|runtime| match runtime {
+                    Ok(runtime) => super::host_turn::drive(runtime, request.as_mut()).is_ready(),
+                    Err(error) => {
+                        let _result = super::emit(&serde_json::json!({"id": 0, "type": "error", "message": error.to_string()}));
+                        true
+                    }
+                });
+                if finished { *slot = None; }
+                finished
+            })
+        }
+
+        fn execute(request: String) {
+            REQUEST.with(|slot| {
+                // The original blocking export remains available to synchronous hosts.
+                let Ok(pending) = slot.try_borrow_mut() else {
+                    report_busy(&request);
+                    return;
+                };
+                if pending.is_some() {
+                    report_busy(&request);
+                    return;
+                }
+                RUNTIME.with(|runtime| match runtime {
+                    Ok(runtime) => runtime.block_on(super::handle_request(request.as_bytes())),
+                    Err(error) => {
+                        let _result = super::emit(&serde_json::json!({"id": 0, "type": "error", "message": error.to_string()}));
+                    }
+                });
             });
         }
     }
+    fn report_busy(request: &str) {
+        let id = serde_json::from_str::<super::Request>(request).map_or(0, |r| r.id);
+        let _result = super::emit(
+            &serde_json::json!({"id": id, "type": "error", "message": "A Java request is already running."}),
+        );
+    }
+
     export!(Engine);
 }

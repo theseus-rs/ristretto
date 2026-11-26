@@ -30,6 +30,7 @@ export type Request = {
   source: string;
   operation?: 'input' | 'complete' | 'cancel';
   cursor?: number;
+  measureCollections?: boolean;
 };
 export type Event =
   | {
@@ -41,7 +42,18 @@ export type Event =
   | { id: number; type: 'compiled'; classes: number }
   | { id: number; type: 'checked' }
   | { id: number; type: 'output'; stream: 'stdout' | 'stderr'; text: string }
-  | { id: number; type: 'done'; exitCode?: number }
+  | {
+      id: number;
+      type: 'done';
+      exitCode?: number;
+      gc?: {
+        completed: number;
+        objectsSwept: number;
+        bytesFreed: number;
+        liveBytesBefore: number;
+        liveBytesAfter: number;
+      };
+    }
   | {
       id: number;
       type: 'ready';
