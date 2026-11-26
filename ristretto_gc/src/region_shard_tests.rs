@@ -51,7 +51,7 @@ fn evacuation_ranks_all_shards_and_shares_one_source_quota() {
         .collect();
     assert!(heap.begin_evacuation());
     for step in 0..100 {
-        if heap.select_evacuation().expect("uncontended selection") {
+        if heap.select_evacuation() {
             break;
         }
         assert!(
@@ -226,7 +226,7 @@ fn evacuation_roles_switch_before_the_first_shard_visit() {
         .allocate_selected(layout, None, false, 1)
         .expect("source");
     assert!(heap.begin_evacuation());
-    while !heap.select_evacuation().expect("uncontended selection") {}
+    while !heap.select_evacuation() {}
     let is_source = || {
         lock(heap.shard(1))
             .evacuation
@@ -244,7 +244,7 @@ fn evacuation_roles_switch_before_the_first_shard_visit() {
         .allocate_selected(layout, None, false, 1)
         .expect("reusable source");
     assert_eq!(refill.id(), old.id());
-    while !heap.select_evacuation().expect("uncontended selection") {}
+    while !heap.select_evacuation() {}
     let state = lock(heap.shard(1));
     let plan = state.evacuation.as_ref().expect("policy");
     assert!(plan.is_destination(&old.region));
@@ -274,11 +274,11 @@ fn parked_registry_allows_phase_publication_and_bounded_selection_retry() {
             scope.spawn(move || {
                 assert_eq!(heap.begin_evacuation(), enabled);
                 if enabled {
-                    assert_eq!(heap.select_evacuation(), Some(false)); // Visit the empty shard.
-                    assert_eq!(heap.select_evacuation(), None); // Parked next shard.
-                    assert_eq!(heap.select_evacuation(), None);
+                    assert!(!heap.select_evacuation()); // Visit the empty shard.
+                    assert!(!heap.select_evacuation()); // Defer the parked shard.
+                    assert!(heap.select_evacuation());
                 } else {
-                    assert_eq!(heap.select_evacuation(), Some(true));
+                    assert!(heap.select_evacuation());
                 }
                 heap.end_evacuation();
                 done.send(()).expect("phase completion");
@@ -289,7 +289,7 @@ fn parked_registry_allows_phase_publication_and_bounded_selection_retry() {
         });
         if enabled {
             assert!(heap.begin_evacuation());
-            while !heap.select_evacuation().expect("uncontended selection") {}
+            while !heap.select_evacuation() {}
             let state = lock(heap.shard(1));
             assert!(
                 state
@@ -359,12 +359,55 @@ fn fresh_collections_trim_an_available_shard_and_finish_while_the_other_is_parke
 }
 
 #[test]
+fn skipped_evacuation_index_from_an_older_epoch_is_never_ranked() {
+    let heap = RegionHeap::with_shards(1024, 4096, 0, Budget::new(4096), true, 2);
+    let layout = Layout::from_size_align(128, 64).expect("layout");
+    let parked_source = heap
+        .allocate_selected(layout, None, false, 0)
+        .expect("source");
+    let peer_source = heap
+        .allocate_selected(layout, None, false, 1)
+        .expect("peer");
+    // Leave both indexes populated immediately before the old ranking step.
+    assert!(heap.begin_evacuation());
+    while heap.selection_shard.load(Ordering::Acquire) != 2 {
+        assert!(!heap.select_evacuation());
+    }
+    heap.end_evacuation();
+    assert!(heap.begin_evacuation());
+    {
+        let _parked = lock(heap.shard(0));
+        assert!(!heap.select_evacuation());
+    }
+    while !heap.select_evacuation() {}
+    let epoch = heap
+        .selection
+        .as_ref()
+        .expect("policy")
+        .epoch()
+        .expect("active");
+    assert!(!Evacuation::source_at(&parked_source.region, epoch));
+    assert!(Evacuation::source_at(&peer_source.region, epoch));
+    heap.end_evacuation();
+    assert!(heap.begin_evacuation());
+    while !heap.select_evacuation() {}
+    let epoch = heap
+        .selection
+        .as_ref()
+        .expect("policy")
+        .epoch()
+        .expect("active");
+    assert!(Evacuation::source_at(&parked_source.region, epoch));
+    heap.end_evacuation();
+}
+
+#[test]
 fn a_retired_source_keeps_its_release_accounting_after_the_epoch_ends() {
     let heap = RegionHeap::with_policy(1024, 4096, 0, Budget::new(4096), true);
     let layout = Layout::from_size_align(128, 64).expect("layout");
     let block = heap.allocate(layout, None).expect("source");
     assert!(heap.begin_evacuation());
-    while !heap.select_evacuation().expect("uncontended selection") {}
+    while !heap.select_evacuation() {}
     let backing = block.region.clone();
     drop(block);
     heap.end_evacuation();
@@ -692,7 +735,7 @@ fn a_copy_starts_and_continues_while_its_source_registry_is_parked() {
             )
             .expect("destination with a free 256-byte range");
         assert!(heap.begin_evacuation());
-        while !heap.select_evacuation().expect("uncontended selection") {}
+        while !heap.select_evacuation() {}
         if already_copied != 0 {
             assert!(matches!(
                 source.compact_step(&heap, 64),
@@ -842,7 +885,7 @@ fn clearing_partial_transfers_drops_each_noncopy_element_once() {
         )
         .unwrap();
     assert!(heap.begin_evacuation());
-    while !heap.select_evacuation().unwrap() {}
+    while !heap.select_evacuation() {}
     assert!(matches!(
         compacting.compact_step(&heap, 1),
         TraceProgress::Continue(_)

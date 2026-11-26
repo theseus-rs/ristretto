@@ -99,23 +99,18 @@ pub(super) enum ContextUnit {
 
 impl GarbageCollector {
     pub(super) fn select_regions_unit(&self, cycle: &mut Cycle) -> Unit {
-        match self
+        if self
             .regions
             .as_ref()
-            .map_or(Some(true), |heap| heap.select_evacuation())
+            .is_none_or(|heap| heap.select_evacuation())
         {
-            None => Unit::Busy,
-            Some(done) => {
-                if done {
-                    cycle.phase = Phase::Compact;
-                    self.domain().relocation_ready.store(
-                        self.regions.is_some() && self.configuration.independent_relocation,
-                        Ordering::Release,
-                    );
-                }
-                Unit::Progress
-            }
+            cycle.phase = Phase::Compact;
+            self.domain().relocation_ready.store(
+                self.regions.is_some() && self.configuration.independent_relocation,
+                Ordering::Release,
+            );
         }
+        Unit::Progress
     }
 
     #[expect(

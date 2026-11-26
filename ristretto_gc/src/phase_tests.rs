@@ -101,7 +101,7 @@ mod native {
     use std::time::Duration;
 
     #[test]
-    fn a_compact_step_returns_while_the_trim_registry_is_parked() -> Result<()> {
+    fn a_compact_ticket_finishes_while_the_trim_registry_is_parked() -> Result<()> {
         for counted in [false, true] {
             let gc = GarbageCollector::with_config(
                 Configuration::builder()
@@ -136,7 +136,7 @@ mod native {
                         });
                         recv.recv_timeout(Duration::from_secs(3))
                             .expect("a trim poll waited for the parked region");
-                        assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Compact);
+                        assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Idle);
                         let id = gc.add_root(&root);
                         gc.write_barrier(&root);
                         gc.remove_root_by_id(id);

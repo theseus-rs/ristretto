@@ -856,6 +856,8 @@ struct Cycle {
     reclaim: VecDeque<ReclaimTask>,
     refund_selection: Option<crate::retirement_grants::Selection>,
     reclaimed_bytes: usize,
+    payload_trim: crate::region::TrimCursor,
+    descriptor_trim: crate::region::TrimCursor,
     handoff: Option<(MetadataRef, usize)>,
     root_cursor: crate::roots::Cursor,
     context_cursor: crate::context::RootCursor,
@@ -894,6 +896,8 @@ impl Default for Cycle {
             reclaim: VecDeque::with_capacity(phase_work::SWEEP_BATCH),
             refund_selection: None,
             reclaimed_bytes: 0,
+            payload_trim: crate::region::TrimCursor::default(),
+            descriptor_trim: crate::region::TrimCursor::default(),
             handoff: None,
             root_cursor: crate::roots::Cursor::default(),
             context_cursor: crate::context::RootCursor::default(),
@@ -5738,6 +5742,8 @@ impl GarbageCollector {
             }
             cycle.started = started;
             cycle.reclaimed_bytes = 0;
+            cycle.payload_trim = crate::region::TrimCursor::default();
+            cycle.descriptor_trim = crate::region::TrimCursor::default();
             let scheduler_start = self
                 .scheduler
                 .as_ref()
@@ -6089,12 +6095,12 @@ impl GarbageCollector {
                                     break;
                                 }
                             }
-                            if !heap.trim(32) {
+                            if !cycle.payload_trim.trim_accessible(heap, 32) {
                                 break;
                             }
                         }
                         if let Some(heap) = &self.descriptor_regions
-                            && !heap.trim(32)
+                            && !cycle.descriptor_trim.trim_accessible(heap, 32)
                         {
                             break;
                         }

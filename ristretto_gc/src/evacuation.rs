@@ -84,7 +84,10 @@ impl Evacuation {
         self.building
     }
 
-    pub(super) fn next_cost(&self) -> Option<usize> {
+    pub(super) fn next_cost(&self, epoch: u64) -> Option<usize> {
+        if self.prepared != epoch || self.building {
+            return None;
+        }
         self.candidates.peek().map(|Reverse((cost, _))| *cost)
     }
 
