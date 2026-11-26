@@ -485,12 +485,11 @@ fn test_shutdown_cleanup_drops_remaining_objects() {
         // Allocate an object and keep it rooted so it survives collection.
         // It should still be freed at shutdown.
         let _root = Gc::new(&collector, obj);
-
-        // Collector drops here -> stop() -> cleanup_remaining_objects()
     }
 
+    // A worker can own the last collector Arc after the caller leaves the scope.
     assert!(
-        dropped.load(Ordering::Acquire),
+        wait_for_condition(TIMEOUT, POLL, || dropped.load(Ordering::Acquire)),
         "remaining rooted objects must be dropped during shutdown cleanup"
     );
 }
@@ -505,17 +504,16 @@ fn test_shutdown_cleanup_runs_finalizers() {
         collector.start();
 
         let _gc = Gc::new_with_finalizer(&collector, obj);
-
-        // Collector drops here -> cleanup should run finalizer then drop
     }
 
+    // Observing destruction also synchronizes with the preceding finalization.
+    assert!(
+        wait_for_condition(TIMEOUT, POLL, || dropped.load(Ordering::Acquire)),
+        "objects must be dropped during shutdown cleanup"
+    );
     assert!(
         finalized.load(Ordering::Acquire),
         "finalizers must be called during shutdown cleanup"
-    );
-    assert!(
-        dropped.load(Ordering::Acquire),
-        "objects must be dropped during shutdown cleanup"
     );
 }
 
