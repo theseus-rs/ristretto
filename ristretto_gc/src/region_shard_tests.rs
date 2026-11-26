@@ -455,3 +455,80 @@ fn a_busy_free_range_map_keeps_the_block_and_its_exact_charge() {
     assert_eq!(heap.statistics().occupied_bytes, 0);
     assert_eq!(region.occupied(), 0);
 }
+
+#[test]
+fn clearing_partial_transfers_drops_each_noncopy_element_once() {
+    use crate::{HeapBuffer, Trace, TraceProgress};
+    struct Element<'a>(&'a AtomicUsize);
+    // SAFETY: each element only points to its host-side destruction counter.
+    unsafe impl Trace for Element<'_> {
+        fn trace(&self, _: &crate::GarbageCollector) {}
+    }
+    impl Drop for Element<'_> {
+        fn drop(&mut self) {
+            self.0.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+    let counters = [const { AtomicUsize::new(0) }; 32];
+    let make_elements = || counters.iter().map(Element).collect::<HeapBuffer<_>>();
+    let size = counters.len() * size_of::<Element<'_>>();
+    let heap = RegionHeap::new(1024, 2048, 0);
+    let mut preparing = make_elements();
+    assert!(matches!(
+        preparing.prepare_step(&heap, 1),
+        Ok(TraceProgress::Continue(_))
+    ));
+    {
+        let _parked = lock(heap.shard(0));
+        assert_eq!(preparing.clear_step(0, 1), TraceProgress::Busy);
+        assert!(counters.iter().all(|n| n.load(Ordering::Relaxed) == 0));
+    }
+    for _ in 1..counters.len() {
+        assert_eq!(preparing.clear_step(0, 1), TraceProgress::Continue(0));
+    }
+    assert_eq!(preparing.clear_step(0, 1), TraceProgress::Complete);
+    drop(preparing);
+    assert!(counters.iter().all(|n| n.load(Ordering::Relaxed) == 1));
+    assert_eq!(heap.recovery_progress().0, 0);
+
+    let heap = RegionHeap::with_shards(1024, 4096, 1024, Budget::with_reserve(4096, 1024), true, 2);
+    let mut compacting = make_elements();
+    compacting.prepare(&heap).unwrap();
+    let id = compacting.relocation_region(&heap).unwrap();
+    let source = heap.index(id);
+    let filler = heap
+        .allocate_selected(
+            Layout::from_size_align(1024 - size, 64).unwrap(),
+            None,
+            false,
+            1 - source,
+        )
+        .unwrap();
+    assert!(heap.begin_evacuation());
+    while !heap.select_evacuation().unwrap() {}
+    assert!(matches!(
+        compacting.compact_step(&heap, 1),
+        TraceProgress::Continue(_)
+    ));
+    {
+        let _parked = lock(heap.shard(1 - source));
+        assert_eq!(compacting.clear_step(0, 1), TraceProgress::Busy);
+        assert!(counters.iter().all(|n| n.load(Ordering::Relaxed) == 1));
+    }
+    {
+        let _parked = lock(heap.shard(source));
+        for _ in 1..counters.len() {
+            assert_eq!(compacting.clear_step(0, 1), TraceProgress::Continue(0));
+        }
+        for _ in 0..2 {
+            assert_eq!(compacting.clear_step(0, 1), TraceProgress::Busy);
+            assert!(counters.iter().all(|n| n.load(Ordering::Relaxed) == 2));
+            assert_eq!(heap.recovery_progress().0, 0);
+        }
+    }
+    assert_eq!(compacting.clear_step(0, 1), TraceProgress::Complete);
+    drop(compacting);
+    assert_eq!(heap.recovery_progress().0, u64::try_from(size).unwrap());
+    assert!(counters.iter().all(|n| n.load(Ordering::Relaxed) == 2));
+    drop(filler);
+}
