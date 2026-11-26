@@ -17,6 +17,13 @@ See [the release check](../benchmarks/gc/release/verify_alpha_heap.py).
 | Whole-JVM throughput | Qualify physical context-local allocation separately from logical credits. Earlier combined buffers improved a 256-byte compact case by 23.9% and raised 4 KiB compact p99.99 from 261.5 to 3,264 µs. Measure common field and array loads/stores and confirm actual compiled entries in the Java hot loop. Static long stores use the ordinary VM continuation, with volatile ordering and Java fault coverage. Reference values live across polls still require owning frame roots and cancellation tests. [Scheduled Java measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/ordinary-static-long/README.md) |
 | Release qualification | Keep deterministic parked-participant progress, ordinary JVM class coverage, browser responsiveness, fixed-rate throughput and scheduled tails against G1/ZGC, three hour-long runs and a 24-hour soak as separate gates. |
 
+Ordinary Java primitive-array writers now skip an empty demotion and notification
+scope. Three stock writer paths took 34–38% less mutator time, and all 36 fixed
+collection comparisons still cleared 10×. The native and WASI minimum individual
+lower bounds at `3d882623` were 10.30× and 12.21×. The forced deletion of a
+white child passed under both publication policies, including on WASI and Miri.
+[Write costs, collection intervals and snapshot trials](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/primitive-writes/README.md)
+
 
 
 ## Tenfold complete-collection gate

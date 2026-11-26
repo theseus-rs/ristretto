@@ -698,9 +698,11 @@ pub unsafe trait Trace {
     /// Whether releasing a managed write guard can omit both `unroot` and the
     /// owner notification for the current value. The guard holds exclusive access.
     /// Returning true requires an empty strong and conditional graph, a no-op
-    /// `unroot` (including custom, nested and relocation hooks), and no pending
-    /// notification. This must also hold after replacing a different value.
-    /// The query must not allocate, lock or call the collector.
+    /// `unroot` (including custom, nested and relocation hooks), and a false
+    /// `needs_write_barrier` result after that demotion. These guarantees
+    /// describe the current payload, including after replacing a different value.
+    /// The collector still revokes trace coverage, unlocks and accounts for the
+    /// payload pin. The query must not allocate, lock or call the collector.
     fn can_skip_unroot_after_write(&self) -> bool {
         false
     }
