@@ -32,6 +32,23 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Reject retired same-heap compiled helper results | `89c0f698` | 251126985 | **10.77×** | **10.59×** | **36 / 36** |
 | Allocation waiters and last-worker exit (withheld experiment) | `53c3f961` | 251126992 | **10.35×** | **10.35×** | **36 / 36** |
 | Cooperative clearing of locked buffers | `d07426d1` | 251127009 | **10.43×** | **10.63×** | **36 / 36** |
+| Executor registration and last-worker exit | `43ad8138` | 251127011 | **10.14×** | **10.81×** | **36 / 36** |
+
+## Allocation waiters across executor changes and worker exit
+
+At the heap limit, an allocation keeps its registered waker across polls on the same executor. A poll on a different executor replaces the callback. An eligible waiter can enter the ordered index while another publisher is parked. A peer observing the last worker’s exit can deliver the outstanding notification, even if the physical allocation request has since been cancelled. The previous experiment stranded a ticket waiter in that schedule.
+
+Seventeen forced schedules each passed in 100 fresh native processes. They include cancellation, a refund racing the last worker’s exit, changed executor identity, and a callback claimed during executor replacement. The strict-provenance Miri regression uses a waker whose clone changes its representation. The all-feature native GC suite, 320 WASI library tests, strict Clippy, the bare-Wasm check and verification of the packaged collector passed. The complete-collection comparison used 24 pairs per condition against `f1daebeb`. [Full-cycle process measurements](executor-waiters.csv) · [Failing controls, stress runs, fixtures and paired samples](executor-waiter-verification.json.gz)
+
+A read-only Neon review of the terminal callback transition identified the single-writer and ordering requirements for preventing a replacement after delivery. The forced migration tests exercise closure before replacement and during a subsequent replacement. Carbon rejected the requested effort level and its highest supported setting timed out.
+
+The native cost comparisons use the immediate parent `f1b72c1f`, with one pinned CPU and the same fixture in each pair. Registration and repoll measurements include creation and cancellation of 16,384 pending allocations per process. There were 48 pairs per queue size for those operations and 64 for refund-to-completion. With 1,024 waiters, enrollment took 11.6% less time and same-executor repolls took 16.9% less. With one waiter, same-executor repolls took 1.8% longer and completing a refund took 5.6% longer. Changing executors took 7.4% longer with one waiter and 10.0% longer with 64. The intervals below are paired bootstrap 95% intervals for each condition.
+
+![Elapsed time to enroll, repoll or complete an allocation after a refund, relative to the parent at three queue sizes](executor-waiter-cost.svg)
+
+## Outstanding deletion-barrier regressions
+
+Two native tests fail at both `f1b72c1f` and `43ad8138`. A callback lease delays the retirement of a parent containing a child reference. In the first test, the original child is physically reclaimed and a fresh allocation receives the same verified address with a different object identity. Dropping the delayed edge marks the new allocation in the next full cycle. In the second test the original child is still present. Under counted publication the parent's clearing thread misses a one-second deadline while another thread holds the child's object shard. The test releases the shard and joins the clearing thread. These cases block integrated-alpha qualification. [Reproducible test patch, command and failing output](deletion-barrier-controls.json.gz)
 
 ## Cooperative clearing of locked buffers
 

@@ -2,6 +2,9 @@
 
 ## Tenfold complete-collection gate
 
+At `43ad8138`, peers can deliver allocation and ticket notifications across a parked waiter publisher, executor migration, and the last worker’s exit. All 1,700 forced schedules and 36 complete-collection conditions passed. The lowest individual 95% speedup bounds were 10.14× native and 10.81× WASI. The largest queue improved on enrollment and repeat polls, while executor changes at one and 64 waiters still cost more than the parent. Region-backed or finalizable storage, deletion during address reuse, ordinary VM root ownership, and whole-host qualification remain open.
+[Waiter controls, cost intervals and full-cycle measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#allocation-waiters-across-executor-changes-and-worker-exit).
+
 At `d07426d1`, three supported lock wrappers forward cooperative clearing of their contents. Each had previously stranded an unrelated allocation at the heap limit. All 900 forced native runs and all 36 complete-collection comparisons passed, with weakest individual 95% speedup bounds of 10.43× native and 10.63× WASI.
 [Locked-buffer controls and collection measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#cooperative-clearing-of-locked-buffers).
 
