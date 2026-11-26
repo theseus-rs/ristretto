@@ -3,6 +3,22 @@
 #![cfg_attr(not(target_family = "wasm"), expect(clippy::unwrap_in_result))]
 use super::*;
 
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+thread_local! {
+    static AFTER_ACTIVATION: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn after_snapshot_activation() {
+    if let Some(pause) = AFTER_ACTIVATION.take() {
+        pause.entered.send(()).expect("snapshot observer");
+        pause
+            .resume
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("resume snapshot");
+    }
+}
+
 fn collector(concurrent: bool) -> Arc<GarbageCollector> {
     GarbageCollector::with_config(
         Configuration::builder()
@@ -99,6 +115,81 @@ mod native {
     use super::*;
     use std::sync::mpsc;
     use std::time::Duration;
+
+    #[cfg(not(miri))]
+    #[test]
+    fn a_request_after_snapshot_activation_waits_for_a_fresh_full_collection() -> Result<()> {
+        use std::future::Future;
+        use std::task::{Context as PollContext, Waker};
+
+        for counted in [true, false] {
+            for independent in [false, true] {
+                let gc = GarbageCollector::with_config(
+                    Configuration::builder()
+                        .concurrent_publication(counted)
+                        .independent_phases(independent)
+                        .incremental_step_size(1)
+                        .max_pause_time_us(0)
+                        .allocation_threshold(usize::MAX)
+                        .full_collection_interval(usize::MAX)
+                        .build(),
+                );
+                let mut root = Some(Gc::try_new(&gc, 71_u64)?);
+                let address = root.as_ref().unwrap().as_ptr().addr();
+                let metadata = gc.objects.lookup(address).unwrap();
+                let first = gc.request_full_cycle();
+                let (entered, observed) = mpsc::channel();
+                let (resume, resumed) = mpsc::channel();
+                let heap = gc.clone();
+                let starter = thread::spawn(move || {
+                    AFTER_ACTIVATION.set(Some(ClaimPause {
+                        entered,
+                        resume: resumed,
+                    }));
+                    heap.step();
+                });
+                observed
+                    .recv_timeout(Duration::from_secs(5))
+                    .expect("first full snapshot");
+                assert!(gc.domains[1].marking());
+                // Counted publication admits this deletion while the starter is parked.
+                // The gated collector admits it once the starter releases the writer.
+                if counted {
+                    drop(root.take());
+                }
+                let mut request = Box::pin(gc.collect_full_async());
+                let mut cx = PollContext::from_waker(Waker::noop());
+                assert!(request.as_mut().poll(&mut cx).is_pending());
+                let second = gc.domains[1].request_ticket.load(Ordering::Acquire);
+                assert!(second > first);
+                resume.send(()).expect("resume startup");
+                starter.join().expect("starter");
+                drop(root);
+                for _ in 0..4096 {
+                    if gc.completed_full_ticket() >= first {
+                        break;
+                    }
+                    gc.step();
+                }
+                assert_eq!(
+                    gc.completed_full_ticket(),
+                    first,
+                    "an active snapshot acknowledged a later request"
+                );
+                assert_eq!(gc.objects.lookup(address).unwrap().id, metadata.id);
+                for _ in 0..4096 {
+                    if let std::task::Poll::Ready(result) = request.as_mut().poll(&mut cx) {
+                        result?;
+                        break;
+                    }
+                }
+                assert_eq!(gc.completed_full_ticket(), second);
+                assert!(gc.objects.lookup(address).is_none());
+                assert_eq!(gc.managed_bytes(), 0);
+            }
+        }
+        Ok(())
+    }
 
     #[test]
     fn a_compact_ticket_finishes_while_the_trim_registry_is_parked() -> Result<()> {

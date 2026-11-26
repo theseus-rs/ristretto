@@ -5698,6 +5698,8 @@ impl GarbageCollector {
                 }
                 return Some(false);
             }
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            phase_tests::after_snapshot_activation();
             if index == 1 {
                 self.mature_census.strong.store(0, Ordering::Release);
                 self.domain().mark_queue.reset_mature_strong();
