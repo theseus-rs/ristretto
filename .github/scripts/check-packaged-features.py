@@ -34,8 +34,12 @@ def main():
             if dep["kind"] != "dev" and name in packages and name not in required:
                 required.add(name)
                 pending.append(name)
-    # Package the workspace together so the published manifests and lockfiles are normalized.
-    subprocess.run(["cargo", "package", "--workspace", "--locked", "--no-verify"], check=True)
+    # Stage the same publishable set as cargo publish --workspace. cargo package
+    # --workspace also tries to normalize path-only, workspace-private crates.
+    stage = ["cargo", "package", "--locked", "--no-verify"]
+    for name in sorted(packages):
+        stage.extend(["-p", name])
+    subprocess.run(stage, check=True)
     archives = Path(metadata["target_directory"]) / "package"
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
