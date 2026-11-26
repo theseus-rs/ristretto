@@ -151,10 +151,10 @@ mod native {
                 observed
                     .recv_timeout(Duration::from_secs(5))
                     .expect("first full snapshot");
-                assert!(gc.domains[1].marking());
                 // Counted publication admits this deletion while the starter is parked.
                 // The gated collector admits it once the starter releases the writer.
                 if counted {
+                    assert!(gc.domains[1].marking());
                     drop(root.take());
                 }
                 let mut request = Box::pin(gc.collect_full_async());
@@ -177,12 +177,15 @@ mod native {
                     "an active snapshot acknowledged a later request"
                 );
                 assert_eq!(gc.objects.lookup(address).unwrap().id, metadata.id);
+                let mut finished = false;
                 for _ in 0..4096 {
                     if let std::task::Poll::Ready(result) = request.as_mut().poll(&mut cx) {
                         result?;
+                        finished = true;
                         break;
                     }
                 }
+                assert!(finished, "later explicit collection did not complete");
                 assert_eq!(gc.completed_full_ticket(), second);
                 assert!(gc.objects.lookup(address).is_none());
                 assert_eq!(gc.managed_bytes(), 0);

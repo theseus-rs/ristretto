@@ -380,6 +380,13 @@ struct Domain {
 }
 
 impl Domain {
+    /// Returns true when a newly published request needs a worker wakeup.
+    fn publish_request(&self) -> bool {
+        // A repeated request can carry a newer ticket. Keep every publisher
+        // in the release chain consumed by the cycle starter's swap(false).
+        !self.requested.swap(true, Ordering::AcqRel)
+    }
+
     fn active(&self) -> bool {
         self.publication_clock.as_ref().map_or_else(
             || self.active.load(Ordering::Acquire),
@@ -3026,7 +3033,7 @@ impl GarbageCollector {
             .request_ticket
             .fetch_add(1, Ordering::AcqRel)
             + 1;
-        self.domains[1].requested.store(true, Ordering::Release);
+        self.domains[1].publish_request();
         self.wake();
         ticket
     }
@@ -3045,7 +3052,7 @@ impl GarbageCollector {
             // its ticket and setting the flag. A race with cycle start can request
             // one redundant pass, but cannot strand a waiter or lose a request.
             if !domain.active() {
-                domain.requested.store(true, Ordering::Release);
+                domain.publish_request();
             }
             self.wake();
             return requested;
@@ -3102,7 +3109,7 @@ impl GarbageCollector {
 
     /// Requests a young collection without requiring a native worker.
     pub fn collect_young(&self) {
-        if self.domains[0].requested.swap(true, Ordering::AcqRel) {
+        if !self.domains[0].publish_request() {
             return;
         }
         self.wake();
@@ -5672,6 +5679,9 @@ impl GarbageCollector {
                 return (!self.pending()).then_some(true);
             }
             let full = index == 1;
+            // Capture before publishing any part of the snapshot. A request
+            // arriving after this cut leaves the flag set for the next start.
+            let ticket = self.domain().request_ticket.load(Ordering::Acquire);
             cycle.kind = if full && !full_request {
                 CollectionKind::Old
             } else if full {
@@ -5694,7 +5704,7 @@ impl GarbageCollector {
                 if cycle.kind == CollectionKind::Old {
                     self.old_requested.store(true, Ordering::Release);
                 } else {
-                    self.domain().requested.store(true, Ordering::Release);
+                    self.domain().publish_request();
                 }
                 return Some(false);
             }
@@ -5721,7 +5731,7 @@ impl GarbageCollector {
             cycle.context_cursor = crate::context::RootCursor::default();
             cycle.cursor = 0;
             cycle.reference_stage = 0;
-            cycle.ticket = self.domain().request_ticket.load(Ordering::Acquire);
+            cycle.ticket = ticket;
             cycle.relocations.clear();
             cycle.relocation_scan_done = false;
             debug_assert!(cycle.phantom_retained.is_empty());
@@ -6179,7 +6189,7 @@ impl GarbageCollector {
                                 if stats.young_collections.is_multiple_of(
                                     self.configuration.full_collection_interval.max(1),
                                 ) {
-                                    self.domains[1].requested.store(true, Ordering::Release);
+                                    self.domains[1].publish_request();
                                 } else if self.configuration.old_collection_interval != 0
                                     && stats
                                         .young_collections
