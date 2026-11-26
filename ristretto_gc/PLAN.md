@@ -2,6 +2,14 @@
 
 ## Tenfold complete-collection gate
 
+Hard-cap recovery remains an integrated alpha blocker. With one reaper parked and
+an independent 32-byte donor available to four 8-byte requests, 8 of 1,800
+fresh native processes returned at least one terminal OOM. After all four peers
+finished, each failing process had enough headroom for its missing roots before
+the original reaper resumed. The release test must exercise competing waiters,
+retain their successful roots and account for both donors.
+[Forced schedules and process receipts](../benchmarks/gc/publication/compacting-endurance/region-epochs/README.md).
+
 In the latest matched Java run at `81594aad`, Ristretto completed all arrivals
 but both HotSpot collectors had lower scheduled p99.9 at each rate. The
 JIT-enabled diagnostic interpreted every one of 35,891 entries to
