@@ -49,6 +49,17 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Guarded payload pin feedback | `2f5b3276` | 251127193 | **10.44×** | **10.07×** | **36 / 36** |
 | Capture full requests before snapshot activation | `1116f721` | 251127211 | 9.89× | 10.23× | 34 / 36 |
 | Retire exclusively owned swept storage | `b0db10cd` | 251127223 | **10.47×** | **10.42×** | **36 / 36** |
+| Synchronous cleanup groups with cooperative request publication | `0f1145b6` | 251127237 | **10.61×** | **10.42×** | **36 / 36** |
+
+## Physical cleanup claimed by a synchronous full collection
+
+A sweeper can remove the last object from its indexes and hold its cleanup privately while another helper finishes the logical ticket. In the forced schedule the original explicit caller returned with zero destructor calls. Each native synchronous request now enrolls in a cleanup group before publishing the request. The sweep reserves each ready host cleanup before releasing the cycle lock. A completed destructor and refund release that reservation. A cleanup that returns Busy releases its reservation once the retry is public and keeps its bytes charged. Leased storage is deferred. Unrelated later tickets can finish while an earlier callback is parked.
+
+The first implementation waited on the cycle lock to enroll. A forced schedule blocked publication for the full one-second observation. The final protocol lets a caller publish while that lock is parked. It preserves the original group across a failed counted phase transition and leaves a full request for a later group. A separate forced schedule checked that the later group remained pending even when its numeric ticket had already completed.
+
+The complete native suite passed 955 tests with one ignored. The migration and generational tests each passed 100 fresh processes. All eight repeated schedules passed in 800 processes, including a private sweep handoff, an explicitly deferred Busy callback, and shutdown after a foreground callback failed. There were 873 passing all-feature native library tests, 334 WASI library tests and 30 selected WASI integration tests. Strict native and WASI Clippy, bare-Wasm checking and local package verification passed. All 36 timing conditions cleared 10× against `f1daebeb`. [Process-level measurements](scoped-cleanup.csv) · [Minimum speedup graph](minimum.svg) · [Test runs, audits and package checksum](scoped-cleanup-controls.json.gz)
+
+A separate 128-object control parked the first destructor of a native sweep batch. Only 112 of the other 127 destructors finished before release. Fifteen independent tasks remained private to the callback running the first object. The patch and failing output are included in the controls. The scoped completion results apply to cleanup first retired by the caller's full snapshot. An older callback already executing elsewhere can outlive that call.
 
 ## Full collection requests during snapshot activation
 
