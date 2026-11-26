@@ -53,7 +53,20 @@ def validate_builds(builds):
     if set(builds) != {'before', 'after'}:
         raise ValueError('need both builds')
     a, b = builds['before'], builds['after']
-    for field in ['fixture_sha256', 'toolchain', 'target', 'profile_sha256', 'dependencies_sha256']:
+    fields = ['fixture_sha256', 'toolchain', 'target']
+    raw_fields = ['profile_sha256', 'dependencies_sha256']
+    if not all(arm.get(key) for arm in (a, b) for key in raw_fields):
+        raise ValueError('missing raw workspace or dependency digest')
+    controls = [(arm.get('compilation') or {}).get('controls_sha256') for arm in (a, b)]
+    if all(controls) and controls[0] != controls[1]:
+        raise ValueError('compiled build controls differ')
+    if any(a[key] != b[key] for key in raw_fields):
+        # Only fresh isolated builds can attest the effective compiler inputs.
+        left, right = [arm.get('compilation') or {} for arm in (a, b)]
+        if not (left.get('fresh') and right.get('fresh') and left.get('controls_sha256')
+                and left['controls_sha256'] == right.get('controls_sha256')):
+            raise ValueError('workspace manifests differ without matching compiled build controls')
+    for field in fields:
         if not a.get(field) or a[field] != b.get(field):
             raise ValueError(f'build {field} differs or is missing')
     if a['target'] not in ['native', 'wasm']:

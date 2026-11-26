@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Build a GC example in isolation or record an existing binary for a paired run."""
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
 import subprocess
 import tempfile
+import tomllib
 from paired_measurement import sha256
 
 
@@ -35,6 +37,39 @@ def compiled_example(messages, source, fixture, target_dir):
     return artifact, example['package_id']
 
 
+def build_controls(messages, source, collector_id):
+    """Compare the actual compiled closure when the workspace membership changes."""
+    manifest = tomllib.loads((source / 'Cargo.toml').read_text())
+    workspace = manifest['workspace']
+    for field in ('members', 'default-members'):
+        workspace.pop(field, None)
+    lock = tomllib.loads((source / 'Cargo.lock').read_text())
+    registry_packages = [pkg for pkg in lock['package'] if 'source' in pkg]
+    artifacts = []
+    for line in messages.splitlines():
+        item = json.loads(line)
+        if item.get('reason') != 'compiler-artifact':
+            continue
+        package = item['package_id']
+        if package == collector_id:
+            package = 'ristretto_gc'
+        elif not package.startswith('registry+'):
+            # The receipt does not hash source for another local or Git dependency.
+            return None
+        artifacts.append([package, item['target']['name'], item['target']['kind'],
+                          sorted(item['features']), item['profile']])
+    artifacts.sort(key=lambda row: json.dumps(row, sort_keys=True))
+    settings = {key: value for key, value in os.environ.items()
+                if key in ('RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'RUSTC_WRAPPER')
+                or key.startswith(('CARGO_PROFILE_', 'CARGO_TARGET_')) and key != 'CARGO_TARGET_DIR'}
+    config_files = {str(path.relative_to(source)): sha256(path)
+                    for path in [source / '.cargo/config.toml', source / '.cargo/config',
+                                 source / 'rust-toolchain.toml'] if path.is_file()}
+    inputs = dict(workspace=manifest, registry_packages=registry_packages,
+                  artifacts=artifacts, settings=settings, config_files=config_files)
+    return hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
+
+
 def compile_binary(source, fixture, command, binary, hashes, input_hashes):
     # A target shared by different checkouts can carry a fresh-looking executable
     # from an earlier build. Hash the artifact named by this compiler invocation.
@@ -51,7 +86,8 @@ def compile_binary(source, fixture, command, binary, hashes, input_hashes):
         os.link(artifact, binary)
         return dict(package_id=package, library='ristretto_gc/src/lib.rs',
                     example=str(fixture.relative_to(source)), fresh=True,
-                    method='isolated-cargo-json-v1')
+                    method='isolated-cargo-json-v1',
+                    controls_sha256=build_controls(result.stdout, source, package))
 
 
 def main():

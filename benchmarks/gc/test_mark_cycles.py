@@ -1,3 +1,4 @@
+from paired_measurement import sha256
 """Invalid work accounting and incomplete pairs must not produce a favorable graph."""
 import unittest
 import shutil
@@ -61,6 +62,18 @@ class MarkCycleEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'identical timed binaries'):
             validate_builds({'before': dict(common, source_sha256={'gc.rs': 'old'}),
                              'after': dict(common, source_sha256={'gc.rs': 'new'})})
+
+    def test_workspace_membership_changes_require_matching_compiler_controls(self):
+        common = dict(fixture_sha256='f', toolchain='rust', target='native',
+                      profile_sha256='old', dependencies_sha256='old', source_sha256={'fixture': 'same'},
+                      binary=__file__, binary_sha256=sha256(Path(__file__)),
+                      compilation=dict(fresh=True, controls_sha256='same'))
+        after = dict(common, profile_sha256='new', dependencies_sha256='new')
+        validate_builds({'before': common, 'after': after})
+        for receipt in [None, dict(fresh=False, controls_sha256='same'),
+                        dict(fresh=True, controls_sha256='different')]:
+            with self.subTest(receipt=receipt), self.assertRaises(ValueError):
+                validate_builds({'before': common, 'after': dict(after, compilation=receipt)})
 
     def test_disabled_diagnostics_must_have_no_tasks(self):
         data = dict(evidence(), diagnostics=False, trace_tasks=0)
