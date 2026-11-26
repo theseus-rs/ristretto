@@ -2,6 +2,9 @@
 
 ## Tenfold complete-collection gate
 
+At `ed3a9426`, native retirement of a regional descriptor or direct Java array buffer can retry its range return while the worker reclaims an independent global donor. Seven contention schedules passed across 700 fresh processes. All 36 complete-collection conditions exceeded 10× against `f1daebeb`, with weakest individual 95% bounds of 10.58× native and 10.28× WASI. A wrapped regional buffer and a parked allocation-waiter index still block independent work. Shared VM roots, native boundaries and compiled execution remain on the integrated alpha critical path.
+[Collection results and remaining schedules](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#cooperative-regional-descriptor-and-java-array-returns).
+
 At `0a7993f0`, waiting allocations reclaim the same returned donor while its
 first selector is parked. One helper wins physical release and an unrelated
 publication can only postpone directory cleanup. Ten regressions passed in

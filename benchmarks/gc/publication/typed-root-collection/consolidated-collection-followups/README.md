@@ -26,6 +26,17 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Terminal poll budget, eager grant records | `e5d1b3d5` | 251126953 | 10.57× | 11.20× | 36 / 36 |
 | Per-donor physical claim and lazy grant preparation | `0a7993f0` | 251126959 | **10.17×** | **10.60×** | **36 / 36** |
 | Reference handler registration and independent wake delivery | `93ea1b2b` | 251126972 | **10.76×** | **11.02×** | **36 / 36** |
+| Cooperative regional descriptor and Java array returns | `ed3a9426` | 251126975 | **10.58×** | **10.28×** | **36 / 36** |
+
+## Cooperative regional descriptor and Java array returns
+
+At a full heap, a native collection worker could block while freeing a descriptor or a buffer in a parked region registry. An unrelated allocator missed its one-second deadline even after a global donor became available. At `ed3a9426`, the collector keeps the outstanding range and its charge on a retryable retirement task. Other reclamation work can proceed. A separate test started the single production worker with `gc.start()` and recovered the global allocation before releasing the registry. Seven tests covering these schedules, interrupted clearing, abandonment and exact backing release passed in 100 fresh native processes each.
+
+A partially copied array keeps ownership of every initialized element in the source until the copy commits. On cancellation a staging return cannot advance the count of reusable live payload bytes. Reference arrays retain their remembered cards until their values are cleared. The additional test at `9c393033` parked each registry during preparation and compaction, retried the return after the final element dropped, and checked every element's destruction counter. It passed on native, WASI and Miri. The read-only Neon audit identified this missing test. Carbon rejected the requested effort.
+
+The collection comparison used 24 paired processes in each of 36 conditions. The lowest individual 95% speedup bounds against `f1daebeb` were 10.58× native and 10.28× WASI. The comparison times whole collections on its established workloads. The parked-registry tests separately exercise compaction and bounded allocation. Native GC library and all-feature tests, native classloader tests, WASI collector and array tests, bare-Wasm checks, strict Clippy and Cargo package verification passed. [All 1,728 process measurements](regional-returns.csv) · [Forced schedules, parent failures, audit and verification](regional-return-tests.json.gz)
+
+An additional control on this revision wraps the same regional buffer in `Option`. Its default clearing hook still lets ordinary destruction block the only registered worker. The allocation-waiter index, other nested storage, integration boundaries and host-wide progress also remain open.
 
 ## Independent reference handler registration and delivery
 
