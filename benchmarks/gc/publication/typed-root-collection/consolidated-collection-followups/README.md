@@ -25,6 +25,17 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Public deferred selection, initial poll regression | `e8b0e6d2` | 251126951 | 10.43× | 11.01× | 36 / 36 |
 | Terminal poll budget, eager grant records | `e5d1b3d5` | 251126953 | 10.57× | 11.20× | 36 / 36 |
 | Per-donor physical claim and lazy grant preparation | `0a7993f0` | 251126959 | **10.17×** | **10.60×** | **36 / 36** |
+| Reference handler registration and independent wake delivery | `93ea1b2b` | 251126972 | **10.76×** | **11.02×** | **36 / 36** |
+
+## Independent reference handler registration and delivery
+
+At `93ea1b2b`, a Java reference handler can register, cancel and receive a wake while a thread holds the allocation-waiter mutex. The parent missed the one-second deadline. A separate test consumes the pending reference while the first callback is parked. A peer delivers the original notice across 130 handlers, spanning three pages. Repoll, cancellation and ticket exhaustion tests check exact callback ownership when a slot is reused. Six forced tests each passed in 100 fresh native processes. Native passed 520 default tests and 1,167 all-feature checks, WASI passed 332 checks, and Miri passed the three slot ownership tests. Strict Clippy, bare Wasm and Cargo package verification passed. [Validation, forced schedules and package checksum](reference-wait-evidence.json.gz)
+
+Both enrollment benchmarks execute 16,384 public-API operations per native process on one pinned CPU, with 32 randomized process pairs per size. The reference benchmark polls each handler and drops it. The allocation benchmark parks the sole registered worker in a finalizer at the heap cap and polls each allocation twice. Outside the timed intervals it checks that the collector registered every waker and removed them all on cancellation. The earlier first-poll fixture yields before registration. Relative to `a9f3e401`, median paired reference time fell **12.4%, 13.6% and 29.4%** for 1, 64 and 1,024 outstanding waits. Allocation elapsed-time ratios were **0.996, 1.010 and 0.997**. All three allocation intervals include parity. A private allocation-index prototype took **1.44×, 2.35× and 2.58×** the parent's time in a separate 12-pair pilot. [Fixtures, build hashes and ordered process samples](reference-wait-evidence.json.gz) · [Complete-collection process records](reference-waits.csv)
+
+![Elapsed reference and allocation registration time relative to the parent, with 95% paired bootstrap intervals](reference-wait-cost.svg)
+
+A separate forced schedule on `93ea1b2b` parked the descriptor-region registry on a 24-byte heap. The sole registered worker attempted to return one regional descriptor. An asynchronous allocation missed its one-second deadline after an independent global donor became available. The general allocation-index stall and this regional return remain open. [Reproducer patch and observed failure](reference-wait-evidence.json.gz)
 
 ## Helping a stopped selector after lease release
 
