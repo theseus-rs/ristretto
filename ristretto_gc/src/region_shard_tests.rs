@@ -610,7 +610,7 @@ fn async_allocation_reports_exhaustion_with_an_empty_shard_parked_and_all_backin
     let mut future = std::pin::pin!(crate::HeapBuffer::try_with_fn_in_async(
         &gc,
         32,
-        |_| -> crate::Result<u8> {
+        |_| -> Result<u8> {
             panic!("no usable physical backing");
         }
     ));
@@ -621,7 +621,7 @@ fn async_allocation_reports_exhaustion_with_an_empty_shard_parked_and_all_backin
     });
     drop(parked);
     assert!(
-        matches!(result, Some(Err(crate::Error::OutOfMemory))),
+        matches!(result, Some(Err(Error::OutOfMemory))),
         "{result:?}"
     );
     assert!(gc.completed_full_ticket() > before);
