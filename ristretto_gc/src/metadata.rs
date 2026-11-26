@@ -497,6 +497,8 @@ impl ObjectMetadata {
                     metadata: self,
                     collector,
                 };
+                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                crate::refund_tests::before_storage_drop();
                 std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     drop(allocation);
                 }))

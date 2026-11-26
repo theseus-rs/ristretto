@@ -19,45 +19,6 @@ pub(super) fn pause_unlink() {
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
-fn allocate_when_woken(
-    gc: &Arc<crate::GarbageCollector>,
-    value: u64,
-    start: &std::sync::Barrier,
-) -> Option<crate::Result<crate::GcRootGuard<u64>>> {
-    use std::{
-        future::Future,
-        sync::mpsc,
-        task::{Context, Poll, Wake, Waker},
-        time::{Duration, Instant},
-    };
-    struct WakePeer(mpsc::SyncSender<()>);
-    impl Wake for WakePeer {
-        fn wake(self: Arc<Self>) {
-            self.wake_by_ref();
-        }
-        fn wake_by_ref(self: &Arc<Self>) {
-            let _ = self.0.try_send(());
-        }
-    }
-    let (send, notifications) = mpsc::sync_channel(1);
-    let waker = Waker::from(Arc::new(WakePeer(send)));
-    let mut cx = Context::from_waker(&waker);
-    let mut allocation = Box::pin(crate::Gc::try_new_async(gc, value));
-    let first = allocation.as_mut().poll(&mut cx);
-    // Every competing request must observe a full heap before any peer assists.
-    start.wait();
-    assert!(first.is_pending());
-    let deadline = Instant::now() + Duration::from_secs(3);
-    loop {
-        let left = deadline.checked_duration_since(Instant::now())?;
-        notifications.recv_timeout(left).ok()?;
-        if let Poll::Ready(result) = allocation.as_mut().poll(&mut cx) {
-            return Some(result);
-        }
-    }
-}
-
-#[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[test]
 #[expect(
     clippy::unwrap_in_result,
@@ -110,7 +71,7 @@ fn capped_peer_reclaims_while_the_last_identity_page_is_being_unlinked() -> crat
                     let (gc, start, send) = (gc.clone(), start.clone(), send.clone());
                     thread::spawn(move || {
                         let value = 23 + i as u64;
-                        let result = allocate_when_woken(&gc, value, &start);
+                        let result = crate::refund_tests::allocate_when_woken(&gc, value, &start);
                         let _ = send.send((value, result));
                     })
                 })

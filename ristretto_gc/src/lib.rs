@@ -61,6 +61,8 @@ mod private_allocation;
 mod publication_directory;
 mod publication_queue;
 mod recovery;
+#[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+mod refund_tests;
 pub mod region;
 #[expect(
     dead_code,
