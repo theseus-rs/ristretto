@@ -1,0 +1,10 @@
+[workspace]
+
+[package]
+name = "ristretto-catalog-cost-prototype"
+version = "0.0.0"
+edition = "2024"
+
+[dependencies]
+tree = { package = "ristretto-catalog-prototype", path = "../catalog-prototype" }
+descriptor = { package = "ristretto-catalog-descriptor-prototype", path = "../catalog-descriptor-prototype" }

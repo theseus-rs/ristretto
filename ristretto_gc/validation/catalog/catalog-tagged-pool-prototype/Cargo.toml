@@ -1,0 +1,9 @@
+[package]
+name = "gc-tagged-pool-experiment"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+loom = "0.7.2"

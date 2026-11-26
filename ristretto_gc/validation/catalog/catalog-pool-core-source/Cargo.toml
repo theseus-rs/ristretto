@@ -1,0 +1,12 @@
+[workspace]
+
+[package]
+name = "ristretto-catalog-pool-prototype"
+version = "0.0.0"
+edition = "2024"
+
+[dependencies]
+arc-swap = "=1.9.4"
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+loom = "=0.7.2"

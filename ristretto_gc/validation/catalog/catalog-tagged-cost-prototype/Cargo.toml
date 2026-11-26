@@ -1,0 +1,11 @@
+[workspace]
+[package]
+name = "ristretto-catalog-tagged-cost-prototype"
+version = "0.0.0"
+edition = "2024"
+[features]
+counts = []
+[dependencies]
+pooled = { package = "ristretto-catalog-pooled-prototype", path = "../catalog-pooled-prototype" }
+tagged = { package = "ristretto-catalog-tagged-prototype", path = "../catalog-tagged-prototype" }
+pool = { package = "gc-tagged-pool-experiment", path = "../catalog-tagged-pool-prototype" }

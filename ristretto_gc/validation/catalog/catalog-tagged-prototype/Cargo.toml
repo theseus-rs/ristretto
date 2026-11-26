@@ -1,0 +1,45 @@
+[package]
+name = "ristretto-catalog-tagged-prototype"
+version = "0.0.0"
+edition = "2024"
+
+[dependencies]
+pool = { package = "gc-tagged-pool-experiment", path = "../catalog-tagged-pool-prototype" }
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+loom = "=0.7.2"
+
+[features]
+allocation-audit = []
+
+[[example]]
+name = "accounting"
+required-features = ["allocation-audit"]
+
+[[example]]
+name = "record_accounting"
+required-features = ["allocation-audit"]
+
+[[example]]
+name = "root_accounting"
+required-features = ["allocation-audit"]
+
+[[example]]
+name = "reference_accounting"
+required-features = ["allocation-audit"]
+
+[[example]]
+name = "allocation_accounting"
+required-features = ["allocation-audit"]
+
+[[example]]
+name = "runtime_storage_accounting"
+required-features = ["allocation-audit"]
+
+[[example]]
+name = "retry_accounting"
+required-features = ["allocation-audit"]
+
+[[example]]
+name = "edge_accounting"
+required-features = ["allocation-audit"]
