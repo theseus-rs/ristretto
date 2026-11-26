@@ -9,7 +9,8 @@ use std::sync::{Arc, Mutex, MutexGuard, Weak};
 
 #[path = "evacuation.rs"]
 mod evacuation;
-use evacuation::Evacuation;
+use crate::collector::try_lock;
+use evacuation::{Evacuation, Selection};
 
 #[cfg(test)]
 #[path = "region_shard_tests.rs"]
@@ -73,14 +74,22 @@ struct State {
 impl State {
     /// Unregister empty backing without releasing its physical charge. An escaped
     /// range owner can still retain it; `Region::drop` accounts for the actual free.
-    fn remove_region(&mut self, id: u64) -> Option<Arc<Region>> {
-        let region = self.regions.remove(&id)?;
+    fn remove_region(&mut self, id: u64, only_selected: bool) -> Option<Arc<Region>> {
+        let region = self.regions.get(&id)?;
         debug_assert_eq!(region.occupied(), 0);
+        // End can invalidate the epoch while this registry is locked. Use one
+        // source decision for both eager retirement and its physical-release metrics.
+        let selected = self
+            .evacuation
+            .as_ref()
+            .is_some_and(|plan| plan.source(region));
+        if only_selected && !selected {
+            return None;
+        }
+        let region = self.regions.remove(&id)?;
         self.available.remove(&(region.largest_free(), id));
         self.registered -= region.layout.size();
-        if let Some(evacuation) = &self.evacuation
-            && evacuation.source(&region)
-        {
+        if selected {
             region.evacuated.store(true, Ordering::Relaxed);
         }
         Some(region)
@@ -187,7 +196,7 @@ pub struct RegionHeap {
     states: Box<[Arc<Mutex<State>>]>,
     selection_shard: AtomicUsize,
     trim_shard: Mutex<usize>,
-    source_slots: Arc<AtomicUsize>,
+    selection: Option<Arc<Selection>>,
     budget: Arc<Budget>,
     identity: Arc<()>,
     region_size: usize,
@@ -198,7 +207,6 @@ pub struct RegionHeap {
     recopied: AtomicU64,
     destination_failures: AtomicU64,
     relocations: AtomicU64,
-    cost_aware: bool,
 }
 
 impl RegionHeap {
@@ -246,7 +254,7 @@ impl RegionHeap {
         assert_eq!(limit, budget.limit);
         assert!(reserve <= budget.reserve);
         let count = crate::index::shard_count(shards);
-        let source_slots = Arc::new(AtomicUsize::new(0));
+        let selection = cost_aware.then(|| Arc::new(Selection::default()));
         Arc::new(Self {
             budget,
             identity: Arc::new(()),
@@ -262,12 +270,11 @@ impl RegionHeap {
                         released: 0,
                         reclaimed: 0,
                         trim_cursor: 0,
-                        evacuation: cost_aware
-                            .then(|| Evacuation::with_quota(source_slots.clone())),
+                        evacuation: selection.as_ref().map(|s| Evacuation::new(s.clone())),
                     }))
                 })
                 .collect(),
-            source_slots,
+            selection,
             selection_shard: AtomicUsize::new(0),
             trim_shard: Mutex::new(0),
             region_size: region_size.max(1).min(limit.saturating_sub(reserve).max(1)),
@@ -278,7 +285,6 @@ impl RegionHeap {
             recopied: AtomicU64::new(0),
             destination_failures: AtomicU64::new(0),
             relocations: AtomicU64::new(0),
-            cost_aware,
         })
     }
 
@@ -322,18 +328,16 @@ impl RegionHeap {
     fn allocate_range(&self, layout: Layout, before: Option<u64>) -> Result<Block> {
         let evacuating = if let Some(id) = before {
             let state = lock(self.shard(self.index(id)));
-            let active = state.evacuation.as_ref().is_some_and(|plan| plan.active);
-            if active
-                && !state.regions.get(&id).is_some_and(|region| {
-                    state
-                        .evacuation
-                        .as_ref()
-                        .is_some_and(|plan| plan.source(region))
-                })
+            let epoch = self.selection.as_ref().and_then(|s| s.epoch());
+            if let Some(epoch) = epoch
+                && !state
+                    .regions
+                    .get(&id)
+                    .is_some_and(|region| Evacuation::source_at(region, epoch))
             {
                 return Err(Error::OutOfMemory);
             }
-            active
+            epoch.is_some()
         } else {
             false
         };
@@ -558,105 +562,87 @@ impl RegionHeap {
         if !self.owns(source) || !self.owns(destination) {
             return false;
         }
-        if !self.cost_aware {
+        let Some(selection) = &self.selection else {
             return true;
-        }
-        lock(self.shard(self.index(source.id())))
-            .evacuation
-            .as_ref()
-            .is_none_or(|plan| {
-                !plan.active
-                    || (plan.source(&source.region) && plan.is_destination(&destination.region))
-            })
+        };
+        let _source = lock(self.shard(self.index(source.id())));
+        selection.epoch().is_none_or(|epoch| {
+            Evacuation::source_at(&source.region, epoch)
+                && Evacuation::destination_at(&destination.region, epoch)
+        })
     }
 
     pub(crate) fn begin_evacuation(&self) -> bool {
-        self.source_slots
-            .store(evacuation::MAX_SOURCES, Ordering::Release);
-        self.selection_shard.store(0, Ordering::Release);
-        let mut active = true;
-        for shard in &self.states {
-            active &= lock(shard)
-                .evacuation
-                .as_mut()
-                .is_some_and(Evacuation::begin);
-        }
-        if !active {
-            self.end_evacuation();
-        }
-        active
+        self.selection.as_ref().is_some_and(|selection| {
+            self.selection_shard.store(0, Ordering::Relaxed);
+            selection.begin()
+        })
     }
 
-    pub(crate) fn select_evacuation(&self) -> bool {
+    /// A busy shard yields the helper. A successful probe reports whether selection is complete.
+    pub(crate) fn select_evacuation(&self) -> Option<bool> {
+        let Some(selection) = &self.selection else {
+            return Some(true);
+        };
+        let Some(epoch) = selection.epoch() else {
+            return Some(true);
+        };
         let index = self.selection_shard.load(Ordering::Acquire);
         if let Some(shard) = self.states.get(index) {
-            let mut state = lock(shard);
+            let mut state = try_lock(shard)?;
             let State {
                 regions,
                 evacuation,
                 ..
             } = &mut *state;
             if let Some(plan) = evacuation {
-                if plan.select(regions) {
-                    drop(state);
+                if plan.select(regions, epoch) {
                     self.end_evacuation();
-                    return true;
+                    return Some(true);
                 }
                 if plan.building() {
-                    return false;
+                    return Some(false);
                 }
             }
             self.selection_shard.store(index + 1, Ordering::Release);
-            return false;
+            return Some(false);
         }
-        if self.source_slots.load(Ordering::Acquire) == 0 {
-            return true;
+        if selection.remaining.load(Ordering::Acquire) == 0 {
+            return Some(true);
         }
-        // Compare one candidate per shard. Scores remain advisory and the chosen
-        // shard rechecks occupancy, mutation and roles under its own mutex.
-        let next = self
-            .states
-            .iter()
-            .enumerate()
-            .filter_map(|(index, shard)| {
-                lock(shard)
-                    .evacuation
-                    .as_ref()
-                    .and_then(Evacuation::next_cost)
-                    .map(|cost| (cost, index))
-            })
-            .min();
+        // Ranking requires a sample from every shard. Retry without choosing
+        // a winner when one is busy, retaining the shared source quota.
+        let mut next = None;
+        for (index, shard) in self.states.iter().enumerate() {
+            let state = try_lock(shard)?;
+            if let Some(cost) = state.evacuation.as_ref().and_then(Evacuation::next_cost) {
+                next = Some(next.map_or((cost, index), |best| std::cmp::min(best, (cost, index))));
+            }
+        }
         let Some((_, index)) = next else {
-            return true;
+            return Some(true);
         };
-        let mut state = lock(self.shard(index));
+        let mut state = try_lock(self.shard(index))?;
         let State {
             regions,
             evacuation,
             ..
         } = &mut *state;
         if let Some(plan) = evacuation {
-            plan.select(regions);
+            plan.select(regions, epoch);
         }
-        false
+        Some(false)
     }
 
     pub(crate) fn end_evacuation(&self) {
-        for shard in &self.states {
-            if let Some(plan) = &mut lock(shard).evacuation {
-                plan.active = false;
-            }
+        if let Some(selection) = &self.selection {
+            selection.end();
         }
     }
 
     #[cfg(all(test, not(target_family = "wasm")))]
     pub(crate) fn evacuation_active(&self) -> bool {
-        self.states.iter().any(|shard| {
-            lock(shard)
-                .evacuation
-                .as_ref()
-                .is_some_and(|plan| plan.active)
-        })
+        self.selection.as_ref().is_some_and(|s| s.epoch().is_some())
     }
 
     pub(crate) fn record_pin(&self, id: u64) {
@@ -698,7 +684,7 @@ impl RegionHeap {
                 continue;
             };
             state.trim_cursor = id;
-            if empty && let Some(region) = state.remove_region(id) {
+            if empty && let Some(region) = state.remove_region(id, false) {
                 // Backing deallocation can block in the system allocator.
                 drop(state);
                 drop(region);
@@ -1048,16 +1034,11 @@ impl Drop for Block {
             state
                 .available
                 .insert((self.region.largest_free(), self.region.id));
-            if let Some(plan) = &state.evacuation
-                && self.region.occupied() == 0
-                && plan.source(&self.region)
+            // Empty oversized arrays retire even outside a selection, so tiny
+            // copies cannot strand their backing until the next trim pass.
+            if self.region.occupied() == 0 && (state.evacuation.is_some() || self.region.oversized)
             {
-                retired = state.remove_region(self.region.id);
-            }
-            // Do not let a dead large array's backing absorb tiny copies before
-            // final trimming: those copies could strand almost the entire cap.
-            if retired.is_none() && self.region.oversized && self.region.occupied() == 0 {
-                retired = state.remove_region(self.region.id);
+                retired = state.remove_region(self.region.id, !self.region.oversized);
             }
         }
         // Region::drop accounts for backing deallocation and may lock this state.
@@ -1084,13 +1065,13 @@ mod tests {
             .filter_map(|(index, block)| index.is_multiple_of(2).then_some(block))
             .collect();
         assert!(heap.begin_evacuation());
-        assert!(!heap.select_evacuation()); // Snapshot the first sparse candidate.
+        assert!(!heap.select_evacuation().expect("uncontended selection")); // Snapshot the first sparse candidate.
         let small = Layout::from_size_align(64, 64).expect("small layout");
         let refill = heap
             .allocate(small, None)
             .expect("refill candidate after sampling");
         let mut steps = 1;
-        while !heap.select_evacuation() {
+        while !heap.select_evacuation().expect("uncontended selection") {
             steps += 1;
             assert!(steps <= 18); // At most eight entries plus eight candidates and boundaries.
         }
@@ -1124,7 +1105,7 @@ mod tests {
         drop(large);
         assert_eq!(heap.statistics().shared_committed_bytes, 1024);
         assert!(heap.begin_evacuation());
-        while !heap.select_evacuation() {}
+        while !heap.select_evacuation().expect("uncontended selection") {}
         small.compact_step(&heap, 512);
         assert_eq!(heap.statistics().shared_committed_bytes, 1024);
         assert!(small.iter().all(|value| *value == 7));
@@ -1167,7 +1148,7 @@ mod tests {
             .filter_map(|(index, buffer)| index.is_multiple_of(2).then_some(buffer))
             .collect();
         assert!(heap.begin_evacuation());
-        while !heap.select_evacuation() {}
+        while !heap.select_evacuation().expect("uncontended selection") {}
         for (index, buffer) in live.iter_mut().enumerate() {
             let address = buffer.as_ptr();
             assert_eq!(address.addr() % 256, 0);
@@ -1214,7 +1195,7 @@ mod tests {
         ));
         assert_eq!(heap.statistics().bytes_copied, 128);
         assert!(heap.begin_evacuation());
-        while !heap.select_evacuation() {}
+        while !heap.select_evacuation().expect("uncontended selection") {}
         for _ in 0..4 {
             source.compact_step(&heap, 128);
         }
@@ -1252,7 +1233,7 @@ mod tests {
         let pinned_address = pinned.as_ptr();
         let pinned_region = pinned.relocation_region(&heap).expect("region");
         assert!(heap.begin_evacuation());
-        while !heap.select_evacuation() {}
+        while !heap.select_evacuation().expect("uncontended selection") {}
         heap.record_pin(pinned_region);
         heap.end_evacuation();
         for value in 0..9 {
@@ -1263,7 +1244,7 @@ mod tests {
                 .expect("element") = value;
         }
         assert!(heap.begin_evacuation());
-        while !heap.select_evacuation() {}
+        while !heap.select_evacuation().expect("uncontended selection") {}
         let cold = live.get_mut(2).expect("cold payload");
         let cold_address = cold.as_ptr();
         for _ in 0..4 {
@@ -1281,7 +1262,7 @@ mod tests {
         heap.end_evacuation();
         // Pin feedback lasts one selection, not forever after the guard is gone.
         assert!(heap.begin_evacuation());
-        while !heap.select_evacuation() {}
+        while !heap.select_evacuation().expect("uncontended selection") {}
         let released = live.get_mut(1).expect("released payload");
         for _ in 0..4 {
             released.compact_step(&heap, 128);
@@ -1312,7 +1293,7 @@ mod tests {
         assert_eq!(heap.statistics().committed_bytes, 3072);
         assert!(heap.begin_evacuation());
         let mut selection_steps = 1;
-        while !heap.select_evacuation() {
+        while !heap.select_evacuation().expect("uncontended selection") {
             selection_steps += 1;
             assert!(selection_steps <= 8); // Three build units, three selections, two boundaries.
         }
@@ -1366,7 +1347,7 @@ mod tests {
             .filter_map(|(index, block)| index.is_multiple_of(2).then_some(block))
             .collect();
         assert!(heap.begin_evacuation());
-        while !heap.select_evacuation() {}
+        while !heap.select_evacuation().expect("uncontended selection") {}
         let tiny = Layout::from_size_align(64, 64).expect("layout");
         assert!(heap.allocate(tiny, None).is_err());
         // A pinned/hot source may remain unmoved; its spare space must not stay
@@ -1391,7 +1372,7 @@ mod tests {
         // local cache tail still owns the allocation. Dropping a registry Arc is
         // not the physical reclamation event.
         let removed = lock(&heap.states[0])
-            .remove_region(tail.id())
+            .remove_region(tail.id(), false)
             .expect("registered source");
         drop(removed);
         let held = heap.statistics();

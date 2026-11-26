@@ -76,6 +76,26 @@ pub(super) enum ContextUnit {
 }
 
 impl GarbageCollector {
+    pub(super) fn select_regions_unit(&self, cycle: &mut Cycle) -> Unit {
+        match self
+            .regions
+            .as_ref()
+            .map_or(Some(true), |heap| heap.select_evacuation())
+        {
+            None => Unit::Busy,
+            Some(done) => {
+                if done {
+                    cycle.phase = Phase::Compact;
+                    self.domain().relocation_ready.store(
+                        self.regions.is_some() && self.configuration.independent_relocation,
+                        Ordering::Release,
+                    );
+                }
+                Unit::Progress
+            }
+        }
+    }
+
     #[expect(
         clippy::too_many_lines,
         reason = "one budget for independent domain units"
@@ -158,20 +178,7 @@ impl GarbageCollector {
                     }
                     Phase::References => self.reference_unit(&mut cycle, &mut counters),
                     Phase::Sweep => self.sweep_unit(&mut cycle, &mut remaining, &mut counters),
-                    Phase::SelectRegions => {
-                        if self
-                            .regions
-                            .as_ref()
-                            .is_none_or(|heap| heap.select_evacuation())
-                        {
-                            cycle.phase = Phase::Compact;
-                            self.domain().relocation_ready.store(
-                                self.regions.is_some() && self.configuration.independent_relocation,
-                                Ordering::Release,
-                            );
-                        }
-                        Unit::Progress
-                    }
+                    Phase::SelectRegions => self.select_regions_unit(&mut cycle),
                     _ => Unit::Boundary,
                 };
                 match unit {

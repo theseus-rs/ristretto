@@ -51,7 +51,7 @@ fn evacuation_ranks_all_shards_and_shares_one_source_quota() {
         .collect();
     assert!(heap.begin_evacuation());
     for step in 0..100 {
-        if heap.select_evacuation() {
+        if heap.select_evacuation().expect("uncontended selection") {
             break;
         }
         assert!(
@@ -216,4 +216,111 @@ fn a_saturated_allocator_observes_a_returned_hole_while_its_preferred_shard_is_p
     });
     while !heap.trim(1) {}
     assert_eq!(budget.used.load(Ordering::Acquire), 0);
+}
+
+#[test]
+fn evacuation_roles_switch_before_the_first_shard_visit() {
+    let heap = RegionHeap::with_shards(1024, 4096, 0, Budget::new(4096), true, 2);
+    let layout = Layout::from_size_align(128, 64).expect("layout");
+    let old = heap
+        .allocate_selected(layout, None, false, 1)
+        .expect("source");
+    assert!(heap.begin_evacuation());
+    while !heap.select_evacuation().expect("uncontended selection") {}
+    let is_source = || {
+        lock(heap.shard(1))
+            .evacuation
+            .as_ref()
+            .expect("policy")
+            .source(&old.region)
+    };
+    assert!(is_source());
+    heap.end_evacuation();
+    assert!(!is_source());
+    assert!(heap.begin_evacuation());
+    assert!(!is_source());
+    // This allocation precedes even the first shard visit of the new epoch.
+    let refill = heap
+        .allocate_selected(layout, None, false, 1)
+        .expect("reusable source");
+    assert_eq!(refill.id(), old.id());
+    while !heap.select_evacuation().expect("uncontended selection") {}
+    let state = lock(heap.shard(1));
+    let plan = state.evacuation.as_ref().expect("policy");
+    assert!(plan.is_destination(&old.region));
+    assert!(!plan.source(&old.region));
+    drop(state);
+    heap.end_evacuation();
+    drop((old, refill));
+    while !heap.trim(4) {}
+    assert_eq!(heap.statistics().shared_committed_bytes, 0);
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn parked_registry_allows_phase_publication_and_bounded_selection_retry() {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for enabled in [false, true] {
+        let heap = RegionHeap::with_shards(1024, 4096, 0, Budget::new(4096), enabled, 2);
+        let layout = Layout::from_size_align(128, 64).expect("layout");
+        let block = heap
+            .allocate_selected(layout, None, false, 1)
+            .expect("source");
+        std::thread::scope(|scope| {
+            let parked = lock(heap.shard(1));
+            let (done, result) = mpsc::channel();
+            let heap = &heap;
+            scope.spawn(move || {
+                assert_eq!(heap.begin_evacuation(), enabled);
+                if enabled {
+                    assert_eq!(heap.select_evacuation(), Some(false)); // Visit the empty shard.
+                    assert_eq!(heap.select_evacuation(), None); // Parked next shard.
+                    assert_eq!(heap.select_evacuation(), None);
+                } else {
+                    assert_eq!(heap.select_evacuation(), Some(true));
+                }
+                heap.end_evacuation();
+                done.send(()).expect("phase completion");
+            });
+            let completed = result.recv_timeout(Duration::from_secs(3));
+            drop(parked);
+            completed.expect("a parked registry delayed an evacuation transition");
+        });
+        if enabled {
+            assert!(heap.begin_evacuation());
+            while !heap.select_evacuation().expect("uncontended selection") {}
+            let state = lock(heap.shard(1));
+            assert!(
+                state
+                    .evacuation
+                    .as_ref()
+                    .expect("policy")
+                    .source(&block.region)
+            );
+            drop(state);
+            heap.end_evacuation();
+        }
+    }
+}
+
+#[test]
+fn a_retired_source_keeps_its_release_accounting_after_the_epoch_ends() {
+    let heap = RegionHeap::with_policy(1024, 4096, 0, Budget::new(4096), true);
+    let layout = Layout::from_size_align(128, 64).expect("layout");
+    let block = heap.allocate(layout, None).expect("source");
+    assert!(heap.begin_evacuation());
+    while !heap.select_evacuation().expect("uncontended selection") {}
+    let backing = block.region.clone();
+    drop(block);
+    heap.end_evacuation();
+    let held = heap.statistics();
+    assert_eq!(held.regions, 0);
+    assert_eq!(held.evacuation_bytes_released, 0);
+    assert_eq!(held.shared_committed_bytes, 1024);
+    drop(backing);
+    let released = heap.statistics();
+    assert_eq!(released.evacuation_regions_released, 1);
+    assert_eq!(released.evacuation_bytes_released, 1024);
+    assert_eq!(released.shared_committed_bytes, 0);
 }
