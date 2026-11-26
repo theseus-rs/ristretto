@@ -29,7 +29,7 @@ fn legacy_packing_can_move_between_registries() {
         .expect("second region");
     assert!(earlier.id() < source.id());
     let destination = heap
-        .allocate(layout, Some(source.id()))
+        .allocate(layout, Some(&source))
         .expect("cross-shard destination");
     assert_eq!(destination.id(), earlier.id());
     drop((source, destination, earlier));
@@ -330,5 +330,60 @@ impl RegionHeap {
     pub(crate) fn with_parked_registry(&self, work: impl FnOnce()) {
         let _guard = lock(self.shard(0));
         work();
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn a_copy_starts_and_continues_while_its_source_registry_is_parked() {
+    use crate::{HeapBuffer, TraceProgress};
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    for already_copied in [0, 64] {
+        let heap =
+            RegionHeap::with_shards(1024, 4096, 1024, Budget::with_reserve(4096, 1024), true, 2);
+        let mut source = HeapBuffer::try_with_fn(Some(&heap), 256, |_| Ok(91_u8)).expect("payload");
+        let source_id = source.relocation_region(&heap).expect("source region");
+        let source_index = heap.index(source_id);
+        let filler = heap
+            .allocate_selected(
+                Layout::from_size_align(768, 64).expect("layout"),
+                None,
+                false,
+                1 - source_index,
+            )
+            .expect("destination with a free 256-byte range");
+        assert!(heap.begin_evacuation());
+        while !heap.select_evacuation().expect("uncontended selection") {}
+        if already_copied != 0 {
+            assert!(matches!(
+                source.compact_step(&heap, 64),
+                TraceProgress::Continue(64)
+            ));
+        }
+        std::thread::scope(|scope| {
+            let (done, recv) = mpsc::channel();
+            let source = &mut source;
+            let heap = &heap;
+            let parked = lock(heap.shard(source_index));
+            scope.spawn(move || {
+                let _ = done.send(source.compact_step(heap, 64));
+            });
+            let result = recv.recv_timeout(Duration::from_secs(3));
+            drop(parked);
+            assert!(
+                matches!(result.expect("copy waited for the source registry"),
+                TraceProgress::Continue(n) if n == already_copied + 64)
+            );
+        });
+        source.compact_step(&heap, 256);
+        assert!(source.iter().all(|value| *value == 91));
+        assert_eq!(source.relocation_region(&heap), Some(filler.id()));
+        assert_eq!(heap.statistics().bytes_copied, 256);
+        heap.end_evacuation();
+        drop((source, filler));
+        while !heap.trim(4) {}
+        assert_eq!(heap.statistics().shared_committed_bytes, 0);
     }
 }
