@@ -954,11 +954,7 @@ impl GarbageCollector {
             .dirty
             .retire(metadata.id.to_i64().cast_unsigned());
         if metadata.retire() {
-            cycle.reclaim.push_back(ReclaimTask {
-                metadata,
-                offset: 0,
-                finalized: false,
-            });
+            cycle.reclaim.push_back(ReclaimTask::new(metadata));
         } else {
             // Returning the retiring borrow may publish external clearing
             // work. Do not retain page or remembered guards for that handoff.

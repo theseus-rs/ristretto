@@ -71,6 +71,53 @@ struct Payload {
     allocation: crate::allocation::Erased,
     owner: Option<Arc<dyn crate::HeapOwner>>,
 }
+/// Owns the cleared value's backing, heap owner and charge until the physical
+/// range is returned. Inert external metadata references do not own this job.
+pub(crate) struct RegionalReturn {
+    payload: Option<Payload>,
+    metadata: MetadataRef,
+    selection: Option<crate::retirement_grants::Selection>,
+}
+
+impl std::fmt::Debug for RegionalReturn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RegionalReturn")
+            .field("id", &self.metadata.id)
+            .finish_non_exhaustive()
+    }
+}
+
+impl RegionalReturn {
+    pub(crate) fn finish(&mut self, gc: &crate::GarbageCollector) -> bool {
+        if let Some(payload) = self.payload.as_mut() {
+            // Destroy T with its complete range still reserved, outside all
+            // collector and region locks. Future retries own only its backing.
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                payload.allocation.destroy_value();
+            }))
+            .unwrap_or_else(|_| warn!("Drop function panicked during object cleanup"));
+            if !payload.allocation.try_return_region() {
+                return false;
+            }
+        }
+        self.metadata
+            .destroy_payload(self.payload.take(), Some(gc), self.selection.take());
+        true
+    }
+}
+impl Drop for RegionalReturn {
+    fn drop(&mut self) {
+        if self.payload.is_some() {
+            let heap = self.metadata.collector.upgrade();
+            self.metadata.destroy_payload(
+                self.payload.take(),
+                heap.as_deref(),
+                self.selection.take(),
+            );
+        }
+    }
+}
+
 type DropFn = Option<Payload>;
 
 /// Type and callback identity are immutable and shared by all matching allocations.
@@ -459,7 +506,6 @@ impl ObjectMetadata {
     /// Destroys the erased allocation owner if present. `take()`-guarded so it runs
     /// at most once. Used in shutdown phase 2 after all finalizers have run.
     ///
-    /// Uses `try_lock` to avoid deadlocking on a poisoned mutex from a prior panic.
     pub(crate) fn run_drop_fn(&self) {
         self.run_drop_fn_with_collector(None, None);
     }
@@ -479,23 +525,39 @@ impl ObjectMetadata {
         metadata: &mut MetadataRef,
         collector: &crate::GarbageCollector,
         selection: Option<crate::retirement_grants::Selection>,
-    ) {
+    ) -> Option<Box<RegionalReturn>> {
         assert!(
             std::ptr::eq(metadata.collector.as_ptr(), collector),
             "foreign descriptor refund collector"
         );
-        if let Some(unique) = MetadataRef::get_mut(metadata) {
-            if unique.storage.destroy_unique() {
-                let payload = unique
-                    .drop_fn
-                    .get_mut()
-                    .unwrap_or_else(std::sync::PoisonError::into_inner)
-                    .take();
-                unique.destroy_payload(payload, Some(collector), selection);
+        let payload = if let Some(unique) = MetadataRef::get_mut(metadata) {
+            if !unique.storage.destroy_unique() {
+                return None;
+            }
+            unique
+                .drop_fn
+                .get_mut()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .take()
+        } else {
+            if !metadata.storage.destroy() {
+                return None;
+            }
+            metadata.take_claimed_payload()
+        }?;
+        if payload.allocation.is_regional() {
+            let mut pending = RegionalReturn {
+                payload: Some(payload),
+                metadata: metadata.clone(),
+                selection,
+            };
+            if !pending.finish(collector) {
+                return Some(Box::new(pending));
             }
         } else {
-            metadata.run_drop_fn_with_collector(Some(collector), selection);
+            metadata.destroy_payload(Some(payload), Some(collector), selection);
         }
+        None
     }
 
     fn run_drop_fn_with_collector(
@@ -506,13 +568,17 @@ impl ObjectMetadata {
         if !self.storage.destroy() {
             return;
         }
-        let drop_fn = if let Ok(mut guard) = self.drop_fn.try_lock() {
-            guard.take()
-        } else {
-            warn!("Failed to acquire drop_fn lock during object cleanup; drop skipped");
-            return;
-        };
-        self.destroy_payload(drop_fn, collector, selection);
+        self.destroy_payload(self.take_claimed_payload(), collector, selection);
+    }
+
+    // Only the successful terminal storage transition reaches this method.
+    // The unique-owner path already holds &mut self. Neither path invokes a
+    // callback while accessing the slot, so a parked peer cannot own its lock.
+    fn take_claimed_payload(&self) -> DropFn {
+        self.drop_fn
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take()
     }
 
     fn destroy_payload(

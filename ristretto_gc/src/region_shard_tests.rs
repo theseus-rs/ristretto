@@ -387,3 +387,31 @@ fn a_copy_starts_and_continues_while_its_source_registry_is_parked() {
         assert_eq!(heap.statistics().shared_committed_bytes, 0);
     }
 }
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn last_unlinked_region_releases_its_backing_while_registry_is_parked() {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    let heap = RegionHeap::new(1024, 4096, 0);
+    let block = heap.allocate(Layout::new::<[u8; 4096]>(), None).unwrap();
+    let region = block.region.clone();
+    drop(block);
+    assert_eq!(heap.statistics().regions, 0);
+    assert_eq!(heap.budget.used.load(Ordering::Acquire), 4096);
+    let (done, finished) = mpsc::channel();
+    std::thread::scope(|scope| {
+        let locked = lock(heap.shard(0));
+        scope.spawn(move || {
+            drop(region);
+            done.send(()).unwrap();
+        });
+        let before_release = finished.recv_timeout(Duration::from_secs(1));
+        drop(locked);
+        assert!(before_release.is_ok());
+    });
+    let stats = heap.statistics();
+    assert_eq!(stats.shared_committed_bytes, 0);
+    assert_eq!(stats.committed_bytes, 0);
+    assert_eq!(stats.regions_released, 1);
+}

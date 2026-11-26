@@ -188,7 +188,7 @@ fn recover_with_parked_reaper(
 }
 
 use std::future::Future;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::task::{Context, Poll, Wake, Waker};
 use std::time::Instant;
 
@@ -788,6 +788,26 @@ fn publishing_a_second_returned_lease_cannot_revoke_the_first_physical_claim() -
     reason = "bounded forced schedule"
 )]
 fn a_busy_descriptor_registry_does_not_strand_an_unrelated_native_allocation() -> Result<()> {
+    #[derive(Default)]
+    struct Counts {
+        cleared: AtomicUsize,
+        dropped: AtomicUsize,
+    }
+    struct Tracked(Arc<Counts>);
+    // SAFETY: the payload holds only host counters, with no managed edges.
+    unsafe impl crate::Trace for Tracked {
+        fn trace(&self, _: &GarbageCollector) {}
+        fn clear_step(&mut self, _: usize, _: usize) -> crate::TraceProgress {
+            self.0.cleared.fetch_add(1, Ordering::Relaxed);
+            crate::TraceProgress::Complete
+        }
+    }
+    impl Drop for Tracked {
+        fn drop(&mut self) {
+            self.0.dropped.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+    let counts = Arc::new(Counts::default());
     let gc = GarbageCollector::with_config(
         Configuration::builder()
             .local_allocation_buffers(true)
@@ -801,7 +821,7 @@ fn a_busy_descriptor_registry_does_not_strand_an_unrelated_native_allocation() -
     );
     let global = Gc::try_new(&gc, 11_u64)?;
     let context = gc.register_context();
-    let regional = context.with(|| Gc::try_new(&gc, 13_u64))?;
+    let regional = context.with(|| Gc::try_new(&gc, Tracked(counts.clone())))?;
     let keep = context.with(|| Gc::try_new(&gc, 17_u64))?;
     assert_eq!(gc.managed_bytes(), 24);
     assert_eq!(gc.diagnostics().descriptor_occupied_bytes, 16);
@@ -824,7 +844,7 @@ fn a_busy_descriptor_registry_does_not_strand_an_unrelated_native_allocation() -
             heap.with_parked_descriptor_registry(|| {
                 entered.send(()).unwrap();
                 release.recv_timeout(Duration::from_secs(8)).unwrap();
-            })
+            });
         });
         parked.recv_timeout(Duration::from_secs(3)).unwrap();
         drop(region_lease);
@@ -847,12 +867,14 @@ fn a_busy_descriptor_registry_does_not_strand_an_unrelated_native_allocation() -
             std::thread::yield_now();
         }
         let recovered = peer.result.take();
+        let held_bytes = gc.managed_bytes();
         finished.store(true, Ordering::Release);
         resume.send(()).unwrap();
         assert!(
             observed.is_ok(),
             "worker must attempt returning regional storage"
         );
+        assert_eq!(held_bytes, 24);
         recovered
     });
     let root =
@@ -861,5 +883,7 @@ fn a_busy_descriptor_registry_does_not_strand_an_unrelated_native_allocation() -
     drop((root, keep, context));
     gc.collect_full()?;
     assert_eq!(gc.managed_bytes(), 0);
+    assert_eq!(counts.cleared.load(Ordering::Acquire), 1);
+    assert_eq!(counts.dropped.load(Ordering::Acquire), 1);
     Ok(())
 }

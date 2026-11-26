@@ -336,6 +336,26 @@ unsafe fn drop_value<T>(ptr: *mut u8) {
 }
 
 impl Erased {
+    pub(crate) fn is_regional(&self) -> bool {
+        matches!(self.storage, Storage::Region(_))
+    }
+
+    pub(crate) fn try_return_region(&mut self) -> bool {
+        if let Storage::Region(block) = &mut self.storage {
+            block.try_return()
+        } else {
+            false
+        }
+    }
+
+    pub(crate) fn destroy_value(&mut self) {
+        if let Some(drop_value) = self.drop_value.take() {
+            // SAFETY: erase installed this destructor for the initialized T.
+            // Taking it first prevents a second call on retry or unwind.
+            unsafe { drop_value(self.storage.ptr()) };
+        }
+    }
+
     pub(crate) fn direct_refund(&self, bytes: usize) -> bool {
         self.drop_value.is_none()
             && matches!(&self.storage, Storage::Global(raw) if raw.layout.size() == bytes)
@@ -344,11 +364,7 @@ impl Erased {
 
 impl Drop for Erased {
     fn drop(&mut self) {
-        if let Some(drop_value) = self.drop_value {
-            // SAFETY: this is the unique initialized owner until the destructor
-            // returns (or unwinds). Backing storage is released afterward.
-            unsafe { drop_value(self.storage.ptr()) };
-        }
+        self.destroy_value();
     }
 }
 

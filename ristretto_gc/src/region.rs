@@ -56,16 +56,31 @@ pub struct RegionStatistics {
     pub evacuation_bytes_released: u64,
 }
 
+/// Physical backing can outlive its last registered range. Its destructor
+/// updates this accounting after deallocation without reacquiring the registry.
+#[derive(Debug, Default)]
+struct BackingTotals {
+    committed: AtomicUsize,
+    released: AtomicU64,
+    evacuated_regions: AtomicU64,
+    evacuated_bytes: AtomicU64,
+}
+
+#[derive(Debug)]
+struct Registry {
+    state: Weak<Mutex<State>>,
+    totals: Arc<BackingTotals>,
+}
+
 #[derive(Debug)]
 struct State {
     regions: BTreeMap<u64, Arc<Region>>,
     // Largest free range first narrows candidates; Region::allocate checks alignment.
     available: BTreeSet<(usize, u64)>,
     next: u64,
-    committed: usize,
+    backing: Arc<BackingTotals>,
     registered: usize,
     occupied: usize,
-    released: u64,
     reclaimed: u64,
     trim_cursor: u64,
     evacuation: Option<Evacuation>,
@@ -87,7 +102,8 @@ impl State {
             return None;
         }
         let region = self.regions.remove(&id)?;
-        self.available.remove(&(region.largest_free(), id));
+        // All ranges have returned and coalesced across the whole backing.
+        self.available.remove(&(region.layout.size(), id));
         self.registered -= region.layout.size();
         if selected {
             region.evacuated.store(true, Ordering::Relaxed);
@@ -177,15 +193,17 @@ impl Drop for BackingCredit {
 }
 
 /// Rolls back a backing allocation reservation on failure or unwinding.
-struct Reservation<'a> {
-    state: &'a Mutex<State>,
+struct Reservation {
+    totals: Arc<BackingTotals>,
     bytes: usize,
 }
 
-impl Drop for Reservation<'_> {
+impl Drop for Reservation {
     fn drop(&mut self) {
         if self.bytes != 0 {
-            lock(self.state).committed -= self.bytes;
+            self.totals
+                .committed
+                .fetch_sub(self.bytes, Ordering::AcqRel);
         }
     }
 }
@@ -264,10 +282,9 @@ impl RegionHeap {
                         regions: BTreeMap::new(),
                         available: BTreeSet::new(),
                         next: 1 + index as u64,
-                        committed: 0,
+                        backing: Arc::default(),
                         registered: 0,
                         occupied: 0,
-                        released: 0,
                         reclaimed: 0,
                         trim_cursor: 0,
                         evacuation: selection.as_ref().map(|s| Evacuation::new(s.clone())),
@@ -474,39 +491,39 @@ impl RegionHeap {
             return Err(Error::OutOfMemory);
         }
         let size = self.region_size.max(layout.size());
-        let committed = state
-            .committed
-            .checked_add(size)
-            .ok_or(Error::OutOfMemory)?;
         let limit = if evacuating {
             self.limit
         } else {
             self.limit.saturating_sub(self.reserve)
         };
-        if committed > limit {
-            return Err(Error::OutOfMemory);
-        }
         let id = state.next;
         let next = id
             .checked_add(self.states.len() as u64)
             .ok_or(Error::OutOfMemory)?;
-        let backing = self.budget.reserve(size, evacuating)?;
-        state.next = next;
-        state.committed = committed;
-        let track_relocation = state.evacuation.is_some();
-        // Reserve before releasing the lock so concurrent allocations cannot exceed
-        // the physical limit. System allocation must not hold the heap registry lock.
-        drop(state);
+        state
+            .backing
+            .committed
+            .try_update(Ordering::AcqRel, Ordering::Acquire, |used| {
+                used.checked_add(size).filter(|total| *total <= limit)
+            })
+            .map_err(|_| Error::OutOfMemory)?;
         let mut reservation = Reservation {
-            state: self.shard(index),
+            totals: state.backing.clone(),
             bytes: size,
         };
+        let backing = self.budget.reserve(size, evacuating)?;
+        state.next = next;
+        let track_relocation = state.evacuation.is_some();
+        drop(state);
         let region = Arc::new(Region::new(
             id,
             Layout::from_size_align(size, layout.align().max(64))
                 .map_err(|_| Error::OutOfMemory)?,
             self.identity.clone(),
-            Arc::downgrade(self.shard(index)),
+            Registry {
+                state: Arc::downgrade(self.shard(index)),
+                totals: reservation.totals.clone(),
+            },
             backing,
             track_relocation,
             size > self.region_size,
@@ -731,10 +748,10 @@ impl RegionHeap {
         };
         for shard in &self.states {
             let state = lock(shard);
-            result.committed_bytes += state.committed;
+            result.committed_bytes += state.backing.committed.load(Ordering::Acquire);
             result.occupied_bytes += state.occupied;
             result.regions += state.regions.len();
-            result.regions_released += state.released;
+            result.regions_released += state.backing.released.load(Ordering::Acquire);
             result.regions_selected += state
                 .evacuation
                 .as_ref()
@@ -754,14 +771,10 @@ impl RegionHeap {
             result.pinned_region_skips +=
                 state.evacuation.as_ref().map_or(0, |plan| plan.pin_skips);
             result.hot_region_skips += state.evacuation.as_ref().map_or(0, |plan| plan.hot_skips);
-            result.evacuation_regions_released += state
-                .evacuation
-                .as_ref()
-                .map_or(0, |plan| plan.released_regions);
-            result.evacuation_bytes_released += state
-                .evacuation
-                .as_ref()
-                .map_or(0, |plan| plan.released_bytes);
+            result.evacuation_regions_released +=
+                state.backing.evacuated_regions.load(Ordering::Acquire);
+            result.evacuation_bytes_released +=
+                state.backing.evacuated_bytes.load(Ordering::Acquire);
         }
         result
     }
@@ -770,7 +783,7 @@ impl RegionHeap {
         let mut result = Pressure::default();
         for shard in &self.states {
             let state = shard.try_lock().ok()?;
-            result.committed += state.committed;
+            result.committed += state.backing.committed.load(Ordering::Acquire);
             result.free += state.registered.saturating_sub(state.occupied);
             result.largest_free = result
                 .largest_free
@@ -809,7 +822,7 @@ impl RegionHeap {
 
 #[derive(Debug)]
 struct Region {
-    state: Weak<Mutex<State>>,
+    registry: Registry,
     heap_identity: Arc<()>,
     id: u64,
     ptr: NonNull<u8>,
@@ -855,7 +868,7 @@ impl Region {
         id: u64,
         layout: Layout,
         heap_identity: Arc<()>,
-        state: Weak<Mutex<State>>,
+        registry: Registry,
         backing: BackingCredit,
         track_relocation: bool,
         oversized: bool,
@@ -864,7 +877,7 @@ impl Region {
         // SAFETY: a valid, nonzero allocation layout.
         let ptr = NonNull::new(unsafe { alloc(layout) }).ok_or(Error::OutOfMemory)?;
         Ok(Self {
-            state,
+            registry,
             heap_identity,
             id,
             ptr,
@@ -921,11 +934,11 @@ impl Region {
             offset: aligned,
             length: layout.size(),
             relocation: false,
+            returned: false,
         })
     }
 
-    fn release(&self, offset: usize, length: usize) {
-        let mut free = lock(&self.free);
+    fn release(&self, free: &mut FreeRanges, offset: usize, length: usize) {
         let mut start = offset;
         let mut size = length;
         if let Some((&previous, &length)) = free.by_offset.range(..offset).next_back()
@@ -948,17 +961,17 @@ impl Drop for Region {
         // SAFETY: all Block owners are gone; only Region owns this allocation and layout.
         unsafe { dealloc(self.ptr.as_ptr(), self.layout) };
         self.backing.reclamation = self.reclaimed.load(Ordering::Relaxed);
-        if self.registered.load(Ordering::Acquire)
-            && let Some(state) = self.state.upgrade()
-        {
-            let mut state = lock(&state);
-            state.committed -= self.layout.size();
-            state.released += 1;
-            if self.evacuated.load(Ordering::Relaxed)
-                && let Some(plan) = &mut state.evacuation
-            {
-                plan.released_regions += 1;
-                plan.released_bytes += self.layout.size() as u64;
+        if self.registered.load(Ordering::Acquire) {
+            let totals = &self.registry.totals;
+            totals
+                .committed
+                .fetch_sub(self.layout.size(), Ordering::AcqRel);
+            totals.released.fetch_add(1, Ordering::Relaxed);
+            if self.evacuated.load(Ordering::Relaxed) {
+                totals.evacuated_regions.fetch_add(1, Ordering::Relaxed);
+                totals
+                    .evacuated_bytes
+                    .fetch_add(self.layout.size() as u64, Ordering::Relaxed);
             }
         }
         // The shared BackingCredit field refunds after actual deallocation too.
@@ -973,6 +986,7 @@ pub(crate) struct Block {
     // Raw destinations and transferred sources do not represent new capacity
     // from dead payloads. Counting them can make OOM recovery retry forever.
     relocation: bool,
+    returned: bool,
 }
 
 impl Block {
@@ -1006,6 +1020,7 @@ impl Block {
             offset: self.offset,
             length,
             relocation: self.relocation,
+            returned: false,
         };
         self.offset += length;
         self.length -= length;
@@ -1020,22 +1035,40 @@ impl Block {
     }
 }
 
-impl Drop for Block {
-    fn drop(&mut self) {
-        // Always acquire the registry before the range map, as allocation does.
-        // The weak link permits buffers to outlive their heap without a cycle.
+impl Block {
+    /// Return a fully destroyed payload's range. A busy registry or range map
+    /// leaves both physical ownership and its accounting with the caller.
+    pub(crate) fn try_return(&mut self) -> bool {
+        if self.returned {
+            return true;
+        }
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         crate::refund_tests::before_region_return();
-        let state = self.region.state.upgrade();
-        let mut state = state.as_ref().map(|state| lock(state));
-        let previous = self.region.largest_free();
+        let registry = self.region.registry.state.upgrade();
+        let state = if let Some(registry) = &registry {
+            let Some(state) = try_lock(registry) else {
+                return false;
+            };
+            Some(state)
+        } else {
+            None
+        };
+        let Some(mut free) = try_lock(&self.region.free) else {
+            return false;
+        };
+        self.release_locked(state, &mut free);
+        self.returned = true;
+        true
+    }
+
+    fn release_locked(&self, mut state: Option<MutexGuard<'_, State>>, free: &mut FreeRanges) {
+        let previous = free.by_size.last().map_or(0, |(size, _)| *size);
         if self.length != 0 {
-            self.region.release(self.offset, self.length);
+            self.region.release(free, self.offset, self.length);
             if !self.relocation {
                 self.region.reclaimed.store(true, Ordering::Relaxed);
             }
         }
-        let mut retired = None;
         if let Some(state) = &mut state
             && state.regions.contains_key(&self.region.id)
         {
@@ -1044,20 +1077,27 @@ impl Drop for Block {
                 state.reclaimed = state.reclaimed.wrapping_add(self.length as u64);
             }
             state.available.remove(&(previous, self.region.id));
-            state
-                .available
-                .insert((self.region.largest_free(), self.region.id));
-            // Empty oversized arrays retire even outside a selection, so tiny
-            // copies cannot strand their backing until the next trim pass.
+            let largest = free.by_size.last().map_or(0, |(size, _)| *size);
+            state.available.insert((largest, self.region.id));
             if self.region.occupied() == 0 && (state.evacuation.is_some() || self.region.oversized)
             {
-                retired = state.remove_region(self.region.id, !self.region.oversized);
+                state.remove_region(self.region.id, !self.region.oversized);
             }
         }
-        // Region::drop accounts for backing deallocation and may lock this state.
-        // The Block's own Arc drops only after this method has released the lock.
-        drop(state);
-        drop(retired);
+    }
+}
+
+impl Drop for Block {
+    fn drop(&mut self) {
+        if self.returned {
+            return;
+        }
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        crate::refund_tests::before_region_return();
+        let registry = self.region.registry.state.upgrade();
+        let state = registry.as_ref().map(|registry| lock(registry));
+        let mut free = lock(&self.region.free);
+        self.release_locked(state, &mut free);
     }
 }
 
@@ -1452,10 +1492,10 @@ mod tests {
     #[test]
     fn pressure_skips_busy_registry_and_excludes_unregistered_credits() {
         let heap = RegionHeap::new(1024, 2048, 0);
-        let mut state = lock(&heap.states[0]);
+        let state = lock(&heap.states[0]);
         assert!(heap.pressure().is_none());
         // Simulate a reserved backing allocation not yet installed in the registry.
-        state.committed = 1024;
+        state.backing.committed.store(1024, Ordering::Release);
         drop(state);
         let pressure = heap.pressure().expect("registry");
         assert_eq!(pressure.committed, 1024);

@@ -439,8 +439,39 @@ impl ReservedFullScan {
 #[derive(Debug)]
 struct ReclaimTask {
     metadata: MetadataRef,
-    offset: usize,
-    finalized: bool,
+    stage: ReclaimStage,
+}
+
+#[derive(Debug)]
+enum ReclaimStage {
+    Clear { offset: usize, finalized: bool },
+    Return(Box<crate::metadata::RegionalReturn>),
+}
+
+enum RetirementStep {
+    Progress(bool),
+    Contended,
+}
+
+impl ReclaimTask {
+    fn new(metadata: MetadataRef) -> Self {
+        Self {
+            metadata,
+            stage: ReclaimStage::Clear {
+                offset: 0,
+                finalized: false,
+            },
+        }
+    }
+
+    fn advance(&mut self, progress: TraceProgress) {
+        if let ReclaimStage::Clear { offset, finalized } = &mut self.stage {
+            *finalized = true;
+            if let TraceProgress::Continue(next) = progress {
+                *offset = next;
+            }
+        }
+    }
 }
 
 /// Accumulate useful work without taking the statistics mutex for every object.
@@ -4523,23 +4554,15 @@ impl GarbageCollector {
         if metadata.can_transfer_retired_charge() {
             self.released_donors.publish(metadata);
         } else {
-            self.publish_retirement(ReclaimTask {
-                metadata,
-                offset: 0,
-                finalized: false,
-            });
+            self.publish_retirement(ReclaimTask::new(metadata));
         }
     }
 
     /// Publish a continuation before releasing the current callback's ready count.
-    fn queue_clearing(&self, metadata: MetadataRef, offset: usize, finalized: bool) {
+    fn queue_clearing(&self, task: ReclaimTask) {
         self.retired_objects.fetch_add(1, Ordering::AcqRel);
         self.retired_ready.fetch_add(1, Ordering::AcqRel);
-        self.publish_retirement(ReclaimTask {
-            metadata,
-            offset,
-            finalized,
-        });
+        self.publish_retirement(task);
     }
 
     fn publish_retirement(&self, task: ReclaimTask) {
@@ -4561,30 +4584,52 @@ impl GarbageCollector {
     /// callback unwinds, its partially cleared payload can only be destroyed.
     fn clear_retired(
         &self,
-        metadata: &mut MetadataRef,
-        offset: usize,
-        finalized: bool,
+        task: &mut ReclaimTask,
         budget: usize,
         counters: &mut WorkCounters,
         selection: Option<crate::retirement_grants::Selection>,
     ) -> TraceProgress {
         use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
-        debug_assert!(metadata.storage_ready());
-        let callback_panic = match catch_unwind(AssertUnwindSafe(|| {
-            if !finalized {
-                metadata.run_finalizer();
+        let metadata = &mut task.metadata;
+        let callback_panic = if let ReclaimStage::Clear { offset, finalized } = task.stage {
+            debug_assert!(metadata.storage_ready());
+            match catch_unwind(AssertUnwindSafe(|| {
+                if !finalized {
+                    metadata.run_finalizer();
+                }
+                metadata.trace.clear_step(offset, budget)
+            })) {
+                Ok(TraceProgress::Complete) => None,
+                Ok(progress) => return progress,
+                Err(panic) => Some(panic),
             }
-            metadata.trace.clear_step(offset, budget)
-        })) {
-            Ok(TraceProgress::Complete) => None,
-            Ok(progress) => return progress,
-            Err(panic) => Some(panic),
+        } else {
+            None
         };
-        // Drop the storage even if other owners still hold inert metadata. Its
-        // own refund guard also runs if reporting a destructor panic unwinds.
-        let destruction = catch_unwind(AssertUnwindSafe(|| {
-            ObjectMetadata::destroy_retired(metadata, self, selection);
+        let destruction = catch_unwind(AssertUnwindSafe(|| match &mut task.stage {
+            ReclaimStage::Clear { .. } => {
+                if let Some(region) = ObjectMetadata::destroy_retired(metadata, self, selection) {
+                    task.stage = ReclaimStage::Return(region);
+                    false
+                } else {
+                    true
+                }
+            }
+            ReclaimStage::Return(region) => region.finish(self),
         }));
+        if matches!(destruction, Ok(false)) {
+            if let Some(panic) = callback_panic {
+                // Preserve sole ownership of deferred backing before propagating
+                // the callback panic. The queued job accounts for its own refund.
+                let mut next = ReclaimTask::new(metadata.clone());
+                std::mem::swap(&mut next.stage, &mut task.stage);
+                self.queue_clearing(next);
+                self.retired_ready.fetch_sub(1, Ordering::AcqRel);
+                self.wake();
+                resume_unwind(panic);
+            }
+            return TraceProgress::Busy;
+        }
         self.retired_bytes
             .fetch_sub(metadata.size(), Ordering::AcqRel);
         counters.swept += 1;
@@ -4604,26 +4649,14 @@ impl GarbageCollector {
     /// sweep while that exact epoch has space in its bounded continuation queue.
     fn reclaim_swept(
         &self,
-        task: ReclaimTask,
+        mut task: ReclaimTask,
         index: usize,
         epoch: u64,
         budget: usize,
         counters: &mut WorkCounters,
         selection: Option<crate::retirement_grants::Selection>,
     ) {
-        let ReclaimTask {
-            mut metadata,
-            offset,
-            finalized,
-        } = task;
-        let progress = self.clear_retired(
-            &mut metadata,
-            offset,
-            finalized,
-            budget,
-            counters,
-            selection,
-        );
+        let progress = self.clear_retired(&mut task, budget, counters, selection);
         if progress == TraceProgress::Complete {
             if let Some(scheduler) = &self.scheduler
                 && let Ok(mut cycle) = self.domain_at(index).cycle.try_lock()
@@ -4634,27 +4667,19 @@ impl GarbageCollector {
                 if cycle.reclaimed_bytes == 0 {
                     scheduler.reclaimed();
                 }
-                cycle.reclaimed_bytes = cycle.reclaimed_bytes.saturating_add(metadata.size());
+                cycle.reclaimed_bytes = cycle.reclaimed_bytes.saturating_add(task.metadata.size());
             }
         } else {
-            let offset = if let TraceProgress::Continue(next) = progress {
-                next
-            } else {
-                offset
-            };
+            task.advance(progress);
             if progress != TraceProgress::Busy
                 && let Ok(mut cycle) = self.domain_at(index).cycle.try_lock()
                 && cycle.epoch == epoch
                 && cycle.phase == Phase::Sweep
                 && cycle.reclaim.len() < phase_work::SWEEP_BATCH
             {
-                cycle.reclaim.push_back(ReclaimTask {
-                    metadata,
-                    offset,
-                    finalized: true,
-                });
+                cycle.reclaim.push_back(task);
             } else {
-                self.queue_clearing(metadata, offset, true);
+                self.queue_clearing(task);
             }
         }
         self.retired_ready.fetch_sub(1, Ordering::AcqRel);
@@ -4671,7 +4696,7 @@ impl GarbageCollector {
         &self,
         concurrent: bool,
         check: Option<&mut crate::retirement_grants::ReleasedCheck>,
-    ) -> Option<bool> {
+    ) -> Option<RetirementStep> {
         // Popping transfers exclusive descriptor ownership to this call. It has
         // already been removed from every generation's registry, so neither the
         // coordinator nor a generation cursor protects this callback's storage.
@@ -4701,59 +4726,36 @@ impl GarbageCollector {
                     self.record_step(started, cpu_started, concurrent, &mut counters);
                     drop(timing.measure_from(self.diagnostics_enabled(), started));
                     self.notify_progress();
-                    return Some(false);
+                    return Some(RetirementStep::Progress(false));
                 }
                 Some(crate::retirement_grants::ReleasedWork::Claimed(metadata, selection)) => {
-                    task = Some((
-                        ReclaimTask {
-                            metadata,
-                            offset: 0,
-                            finalized: false,
-                        },
-                        Some(selection),
-                    ));
+                    task = Some((ReclaimTask::new(metadata), Some(selection)));
                 }
                 None => task = queued(),
             }
         }
-        let (
-            ReclaimTask {
-                mut metadata,
-                offset,
-                finalized,
-            },
-            selection,
-        ) = task?;
+        let (mut task, selection) = task?;
         let measurement = timing.measure_from(self.diagnostics_enabled(), started);
         self.retired_objects.fetch_sub(1, Ordering::AcqRel);
-        let budget = budget.min(metadata.trace.budget);
-        let progress = self.clear_retired(
-            &mut metadata,
-            offset,
-            finalized,
-            budget,
-            &mut counters,
-            selection,
-        );
+        let budget = budget.min(task.metadata.trace.budget);
+        let progress = self.clear_retired(&mut task, budget, &mut counters, selection);
+        let contended =
+            progress == TraceProgress::Busy && matches!(task.stage, ReclaimStage::Return(_));
         if progress == TraceProgress::Complete {
             self.retired_ready.fetch_sub(1, Ordering::AcqRel);
         } else {
-            let offset = if let TraceProgress::Continue(next) = progress {
-                next
-            } else {
-                offset
-            };
+            task.advance(progress);
             self.retired_objects.fetch_add(1, Ordering::AcqRel);
-            self.publish_retirement(ReclaimTask {
-                metadata,
-                offset,
-                finalized: true,
-            });
+            self.publish_retirement(task);
         }
         self.record_step(started, cpu_started, concurrent, &mut counters);
         drop(measurement);
         self.notify_progress();
-        Some(!self.pending())
+        Some(if contended {
+            RetirementStep::Contended
+        } else {
+            RetirementStep::Progress(!self.pending())
+        })
     }
 
     /// Performs at most one configured batch. Returns true when no collection is pending.
@@ -4956,9 +4958,12 @@ impl GarbageCollector {
                     .domains
                     .iter()
                     .any(|domain| domain.active() || domain.requested.load(Ordering::Acquire)))
-            && let Some(done) = self.reap_retired(concurrent, None)
+            && let Some(step) = self.reap_retired(concurrent, None)
         {
-            return Some(done);
+            return match step {
+                RetirementStep::Progress(done) => Some(done),
+                RetirementStep::Contended => None,
+            };
         }
         // Alternate drains with tracing/phase work so a replenished buffer cannot
         // starve marking. Busy claims rotate without dropping their reservation.

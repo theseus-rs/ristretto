@@ -54,8 +54,6 @@ pub(super) struct Evacuation {
     pub(super) selected_regions: u64,
     pub(super) selected_bytes: u64,
     pub(super) selection_skips: u64,
-    pub(super) released_regions: u64,
-    pub(super) released_bytes: u64,
     pub(super) pin_skips: u64,
     pub(super) hot_skips: u64,
 }
@@ -77,8 +75,6 @@ impl Evacuation {
             selected_regions: 0,
             selected_bytes: 0,
             selection_skips: 0,
-            released_regions: 0,
-            released_bytes: 0,
             pin_skips: 0,
             hot_skips: 0,
         }
