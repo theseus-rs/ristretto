@@ -58,8 +58,7 @@ struct Observations {
     earlier: arc_swap::ArcSwapOption<Vec<std::sync::Weak<RefundGroup>>>,
 }
 
-#[cfg(not(target_family = "wasm"))]
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 struct Workers {
     count: usize,
     exit: u64,
@@ -257,35 +256,35 @@ impl Recovery {
             .ok();
     }
 
-    pub(crate) fn registered_workers(&self) -> usize {
+    #[cfg_attr(
+        target_family = "wasm",
+        expect(
+            clippy::unused_self,
+            reason = "cooperative collectors have no native worker state"
+        )
+    )]
+    fn worker_snapshot(&self) -> Workers {
         #[cfg(not(target_family = "wasm"))]
-        return self.workers.load().count;
+        return **self.workers.load();
         #[cfg(target_family = "wasm")]
-        0
+        Workers::default()
+    }
+
+    pub(crate) fn registered_workers(&self) -> usize {
+        self.worker_snapshot().count
     }
 
     fn worker_exit(&self) -> u64 {
-        #[cfg(not(target_family = "wasm"))]
-        return self.workers.load().exit;
-        #[cfg(target_family = "wasm")]
-        0
+        self.worker_snapshot().exit
     }
 
     fn worker_status(&self) -> (usize, bool) {
-        #[cfg(not(target_family = "wasm"))]
-        {
-            let workers = self.workers.load();
-            (workers.count, workers.failed)
-        }
-        #[cfg(target_family = "wasm")]
-        (0, false)
+        let workers = self.worker_snapshot();
+        (workers.count, workers.failed)
     }
 
     fn worker_failed(&self) -> bool {
-        #[cfg(not(target_family = "wasm"))]
-        return self.workers.load().failed;
-        #[cfg(target_family = "wasm")]
-        false
+        self.worker_snapshot().failed
     }
 
     /// Install before requesting a cycle, including before the first future poll.
