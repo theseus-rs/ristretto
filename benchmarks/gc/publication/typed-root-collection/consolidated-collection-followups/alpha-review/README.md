@@ -49,3 +49,5 @@ To reproduce the rejected implementation, apply the decompressed patch to
 `2e9795b8` with the regression test present. Its changes are research evidence.
 
 [Trial order and outcomes](paired-region-outcomes.json) · [Regional experiment patch](paired-region-experiment.patch.gz)
+
+[Three atomic host slab layouts, allocation timings and sparse physical retention](host-slabs/README.md)
