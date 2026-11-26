@@ -379,7 +379,7 @@ fn a_guarded_payload_and_parked_registry_allow_an_independent_full_ticket() {
         let payload = crate::HeapBuffer::try_with_fn(Some(heap), 32, |i| Ok(i as u64))
             .expect("regional payload");
         let source = heap.index(payload.relocation_region(heap).expect("source region"));
-        let owner = crate::Gc::new(&gc, crate::RwLock::new(payload));
+        let owner = crate::Gc::new(&gc, crate::cell::RwLock::new(payload));
         let guard = owner.read();
         let address = guard.as_ptr();
         drop(crate::Gc::new(&gc, 93_u64));
