@@ -2,6 +2,21 @@
 
 ## Tenfold complete-collection gate
 
+At `b041f0c3`, all 36 complete-collection cells passed against `f1daebeb`.
+The weakest 95% lower bounds were 10.55× native and 11.76× WASI. The
+previous integrated revision missed one native condition at 9.88×. Per-lane
+mature strong-mark counts preserve the sweep coverage check. In 200 forced
+two-lane schedules the collection ticket stayed open while one lane had
+marked targets but had yet to publish its tally.
+
+Shared contexts can spend prepaid bytes with a parked range cache and wake
+after a real refund while a collector is paused in tracing. A space observer
+keeps refills visible through cancellation, stolen refunds and context changes.
+The native default and all-feature GC suites, WASI tests, bare Wasm build,
+strict Clippy and verified Cargo package passed. The independent-donor
+hard-cap failure below remains open.
+[Measurements, process receipts and package identity](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md).
+
 At `74275197`, a parked target address shard permits clean buffered edge
 publication during an explicit context flush, a mutator overflow and collector
 draining. The forced schedules retain the graph and keep a privately claimed
@@ -26,9 +41,7 @@ four policies in 100 fresh native processes.
 A separate shared-context experiment passed the 10× timing gate but could
 return OOM for 8 bytes while 4,088 prepaid bytes remained in the same
 context. A forced refill between cache lookup and global reservation reproduced
-the failure. Before integrating this path, require the competing allocator to
-consume the refill exactly once and a waiting future to receive a wake when
-the refill makes its reservation possible.
+the failure. The corrected shared-interest path and its wake-driven tests are recorded above.
 [Reproduction and timings](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md).
 
 At `74275197`, all three runtimes completed all arrivals. At 1,500/s the
