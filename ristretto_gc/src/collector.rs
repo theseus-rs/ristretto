@@ -6456,6 +6456,16 @@ unsafe impl<T> Trace for Mutex<T>
 where
     T: Trace,
 {
+    fn needs_clear() -> bool {
+        T::needs_clear()
+    }
+
+    fn clear_step(&mut self, offset: usize, budget: usize) -> TraceProgress {
+        self.get_mut()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clear_step(offset, budget)
+    }
+
     fn may_contain_gc_references() -> bool {
         T::may_contain_gc_references()
     }
@@ -6497,6 +6507,16 @@ unsafe impl<T> Trace for RwLock<T>
 where
     T: Trace,
 {
+    fn needs_clear() -> bool {
+        T::needs_clear()
+    }
+
+    fn clear_step(&mut self, offset: usize, budget: usize) -> TraceProgress {
+        self.get_mut()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clear_step(offset, budget)
+    }
+
     fn may_contain_gc_references() -> bool {
         T::may_contain_gc_references()
     }
@@ -6540,6 +6560,14 @@ unsafe impl<T> Trace for crate::sync::Mutex<T>
 where
     T: Trace,
 {
+    fn needs_clear() -> bool {
+        T::needs_clear()
+    }
+
+    fn clear_step(&mut self, offset: usize, budget: usize) -> TraceProgress {
+        self.get_mut().clear_step(offset, budget)
+    }
+
     fn may_contain_gc_references() -> bool {
         T::may_contain_gc_references()
     }

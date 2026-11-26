@@ -937,11 +937,12 @@ fn a_busy_payload_registry_does_not_strand_an_unrelated_native_allocation() -> R
     Ok(())
 }
 
-#[test]
 #[expect(clippy::panic_in_result_fn, reason = "bounded forced schedule")]
-fn a_busy_optional_payload_registry_does_not_strand_an_unrelated_native_allocation() -> Result<()> {
+fn recover_past_wrapped_buffer<T: crate::Trace + Send + Sync + 'static>(
+    wrap: impl Fn(crate::HeapBuffer<u8>) -> T,
+) -> Result<()> {
     let example: crate::HeapBuffer<u8> = vec![0; 256].into();
-    let size = Gc::allocation_size(&Some(example))?;
+    let size = Gc::allocation_size(&wrap(example))?;
     let ballast = "x".repeat(256);
     let cap = size + 8 + Gc::allocation_size(&ballast)?;
     let gc = GarbageCollector::with_config(
@@ -959,14 +960,77 @@ fn a_busy_optional_payload_registry_does_not_strand_an_unrelated_native_allocati
     let global = Gc::try_new(&gc, 11u64)?;
     let buffer =
         crate::HeapBuffer::try_with_fn(gc.region_heap().map(Arc::as_ref), 256, |_| Ok(7u8))?;
-    let regional = Gc::try_new(&gc, Some(buffer))?;
+    let regional = Gc::try_new(&gc, wrap(buffer))?;
     assert_eq!(gc.managed_bytes(), cap);
-    assert_eq!(gc.region_heap().unwrap().statistics().occupied_bytes, 256);
+    assert_eq!(
+        gc.region_heap().map(|h| h.statistics().occupied_bytes),
+        Some(256)
+    );
     let root = recover_past_region_return(&gc, global, regional, true)?;
     drop((root, ballast));
     gc.collect_full()?;
     assert_eq!(gc.managed_bytes(), 0);
     Ok(())
+}
+
+#[test]
+fn poisoned_standard_locks_preserve_the_inner_clear_cursor() {
+    use crate::{Trace, TraceProgress};
+    struct Cursor;
+    // SAFETY: this probe has no references into the managed heap.
+    unsafe impl Trace for Cursor {
+        fn trace(&self, _: &GarbageCollector) {}
+        fn clear_step(&mut self, offset: usize, budget: usize) -> TraceProgress {
+            match (offset, budget) {
+                (0, 1) => TraceProgress::Busy,
+                (0, 2) => TraceProgress::Continue(2),
+                (2, 1) => TraceProgress::Complete,
+                _ => TraceProgress::Continue(usize::MAX),
+            }
+        }
+    }
+    fn exercise(mut value: impl Trace) {
+        assert_eq!(value.clear_step(0, 1), TraceProgress::Busy);
+        assert_eq!(value.clear_step(0, 2), TraceProgress::Continue(2));
+        assert_eq!(value.clear_step(2, 1), TraceProgress::Complete);
+    }
+    let mutex = std::sync::Mutex::new(Cursor);
+    let rwlock = std::sync::RwLock::new(Cursor);
+    std::thread::scope(|scope| {
+        assert!(
+            scope
+                .spawn(|| {
+                    let _mutex = mutex.lock();
+                    let _write = rwlock.write();
+                    panic!("poison both wrappers");
+                })
+                .join()
+                .is_err()
+        );
+    });
+    assert!(mutex.is_poisoned() && rwlock.is_poisoned());
+    exercise(mutex);
+    exercise(rwlock);
+}
+
+#[test]
+fn a_busy_optional_payload_registry_does_not_strand_an_unrelated_native_allocation() -> Result<()> {
+    recover_past_wrapped_buffer(Some)
+}
+
+#[test]
+fn a_busy_payload_registry_inside_a_standard_mutex_allows_recovery() -> Result<()> {
+    recover_past_wrapped_buffer(std::sync::Mutex::new)
+}
+
+#[test]
+fn a_busy_payload_registry_inside_a_standard_rwlock_allows_recovery() -> Result<()> {
+    recover_past_wrapped_buffer(std::sync::RwLock::new)
+}
+
+#[test]
+fn a_busy_payload_registry_inside_a_collector_mutex_allows_recovery() -> Result<()> {
+    recover_past_wrapped_buffer(crate::sync::Mutex::new)
 }
 
 #[test]
