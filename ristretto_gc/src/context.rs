@@ -9,6 +9,9 @@ use std::ops::Bound::{Excluded, Unbounded};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 
+#[path = "context_repairs.rs"]
+mod repairs;
+
 pub(crate) const MAX_RECORDS: usize = 64;
 
 thread_local! {
@@ -234,7 +237,7 @@ pub(crate) struct State {
     pub(crate) id: usize,
     handles: AtomicUsize,
     collector: Weak<GarbageCollector>,
-    pub(crate) roots: RootSlots,
+    pub(crate) roots: Arc<RootSlots>,
     buffer: Mutex<Buffer>,
     // Optional certificates cannot hold the required-record buffer or delay
     // acknowledgement of a drained record. Every access uses try_lock.
@@ -460,6 +463,7 @@ pub(crate) struct Registry {
     ready: Mutex<BTreeMap<usize, Arc<State>>>,
     next: AtomicUsize,
     drain_cursor: AtomicUsize,
+    pub(crate) repairs: repairs::Repairs,
     retired_roots: Mutex<RetiredRootStatistics>,
     pub(crate) pending: AtomicUsize,
     // Once an epoch would wrap, cached epoch equality is no longer sufficient.
@@ -481,7 +485,7 @@ impl Registry {
             id,
             handles: AtomicUsize::new(1),
             collector: gc.weak(),
-            roots: RootSlots::default(),
+            roots: Arc::default(),
             buffer: Mutex::new(Buffer::default()),
             completed: Mutex::new(Completed::default()),
             allocation: Mutex::new(crate::allocation::Cache::default()),

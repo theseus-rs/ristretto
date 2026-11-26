@@ -150,7 +150,9 @@ impl Drop for RootReservation<'_> {
     fn drop(&mut self) {
         if let Some(slot) = self.slot.take() {
             if let Some(context) = &self.context {
-                context.roots.cancel_prepared(slot);
+                if context.roots.cancel_prepared(slot) {
+                    self.collector.wake_context_root_repair(context);
+                }
             } else if let Some(roots) = self.collector.scanned_slots() {
                 roots.cancel_prepared(slot);
                 self.collector.wake_root_repair(roots);
@@ -1031,6 +1033,7 @@ impl GarbageCollector {
             || self
                 .scanned_slots()
                 .is_some_and(crate::roots::RootSlots::repair_pending)
+            || self.contexts.repairs.pending()
             || self.old_requested.load(Ordering::Acquire)
             || self
                 .domains
@@ -2772,6 +2775,12 @@ impl GarbageCollector {
         // Private reservations may outlive the ordinary heap. Each owner refunds its own charge.
     }
 
+    fn wake_context_root_repair(&self, context: &crate::context::State) {
+        if self.contexts.repairs.publish(context) {
+            self.wake();
+        }
+    }
+
     fn wake_root_repair(&self, roots: &crate::roots::RootSlots) {
         if roots.repair_pending() {
             self.wake();
@@ -3318,8 +3327,8 @@ impl GarbageCollector {
                 }
             }
             crate::roots::Registration::Context(context, root) => {
-                if self.remove_paged_root::<ADOPT>(root) {
-                    context.roots.finish_removal(root);
+                if self.remove_paged_root::<ADOPT>(root) && context.roots.finish_removal(root) {
+                    self.wake_context_root_repair(context);
                 }
             }
         }
@@ -4719,9 +4728,11 @@ impl GarbageCollector {
                     .is_some_and(|metadata| metadata.id.to_i64().cast_unsigned() == id)
             });
         }
-        if self
+        let global_repair = self
             .scanned_slots()
-            .is_some_and(crate::roots::RootSlots::repair_step)
+            .is_some_and(crate::roots::RootSlots::repair_step);
+        let context_repair = self.contexts.repairs.step();
+        if (global_repair || context_repair)
             && self.retired_ready.load(Ordering::Acquire) == 0
             && !self.domain_has_work(0)
             && !self.domain_has_work(1)
@@ -6890,6 +6901,109 @@ mod tests {
             assert_eq!(gc.statistics()?.live_objects, 0);
         }
         Ok(())
+    }
+
+    #[test]
+    fn idle_steps_repair_attached_contexts_while_another_context_writer_is_parked() -> Result<()> {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .root_storage(crate::RootStorage::Contexts)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let parked = gc.register_context();
+        let peer = gc.register_context();
+        let reserve = || {
+            let keep: Vec<_> = (0..crate::roots::SLOTS)
+                .map(|_| gc.reserve_owned_root(0x1000))
+                .collect();
+            (keep, gc.reserve_owned_root(0x1000))
+        };
+        let (first, cancel_first) = parked.with(reserve);
+        let (second, cancel_second) = peer.with(reserve);
+        parked.0.roots.with_all_writers_held(|| {
+            drop(cancel_first);
+            peer.0.roots.with_all_writers_held(|| drop(cancel_second));
+            assert!(parked.0.roots.repair_pending() && peer.0.roots.repair_pending());
+            for _ in 0..256 {
+                gc.step();
+            }
+            assert!(!peer.0.roots.repair_pending(), "idle peer never repaired");
+            assert!(parked.0.roots.repair_pending());
+            assert_eq!(peer.0.roots.statistics().pages, 1);
+        });
+        for _ in 0..256 {
+            if gc.step() {
+                break;
+            }
+        }
+        assert!(!parked.0.roots.repair_pending());
+        assert_eq!(parked.0.roots.statistics().pages, 1);
+        assert_eq!(gc.statistics()?.collections_completed, 0);
+        drop((first, second, parked, peer));
+        gc.stop()
+    }
+
+    #[test]
+    fn removing_an_escaped_typed_root_services_its_context_without_a_collection() -> Result<()> {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .root_storage(crate::RootStorage::Contexts)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let owner = Gc::try_new(&gc, 13_u64)?;
+        let context = gc.register_context();
+        let mut aliases = context.with(|| {
+            (0..=crate::roots::SLOTS)
+                .map(|_| Gc::<u64>::from_handle_rooted(&gc, owner.as_handle_i64()))
+                .collect::<Result<Vec<_>>>()
+        })?;
+        let last = aliases.pop().unwrap();
+        context.0.roots.with_all_writers_held(|| drop(last));
+        assert!(context.0.roots.repair_pending());
+        assert!((0..256).any(|_| gc.step()));
+        assert!(!context.0.roots.repair_pending() && !gc.contexts.repairs.pending());
+        assert_eq!(context.0.roots.statistics().pages, 1);
+        assert_eq!(gc.statistics()?.collections_completed, 0);
+        assert!(
+            aliases
+                .iter()
+                .all(|edge| edge.identity() == owner.identity())
+        );
+        drop((aliases, owner, context));
+        gc.stop()
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn a_new_worker_pool_finds_context_repairs_published_between_generations() -> Result<()> {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .root_storage(crate::RootStorage::Contexts)
+                .build(),
+        );
+        gc.start();
+        let old_pool = gc.worker_signals.load_full().unwrap();
+        gc.stop()?;
+        let context = gc.register_context();
+        let reserve = || context.with(|| gc.reserve_owned_root(0x1000));
+        let keep: Vec<_> = (0..crate::roots::SLOTS).map(|_| reserve()).collect();
+        let cancel = reserve();
+        context.0.roots.with_all_writers_held(|| drop(cancel));
+        assert!(gc.contexts.repairs.pending());
+        let completed = gc.statistics()?.collections_completed;
+        gc.start();
+        old_pool.wake();
+        let started = std::time::Instant::now();
+        while gc.contexts.repairs.pending() {
+            assert!(started.elapsed() < std::time::Duration::from_secs(5));
+            thread::yield_now();
+        }
+        assert_eq!(context.0.roots.statistics().pages, 1);
+        assert_eq!(gc.statistics()?.collections_completed, completed);
+        drop(keep);
+        gc.stop()
     }
 
     #[cfg(not(target_family = "wasm"))]

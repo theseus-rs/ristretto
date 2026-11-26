@@ -488,7 +488,7 @@ impl RootSlots {
         slot
     }
 
-    pub(crate) fn cancel_prepared(&self, slot: PreparedSlot) {
+    pub(crate) fn cancel_prepared(&self, slot: PreparedSlot) -> bool {
         // The caller still exclusively owns this unpublished generation.
         slot.address().store(0, Ordering::Release);
         match slot {
@@ -496,6 +496,7 @@ impl RootSlots {
             PreparedSlot::Overflow(record) => {
                 record.cancel_typed();
                 self.finish_overflow(&record);
+                false
             }
         }
     }
@@ -512,13 +513,11 @@ impl RootSlots {
         self.overflow.matching(address)
     }
 
-    fn cancel(&self, reservation: Reservation) {
+    fn cancel(&self, reservation: Reservation) -> bool {
         let root = SlotRoot::new(reservation.id, reservation.page);
         let address = root.take_address();
         debug_assert_eq!(address, Some(0));
-        if root.release() {
-            self.finish_removal(&root);
-        }
+        root.release() && self.finish_removal(&root)
     }
 
     #[cfg(test)]
@@ -598,9 +597,9 @@ impl RootSlots {
 
     /// Metadata cleanup never waits for the writer mutex and runs after the
     /// caller's deletion admission. A busy writer receives a deferred request.
-    pub(crate) fn finish_removal(&self, root: &SlotRoot) {
+    pub(crate) fn finish_removal(&self, root: &SlotRoot) -> bool {
         let registry = &self.shards[root.shard()];
-        if let Some(mut state) = Self::try_state(registry) {
+        let posted = if let Some(mut state) = Self::try_state(registry) {
             let same_page = state
                 .pages
                 .get(root.page_id() as u64)
@@ -609,13 +608,16 @@ impl RootSlots {
             let old_view = changed.then(|| registry.published.swap(Arc::new(state.pages.clone())));
             drop(state);
             drop(old_view);
+            false
         } else {
             self.repair_mask
                 .fetch_or(1 << root.shard(), Ordering::Release);
-        }
+            true
+        };
         // Retry after setting the flag: the writer may have unlocked just before
         // that store. Either this retry or that writer's exit observes the work.
         self.finish_deferred(root.shard());
+        posted
     }
 
     fn finish_deferred(&self, shard: usize) -> bool {
