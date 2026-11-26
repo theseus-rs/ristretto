@@ -434,16 +434,20 @@ mod imp {
             let lock = RwLock::new(((1, 2), 3));
 
             let guard = RwLockReadGuard::try_map(lock.read(), |_| None::<&i32>).unwrap_err();
+            assert!(lock.try_write().is_none());
             let pair = RwLockReadGuard::map(guard, |root| &root.0);
             let pair = MappedRwLockReadGuard::try_map(pair, |_| None::<&i32>).unwrap_err();
+            assert!(lock.try_write().is_none());
             let field = MappedRwLockReadGuard::map(pair, |pair| &pair.1);
             assert_eq!(*field, 2);
             assert!(lock.try_write().is_none());
             drop(field);
 
             let guard = RwLockWriteGuard::try_map(lock.write(), |_| None::<&mut i32>).unwrap_err();
+            assert!(lock.try_read().is_none());
             let pair = RwLockWriteGuard::try_map(guard, |root| Some(&mut root.0)).unwrap();
             let pair = MappedRwLockWriteGuard::try_map(pair, |_| None::<&mut i32>).unwrap_err();
+            assert!(lock.try_read().is_none());
             let mut field = MappedRwLockWriteGuard::map(pair, |pair| &mut pair.1);
             assert!(lock.try_read().is_none());
             *field = 4;
