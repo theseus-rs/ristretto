@@ -16,6 +16,11 @@ fresh native processes returned at least one terminal OOM. After all four peers
 finished, each failing process had enough headroom for its missing roots before
 the original reaper resumed. The release test must exercise competing waiters,
 retain their successful roots and account for both donors.
+A subsequent forced schedule held both donors before physical release. A
+fresh full ticket completed, then the three competing requests returned OOM
+while all 64 bytes were still charged. Resuming only the second reaper left
+24 bytes free after its own allocation. This ordering reproduced under all
+four policies in 100 fresh native processes.
 [Forced schedules and process receipts](../benchmarks/gc/publication/compacting-endurance/region-epochs/README.md).
 
 A separate shared-context experiment passed the 10× timing gate but could
