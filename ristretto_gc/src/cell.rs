@@ -369,7 +369,7 @@ impl<'a, T: ?Sized> RwLockWriteGuard<'a, T> {
     /// The caller must not let a value containing an unrooted strong edge escape its
     /// managed owner, including through a return value, captured state, or unwinding.
     /// Any edge exposed to unrestricted mutable access must first acquire independent
-    /// ownership with [`Trace::root`]. Replacing and dropping an edge in place is
+    /// ownership with [`crate::Trace::root`]. Replacing and dropping an edge in place is
     /// permitted; normal barriers and tracing invariants must still be maintained.
     /// This does not certify that a collector may skip tracing the locked payload.
     pub unsafe fn unrooted_mut(&mut self) -> &mut T {
