@@ -5274,7 +5274,7 @@ impl GarbageCollector {
             cycle.object_cursor = crate::index::Cursor::default();
         }
         if cycle.phase == Phase::Idle {
-            let Some(_publication) = self.try_publication_write() else {
+            let Some(publication) = self.try_publication_write() else {
                 return Some(false);
             };
             let Some(observation) = self.observe_phase() else {
@@ -5287,7 +5287,6 @@ impl GarbageCollector {
                 // cycle ends. This worker did not claim that task or a request.
                 return (!self.pending()).then_some(true);
             }
-            let mut stats = lock(&self.statistics);
             let full = index == 1;
             cycle.kind = if full && !full_request {
                 CollectionKind::Old
@@ -5358,15 +5357,22 @@ impl GarbageCollector {
             }
             cycle.started = started;
             cycle.reclaimed_bytes = 0;
-            if cycle.kind == CollectionKind::Full
-                && let Some(scheduler) = &self.scheduler
-            {
-                scheduler.started(self.managed_budget.used());
-            }
+            let scheduler_start = self
+                .scheduler
+                .as_ref()
+                .filter(|_| cycle.kind == CollectionKind::Full)
+                .map(|scheduler| (scheduler, self.managed_budget.used()));
             self.domain().active.store(true, Ordering::Release);
             self.domain().marking.store(true, Ordering::Release);
             self.allocation_debt.store(0, Ordering::Release);
             self.published_debt.store(0, Ordering::Release);
+            // The phase flags and both debts are visible to newly admitted
+            // mutators. Keep the cycle serialized through its bookkeeping.
+            drop(publication);
+            if let Some((scheduler, live)) = scheduler_start {
+                scheduler.started(live);
+            }
+            let mut stats = lock(&self.statistics);
             stats.collections_started += 1;
             stats.last_collection_start = started;
         }
@@ -5727,7 +5733,7 @@ impl GarbageCollector {
                             };
                             coordinator = Some(guard);
                         }
-                        let Some(_publication) = self.try_publication_write() else {
+                        let Some(publication) = self.try_publication_write() else {
                             break;
                         };
                         let Some(observation) = self.observe_phase() else {
@@ -5770,9 +5776,6 @@ impl GarbageCollector {
                             cycle.identity_cursor = crate::identity_pages::RetireCursor::default();
                         }
                         cycle.phase = Phase::Idle;
-                        let mut stats = lock(&self.statistics);
-                        counters.flush(&mut stats);
-                        stats.collections_completed += 1;
                         #[cfg(all(
                             feature = "experimental-pause-recorder",
                             target_os = "linux",
@@ -5781,6 +5784,12 @@ impl GarbageCollector {
                         if let Some(recorder) = &self.configuration.pause_recorder {
                             recorder.collection_completed();
                         }
+                        // Roots and barriers may enter the inactive domain.
+                        // The coordinator still orders metrics and ticket completion.
+                        drop(publication);
+                        let mut stats = lock(&self.statistics);
+                        counters.flush(&mut stats);
+                        stats.collections_completed += 1;
                         match cycle.kind {
                             CollectionKind::Young => {
                                 stats.young_collections += 1;

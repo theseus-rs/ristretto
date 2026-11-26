@@ -101,6 +101,61 @@ mod native {
     use std::time::Duration;
 
     #[test]
+    fn phase_statistics_do_not_park_unrelated_root_and_edge_publication() -> Result<()> {
+        for starting in [true, false] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .incremental_step_size(1)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let root = Gc::try_new(&gc, 42_u64)?;
+            gc.collect();
+            if !starting {
+                for _ in 0..10_000 {
+                    if lock(&gc.domains[1].cycle).phase == Phase::Compact {
+                        break;
+                    }
+                    gc.step();
+                }
+                assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Compact);
+            }
+            thread::scope(|scope| {
+                let stats = lock(&gc.statistics);
+                scope.spawn(|| gc.coordinated_step(false));
+                let waiting = if starting {
+                    &gc.domains[1].requested
+                } else {
+                    &gc.domains[1].active
+                };
+                let deadline = std::time::Instant::now() + Duration::from_secs(3);
+                while waiting.load(Ordering::Acquire) && std::time::Instant::now() < deadline {
+                    thread::yield_now();
+                }
+                let transitioned = !waiting.load(Ordering::Acquire);
+                let (done, recv) = mpsc::channel();
+                let (collector, target) = (&gc, &root);
+                scope.spawn(move || {
+                    let id = collector.add_root(target);
+                    collector.write_barrier(target);
+                    collector.remove_root_by_id(id);
+                    done.send(()).unwrap();
+                });
+                let progressed = recv.recv_timeout(Duration::from_secs(2)).is_ok();
+                drop(stats);
+                assert!(transitioned);
+                assert!(
+                    progressed,
+                    "publication stalled at a phase statistics update"
+                );
+            });
+            gc.collect_full()?;
+            assert_eq!(**root, 42);
+        }
+        Ok(())
+    }
+
+    #[test]
     fn an_admitted_publisher_does_not_park_collection_or_other_publishers() -> Result<()> {
         for independent in [false, true] {
             for phase in [
