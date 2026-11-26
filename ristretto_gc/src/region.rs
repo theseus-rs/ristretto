@@ -304,6 +304,9 @@ impl PreparedRegion {
 #[derive(Debug)]
 pub struct RegionHeap {
     states: Box<[Arc<Mutex<State>>]>,
+    // A waiter may rule out a skipped registry only when even its backing,
+    // including unpublished reservations, is smaller than the request.
+    shard_backing: Box<[Arc<BackingTotals>]>,
     selection_shard: AtomicUsize,
     trim_cursor: Mutex<TrimCursor>,
     selection: Option<Arc<Selection>>,
@@ -365,16 +368,19 @@ impl RegionHeap {
         assert!(reserve <= budget.reserve);
         let count = crate::index::shard_count(shards);
         let selection = cost_aware.then(|| Arc::new(Selection::default()));
+        let shard_backing: Box<[Arc<BackingTotals>]> = (0..count).map(|_| Arc::default()).collect();
         Arc::new(Self {
             budget,
             returned_bytes: Arc::new(AtomicU64::new(0)),
-            states: (0..count)
-                .map(|index| {
+            states: shard_backing
+                .iter()
+                .enumerate()
+                .map(|(index, backing)| {
                     Arc::new(Mutex::new(State {
                         regions: BTreeMap::new(),
                         available: BTreeSet::new(),
                         next: 1 + index as u64,
-                        backing: Arc::default(),
+                        backing: backing.clone(),
                         registered: 0,
                         occupied: 0,
                         evacuation: selection.as_ref().map(|s| Evacuation::new(s.clone())),
@@ -383,6 +389,7 @@ impl RegionHeap {
                 .collect(),
             selection,
             selection_shard: AtomicUsize::new(0),
+            shard_backing,
             trim_cursor: Mutex::default(),
             region_size: region_size.max(1).min(limit.saturating_sub(reserve).max(1)),
             limit,
@@ -651,6 +658,16 @@ impl RegionHeap {
                 }
             }
         }
+        self.can_open_backing(layout)
+    }
+
+    fn shard_could_fit(&self, index: usize, layout: Layout) -> bool {
+        self.shard_backing
+            .get(index)
+            .is_some_and(|backing| backing.committed.load(Ordering::Acquire) >= layout.size())
+    }
+
+    fn can_open_backing(&self, layout: Layout) -> bool {
         let size = self.region_size.max(layout.size());
         Layout::from_size_align(size, layout.align().max(64)).is_ok()
             && self

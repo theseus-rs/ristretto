@@ -486,28 +486,53 @@ fn cancelled_probe_releases_unpublished_backing_while_the_registry_is_parked() {
 #[test]
 fn probe_reuses_a_returned_peer_range_before_a_parked_registry_resumes() {
     use std::task::Poll;
-    let heap =
-        RegionHeap::with_shards(1024, 2048, 1024, Budget::with_reserve(2048, 1024), false, 2);
-    let preferred = heap.preferred_shard();
-    let layout = Layout::from_size_align(512, 64).expect("layout");
-    let keep = heap
-        .allocate_selected(layout, None, false, 1 - preferred)
-        .expect("first half");
-    let donor = heap
-        .allocate_selected(layout, None, false, 1 - preferred)
-        .expect("second half");
-    let address = donor.ptr::<u8>().addr();
-    let parked = lock(heap.shard(preferred));
-    let mut probe = AllocationProbe::default();
-    assert!(probe.poll(&heap, layout).is_pending());
-    drop(donor);
-    let Poll::Ready(Ok(reused)) = probe.poll(&heap, layout) else {
-        panic!("free peer range");
-    };
-    assert_eq!(reused.ptr::<u8>().addr(), address);
-    assert_eq!(heap.budget.used.load(Ordering::Acquire), 1024);
-    drop(parked);
-    drop((reused, keep));
+    for populate_parked in [false, true] {
+        let ordinary = if populate_parked { 2048 } else { 1024 };
+        let limit = ordinary + 1024;
+        let heap = RegionHeap::with_shards(
+            1024,
+            limit,
+            1024,
+            Budget::with_reserve(limit, 1024),
+            false,
+            2,
+        );
+        let preferred = heap.preferred_shard();
+        let layout = Layout::from_size_align(512, 64).expect("layout");
+        let seed = populate_parked.then(|| {
+            heap.allocate_selected(layout, None, false, preferred)
+                .expect("parked half")
+        });
+        let keep = heap
+            .allocate_selected(layout, None, false, 1 - preferred)
+            .expect("first half");
+        let donor = heap
+            .allocate_selected(layout, None, false, 1 - preferred)
+            .expect("second half");
+        let address = donor.ptr::<u8>().addr();
+        let parked = lock(heap.shard(preferred));
+        let mut probe = AllocationProbe::default();
+        let first = probe.poll(&heap, layout);
+        if populate_parked {
+            assert!(
+                first.is_pending(),
+                "the skipped shard still has a fitting hole"
+            );
+        } else {
+            assert!(
+                matches!(first, Poll::Ready(Err(Error::OutOfMemory))),
+                "empty shard has no backing"
+            );
+        }
+        drop(donor);
+        let Poll::Ready(Ok(reused)) = probe.poll(&heap, layout) else {
+            panic!("free peer range");
+        };
+        assert_eq!(reused.ptr::<u8>().addr(), address);
+        assert_eq!(heap.budget.used.load(Ordering::Acquire), ordinary);
+        drop(parked);
+        drop((reused, keep, seed));
+    }
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -585,6 +610,24 @@ fn contended_allocation_reclaims_unreachable_peer(worker: bool) {
     if worker {
         gc.stop().expect("worker shutdown");
     }
+}
+
+#[test]
+fn an_empty_parked_shard_can_still_open_fresh_backing_after_release() {
+    let heap = RegionHeap::new(1024, 1024, 0);
+    let mut probe = AllocationProbe::default();
+    let layout = Layout::new::<u64>();
+    {
+        let _parked = lock(heap.shard(0));
+        for _ in 0..64 {
+            assert!(probe.poll(&heap, layout).is_pending());
+        }
+        assert_eq!(heap.budget.used.load(Ordering::Acquire), 0);
+    }
+    assert!(matches!(
+        probe.poll(&heap, layout),
+        std::task::Poll::Ready(Ok(_))
+    ));
 }
 
 #[test]

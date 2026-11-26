@@ -36,7 +36,7 @@ impl AllocationProbe {
             }
             let index = (first + self.visited) & (heap.states.len() - 1);
             let Some(mut state) = try_lock(heap.shard(index)) else {
-                self.busy = true;
+                self.busy |= heap.shard_could_fit(index, layout);
                 self.next_shard();
                 continue;
             };
@@ -98,7 +98,7 @@ impl AllocationProbe {
         for offset in 0..heap.states.len() {
             let index = (first + offset) & (heap.states.len() - 1);
             let Some(state) = try_lock(heap.shard(index)) else {
-                busy = true;
+                busy |= heap.shard_could_fit(index, layout) || heap.can_open_backing(layout);
                 continue;
             };
             if let Ok(fresh) = heap.prepare_region(layout, false, index, state) {
