@@ -231,7 +231,11 @@ def main():
             continue
         for method in row["coverage"]["required_methods"]:
             counts = [method.get(k, 0) for k in ["compiled_entries", "interpreter_entries", "intrinsic_entries"]]
-            lines.append(f"| {row['policy']} | {row['workload']} | `{method['method']}` | {counts[0]} | {method.get('compiled_resumes', 'unavailable')} | {method.get('compiled_backedges', 'unavailable')} | {counts[1]} | {counts[2]} | {method.get('rejection_reason', method['status'])} |")
+            reason = method.get("rejection_reason") or method["status"]
+            if method.get("rejected_bytecode") is not None:
+                offset, opcode = method["rejected_bytecode"]
+                reason += f" (byte {offset}, opcode 0x{opcode:02x})"
+            lines.append(f"| {row['policy']} | {row['workload']} | `{method['method']}` | {counts[0]} | {method.get('compiled_resumes', 'unavailable')} | {method.get('compiled_backedges', 'unavailable')} | {counts[1]} | {counts[2]} | {reason} |")
             plotted.append((f"{row['policy']} / {row['workload']} / {method['method']}", counts))
     lines.extend(["", f"Frozen inputs unchanged: {unchanged}. Qualification: false."])
     (output / "REPORT.md").write_text("\n".join(lines) + "\n")

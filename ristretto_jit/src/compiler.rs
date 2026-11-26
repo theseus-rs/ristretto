@@ -77,6 +77,11 @@ impl Debug for Compiler {
     }
 }
 
+enum Rejection<'a> {
+    Method(&'static str),
+    Instruction(&'static str, &'a [Instruction], &'a Instruction),
+}
+
 impl Compiler {
     /// Creates a new instance of the compiler for the host machine.
     ///
@@ -153,8 +158,26 @@ impl Compiler {
     /// This uses the same gate as [`Self::can_compile`].
     #[must_use]
     pub fn rejection_reason(method: &Method) -> Option<&'static str> {
+        Self::production_rejection(method).map(|rejection| match rejection {
+            Rejection::Method(reason) | Rejection::Instruction(reason, ..) => reason,
+        })
+    }
+
+    /// JVM byte offset and opcode responsible for an instruction-level production rejection.
+    /// Method-level restrictions have no bytecode location.
+    #[must_use]
+    pub fn rejected_bytecode(method: &Method) -> Option<(usize, u8)> {
+        let Rejection::Instruction(_, code, rejected) = Self::production_rejection(method)? else {
+            return None;
+        };
+        Instruction::with_offsets(code).find_map(|(offset, instruction)| {
+            std::ptr::eq(instruction, rejected).then(|| (offset, instruction.code()))
+        })
+    }
+
+    fn production_rejection(method: &Method) -> Option<Rejection<'_>> {
         if !method.access_flags.contains(MethodAccessFlags::STATIC) {
-            return Some("non_static_method");
+            return Some(Rejection::Method("non_static_method"));
         }
         let Some((instructions, exception_table)) =
             method.attributes.iter().find_map(|attribute| {
@@ -170,21 +193,24 @@ impl Compiler {
                 }
             })
         else {
-            return Some("missing_code");
+            return Some(Rejection::Method("missing_code"));
         };
         if !exception_table.is_empty() {
-            return Some("exception_handlers");
+            return Some(Rejection::Method("exception_handlers"));
         }
-        if Self::first_unsupported_instruction(instructions).is_some() {
-            return Some("unsupported_invocation");
+        if let Some(instruction) = Self::first_unsupported_instruction(instructions) {
+            return Some(Rejection::Instruction(
+                "unsupported_invocation",
+                instructions,
+                instruction,
+            ));
         }
-        if !instructions
+        instructions
             .iter()
-            .all(Self::is_production_safe_instruction)
-        {
-            return Some("unqualified_instruction");
-        }
-        None
+            .find(|i| !Self::is_production_safe_instruction(i))
+            .map(|instruction| {
+                Rejection::Instruction("unqualified_instruction", instructions, instruction)
+            })
     }
 
     /// Reports restrictions for explicit experimental reference-method preparation.
@@ -1675,6 +1701,53 @@ mod tests {
     fn test_compiler_new() {
         let result = Compiler::new();
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn rejected_bytecode_reports_the_gate_that_denied_the_whole_method() {
+        let method = |access_flags, code| Method {
+            access_flags,
+            attributes: vec![Attribute::Code {
+                name_index: 0,
+                max_stack: 2,
+                max_locals: 1,
+                code,
+                exception_table: vec![],
+                attributes: vec![],
+            }],
+            ..Default::default()
+        };
+        // The first branch jumps over an unreachable putstatic at byte offset 3.
+        let cold = vec![
+            Instruction::Goto(6),
+            Instruction::Putstatic(1),
+            Instruction::Return,
+        ];
+        let body = method(MethodAccessFlags::STATIC, cold.clone());
+        assert_eq!(
+            Compiler::rejected_bytecode(&body),
+            Some((3, Instruction::Putstatic(1).code()))
+        );
+        assert_eq!(
+            Compiler::rejected_bytecode(&method(MethodAccessFlags::PUBLIC, cold)),
+            None
+        );
+        let invocation = method(
+            MethodAccessFlags::STATIC,
+            vec![
+                Instruction::Aconst_null,
+                Instruction::Sipush(12),
+                Instruction::Invokedynamic(1),
+            ],
+        );
+        assert_eq!(
+            Compiler::rejection_reason(&invocation),
+            Some("unsupported_invocation")
+        );
+        assert_eq!(
+            Compiler::rejected_bytecode(&invocation),
+            Some((4, Instruction::Invokedynamic(1).code()))
+        );
     }
 
     #[cfg(feature = "experimental-reference-dispatch")]

@@ -32,6 +32,12 @@ impl Compiler {
         Some("unsupported_target")
     }
 
+    /// Native code generation is unavailable, independently of method bytecode.
+    #[must_use]
+    pub fn rejected_bytecode(_method: &Method) -> Option<(usize, u8)> {
+        None
+    }
+
     /// Experimental native preparation is also unavailable on this target.
     #[cfg(feature = "experimental-reference-dispatch")]
     #[must_use]
