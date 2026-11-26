@@ -22,6 +22,19 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Reserve physically released donor charges for waiting allocations | `a9242931` | 251126942 | **10.53×** | **10.63×** | **36 / 36** |
 | Paged enrollment with a helpable commit | `5c05cc39` | 251126945 | **11.01×** | **11.38×** | **36 / 36** |
 | Synchronous recovery at the managed heap limit | `ef490d09` | 251126947 | **10.88×** | **10.95×** | **36 / 36** |
+| Public deferred selection, initial poll regression | `e8b0e6d2` | 251126951 | 10.43× | 11.01× | 36 / 36 |
+| Terminal poll budget, eager grant records | `e5d1b3d5` | 251126953 | 10.57× | 11.20× | 36 / 36 |
+| Per-donor physical claim and lazy grant preparation | `0a7993f0` | 251126959 | **10.17×** | **10.60×** | **36 / 36** |
+
+## Helping a stopped selector after lease release
+
+At `0a7993f0`, four 8-byte requests spent one returned 32-byte donor while the original selector remained parked. The test stops the selector before binding, after binding, after a partial scan and immediately before the physical claim. Peer helpers retain the exact request generation across cancellation and reopening. One per-donor state transition gives a helper exclusive responsibility for physical release. Concurrent insertion of a second donor can postpone directory cleanup without revoking the first claim.
+
+Ten regressions passed in 100 fresh native processes each. They cover preparations for ordinary and returned storage, cancellation between binding and cursor publication, four policy combinations for donor sharing, and an eligible request behind 4,096 oversized interests. The latter case checks at most one measured collection batch per poll. A separate test changes the caller's managed guard or available credit while the terminal poll is suspended. Native passed 516 default library tests and 1,161 all-feature checks. WASI passed 313 library tests and 16 allocation and recovery integration tests. Formatting, native Clippy with warnings denied, the bare Wasm build and verified Cargo packaging passed. [Tests, original failures, schedules and package hash](deferred-help-tests.json.gz) · [Complete-collection process measurements](deferred-help.csv)
+
+The initial selection change passed all collection timing conditions but failed the existing async poll-budget tests. Eager allocation of grant records in the next revision increased full-heap registration and cancellation time by 66–70% versus `ef490d09`. Preparing a record only for a fitting request brought the median paired elapsed-time ratios to 0.978, 0.972 and 1.002 at one, 64 and 1,024 pending requests. The last interval included parity. Costs relative to the earlier `42c37eb4` control were 1.75×, 1.84× and 1.31×. [Enrollment comparison and 95% intervals](deferred-enrollment.svg) · [Initial collection timing](deferred-help-initial.csv) · [Poll-budget revision timing](deferred-help-poll.csv)
+
+Coverage here is for directly transferable storage after callback lease release. A parked allocation-waiter index still blocks an unrelated full collection in the consolidated implementation. Region storage, finalizer paths, integrated VM semantics and host pause qualification remain open.
 
 ## Synchronous allocation recovery
 

@@ -2,6 +2,18 @@
 
 ## Tenfold complete-collection gate
 
+At `0a7993f0`, waiting allocations reclaim the same returned donor while its
+first selector is parked. One helper wins physical release and an unrelated
+publication can only postpone directory cleanup. Ten regressions passed in
+100 fresh native processes each. All 36 complete-collection conditions passed
+against `f1daebeb`, with weakest individual 95% lower bounds of 10.17× native
+and 10.60× WASI. Relative to `ef490d09`, full-heap registration and
+cancellation took 0.978×, 0.972× and 1.002× as long at one, 64 and 1,024
+pending requests. The parked allocation-waiter index remains a reproduced
+alpha blocker. Region-backed and finalizable storage, VM boundaries, and
+whole-host pause and endurance evidence remain open.
+[Schedules, regressions, samples and graphs](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#helping-a-stopped-selector-after-lease-release).
+
 At `ef490d09`, synchronous allocation at the logical heap limit can reclaim
 unreachable storage, including when a registered native worker is parked.
 All 36 complete-collection conditions passed against `f1daebeb`. The weakest
