@@ -317,7 +317,7 @@ impl<T> Initialized<T> {
         let storage = unsafe { std::ptr::read(&raw const this.storage) };
         Erased {
             storage,
-            drop_value: drop_value::<T>,
+            drop_value: std::mem::needs_drop::<T>().then_some(drop_value::<T>),
         }
     }
 }
@@ -334,7 +334,7 @@ impl<T> Drop for Initialized<T> {
 /// Storage's automatic field drop also runs if the value's destructor unwinds.
 pub(crate) struct Erased {
     storage: Storage,
-    drop_value: unsafe fn(*mut u8),
+    drop_value: Option<unsafe fn(*mut u8)>,
 }
 
 unsafe fn drop_value<T>(ptr: *mut u8) {
@@ -344,9 +344,11 @@ unsafe fn drop_value<T>(ptr: *mut u8) {
 
 impl Drop for Erased {
     fn drop(&mut self) {
-        // SAFETY: this is the unique initialized owner until the destructor
-        // returns (or unwinds). Backing storage is released afterward.
-        unsafe { (self.drop_value)(self.storage.ptr()) };
+        if let Some(drop_value) = self.drop_value {
+            // SAFETY: this is the unique initialized owner until the destructor
+            // returns (or unwinds). Backing storage is released afterward.
+            unsafe { drop_value(self.storage.ptr()) };
+        }
     }
 }
 

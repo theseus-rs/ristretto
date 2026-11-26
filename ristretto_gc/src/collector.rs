@@ -595,6 +595,18 @@ pub unsafe trait Trace {
         TraceProgress::Complete
     }
 
+    /// Whether retirement must invoke this type's clearing hook.
+    /// Only return false if skipping every call to `clear_step` preserves
+    /// all edge, resource and callback obligations for every value of this type.
+    /// Finalization and ordinary Rust destruction are independent.
+    #[must_use]
+    fn needs_clear() -> bool
+    where
+        Self: Sized,
+    {
+        true
+    }
+
     /// Releases outgoing edges in bounded batches before destruction of unreachable values.
     fn clear_step(&mut self, _offset: usize, _budget: usize) -> TraceProgress {
         TraceProgress::Complete
@@ -6242,6 +6254,7 @@ macro_rules! impl_trace_primitive {
             // SAFETY: primitive scalars contain no managed edges.
             unsafe impl Trace for $t {
                 fn may_contain_gc_references() -> bool { false }
+                fn needs_clear() -> bool { false }
 
                 fn canonical_payload() -> Option<crate::CanonicalPayload<Self>> {
                     // SAFETY: primitive scalars have no graph, owner, backing or callbacks.

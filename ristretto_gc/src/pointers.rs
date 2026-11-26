@@ -3,6 +3,8 @@
 use crate::GarbageCollector;
 use crate::collector::Trace;
 
+type ClearStep = fn(*const (), usize, usize) -> crate::TraceProgress;
+
 type TraceStep = fn(*const (), &GarbageCollector, usize, usize) -> crate::TraceProgress;
 
 /// Immutable type operations are shared by every descriptor and root of that type.
@@ -10,7 +12,7 @@ type TraceStep = fn(*const (), &GarbageCollector, usize, usize) -> crate::TraceP
 struct TraceTable {
     trace: fn(*const (), &GarbageCollector),
     compact: fn(*const (), &crate::region::RegionHeap, usize) -> crate::TraceProgress,
-    clear: fn(*const (), usize, usize) -> crate::TraceProgress,
+    clear: Option<ClearStep>,
 }
 
 const MIN_TRACE_ADDRESS: usize = 4096;
@@ -111,18 +113,30 @@ impl TracePtr {
             ptr: gc_ptr.cast::<()>(),
             budget: 32,
             step_fn: T::may_contain_gc_references().then_some(Self::step::<T>),
-            table: const {
-                &TraceTable {
-                    trace: Self::trace_impl::<T>,
-                    clear: Self::clear::<T>,
-                    compact: Self::compact::<T>,
-                }
+            table: if T::needs_clear() {
+                Self::table::<T, true>()
+            } else {
+                Self::table::<T, false>()
             },
         }
     }
 
+    const fn table<T: Trace, const CLEAR: bool>() -> &'static TraceTable {
+        &const {
+            TraceTable {
+                trace: Self::trace_impl::<T>,
+                clear: if CLEAR { Some(Self::clear::<T>) } else { None },
+                compact: Self::compact::<T>,
+            }
+        }
+    }
+
     pub(crate) fn clear_step(&self, offset: usize, budget: usize) -> crate::TraceProgress {
-        (self.table.clear)(self.ptr, offset, budget)
+        self.table
+            .clear
+            .map_or(crate::TraceProgress::Complete, |clear| {
+                clear(self.ptr, offset, budget)
+            })
     }
 
     pub(crate) fn compact_guarded(
