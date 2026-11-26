@@ -274,6 +274,11 @@ pub(crate) struct Demand<'a> {
 }
 
 impl Registry {
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn has_demand(&self) -> bool {
+        self.active.load(Ordering::Acquire) != 0
+    }
+
     pub(crate) fn visit_arms(
         &self,
         scan: crate::recovery::grant_wake::Scan,
