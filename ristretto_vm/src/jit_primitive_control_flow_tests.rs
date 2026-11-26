@@ -659,3 +659,134 @@ async fn ordinary_static_long_store_reports_a_missing_field_from_compiled_code()
     drop(function);
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn compiled_volatile_long_store_publishes_an_earlier_plain_store_to_a_java_peer() -> Result<()>
+{
+    use ristretto_classfile::{Field, FieldAccessFlags, FieldType};
+
+    const BITS: i64 = 0x7abc_fedc_8765_4321;
+    let harness = Harness::new().await?;
+    let name = "ProductionLongHandoff";
+    let mut pool = ConstantPool::new();
+    let owner = pool.add_class(name)?;
+    let payload = pool.add_field_ref(owner, "payload", "J")?;
+    let ready = pool.add_field_ref(owner, "ready", "J")?;
+    let publish = method(
+        &mut pool,
+        "publish",
+        "(J)V",
+        vec![
+            Instruction::Lload_0,
+            Instruction::Putstatic(payload),
+            Instruction::Lconst_1,
+            Instruction::Putstatic(ready),
+            Instruction::Return,
+        ],
+    )?;
+    let read_flag = method(
+        &mut pool,
+        "readFlag",
+        "()J",
+        vec![Instruction::Getstatic(ready), Instruction::Lreturn],
+    )?;
+    let read_payload = method(
+        &mut pool,
+        "readPayload",
+        "()J",
+        vec![Instruction::Getstatic(payload), Instruction::Lreturn],
+    )?;
+    let fields = [
+        ("payload", FieldAccessFlags::empty()),
+        ("ready", FieldAccessFlags::VOLATILE),
+    ]
+    .into_iter()
+    .map(|(name, flags)| -> Result<Field> {
+        Ok(Field {
+            access_flags: FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | flags,
+            name_index: pool.add_utf8(name)?,
+            descriptor_index: pool.add_utf8("J")?,
+            field_type: FieldType::parse("J")?,
+            attributes: vec![],
+        })
+    })
+    .collect::<Result<Vec<_>>>()?;
+    let mut definition = class_from_methods(
+        name,
+        "java/lang/Object",
+        pool,
+        vec![publish, read_flag, read_payload],
+    )?
+    .class_file()
+    .clone();
+    definition.fields = fields;
+    let class = register(&harness.thread, Class::from(None, definition)?).await?;
+    harness.thread.initialize_class(&class).await?;
+    let peer = Thread::new(&Arc::downgrade(&harness.vm), harness.thread.id() + 1);
+    let observed_class = class.clone();
+    let (started, reading) = tokio::sync::oneshot::channel();
+    let runtime = tokio::runtime::Handle::current();
+    let reader = tokio::task::spawn_blocking(move || {
+        runtime.block_on(async move {
+            let flag = observed_class.try_get_method("readFlag", "()J")?;
+            let payload = observed_class.try_get_method("readPayload", "()J")?;
+            assert_eq!(
+                peer.execute(&observed_class, &flag, &[] as &[Value])
+                    .await?,
+                Some(Value::Long(0))
+            );
+            // This signal precedes both stores. Only the Java flag communicates publication to the reader.
+            started
+                .send(())
+                .map_err(|()| InternalError("writer exited before the reader".into()))?;
+            let deadline = std::time::Instant::now() + Duration::from_secs(5);
+            loop {
+                match peer
+                    .execute(&observed_class, &flag, &[] as &[Value])
+                    .await?
+                {
+                    Some(Value::Long(1)) => break,
+                    Some(Value::Long(0)) if std::time::Instant::now() < deadline => {
+                        std::thread::yield_now()
+                    }
+                    other => {
+                        return Err(InternalError(format!(
+                            "volatile handoff stalled or produced {other:?}"
+                        )));
+                    }
+                }
+            }
+            peer.execute(&observed_class, &payload, &[] as &[Value])
+                .await
+        })
+    });
+    reading
+        .await
+        .map_err(|error| InternalError(error.to_string()))?;
+    let publish = class.try_get_method("publish", "(J)V")?;
+    assert_eq!(
+        harness
+            .thread
+            .execute(&class, &publish, &[Value::Long(BITS)])
+            .await?,
+        None
+    );
+    assert_eq!(
+        reader
+            .await
+            .map_err(|error| InternalError(error.to_string()))??,
+        Some(Value::Long(BITS))
+    );
+    let function = harness
+        .vm
+        .compiler()
+        .and_then(|compiler| compiler.get_cached(cache_key(&publish)))
+        .flatten()
+        .ok_or_else(|| {
+            InternalError("the volatile publisher ran only in the interpreter".into())
+        })?;
+    #[cfg(feature = "execution-profile")]
+    assert_eq!(function.execution_count(), 1);
+    drop(function);
+    Ok(())
+}
