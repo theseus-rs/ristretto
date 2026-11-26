@@ -584,7 +584,8 @@ impl GarbageCollector {
                 && !self.configuration.overlapping_generations
                 && self.configuration.old_collection_interval == 0
             {
-                self.mature_census.coverage()
+                self.mature_census
+                    .coverage(self.domain().mark_queue.mature_strong())
             } else {
                 MatureCoverage::Incomplete
             };

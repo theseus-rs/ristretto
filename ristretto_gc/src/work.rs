@@ -428,6 +428,9 @@ impl Queue {
 struct Local {
     owners: Owners,
     queue: Mutex<Queue>,
+    // The lane mutex serializes strong discoveries. Readers at full mark
+    // closure sample the tally without acquiring a possibly parked lane.
+    mature_strong: portable_atomic::AtomicU64,
     victim: AtomicUsize,
     // Updated under the queue lock. Zero can bypass that lock only when the
     // caller also excludes publishers and unreserved claims at termination.
@@ -853,12 +856,33 @@ impl MarkQueues {
             } else {
                 queue.publish_group(&self.queues[source].owners, &targets, count, strong_epoch);
             }
+            if strong_epoch != 0 && count != 0 {
+                let tally = &self.queues[source].mature_strong;
+                tally.store(
+                    tally.load(Ordering::Relaxed) + count as u64,
+                    Ordering::Release,
+                );
+            }
             self.queues[source]
                 .queued
                 .store(queue.len(), Ordering::Release);
             return handled;
         }
         0
+    }
+
+    pub(crate) fn reset_mature_strong(&self) {
+        // Full-epoch initialization excludes all reserved marking callbacks.
+        for local in &self.queues {
+            local.mature_strong.store(0, Ordering::Release);
+        }
+    }
+
+    pub(crate) fn mature_strong(&self) -> u64 {
+        self.queues
+            .iter()
+            .map(|local| local.mature_strong.load(Ordering::Acquire))
+            .sum()
     }
 
     fn try_push_any(&self, local: usize, item: MarkItem) -> Result<(), MarkItem> {
@@ -1351,6 +1375,38 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn strong_tally_counts_only_fresh_mature_edges_across_lanes_and_epochs() {
+        let queues = MarkQueues::new(2, 1);
+        let edges: [_; 8] = std::array::from_fn(|_| item(0, None).metadata);
+        assert_eq!(
+            queues.append_mature(1, 8, 17, edges.iter().map(Some), |_, _| Some(true)),
+            8
+        );
+        let mut marks = [Some(false), Some(true), None].into_iter();
+        assert_eq!(
+            queues.append_mature(2, 8, 17, edges.iter().map(Some), |_, _| marks
+                .next()
+                .flatten()),
+            2
+        );
+        // Weaker discoveries publish tasks but do not certify strong survival.
+        assert_eq!(
+            queues.append_mature(0, 8, 0, edges.iter().map(Some), |_, _| Some(true)),
+            8
+        );
+        let parked = lock(&queues.queues[1].queue);
+        assert_eq!(queues.mature_strong(), 9);
+        queues.reset_mature_strong();
+        assert_eq!(queues.mature_strong(), 0);
+        assert_eq!(
+            queues.append_mature(1, 8, 20, edges.iter().map(Some), |_, _| Some(true)),
+            8
+        );
+        assert_eq!(queues.mature_strong(), 8);
+        drop(parked);
     }
 
     #[test]

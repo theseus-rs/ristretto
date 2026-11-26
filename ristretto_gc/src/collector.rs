@@ -682,11 +682,12 @@ enum MatureCoverage {
 }
 
 impl MatureCensus {
-    fn coverage(&self) -> MatureCoverage {
+    fn coverage(&self, marked_edges: u64) -> MatureCoverage {
         let promotions = self.promotions.load(Ordering::Acquire);
         let retired = self.retirements.load(Ordering::Acquire);
         if promotions != 0
-            && promotions.checked_sub(retired) == Some(self.strong.load(Ordering::Acquire))
+            && promotions.checked_sub(retired)
+                == Some(self.strong.load(Ordering::Acquire) + marked_edges)
         {
             MatureCoverage::Complete(promotions)
         } else {
@@ -4352,8 +4353,7 @@ impl GarbageCollector {
         let mature = self.configuration.promotion_age.max(1);
         let epoch = full.epoch.load(Ordering::Acquire);
         let strength = retention.max(Retention::at_phase(phase));
-        let mut fresh = 0;
-        let handled = full.mark_queue.append_mature(
+        full.mark_queue.append_mature(
             self.local_queue(),
             count,
             if strength == Retention::Strong {
@@ -4371,17 +4371,9 @@ impl GarbageCollector {
                 {
                     return None;
                 }
-                let changed = m.birth.is_live() && m.mark(1, epoch, strength);
-                fresh += u64::from(changed);
-                Some(changed)
+                Some(m.birth.is_live() && m.mark(1, epoch, strength))
             },
-        );
-        if strength == Retention::Strong && fresh != 0 {
-            self.mature_census
-                .strong
-                .fetch_add(fresh, Ordering::Relaxed);
-        }
-        handled
+        )
     }
 
     pub(crate) fn mark_object(&self, ptr: SafePtr, identity: crate::ObjectId) {
@@ -5341,6 +5333,7 @@ impl GarbageCollector {
             }
             if index == 1 {
                 self.mature_census.strong.store(0, Ordering::Release);
+                self.domain().mark_queue.reset_mature_strong();
                 cycle.mature_coverage = MatureCoverage::Unchecked;
                 cycle.packet_cleanup = None;
             }
