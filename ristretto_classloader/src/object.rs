@@ -225,6 +225,37 @@ impl Object {
         })
     }
 
+    /// Tests Java referent identity without reading the referent into an owning handle.
+    ///
+    /// # Errors
+    /// Returns an error if the reference class has no resolved referent field.
+    pub fn referent_refers_to(&self, target: &Value) -> Result<bool> {
+        let slot = self
+            .class
+            .java_reference_field_slot(crate::JavaReferenceField::Referent)?;
+        if let Some(state) = &self.reference
+            && state.slot == slot
+        {
+            return Ok(match target {
+                Value::Object(Some(object)) => state
+                    .link
+                    .as_ref()
+                    .is_some_and(|link| link.refers_to(object)),
+                Value::Object(None) => state.link.as_ref().is_none_or(GcWeak::is_cleared),
+                _ => false,
+            });
+        }
+        let field = self.values.get(slot).ok_or_else(|| FieldNotFound {
+            class_name: self.class.name().to_owned(),
+            field_name: slot.to_string(),
+        })?;
+        Ok(match (field, target) {
+            (Value::Object(Some(a)), Value::Object(Some(b))) => a.ptr_eq(b),
+            (Value::Object(None), Value::Object(None)) => true,
+            _ => false,
+        })
+    }
+
     /// Write an already resolved instance slot. The caller must validate the field's type and
     /// access restrictions; bounds are always checked. Existing object locking still applies.
     ///

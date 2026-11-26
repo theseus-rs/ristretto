@@ -1,6 +1,7 @@
 use ristretto_classfile::VersionSpecification::{GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::{JavaReferenceField, Value};
+#[cfg(test)]
 use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result};
@@ -89,15 +90,7 @@ pub fn refers_to_0<T: Thread + 'static>(
     let object_parameter = parameters.pop()?;
     let reference = parameters.pop()?;
     let reference = reference.as_object_ref()?;
-    let slot = reference
-        .class()
-        .java_reference_field_slot(JavaReferenceField::Referent)?;
-    let object = reference.value_at_slot(slot)?;
-    let refers_to = match (&object, &object_parameter) {
-        (Value::Object(Some(a)), Value::Object(Some(b))) => Gc::ptr_eq(a, b),
-        (Value::Object(None), Value::Object(None)) => true,
-        _ => false,
-    };
+    let refers_to = reference.referent_refers_to(&object_parameter)?;
     Ok(Some(Value::from(refers_to)))
 }
 

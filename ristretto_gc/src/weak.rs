@@ -178,6 +178,28 @@ impl<T: Trace + 'static> GcWeak<T> {
         }
     }
 
+    /// Tests the allocation identity without rooting or tracing the referent.
+    #[must_use]
+    pub fn refers_to(&self, target: &Gc<T>) -> bool {
+        self.slot.target_identity == target.identity() && !self.is_cleared()
+    }
+
+    /// Tests whether this edge is explicitly or logically cleared, without upgrading it.
+    #[must_use]
+    pub fn is_cleared(&self) -> bool {
+        let Some(gc) = self.collector.upgrade() else {
+            return true;
+        };
+        if self.slot.target.load(Ordering::Acquire) == 0 {
+            return true;
+        }
+        // Observe the same phase and slot decision as an upgrade. No root,
+        // publication record, or tracing work is created by this observation.
+        let (_publication, _decision) = self.slot.admitted_decision(&gc);
+        let address = self.slot.target.load(Ordering::Acquire);
+        gc.weak_is_cleared(&self.slot, address)
+    }
+
     /// Acquires a strong root if the referent has not been cleared.
     #[must_use]
     pub fn upgrade(&self) -> Option<Gc<T>> {

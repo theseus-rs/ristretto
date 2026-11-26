@@ -628,6 +628,41 @@ fn final_graph_tracing_cannot_reverse_weak_descendant_clearing() -> Result<()> {
 }
 
 #[test]
+fn passive_weak_identity_never_strengthens_a_white_referent() -> Result<()> {
+    for concurrent in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(concurrent)
+                .allocation_threshold(usize::MAX)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .build(),
+        );
+        let target = Gc::try_new(&gc, 37_u64)?;
+        let other = Gc::try_new(&gc, 37_u64)?;
+        let weak = GcWeak::new(&target, ReferenceKind::Weak, 0);
+        let mut identity = target.clone_gc();
+        // SAFETY: the owning handle protects demotion. Only the identity is inspected.
+        unsafe { identity.unroot() };
+        drop(target);
+        gc.collect();
+        assert!(!weak.refers_to(&other));
+        assert!(weak.refers_to(&identity));
+        assert!(!weak.is_cleared());
+        at_reference_stage(&gc, 1, 1);
+        // The phase boundary has decided the white referent's fate before its slot is visited.
+        assert_ne!(weak.slot.target.load(Ordering::Acquire), 0);
+        assert!(weak.is_cleared());
+        assert!(!weak.refers_to(&identity));
+        finish(&gc);
+        assert!(weak.is_cleared());
+        assert!(gc.address_for_identity(identity.identity()).is_none());
+        assert_eq!(**other, 37);
+    }
+    Ok(())
+}
+
+#[test]
 fn logically_retired_handles_cannot_resurrect_an_untraced_graph() -> Result<()> {
     for concurrent in [false, true] {
         let gc = GarbageCollector::with_config(
