@@ -6,7 +6,7 @@ use crate::{Finalize, Gc, GcRootGuard, Result};
 use portable_atomic::AtomicU64;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Condvar, Mutex, RwLock, Weak};
+use std::sync::{Arc, Mutex, RwLock, Weak};
 #[cfg(not(target_family = "wasm"))]
 use std::thread;
 
@@ -153,6 +153,7 @@ impl Drop for RootReservation<'_> {
                 context.roots.cancel_prepared(slot);
             } else if let Some(roots) = self.collector.scanned_slots() {
                 roots.cancel_prepared(slot);
+                self.collector.wake_root_repair(roots);
             }
         }
     }
@@ -754,6 +755,12 @@ fn now() -> Option<std::time::Instant> {
     }
 }
 
+#[cfg(not(target_family = "wasm"))]
+#[path = "worker_signals.rs"]
+mod worker_signals;
+#[cfg(not(target_family = "wasm"))]
+use worker_signals::WorkerSignals;
+
 /// A collector with stable descriptors, resumable tracing and optional payload compaction.
 ///
 /// Native workers and cooperative callers drive the same state machine. Publication uses
@@ -836,12 +843,12 @@ pub struct GarbageCollector {
     published_bytes: AtomicUsize,
     published_debt: AtomicUsize,
 
-    shutdown: AtomicBool,
+    #[cfg(not(target_family = "wasm"))]
+    worker_signals: arc_swap::ArcSwapOption<WorkerSignals>,
     #[cfg(not(target_family = "wasm"))]
     collector_thread: Mutex<Vec<thread::JoinHandle<()>>>,
     #[cfg(not(target_family = "wasm"))]
     refund_notifier: arc_swap::ArcSwapOption<crate::recovery::RefundNotifier>,
-    trigger: Arc<(Mutex<bool>, Condvar)>,
 }
 
 impl GarbageCollector {
@@ -1829,12 +1836,12 @@ impl GarbageCollector {
                 allocation_debt: AtomicUsize::new(0),
                 published_bytes: AtomicUsize::new(0),
                 published_debt: AtomicUsize::new(0),
-                shutdown: AtomicBool::new(false),
+                #[cfg(not(target_family = "wasm"))]
+                worker_signals: arc_swap::ArcSwapOption::empty(),
                 #[cfg(not(target_family = "wasm"))]
                 collector_thread: Mutex::new(Vec::new()),
                 #[cfg(not(target_family = "wasm"))]
                 refund_notifier: arc_swap::ArcSwapOption::empty(),
-                trigger: Arc::new((Mutex::new(false), Condvar::new())),
             }
         })
     }
@@ -2425,33 +2432,34 @@ impl GarbageCollector {
         if !worker.is_empty() {
             return;
         }
-        self.shutdown.store(false, Ordering::Release);
         let count = self.configuration.threads.max(1);
+        let signals = Arc::new(WorkerSignals::new(count));
+        self.worker_signals.store(Some(signals.clone()));
         for index in 0..count {
             let weak = self.this.clone();
-            let trigger = self.trigger.clone();
+            let generation = signals.clone();
             let registration = crate::recovery::WorkerRegistration::new(self);
             worker.push(thread::spawn(move || {
                 let _registration = registration;
                 let mut contention_delay = 1_u64;
+                #[expect(
+                    clippy::indexing_slicing,
+                    reason = "each worker gets its ordinal in this fixed pool"
+                )]
+                let signal = &generation.workers[index];
+                signal.register();
+                let mut retry = true;
                 loop {
-                    let (mutex, wake) = &*trigger;
-                    let mut pending = lock(mutex);
-                    while !*pending {
-                        pending = wake
-                            .wait(pending)
-                            .unwrap_or_else(std::sync::PoisonError::into_inner);
+                    if !retry {
+                        signal.wait();
                     }
-                    drop(pending);
-                    let Some(gc) = weak.upgrade() else {
-                        break;
-                    };
-                    if gc.shutdown.load(Ordering::Acquire) {
+                    if generation.closed.load(Ordering::Acquire) {
                         break;
                     }
+                    let Some(gc) = weak.upgrade() else { break };
                     let _worker = WorkerContext::enter(&gc, index);
                     while gc.pending() {
-                        if gc.shutdown.load(Ordering::Acquire) {
+                        if generation.closed.load(Ordering::Acquire) {
                             break;
                         }
                         if !gc.worker_admitted(index) {
@@ -2495,20 +2503,18 @@ impl GarbageCollector {
                     }
                     // A request can look idle while another worker transfers it to
                     // active state. Never block the idle handoff on that worker.
-                    let Ok(_coordinator) = gc.coordinator.try_lock() else {
+                    retry = if let Ok(_coordinator) = gc.coordinator.try_lock() {
+                        gc.pending()
+                    } else {
                         gc.back_off_worker(&mut contention_delay);
-                        continue;
+                        true
                     };
-                    let mut pending = lock(mutex);
-                    if gc.shutdown.load(Ordering::Acquire) {
-                        break;
-                    }
-                    if !gc.pending() {
-                        *pending = false;
-                    }
                 }
             }));
         }
+        // A request may predate worker registration. Poll the authoritative
+        // demand once before sleeping, including when start races a request.
+        signals.wake();
     }
 
     #[cfg(not(target_family = "wasm"))]
@@ -2568,11 +2574,15 @@ impl GarbageCollector {
     /// # Errors
     /// Returns an error if a native worker panics.
     pub fn stop(&self) -> Result<()> {
-        self.shutdown.store(true, Ordering::Release);
-        self.wake();
         #[cfg(not(target_family = "wasm"))]
         {
-            let workers = std::mem::take(&mut *lock(&self.collector_thread));
+            let workers = {
+                let mut workers = lock(&self.collector_thread);
+                if let Some(previous) = self.worker_signals.swap(None) {
+                    previous.close();
+                }
+                std::mem::take(&mut *workers)
+            };
             for worker in workers {
                 if worker.thread().id() == thread::current().id() {
                     continue;
@@ -2690,10 +2700,24 @@ impl GarbageCollector {
         // Private reservations may outlive the ordinary heap. Each owner refunds its own charge.
     }
 
+    fn wake_root_repair(&self, roots: &crate::roots::RootSlots) {
+        if roots.repair_pending() {
+            self.wake();
+        }
+    }
+
+    #[cfg_attr(
+        target_family = "wasm",
+        expect(
+            clippy::unused_self,
+            reason = "cooperative hosts have no native workers"
+        )
+    )]
     fn wake(&self) {
-        let (pending, wake) = &*self.trigger;
-        *lock(pending) = true;
-        wake.notify_all();
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(signals) = self.worker_signals.load().as_ref() {
+            signals.wake();
+        }
     }
 
     /// Requests a full collection. On cooperative targets, call `step` at safe boundaries.
@@ -3218,6 +3242,7 @@ impl GarbageCollector {
                     && let Some(roots) = self.scanned_slots()
                 {
                     roots.finish_removal(root);
+                    self.wake_root_repair(roots);
                 }
             }
             crate::roots::Registration::Context(context, root) => {
@@ -5763,8 +5788,10 @@ impl Drop for GarbageCollector {
     fn drop(&mut self) {
         #[cfg(not(target_family = "wasm"))]
         self.close_refund_notifier();
-        self.shutdown.store(true, Ordering::Release);
-        self.wake();
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(signals) = self.worker_signals.swap(None) {
+            signals.close();
+        }
         self.cleanup_remaining_objects();
     }
 }
@@ -6663,6 +6690,45 @@ mod tests {
             assert_eq!(gc.statistics()?.live_objects, 0);
         }
         Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn cancelled_root_reservation_wakes_an_idle_worker_to_repair_pages() -> Result<()> {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .root_storage(crate::RootStorage::Slots)
+                .build(),
+        );
+        let roots = gc.scanned_slots().expect("paged root fixture");
+        // Fill the cached page so cancelling the next reservation releases a page.
+        let reservations: Vec<_> = (0..crate::roots::SLOTS)
+            .map(|_| gc.reserve_owned_root(0x1000))
+            .collect();
+        let cancelled = gc.reserve_owned_root(0x1000);
+        gc.start();
+        let signals = gc.worker_signals.load_full().expect("worker pool");
+        let wait_until = |condition: &dyn Fn() -> bool| {
+            let start = std::time::Instant::now();
+            while !condition() {
+                assert!(start.elapsed() < std::time::Duration::from_secs(5));
+                thread::yield_now();
+            }
+        };
+        wait_until(&|| {
+            signals
+                .workers
+                .first()
+                .is_some_and(|worker| worker.waiting.load(Ordering::Acquire))
+        });
+        roots.with_all_writers_held(|| {
+            drop(cancelled);
+            assert!(roots.repair_pending());
+        });
+        wait_until(&|| !roots.repair_pending());
+        assert_eq!(roots.statistics().pages, 1);
+        drop(reservations);
+        gc.stop()
     }
 
     #[cfg(not(target_family = "wasm"))]
