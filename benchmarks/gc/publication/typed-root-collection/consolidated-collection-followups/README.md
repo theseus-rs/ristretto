@@ -17,6 +17,9 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Waiting allocations publish context credit to the heap (migration failure) | `35e91dbf` | 251126935 | 10.26× | 11.61× | 36 / 36 |
 | Shared credit across pending-future context changes | `ac047016` | 251126936 | 9.88× | 11.56× | 35 / 36 |
 | Fresh mature edges counted on each marking queue | `b041f0c3` | 251126937 | **10.55×** | **11.76×** | **36 / 36** |
+| Observe a fitting refund before the first allocation yield | `2b324c42` | 251126939 | **10.09×** | **11.62×** | **36 / 36** |
+
+At `2b324c42`, the weakest median speedups were 10.44× native and 11.75× WASI. With an 8-byte cap, a real allocation and an advisory request both received a refund during their first suspension. A competitor immediately took the bytes. The parent exhausted its recovery allowance after two tickets. The revised requests observed the refund and completed three tickets before returning OOM on the still-full heap. With no refund they completed two. Cancellation during the first yield released the observer and restored local allocation batching. The independent-donor case still requires a way to hand returned storage to existing requests. [All process results](first-yield.csv)
 
 At `b041f0c3`, the weakest median speedups were 11.62× native and 11.95× WASI. The collector records each newly strong mature edge under its destination queue mutex, then sums the lane counts at full sweep. A two-lane diagnostic paused a real marking callback between marking its targets and recording their tally. Another helper kept making bounded calls, the ticket stayed open, and the next full collection reclaimed an unreachable mature object. All 200 forced schedules passed. [Test patches, process results, and Cargo packaging receipt](credit-and-census.json.gz)
 

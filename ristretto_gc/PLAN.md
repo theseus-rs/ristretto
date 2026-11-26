@@ -2,6 +2,14 @@
 
 ## Tenfold complete-collection gate
 
+At `2b324c42`, allocating and advisory requests register for fitting refunds
+before their first cooperative yield. A forced refund stolen during that yield
+preserves the retry allowance, and immediate cancellation restores context
+batching. All 36 complete-collection conditions passed against `f1daebeb`,
+with weakest individual 95% lower bounds of 10.09× native and 11.62× WASI.
+The independent-donor hard-cap failure remains open.
+[Process results and test outcomes](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md).
+
 At `b041f0c3`, all 36 complete-collection cells passed against `f1daebeb`.
 The weakest 95% lower bounds were 10.55× native and 11.76× WASI. The
 previous integrated revision missed one native condition at 9.88×. Per-lane
