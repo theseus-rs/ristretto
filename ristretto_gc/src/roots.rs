@@ -6,9 +6,8 @@ mod overflow;
 use overflow::Overflow;
 pub(crate) use overflow::Record;
 use portable_atomic::AtomicU64;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::num::NonZeroU64;
-use std::ops::Bound::{Excluded, Unbounded};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 
@@ -329,9 +328,26 @@ impl Reservation {
     }
 }
 
+type Pages = crate::publication_directory::Directory<Arc<Page>>;
+
+// Keys originate exclusively from a checked, pointer-width page number.
+#[expect(
+    clippy::expect_used,
+    reason = "only pointer-width page indices enter this directory"
+)]
+fn page_number(key: u64) -> usize {
+    usize::try_from(key).expect("addressable root page")
+}
+
+fn indexed_pages(pages: &Pages) -> impl Iterator<Item = (u64, &Arc<Page>)> {
+    std::iter::successors(pages.next_after(None), |(id, _)| {
+        pages.next_after(Some(*id))
+    })
+}
+
 #[derive(Debug, Default)]
 struct State {
-    pages: BTreeMap<usize, Arc<Page>>,
+    pages: Pages,
     available: BTreeSet<usize>,
     cached_page: Option<usize>,
     next_page: usize,
@@ -348,7 +364,7 @@ struct Shard {
     // Updated only when page membership changes, under `state`. A scan never
     // takes that mutex or retains this map across work units. The current page
     // has its own Arc, so retirement does not invalidate a resumable cursor.
-    published: ArcSwap<BTreeMap<usize, Arc<Page>>>,
+    published: ArcSwap<Pages>,
     cleanup_pending: AtomicBool,
 }
 
@@ -406,13 +422,17 @@ impl RootSlots {
                 let id = loop {
                     let id = state.next_page;
                     state.next_page = id.wrapping_add(1) & MAX_PAGE;
-                    if !state.pages.contains_key(&id) {
+                    if state.pages.get(id as u64).is_none() {
                         break id;
                     }
                 };
                 Arc::get_mut(&mut page).expect("unpublished page").location =
                     (id << LOCATION_BITS) | (shard << SLOT_BITS);
-                state.pages.insert(id, page);
+                state.pages = state
+                    .pages
+                    .insert(id as u64, page)
+                    .expect("addressable root pages")
+                    .0;
                 self.shards[shard]
                     .published
                     .store(Arc::new(state.pages.clone()));
@@ -432,7 +452,7 @@ impl RootSlots {
                 state.cached_page = Some(page_id);
                 state
                     .pages
-                    .get(&page_id)
+                    .get(page_id as u64)
                     .expect("available page")
                     .keep_empty
                     .store(true, Ordering::Release);
@@ -452,7 +472,10 @@ impl RootSlots {
                 .filter(|generation| *generation <= MAX_GENERATION)
                 .expect("root slot generation exhausted");
             state.generation = generation;
-            let page = state.pages.get_mut(&page_id).expect("available root page");
+            let page = state
+                .pages
+                .get(page_id as u64)
+                .expect("available root page");
             let occupied = page.occupied.load(Ordering::Acquire);
             let slot = (!occupied).trailing_zeros() as usize;
             let reused = page.slots[slot].generation.load(Ordering::Relaxed) != 0;
@@ -526,7 +549,7 @@ impl RootSlots {
         let page = self.shards[id.shard()]
             .published
             .load()
-            .get(&id.page())
+            .get(id.page() as u64)
             .cloned()?;
         let root = SlotRoot::new(id, page);
         let address = root.take_address()?;
@@ -560,7 +583,7 @@ impl RootSlots {
     // Caller owns the writer mutex. Atomic removers only clear occupied bits;
     // no new reservation can appear while this mutex is held.
     fn clean_page(state: &mut State, id: usize) -> bool {
-        let Some(page) = state.pages.get(&id) else {
+        let Some(page) = state.pages.get(id as u64) else {
             return false;
         };
         let occupied = page.occupied.load(Ordering::Acquire);
@@ -577,20 +600,16 @@ impl RootSlots {
         }
         state.available.remove(&id);
         state.released += 1;
-        state.pages.remove(&id);
+        state.pages = state.pages.remove(id as u64).0;
         true
     }
 
-    fn clean_all(registry: &Shard, state: &mut State) -> Option<Arc<BTreeMap<usize, Arc<Page>>>> {
-        let mut next = state.pages.first_key_value().map(|(&id, _)| id);
+    fn clean_all(registry: &Shard, state: &mut State) -> Option<Arc<Pages>> {
+        let mut next = state.pages.next_after(None).map(|(id, _)| id);
         let mut changed = false;
         while let Some(id) = next {
-            changed |= Self::clean_page(state, id);
-            next = state
-                .pages
-                .range((Excluded(id), Unbounded))
-                .next()
-                .map(|(&id, _)| id);
+            changed |= Self::clean_page(state, page_number(id));
+            next = state.pages.next_after(Some(id)).map(|(id, _)| id);
         }
         changed.then(|| registry.published.swap(Arc::new(state.pages.clone())))
     }
@@ -602,7 +621,7 @@ impl RootSlots {
         if let Some(mut state) = Self::try_state(registry) {
             let same_page = state
                 .pages
-                .get(&root.page_id())
+                .get(root.page_id() as u64)
                 .is_some_and(|page| Arc::ptr_eq(page, &root.page));
             let changed = same_page && Self::clean_page(&mut state, root.page_id());
             let old_view = changed.then(|| registry.published.swap(Arc::new(state.pages.clone())));
@@ -640,7 +659,7 @@ impl RootSlots {
             return self.overflow.scan(&mut cursor.page);
         };
         if cursor.current.is_none() && cursor.slot == 0 {
-            cursor.current = shard.published.load().get(&cursor.page).cloned();
+            cursor.current = shard.published.load().get(cursor.page as u64).cloned();
         }
         if let Some(page) = &cursor.current {
             let mask = if cursor.slot < SLOTS {
@@ -668,9 +687,8 @@ impl RootSlots {
         let next = shard
             .published
             .load()
-            .range((Excluded(cursor.page), Unbounded))
-            .next()
-            .map(|(&id, page)| (id, page.clone()));
+            .next_after(Some(cursor.page as u64))
+            .map(|(id, page)| (page_number(id), page.clone()));
         cursor.current = None;
         if let Some((id, page)) = next {
             cursor.page = id;
@@ -690,14 +708,14 @@ impl RootSlots {
         let mut found = Vec::new();
         for (shard, registry) in self.shards.iter().enumerate() {
             let pages = registry.published.load();
-            for (&id, page) in pages.iter() {
+            for (id, page) in indexed_pages(&pages) {
                 let mut occupied = page.occupied.load(Ordering::Acquire);
                 while occupied != 0 {
                     let slot = occupied.trailing_zeros() as usize;
                     occupied &= occupied - 1;
                     if let Some(generation) = page.slots[slot].matching_generation(address) {
                         found.push(SlotRoot::new(
-                            SlotId::new(shard, id, slot, generation),
+                            SlotId::new(shard, page_number(id), slot, generation),
                             page.clone(),
                         ));
                     }
@@ -715,14 +733,16 @@ impl RootSlots {
             let empty_cached = state.cached_page.filter(|id| {
                 state
                     .pages
-                    .get(id)
+                    .get(*id as u64)
                     .is_some_and(|page| page.occupied.load(Ordering::Acquire) == 0)
             });
             let retired = empty_cached.and_then(|id| {
                 state.cached_page = None;
                 state.available.remove(&id);
                 state.released += 1;
-                state.pages.remove(&id)
+                let (next, page) = state.pages.remove(id as u64);
+                state.pages = next;
+                page
             });
             if retired.is_some() {
                 shard.published.store(Arc::new(state.pages.clone()));
@@ -746,7 +766,7 @@ impl RootSlots {
         let mut result = RootStatistics::default();
         for (index, shard) in self.shards.iter().enumerate() {
             let state = lock(&shard.state);
-            for page in state.pages.values() {
+            for (_, page) in indexed_pages(&state.pages) {
                 let mut occupied = page.occupied.load(Ordering::Acquire);
                 while occupied != 0 {
                     let slot = occupied.trailing_zeros() as usize;
@@ -763,7 +783,7 @@ impl RootSlots {
             result.cached_empty_pages += usize::from(
                 state
                     .cached_page
-                    .and_then(|id| state.pages.get(&id))
+                    .and_then(|id| state.pages.get(id as u64))
                     .is_some_and(|page| page.occupied.load(Ordering::Acquire) == 0),
             );
             result.pages_created += state.created;
@@ -784,6 +804,35 @@ impl RootSlots {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn published_page_updates_share_unaffected_pages_with_a_pinned_view() {
+        let roots = RootSlots::default();
+        let mut ids: Vec<_> = (0..SLOTS * 2).map(|_| roots.insert(0x1000)).collect();
+        let first = ids[0];
+        let shard = &roots.shards[first.shard()];
+        let pinned = shard.published.load_full();
+        let page = pinned.get(first.page() as u64).expect("first page");
+        let owners = Arc::strong_count(page);
+        let extra = roots.insert(0x1000);
+        let current = shard.published.load_full();
+        assert_eq!(pinned.len(), 2);
+        assert_eq!(current.len(), 3);
+        assert!(Arc::ptr_eq(
+            page,
+            current.get(first.page() as u64).expect("same page")
+        ));
+        assert_eq!(Arc::strong_count(page), owners);
+        assert_eq!(roots.remove(extra), Some(0x1000));
+        assert_eq!(shard.published.load().len(), 2);
+        assert!(current.get(extra.page() as u64).is_some());
+        while let Some(id) = ids.pop() {
+            assert_eq!(roots.remove(id), Some(0x1000));
+        }
+        drop((current, pinned));
+        roots.trim_empty();
+        assert_eq!(roots.statistics().resident_pages, 0);
+    }
 
     #[test]
     fn overflow_retry_and_cancellation() {
