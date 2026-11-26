@@ -51,8 +51,6 @@ ristretto_classloader = { path = "../ristretto_classloader", version = "0.35.0" 
 tempfile = { workspace = true }
 
 [features]
-# Explicit application native int-to-int boundary into the restricted interpreter.
-experimental-canonical-native = ["ristretto_vm/experimental-canonical-runtime"]
 default = ["audio", "tls-rustls-ring"]
 audio = [
     "ristretto_vm/audio",

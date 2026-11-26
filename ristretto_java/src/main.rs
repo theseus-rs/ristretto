@@ -10,8 +10,6 @@
 )]
 
 mod argument;
-#[cfg(feature = "experimental-canonical-native")]
-mod canonical_native;
 mod logging;
 mod module;
 mod source;
@@ -173,13 +171,6 @@ async fn common_main(mut cli: Arguments) -> Result<()> {
         }
     };
     startup_trace!("[cli] vm created");
-
-    #[cfg(feature = "experimental-canonical-native")]
-    if let Some(binding) = &cli.canonical_native
-        && let Err(error) = binding.install(&vm, &cli.canonical_classes).await
-    {
-        return process_error(error);
-    }
 
     let parameters = cli.parameters.unwrap_or_default();
     let execution = if let Some(source_file) = source_file {
