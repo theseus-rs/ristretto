@@ -1007,93 +1007,140 @@ fn a_late_contended_dirty_owner_is_retraced_even_if_already_strong() -> Result<(
         .into_iter()
         .flat_map(|(counted, contended)| [0, 4].map(|buffer| (counted, contended, buffer)))
     {
-        let gc = GarbageCollector::with_config(
-            Configuration::builder()
-                .concurrent_publication(counted)
-                .barrier_buffer_size(buffer)
-                .promotion_age(2)
-                .incremental_step_size(1)
-                .max_pause_time_us(0)
-                .allocation_threshold(usize::MAX)
-                .full_collection_interval(usize::MAX)
-                .build(),
-        );
-        let owner = Gc::try_new(
-            &gc,
-            SplitField {
-                edge: Mutex::default(),
-                scans: AtomicUsize::new(0),
-                split: AtomicBool::new(false),
-                busy: AtomicBool::new(false),
-            },
-        )?;
-        gc.collect_full()?;
-        gc.collect_full()?;
-        let address = owner.as_ptr() as usize;
-        assert!(!gc.is_young_allocation(address));
-        let meta = gc.objects.lookup(address).expect("registered owner");
-        let mut child = Gc::try_new(&gc, 79_u64)?.into_rooted();
-        let target = gc
-            .objects
-            .lookup(child.as_ptr() as usize)
-            .expect("registered child");
-        let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
-        // SAFETY: the test drives this young cycle only through the owner's
-        // first mark callback. It installs the edge before weak closure/sweep.
-        unsafe { child.unroot() };
-        gc.remember(&owner);
-        let before = owner.scans.load(Ordering::Relaxed);
-        gc.collect_young();
-        assert!((0..4096).any(|_| {
-            gc.step();
-            owner.scans.load(Ordering::Relaxed) > before
-        }));
-        let epoch = gc.domains[0].epoch.load(Ordering::Acquire);
-        assert_eq!(gc.domains[0].weak_phase(), 0);
-        assert_eq!(meta.retention(0, epoch), Some(Retention::Strong));
-        assert!(!target.marked(0, epoch));
-        owner.split.store(true, Ordering::Release);
-        owner.busy.store(true, Ordering::Release);
-        meta.mutation.store(usize::MAX, Ordering::Release);
-        {
-            let _parked = gc.remembered.lock(address);
-            for _ in 0..1024 {
-                gc.remember(&owner);
-            }
+        check_late_owner_write(counted, contended, buffer, DirtyDelivery::Immediate)?;
+    }
+    Ok(())
+}
+
+#[test]
+fn a_late_buffered_owner_write_survives_collector_draining() -> Result<()> {
+    for counted in [false, true] {
+        check_late_owner_write(counted, false, 4, DirtyDelivery::Collector)?;
+    }
+    Ok(())
+}
+
+#[test]
+fn a_late_buffered_owner_write_survives_explicit_flushing() -> Result<()> {
+    for counted in [false, true] {
+        check_late_owner_write(counted, false, 4, DirtyDelivery::ExplicitFlush)?;
+    }
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+enum DirtyDelivery {
+    Immediate,
+    Collector,
+    ExplicitFlush,
+}
+
+fn check_late_owner_write(
+    counted: bool,
+    contended: bool,
+    buffer: usize,
+    delivery: DirtyDelivery,
+) -> Result<()> {
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .concurrent_publication(counted)
+            .barrier_buffer_size(buffer)
+            .promotion_age(2)
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .allocation_threshold(usize::MAX)
+            .full_collection_interval(usize::MAX)
+            .build(),
+    );
+    let owner = Gc::try_new(
+        &gc,
+        SplitField {
+            edge: Mutex::default(),
+            scans: AtomicUsize::new(0),
+            split: AtomicBool::new(false),
+            busy: AtomicBool::new(false),
+        },
+    )?;
+    gc.collect_full()?;
+    gc.collect_full()?;
+    let address = owner.as_ptr() as usize;
+    assert!(!gc.is_young_allocation(address));
+    let meta = gc.objects.lookup(address).expect("registered owner");
+    let mut child = Gc::try_new(&gc, 79_u64)?.into_rooted();
+    let target = gc
+        .objects
+        .lookup(child.as_ptr() as usize)
+        .expect("registered child");
+    let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+    // SAFETY: the test drives this young cycle only through the owner's
+    // first mark callback. It installs the edge before weak closure/sweep.
+    unsafe { child.unroot() };
+    gc.remember(&owner);
+    let before = owner.scans.load(Ordering::Relaxed);
+    gc.collect_young();
+    assert!((0..4096).any(|_| {
+        gc.step();
+        owner.scans.load(Ordering::Relaxed) > before
+    }));
+    let epoch = gc.domains[0].epoch.load(Ordering::Acquire);
+    assert_eq!(gc.domains[0].weak_phase(), 0);
+    assert_eq!(meta.retention(0, epoch), Some(Retention::Strong));
+    assert!(!target.marked(0, epoch));
+    owner.split.store(true, Ordering::Release);
+    owner.busy.store(true, Ordering::Release);
+    meta.mutation.store(usize::MAX, Ordering::Release);
+    {
+        let _parked = gc.remembered.lock(address);
+        for _ in 0..1024 {
+            gc.remember(&owner);
         }
-        assert!((0..4096).any(|_| {
-            gc.step();
-            owner.scans.load(Ordering::Relaxed) == before + 2
-        }));
-        assert!(!target.marked(0, epoch));
-        *lock(&owner.edge) = Some(child);
-        {
+    }
+    assert!((0..4096).any(|_| {
+        gc.step();
+        owner.scans.load(Ordering::Relaxed) == before + 2
+    }));
+    assert!(!target.marked(0, epoch));
+    *lock(&owner.edge) = Some(child);
+    let context = gc.register_context();
+    match delivery {
+        DirtyDelivery::Immediate => {
             let _parked = contended.then(|| gc.remembered.lock(address));
             for _ in 0..1024 {
                 gc.remember(&owner);
             }
         }
-        assert!((0..4096).any(|_| gc.step()));
-        assert_eq!(weak.upgrade().as_deref(), Some(&79));
-        assert_eq!(owner.scans.load(Ordering::Relaxed), before + 3);
-        drop(owner);
-        gc.collect_full()?;
-        assert!(weak.upgrade().is_none());
-        assert!(
-            gc.remembered
-                .dirty
-                .next(&mut gc.remembered.dirty.cursor())
-                .is_none()
-        );
-        let _admission = gc.allocation_guard();
-        gc.remember_contended_owner(&meta, None);
-        assert!(
-            gc.remembered
-                .dirty
-                .next(&mut gc.remembered.dirty.cursor())
-                .is_none()
-        );
+        DirtyDelivery::Collector | DirtyDelivery::ExplicitFlush => {
+            context.with(|| gc.remember(&owner));
+            assert!(context.0.try_peek().expect("queued mutation").dirty);
+            assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 1);
+            if matches!(delivery, DirtyDelivery::ExplicitFlush) {
+                context.flush();
+            } else {
+                assert!(gc.try_apply_buffered_record(&context.0));
+            }
+            assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+        }
     }
+    assert!((0..4096).any(|_| gc.step()));
+    assert_eq!(weak.upgrade().as_deref(), Some(&79));
+    assert_eq!(owner.scans.load(Ordering::Relaxed), before + 3);
+    drop(owner);
+    gc.collect_full()?;
+    assert!(weak.upgrade().is_none());
+    assert!(
+        gc.remembered
+            .dirty
+            .next(&mut gc.remembered.dirty.cursor())
+            .is_none()
+    );
+    let _admission = gc.allocation_guard();
+    gc.remember_contended_owner(&meta, None);
+    assert!(
+        gc.remembered
+            .dirty
+            .next(&mut gc.remembered.dirty.cursor())
+            .is_none()
+    );
     Ok(())
 }
 

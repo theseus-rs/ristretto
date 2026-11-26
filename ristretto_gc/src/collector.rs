@@ -4220,11 +4220,7 @@ impl GarbageCollector {
             };
             remembered.insert(record.address);
             drop(remembered);
-            // A buffered notification may have crossed the young remembered scan.
-            if self.domains[0].active() {
-                let _context = Context::enter(self, 0);
-                self.shade_metadata(&metadata);
-            }
+            self.rescan_buffered_owner(&metadata);
             true
         } else {
             let mut matching =
@@ -4345,15 +4341,26 @@ impl GarbageCollector {
             observer.send(()).expect("barrier claim observer");
         }
         let _retention = TraceRetention::enter(self, Retention::Strong);
-        if needs_metadata
-            && let Some(metadata) = metadata.as_ref()
-            && self.domains[0].active()
-        {
-            let _context = Context::enter(self, 0);
-            self.shade_metadata(metadata);
+        if needs_metadata && let Some(metadata) = metadata.as_ref() {
+            self.rescan_buffered_owner(metadata);
         }
         self.acknowledge_buffered_record(context, record);
         true
+    }
+
+    /// The pending reservation protects this handoff through enqueue. An owner
+    /// already marked Strong may have been traced before the buffered write.
+    fn rescan_buffered_owner(&self, metadata: &MetadataRef) {
+        let young = &self.domains[0];
+        if !young.active() {
+            return;
+        }
+        if young.weak_phase() == 0 {
+            self.rescan_dirty_owner(metadata);
+        } else {
+            let _context = Context::enter(self, 0);
+            self.shade_metadata(metadata);
+        }
     }
 
     fn acknowledge_buffered_record(
