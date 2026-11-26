@@ -1,0 +1,8 @@
+{
+  "mode": "control",
+  "binary_sha256": "611558737bfbb375cb1f6693d92d41533ea0c6016da4c0a102ff0008dad5baf6",
+  "processes": 100,
+  "schedules": [
+    "a_peer_claiming_the_last_job_completes_an_enrolled_dispatch"
+  ]
+}

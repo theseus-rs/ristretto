@@ -9,6 +9,15 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `29634965` native callback claimants can reclaim every published sibling
+past a parked claimant. Ten schedules passed in 1,000 fresh processes. When a
+peer took the last job after dispatch enrollment, the control exhausted 2,048
+polls in 100/100 processes. The corrected allocator settled while the job
+remained charged. All 36 complete-collection conditions passed, with minimum
+individual 95% lower speedup bounds of **10.70× native and 10.18× WASI**.
+The original six cheap-finalizer cost intervals included parity with shipping.
+[Progress controls, retention, qualification and graphs](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/independent-native-callbacks/README.md).
+
 At `fe7d8c39` all three JVM smoke tiers reclaimed their complete two-node
 charge. All 36 complete-collection conditions passed the 10× gate relative to
 `f1daebeb`, with minimum individual 95% lower bounds of 10.84× on native and
@@ -79,7 +88,7 @@ included parity. Minimum individual 95% complete-collection speedup bounds
 were **10.24× native and 10.12× WASI** across the 36 conditions.
 [Controls, timings and collection graph](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/pressure-service-turn/README.md).
 
-The native receiver can still hide unrelated jobs while a claimant holds its
+The earlier native receiver could hide unrelated jobs while a claimant held its
 mutex. An independently claimable queue with the same dispatch acknowledgment
 passed 400 forced allocation and reclamation runs. It took 32% longer for 64
 cheap finalizers with two workers. Independent claims, pressure-service
@@ -90,8 +99,8 @@ Linked pages and fixed ring slots both left 128 jobs available before a
 parked claim and 127 afterward. The allocation-at-cap controls also passed,
 across 800 forced runs in total. With 1,024 cheap finalizers and two workers,
 the page trial took 1.195× the shipping elapsed time and the ring with
-overflow took 7.054×. The shipping receiver still needs a way to claim work
-around a parked owner at comparable cost.
+overflow took 7.054×. These costs led to growing reusable banks and the bounded consumer cursor
+qualified at `29634965`.
 [Queue designs, progress checks and timing intervals](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/native-callback-inboxes/README.md).
 
 Default Java instance fields carry zeroes and nulls. Construction and first
