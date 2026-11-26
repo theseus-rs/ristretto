@@ -1148,7 +1148,7 @@ mod tests {
 
     #[cfg(not(target_family = "wasm"))]
     #[test]
-    fn parked_observations_leave_ticket_wakes_and_cancellation_available() -> Result<()> {
+    fn parked_observations_leave_ticket_wakes_and_cancellation_available() {
         use std::sync::mpsc;
         use std::time::Duration;
         let gc = GarbageCollector::new();
@@ -1185,7 +1185,6 @@ mod tests {
         });
         assert_eq!(gc.recovery.waiter_count(), 0);
         drop(worker);
-        Ok(())
     }
 
     #[test]
