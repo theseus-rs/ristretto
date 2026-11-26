@@ -659,7 +659,7 @@ mod native {
     }
 
     #[test]
-    fn workers_back_off_when_another_worker_owns_serial_reclamation() -> Result<()> {
+    fn workers_complete_a_fresh_ticket_while_a_destructor_owns_its_storage() -> Result<()> {
         struct SlowDrop(Arc<Gate>);
         // SAFETY: this fixture contains no outgoing GC references.
         #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
@@ -685,7 +685,10 @@ mod native {
         gc.start();
         gc.collect();
         until(|| gate.entered.load(Ordering::Acquire) > 0);
-        until(|| gc.diagnostics().worker_backoffs > 0);
+        let charge = gc.managed_bytes();
+        assert!(charge > 0);
+        run(gc.collect_full_async())?;
+        assert_eq!(gc.managed_bytes(), charge);
         gate.release();
         gc.stop()?;
         assert_eq!(gc.managed_bytes(), 0);

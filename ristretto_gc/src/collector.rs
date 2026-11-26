@@ -689,6 +689,20 @@ pub unsafe trait Trace {
         true
     }
 
+    /// Whether clearing and dropping every value of this type can run on a collector
+    /// worker without calling user code, waiting on another thread, or doing work
+    /// proportional to payload size, assuming the backing allocator makes progress.
+    /// Returning true only affects scheduling.
+    /// The collector still runs both cleanup operations. Separately registered
+    /// finalizers and heap owners retain their own callback requirements.
+    #[must_use]
+    fn has_bounded_cleanup() -> bool
+    where
+        Self: Sized,
+    {
+        false
+    }
+
     /// Releases outgoing edges in bounded batches before destruction of unreachable values.
     fn clear_step(&mut self, _offset: usize, _budget: usize) -> TraceProgress {
         TraceProgress::Complete
@@ -6313,6 +6327,10 @@ impl Drop for GarbageCollector {
 
 // SAFETY: all hooks forward to the present value with the same protected owner.
 unsafe impl<T: Trace> Trace for Option<T> {
+    fn has_bounded_cleanup() -> bool {
+        T::has_bounded_cleanup()
+    }
+
     fn edges_rooted_before_unroot(&self) -> bool {
         self.as_ref().is_some_and(Trace::edges_rooted_before_unroot)
     }
@@ -6357,6 +6375,10 @@ unsafe impl<T: Trace> Trace for Option<T> {
 // SAFETY: every initialized element is traced and participates in ownership
 // conversion; clearing only destroys initialized elements under exclusive access.
 unsafe impl<T: Trace> Trace for Vec<T> {
+    fn has_bounded_cleanup() -> bool {
+        !std::mem::needs_drop::<T>()
+    }
+
     fn may_contain_gc_references() -> bool {
         T::may_contain_gc_references()
     }
@@ -6368,7 +6390,8 @@ unsafe impl<T: Trace> Trace for Vec<T> {
         }
     }
     fn clear_step(&mut self, _offset: usize, budget: usize) -> TraceProgress {
-        if !T::may_contain_gc_references() && !std::mem::needs_drop::<T>() {
+        // Clearing elements with no drop glue only changes the length.
+        if !std::mem::needs_drop::<T>() {
             self.clear();
             return TraceProgress::Complete;
         }
@@ -6533,6 +6556,10 @@ unsafe impl<A: Trace, B: Trace, C: Trace> Trace for (A, B, C) {
 
 // SAFETY: strings contain no managed edges and retain ordinary Rust storage.
 unsafe impl Trace for String {
+    fn has_bounded_cleanup() -> bool {
+        true
+    }
+
     fn may_contain_gc_references() -> bool {
         false
     }

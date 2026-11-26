@@ -552,6 +552,41 @@ mod native {
     }
 
     #[test]
+    fn registered_workers_back_off_on_a_held_phase_transition() -> Result<()> {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .threads(2)
+                .diagnostics(true)
+                .worker_yield_time_us(50)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let coordinator = lock(&gc.coordinator);
+        gc.start();
+        let before = gc.diagnostics();
+        let ticket = gc.request_full_cycle();
+        let deadline = std::time::Instant::now() + Duration::from_secs(3);
+        loop {
+            let after = gc.diagnostics();
+            if after.coordinator_misses > before.coordinator_misses
+                && after.worker_backoffs > before.worker_backoffs
+            {
+                break;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "worker did not back off after a failed claim"
+            );
+            thread::yield_now();
+        }
+        assert!(gc.completed_full_ticket() < ticket);
+        drop(coordinator);
+        gc.stop()?;
+        assert!(gc.completed_full_ticket() >= ticket);
+        Ok(())
+    }
+
+    #[test]
     fn adaptive_peer_completes_a_fresh_ticket_while_worker_zero_is_parked() -> Result<()> {
         struct ParkOnWake(mpsc::Sender<Option<usize>>, Mutex<mpsc::Receiver<()>>);
         impl std::task::Wake for ParkOnWake {

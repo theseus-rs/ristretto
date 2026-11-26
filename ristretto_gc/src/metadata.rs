@@ -122,7 +122,6 @@ type DropFn = Option<Payload>;
 
 /// Type and callback identity are immutable and shared by all matching allocations.
 struct Kind {
-    needs_drop: bool,
     type_id: std::any::TypeId,
     finalizer: Option<FinalizerFn>,
 }
@@ -157,6 +156,7 @@ pub(crate) struct ObjectMetadata {
     kind: &'static Kind,
     finalized: AtomicBool,
     direct_refund: bool,
+    host_cleanup: bool,
     dirty_scan: AtomicU8,
     // Discovery must not turn old descriptor snapshots into managed roots.
     // The matching strong owner lives only in the payload destruction record.
@@ -237,10 +237,7 @@ impl ObjectMetadata {
     }
 
     pub(crate) fn has_cleanup(&self) -> bool {
-        self.kind.needs_drop
-            || self.kind.finalizer.is_some()
-            || self.trace.requires_clear()
-            || self.owner.is_some()
+        self.host_cleanup || self.kind.finalizer.is_some()
     }
 
     pub(crate) fn can_transfer_retired_charge(&self) -> bool {
@@ -392,6 +389,9 @@ impl ObjectMetadata {
         // SAFETY: constructors exclusively own this initialized, unpublished T.
         let owner = unsafe { (&*ptr).heap_owner() };
         let discovery = owner.as_ref().map(Arc::downgrade);
+        let host_cleanup = owner.is_some()
+            || ((trace.requires_clear() || std::mem::needs_drop::<T>())
+                && !T::has_bounded_cleanup());
         let direct_refund =
             owner.is_none() && allocation.direct_refund(size) && !trace.requires_clear();
         let drop_fn: DropFn = Some(Payload { allocation, owner });
@@ -400,12 +400,12 @@ impl ObjectMetadata {
             id,
             size,
             direct_refund,
+            host_cleanup,
             logical_size: size - crate::gc::Allocation::<T>::layout().size() + size_of::<T>(),
             birth: BirthVisibility::default(),
             drop_fn: Mutex::new(drop_fn),
             kind: &const {
                 Kind {
-                    needs_drop: std::mem::needs_drop::<T>(),
                     type_id: std::any::TypeId::of::<T>(),
                     finalizer: None,
                 }
@@ -435,7 +435,6 @@ impl ObjectMetadata {
         let mut metadata = Self::new_for_gc::<T>(allocation, size, id);
         metadata.kind = &const {
             Kind {
-                needs_drop: std::mem::needs_drop::<T>(),
                 type_id: std::any::TypeId::of::<T>(),
                 finalizer: Some(crate::finalizer::finalize::<T>),
             }

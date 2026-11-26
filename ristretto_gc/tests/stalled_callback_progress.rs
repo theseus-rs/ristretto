@@ -256,8 +256,10 @@ fn ordinary_destructor_without_trace_or_clear_preserves_independent_allocation_p
         Stage::Drop,
         true,
         true,
-        |c| DropOnly {
-            _payload: Payload(c),
+        |c| {
+            Some(DropOnly {
+                _payload: Payload(c),
+            })
         },
         Gc::try_new,
         [0, 0],
@@ -288,7 +290,7 @@ fn primitive_buffer_donor_refunds_behind_a_stalled_host_destructor() -> Result<(
         },
         Gc::try_new,
         [0, 0],
-        String::from("an independent string backing allocation"),
+        Some(String::from("an independent string backing allocation")),
     )
 }
 
