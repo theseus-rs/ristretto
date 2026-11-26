@@ -92,12 +92,12 @@ jobs:
         run: |
           python3 .github/scripts/check-packaged-features.py \
             ristretto_gc/experimental-canonical-runtime \
-            ristretto_vm/experimental-canonical-jit \
+            ristretto_vm/experimental-reference-dispatch \
             ristretto_jit/experimental-reference-dispatch
       - name: Install WASI target
         run: rustup target add wasm32-wasip2
-      - name: Build the packaged WASI interpreter features
+      - name: Build the packaged WASI interpreter and GC adapter
         run: |
           python3 .github/scripts/check-packaged-features.py --target wasm32-wasip2 \
             ristretto_gc/experimental-canonical-runtime \
-            ristretto_vm/experimental-canonical-runtime
+            ristretto_vm

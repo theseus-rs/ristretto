@@ -11,7 +11,7 @@ import tempfile
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", help="Rust target triple for the external consumer build")
-    parser.add_argument("features", nargs="+", metavar="PACKAGE/FEATURE")
+    parser.add_argument("features", nargs="+", metavar="PACKAGE[/FEATURE]")
     args = parser.parse_args()
     metadata = json.loads(subprocess.check_output([
         "cargo", "metadata", "--locked", "--no-deps", "--format-version=1"
@@ -20,9 +20,11 @@ def main():
     selected = {}
     for item in args.features:
         package, sep, feature = item.partition("/")
-        if not sep or package not in packages or feature not in packages[package]["features"]:
+        if package not in packages or (sep and feature not in packages[package]["features"]):
             parser.error(f"unknown publishable workspace package or feature: {item}")
-        selected.setdefault(package, set()).add(feature)
+        enabled = selected.setdefault(package, set())
+        if sep:
+            enabled.add(feature)
     required = set(selected)
     pending = list(selected)
     while pending:
