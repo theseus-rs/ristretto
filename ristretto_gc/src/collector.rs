@@ -1563,6 +1563,10 @@ impl GarbageCollector {
         }
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         barrier_progress_tests::pause_before_remembering();
+        self.enroll_unbuffered_owner(address)
+    }
+
+    fn enroll_unbuffered_owner(&self, address: usize) -> bool {
         let _measurement = self
             .diagnostics
             .barrier_record
@@ -1580,6 +1584,10 @@ impl GarbageCollector {
 
     pub(crate) fn remember_address(&self, address: usize) {
         let _publication = self.allocation_guard();
+        if self.configuration.barrier_buffer_size == 0 {
+            self.enroll_unbuffered_owner(address);
+            return;
+        }
         if let Some(metadata) = self.objects.lock(address).get(&address) {
             metadata.record_mutation();
         } else {

@@ -737,3 +737,68 @@ fn mutation_version_saturation_disables_optional_pruning_for_that_owner() -> Res
     assert!(gc.remembered.lock(address).contains(&address));
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn ordinary_vector_write_enrolls_a_mature_owner_while_its_object_shard_is_parked() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .promotion_age(3)
+                .allocation_threshold(usize::MAX)
+                .full_collection_interval(usize::MAX)
+                .build(),
+        );
+        let owner = Gc::try_new(&gc, crate::cell::RwLock::new(Vec::<Gc<u64>>::new()))?;
+        for _ in 0..3 {
+            gc.collect_full()?;
+        }
+        let address = owner.as_ptr() as usize;
+        assert!(!gc.is_young_allocation(address));
+        generation_tests::finish_young(&gc)?;
+        assert!(!gc.remembered.lock(address).contains(&address));
+        let child = Gc::try_new(&gc, 43_u64)?.into_rooted();
+        let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+        let victim = Gc::try_new(&gc, 17_u64)?;
+        let garbage = crate::GcWeak::new(&victim, crate::ReferenceKind::Weak, 0);
+        drop(victim);
+        thread::scope(|scope| {
+            let (entered, parked) = mpsc::channel();
+            let (go, wait) = mpsc::channel();
+            let (done, observed) = mpsc::channel();
+            let parent = &owner;
+            let writer = scope.spawn(move || {
+                let mut value = parent.write();
+                value.push(child);
+                entered.send(()).unwrap();
+                wait.recv().unwrap();
+                drop(value);
+                done.send(()).unwrap();
+            });
+            parked.recv_timeout(Duration::from_secs(3)).unwrap();
+            let shard = gc.objects.lock(address);
+            go.send(()).unwrap();
+            let completed = observed.recv_timeout(Duration::from_secs(3)).is_ok();
+            drop(shard);
+            writer.join().unwrap();
+            assert!(
+                completed,
+                "dirty publication waited for the owner object shard"
+            );
+        });
+        for _ in 0..2 {
+            generation_tests::finish_young(&gc)?;
+            assert_eq!(weak.upgrade().as_deref(), Some(&43));
+        }
+        assert!(gc.is_young_allocation(owner.read()[0].as_ptr() as usize));
+        assert!(garbage.upgrade().is_none());
+        drop(owner);
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}
