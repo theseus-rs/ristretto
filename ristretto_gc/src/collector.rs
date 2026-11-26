@@ -317,6 +317,26 @@ impl Drop for Context {
     }
 }
 
+/// Marking and sweep helpers modify this count for each reserved batch. Keep
+/// those writes off the cache line containing the epoch and reference stage.
+#[cfg_attr(not(target_family = "wasm"), repr(align(64)))]
+#[derive(Debug, Default)]
+struct WorkReservations(AtomicUsize);
+
+impl WorkReservations {
+    fn count(&self) -> usize {
+        self.0.load(Ordering::Acquire)
+    }
+
+    fn reserve(&self, count: usize) {
+        self.0.fetch_add(count, Ordering::AcqRel);
+    }
+
+    fn release(&self, count: usize) {
+        self.0.fetch_sub(count, Ordering::AcqRel);
+    }
+}
+
 #[derive(Debug)]
 struct Domain {
     cycle: Mutex<Cycle>,
@@ -328,7 +348,7 @@ struct Domain {
     mark_queue: MarkQueues,
     relocations: Option<crate::relocation::Queues>,
     relocation_ready: AtomicBool,
-    in_flight: AtomicUsize,
+    in_flight: WorkReservations,
     trace_ready: AtomicBool,
     weak_phase: AtomicUsize,
     late_references: crate::weak_registry::LateReferences,
@@ -378,7 +398,7 @@ impl Domain {
                 .independent_relocation
                 .then(|| crate::relocation::Queues::new(workers)),
             relocation_ready: AtomicBool::new(false),
-            in_flight: AtomicUsize::new(0),
+            in_flight: WorkReservations::default(),
             trace_ready: AtomicBool::new(false),
             weak_phase: AtomicUsize::new(0),
             late_references: crate::weak_registry::LateReferences::default(),
@@ -1006,7 +1026,7 @@ impl GarbageCollector {
         // charged until callbacks, continuation publication and counter merging finish.
         self.domains
             .iter()
-            .map(|domain| domain.in_flight.load(Ordering::Acquire))
+            .map(|domain| domain.in_flight.count())
             .sum()
     }
 
@@ -1018,7 +1038,7 @@ impl GarbageCollector {
             // are restricted to its traced snapshot (never post-trace births),
             // whose graphs remain roots for young cycles. Leases alone would
             // protect descriptors, not callback access to their outgoing graph.
-            self.domain().in_flight.load(Ordering::Acquire)
+            self.domain().in_flight.count()
         } else {
             self.in_flight()
         }
@@ -1342,7 +1362,7 @@ impl GarbageCollector {
                     *value = capacity;
                 }
                 if let Some(value) = snapshot.in_flight_work.get_mut(index) {
-                    *value = domain.in_flight.load(Ordering::Acquire);
+                    *value = domain.in_flight.count();
                 }
                 if let Some(queues) = &domain.relocations {
                     if let Some(value) = snapshot.queued_relocation_tasks.get_mut(index) {
@@ -1737,14 +1757,14 @@ impl GarbageCollector {
         // through the ordinary barrier, which can publish to the overflow index.
         self.remembered
             .try_lock(address)
-            .and_then(|remembered| self.enroll_unbuffered_owner(address, remembered))
+            .and_then(|remembered| self.enroll_unbuffered_owner(address, &remembered))
             .is_some()
     }
 
     fn enroll_unbuffered_owner(
         &self,
         address: usize,
-        remembered: crate::index::RememberedGuard<'_>,
+        remembered: &crate::index::RememberedGuard<'_>,
     ) -> Option<MetadataRef> {
         let _measurement = self
             .diagnostics
@@ -1766,7 +1786,7 @@ impl GarbageCollector {
         let _publication = self.allocation_guard();
         if self.configuration.barrier_buffer_size == 0 {
             if let Some(remembered) = self.remembered.try_lock(address) {
-                if let Some(metadata) = self.enroll_unbuffered_owner(address, remembered) {
+                if let Some(metadata) = self.enroll_unbuffered_owner(address, &remembered) {
                     self.rescan_dirty_owner(&metadata);
                 }
             } else if let Some(metadata) = self.objects.lookup(address) {
@@ -4870,12 +4890,12 @@ impl GarbageCollector {
             // There is already a live reservation in precisely the generation
             // we just probed. A coordinator cannot close it. A new request or
             // published continuation is reconsidered by the next helper call.
-            *reserved_miss = self.domain().in_flight.load(Ordering::Acquire) != 0
-                && !self.domain_has_work(1 - index);
+            *reserved_miss =
+                self.domain().in_flight.count() != 0 && !self.domain_has_work(1 - index);
             return None;
         }
         self.next_domain.fetch_add(1, Ordering::Relaxed);
-        self.domain().in_flight.fetch_add(count, Ordering::AcqRel);
+        self.domain().in_flight.reserve(count);
         let mut reserved = count;
         drop(claim);
         let _measurement = if concurrent {
@@ -4904,7 +4924,7 @@ impl GarbageCollector {
             if count == 0 {
                 break;
             }
-            self.domain().in_flight.fetch_add(count, Ordering::AcqRel);
+            self.domain().in_flight.reserve(count);
             reserved += count;
         }
         if self.diagnostics_enabled() {
@@ -4914,9 +4934,7 @@ impl GarbageCollector {
         }
         self.record_step(started, cpu_started, concurrent, &mut counters);
         // Release last: completion tickets must never precede this step's counters.
-        self.domain()
-            .in_flight
-            .fetch_sub(reserved, Ordering::AcqRel);
+        self.domain().in_flight.release(reserved);
         drop(context);
         self.notify_progress();
         Some(!self.pending())
@@ -5143,7 +5161,7 @@ impl GarbageCollector {
         if self.configuration.overlapping_generations {
             self.next_domain.fetch_add(1, Ordering::Relaxed);
         }
-        self.domain().in_flight.fetch_add(1, Ordering::AcqRel);
+        self.domain().in_flight.reserve(1);
         drop(claim);
         let cpu_started = (concurrent && self.diagnostics_enabled())
             .then(crate::diagnostics::thread_cpu_ns)
@@ -5199,7 +5217,7 @@ impl GarbageCollector {
             concurrent,
             &mut WorkCounters::default(),
         );
-        self.domain().in_flight.fetch_sub(1, Ordering::AcqRel);
+        self.domain().in_flight.release(1);
         drop(measurement);
         drop(context);
         self.notify_progress();
@@ -5624,7 +5642,7 @@ impl GarbageCollector {
                             work = remaining;
                             // Reserve the whole batch before releasing the coordinator. Neither
                             // generation may finish marking while even an unexecuted task is local.
-                            self.domain().in_flight.fetch_add(count, Ordering::AcqRel);
+                            self.domain().in_flight.reserve(count);
                             let epoch = cycle.epoch;
                             drop(claim_admission);
                             drop(cycle);
@@ -5635,7 +5653,7 @@ impl GarbageCollector {
                             if counters.marked != 0 {
                                 counters.flush(&mut lock(&self.statistics));
                             }
-                            self.domain().in_flight.fetch_sub(count, Ordering::AcqRel);
+                            self.domain().in_flight.release(count);
                             if stalled || work == 0 {
                                 break 'units;
                             }
@@ -5863,7 +5881,7 @@ impl GarbageCollector {
                                     }
                                 };
                                 if let Some((metadata, attempts)) = next {
-                                    self.domain().in_flight.fetch_add(1, Ordering::AcqRel);
+                                    self.domain().in_flight.reserve(1);
                                     drop(claim_admission);
                                     drop(cycle);
                                     drop(coordinator);
@@ -5879,7 +5897,7 @@ impl GarbageCollector {
                                             .relocations
                                             .push_back((metadata, attempts.saturating_add(1)));
                                     }
-                                    self.domain().in_flight.fetch_sub(1, Ordering::AcqRel);
+                                    self.domain().in_flight.release(1);
                                     continue;
                                 }
                                 drop(claim_admission);
@@ -6767,7 +6785,7 @@ mod tests {
             assert!(gc.remembered.may_prune());
             assert_eq!(gc.claim_mark_batch(&mut tasks, &mut 1), 1);
             gc.trace_mark_batch(&mut tasks, None, &mut WorkCounters::default());
-            assert!(gc.remembered.lock(address).contains(&address));
+            assert!(gc.remembered.lock(address).contains(address));
             drop(context);
             drop(owner);
             gc.collect_full()?;
@@ -7126,7 +7144,7 @@ mod tests {
             let mut counters = WorkCounters::default();
             assert!(!gc.trace_mark_batch(&mut tasks, now(), &mut counters));
             assert_eq!(counters.marked, 1);
-            assert!(gc.remembered.lock(address).contains(&address));
+            assert!(gc.remembered.lock(address).contains(address));
             if address != replacement_address {
                 gc.objects.replace_for_test(address, None);
             }
@@ -7542,11 +7560,11 @@ mod tests {
             completed,
             "pruning waited for the heap-wide publication writer"
         );
-        assert!(!gc.remembered.lock(address).contains(&address));
+        assert!(!gc.remembered.lock(address).contains(address));
         // A later mutation must invalidate the old scan and remain remembered.
         gc.remember(&root);
         gc.prune_remembered(address, identity, version, false);
-        assert!(gc.remembered.lock(address).contains(&address));
+        assert!(gc.remembered.lock(address).contains(address));
         drop(root);
         gc.stop()?;
         Ok(())
@@ -7582,10 +7600,10 @@ mod tests {
                 completed
             });
             assert!(completed.is_ok(), "optional pruning waited on a shard");
-            assert!(gc.remembered.lock(address).contains(&address));
+            assert!(gc.remembered.lock(address).contains(address));
         }
         gc.prune_remembered(address, id, version, false);
-        assert!(!gc.remembered.lock(address).contains(&address));
+        assert!(!gc.remembered.lock(address).contains(address));
         Ok(())
     }
 
@@ -7613,7 +7631,7 @@ mod tests {
             .join()
             .unwrap_or_else(|error| std::panic::resume_unwind(error));
         let root = completed.map_err(|error| crate::Error::SyncError(error.to_string()))?;
-        assert!(gc.remembered.lock(address).contains(&address));
+        assert!(gc.remembered.lock(address).contains(address));
         assert!(gc.objects.contains_young(address));
         drop(root);
         gc.stop()?;

@@ -431,7 +431,7 @@ fn young_cycles_complete_while_a_full_relocation_callback_is_in_flight() -> Resu
             observed
                 .recv_timeout(std::time::Duration::from_secs(10))
                 .expect("callback entered");
-            assert_eq!(gc.domains[1].in_flight.load(Ordering::Acquire), 1);
+            assert_eq!(gc.domains[1].in_flight.count(), 1);
             assert!(gc.region_heap().expect("heap").evacuation_active());
             drop(root);
             for round in 0..3 {
@@ -442,7 +442,7 @@ fn young_cycles_complete_while_a_full_relocation_callback_is_in_flight() -> Resu
                 assert!(weak.upgrade().is_none());
                 assert!(weak_born.upgrade().is_none());
                 assert!(weak_root.upgrade().is_some());
-                assert_eq!(gc.domains[1].in_flight.load(Ordering::Acquire), 1);
+                assert_eq!(gc.domains[1].in_flight.count(), 1);
                 assert_eq!(drops.load(Ordering::Acquire), 0);
                 assert_eq!(born_copies.load(Ordering::Relaxed), 0);
                 assert!(
@@ -723,7 +723,7 @@ fn first_sweep_removes_explicitly_remembered_unaged_owners_in_a_white_run() -> R
             if n % 3 == 0 {
                 gc.remember(&scalar);
                 let address = scalar.as_ptr().addr();
-                assert!(gc.remembered.lock(address).contains(&address));
+                assert!(gc.remembered.lock(address).contains(address));
                 remembered.push(address);
             }
             roots.push(scalar);
@@ -736,7 +736,7 @@ fn first_sweep_removes_explicitly_remembered_unaged_owners_in_a_white_run() -> R
         assert!(
             remembered
                 .into_iter()
-                .all(|a| !gc.remembered.lock(a).contains(&a))
+                .all(|a| !gc.remembered.lock(a).contains(a))
         );
     }
     Ok(())

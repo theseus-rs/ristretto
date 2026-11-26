@@ -269,12 +269,12 @@ fn dynamic_leaf_writes_preserve_hooks_and_later_reference_publication() -> Resul
         root.write().edge = None;
         assert_eq!(unroots.load(Ordering::Relaxed), initial + 1);
         assert_eq!(metadata.mutation.load(Ordering::Acquire), 0);
-        assert!(!gc.remembered.lock(address).contains(&address));
+        assert!(!gc.remembered.lock(address).contains(address));
         let child = Gc::try_new(&gc, 42_u64)?.into_rooted();
         let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
         root.write().edge = Some(child);
         assert_eq!(metadata.mutation.load(Ordering::Acquire), 1);
-        assert!(gc.remembered.lock(address).contains(&address));
+        assert!(gc.remembered.lock(address).contains(address));
         gc.collect_young();
         for _ in 0..10000 {
             if gc.step() {
@@ -4308,7 +4308,7 @@ fn flushing_an_old_identity_preserves_an_unrelated_pending_birth() -> Result<()>
                 );
                 context.flush();
                 assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
-                assert!(!gc.remembered.lock(address).contains(&address));
+                assert!(!gc.remembered.lock(address).contains(address));
                 assert!(!context.0.satisfies(&gc.contexts, record));
             }
         }));

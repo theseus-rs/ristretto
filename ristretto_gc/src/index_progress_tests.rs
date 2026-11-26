@@ -345,7 +345,7 @@ fn promotion_waits_only_for_the_object_shard_and_preserves_generation_membership
                     assert_eq!(lock(&gc.domains[0].cycle).phase, Phase::Sweep);
                 }
                 assert_eq!(gc.objects.contains_young(address), !remembered);
-                assert_eq!(gc.remembered.lock(address).contains(&address), remembered);
+                assert_eq!(gc.remembered.lock(address).contains(address), remembered);
                 assert_eq!(gc.address_for_identity(root.identity()), Some(address));
                 for _ in 0..10000 {
                     if gc.step() {
@@ -356,7 +356,7 @@ fn promotion_waits_only_for_the_object_shard_and_preserves_generation_membership
                 assert_eq!(metadata.age.load(Ordering::Acquire), 1);
                 assert_eq!(gc.statistics()?.objects_promoted, 1);
                 assert!(!gc.objects.contains_young(address));
-                assert!(gc.remembered.lock(address).contains(&address));
+                assert!(gc.remembered.lock(address).contains(address));
                 assert_eq!(**root, 42);
                 drop(root);
                 gc.stop()?;

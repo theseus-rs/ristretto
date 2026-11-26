@@ -71,7 +71,7 @@ fn young_start_retraces_a_dirty_owner_enrolled_after_the_remembered_scan() -> Re
             assert_eq!(phase, Phase::Mark);
             assert_eq!(pending, 1);
             assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
-            assert!(gc.remembered.lock(address).contains(&address));
+            assert!(gc.remembered.lock(address).contains(address));
             let epoch = gc.domains[0].epoch.load(Ordering::Acquire);
             assert_eq!(
                 gc.objects
@@ -586,7 +586,7 @@ fn parked_writer_retains_incoming_root_through_two_young_cycles() -> Result<()> 
         assert!(!gc.is_young_allocation(address));
         gc.collect_young();
         while !gc.step() {}
-        assert!(!gc.remembered.lock(address).contains(&address));
+        assert!(!gc.remembered.lock(address).contains(address));
         let incoming = Gc::try_new(&gc, 42_u64)?.into_rooted();
         let incoming_address = incoming.as_ptr() as usize;
         let alias = incoming.clone();
@@ -633,7 +633,7 @@ fn parked_writer_retains_incoming_root_through_two_young_cycles() -> Result<()> 
             );
             Ok(())
         })?;
-        assert!(gc.remembered.lock(address).contains(&address));
+        assert!(gc.remembered.lock(address).contains(address));
         assert!(gc.is_young_allocation(incoming_address));
         let before = gc.statistics()?.young_collections;
         gc.collect_young();
@@ -694,7 +694,7 @@ fn demoted_vector_edge_survives_a_young_cycle_before_owner_notification() -> Res
             generation_tests::finish_young(&gc)?;
             let address = parent.as_ptr() as usize;
             assert!(!gc.is_young_allocation(address));
-            assert!(!gc.remembered.lock(address).contains(&address));
+            assert!(!gc.remembered.lock(address).contains(address));
             let child = Gc::try_new(&gc, 42_u64)?.into_rooted();
             let id = child.identity();
             let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
@@ -775,7 +775,7 @@ fn prepared_field_update_keeps_new_membership_against_a_stale_prune() -> Result<
         let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
         *owner.write() = Some(child);
         gc.prune_remembered(address, metadata.id, stale_version, false);
-        assert!(gc.remembered.lock(address).contains(&address));
+        assert!(gc.remembered.lock(address).contains(address));
         gc.collect_young();
         for _ in 0..4096 {
             if gc.step() {
@@ -827,7 +827,7 @@ fn pinned_retired_owner_cannot_reinsert_its_remembered_address() -> Result<()> {
             assert!(gc.objects.lookup(address).is_none());
             resume.send(()).expect("resume");
             assert!(!writer.join().expect("publisher"));
-            assert!(!gc.remembered.lock(address).contains(&address));
+            assert!(!gc.remembered.lock(address).contains(address));
             Ok(())
         })?;
         drop(lease);
@@ -848,7 +848,7 @@ fn mutation_version_saturation_disables_optional_pruning_for_that_owner() -> Res
     *owner.write() = Some(Gc::try_new(&gc, 75_u64)?.into_rooted());
     assert_eq!(metadata.mutation.load(Ordering::Acquire), usize::MAX);
     gc.prune_remembered(address, metadata.id, usize::MAX, false);
-    assert!(gc.remembered.lock(address).contains(&address));
+    assert!(gc.remembered.lock(address).contains(address));
     Ok(())
 }
 
@@ -874,7 +874,7 @@ fn ordinary_vector_write_enrolls_a_mature_owner_while_either_shard_is_parked() -
             let address = owner.as_ptr() as usize;
             assert!(!gc.is_young_allocation(address));
             generation_tests::finish_young(&gc)?;
-            assert!(!gc.remembered.lock(address).contains(&address));
+            assert!(!gc.remembered.lock(address).contains(address));
             let child = Gc::try_new(&gc, 43_u64)?.into_rooted();
             let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
             let victim = Gc::try_new(&gc, 17_u64)?;
@@ -940,7 +940,7 @@ fn prepared_field_store_completes_with_a_parked_metadata_writer() -> Result<()> 
         gc.collect_full()?;
         generation_tests::finish_young(&gc)?;
         let address = owner.as_ptr().addr();
-        assert!(!gc.remembered.lock(address).contains(&address));
+        assert!(!gc.remembered.lock(address).contains(address));
         let child = Gc::try_new(&gc, 71_u64)?.into_rooted();
         let id = child.identity();
         let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
@@ -1250,7 +1250,7 @@ fn dirty_owner_debt_can_drain_while_the_young_owner_shard_is_parked() -> Result<
             "dirty owner waited for object shard"
         );
         assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
-        assert!(gc.remembered.lock(address).contains(&address));
+        assert!(gc.remembered.lock(address).contains(address));
         drop(shard);
         gc.collect_full()?;
         assert_eq!(**owner.first().expect("live child"), 41);
@@ -1281,7 +1281,7 @@ fn young_progress_with_remembered_publisher(counted: bool, parked: bool) -> Resu
     let child = Gc::try_new(&gc, 67_u64)?;
     let live = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
     *owner.write() = Some(child.into_rooted());
-    assert!(gc.remembered.lock(address).contains(&address));
+    assert!(gc.remembered.lock(address).contains(address));
     let garbage = Gc::try_new(&gc, 91_u64)?;
     let dead = crate::GcWeak::new(&garbage, crate::ReferenceKind::Weak, 0);
     drop(garbage);

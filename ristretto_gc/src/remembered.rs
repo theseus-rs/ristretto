@@ -10,6 +10,7 @@ use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 #[derive(Debug, Default)]
 struct Shard {
     writer: Mutex<()>,
+    members: AtomicUsize,
     entries: ArcSwap<Directory<usize>>,
 }
 
@@ -24,6 +25,7 @@ pub(crate) struct Remembered {
 pub(crate) struct RememberedCursor {
     shard: usize,
     after: Option<u64>,
+    limit: Option<u64>,
 }
 
 pub(crate) struct RememberedGuard<'a> {
@@ -36,7 +38,7 @@ impl Remembered {
         Self {
             shards: (0..shard_count(count)).map(|_| Shard::default()).collect(),
             members: AtomicUsize::new(0),
-            dirty: Default::default(),
+            dirty: dirty_owners::DirtyOwners::default(),
         }
     }
 
@@ -50,10 +52,9 @@ impl Remembered {
 
     pub(crate) fn may_contain(&self, address: usize) -> bool {
         self.bucket(address_bucket(address))
-            .entries
-            .load()
-            .last_key()
-            .is_some()
+            .members
+            .load(Ordering::Relaxed)
+            != 0
     }
 
     pub(crate) fn may_prune(&self) -> bool {
@@ -95,7 +96,8 @@ impl Remembered {
     )]
     pub(crate) fn insert(&self, address: usize, id: ObjectId) {
         let key = id.to_i64().cast_unsigned();
-        let index = &self.bucket(address_bucket(address)).entries;
+        let shard = self.bucket(address_bucket(address));
+        let index = &shard.entries;
         let mut current = index.load_full();
         if current.get(key).is_some() {
             return;
@@ -103,6 +105,7 @@ impl Remembered {
         // Reserve before publishing. In-flight attempts can only overestimate
         // the optional prune hint. A successful remover returns this count.
         self.members.fetch_add(1, Ordering::Relaxed);
+        shard.members.fetch_add(1, Ordering::Relaxed);
         loop {
             let next = Arc::new(current.insert(key, address).expect("unique birth fits").0);
             let seen = index.compare_and_swap(&current, next);
@@ -110,6 +113,7 @@ impl Remembered {
                 return;
             }
             if seen.get(key).is_some() {
+                shard.members.fetch_sub(1, Ordering::Relaxed);
                 self.members.fetch_sub(1, Ordering::Relaxed);
                 return;
             }
@@ -119,12 +123,14 @@ impl Remembered {
 
     pub(crate) fn remove(&self, address: usize, id: ObjectId) -> bool {
         let key = id.to_i64().cast_unsigned();
-        let index = &self.bucket(address_bucket(address)).entries;
+        let shard = self.bucket(address_bucket(address));
+        let index = &shard.entries;
         let mut current = index.load_full();
         while current.get(key) == Some(&address) {
             let next = Arc::new(current.remove(key).0);
             let seen = index.compare_and_swap(&current, next);
             if Arc::ptr_eq(&seen, &current) {
+                shard.members.fetch_sub(1, Ordering::Relaxed);
                 self.members.fetch_sub(1, Ordering::Relaxed);
                 return true;
             }
@@ -137,7 +143,15 @@ impl Remembered {
         let Some(shard) = self.shards.get(cursor.shard) else {
             return Scan::Done;
         };
-        if let Some((id, &address)) = shard.entries.load().next_after(cursor.after) {
+        let entries = shard.entries.load();
+        if cursor.after.is_none() {
+            cursor.limit = entries.last_key();
+        }
+        // A stream of new births cannot extend this shard's scan. Writers
+        // publishing behind the cursor separately notify the active young epoch.
+        if let Some((id, &address)) = entries.next_after(cursor.after)
+            && cursor.limit.is_some_and(|limit| id <= limit)
+        {
             cursor.after = Some(id);
             return Scan::Entry(address, ObjectId::from_i64(id.cast_signed()));
         }
@@ -153,6 +167,7 @@ impl Remembered {
     pub(crate) fn clear(&self) {
         for shard in &self.shards {
             shard.entries.store(Arc::default());
+            shard.members.store(0, Ordering::Relaxed);
         }
         self.members.store(0, Ordering::Relaxed);
         self.dirty.clear();
@@ -178,8 +193,8 @@ impl RememberedGuard<'_> {
     }
 
     #[cfg(test)]
-    pub(crate) fn contains(&self, address: &usize) -> bool {
-        self.identity(*address).is_some()
+    pub(crate) fn contains(&self, address: usize) -> bool {
+        self.identity(address).is_some()
     }
 
     #[cfg(test)]
