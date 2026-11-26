@@ -134,23 +134,47 @@ impl<T> HeapBuffer<T> {
         let mut retry = crate::recovery::PhysicalRetry::default();
         let mut probe = crate::allocation::PayloadProbe::default();
         loop {
-            let storage = match collector.poll_payload(layout, &mut probe) {
-                std::task::Poll::Pending => {
-                    crate::recovery::yield_once().await;
-                    if crate::cell::has_guards() {
-                        return Err(Error::CollectionPhaseError(
-                            "asynchronous initialization requires released managed guards".into(),
-                        ));
-                    }
-                    continue;
+            let mut wait = None;
+            let block = std::future::poll_fn(|cx| {
+                if crate::cell::has_guards() {
+                    return std::task::Poll::Ready(Err(Error::CollectionPhaseError(
+                        "asynchronous initialization requires released managed guards".into(),
+                    )));
                 }
-                std::task::Poll::Ready(Ok(Some(block))) => Ok(Self {
+                let result = collector.poll_payload(layout, &mut probe);
+                if result.is_pending() {
+                    // At the physical limit a parked shard can hide free space.
+                    // Probe for a returned range on every poll while an existing
+                    // worker or at most one cooperative step reclaims other ranges.
+                    if probe.exact.needs_collection && !retry.exhausted(collector) {
+                        let ticket = wait.get_or_insert_with(|| {
+                            crate::recovery::CollectionWait::new(
+                                collector,
+                                collector.request_recovery_cycle(),
+                            )
+                        });
+                        if let std::task::Poll::Ready(completed) =
+                            std::pin::Pin::new(ticket).poll(cx)
+                        {
+                            completed?;
+                            wait = None;
+                        }
+                    }
+                    cx.waker().wake_by_ref();
+                }
+                result
+            })
+            .await;
+            drop(wait);
+            let storage = match block {
+                Ok(Some(block)) => Ok(Self {
                     storage: Storage::Region(block),
                     length: 0,
                     copying: None,
                 }),
-                std::task::Poll::Ready(Ok(None)) => Self::try_empty(None, length),
-                std::task::Poll::Ready(Err(error)) => Err(error),
+                Ok(None) => Self::try_empty(None, length),
+                Err(Error::OutOfMemory) => Err(Error::OutOfMemory),
+                Err(error) => return Err(error),
             };
             match storage {
                 Ok(mut buffer) => {

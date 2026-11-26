@@ -444,14 +444,17 @@ fn workerless_allocation_reclaims_an_unreachable_peer_range_before_registry_rele
         let parked = lock(heap.shard(1 - source));
         let gc = &gc;
         scope.spawn(move || {
-            let mut future = std::pin::pin!(crate::HeapBuffer::try_with_fn_in_async(gc, 256, |_| {
-                Ok(3_u8)
-            }));
+            let mut future =
+                std::pin::pin!(crate::HeapBuffer::try_with_fn_in_async(gc, 256, |_| {
+                    Ok(3_u8)
+                }));
             let mut cx = Context::from_waker(Waker::noop());
             for _ in 0..4096 {
                 if let Poll::Ready(result) = future.as_mut().poll(&mut cx) {
-                    send.send(result.map(|buf| buf.iter().copied().map(usize::from).sum::<usize>()))
-                        .expect("report completion");
+                    send.send(
+                        result.map(|buf| buf.iter().copied().map(usize::from).sum::<usize>()),
+                    )
+                    .expect("report completion");
                     return;
                 }
             }

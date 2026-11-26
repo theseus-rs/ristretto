@@ -3033,7 +3033,7 @@ impl GarbageCollector {
 
     // Recovery can share an outstanding full request. Explicit collection still
     // requests a fresh ticket. No coordinator lock is taken on the allocating task.
-    fn request_recovery_cycle(&self) -> u64 {
+    pub(crate) fn request_recovery_cycle(&self) -> u64 {
         let domain = &self.domains[1];
         let requested = domain.request_ticket.load(Ordering::Acquire);
         if requested > domain.completed_ticket.load(Ordering::Acquire) {

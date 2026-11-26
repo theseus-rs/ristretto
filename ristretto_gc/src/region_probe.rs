@@ -12,6 +12,8 @@ pub(crate) struct AllocationProbe {
     region: Option<(usize, u64)>,
     extent: Option<(usize, usize)>,
     busy: bool,
+    // A complete pass found both an inaccessible range and a backing failure.
+    pub(crate) needs_collection: bool,
 }
 
 impl AllocationProbe {
@@ -24,12 +26,13 @@ impl AllocationProbe {
     /// Probe at most 32 candidates per call. A parked or fragmented region does
     /// not prevent allocation from another shard or from fresh backing.
     pub(crate) fn poll(&mut self, heap: &RegionHeap, layout: Layout) -> Poll<Result<Block>> {
+        self.needs_collection = false;
         let first = *self.first.get_or_insert_with(|| heap.preferred_shard());
         for _ in 0..32 {
             if self.visited == heap.states.len() {
                 let busy = self.busy;
                 *self = Self::default();
-                return Self::open_backing(heap, layout, first, busy);
+                return self.open_backing(heap, layout, first, busy);
             }
             let index = (first + self.visited) & (heap.states.len() - 1);
             let Some(mut state) = try_lock(heap.shard(index)) else {
@@ -85,11 +88,13 @@ impl AllocationProbe {
     }
 
     fn open_backing(
+        &mut self,
         heap: &RegionHeap,
         layout: Layout,
         first: usize,
         mut busy: bool,
     ) -> Poll<Result<Block>> {
+        let mut backing_failed = false;
         for offset in 0..heap.states.len() {
             let index = (first + offset) & (heap.states.len() - 1);
             let Some(state) = try_lock(heap.shard(index)) else {
@@ -106,8 +111,10 @@ impl AllocationProbe {
                 };
                 return Poll::Ready(fresh.publish(layout, &mut state));
             }
+            backing_failed = true;
         }
         if busy {
+            self.needs_collection = backing_failed;
             Poll::Pending
         } else {
             Poll::Ready(Err(Error::OutOfMemory))
