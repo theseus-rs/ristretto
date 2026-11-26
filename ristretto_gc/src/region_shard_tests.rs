@@ -334,6 +334,107 @@ impl RegionHeap {
 }
 
 #[cfg(not(target_family = "wasm"))]
+fn parked_payload_allocation(park_range_map: bool) {
+    use std::future::Future;
+    use std::sync::mpsc;
+    use std::task::{Context, Poll, Wake, Waker};
+    use std::time::Duration;
+
+    struct Ready(AtomicBool);
+    impl Wake for Ready {
+        fn wake(self: Arc<Self>) {
+            self.0.store(true, Ordering::Release);
+        }
+    }
+
+    for shards in [1, 2] {
+        let gc = crate::GarbageCollector::with_config(
+            crate::Configuration::builder()
+                .region_shards(shards)
+                .compact_heap(true)
+                .max_heap_bytes(1024)
+                .relocation_reserve_bytes(0)
+                .region_layout(1024, 0)
+                .build(),
+        );
+        let heap = gc.region_heap().expect("payload heap");
+        let held = heap
+            .allocate_selected(Layout::new::<u64>(), None, false, 0)
+            .expect("seed an existing region with free space");
+        let initial = heap.statistics();
+        let (started, polling) = mpsc::channel();
+        let (first, result) = mpsc::channel();
+        let (resume, released) = mpsc::channel();
+        let initialized = AtomicUsize::new(0);
+        std::thread::scope(|scope| {
+            let registry_guard = (!park_range_map).then(|| lock(heap.shard(0)));
+            let range_guard = park_range_map.then(|| lock(&held.region.free));
+            let initialized = &initialized;
+            let gc = &gc;
+            let peer = scope.spawn(move || {
+                let ready = Arc::new(Ready(AtomicBool::new(false)));
+                let waker = Waker::from(ready.clone());
+                let mut context = Context::from_waker(&waker);
+                let mut buffer = Box::pin(crate::HeapBuffer::try_with_fn_in_async(gc, 64, |_| {
+                    initialized.fetch_add(1, Ordering::Relaxed);
+                    Ok(9_u8)
+                }));
+                started.send(()).expect("poll observer");
+                let initial = buffer.as_mut().poll(&mut context);
+                first
+                    .send(initial.is_pending())
+                    .expect("observe first poll");
+                released.recv().expect("release the registry");
+                match initial {
+                    Poll::Ready(result) => result.expect("buffer after release"),
+                    Poll::Pending => {
+                        for _ in 0..64 {
+                            assert!(
+                                ready.0.swap(false, Ordering::AcqRel),
+                                "pending poll lost its wake"
+                            );
+                            if let Poll::Ready(result) = buffer.as_mut().poll(&mut context) {
+                                return result.expect("buffer after release");
+                            }
+                        }
+                        panic!("available payload range was not reused");
+                    }
+                }
+            });
+            polling.recv().expect("worker started");
+            let first_poll = result.recv_timeout(Duration::from_secs(2));
+            let before_release = initialized.load(Ordering::Relaxed);
+            drop((registry_guard, range_guard));
+            resume.send(()).expect("resume allocation");
+            let buffer = peer.join().expect("allocation worker");
+            assert_eq!(
+                first_poll,
+                Ok(true),
+                "the first poll waited on a parked allocator"
+            );
+            assert_eq!(before_release, 0);
+            assert_eq!(initialized.load(Ordering::Relaxed), 64);
+            assert_eq!(&*buffer, &[9_u8; 64]);
+        });
+        let after = heap.statistics();
+        assert_eq!(after.shared_committed_bytes, initial.shared_committed_bytes);
+        assert_eq!(after.occupied_bytes, initial.occupied_bytes);
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn async_buffer_yields_while_the_only_fitting_registry_is_parked() {
+    parked_payload_allocation(false);
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn async_buffer_yields_while_a_fitting_range_map_is_parked() {
+    parked_payload_allocation(true);
+}
+
+#[cfg(not(target_family = "wasm"))]
 #[test]
 fn a_copy_starts_and_continues_while_its_source_registry_is_parked() {
     use crate::{HeapBuffer, TraceProgress};
