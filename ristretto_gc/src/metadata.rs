@@ -122,7 +122,6 @@ type DropFn = Option<Payload>;
 
 /// Type and callback identity are immutable and shared by all matching allocations.
 struct Kind {
-    #[cfg(not(target_family = "wasm"))]
     needs_drop: bool,
     type_id: std::any::TypeId,
     finalizer: Option<FinalizerFn>,
@@ -237,8 +236,7 @@ impl ObjectMetadata {
         previous == 3
     }
 
-    #[cfg(not(target_family = "wasm"))]
-    pub(crate) fn has_native_cleanup(&self) -> bool {
+    pub(crate) fn has_cleanup(&self) -> bool {
         self.kind.needs_drop
             || self.kind.finalizer.is_some()
             || self.trace.requires_clear()
@@ -407,7 +405,6 @@ impl ObjectMetadata {
             drop_fn: Mutex::new(drop_fn),
             kind: &const {
                 Kind {
-                    #[cfg(not(target_family = "wasm"))]
                     needs_drop: std::mem::needs_drop::<T>(),
                     type_id: std::any::TypeId::of::<T>(),
                     finalizer: None,
@@ -438,7 +435,6 @@ impl ObjectMetadata {
         let mut metadata = Self::new_for_gc::<T>(allocation, size, id);
         metadata.kind = &const {
             Kind {
-                #[cfg(not(target_family = "wasm"))]
                 needs_drop: std::mem::needs_drop::<T>(),
                 type_id: std::any::TypeId::of::<T>(),
                 finalizer: Some(crate::finalizer::finalize::<T>),

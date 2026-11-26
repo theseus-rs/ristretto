@@ -10,7 +10,6 @@ use std::thread;
 thread_local! {
     // Native workers are owned by exactly one pool generation for their lifetime.
     static POOL: std::cell::OnceCell<std::sync::Weak<super::WorkerSignals>> = const { std::cell::OnceCell::new() };
-    static CALLBACK: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 pub(super) fn register(pool: &Arc<super::WorkerSignals>) {
@@ -21,10 +20,6 @@ pub(super) fn register(pool: &Arc<super::WorkerSignals>) {
 
 pub(super) fn pool() -> Option<Arc<super::WorkerSignals>> {
     POOL.with(|current| current.get().and_then(std::sync::Weak::upgrade))
-}
-
-pub(super) fn executing(gc: &GarbageCollector) -> bool {
-    CALLBACK.get() == std::ptr::from_ref(gc).addr()
 }
 
 #[derive(Debug, Default)]
@@ -105,7 +100,7 @@ impl Runner {
                         budget,
                         origin,
                     } = job;
-                    CALLBACK.set(Arc::as_ptr(&gc).addr());
+                    let _cleanup = super::CleanupScope::enter(&gc);
                     let mut counters = WorkCounters::default();
                     let started = now();
                     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -120,15 +115,26 @@ impl Runner {
                         }
                         gc.retired_ready.fetch_sub(1, Ordering::AcqRel);
                         gc.record_step(started, None, true, &mut counters);
+                        progress != TraceProgress::Complete
                     }));
-                    CALLBACK.set(0);
-                    gc.callback_jobs.fetch_sub(1, Ordering::AcqRel);
+                    let last = gc.callback_jobs.fetch_sub(1, Ordering::AcqRel) == 1;
                     if result.is_err() {
                         failed = true;
                         gc.recovery.callback_failed();
                     }
-                    gc.wake();
-                    gc.notify_progress();
+                    if last || result.unwrap_or(true) {
+                        gc.wake();
+                    }
+                    // Executor wakes can run arbitrary host code, including shutdown or panic.
+                    if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        gc.notify_progress()
+                    }))
+                    .is_err()
+                    {
+                        failed = true;
+                        gc.recovery.callback_failed();
+                        gc.wake();
+                    }
                 }
                 if failed {
                     Err(crate::Error::SyncError(

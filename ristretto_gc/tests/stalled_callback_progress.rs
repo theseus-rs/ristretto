@@ -303,6 +303,35 @@ fn callback_shutdown_cannot_wait_for_itself_and_the_pool_can_restart() -> Result
 
 #[cfg(not(miri))]
 #[test]
+fn caller_driven_cleanup_cannot_join_its_own_retirement() -> Result<()> {
+    struct Reentrant(std::sync::Weak<GarbageCollector>, mpsc::Sender<bool>);
+    // SAFETY: neither field contains managed edges.
+    unsafe impl Trace for Reentrant {
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+    impl Drop for Reentrant {
+        fn drop(&mut self) {
+            if let Some(gc) = self.0.upgrade() {
+                let rejected =
+                    matches!(gc.stop(), Err(ristretto_gc::Error::CollectionPhaseError(_)));
+                let _ = self.1.send(rejected);
+            }
+        }
+    }
+    let gc = GarbageCollector::new();
+    let (tx, rx) = mpsc::channel();
+    drop(Gc::try_new(&gc, Reentrant(Arc::downgrade(&gc), tx))?);
+    let helper = gc.clone();
+    let collector = std::thread::spawn(move || helper.collect_full());
+    assert_eq!(rx.recv_timeout(Duration::from_secs(2)), Ok(true));
+    collector.join().expect("caller completed")?;
+    gc.stop()?;
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
+
+#[cfg(not(miri))]
+#[test]
 fn callback_panic_refunds_once_and_stop_reports_the_failure() -> Result<()> {
     struct Panics(mpsc::Sender<()>, Arc<AtomicUsize>);
     // SAFETY: channels and the destruction counter contain no managed edges.

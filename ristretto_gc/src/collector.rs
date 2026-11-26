@@ -248,10 +248,33 @@ impl Drop for AllocationReservation<'_> {
 }
 
 thread_local! {
+    static CLEANUP_HEAPS: std::cell::RefCell<Vec<usize>> = const { std::cell::RefCell::new(Vec::new()) };
     static CONTEXT: std::cell::Cell<Option<(usize, usize)>> = const { std::cell::Cell::new(None) };
     static WORKER: std::cell::Cell<Option<(usize, usize)>> = const { std::cell::Cell::new(None) };
     static SCAN_YOUNG: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     static TRACE_RETENTION: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+// A callback can enter another heap and then try to stop its outer collector.
+struct CleanupScope;
+
+impl CleanupScope {
+    fn enter(gc: &GarbageCollector) -> Self {
+        CLEANUP_HEAPS.with_borrow_mut(|heaps| heaps.push(std::ptr::from_ref(gc).addr()));
+        Self
+    }
+
+    fn contains(gc: &GarbageCollector) -> bool {
+        CLEANUP_HEAPS.with_borrow(|heaps| heaps.contains(&std::ptr::from_ref(gc).addr()))
+    }
+}
+
+impl Drop for CleanupScope {
+    fn drop(&mut self) {
+        CLEANUP_HEAPS.with_borrow_mut(|heaps| {
+            heaps.pop();
+        });
+    }
 }
 
 // A trace callback can step another heap on this thread. Restore the
@@ -2785,13 +2808,14 @@ impl GarbageCollector {
     /// # Errors
     /// Returns an error if a native worker panics.
     pub fn stop(&self) -> Result<()> {
+        if CleanupScope::contains(self) {
+            return Err(crate::Error::CollectionPhaseError(
+                "cleanup cannot wait for its own collector to stop".into(),
+            ));
+        }
+        let _shutdown = CleanupScope::enter(self);
         #[cfg(not(target_family = "wasm"))]
         {
-            if native_callbacks::executing(self) {
-                return Err(crate::Error::CollectionPhaseError(
-                    "a native cleanup callback cannot wait for its own shutdown".into(),
-                ));
-            }
             let (workers, generation) = {
                 let mut workers = lock(&self.collector_thread);
                 let generation = self.worker_signals.swap(None);
@@ -4706,7 +4730,7 @@ impl GarbageCollector {
         budget: usize,
         origin: Option<(usize, u64)>,
     ) -> Option<ReclaimTask> {
-        if task.metadata.has_native_cleanup()
+        if task.metadata.has_cleanup()
             && WORKER
                 .get()
                 .is_some_and(|(heap, _)| heap == std::ptr::from_ref(self).addr())
@@ -4737,6 +4761,10 @@ impl GarbageCollector {
             };
             task = owned;
         }
+        let _cleanup = task
+            .metadata
+            .has_cleanup()
+            .then(|| CleanupScope::enter(self));
         let progress = self.clear_retired(&mut task, budget, counters, selection);
         if progress == TraceProgress::Complete {
             self.record_sweep_reclaimed(index, epoch, task.metadata.size());
@@ -4830,6 +4858,10 @@ impl GarbageCollector {
             };
             task = owned;
         }
+        let _cleanup = task
+            .metadata
+            .has_cleanup()
+            .then(|| CleanupScope::enter(self));
         let progress = self.clear_retired(&mut task, budget, &mut counters, selection);
         let contended = progress == TraceProgress::Busy;
         if progress == TraceProgress::Complete {

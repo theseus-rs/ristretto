@@ -285,7 +285,9 @@ impl Recovery {
 
     #[cfg(not(target_family = "wasm"))]
     pub(crate) fn callback_failed(&self) {
+        // Unfinished tickets must repoll even when the failure returned no useful space.
         self.workers.rcu(|workers| Workers {
+            exit: workers.exit.saturating_add(u64::from(!workers.failed)),
             failed: true,
             ..**workers
         });
@@ -1167,6 +1169,28 @@ mod tests {
     #![expect(clippy::panic_in_result_fn)]
     use super::*;
     use crate::Configuration;
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn failed_callback_wakes_waiters_with_unfinished_tickets() {
+        struct Signal(std::sync::mpsc::Sender<()>);
+        impl std::task::Wake for Signal {
+            fn wake(self: Arc<Self>) { let _ = self.0.send(()); }
+        }
+        let gc = GarbageCollector::new();
+        let _worker = WorkerRegistration::new(&gc);
+        let (tx, rx) = std::sync::mpsc::channel();
+        let waker = Waker::from(Arc::new(Signal(tx)));
+        let mut cx = Context::from_waker(&waker);
+        let mut wait = Box::pin(CollectionWait::new(&gc, 4));
+        assert!(wait.as_mut().poll(&mut cx).is_pending());
+        assert!(rx.try_recv().is_err());
+        gc.recovery.callback_failed();
+        gc.recovery.notify_progress(&gc);
+        assert_eq!(rx.try_recv(), Ok(()));
+        assert!(matches!(wait.as_mut().poll(&mut cx), Poll::Ready(Err(Error::SyncError(_)))));
+        assert_eq!(gc.completed_full_ticket(), 0);
+    }
 
     #[cfg(not(target_family = "wasm"))]
     #[test]
