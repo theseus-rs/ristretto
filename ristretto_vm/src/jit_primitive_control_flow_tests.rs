@@ -610,3 +610,52 @@ async fn ordinary_dispatch_compiles_a_volatile_static_long_store() -> Result<()>
     drop(function);
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn ordinary_static_long_store_reports_a_missing_field_from_compiled_code() -> Result<()> {
+    let harness = Harness::new().await?;
+    let name = "ProductionMissingLongStore";
+    let mut pool = ConstantPool::new();
+    let owner = pool.add_class(name)?;
+    let absent = pool.add_field_ref(owner, "absent", "J")?;
+    let body = method(
+        &mut pool,
+        "publish",
+        "(J)V",
+        vec![
+            Instruction::Lload_0,
+            Instruction::Putstatic(absent),
+            Instruction::Return,
+        ],
+    )?;
+    let class = register(
+        &harness.thread,
+        class_from_methods(name, "java/lang/Object", pool, vec![body])?,
+    )
+    .await?;
+    let publish = class.try_get_method("publish", "(J)V")?;
+    for thread in [&harness.interpreted_thread, &harness.thread] {
+        let result = thread
+            .execute(&class, &publish, &[Value::Long(0x1234_5678_9abc)])
+            .await;
+        let Err(crate::Error::Throwable(value)) = result else {
+            return Err(InternalError(format!("missing field produced {result:?}")));
+        };
+        assert_eq!(
+            value.as_object_ref()?.class().name(),
+            "java/lang/NoSuchFieldError"
+        );
+    }
+    let function = harness
+        .vm
+        .compiler()
+        .and_then(|compiler| compiler.get_cached(cache_key(&publish)))
+        .flatten()
+        .ok_or_else(|| {
+            InternalError("the missing field store ran only in the interpreter".into())
+        })?;
+    #[cfg(feature = "execution-profile")]
+    assert_eq!(function.execution_count(), 1);
+    drop(function);
+    Ok(())
+}
