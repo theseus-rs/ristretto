@@ -31,6 +31,12 @@ All 300 fresh native processes passed across three tests covering sleeping synch
 
 A separate native test parked the allocation waiter index. A peer exceeded its one-second deadline to reclaim an unrelated object and finish its ticket. Independent wake delivery and deferred storage retirement remain open.
 
+## Reclamation after a callback lease returns
+
+On the consolidated source at `2fb3cb90`, three of four eligible 8-byte requests returned OOM while the second 32-byte donor was privately held for destruction. The test first retained a callback lease across collection. It then enrolled the competing requests either before lease release or between release and the first reaper claim. All 800 native schedules reproduced the three premature results across the two enrollment orders and four policy combinations.
+
+A local prototype captured enrolled requests on the first reaper claim and retained that selection across bounded batches. It passed all 800 matched schedules, 507 native library tests and strict native Clippy. While a helper owns a partially scanned donor outside the queue, another helper cannot resume that particular scan. Suspension inside selection, independently available donors, native/Wasm qualification and the collection performance gate remain open for the prototype. [Matched process results, source patches and verification](leased-donor-trials.json.gz)
+
 ## Paged enrollment
 
 At `5c05cc39`, the collector commits interests in chronological order. A peer can commit a linked slot while its owner is stopped. A donor sees precisely the positions below its cutoff and retains the original request order through cancellation. Cancellation during assignment leaves the full share available to a later request. Both forced races and the four-allocator test passed in 100 fresh processes each. The original four-allocator fixture passed in all 1,800 fresh processes. The native default library suite passed 503 tests, the native all-feature suite passed 1,146, and the WASI library suite passed 311. The bare Wasm build, strict native Clippy and verified Cargo package passed. [Schedules, process outcomes and build identities](paged-enrollment-tests.json.gz)
