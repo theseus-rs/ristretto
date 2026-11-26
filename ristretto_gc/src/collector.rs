@@ -3426,6 +3426,10 @@ impl GarbageCollector {
             return Err(crate::Error::OutOfMemory);
         }
         let demand = self.grant_registry.register(self, size)?;
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(pool) = self.worker_signals.load().as_ref() {
+            pool.callbacks.wake_pressure();
+        }
         let mut empty_cycles = 0;
         let mut released = None;
         loop {

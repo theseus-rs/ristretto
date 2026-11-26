@@ -30,7 +30,15 @@ struct Runner {
     send: arc_swap::ArcSwapOption<mpsc::Sender<Submission>>,
     receive: Arc<Mutex<Receiver>>,
     helper_failed: AtomicBool,
-    thread: Mutex<Option<thread::JoinHandle<bool>>>,
+    pressure: mpsc::SyncSender<()>,
+    closing: Arc<AtomicBool>,
+    threads: Mutex<Option<Threads>>,
+}
+
+#[derive(Debug)]
+struct Threads {
+    primary: thread::JoinHandle<bool>,
+    assistant: Option<thread::JoinHandle<bool>>,
 }
 
 pub(super) struct Batch {
@@ -114,13 +122,19 @@ struct Job {
 }
 
 impl Callbacks {
+    pub(super) fn wake_pressure(&self) {
+        if let Some(runner) = self.0.get() {
+            let _ = runner.pressure.try_send(());
+        }
+    }
+
     pub(super) fn send(
         &self,
         gc: &GarbageCollector,
         batch: Batch,
         origin: Option<(usize, u64)>,
     ) -> Option<Batch> {
-        let Ok(runner) = self.0.get_or_try_init(Runner::spawn) else {
+        let Ok(runner) = self.0.get_or_try_init(|| Runner::spawn(gc.this.clone())) else {
             return Some(batch);
         };
         let Some(owner) = gc.this.upgrade() else {
@@ -140,6 +154,9 @@ impl Callbacks {
             gc.callback_jobs.fetch_sub(count, Ordering::AcqRel);
             return Some(submission.batch);
         }
+        if gc.grant_registry.has_demand() {
+            let _ = runner.pressure.try_send(());
+        }
         None
     }
 
@@ -148,12 +165,24 @@ impl Callbacks {
             // Disconnect after the pool stops. A sender already holding its own
             // handle can finish publication; the receiver drains all accepted jobs.
             runner.send.store(None);
-            if let Some(handle) = lock(&runner.thread).take()
-                && handle.thread().id() != thread::current().id()
-            {
-                let failed = handle.join().map_err(|_| {
-                    crate::Error::SyncError("collector callback worker panicked".into())
-                })?;
+            runner.closing.store(true, Ordering::Release);
+            let _ = runner.pressure.try_send(());
+            if let Some(handles) = lock(&runner.threads).take() {
+                let mut failed = false;
+                let mut panicked = false;
+                for handle in std::iter::once(handles.primary).chain(handles.assistant) {
+                    if handle.thread().id() != thread::current().id() {
+                        match handle.join() {
+                            Ok(result) => failed |= result,
+                            Err(_) => panicked = true,
+                        }
+                    }
+                }
+                if panicked {
+                    return Err(crate::Error::SyncError(
+                        "collector callback worker panicked".into(),
+                    ));
+                }
                 return Ok(failed || runner.helper_failed.load(Ordering::Acquire));
             }
         }
@@ -235,14 +264,14 @@ impl Job {
 }
 
 impl Runner {
-    fn spawn() -> std::io::Result<Box<Self>> {
+    fn spawn(heap: std::sync::Weak<GarbageCollector>) -> std::io::Result<Box<Self>> {
         let (send, submissions) = mpsc::channel();
         let receive = Arc::new(Mutex::new(Receiver {
             submissions,
             remaining: None,
         }));
         let queue = receive.clone();
-        let thread = thread::Builder::new()
+        let primary = thread::Builder::new()
             .name("gc-finalizers".into())
             .spawn(move || {
                 let mut failed = false;
@@ -253,11 +282,44 @@ impl Runner {
                 }
                 failed
             })?;
+        let (pressure, requested) = mpsc::sync_channel(1);
+        let closing = Arc::new(AtomicBool::new(false));
+        let stopping = closing.clone();
+        let queue = receive.clone();
+        // Only an allocation at the logical cap activates the second consumer.
+        // Its queue token is advisory. Ownership and refunds stay with Job::run.
+        let assistant = thread::Builder::new()
+            .name("gc-pressure-finalizers".into())
+            .spawn(move || {
+                let mut failed = false;
+                while requested.recv().is_ok() && !stopping.load(Ordering::Acquire) {
+                    loop {
+                        // Do not keep the heap alive while the primary is asleep
+                        // holding the receiver lock or while waiting for another signal.
+                        if stopping.load(Ordering::Acquire)
+                            || !heap
+                                .upgrade()
+                                .is_some_and(|gc| gc.grant_registry.has_demand())
+                        {
+                            break;
+                        }
+                        let next = lock(&queue).claim(false);
+                        let Some(job) = next else { break };
+                        failed |= job.run();
+                    }
+                }
+                failed
+            })
+            // The primary can still drain all accepted jobs if the OS refuses
+            // the optional thread. Allocation keeps its ordinary finite retry.
+            .ok();
         Ok(Box::new(Self {
             send: arc_swap::ArcSwapOption::from(Some(Arc::new(send))),
             receive,
             helper_failed: AtomicBool::new(false),
-            thread: Mutex::new(Some(thread)),
+            pressure,
+            closing,
+            threads: Mutex::new(Some(Threads { primary, assistant })),
         }))
     }
 }
