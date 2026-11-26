@@ -17,6 +17,12 @@ See [the release check](../benchmarks/gc/release/verify_alpha_heap.py).
 | Whole-JVM throughput | Qualify physical context-local allocation separately from logical credits. Earlier combined buffers improved a 256-byte compact case by 23.9% and raised 4 KiB compact p99.99 from 261.5 to 3,264 µs. Measure common field and array loads/stores and confirm actual compiled entries in the Java hot loop. Static long stores use the ordinary VM continuation, with volatile ordering and Java fault coverage. Reference values live across polls still require owning frame roots and cancellation tests. [Scheduled Java measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/ordinary-static-long/README.md) |
 | Release qualification | Keep deterministic parked-participant progress, ordinary JVM class coverage, browser responsiveness, fixed-rate throughput and scheduled tails against G1/ZGC, three hour-long runs and a 24-hour soak as separate gates. |
 
+Ordinary Java full scans trace every reference while skipping the child shard
+lookup used only to prune old-to-young cards. At `9a6e0f59`, full collection of
+4,096 distinct Java children took 20% less time on native and 9% less on WASI.
+With a repeated reference the reductions were 80% and 56%.
+[Java reference-card fixture and measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/java-reference-cards/README.md).
+
 Ordinary Java primitive-array writers now skip an empty demotion and notification
 scope. Three stock writer paths took 34–38% less mutator time, and all 36 fixed
 collection comparisons still cleared 10×. The native and WASI minimum individual
