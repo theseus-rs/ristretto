@@ -2,7 +2,9 @@
 #![cfg(not(target_family = "wasm"))]
 #![expect(unsafe_code, reason = "the fixture contains no managed edges")]
 #![expect(clippy::expect_used, clippy::panic_in_result_fn)]
-use ristretto_gc::{Configuration, Finalize, GarbageCollector, Gc, Result, Trace, TraceProgress};
+use ristretto_gc::{
+    Configuration, Finalize, GarbageCollector, Gc, GcRootGuard, Result, Trace, TraceProgress,
+};
 use std::future::Future;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
@@ -76,6 +78,24 @@ impl Wake for Ready {
 }
 
 fn exercise(stage: Stage, registered: bool, release_donor: bool) -> Result<()> {
+    exercise_payload(
+        stage,
+        registered,
+        release_donor,
+        Payload,
+        |gc, payload| Ok(Gc::new_with_finalizer(gc, payload)),
+        [1, 1],
+    )
+}
+
+fn exercise_payload<T: Trace + Send + Sync + 'static>(
+    stage: Stage,
+    registered: bool,
+    release_donor: bool,
+    make: impl FnOnce(Arc<Callback>) -> T,
+    allocate: impl FnOnce(&Arc<GarbageCollector>, T) -> Result<GcRootGuard<T>>,
+    [finalized, cleared]: [usize; 2],
+) -> Result<()> {
     let (entered, ready) = mpsc::channel();
     let (resume, release) = mpsc::channel();
     let callback = Arc::new(Callback {
@@ -87,7 +107,7 @@ fn exercise(stage: Stage, registered: bool, release_donor: bool) -> Result<()> {
         cleared: AtomicUsize::new(0),
         dropped: AtomicUsize::new(0),
     });
-    let payload = Payload(callback.clone());
+    let payload = make(callback.clone());
     let payload_size = Gc::allocation_size(&payload)?;
     let scalar_size = Gc::allocation_size(&7_u64)?;
     let gc = GarbageCollector::with_config(Configuration {
@@ -98,7 +118,7 @@ fn exercise(stage: Stage, registered: bool, release_donor: bool) -> Result<()> {
         max_pause_time_us: 0,
         ..Configuration::default()
     });
-    let doomed = Gc::new_with_finalizer(&gc, payload);
+    let doomed = allocate(&gc, payload)?;
     let garbage = Gc::try_new(&gc, 7_u64)?;
     assert_eq!(gc.managed_bytes(), payload_size + scalar_size);
     drop(doomed);
@@ -159,8 +179,8 @@ fn exercise(stage: Stage, registered: bool, release_donor: bool) -> Result<()> {
     }
     drop(retained);
     gc.stop()?;
-    assert_eq!(callback.finalized.load(Ordering::Relaxed), 1);
-    assert_eq!(callback.cleared.load(Ordering::Relaxed), 1);
+    assert_eq!(callback.finalized.load(Ordering::Relaxed), finalized);
+    assert_eq!(callback.cleared.load(Ordering::Relaxed), cleared);
     assert_eq!(callback.dropped.load(Ordering::Relaxed), 1);
     assert_eq!(gc.managed_bytes(), 0);
     Ok(())
@@ -195,6 +215,50 @@ fn registered_worker_recovers_an_independent_donor_during_clear() -> Result<()> 
 #[test]
 fn registered_worker_recovers_an_independent_donor_during_drop() -> Result<()> {
     exercise(Stage::Drop, true, true)
+}
+
+// The destructor exists even when the tracing table omits both trace and clear.
+struct DropOnly {
+    _payload: Payload,
+}
+// SAFETY: this payload contains only the host-side callback state.
+unsafe impl Trace for DropOnly {
+    fn may_contain_gc_references() -> bool {
+        false
+    }
+    fn needs_clear() -> bool {
+        false
+    }
+    fn trace(&self, _: &GarbageCollector) {}
+}
+
+#[cfg(not(miri))]
+#[test]
+fn ordinary_wrapped_clear_preserves_independent_allocation_progress() -> Result<()> {
+    exercise_payload(
+        Stage::Clear,
+        true,
+        true,
+        |c| Some(Mutex::new(Payload(c))),
+        Gc::try_new,
+        [0, 1],
+    )
+}
+
+#[cfg(not(miri))]
+#[test]
+fn ordinary_destructor_without_trace_or_clear_preserves_independent_allocation_progress()
+-> Result<()> {
+    exercise_payload(
+        Stage::Drop,
+        true,
+        true,
+        |c| DropOnly {
+            _payload: Payload(c),
+        },
+        Gc::try_new,
+        [0, 0],
+    )
 }
 
 #[cfg(not(miri))]
