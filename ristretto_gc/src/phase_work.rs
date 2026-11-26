@@ -77,7 +77,6 @@ impl SealedPages {
 
 pub(super) enum ContextUnit {
     Progress,
-    Busy,
     Cleanup(crate::context::ContextCleanup),
 }
 
@@ -132,10 +131,6 @@ impl GarbageCollector {
                         ContextUnit::Progress => {
                             progressed = true;
                             continue;
-                        }
-                        ContextUnit::Busy => {
-                            progressed = true;
-                            break;
                         }
                         ContextUnit::Cleanup(cleanup) => {
                             drop(cycle);
@@ -239,10 +234,7 @@ impl GarbageCollector {
             .then(|| self.allocation_guard());
         match self.contexts.scan(&mut cycle.context_cursor) {
             crate::context::RootScan::Root(address) => {
-                if self.try_shade(address).is_none() {
-                    cycle.context_cursor.retry_root();
-                    return ContextUnit::Busy;
-                }
+                self.shade_registered_root(address);
             }
             crate::context::RootScan::Advance => {}
             crate::context::RootScan::Done => cycle.phase = Phase::RootSlots,
@@ -302,10 +294,7 @@ impl GarbageCollector {
                     .map(|roots| roots.scan(&mut cycle.root_cursor))
                 {
                     Some(crate::roots::Scan::Root(address)) => {
-                        if self.try_shade(address).is_none() {
-                            cycle.root_cursor.retry_root();
-                            return false;
-                        }
+                        self.shade_registered_root(address);
                     }
                     Some(crate::roots::Scan::Advance) => {}
                     Some(crate::roots::Scan::Done) | None => cycle.phase = Phase::Roots,
@@ -313,9 +302,7 @@ impl GarbageCollector {
             }
             Phase::Roots => match self.roots.scan(cycle.cursor) {
                 crate::roots::TreeScan::Root(id, address) => {
-                    if self.try_shade(address).is_none() {
-                        return false;
-                    }
+                    self.shade_registered_root(address);
                     cycle.cursor = id;
                 }
                 crate::roots::TreeScan::Retry => return false,

@@ -152,10 +152,14 @@ fn reserved_address_allows_reclamation_under_held_live_operation_guards() -> Res
 }
 
 #[test]
-fn slot_and_context_root_reads_retry_held_metadata_without_retaining_admission() -> Result<()> {
+fn registered_root_scans_trace_the_graph_while_its_object_shard_is_parked() -> Result<()> {
     for concurrent in [false, true] {
         for independent in [false, true] {
-            for storage in [crate::RootStorage::Slots, crate::RootStorage::Contexts] {
+            for storage in [
+                crate::RootStorage::Tree,
+                crate::RootStorage::Slots,
+                crate::RootStorage::Contexts,
+            ] {
                 let gc = GarbageCollector::with_config(
                     Configuration::builder()
                         .concurrent_publication(concurrent)
@@ -173,19 +177,20 @@ fn slot_and_context_root_reads_retry_held_metadata_without_retaining_admission()
                 gc.collect();
                 // A first-page slot can be read in the very first step. Hold
                 // metadata before any collector work, including cycle startup.
-                let phase = if storage == crate::RootStorage::Contexts {
-                    Phase::ContextRoots
-                } else {
-                    Phase::RootSlots
-                };
+                let child = gc
+                    .objects
+                    .lookup(root[0].as_ptr() as usize)
+                    .expect("registered child");
                 let objects = gc.objects.lock(root.as_ptr() as usize);
                 let worker_gc = gc.clone();
                 let (finished, result) = mpsc::channel();
                 let worker = thread::spawn(move || {
-                    for _ in 0..64 {
+                    let marked = (0..4096).any(|_| {
                         worker_gc.step();
-                    }
-                    finished.send(()).expect("root steps complete");
+                        let epoch = worker_gc.domains[1].epoch.load(Ordering::Acquire);
+                        epoch != 0 && child.retention(1, epoch) == Some(Retention::Strong)
+                    });
+                    finished.send(marked).expect("root steps complete");
                 });
                 let yielded = result.recv_timeout(Duration::from_secs(1));
                 let coordinator_free = gc.coordinator.try_lock().is_ok();
@@ -193,14 +198,10 @@ fn slot_and_context_root_reads_retry_held_metadata_without_retaining_admission()
                     || gc.publication.try_write().is_some(),
                     |clock| clock.active() == 0,
                 );
-                println!(
-                    "held root metadata: counted={concurrent} independent={independent} storage={storage:?}; yielded={yielded:?} coordinator_free={coordinator_free} admission_free={admission_free}"
-                );
                 drop(objects);
                 worker.join().expect("root worker");
-                assert_eq!(yielded, Ok(()));
+                assert_eq!(yielded, Ok(true), "parked root shard held graph traversal");
                 assert!(coordinator_free && admission_free);
-                assert_eq!(lock(&gc.domains[1].cycle).phase, phase);
                 gc.collect_full()?;
                 let recovered = weak.upgrade().expect("retried root graph survived");
                 assert_eq!(*recovered[0], 42);

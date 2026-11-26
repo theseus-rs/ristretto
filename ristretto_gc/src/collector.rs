@@ -3498,11 +3498,12 @@ impl GarbageCollector {
             .is_some_and(|metadata| self.shade_known(&metadata))
     }
 
-    /// A root enumerator retains its position when the object shard is busy.
-    /// The caller still protects the successful read-to-shade operation.
-    fn try_shade(&self, address: usize) -> Option<bool> {
-        let metadata = self.objects.try_lock(address)?.get(&address).cloned();
-        Some(metadata.is_some_and(|metadata| self.shade_known(&metadata)))
+    /// The phase unit orders its root read and shade against closure. Resolve
+    /// only visible metadata; shading never borrows the target payload.
+    fn shade_registered_root(&self, address: usize) {
+        if let Some(metadata) = self.objects.lookup(address) {
+            self.shade_known(&metadata);
+        }
     }
 
     /// The caller protects registration/phase ordering; this path does not wait
@@ -5085,7 +5086,6 @@ impl GarbageCollector {
                     }
                     Phase::ContextRoots => match self.context_root_unit(&mut cycle) {
                         phase_work::ContextUnit::Progress => {}
-                        phase_work::ContextUnit::Busy => break,
                         phase_work::ContextUnit::Cleanup(cleanup) => {
                             drop(cycle);
                             drop(coordinator);

@@ -405,7 +405,7 @@ mod native {
     }
 
     #[test]
-    fn independent_root_read_retries_a_contended_entry_without_retaining_admission() -> Result<()> {
+    fn independent_root_read_advances_past_a_parked_object_shard() -> Result<()> {
         for concurrent in [false, true] {
             let gc = collector(concurrent);
             let first = Gc::try_new(&gc, 7_u64)?;
@@ -433,9 +433,9 @@ mod native {
             worker.join().expect("root scan");
             assert_eq!(yielded, Ok(phase_work::PhaseStep::Worked(false)));
             assert!(coordinator_free && admission_free);
-            assert_eq!(lock(&gc.domains[1].cycle).cursor, cursor);
+            assert!(lock(&gc.domains[1].cycle).cursor > cursor);
             gc.collect_full()?;
-            let recovered = weak.upgrade().expect("retried graph survived");
+            let recovered = weak.upgrade().expect("scanned graph survived");
             assert_eq!(*recovered[0], 42);
             drop((recovered, first, root));
             gc.stop()?;
