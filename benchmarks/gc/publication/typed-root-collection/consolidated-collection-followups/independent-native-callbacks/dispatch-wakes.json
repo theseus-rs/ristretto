@@ -1,0 +1,17 @@
+{
+  "exe_sha256": "fe8f7b9d10f1fa26081e04bd176696644651b25396b7df744c432f4ba0daefb1",
+  "count": 100,
+  "min_wakes": 2048,
+  "max_wakes": 2048,
+  "parent": "3fb92fee",
+  "cpu_sets": {
+    "even repeat": [
+      4,
+      6,
+      9
+    ],
+    "odd repeat": [
+      4
+    ]
+  }
+}

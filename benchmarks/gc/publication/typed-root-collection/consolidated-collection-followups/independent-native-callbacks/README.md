@@ -73,6 +73,23 @@ cumulative destructor count. [Callback estimates](callback-cost.csv) ·
 
 ![Full-cycle callback cost and individual 95% intervals](callback-cost.png)
 
+## Remaining executor wake-ups
+
+With one donor still published and the primary destructor and pressure
+assistant both parked, a terminal allocator remained pending. Across 100
+fresh native processes, each of 2,048 polls issued one immediate wake to its
+executor. The donor stayed charged, then funded the allocation when the
+assistant resumed. The probe alternated one CPU and three CPUs. This
+measures runnable wake-ups under a forced delay.
+
+A replacement wait must handle assistant dispatch, last-job claims by other
+workers, independent physical refunds, cancellation and pool shutdown. A
+claimant can stop between its successful claim and its next instruction.
+A notification that only this claimant can send after the claim therefore
+needs an independent way to wake the sleeping allocator.
+[Probe patch for `3fb92fee`](dispatch-wakes.patch.gz) ·
+[All 100 schedules](dispatch-wakes.jsonl.gz) · [Binary identity](dispatch-wakes.json).
+
 ## Earlier trials and reproduction
 
 The fixed 32-slot ring took 7.054× shipping time at 1,024 finalizers and
