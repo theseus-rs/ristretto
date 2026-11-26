@@ -39,7 +39,12 @@ struct Waiters {
     space: BTreeMap<(usize, WaiterId), u64>,
     physical: BTreeMap<WaiterId, (u64, Layout)>,
     physical_cursor: WaiterId,
-    observations: BTreeMap<(usize, WaiterId), Arc<AtomicBool>>,
+}
+
+#[derive(Debug, Default)]
+struct Observations {
+    next_id: WaiterId,
+    entries: BTreeMap<(usize, WaiterId), Arc<AtomicBool>>,
 }
 
 impl Waiters {
@@ -76,6 +81,7 @@ impl Waiters {
 #[derive(Debug, Default)]
 pub(crate) struct Recovery {
     waiters: Mutex<Waiters>,
+    observations: Mutex<Observations>,
     notified: AtomicU64,
     waiting: AtomicUsize,
     wake_pending: AtomicBool,
@@ -217,15 +223,15 @@ impl Recovery {
     /// Install before requesting a cycle, including before the first future poll.
     pub(crate) fn observe_space(&self, bytes: usize) -> Result<SpaceObservation<'_>> {
         let seen = Arc::new(AtomicBool::new(false));
-        let mut waiters = lock(&self.waiters);
-        waiters.next_id = waiters
+        let mut observations = lock(&self.observations);
+        observations.next_id = observations
             .next_id
             .checked_add(1)
             .filter(|id| *id != WaiterId::MAX)
             .ok_or(Error::OutOfMemory)?;
-        let id = waiters.next_id;
-        waiters.observations.insert((bytes, id), seen.clone());
-        self.update_observation_minimum(&waiters);
+        let id = observations.next_id;
+        observations.entries.insert((bytes, id), seen.clone());
+        self.update_observation_minimum(&observations);
         Ok(SpaceObservation {
             recovery: self,
             bytes,
@@ -234,16 +240,16 @@ impl Recovery {
         })
     }
 
-    fn update_observation_minimum(&self, waiters: &Waiters) {
+    fn update_observation_minimum(&self, observations: &Observations) {
         self.minimum_observation.store(
-            waiters
-                .observations
+            observations
+                .entries
                 .first_key_value()
                 .map_or(usize::MAX, |((bytes, _), _)| *bytes),
             Ordering::Release,
         );
         self.observing
-            .store(waiters.observations.len(), Ordering::Release);
+            .store(observations.entries.len(), Ordering::Release);
     }
 
     /// Use headroom at the refund's atomic linearization point, before a competing
@@ -255,16 +261,16 @@ impl Recovery {
         {
             return;
         }
-        let mut waiters = lock(&self.waiters);
-        while let Some((&key, _)) = waiters.observations.first_key_value() {
+        let mut observations = lock(&self.observations);
+        while let Some((&key, _)) = observations.entries.first_key_value() {
             if key.0 > available {
                 break;
             }
-            if let Some(seen) = waiters.observations.remove(&key) {
+            if let Some(seen) = observations.entries.remove(&key) {
                 seen.store(true, Ordering::Release);
             }
         }
-        self.update_observation_minimum(&waiters);
+        self.update_observation_minimum(&observations);
     }
 
     fn register(
@@ -514,9 +520,9 @@ impl SpaceObservation<'_> {
 
 impl Drop for SpaceObservation<'_> {
     fn drop(&mut self) {
-        let mut waiters = lock(&self.recovery.waiters);
-        waiters.observations.remove(&(self.bytes, self.id));
-        self.recovery.update_observation_minimum(&waiters);
+        let mut observations = lock(&self.recovery.observations);
+        observations.entries.remove(&(self.bytes, self.id));
+        self.recovery.update_observation_minimum(&observations);
     }
 }
 
@@ -1095,7 +1101,77 @@ mod tests {
         }
         gc.cancel_allocation(8);
         assert_eq!(gc.recovery.observing.load(Ordering::Acquire), 0);
-        assert!(lock(&gc.recovery.waiters).observations.is_empty());
+        assert!(lock(&gc.recovery.observations).entries.is_empty());
+        Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn refund_records_a_stolen_offer_even_with_the_waiter_index_parked() -> Result<()> {
+        use std::sync::mpsc;
+        use std::time::Duration;
+        let gc = GarbageCollector::with_config(Configuration::builder().max_heap_bytes(8).build());
+        let charge = gc.reserve_private_bytes(8)?;
+        let fits = gc.recovery.observe_space(8)?;
+        let large = gc.recovery.observe_space(9)?;
+        std::thread::scope(|scope| {
+            let parked = lock(&gc.recovery.waiters);
+            let (done, recv) = mpsc::channel();
+            scope.spawn(move || {
+                drop(charge);
+                let _ = done.send(());
+            });
+            let finished = recv.recv_timeout(Duration::from_secs(2)).is_ok();
+            drop(parked);
+            assert!(finished, "refund stalled with an unrelated waiter writer");
+        });
+        assert_eq!(gc.managed_bytes(), 0);
+        let stolen = gc.reserve_private_bytes(8)?;
+        assert!(fits.was_offered());
+        assert!(!large.was_offered());
+        drop(stolen);
+        Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn parked_observations_leave_ticket_wakes_and_cancellation_available() -> Result<()> {
+        use std::sync::mpsc;
+        use std::time::Duration;
+        let gc = GarbageCollector::new();
+        let worker = WorkerRegistration::new(&gc);
+        let mut cancelled = Box::pin(CollectionWait::new(&gc, 10));
+        assert!(
+            cancelled
+                .as_mut()
+                .poll(&mut Context::from_waker(Waker::noop()))
+                .is_pending()
+        );
+        let mut completed = Box::pin(CollectionWait::new(&gc, 1));
+        assert!(
+            completed
+                .as_mut()
+                .poll(&mut Context::from_waker(Waker::noop()))
+                .is_pending()
+        );
+        std::thread::scope(|scope| {
+            let parked = lock(&gc.recovery.observations);
+            let (sent, received) = mpsc::channel();
+            let collector = &gc;
+            scope.spawn(move || {
+                drop(cancelled);
+                collector.collect_full().expect("full cycle completes");
+                let ready = completed
+                    .as_mut()
+                    .poll(&mut Context::from_waker(Waker::noop()));
+                let _ = sent.send(ready.is_ready());
+            });
+            let progress = received.recv_timeout(Duration::from_secs(2));
+            drop(parked);
+            assert_eq!(progress, Ok(true));
+        });
+        assert_eq!(gc.recovery.waiter_count(), 0);
+        drop(worker);
         Ok(())
     }
 
@@ -1110,7 +1186,7 @@ mod tests {
         assert!(!large.seen.load(Ordering::Acquire));
         drop(large);
         assert_eq!(recovery.observing.load(Ordering::Acquire), 0);
-        assert!(lock(&recovery.waiters).observations.is_empty());
+        assert!(lock(&recovery.observations).entries.is_empty());
         Ok(())
     }
 }
