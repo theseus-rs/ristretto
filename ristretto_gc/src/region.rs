@@ -1162,6 +1162,35 @@ mod tests {
     }
 
     #[test]
+    fn retiring_a_partially_prepared_buffer_retries_each_owned_registry() {
+        use crate::{HeapBuffer, Trace, TraceProgress};
+        let source = RegionHeap::new(1024, 4096, 0);
+        let destination = RegionHeap::new(1024, 4096, 0);
+        let mut buffer = HeapBuffer::try_with_fn(Some(&source), 256, |_| Ok(7_u8)).expect("source");
+        assert_eq!(
+            buffer.prepare_step(&destination, 1).expect("begin staging"),
+            TraceProgress::Continue(1)
+        );
+        {
+            let _parked = lock(destination.states.first().expect("destination registry"));
+            assert_eq!(buffer.clear_step(0, 1), TraceProgress::Busy);
+            assert_eq!(buffer.len(), 256);
+        }
+        assert_eq!(destination.statistics().occupied_bytes, 256);
+        {
+            let _parked = lock(source.states.first().expect("source registry"));
+            assert_eq!(buffer.clear_step(0, 1), TraceProgress::Busy);
+            assert!(buffer.is_empty());
+            assert_eq!(destination.statistics().occupied_bytes, 0);
+        }
+        assert_eq!(source.statistics().occupied_bytes, 256);
+        assert_eq!(buffer.clear_step(0, 1), TraceProgress::Complete);
+        assert_eq!(source.statistics().occupied_bytes, 0);
+        drop(buffer);
+        assert_eq!(source.statistics().occupied_bytes, 0);
+    }
+
+    #[test]
     fn empty_oversized_backing_cannot_be_repopulated_by_tiny_copies() {
         let heap = RegionHeap::with_policy(1024, 4096, 0, Budget::new(4096), true);
         let mut small =

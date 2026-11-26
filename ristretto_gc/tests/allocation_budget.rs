@@ -31,6 +31,28 @@ impl Drop for Payload {
 }
 
 #[test]
+fn clearing_a_heap_buffer_without_element_destructors_runs_no_element_hooks() {
+    struct Leaf;
+    // SAFETY: this leaf contains no managed edges.
+    #[expect(unsafe_code)]
+    unsafe impl Trace for Leaf {
+        fn may_contain_gc_references() -> bool {
+            panic!("retirement invoked the element's tracing policy")
+        }
+
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+
+    let mut buffer = ristretto_gc::HeapBuffer::from(vec![Leaf, Leaf]);
+    assert!(ristretto_gc::HeapBuffer::<Leaf>::has_bounded_cleanup());
+    assert_eq!(
+        buffer.clear_step(0, 1),
+        ristretto_gc::TraceProgress::Complete
+    );
+    assert!(buffer.is_empty());
+}
+
+#[test]
 fn limit_failure_and_success_refund_once_after_destruction() -> ristretto_gc::Result<()> {
     let collector = GarbageCollector::with_config(
         Configuration::builder()

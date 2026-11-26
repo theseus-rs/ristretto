@@ -689,9 +689,9 @@ pub unsafe trait Trace {
         true
     }
 
-    /// Whether clearing and dropping every value of this type can run on a collector
-    /// worker without calling user code, waiting on another thread, or doing work
-    /// proportional to payload size, assuming the backing allocator makes progress.
+    /// Whether each retirement clearing step and destruction after clearing completes
+    /// can run on a collector worker without calling user code, waiting on another
+    /// thread, or doing work proportional to payload size, assuming allocator progress.
     /// Returning true only affects scheduling.
     /// The collector still runs both cleanup operations. Separately registered
     /// finalizers and heap owners retain their own callback requirements.

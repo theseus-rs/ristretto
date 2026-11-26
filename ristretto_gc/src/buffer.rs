@@ -612,6 +612,11 @@ impl<T> FromIterator<T> for HeapBuffer<T> {
 // restores ownership before storage can move; preparation/compaction preserve
 // initialization and existing guarded relocation invariants.
 unsafe impl<T: crate::Trace> crate::Trace for HeapBuffer<T> {
+    fn has_bounded_cleanup() -> bool {
+        // Clearing returns each owned block cooperatively before ordinary destruction.
+        !std::mem::needs_drop::<T>()
+    }
+
     fn may_contain_gc_references() -> bool {
         T::may_contain_gc_references()
     }
@@ -680,10 +685,10 @@ unsafe impl<T: crate::Trace> crate::Trace for HeapBuffer<T> {
             }
             self.copying = None;
         }
-        let keep = if !T::may_contain_gc_references() && !std::mem::needs_drop::<T>() {
-            0
-        } else {
+        let keep = if std::mem::needs_drop::<T>() {
             self.len().saturating_sub(budget.max(1))
+        } else {
+            0
         };
         self.truncate(keep);
         if !self.is_empty() {

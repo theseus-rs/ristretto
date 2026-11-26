@@ -333,11 +333,41 @@ mod bounded_lock_donor {
     }
 
     #[test]
+    fn managed_host_heap_buffer() -> Result<()> {
+        let buffer = ristretto_gc::HeapBuffer::from(vec![5_u8; 256]);
+        check(ristretto_gc::sync::RwLock::new(buffer))
+    }
+
+    #[test]
+    fn managed_region_heap_buffer() -> Result<()> {
+        let regions = ristretto_gc::region::RegionHeap::new(1024, 4096, 0);
+        let buffer = ristretto_gc::HeapBuffer::try_with_fn(Some(&regions), 256, |_| Ok(5_u8))?;
+        assert_eq!(regions.statistics().occupied_bytes, 256);
+        check(ristretto_gc::sync::RwLock::new(buffer))?;
+        assert_eq!(regions.statistics().occupied_bytes, 0);
+        Ok(())
+    }
+
+    #[test]
     fn nested() -> Result<()> {
         check(Some(Mutex::new(ristretto_gc::sync::RwLock::new(
             String::from("backing"),
         ))))
     }
+}
+
+#[cfg(not(miri))]
+#[test]
+fn a_heap_buffer_element_destructor_leaves_the_worker_available() -> Result<()> {
+    exercise_payload(
+        Stage::Drop,
+        true,
+        true,
+        |callback| ristretto_gc::HeapBuffer::from(vec![Payload(callback)]),
+        Gc::try_new,
+        [0, 0],
+        7_u64,
+    )
 }
 
 #[cfg(not(miri))]

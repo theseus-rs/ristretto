@@ -551,6 +551,20 @@ mod native {
         allocator_stress(true, true)
     }
 
+    async fn allocate_buffer(
+        gc: &Arc<GarbageCollector>,
+        byte: u8,
+    ) -> std::result::Result<(), (&'static str, Error)> {
+        let buffer = HeapBuffer::try_with_fn_in_async(gc, 4096, |_| Ok(byte))
+            .await
+            .map_err(|error| ("buffer backing", error))?;
+        let root = Gc::try_new_async(gc, ristretto_gc::sync::RwLock::new(buffer))
+            .await
+            .map_err(|error| ("managed object", error))?;
+        assert_eq!(root.read().last(), Some(&byte));
+        Ok(())
+    }
+
     fn allocator_stress(concurrent_publication: bool, overlap: bool) -> Result<()> {
         for (compact, predictive, storage, independent) in [
             ristretto_gc::RootStorage::Tree,
@@ -609,19 +623,9 @@ mod native {
                                     gc.collect_old();
                                     gc.collect_young();
                                 }
-                                run(context.scope(async {
-                                    let buffer =
-                                        HeapBuffer::try_with_fn_in_async(gc, 4096, |_| Ok(byte))
-                                            .await?;
-                                    let root = Gc::try_new_async(
-                                        gc,
-                                        ristretto_gc::sync::RwLock::new(buffer),
-                                    )
-                                    .await?;
-                                    assert_eq!(root.read().last(), Some(&byte));
-                                    Ok::<_, Error>(())
-                                })).inspect_err(|error| {
-                                    eprintln!("{error:?}: concurrent_publication={concurrent_publication}, overlap={overlap}, compact={compact}, predictive={predictive}, storage={storage:?}, independent={independent}, mutator={byte}, iteration={iteration}; logical={:?}; regions={:?}", gc.statistics(), gc.region_heap().map(|heap| heap.statistics()));
+                                run(context.scope(allocate_buffer(gc, byte))).map_err(|(stage, error)| {
+                                    eprintln!("{error:?} during {stage}: concurrent_publication={concurrent_publication}, overlap={overlap}, compact={compact}, predictive={predictive}, storage={storage:?}, independent={independent}, mutator={byte}, iteration={iteration}; logical={:?}; regions={:?}", gc.statistics(), gc.region_heap().map(|heap| heap.statistics()));
+                                    error
                                 })?;
                             }
                             Ok(())
