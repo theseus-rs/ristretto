@@ -335,6 +335,13 @@ unsafe fn drop_value<T>(ptr: *mut u8) {
     unsafe { std::ptr::drop_in_place(ptr.cast::<T>()) };
 }
 
+impl Erased {
+    pub(crate) fn direct_refund(&self, bytes: usize) -> bool {
+        self.drop_value.is_none()
+            && matches!(&self.storage, Storage::Global(raw) if raw.layout.size() == bytes)
+    }
+}
+
 impl Drop for Erased {
     fn drop(&mut self) {
         if let Some(drop_value) = self.drop_value {

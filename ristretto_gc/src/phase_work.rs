@@ -20,7 +20,11 @@ pub(super) enum Unit {
 
 pub(super) enum SweepWork {
     ReleasePacket(crate::work::Packet),
-    Reclaim(ReclaimTask, usize),
+    Reclaim(
+        ReclaimTask,
+        usize,
+        Option<crate::retirement_grants::Selection>,
+    ),
     Unlink(SealedPages),
 }
 
@@ -34,7 +38,9 @@ impl SweepWork {
     ) {
         match self {
             Self::ReleasePacket(packet) => drop(packet),
-            Self::Reclaim(task, budget) => gc.reclaim_swept(task, index, epoch, budget, counters),
+            Self::Reclaim(task, budget, selection) => {
+                gc.reclaim_swept(task, index, epoch, budget, counters, selection);
+            }
             Self::Unlink(pages) => pages.unlink(gc),
         }
     }
@@ -566,12 +572,29 @@ impl GarbageCollector {
         work: &mut usize,
         counters: &mut WorkCounters,
     ) -> Unit {
+        if let Some(task) = cycle.reclaim.front() {
+            if cycle.refund_selection.is_none() {
+                cycle.refund_selection = self.grant_registry.capture(&task.metadata);
+            }
+            if let Some(selection) = &mut cycle.refund_selection
+                && !selection.advance(work)
+            {
+                return Unit::Progress;
+            }
+        }
         let scan_budget = (*work + 1).min(32);
         if let Some(task) = cycle.reclaim.pop_front() {
+            if let Some(selection) = &cycle.refund_selection {
+                selection.mark_private();
+            }
             let scan_budget = scan_budget.min(task.metadata.trace.budget);
             *work = work.saturating_sub(scan_budget.saturating_sub(1));
             self.retired_ready.fetch_add(1, Ordering::AcqRel);
-            return Unit::Sweep(SweepWork::Reclaim(task, scan_budget));
+            return Unit::Sweep(SweepWork::Reclaim(
+                task,
+                scan_budget,
+                cycle.refund_selection.take(),
+            ));
         }
         let Some(_publication) = self.try_publication_write() else {
             return Unit::Busy;

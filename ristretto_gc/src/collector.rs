@@ -216,7 +216,15 @@ pub(crate) struct AllocationReservation<'a> {
     committed: bool,
 }
 
-impl AllocationReservation<'_> {
+impl<'gc> AllocationReservation<'gc> {
+    pub(crate) fn transferred(collector: &'gc GarbageCollector, size: usize) -> Self {
+        Self {
+            collector,
+            size,
+            committed: false,
+        }
+    }
+
     fn transfer(mut self, metadata: &mut ObjectMetadata) {
         assert_eq!(
             self.size,
@@ -758,6 +766,7 @@ struct Cycle {
     relocation_scan_done: bool,
     phantom_retained: BTreeSet<usize>,
     reclaim: VecDeque<ReclaimTask>,
+    refund_selection: Option<crate::retirement_grants::Selection>,
     reclaimed_bytes: usize,
     handoff: Option<(MetadataRef, usize)>,
     root_cursor: crate::roots::Cursor,
@@ -795,6 +804,7 @@ impl Default for Cycle {
             relocation_scan_done: false,
             phantom_retained: BTreeSet::new(),
             reclaim: VecDeque::with_capacity(phase_work::SWEEP_BATCH),
+            refund_selection: None,
             reclaimed_bytes: 0,
             handoff: None,
             root_cursor: crate::roots::Cursor::default(),
@@ -858,6 +868,7 @@ pub struct GarbageCollector {
     pacing: Option<crate::pacing::Controller>,
     pub(crate) diagnostics: Arc<crate::diagnostics::Counters>,
     pub(crate) recovery: crate::recovery::Recovery,
+    pub(crate) grant_registry: crate::retirement_grants::Registry,
     roots: crate::roots::TreeRoots,
     #[cfg(test)]
     tree_root_insert_probe: Mutex<Option<fn(&GarbageCollector)>>,
@@ -1907,6 +1918,7 @@ impl GarbageCollector {
                 leaves_marked_at_birth: AtomicUsize::new(0),
                 diagnostics: Arc::new(crate::diagnostics::Counters::default()),
                 recovery: crate::recovery::Recovery::default(),
+                grant_registry: crate::retirement_grants::Registry::default(),
                 roots: crate::roots::TreeRoots::default(),
                 #[cfg(test)]
                 tree_root_insert_probe: Mutex::new(None),
@@ -2502,14 +2514,16 @@ impl GarbageCollector {
     /// Only a logical allocation that would sleep behind native collection needs
     /// independent wake delivery. Reuse it until this set of workers stops.
     #[cfg(not(target_family = "wasm"))]
-    pub(crate) fn ensure_refund_notifier(&self) -> Result<()> {
+    pub(crate) fn ensure_refund_notifier(&self, settlement_only: bool) -> Result<()> {
         if self.refund_notifier.load().is_some() {
             return Ok(());
         }
         let _workers = lock(&self.collector_thread);
         // stop() may already have taken the handles while a worker is still
         // parked. Keep independent delivery available until the workers exit.
-        if self.recovery.registered_workers() == 0 || self.refund_notifier.load().is_some() {
+        if (!settlement_only && self.recovery.registered_workers() == 0)
+            || self.refund_notifier.load().is_some()
+        {
             return Ok(());
         }
         let notifier = crate::recovery::RefundNotifier::spawn(self)?;
@@ -2928,6 +2942,16 @@ impl GarbageCollector {
         self.managed_budget.reserve(bytes)
     }
 
+    pub(crate) fn signal_grants(&self) {
+        // Pair with the same-word RMW after a terminal sleeper installed delivery.
+        self.managed_budget.used_after_registration();
+        self.recovery.grants_pending.store(true, Ordering::Release);
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(notifier) = self.refund_notifier.load().as_ref() {
+            notifier.signal();
+        }
+    }
+
     pub(crate) fn cancel_allocation(&self, size: usize) {
         let previous = self.managed_budget.release(size);
         let available = self
@@ -3042,13 +3066,35 @@ impl GarbageCollector {
         if size > self.configuration.max_heap_bytes {
             return Err(crate::Error::OutOfMemory);
         }
+        if let Ok(reservation) = self.reserve_bytes(size) {
+            return Ok(reservation);
+        }
+        if crate::cell::has_guards() {
+            return Err(crate::Error::OutOfMemory);
+        }
+        let demand = self.grant_registry.register(self, size)?;
         let mut empty_cycles = 0;
         loop {
+            if let Some(reservation) = demand.take() {
+                return Ok(reservation);
+            }
             if let Ok(reservation) = self.reserve_bytes(size) {
                 return Ok(reservation);
             }
-            if empty_cycles == 2 || crate::cell::has_guards() {
+            if crate::cell::has_guards() {
                 return Err(crate::Error::OutOfMemory);
+            }
+            if empty_cycles == 2 {
+                if demand.finish_uncovered() {
+                    return Err(crate::Error::OutOfMemory);
+                }
+                // This donor was selected while publicly owned. Its charge is
+                // still unavailable until the backing storage is actually freed.
+                let mut opportunity = self.observe_space(size)?;
+                crate::recovery::CollectionWait::for_space(self, u64::MAX, &mut opportunity)
+                    .with_grant(&demand.request, true)
+                    .await?;
+                continue;
             }
             let _measurement = self
                 .diagnostics
@@ -3058,6 +3104,9 @@ impl GarbageCollector {
             // during that suspension counts as an allocation opportunity.
             let mut opportunity = self.observe_space(size)?;
             crate::recovery::yield_once().await;
+            if let Some(reservation) = demand.take() {
+                return Ok(reservation);
+            }
             if let Ok(reservation) = self.reserve_bytes(size) {
                 return Ok(reservation);
             }
@@ -3066,7 +3115,11 @@ impl GarbageCollector {
             loop {
                 observed_space |=
                     crate::recovery::CollectionWait::for_space(self, ticket, &mut opportunity)
+                        .with_grant(&demand.request, false)
                         .await?;
+                if let Some(reservation) = demand.take() {
+                    return Ok(reservation);
+                }
                 if let Ok(reservation) = self.reserve_bytes(size) {
                     return Ok(reservation);
                 }
@@ -4458,6 +4511,7 @@ impl GarbageCollector {
         finalized: bool,
         budget: usize,
         counters: &mut WorkCounters,
+        selection: Option<crate::retirement_grants::Selection>,
     ) -> TraceProgress {
         use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
         debug_assert!(metadata.storage_ready());
@@ -4474,7 +4528,7 @@ impl GarbageCollector {
         // Drop the storage even if other owners still hold inert metadata. Its
         // own refund guard also runs if reporting a destructor panic unwinds.
         let destruction = catch_unwind(AssertUnwindSafe(|| {
-            ObjectMetadata::destroy_retired(metadata, self);
+            ObjectMetadata::destroy_retired(metadata, self, selection);
         }));
         self.retired_bytes
             .fetch_sub(metadata.size(), Ordering::AcqRel);
@@ -4500,13 +4554,21 @@ impl GarbageCollector {
         epoch: u64,
         budget: usize,
         counters: &mut WorkCounters,
+        selection: Option<crate::retirement_grants::Selection>,
     ) {
         let ReclaimTask {
             mut metadata,
             offset,
             finalized,
         } = task;
-        let progress = self.clear_retired(&mut metadata, offset, finalized, budget, counters);
+        let progress = self.clear_retired(
+            &mut metadata,
+            offset,
+            finalized,
+            budget,
+            counters,
+            selection,
+        );
         if progress == TraceProgress::Complete {
             if let Some(scheduler) = &self.scheduler
                 && let Ok(mut cycle) = self.domain_at(index).cycle.try_lock()
@@ -4576,7 +4638,14 @@ impl GarbageCollector {
             .clamp(1, 32)
             .min(metadata.trace.budget);
         let mut counters = WorkCounters::default();
-        let progress = self.clear_retired(&mut metadata, offset, finalized, budget, &mut counters);
+        let progress = self.clear_retired(
+            &mut metadata,
+            offset,
+            finalized,
+            budget,
+            &mut counters,
+            None,
+        );
         if progress == TraceProgress::Complete {
             self.retired_ready.fetch_sub(1, Ordering::AcqRel);
         } else {
@@ -6169,6 +6238,9 @@ unsafe impl<T: Trace, S: ::std::hash::BuildHasher> Trace for HashSet<T, S> {
 
 // SAFETY: every component is traced and receives the same ownership context.
 unsafe impl<A: Trace, B: Trace> Trace for (A, B) {
+    fn needs_clear() -> bool {
+        A::needs_clear() || B::needs_clear()
+    }
     fn root(&mut self) {
         self.0.root();
         self.1.root();
@@ -6195,6 +6267,9 @@ unsafe impl<A: Trace, B: Trace> Trace for (A, B) {
 
 // SAFETY: every component is traced and receives the same ownership context.
 unsafe impl<A: Trace, B: Trace, C: Trace> Trace for (A, B, C) {
+    fn needs_clear() -> bool {
+        A::needs_clear() || B::needs_clear() || C::needs_clear()
+    }
     fn root(&mut self) {
         self.0.root();
         self.1.root();

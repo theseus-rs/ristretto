@@ -108,6 +108,7 @@ pub(crate) struct ObjectMetadata {
     drop_fn: Mutex<DropFn>,
     kind: &'static Kind,
     finalized: AtomicBool,
+    direct_refund: bool,
     dirty_scan: AtomicU8,
     // Discovery must not turn old descriptor snapshots into managed roots.
     // The matching strong owner lives only in the payload destruction record.
@@ -120,13 +121,21 @@ pub(crate) struct ObjectMetadata {
 struct Refund<'a> {
     metadata: &'a ObjectMetadata,
     collector: Option<&'a crate::GarbageCollector>,
+    selection: Option<crate::retirement_grants::Selection>,
 }
 
 impl Drop for Refund<'_> {
     fn drop(&mut self) {
         if let Some(collector) = self.collector {
             self.metadata.refund_publication(collector);
-            collector.cancel_allocation(self.metadata.size);
+            let paid = self
+                .selection
+                .as_mut()
+                .map_or(0, crate::retirement_grants::Selection::pay);
+            collector.cancel_allocation(self.metadata.size - paid);
+            if paid != 0 {
+                collector.signal_grants();
+            }
         } else if let Some(collector) = self.metadata.collector.upgrade() {
             self.metadata.refund_publication(&collector);
             collector.cancel_allocation(self.metadata.size);
@@ -177,6 +186,10 @@ impl ObjectMetadata {
         let previous = self.dirty_scan.fetch_and(!2, Ordering::AcqRel);
         debug_assert!(matches!(previous, 2 | 3));
         previous == 3
+    }
+
+    pub(crate) fn can_transfer_retired_charge(&self) -> bool {
+        self.direct_refund && self.kind.finalizer.is_none()
     }
 
     pub(crate) fn is_type<T: 'static>(&self) -> bool {
@@ -324,11 +337,14 @@ impl ObjectMetadata {
         // SAFETY: constructors exclusively own this initialized, unpublished T.
         let owner = unsafe { (&*ptr).heap_owner() };
         let discovery = owner.as_ref().map(Arc::downgrade);
+        let direct_refund =
+            owner.is_none() && allocation.direct_refund(size) && !trace.requires_clear();
         let drop_fn: DropFn = Some(Payload { allocation, owner });
 
         Self {
             id,
             size,
+            direct_refund,
             logical_size: size - crate::gc::Allocation::<T>::layout().size() + size_of::<T>(),
             birth: BirthVisibility::default(),
             drop_fn: Mutex::new(drop_fn),
@@ -445,39 +461,48 @@ impl ObjectMetadata {
     ///
     /// Uses `try_lock` to avoid deadlocking on a poisoned mutex from a prior panic.
     pub(crate) fn run_drop_fn(&self) {
-        self.run_drop_fn_with_collector(None);
+        self.run_drop_fn_with_collector(None, None);
     }
 
     /// Reclamation already borrows the owning heap. Validate that identity before
     /// claiming storage, then reuse the borrow instead of upgrading a weak owner.
+    #[cfg(test)]
     pub(crate) fn run_drop_fn_in(&self, collector: &crate::GarbageCollector) {
         assert!(
             std::ptr::eq(self.collector.as_ptr(), collector),
             "foreign descriptor refund collector"
         );
-        self.run_drop_fn_with_collector(Some(collector));
+        self.run_drop_fn_with_collector(Some(collector), None);
     }
 
-    pub(crate) fn destroy_retired(metadata: &mut MetadataRef, collector: &crate::GarbageCollector) {
+    pub(crate) fn destroy_retired(
+        metadata: &mut MetadataRef,
+        collector: &crate::GarbageCollector,
+        selection: Option<crate::retirement_grants::Selection>,
+    ) {
+        assert!(
+            std::ptr::eq(metadata.collector.as_ptr(), collector),
+            "foreign descriptor refund collector"
+        );
         if let Some(unique) = MetadataRef::get_mut(metadata) {
-            assert!(
-                std::ptr::eq(unique.collector.as_ptr(), collector),
-                "foreign descriptor refund collector"
-            );
             if unique.storage.destroy_unique() {
                 let payload = unique
                     .drop_fn
                     .get_mut()
                     .unwrap_or_else(std::sync::PoisonError::into_inner)
                     .take();
-                unique.destroy_payload(payload, Some(collector));
+                unique.destroy_payload(payload, Some(collector), selection);
             }
         } else {
-            metadata.run_drop_fn_in(collector);
+            metadata.run_drop_fn_with_collector(Some(collector), selection);
         }
     }
 
-    fn run_drop_fn_with_collector(&self, collector: Option<&crate::GarbageCollector>) {
+    fn run_drop_fn_with_collector(
+        &self,
+        collector: Option<&crate::GarbageCollector>,
+        selection: Option<crate::retirement_grants::Selection>,
+    ) {
         if !self.storage.destroy() {
             return;
         }
@@ -487,16 +512,24 @@ impl ObjectMetadata {
             warn!("Failed to acquire drop_fn lock during object cleanup; drop skipped");
             return;
         };
-        self.destroy_payload(drop_fn, collector);
+        self.destroy_payload(drop_fn, collector, selection);
     }
 
-    fn destroy_payload(&self, drop_fn: DropFn, collector: Option<&crate::GarbageCollector>) {
+    fn destroy_payload(
+        &self,
+        drop_fn: DropFn,
+        collector: Option<&crate::GarbageCollector>,
+        selection: Option<crate::retirement_grants::Selection>,
+    ) {
         if let Some(Payload { allocation, owner }) = drop_fn {
             {
                 let _refund = Refund {
                     metadata: self,
                     collector,
+                    selection,
                 };
+                // On unwind, storage must drop before its charge can be reused.
+                let allocation = allocation;
                 #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
                 crate::refund_tests::before_storage_drop();
                 std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {

@@ -131,6 +131,10 @@ impl TracePtr {
         }
     }
 
+    pub(crate) fn requires_clear(&self) -> bool {
+        self.table.clear.is_some()
+    }
+
     pub(crate) fn clear_step(&self, offset: usize, budget: usize) -> crate::TraceProgress {
         self.table
             .clear

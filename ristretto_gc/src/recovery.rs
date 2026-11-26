@@ -18,8 +18,21 @@ fn lock<T>(value: &Mutex<T>) -> MutexGuard<'_, T> {
 
 type WaiterId = u64;
 
+#[derive(Debug, Clone)]
+struct GrantWatch {
+    request: Arc<crate::retirement_grants::Request>,
+    settlement_only: bool,
+}
+
+impl GrantWatch {
+    fn ready(&self) -> bool {
+        self.request.paid() || (self.settlement_only && self.request.waiting())
+    }
+}
+
 #[derive(Debug)]
 struct Waiter {
+    grant: Option<GrantWatch>,
     bytes: Option<usize>,
     waker: Waker,
     space_seen: Option<Arc<AtomicBool>>,
@@ -78,6 +91,18 @@ impl Waiters {
         Some(((cycle, id), entry, bytes))
     }
 
+    fn queue_ready_grants(&mut self) {
+        let eligible = self.entries.extract_if(.., |_, waiter| {
+            waiter.grant.as_ref().is_some_and(GrantWatch::ready)
+        });
+        for (key, waiter) in eligible {
+            if let Some(bytes) = waiter.bytes {
+                self.space.remove(&(bytes, key.1));
+            }
+            self.ready.insert(key, waiter);
+        }
+    }
+
     fn queue_fitting_allocations(&mut self, gc: &GarbageCollector, mut remaining: usize) {
         while let Some((key, entry, bytes)) = self.take_fitting_allocation(gc, remaining) {
             remaining -= bytes;
@@ -93,6 +118,7 @@ pub(crate) struct Recovery {
     notified: AtomicU64,
     waiting: AtomicUsize,
     wake_pending: AtomicBool,
+    pub(crate) grants_pending: AtomicBool,
     physical_waiting: AtomicUsize,
     minimum_bytes: AtomicUsize,
     observing: AtomicUsize,
@@ -343,12 +369,9 @@ impl Recovery {
         &self,
         ticket: u64,
         id: Option<WaiterId>,
-        bytes: Option<usize>,
-        waker: &Waker,
-        space_seen: Option<&Arc<AtomicBool>>,
+        waiter: Waiter,
         physical: Option<Layout>,
     ) -> Result<WaiterId> {
-        let waker = waker.clone();
         let (id, previous) = {
             let mut waiters = lock(&self.waiters);
             let id = if let Some(id) = id {
@@ -361,21 +384,14 @@ impl Recovery {
                     .ok_or(Error::OutOfMemory)?;
                 waiters.next_id
             };
-            if let Some(bytes) = bytes {
+            if let Some(bytes) = waiter.bytes {
                 waiters.space.insert((bytes, id), ticket);
             }
             if let Some(layout) = physical {
                 waiters.physical.insert(id, (ticket, layout));
             }
             let queued = waiters.ready.remove(&(ticket, id));
-            let previous = waiters.entries.insert(
-                (ticket, id),
-                Waiter {
-                    bytes,
-                    waker,
-                    space_seen: space_seen.cloned(),
-                },
-            );
+            let previous = waiters.entries.insert((ticket, id), waiter);
             self.update_counts(&waiters);
             (id, (previous, queued))
         };
@@ -402,7 +418,10 @@ impl Recovery {
 
     #[cfg(not(target_family = "wasm"))]
     pub(crate) fn has_fitting_waiter(&self, available: usize) -> bool {
-        self.waiter_count() != 0 && available >= self.minimum_bytes.load(Ordering::Acquire)
+        self.waiter_count() != 0
+            && (self.grants_pending.load(Ordering::Acquire)
+                || self.wake_pending.load(Ordering::Acquire)
+                || available >= self.minimum_bytes.load(Ordering::Acquire))
     }
 
     pub(crate) fn waiter_count(&self) -> usize {
@@ -432,9 +451,22 @@ impl Recovery {
     #[cfg(not(target_family = "wasm"))]
     fn take_refund_waker(&self, gc: &GarbageCollector) -> Option<Waker> {
         let mut waiters = lock(&self.waiters);
-        let (_, entry, _) = waiters.take_fitting_allocation(gc, gc.allocation_headroom())?;
+        if self.grants_pending.swap(false, Ordering::AcqRel) {
+            waiters.queue_ready_grants();
+        }
+        // A progress callback may itself be parked. The remaining queued
+        // allocations are already eligible and can be delivered independently.
+        let entry = waiters
+            .ready
+            .pop_first()
+            .map(|(_, entry)| entry)
+            .or_else(|| {
+                waiters
+                    .take_fitting_allocation(gc, gc.allocation_headroom())
+                    .map(|(_, entry, _)| entry)
+            });
         self.update_counts(&waiters);
-        Some(entry.waker)
+        entry.map(|entry| entry.waker)
     }
 
     /// Called after releasing all collector locks.
@@ -447,6 +479,7 @@ impl Recovery {
         let available = gc.allocation_headroom();
         if ticket <= self.notified.load(Ordering::Acquire)
             && available < self.minimum_bytes.load(Ordering::Acquire)
+            && !self.grants_pending.load(Ordering::Acquire)
             && self.physical_waiting.load(Ordering::Acquire) == 0
         {
             self.deliver_ready();
@@ -471,6 +504,9 @@ impl Recovery {
                         }
                     }
                 }
+            }
+            if self.grants_pending.swap(false, Ordering::AcqRel) {
+                waiters.queue_ready_grants();
             }
             waiters.queue_fitting_allocations(gc, remaining);
             // Publish logical wakes before looking at the heap. A paused
@@ -610,6 +646,7 @@ impl Drop for ObservationInterest<'_> {
 
 /// A request owns exactly one waiter slot, even when its future migrates executors.
 pub(crate) struct CollectionWait<'a> {
+    grant: Option<GrantWatch>,
     gc: &'a GarbageCollector,
     ticket: u64,
     id: Option<WaiterId>,
@@ -625,6 +662,7 @@ pub(crate) struct CollectionWait<'a> {
 impl<'a> CollectionWait<'a> {
     pub(crate) fn new(gc: &'a GarbageCollector, ticket: u64) -> Self {
         Self {
+            grant: None,
             gc,
             ticket,
             id: None,
@@ -643,6 +681,7 @@ impl<'a> CollectionWait<'a> {
         observation: &'a mut SpaceObservation<'_>,
     ) -> Self {
         Self {
+            grant: None,
             gc,
             ticket,
             id: None,
@@ -662,6 +701,18 @@ impl<'a> CollectionWait<'a> {
         }
     }
 
+    pub(crate) fn with_grant(
+        mut self,
+        request: &Arc<crate::retirement_grants::Request>,
+        settlement_only: bool,
+    ) -> Self {
+        self.grant = Some(GrantWatch {
+            request: request.clone(),
+            settlement_only,
+        });
+        self
+    }
+
     pub(crate) fn for_physical(gc: &'a GarbageCollector, ticket: u64, layout: Layout) -> Self {
         let mut wait = Self::new(gc, ticket);
         wait.physical = Some(layout);
@@ -671,12 +722,13 @@ impl<'a> CollectionWait<'a> {
     // true means sufficient headroom was observed or offered; false means completion
     // without such an opportunity. An offer is advisory, not reserved allocation credit.
     fn ready(&self) -> Option<bool> {
-        if (self.physical_assisted || self.gc.recovery.workers.load(Ordering::Acquire) != 0)
-            && self.physical.is_some_and(|layout| {
-                self.gc
-                    .region_heap()
-                    .is_some_and(|heap| heap.can_allocate(layout))
-            })
+        if self.grant.as_ref().is_some_and(GrantWatch::ready)
+            || (self.physical_assisted || self.gc.recovery.workers.load(Ordering::Acquire) != 0)
+                && self.physical.is_some_and(|layout| {
+                    self.gc
+                        .region_heap()
+                        .is_some_and(|heap| heap.can_allocate(layout))
+                })
             || self
                 .bytes
                 .is_some_and(|bytes| bytes <= self.gc.allocation_headroom())
@@ -724,9 +776,12 @@ impl Future for CollectionWait<'_> {
         this.id = Some(gc.recovery.register(
             this.ticket,
             this.id,
-            this.bytes,
-            context.waker(),
-            this.space_seen.as_ref(),
+            Waiter {
+                bytes: this.bytes,
+                space_seen: this.space_seen.clone(),
+                waker: context.waker().clone(),
+                grant: this.grant.clone(),
+            },
             this.physical,
         )?);
         // Registration precedes both checks, closing completion and worker-exit races.
@@ -738,13 +793,19 @@ impl Future for CollectionWait<'_> {
             gc.recovery.remove(this.ticket, this.id);
             return Poll::Ready(Err(Error::SyncError("collector worker panicked".into())));
         }
-        if gc.recovery.workers.load(Ordering::Acquire) != 0 {
+        let settlement_only = this
+            .grant
+            .as_ref()
+            .is_some_and(|grant| grant.settlement_only && grant.request.private());
+        if settlement_only || gc.recovery.workers.load(Ordering::Acquire) != 0 {
             #[cfg(not(target_family = "wasm"))]
             if let Some(bytes) = this.bytes {
                 // Register first, then install delivery and check again. A worker
                 // may have started during this poll, or credit may already fit.
-                gc.ensure_refund_notifier()?;
-                if bytes <= gc.headroom_after_registration() {
+                gc.ensure_refund_notifier(settlement_only)?;
+                if bytes <= gc.headroom_after_registration()
+                    || this.grant.as_ref().is_some_and(GrantWatch::ready)
+                {
                     gc.recovery.remove(this.ticket, this.id);
                     return Poll::Ready(Ok(true));
                 }

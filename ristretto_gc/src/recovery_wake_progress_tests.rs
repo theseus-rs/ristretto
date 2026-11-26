@@ -53,7 +53,17 @@ fn a_paused_physical_probe_leaves_logical_wakes_and_cancellation_available() {
     let logical = Arc::new(Notice(AtomicUsize::new(0)));
     let physical = Arc::new(Notice(AtomicUsize::new(0)));
     gc.recovery
-        .register(1, None, Some(1), &Waker::from(logical.clone()), None, None)
+        .register(
+            1,
+            None,
+            Waiter {
+                bytes: Some(1),
+                waker: Waker::from(logical.clone()),
+                space_seen: None,
+                grant: None,
+            },
+            None,
+        )
         .unwrap();
     let layout = Layout::new::<[u8; 16]>();
     assert!(gc.region_heap().unwrap().can_allocate(layout));
@@ -62,9 +72,12 @@ fn a_paused_physical_probe_leaves_logical_wakes_and_cancellation_available() {
         .register(
             1,
             None,
-            None,
-            &Waker::from(physical.clone()),
-            None,
+            Waiter {
+                bytes: None,
+                waker: Waker::from(physical.clone()),
+                space_seen: None,
+                grant: None,
+            },
             Some(layout),
         )
         .unwrap();
@@ -117,7 +130,17 @@ fn another_helper_delivers_wakes_while_a_callback_is_parked() {
         let cancelled = Arc::new(Notice(AtomicUsize::new(0)));
         let register = |waker: &Waker| {
             gc.recovery
-                .register(1, None, Some(1), waker, None, None)
+                .register(
+                    1,
+                    None,
+                    Waiter {
+                        bytes: Some(1),
+                        waker: waker.clone(),
+                        space_seen: None,
+                        grant: None,
+                    },
+                    None,
+                )
                 .unwrap()
         };
         register(&blocker);
@@ -168,7 +191,17 @@ fn synchronous_reentry_drains_the_ready_set_without_recursive_wakes() {
     let waker = Waker::from(owner.clone());
     for _ in 0..128 {
         gc.recovery
-            .register(1, None, Some(1), &waker, None, None)
+            .register(
+                1,
+                None,
+                Waiter {
+                    bytes: Some(1),
+                    waker: waker.clone(),
+                    space_seen: None,
+                    grant: None,
+                },
+                None,
+            )
             .unwrap();
     }
     gc.recovery.notify_progress(&gc);

@@ -72,6 +72,7 @@ mod registration_image;
 mod registration_key;
 mod relocation;
 mod relocation_history;
+mod retirement_grants;
 mod root_guard;
 mod roots;
 mod scheduling;
