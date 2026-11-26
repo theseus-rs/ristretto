@@ -2,6 +2,9 @@
 
 ## Tenfold complete-collection gate
 
+At `8b15e59c`, compiled Java helper results validate the owning heap before publishing a reference into the VM frame cache. On the parent a generated array load returned a foreign heap's child. Both helper entry points now reject it and retain the original foreign value. The native VM suite passed 1,006 tests with three ignored, and all 36 collection conditions exceeded 10×.
+[Generated array control and measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#compiled-helper-result-heap-ownership).
+
 At `f350e347`, optional values also forward cooperative clearing. A parked region registry no longer strands an independent donor in the optional-buffer regression. Eight forced schedules passed in 800 fresh processes. All 36 complete-collection conditions cleared 10×, with weakest individual 95% speedup bounds of 11.02× native and 10.50× WASI. The allocation-waiter index, other composite layouts and shared VM ownership remain open.
 [Optional buffer regression and collection measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/README.md#cooperative-clearing-through-optional-values).
 

@@ -28,6 +28,13 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Reference handler registration and independent wake delivery | `93ea1b2b` | 251126972 | **10.76×** | **11.02×** | **36 / 36** |
 | Cooperative regional descriptor and Java array returns | `ed3a9426` | 251126975 | **10.58×** | **10.28×** | **36 / 36** |
 | Cooperative clearing through optional values | `f350e347` | 251126976 | **11.02×** | **10.50×** | **36 / 36** |
+| Compiled helper-result heap ownership | `8b15e59c` | 251126980 | **10.65×** | **10.29×** | **36 / 36** |
+
+## Compiled helper-result heap ownership
+
+On `c12cf60f`, generated native `aaload` returned a foreign collector's handle through an array owned by the VM. Looking up the same handle directly in the VM's heap rejected it. At `8b15e59c`, the compiled result cache checks the typed handle's heap before either reusing a cached root or acquiring one. Synchronous and asynchronous array loads report a pending error and preserve the foreign owner's value. Same-heap results retain their ownership across frame cleanup and collection. The generated fixture uses experimental compiled dispatch.
+
+The native execution-profile VM suite passed 1,006 tests with three ignored. The GC library passed 529 tests, and strict VM Clippy passed. The complete-collection comparison again cleared all 36 conditions, with weakest individual 95% speedup bounds of 10.65× native and 10.29× WASI. Broader compiled Java coverage, native boundaries, allocation-waiter progress and host pause qualification remain open. [Matched collector samples](vm-heap-ownership.csv) · [Failing control, audit and verification](compiled-reference-ownership.json.gz)
 
 ## Cooperative clearing through optional values
 
