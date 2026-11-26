@@ -25,3 +25,18 @@ Three fresh Chromium 153 workers returned Java checksum 799864. Each guest compl
 | [1](74275197-chromium-1.json.gz) | 1.333 | 84/84 | 20.3 | 21.2 | 21.2 |
 | [2](74275197-chromium-2.json.gz) | 1.504 | 94/94 | 19.3 | 21.6 | 21.6 |
 | [3](74275197-chromium-3.json.gz) | 1.264 | 78/79 | 22.1 | 22.5 | 22.5 |
+
+## Primitive array writes at `3d882623`
+
+Three fresh production Chromium workers compiled and ran the same Java fixture.
+Each completed 13 guest collections, swept 54,059 objects, freed 10,473,075
+bytes and returned checksum 799864. Workers answered 357/357 scheduled
+pings during Java execution. Each process used the same two assigned CPUs.
+The gaps include guest execution, scheduling and message delivery. The probe
+does not attribute any interval to a global GC pause.
+
+| Process | Java window (s) | Replies / scheduled | p95 gap (ms) | p99 (ms) | Maximum (ms) |
+|---|---:|---:|---:|---:|---:|
+| [1](3d882623-chromium-1.json.gz) | 2.180 | 136/136 | 19.0 | 23.5 | 25.0 |
+| [2](3d882623-chromium-2.json.gz) | 2.057 | 129/129 | 20.4 | 20.7 | 20.8 |
+| [3](3d882623-chromium-3.json.gz) | 1.477 | 92/92 | 20.3 | 23.9 | 23.9 |

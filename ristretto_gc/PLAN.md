@@ -31,6 +31,9 @@ A 30-process, single-policy root-storage screen reduced the native scheduled
 p99.99 from 8.32 ms (tree) to 2.91 ms (contexts), while the corresponding WASI
 median rose from 5.57 ms to 8.45 ms. The shipping root policy remains unchanged.
 [Configurations, histograms and backlog](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/primitive-writes/root-storage/README.md)
+Three production browser workers also answered 357/357 scheduled pings during
+Java execution and each completed 13 guest collections. GC-attributable global
+pauses remain unmeasured. [Browser process receipts](../benchmarks/gc/publication/browser-worker-reclamation/consolidated-alpha/README.md#primitive-array-writes-at-3d882623)
 
 
 
