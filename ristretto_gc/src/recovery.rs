@@ -2,14 +2,20 @@
 use crate::{Error, GarbageCollector, Result};
 use portable_atomic::AtomicU64;
 use std::alloc::Layout;
-use std::collections::BTreeMap;
+#[path = "recovery_grant_wake.rs"]
+pub(crate) mod grant_wake;
+#[path = "recovery_index.rs"]
+mod index;
+use index::{Entry, Ready, Waiters};
 use std::future::Future;
-use std::ops::Bound::{Excluded, Unbounded};
 use std::pin::Pin;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard};
+#[cfg(not(target_family = "wasm"))]
+use std::sync::{Mutex, MutexGuard};
 use std::task::{Context, Poll, Waker};
 
+#[cfg(not(target_family = "wasm"))]
 fn lock<T>(value: &Mutex<T>) -> MutexGuard<'_, T> {
     value
         .lock()
@@ -38,19 +44,6 @@ struct Waiter {
     space_seen: Option<Arc<AtomicBool>>,
 }
 
-#[derive(Debug, Default)]
-struct Waiters {
-    next_id: WaiterId,
-    // Several allocation requests can share a cycle ticket.
-    entries: BTreeMap<(u64, WaiterId), Waiter>,
-    // Other notifiers can take the next wake while a callback is running.
-    ready: BTreeMap<(u64, WaiterId), Waiter>,
-    delivering: Vec<std::thread::ThreadId>,
-    space: BTreeMap<(usize, WaiterId), u64>,
-    physical: BTreeMap<WaiterId, (u64, Layout)>,
-    physical_cursor: WaiterId,
-}
-
 // Registrations between two refunds can share one maximum: no earlier offer
 // exists in an open group. Each request still compares its exact byte count.
 #[derive(Debug)]
@@ -65,90 +58,54 @@ struct Observations {
     earlier: arc_swap::ArcSwapOption<Vec<std::sync::Weak<RefundGroup>>>,
 }
 
-impl Waiters {
-    fn take_fitting_allocation(
-        &mut self,
-        gc: &GarbageCollector,
-        available: usize,
-    ) -> Option<((u64, WaiterId), Waiter, usize)> {
-        let (&(bytes, id), &cycle) = self.space.first_key_value()?;
-        if bytes > available {
-            return None;
-        }
-        self.space.remove(&(bytes, id));
-        let entry = self.entries.remove(&(cycle, id))?;
-        if let Some(seen) = &entry.space_seen {
-            seen.store(true, Ordering::Release);
-        }
-        if gc.diagnostics_enabled() {
-            gc.diagnostics
-                .allocation_early_wakeups
-                .fetch_add(1, Ordering::Relaxed);
-        }
-        Some(((cycle, id), entry, bytes))
-    }
-
-    fn queue_ready_grants(&mut self) {
-        let eligible = self.entries.extract_if(.., |_, waiter| {
-            waiter.grant.as_ref().is_some_and(GrantWatch::ready)
-        });
-        for (key, waiter) in eligible {
-            if let Some(bytes) = waiter.bytes {
-                self.space.remove(&(bytes, key.1));
-            }
-            self.ready.insert(key, waiter);
-        }
-    }
-
-    fn queue_fitting_allocations(&mut self, gc: &GarbageCollector, mut remaining: usize) {
-        while let Some((key, entry, bytes)) = self.take_fitting_allocation(gc, remaining) {
-            remaining -= bytes;
-            self.ready.insert(key, entry);
-        }
-    }
+#[cfg(not(target_family = "wasm"))]
+#[derive(Clone, Debug, Default)]
+struct Workers {
+    count: usize,
+    exit: u64,
+    failed: bool,
 }
 
 #[derive(Debug, Default)]
 pub(crate) struct Recovery {
-    waiters: Mutex<Waiters>,
+    waiters: arc_swap::ArcSwap<Waiters>,
+    used: AtomicBool,
+    armed: AtomicUsize,
+    next_id: AtomicU64,
     references: reference_wait::ReferenceWaiters,
+    grant_generation: AtomicU64,
     observations: arc_swap::ArcSwapOption<Observations>,
-    notified: AtomicU64,
-    waiting: AtomicUsize,
-    wake_pending: AtomicBool,
-    pub(crate) grants_pending: AtomicBool,
-    physical_waiting: AtomicUsize,
-    minimum_bytes: AtomicUsize,
     observing: AtomicUsize,
-    workers: AtomicUsize,
-    failed: AtomicBool,
+    #[cfg(not(target_family = "wasm"))]
+    workers: arc_swap::ArcSwap<Workers>,
 }
 
 // A synchronous waker may immediately reenter progress for this collector.
 // Its outer loop continues delivery on return. Other helpers can deliver
 // concurrently, including while this thread is parked inside user code.
-struct DeliveryGuard<'a> {
-    recovery: &'a Recovery,
-    thread: std::thread::ThreadId,
+thread_local! {
+    static DELIVERING: std::cell::RefCell<Vec<usize>> = const { std::cell::RefCell::new(Vec::new()) };
 }
 
-impl<'a> DeliveryGuard<'a> {
-    fn enter(recovery: &'a Recovery) -> Option<Self> {
-        let thread = std::thread::current().id();
-        let mut waiters = lock(&recovery.waiters);
-        if waiters.delivering.contains(&thread) {
-            return None;
-        }
-        waiters.delivering.push(thread);
-        Some(Self { recovery, thread })
+struct DeliveryGuard(usize);
+
+impl DeliveryGuard {
+    fn enter(recovery: &Recovery) -> Option<Self> {
+        let key = std::ptr::from_ref(recovery).addr();
+        DELIVERING.with_borrow_mut(|active| {
+            if active.contains(&key) {
+                None
+            } else {
+                active.push(key);
+                Some(Self(key))
+            }
+        })
     }
 }
 
-impl Drop for DeliveryGuard<'_> {
+impl Drop for DeliveryGuard {
     fn drop(&mut self) {
-        lock(&self.recovery.waiters)
-            .delivering
-            .retain(|thread| *thread != self.thread);
+        DELIVERING.with_borrow_mut(|active| active.retain(|key| *key != self.0));
     }
 }
 
@@ -197,9 +154,12 @@ impl RefundNotifier {
     fn dispatch(weak: &std::sync::Weak<GarbageCollector>, event: &RefundEvent) {
         // A wake offers a retry. An executor can discard or delay that retry,
         // so each independently fitting sleeper gets an opportunity.
+        if let Some(gc) = weak.upgrade() {
+            gc.recovery.prepare_notifications(&gc);
+        }
         while !event.closed.load(Ordering::Acquire) {
             let Some(gc) = weak.upgrade() else { break };
-            if !gc.recovery.has_fitting_waiter(gc.allocation_headroom()) {
+            if !gc.recovery.refund_ready(gc.allocation_headroom(), false) {
                 break;
             }
             let (send, receive) = std::sync::mpsc::sync_channel::<Waker>(1);
@@ -222,7 +182,7 @@ impl RefundNotifier {
             }
             let waker = gc.recovery.take_refund_waker(&gc);
             drop(gc);
-            let Some(waker) = waker else { break };
+            let Some(waker) = waker else { continue };
             let _ = send.send(waker);
         }
     }
@@ -261,14 +221,71 @@ impl GarbageCollector {
 }
 
 impl Recovery {
-    #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+    fn update<R>(&self, mut mutate: impl FnMut(&mut Waiters) -> R) -> R {
+        loop {
+            let old = self.waiters.load();
+            let mut next = (**old).clone();
+            let result = mutate(&mut next);
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            crate::refund_tests::before_waiter_publication();
+            let previous = self.waiters.compare_and_swap(&*old, Arc::new(next));
+            if Arc::ptr_eq(&old, &previous) {
+                return result;
+            }
+        }
+    }
+
+    #[cfg(all(test, not(target_family = "wasm")))]
     pub(crate) fn with_parked_waiter_index<R>(&self, operation: impl FnOnce() -> R) -> R {
-        let _waiters = lock(&self.waiters);
-        operation()
+        // Suspend an actual transaction before its CAS. Its obsolete root must
+        // lose the update when a peer changes the index during suspension.
+        let old = self.waiters.load();
+        let next = Arc::new((**old).clone());
+        let result = operation();
+        let previous = self.waiters.compare_and_swap(&*old, next);
+        if !Arc::ptr_eq(&old, &previous) {
+            self.update(|_| ());
+        }
+        result
+    }
+
+    pub(crate) fn grants_released(&self) {
+        self.grant_generation
+            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |generation| {
+                Some(generation.saturating_add(1))
+            })
+            .ok();
     }
 
     pub(crate) fn registered_workers(&self) -> usize {
-        self.workers.load(Ordering::Acquire)
+        #[cfg(not(target_family = "wasm"))]
+        return self.workers.load().count;
+        #[cfg(target_family = "wasm")]
+        0
+    }
+
+    fn worker_exit(&self) -> u64 {
+        #[cfg(not(target_family = "wasm"))]
+        return self.workers.load().exit;
+        #[cfg(target_family = "wasm")]
+        0
+    }
+
+    fn worker_status(&self) -> (usize, bool) {
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let workers = self.workers.load();
+            (workers.count, workers.failed)
+        }
+        #[cfg(target_family = "wasm")]
+        (0, false)
+    }
+
+    fn worker_failed(&self) -> bool {
+        #[cfg(not(target_family = "wasm"))]
+        return self.workers.load().failed;
+        #[cfg(target_family = "wasm")]
+        false
     }
 
     /// Install before requesting a cycle, including before the first future poll.
@@ -363,6 +380,15 @@ impl Recovery {
         }
     }
 
+    fn new_id(&self) -> Result<WaiterId> {
+        self.next_id
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |old| {
+                old.checked_add(1).filter(|next| *next != u64::MAX)
+            })
+            .map(|old| old + 1)
+            .map_err(|_| Error::OutOfMemory)
+    }
+
     fn register(
         &self,
         ticket: u64,
@@ -370,225 +396,307 @@ impl Recovery {
         waiter: Waiter,
         physical: Option<Layout>,
     ) -> Result<WaiterId> {
-        let (id, previous) = {
-            let mut waiters = lock(&self.waiters);
-            let id = if let Some(id) = id {
-                id
-            } else {
-                waiters.next_id = waiters
-                    .next_id
-                    .checked_add(1)
-                    .filter(|id| *id != WaiterId::MAX)
-                    .ok_or(Error::OutOfMemory)?;
-                waiters.next_id
-            };
-            if let Some(bytes) = waiter.bytes {
-                waiters.space.insert((bytes, id), ticket);
-            }
-            if let Some(layout) = physical {
-                waiters.physical.insert(id, (ticket, layout));
-            }
-            let queued = waiters.ready.remove(&(ticket, id));
-            let previous = waiters.entries.insert((ticket, id), waiter);
-            self.update_counts(&waiters);
-            (id, (previous, queued))
+        self.used.store(true, Ordering::Release);
+        let waiter = Arc::new(Entry::from(waiter));
+        let id = match id {
+            Some(id) => id,
+            None => self.new_id()?,
         };
-        // Waker vtables can run arbitrary code, including on drop.
-        drop(previous);
+        let (id, old, ready) = self.update(|w| {
+            let key = (ticket, id);
+            let old = w.entries.remove(key);
+            let ready = w.ready.remove(key);
+            if let Some(record) = &ready {
+                record.observe();
+            }
+            if let Some(bytes) = old.as_ref().and_then(|entry| entry.bytes) {
+                w.space.remove((bytes as u64, id));
+            }
+            if let Some(bytes) = waiter.bytes {
+                w.space.insert((bytes as u64, id), ticket);
+            }
+            w.physical.remove(id);
+            if let Some(layout) = physical {
+                w.physical.insert(id, (ticket, layout));
+            }
+            w.entries.insert(key, waiter.clone());
+            Ok::<_, Error>((id, old, ready))
+        })?;
+        // After publishing the snapshot, pair the registrar's condition recheck
+        // with progress notification, including the very first allocation wait.
+        self.armed.fetch_add(0, Ordering::AcqRel);
+        if let Some(old) = old {
+            old.callback.take(self);
+        }
+        if let Some(ready) = ready {
+            ready.take(self);
+        }
         Ok(id)
     }
 
     fn remove(&self, ticket: u64, id: Option<WaiterId>) {
-        let Some(id) = id else { return };
-        let previous = {
-            let mut waiters = lock(&self.waiters);
-            let queued = waiters.ready.remove(&(ticket, id));
-            let previous = waiters.entries.remove(&(ticket, id));
-            waiters.physical.remove(&id);
-            if let Some(bytes) = previous.as_ref().and_then(|entry| entry.bytes) {
-                waiters.space.remove(&(bytes, id));
-            }
-            self.update_counts(&waiters);
-            (previous, queued)
+        let Some(id) = id else {
+            return;
         };
-        drop(previous);
+        self.remove_entry(ticket, id, false);
+    }
+
+    fn remove_entry(&self, ticket: u64, id: WaiterId, force: bool) {
+        if !force {
+            let snapshot = self.waiters.load();
+            if snapshot.entries.get((ticket, id)).is_none()
+                && snapshot.ready.get((ticket, id)).is_none()
+            {
+                return;
+            }
+        }
+        let (old, ready) = self.update(|w| {
+            let old = w.entries.remove((ticket, id));
+            if let Some(bytes) = old.as_ref().and_then(|e| e.bytes) {
+                w.space.remove((bytes as u64, id));
+            }
+            w.physical.remove(id);
+            let ready = w.ready.remove((ticket, id));
+            if let Some(record) = &ready {
+                record.observe();
+            }
+            if old
+                .as_ref()
+                .is_some_and(|entry| matches!(*entry.callback, index::Callback::First(_)))
+                || ready
+                    .as_ref()
+                    .is_some_and(|r| matches!(*r.entry.callback, index::Callback::First(_)))
+            {
+                w.first_count -= 1;
+            }
+            (old, ready)
+        });
+        if let Some(old) = old {
+            old.callback.take(self);
+        }
+        if let Some(ready) = ready {
+            ready.take(self);
+        }
+    }
+
+    pub(crate) fn waiter_count(&self) -> usize {
+        self.armed.load(Ordering::Acquire)
+            + if self.used.load(Ordering::Acquire) {
+                {
+                    let index = self.waiters.load();
+                    index.count() - index.first_count
+                }
+            } else {
+                0
+            }
     }
 
     #[cfg(not(target_family = "wasm"))]
     pub(crate) fn has_fitting_waiter(&self, available: usize) -> bool {
-        self.waiter_count() != 0
-            && (self.grants_pending.load(Ordering::Acquire)
-                || self.wake_pending.load(Ordering::Acquire)
-                || available >= self.minimum_bytes.load(Ordering::Acquire))
+        if self.armed.fetch_add(0, Ordering::AcqRel) != 0 {
+            return true;
+        }
+        self.refund_ready(available, true)
     }
 
-    pub(crate) fn waiter_count(&self) -> usize {
-        self.waiting.load(Ordering::Acquire)
-    }
-
-    fn update_counts(&self, waiters: &Waiters) {
-        self.minimum_bytes.store(
-            waiters
-                .space
-                .first_key_value()
-                .map_or(usize::MAX, |((bytes, _), _)| *bytes),
-            Ordering::Release,
-        );
-        self.wake_pending
-            .store(!waiters.ready.is_empty(), Ordering::Release);
-        self.waiting.store(
-            waiters.entries.len() + waiters.ready.len(),
-            Ordering::Release,
-        );
-        self.physical_waiting
-            .store(waiters.physical.len(), Ordering::Release);
+    #[cfg(not(target_family = "wasm"))]
+    // A fresh refund can start a dispatch for an outstanding worker exit.
+    // Within dispatch the captured exit has already been staged. A later event
+    // re-enters through prepare_notifications before claiming more callbacks.
+    fn refund_ready(&self, available: usize, include_worker_exit: bool) -> bool {
+        if !self.used.load(Ordering::Acquire) {
+            return false;
+        }
+        let w = self.waiters.load();
+        let generation = self.grant_generation.load(Ordering::Acquire);
+        w.count() != 0
+            && (w.grants != generation
+                || generation == u64::MAX
+                || !w.ready.is_empty()
+                || w.fits(available)
+                || include_worker_exit && self.worker_exit() > w.exit)
     }
 
     #[cfg(not(target_family = "wasm"))]
     fn take_refund_waker(&self, gc: &GarbageCollector) -> Option<Waker> {
-        let mut waiters = lock(&self.waiters);
-        if self.grants_pending.swap(false, Ordering::AcqRel) {
-            waiters.queue_ready_grants();
+        if !self.used.load(Ordering::Acquire) {
+            return None;
         }
-        // A progress callback may itself be parked. The remaining queued
-        // allocations are already eligible and can be delivered independently.
-        let entry = waiters
-            .ready
-            .pop_first()
-            .map(|(_, entry)| entry)
-            .or_else(|| {
-                waiters
-                    .take_fitting_allocation(gc, gc.allocation_headroom())
-                    .map(|(_, entry, _)| entry)
-            });
-        self.update_counts(&waiters);
-        entry.map(|entry| entry.waker)
+        let early = self.update(|w| {
+            w.queue_grants(self.grant_generation.load(Ordering::Acquire));
+            if w.ready.is_empty()
+                && let Some((key, entry, _)) = w.take_fitting(gc.allocation_headroom())
+            {
+                w.ready.insert(
+                    key,
+                    Ready {
+                        entry,
+                        offered: true,
+                    },
+                );
+                true
+            } else {
+                false
+            }
+        });
+        if early && gc.diagnostics_enabled() {
+            gc.diagnostics
+                .allocation_early_wakeups
+                .fetch_add(1, Ordering::Relaxed);
+        }
+        let ready = self.update(Waiters::pop_ready)?;
+        #[cfg(test)]
+        wake_progress_tests::after_callback_claim();
+        ready.take(self).map(Arc::unwrap_or_clone)
     }
 
-    /// Called after releasing all collector locks.
+    // Capture the exit before scanning. A later exit needs its own scan.
+    // Both collector helpers and the native refund dispatcher can finish the
+    // published exit even if the worker stops before notifying any sleeper.
+    fn prepare_notifications(&self, gc: &GarbageCollector) {
+        let exit = self.worker_exit();
+        let exiting = exit > self.waiters.load().exit || exit == u64::MAX;
+        self.materialize(gc, exiting);
+        if exiting {
+            self.update(|w| {
+                if exit > w.exit || exit == u64::MAX {
+                    w.queue_exit(exit);
+                }
+            });
+        }
+    }
+
+    /// Called after releasing all collector locks. A parked index writer can
+    /// retain an old snapshot but cannot exclude classification or delivery.
     pub(crate) fn notify_progress(&self, gc: &GarbageCollector) {
-        if self.waiter_count() == 0 {
-            self.deliver_ready();
+        self.prepare_notifications(gc);
+        if !self.used.load(Ordering::Acquire) {
             return;
         }
         let ticket = gc.completed_full_ticket();
         let available = gc.allocation_headroom();
-        if ticket <= self.notified.load(Ordering::Acquire)
-            && available < self.minimum_bytes.load(Ordering::Acquire)
-            && !self.grants_pending.load(Ordering::Acquire)
-            && self.physical_waiting.load(Ordering::Acquire) == 0
+        let generation = self.grant_generation.load(Ordering::Acquire);
         {
-            self.deliver_ready();
-            return;
-        }
-        let mut candidates = [None; 32];
-        {
-            let mut waiters = lock(&self.waiters);
-            self.notified.fetch_max(ticket, Ordering::AcqRel);
-            // IDs never reach WaiterId::MAX (register fails before wrapping).
-            let later = waiters.entries.split_off(&(ticket, WaiterId::MAX));
-            let mut ready = std::mem::replace(&mut waiters.entries, later);
-            let mut remaining = available;
-            for ((_, id), entry) in &ready {
-                waiters.physical.remove(id);
-                if let Some(bytes) = entry.bytes {
-                    waiters.space.remove(&(bytes, *id));
-                    if bytes <= remaining {
-                        remaining -= bytes;
-                        if let Some(seen) = &entry.space_seen {
-                            seen.store(true, Ordering::Release);
-                        }
-                    }
+            let w = self.waiters.load();
+            if w.count() == 0
+                || (!w.recheck
+                    && ticket <= w.notified
+                    && !w.fits(available)
+                    && w.physical.is_empty()
+                    && w.grants == generation
+                    && generation != u64::MAX)
+            {
+                let deliver = w.wake_pending();
+                drop(w);
+                if deliver {
+                    self.deliver_ready();
                 }
+                return;
             }
-            if self.grants_pending.swap(false, Ordering::AcqRel) {
-                waiters.queue_ready_grants();
-            }
-            waiters.queue_fitting_allocations(gc, remaining);
-            // Publish logical wakes before looking at the heap. A paused
-            // region probe must leave unrelated wakes and cancellation accessible.
-            waiters.ready.append(&mut ready);
-            let cursor = waiters.physical_cursor;
-            let ordered = waiters
-                .physical
-                .range((Excluded(cursor), Unbounded))
-                .chain(waiters.physical.range(..=cursor));
-            let mut last = cursor;
-            for (slot, (&id, &(cycle, layout))) in candidates.iter_mut().zip(ordered) {
-                *slot = Some((id, cycle, layout));
-                last = id;
-            }
-            waiters.physical_cursor = last;
-            self.update_counts(&waiters);
         }
-        if let Some(heap) = gc.region_heap() {
-            let mut any_ready = false;
-            for candidate in &mut candidates {
-                let Some((_, _, layout)) = *candidate else {
+        let (mut candidates, early) = self.update(|w| {
+            w.recheck = false;
+            // The candidate snapshot is already pinned. A competing enrolment
+            // invalidates this CAS and the retry samples headroom again.
+            let mut remaining = gc.allocation_headroom();
+            #[cfg(all(test, not(target_family = "wasm")))]
+            wake_progress_tests::after_index_budget_sample();
+            w.notified = w.notified.max(ticket);
+            while let Some((key, _)) = w.entries.next(None) {
+                if key.0 > ticket {
+                    break;
+                }
+                let Some(entry) = w.entries.remove(key) else {
                     break;
                 };
-                let fits = heap.can_allocate(layout);
-                #[cfg(all(test, not(target_family = "wasm")))]
-                wake_progress_tests::after_physical_probe();
-                if fits {
-                    any_ready = true;
-                } else {
-                    *candidate = None;
-                }
-            }
-            if any_ready {
-                let mut waiters = lock(&self.waiters);
-                for (id, cycle, layout) in candidates.into_iter().flatten() {
-                    // Another helper may have delivered this wake, or the future
-                    // may have cancelled or re-registered since the heap sample.
-                    if waiters.physical.get(&id) != Some(&(cycle, layout)) {
-                        continue;
+                w.physical.remove(key.1);
+                let offered = entry.bytes.is_some_and(|bytes| {
+                    w.space.remove((bytes as u64, key.1));
+                    if bytes <= remaining {
+                        remaining -= bytes;
+                        true
+                    } else {
+                        false
                     }
-                    waiters.physical.remove(&id);
-                    if let Some(entry) = waiters.entries.remove(&(cycle, id)) {
-                        waiters.ready.insert((cycle, id), entry);
-                        if gc.diagnostics_enabled() {
-                            gc.diagnostics
-                                .physical_allocation_early_wakeups
-                                .fetch_add(1, Ordering::Relaxed);
-                        }
-                    }
-                }
-                self.update_counts(&waiters);
+                });
+                w.ready.insert(key, Ready { entry, offered });
             }
+            if generation >= w.grants {
+                w.queue_grants(generation);
+            }
+            let mut early = 0;
+            while let Some((key, entry, bytes)) = w.take_fitting(remaining) {
+                remaining -= bytes;
+                early += 1;
+                w.ready.insert(
+                    key,
+                    Ready {
+                        entry,
+                        offered: true,
+                    },
+                );
+            }
+            (w.select_physical(), early)
+        });
+        if gc.diagnostics_enabled() && early != 0 {
+            gc.diagnostics
+                .allocation_early_wakeups
+                .fetch_add(early, Ordering::Relaxed);
         }
+        self.check_physical_waiters(gc, &mut candidates);
         self.deliver_ready();
     }
 
-    #[cfg(not(target_family = "wasm"))]
-    fn notify_all(&self) {
-        {
-            let mut waiters = lock(&self.waiters);
-            let mut eligible = std::mem::take(&mut waiters.entries);
-            waiters.ready.append(&mut eligible);
-            waiters.space.clear();
-            waiters.physical.clear();
-            self.update_counts(&waiters);
+    fn check_physical_waiters(
+        &self,
+        gc: &GarbageCollector,
+        candidates: &mut [Option<index::PhysicalCandidate>],
+    ) {
+        if let Some(heap) = gc.region_heap() {
+            for slot in candidates.iter_mut() {
+                let Some(candidate) = slot.as_ref() else {
+                    break;
+                };
+                let ready = heap.can_allocate(candidate.layout);
+                #[cfg(all(test, not(target_family = "wasm")))]
+                wake_progress_tests::after_physical_probe();
+                if !ready {
+                    *slot = None;
+                }
+            }
+            if candidates.iter().any(Option::is_some) {
+                let count = self.update(|w| w.promote_physical(candidates));
+                if gc.diagnostics_enabled() {
+                    gc.diagnostics
+                        .physical_allocation_early_wakeups
+                        .fetch_add(count, Ordering::Relaxed);
+                }
+            }
         }
-        self.deliver_ready();
+    }
+
+    #[cfg(all(test, not(target_family = "wasm")))]
+    fn notify_all(&self, gc: &GarbageCollector) {
+        self.workers.rcu(|workers| Workers {
+            count: workers.count,
+            exit: workers.exit.saturating_add(1),
+            failed: workers.failed,
+        });
+        self.notify_progress(gc);
     }
 
     fn deliver_ready(&self) {
-        if !self.wake_pending.load(Ordering::Acquire) {
-            return;
-        }
         let Some(_delivery) = DeliveryGuard::enter(self) else {
             return;
         };
-        while self.wake_pending.load(Ordering::Acquire) {
-            let next = {
-                let mut waiters = lock(&self.waiters);
-                let next = waiters.ready.pop_first().map(|(_, entry)| entry.waker);
-                self.update_counts(&waiters);
-                next
-            };
-            if let Some(waker) = next {
-                waker.wake();
+        while self.waiters.load().wake_pending() {
+            let ready = self.update(Waiters::pop_ready);
+            #[cfg(all(test, not(target_family = "wasm")))]
+            if ready.is_some() {
+                wake_progress_tests::after_callback_claim();
+            }
+            if let Some(waker) = ready.and_then(|ready| ready.take(self)) {
+                Arc::unwrap_or_clone(waker).wake();
             }
         }
     }
@@ -690,6 +798,7 @@ pub(crate) struct CollectionWait<'a> {
     gc: &'a GarbageCollector,
     ticket: u64,
     id: Option<WaiterId>,
+    first_arm: Option<grant_wake::WakeTarget>,
     bytes: Option<usize>,
     // Survives notification/removal and migration until this future observes completion.
     space_seen: Option<Arc<AtomicBool>>,
@@ -707,6 +816,7 @@ impl<'a> CollectionWait<'a> {
             gc,
             ticket,
             id: None,
+            first_arm: None,
             bytes: None,
             space_seen: None,
             context_interest: None,
@@ -727,6 +837,7 @@ impl<'a> CollectionWait<'a> {
             gc,
             ticket,
             id: None,
+            first_arm: None,
             bytes: Some(observation.bytes),
             space_seen: Some(
                 observation
@@ -745,13 +856,13 @@ impl<'a> CollectionWait<'a> {
 
     pub(crate) fn with_grant(
         mut self,
-        request: &crate::retirement_grants::Request,
+        demand: &'a crate::retirement_grants::Demand<'_>,
         settlement_only: bool,
         caller_assists: bool,
     ) -> Self {
         self.caller_assists = caller_assists;
         self.grant = Some(GrantWatch {
-            request: request.clone(),
+            request: demand.request.clone(),
             settlement_only,
         });
         self
@@ -763,16 +874,84 @@ impl<'a> CollectionWait<'a> {
         wait
     }
 
+    fn register(&mut self, waker: &Waker) -> Result<()> {
+        let gc = self.gc;
+        if let Some(target) = &mut self.first_arm {
+            if self
+                .grant
+                .as_ref()
+                .and_then(|grant| grant.request.arm())
+                .is_some_and(|arm| arm.refresh(target, waker))
+            {
+                return Ok(());
+            }
+            self.unregister();
+        }
+        if let (Some(grant), Some(bytes)) = (&self.grant, self.bytes)
+            && grant.request.arm().is_none()
+        {
+            let owned = waker.clone();
+            let target = grant_wake::WakeTarget::of(&owned);
+            let arm = grant_wake::Arm::new(
+                gc.recovery.new_id()?,
+                self.ticket,
+                bytes,
+                grant.settlement_only,
+                self.space_seen.clone(),
+                owned,
+            );
+            gc.recovery.armed.fetch_add(1, Ordering::AcqRel);
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            crate::refund_tests::before_waiter_publication();
+            if grant.request.install_first_arm(arm) {
+                self.first_arm = Some(target);
+                gc.recovery.armed.fetch_add(0, Ordering::AcqRel);
+            } else {
+                gc.recovery.armed.fetch_sub(1, Ordering::AcqRel);
+            }
+        }
+        if self.first_arm.is_none() {
+            self.id = Some(gc.recovery.register(
+                self.ticket,
+                self.id,
+                Waiter {
+                    bytes: self.bytes,
+                    space_seen: self.space_seen.clone(),
+                    waker: waker.clone(),
+                    grant: self.grant.clone(),
+                },
+                self.physical,
+            )?);
+        }
+        Ok(())
+    }
+
+    fn unregister(&mut self) {
+        if self.first_arm.take().is_some()
+            && let Some(grant) = &self.grant
+            && let Some(arm) = grant.request.arm()
+        {
+            let (callback, moving) = arm.close(&self.gc.recovery);
+            grant.request.clear_arm();
+            if moving {
+                self.gc.recovery.remove_entry(arm.ticket, arm.id, true);
+            }
+            drop(callback);
+        }
+        self.gc.recovery.remove(self.ticket, self.id.take());
+    }
+
     // true means sufficient headroom was observed or offered; false means completion
     // without such an opportunity. An offer is advisory, not reserved allocation credit.
     fn ready(&self) -> Option<bool> {
         if self.grant.as_ref().is_some_and(GrantWatch::ready)
-            || (self.physical_assisted || self.gc.recovery.workers.load(Ordering::Acquire) != 0)
-                && self.physical.is_some_and(|layout| {
-                    self.gc
+            || self.physical.is_some_and(|layout| {
+                (self.physical_assisted || self.gc.recovery.registered_workers() != 0)
+                    && self
+                        .gc
                         .region_heap()
                         .is_some_and(|heap| heap.can_allocate(layout))
-                })
+            })
             || self
                 .bytes
                 .is_some_and(|bytes| bytes <= self.gc.allocation_headroom())
@@ -806,7 +985,7 @@ impl Future for CollectionWait<'_> {
             gc.refresh_allocation_interest(interest)?;
         }
         if let Some(available) = this.ready() {
-            gc.recovery.remove(this.ticket, this.id);
+            this.unregister();
             return Poll::Ready(Ok(available));
         }
         if crate::cell::has_guards() {
@@ -814,27 +993,18 @@ impl Future for CollectionWait<'_> {
                 "asynchronous collection polled while holding a managed guard".into(),
             )));
         }
-        if gc.recovery.failed.load(Ordering::Acquire) {
+        if gc.recovery.worker_failed() {
             return Poll::Ready(Err(Error::SyncError("collector worker panicked".into())));
         }
-        this.id = Some(gc.recovery.register(
-            this.ticket,
-            this.id,
-            Waiter {
-                bytes: this.bytes,
-                space_seen: this.space_seen.clone(),
-                waker: context.waker().clone(),
-                grant: this.grant.clone(),
-            },
-            this.physical,
-        )?);
+        this.register(context.waker())?;
         // Registration precedes both checks, closing completion and worker-exit races.
         if let Some(available) = this.ready() {
-            gc.recovery.remove(this.ticket, this.id);
+            this.unregister();
             return Poll::Ready(Ok(available));
         }
-        if gc.recovery.failed.load(Ordering::Acquire) {
-            gc.recovery.remove(this.ticket, this.id);
+        let (workers, failed) = gc.recovery.worker_status();
+        if failed {
+            this.unregister();
             return Poll::Ready(Err(Error::SyncError("collector worker panicked".into())));
         }
         let settlement_only = this
@@ -843,18 +1013,16 @@ impl Future for CollectionWait<'_> {
             .is_some_and(|grant| grant.settlement_only && grant.request.private());
         let wait_for_donor =
             settlement_only && !(cfg!(target_family = "wasm") && this.caller_assists);
-        if wait_for_donor
-            || (!this.caller_assists && gc.recovery.workers.load(Ordering::Acquire) != 0)
-        {
-            #[cfg(not(target_family = "wasm"))]
+        if wait_for_donor || (!this.caller_assists && workers != 0) {
             if let Some(bytes) = this.bytes {
                 // Register first, then install delivery and check again. A worker
                 // may have started during this poll, or credit may already fit.
+                #[cfg(not(target_family = "wasm"))]
                 gc.ensure_refund_notifier(settlement_only)?;
                 if bytes <= gc.headroom_after_registration()
                     || this.grant.as_ref().is_some_and(GrantWatch::ready)
                 {
-                    gc.recovery.remove(this.ticket, this.id);
+                    this.unregister();
                     return Poll::Ready(Ok(true));
                 }
             }
@@ -867,8 +1035,8 @@ impl Future for CollectionWait<'_> {
             }
             return Poll::Pending;
         }
-        gc.recovery.remove(this.ticket, this.id);
-        if gc.recovery.failed.load(Ordering::Acquire) {
+        this.unregister();
+        if gc.recovery.worker_failed() {
             return Poll::Ready(Err(Error::SyncError("collector worker panicked".into())));
         }
         if gc.diagnostics_enabled() {
@@ -891,7 +1059,7 @@ impl Future for CollectionWait<'_> {
 
 impl Drop for CollectionWait<'_> {
     fn drop(&mut self) {
-        self.gc.recovery.remove(self.ticket, self.id);
+        self.unregister();
     }
 }
 
@@ -901,7 +1069,10 @@ pub(crate) struct WorkerRegistration(std::sync::Weak<GarbageCollector>);
 #[cfg(not(target_family = "wasm"))]
 impl WorkerRegistration {
     pub(crate) fn new(gc: &GarbageCollector) -> Self {
-        gc.recovery.workers.fetch_add(1, Ordering::AcqRel);
+        gc.recovery.workers.rcu(|workers| Workers {
+            count: workers.count + 1,
+            ..**workers
+        });
         Self(gc.weak())
     }
 }
@@ -910,14 +1081,22 @@ impl WorkerRegistration {
 impl Drop for WorkerRegistration {
     fn drop(&mut self) {
         if let Some(gc) = self.0.upgrade() {
-            if std::thread::panicking() {
-                gc.recovery.failed.store(true, Ordering::Release);
-            }
-            if gc.recovery.workers.fetch_sub(1, Ordering::AcqRel) == 1
-                || gc.recovery.failed.load(Ordering::Acquire)
-            {
+            let panicking = std::thread::panicking();
+            let previous = gc.recovery.workers.rcu(|workers| {
+                let failed = workers.failed || panicking;
+                Workers {
+                    count: workers.count - 1,
+                    exit: workers
+                        .exit
+                        .saturating_add(u64::from(workers.count == 1 || failed)),
+                    failed,
+                }
+            });
+            if previous.count == 1 || previous.failed || panicking {
+                #[cfg(test)]
+                wake_progress_tests::after_worker_count_decrement();
                 // A waiting task can switch to cooperative progress after workers stop.
-                gc.recovery.notify_all();
+                gc.recovery.notify_progress(&gc);
             }
         }
     }
@@ -1106,7 +1285,7 @@ mod tests {
         drop(large);
         drop(last);
         assert_eq!(gc.recovery.waiter_count(), 0);
-        assert!(lock(&gc.recovery.waiters).physical.is_empty());
+        assert!(gc.recovery.waiters.load().physical.is_empty());
         drop(tail);
         drop(worker);
         assert!(heap.trim(32));
@@ -1115,29 +1294,43 @@ mod tests {
     }
 
     #[cfg(not(target_family = "wasm"))]
+    struct ReentrantPhysicalWake {
+        gc: std::sync::Weak<GarbageCollector>,
+        count: AtomicUsize,
+    }
+    #[cfg(not(target_family = "wasm"))]
+    impl std::task::Wake for ReentrantPhysicalWake {
+        fn wake(self: Arc<Self>) {
+            self.wake_by_ref();
+        }
+        fn wake_by_ref(self: &Arc<Self>) {
+            let gc = self.gc.upgrade().expect("collector");
+            let id = gc
+                .recovery
+                .register(
+                    u64::MAX,
+                    None,
+                    Waiter {
+                        grant: None,
+                        bytes: None,
+                        space_seen: None,
+                        waker: Waker::noop().clone(),
+                    },
+                    None,
+                )
+                .expect("reentrant registration");
+            gc.recovery.remove(u64::MAX, Some(id));
+            assert!(
+                gc.region_heap().expect("heap").pressure().is_some(),
+                "waker under arena mutex"
+            );
+            self.count.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
     #[test]
     fn physical_space_wakes_before_completion_and_survives_a_stolen_offer() -> Result<()> {
-        struct Wakes {
-            gc: std::sync::Weak<GarbageCollector>,
-            count: AtomicUsize,
-        }
-        impl std::task::Wake for Wakes {
-            fn wake(self: Arc<Self>) {
-                self.wake_by_ref();
-            }
-            fn wake_by_ref(self: &Arc<Self>) {
-                let gc = self.gc.upgrade().expect("collector");
-                assert!(
-                    gc.recovery.waiters.try_lock().is_ok(),
-                    "waker under waiter mutex"
-                );
-                assert!(
-                    gc.region_heap().expect("heap").pressure().is_some(),
-                    "waker under arena mutex"
-                );
-                self.count.fetch_add(1, Ordering::Relaxed);
-            }
-        }
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .compact_heap(true)
@@ -1153,7 +1346,7 @@ mod tests {
             Ok(7_u8)
         })?);
         let worker = WorkerRegistration::new(&gc); // Deterministic fake native worker.
-        let notifications = Arc::new(Wakes {
+        let notifications = Arc::new(ReentrantPhysicalWake {
             gc: gc.weak(),
             count: AtomicUsize::new(0),
         });
@@ -1191,7 +1384,7 @@ mod tests {
         assert_eq!(gc.completed_full_ticket(), 0);
         assert_eq!(gc.diagnostics().physical_allocation_early_wakeups, 4);
         assert_eq!(gc.recovery.waiter_count(), 0);
-        assert!(lock(&gc.recovery.waiters).physical.is_empty());
+        assert!(gc.recovery.waiters.load().physical.is_empty());
         let mut cancelled = Box::pin(CollectionWait::for_physical(
             &gc,
             1,
@@ -1201,7 +1394,7 @@ mod tests {
         assert_eq!(gc.recovery.waiter_count(), 1);
         drop(cancelled);
         assert_eq!(gc.recovery.waiter_count(), 0);
-        assert!(lock(&gc.recovery.waiters).physical.is_empty());
+        assert!(gc.recovery.waiters.load().physical.is_empty());
         drop(future);
         drop(buffer);
         drop(worker);
@@ -1241,7 +1434,7 @@ mod tests {
             assert_eq!(gc.diagnostics().caller_steps.count, before + 1);
             drop(wait);
             assert_eq!(gc.recovery.waiter_count(), 0);
-            assert!(lock(&gc.recovery.waiters).physical.is_empty());
+            assert!(gc.recovery.waiters.load().physical.is_empty());
         }
         assert!(retry.exhausted(&gc));
         assert!(gc.completed_full_ticket() >= 2);
@@ -1432,14 +1625,14 @@ mod tests {
         let fits = gc.observe_space(8)?;
         let large = gc.observe_space(9)?;
         std::thread::scope(|scope| {
-            let parked = lock(&gc.recovery.waiters);
-            let (done, recv) = mpsc::channel();
-            scope.spawn(move || {
-                drop(charge);
-                let _ = done.send(());
+            let finished = gc.recovery.with_parked_waiter_index(|| {
+                let (done, recv) = mpsc::channel();
+                scope.spawn(move || {
+                    drop(charge);
+                    let _ = done.send(());
+                });
+                recv.recv_timeout(Duration::from_secs(2)).is_ok()
             });
-            let finished = recv.recv_timeout(Duration::from_secs(2)).is_ok();
-            drop(parked);
             assert!(finished, "refund stalled with an unrelated waiter writer");
         });
         assert_eq!(gc.managed_bytes(), 0);

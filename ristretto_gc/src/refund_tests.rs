@@ -5,6 +5,7 @@ use std::sync::{Arc, Barrier, mpsc};
 use std::time::Duration;
 
 thread_local! {
+    static WAITER_PUBLICATION: Cell<Option<(mpsc::Sender<()>, mpsc::Receiver<()>)>> = const { Cell::new(None) };
     static REGION_RETURN: Cell<Option<mpsc::Sender<()>>> = const { Cell::new(None) };
     static TERMINAL: Cell<bool> = const { Cell::new(false) };
     static SELECTOR: std::cell::RefCell<Option<SelectorGate>> = const { std::cell::RefCell::new(None) };
@@ -1095,5 +1096,109 @@ fn sole_native_worker_recovers_a_global_donor_while_a_descriptor_registry_remain
     drop(result);
     gc.stop()?;
     assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
+
+pub(crate) fn before_waiter_publication() {
+    if let Some((entered, resume)) = WAITER_PUBLICATION.take() {
+        assert!(entered.send(()).is_ok(), "waiting for the publisher");
+        assert!(
+            resume.recv_timeout(Duration::from_secs(8)).is_ok(),
+            "resume the publisher"
+        );
+    }
+}
+
+#[test]
+#[expect(
+    clippy::panic_in_result_fn,
+    clippy::unwrap_in_result,
+    reason = "bounded native worker and executor schedule"
+)]
+fn sleeping_allocation_finishes_while_an_independent_waiter_is_still_publishing() -> Result<()> {
+    struct Park(Arc<(mpsc::Sender<()>, std::sync::Mutex<mpsc::Receiver<()>>)>);
+    // SAFETY: the finalizer only accesses host-side channels.
+    unsafe impl crate::Trace for Park {
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+    impl crate::Finalize for Park {
+        fn finalize(&self) {
+            self.0.0.send(()).unwrap();
+            self.0
+                .1
+                .lock()
+                .unwrap()
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap();
+        }
+    }
+    for allocation_writer in [false, true] {
+        let (started, in_finalizer) = mpsc::channel();
+        let (finish, release_worker) = mpsc::channel();
+        let payload = Park(Arc::new((started, std::sync::Mutex::new(release_worker))));
+        let cap = Gc::allocation_size(&payload)? + 8;
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .threads(1)
+                .diagnostics(true)
+                .max_heap_bytes(cap)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let charge = gc.reserve_private_bytes(8)?;
+        drop(Gc::new_with_finalizer(&gc, payload));
+        gc.start();
+        gc.collect();
+        in_finalizer.recv_timeout(Duration::from_secs(3)).unwrap();
+        let (asleep, sleeping) = mpsc::channel();
+        let (entered, parked) = mpsc::channel();
+        let (resume, resumed) = mpsc::channel();
+        let (done, completed) = mpsc::channel();
+        let observed = std::thread::scope(|scope| {
+            let heap = &gc;
+            scope.spawn(move || {
+                let mut peer = WaitingPeer::new(heap, 57);
+                peer.poll_until_parked();
+                assert_eq!(heap.diagnostics().allocation_waiters, 1);
+                asleep.send(()).unwrap();
+                let deadline = Instant::now() + Duration::from_secs(4);
+                while peer.result.is_none() && Instant::now() < deadline {
+                    peer.poll_when_woken();
+                    std::thread::yield_now();
+                }
+                done.send(peer.result).unwrap();
+            });
+            sleeping.recv_timeout(Duration::from_secs(3)).unwrap();
+            scope.spawn(move || {
+                WAITER_PUBLICATION.set(Some((entered, resumed)));
+                if allocation_writer {
+                    let mut other = WaitingPeer::new(heap, 73);
+                    other.poll_until_parked();
+                } else {
+                    let mut other = Box::pin(crate::recovery::CollectionWait::new(heap, u64::MAX));
+                    assert!(
+                        other
+                            .as_mut()
+                            .poll(&mut Context::from_waker(Waker::noop()))
+                            .is_pending()
+                    );
+                }
+            });
+            parked.recv_timeout(Duration::from_secs(3)).unwrap();
+            drop(charge);
+            let outcome = completed.recv_timeout(Duration::from_secs(1));
+            resume.send(()).unwrap();
+            outcome
+        });
+        finish.send(()).unwrap();
+        let root = observed
+            .expect("sleeping peer must return while registration is paused")
+            .expect("executor returned a value")?;
+        assert_eq!(**root, 57);
+        assert_eq!(gc.diagnostics().allocation_waiters, 0);
+        drop(root);
+        gc.stop()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
     Ok(())
 }

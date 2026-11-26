@@ -5,7 +5,7 @@ use crate::publication_directory::Directory;
 use arc_swap::{ArcSwap, ArcSwapOption};
 use once_cell::race::OnceBox;
 use portable_atomic::AtomicU64;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 
 // A direct Global layout is limited to isize::MAX bytes on both native and
@@ -107,6 +107,42 @@ impl Request {
         &self.page.slots[self.slot]
     }
 
+    pub(crate) fn arm(&self) -> Option<&crate::recovery::grant_wake::Arm> {
+        self.page.sleepers.get()?.slots.get(self.slot)?.get()
+    }
+
+    pub(crate) fn install_first_arm(&self, arm: crate::recovery::grant_wake::Arm) -> bool {
+        let page = self.page.sleepers.get_or_init(Box::default);
+        let Some(slot) = page.slots.get(self.slot) else {
+            return false;
+        };
+        let (ticket, bytes) = (arm.ticket, arm.bytes);
+        if slot.set(arm).is_err() {
+            return false;
+        }
+        if ticket < page.first_ticket.load(Ordering::Relaxed) {
+            page.first_ticket.fetch_min(ticket, Ordering::Relaxed);
+        }
+        if bytes < page.smallest.load(Ordering::Relaxed) {
+            page.smallest.fetch_min(bytes, Ordering::Relaxed);
+        }
+        page.occupied.fetch_or(1 << self.slot, Ordering::Release);
+        true
+    }
+
+    pub(crate) fn mark_arm_ready(&self) {
+        if let Some(page) = self.page.sleepers.get() {
+            page.ready.fetch_or(1 << self.slot, Ordering::Release);
+        }
+    }
+
+    pub(crate) fn clear_arm(&self) {
+        if let Some(page) = self.page.sleepers.get() {
+            page.occupied
+                .fetch_and(!(1 << self.slot), Ordering::Relaxed);
+        }
+    }
+
     // All competing helpers may construct a candidate. OnceBox publishes one
     // allocation and has no initializer lock that a parked preparer can retain.
     pub(crate) fn prepare(&self) {
@@ -176,7 +212,31 @@ const PAGE_WIDTH: usize = 32;
 type Pages = Directory<Arc<Page>>;
 
 #[derive(Debug)]
+struct Sleepers {
+    slots: [std::sync::OnceLock<crate::recovery::grant_wake::Arm>; PAGE_WIDTH],
+    occupied: AtomicU32,
+    ready: AtomicU32,
+    smallest: AtomicUsize,
+    first_ticket: AtomicU64,
+    grants: AtomicU64,
+}
+
+impl Default for Sleepers {
+    fn default() -> Self {
+        Self {
+            slots: std::array::from_fn(|_| std::sync::OnceLock::new()),
+            occupied: AtomicU32::new(0),
+            ready: AtomicU32::new(0),
+            smallest: AtomicUsize::new(usize::MAX),
+            first_ticket: AtomicU64::new(u64::MAX),
+            grants: AtomicU64::new(0),
+        }
+    }
+}
+
+#[derive(Debug)]
 struct Page {
+    sleepers: OnceBox<Sleepers>,
     slots: [Entry; PAGE_WIDTH],
     // Includes unissued positions. A page can only be removed after every
     // position has been committed and its own demand has closed.
@@ -190,6 +250,7 @@ impl Page {
     )]
     fn new(key: u64) -> Self {
         Self {
+            sleepers: OnceBox::new(),
             slots: std::array::from_fn(|_| Entry::default()),
             remaining: AtomicUsize::new(
                 (u64::MAX - key * PAGE_WIDTH as u64).min(PAGE_WIDTH as u64) as usize,
@@ -213,6 +274,46 @@ pub(crate) struct Demand<'a> {
 }
 
 impl Registry {
+    pub(crate) fn visit_arms(
+        &self,
+        scan: crate::recovery::grant_wake::Scan,
+        mut visit: impl FnMut(&Request, &crate::recovery::grant_wake::Arm),
+    ) {
+        let pages = self.pages.load_full();
+        let mut after = None;
+        while let Some((key, page)) = pages.next_after(after) {
+            after = Some(key);
+            let Some(sleepers) = page.sleepers.get() else {
+                continue;
+            };
+            let mut occupied = sleepers.occupied.load(Ordering::Acquire);
+            if !scan.all
+                && scan.available < sleepers.smallest.load(Ordering::Relaxed)
+                && scan.ticket < sleepers.first_ticket.load(Ordering::Relaxed)
+                && scan.grants != u64::MAX
+                && scan.grants <= sleepers.grants.load(Ordering::Acquire)
+            {
+                occupied &= sleepers.ready.load(Ordering::Acquire);
+            }
+            while occupied != 0 {
+                let slot = occupied.trailing_zeros() as usize;
+                occupied &= occupied - 1;
+                if let Some(arm) = sleepers.slots.get(slot).and_then(std::sync::OnceLock::get) {
+                    visit(
+                        &Request {
+                            page: page.clone(),
+                            slot,
+                        },
+                        arm,
+                    );
+                }
+            }
+            if scan.grants > sleepers.grants.load(Ordering::Relaxed) {
+                sleepers.grants.fetch_max(scan.grants, Ordering::Release);
+            }
+        }
+    }
+
     fn page(&self, position: u64) -> crate::Result<Option<Arc<Page>>> {
         let key = position / PAGE_WIDTH as u64;
         let head = self.pages.load();

@@ -96,11 +96,8 @@ fn covered_workerless_waiter_assists_until_the_donor_becomes_private() -> crate:
     assert!(!selected.advance(&mut 0));
     let mut opportunity = gc.observe_space(8)?;
     let mut wait = std::pin::pin!(
-        crate::recovery::CollectionWait::for_space(&gc, u64::MAX, &mut opportunity).with_grant(
-            &first.request,
-            true,
-            false
-        )
+        crate::recovery::CollectionWait::for_space(&gc, u64::MAX, &mut opportunity)
+            .with_grant(&first, true, false)
     );
     let runnable = Arc::new(Runnable::default());
     let waker = Waker::from(runnable.clone());

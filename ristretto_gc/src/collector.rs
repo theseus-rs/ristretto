@@ -2982,7 +2982,7 @@ impl GarbageCollector {
     pub(crate) fn signal_grants(&self) {
         // Pair with the same-word RMW after a terminal sleeper installed delivery.
         self.managed_budget.used_after_registration();
-        self.recovery.grants_pending.store(true, Ordering::Release);
+        self.recovery.grants_released();
         #[cfg(not(target_family = "wasm"))]
         if let Some(notifier) = self.refund_notifier.load().as_ref() {
             notifier.signal();
@@ -3162,7 +3162,7 @@ impl GarbageCollector {
                 // still unavailable until the backing storage is actually freed.
                 let mut opportunity = self.observe_space(size)?;
                 crate::recovery::CollectionWait::for_space(self, u64::MAX, &mut opportunity)
-                    .with_grant(&demand.request, true, caller_assists)
+                    .with_grant(&demand, true, caller_assists)
                     .await?;
                 continue;
             }
@@ -3185,7 +3185,7 @@ impl GarbageCollector {
             loop {
                 observed_space |=
                     crate::recovery::CollectionWait::for_space(self, ticket, &mut opportunity)
-                        .with_grant(&demand.request, false, caller_assists)
+                        .with_grant(&demand, false, caller_assists)
                         .await?;
                 if let Some(reservation) = demand.take() {
                     return Ok(reservation);
