@@ -9,6 +9,11 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `fe7d8c39` all three JVM smoke tiers reclaimed their complete two-node
+charge. All 36 complete-collection conditions passed the 10× gate relative to
+`f1daebeb`, with minimum individual 95% lower bounds of 10.84× on native and
+10.24× on WASI. [Java receipts, complete-cycle data and graph](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/unified-heap/README.md).
+
 | Review topic | Decision and outstanding evidence |
 |---|---|
 | Storage, publication and worker defaults | Retain the current defaults while stock-policy workload controls are open. In earlier screens, 16 metadata shards added 0.9–2.5% compact throughput and worsened worker p99.99 by 4.4–22%. Counted publication improved recovery throughput and worsened compact p99.99 by 18.7–40.6%. Four-worker compact allocation fell from 402.0k/s with slots to 391.5k/s with contexts. Independent marking and stealing also had mixed throughput results. Repeat matched stock/native, cooperative WASI, and capped-contention arms before removing active fallback paths. The unused registration image has been removed. [Policy measurements](VALIDATION.md) |
