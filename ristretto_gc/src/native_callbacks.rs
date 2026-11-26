@@ -40,7 +40,8 @@ pub(super) struct Batch {
 
 struct Job {
     gc: Arc<GarbageCollector>,
-    batch: Batch,
+    task: ReclaimTask,
+    budget: usize,
     origin: Option<(usize, u64)>,
 }
 
@@ -60,15 +61,29 @@ impl Callbacks {
         let Some(sender) = runner.send.load_full() else {
             return Some(batch);
         };
-        gc.callback_jobs.fetch_add(1, Ordering::AcqRel);
-        let job = Job {
-            gc: owner,
-            batch,
-            origin,
-        };
-        if let Err(mpsc::SendError(job)) = sender.send(job) {
-            gc.callback_jobs.fetch_sub(1, Ordering::AcqRel);
-            return Some(job.batch);
+        // Keep sweep acquisition batched. Publish each callback separately so a
+        // stalled destructor cannot hold the other objects on its private stack.
+        gc.callback_jobs
+            .fetch_add(1 + batch.rest.len(), Ordering::AcqRel);
+        let mut rest = batch.rest.into_iter();
+        let mut next = batch.first;
+        loop {
+            let (task, budget) = next;
+            let job = Job {
+                gc: owner.clone(),
+                task,
+                budget,
+                origin,
+            };
+            if let Err(mpsc::SendError(job)) = sender.send(job) {
+                gc.callback_jobs.fetch_sub(1 + rest.len(), Ordering::AcqRel);
+                return Some(Batch {
+                    first: (job.task, job.budget),
+                    rest: rest.collect(),
+                });
+            }
+            let Some(entry) = rest.next() else { break };
+            next = entry;
         }
         None
     }
@@ -112,46 +127,48 @@ impl Callbacks {
 
 impl Job {
     fn run(self) -> bool {
-        let Self { gc, batch, origin } = self;
+        let Self {
+            gc,
+            mut task,
+            budget,
+            origin,
+        } = self;
         let _cleanup = super::CleanupScope::enter(&gc);
         let mut failed = false;
-        for (mut task, budget) in std::iter::once(batch.first).chain(batch.rest) {
-            let mut counters = WorkCounters::default();
-            let started = now();
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                let progress = gc.clear_retired(&mut task, budget, &mut counters, None);
-                if progress == TraceProgress::Complete {
-                    if let Some((domain, epoch)) = origin {
-                        gc.record_sweep_reclaimed(domain, epoch, task.metadata.size());
-                    }
-                } else {
-                    gc.queue_clearing(task, progress);
+        let mut counters = WorkCounters::default();
+        let started = now();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let progress = gc.clear_retired(&mut task, budget, &mut counters, None);
+            if progress == TraceProgress::Complete {
+                if let Some((domain, epoch)) = origin {
+                    gc.record_sweep_reclaimed(domain, epoch, task.metadata.size());
                 }
-                gc.retired_ready.fetch_sub(1, Ordering::AcqRel);
-                gc.record_step(started, None, true, &mut counters);
-                progress != TraceProgress::Complete
-            }));
-            if result.is_err() {
-                failed = true;
-                gc.recovery.callback_failed();
+            } else {
+                gc.queue_clearing(task, progress);
             }
-            if result.unwrap_or(true) {
-                gc.wake();
+            gc.retired_ready.fetch_sub(1, Ordering::AcqRel);
+            gc.record_step(started, None, true, &mut counters);
+            progress != TraceProgress::Complete
+        }));
+        if result.is_err() {
+            failed = true;
+            gc.recovery.callback_failed();
+        }
+        if result.unwrap_or(true) {
+            gc.wake();
+        }
+        // The next job may block indefinitely. Deliver this job's refund and
+        // progress, and contain any executor unwind, before invoking that job.
+        if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gc.notify_progress())).is_err()
+        {
+            failed = true;
+            if gc.recovery.callback_failed() {
+                // Waiters on unfinished tickets can now observe failure.
+                let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    gc.notify_progress();
+                }));
             }
-            // The next job may block indefinitely. Deliver this job's refund and
-            // progress, and contain any executor unwind, before invoking that job.
-            if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gc.notify_progress()))
-                .is_err()
-            {
-                failed = true;
-                if gc.recovery.callback_failed() {
-                    // Waiters on unfinished tickets can now observe failure.
-                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        gc.notify_progress();
-                    }));
-                }
-                gc.wake();
-            }
+            gc.wake();
         }
         if gc.callback_jobs.fetch_sub(1, Ordering::AcqRel) == 1 {
             gc.wake();
