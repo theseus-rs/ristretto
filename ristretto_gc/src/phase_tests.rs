@@ -261,6 +261,88 @@ mod native {
         Ok(())
     }
 
+    #[test]
+    fn coordinated_mark_returns_its_continuation_while_a_peer_holds_phase_locks() -> Result<()> {
+        struct Paused {
+            entered: mpsc::Sender<()>,
+            release: Mutex<mpsc::Receiver<()>>,
+            progress: TraceProgress,
+            first: AtomicBool,
+        }
+        // SAFETY: this fixture has no outgoing edges or shutdown callbacks.
+        unsafe impl Trace for Paused {
+            fn trace(&self, _: &GarbageCollector) {}
+            fn trace_step(&self, _: &GarbageCollector, _: usize, _: usize) -> TraceProgress {
+                if self.first.swap(false, Ordering::AcqRel) {
+                    self.entered.send(()).expect("callback entered");
+                    lock(&self.release)
+                        .recv_timeout(Duration::from_secs(5))
+                        .expect("resume");
+                    self.progress
+                } else {
+                    TraceProgress::Complete
+                }
+            }
+        }
+        for counted in [false, true] {
+            for independent in [false, true] {
+                for progress in [
+                    TraceProgress::Complete,
+                    TraceProgress::Busy,
+                    TraceProgress::Continue(1),
+                ] {
+                    let gc = GarbageCollector::with_config(
+                        Configuration::builder()
+                            .concurrent_publication(counted)
+                            .independent_phases(independent)
+                            .incremental_step_size(1)
+                            .allocation_threshold(usize::MAX)
+                            .build(),
+                    );
+                    let (entered, parked) = mpsc::channel();
+                    let (release, resume) = mpsc::channel();
+                    let root = Gc::try_new(
+                        &gc,
+                        Paused {
+                            entered,
+                            release: Mutex::new(resume),
+                            progress,
+                            first: AtomicBool::new(true),
+                        },
+                    )?;
+                    tests::prepare_full_mark(&gc);
+                    thread::scope(|scope| {
+                        let (done, observed) = mpsc::channel();
+                        let heap = &gc;
+                        let worker = scope.spawn(move || {
+                            done.send(heap.coordinated_step(false)).expect("observer");
+                        });
+                        parked
+                            .recv_timeout(Duration::from_secs(3))
+                            .expect("first slice");
+                        let coordinator = (!independent).then(|| lock(&gc.coordinator));
+                        let cycle = independent.then(|| lock(&gc.domains[1].cycle));
+                        release.send(()).expect("resume callback");
+                        let finished = observed.recv_timeout(Duration::from_secs(1));
+                        let flight = gc.in_flight();
+                        let empty = gc.domains[1].mark_queue.try_is_empty();
+                        drop((cycle, coordinator));
+                        worker.join().expect("marker");
+                        assert_eq!(finished, Ok(Some(false)));
+                        assert_eq!(flight, 0);
+                        assert_eq!(empty, Some(progress == TraceProgress::Complete));
+                    });
+                    while !gc.step() {}
+                    assert_eq!(gc.statistics()?.objects_marked, 1);
+                    drop(root);
+                    gc.stop()?;
+                    assert_eq!(gc.managed_bytes(), 0);
+                }
+            }
+        }
+        Ok(())
+    }
+
     struct HeldClear {
         entered: Option<mpsc::Sender<Option<usize>>>,
         release: Mutex<mpsc::Receiver<()>>,

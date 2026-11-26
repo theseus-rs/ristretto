@@ -5091,16 +5091,11 @@ impl GarbageCollector {
                             // Reserve the whole batch before releasing the coordinator. Neither
                             // generation may finish marking while even an unexecuted task is local.
                             self.domain().in_flight.fetch_add(count, Ordering::AcqRel);
+                            let epoch = cycle.epoch;
                             drop(claim_admission);
                             drop(cycle);
                             drop(coordinator);
                             let stalled = self.trace_mark_batch(&mut tasks, started);
-                            coordinator = if self.configuration.independent_phases {
-                                None
-                            } else {
-                                Some(lock(&self.coordinator))
-                            };
-                            cycle = lock(&self.domain().cycle);
                             self.publish_mark_batch(&mut tasks, &mut counters);
                             // Another worker can close the epoch as soon as the last
                             // reservation is released. Publish completed mark work first.
@@ -5108,7 +5103,23 @@ impl GarbageCollector {
                                 counters.flush(&mut lock(&self.statistics));
                             }
                             self.domain().in_flight.fetch_sub(count, Ordering::AcqRel);
-                            if stalled {
+                            if stalled || work == 0 {
+                                break 'units;
+                            }
+                            // A reservation protects publication of this batch. Re-enter
+                            // only to claim further work in the same mark phase.
+                            coordinator = if self.configuration.independent_phases {
+                                None
+                            } else if let Ok(guard) = self.coordinator.try_lock() {
+                                Some(guard)
+                            } else {
+                                break 'units;
+                            };
+                            let Ok(next) = self.domain().cycle.try_lock() else {
+                                break 'units;
+                            };
+                            cycle = next;
+                            if cycle.epoch != epoch || cycle.phase != Phase::Mark {
                                 break;
                             }
                         } else {
@@ -6051,7 +6062,7 @@ mod tests {
         Ok(())
     }
 
-    fn prepare_full_mark(gc: &GarbageCollector) {
+    pub(super) fn prepare_full_mark(gc: &GarbageCollector) {
         gc.collect();
         for _ in 0..1000 {
             gc.step();
