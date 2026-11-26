@@ -651,7 +651,7 @@ pub(super) fn record_covered_removal() {
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
-pub(super) fn pause_after_tree_detach() {
+pub(crate) fn pause_after_tree_detach() {
     wait_for_constructor_resume(TREE_DETACH_PAUSE.take());
 }
 
@@ -1051,69 +1051,75 @@ fn typed_root_drop_orders_both_winners_against_a_new_full_cycle() -> Result<()> 
 
 #[test]
 fn unvisited_deletion_links_independent_young_and_full_traversals() -> Result<()> {
-    for counted in [false, true] {
-        let gc = GarbageCollector::with_config(
-            Configuration::builder()
-                .root_storage(crate::RootStorage::Slots)
-                .concurrent_publication(counted)
-                .incremental_step_size(1)
-                .allocation_threshold(usize::MAX)
-                .max_pause_time_us(0)
-                .build(),
-        );
-        let context = gc.register_context();
-        let mut sources = Vec::new();
-        for _ in 0..4 {
-            let child = Gc::try_new(&gc, 41_u64)?;
-            let handle = child.as_handle_i64();
-            let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
-            let address = parent.as_ptr().addr();
-            sources.push((
-                gc.objects.lookup(address).unwrap(),
-                drop_test_registration(&gc, &context, address),
-                handle,
-            ));
-            drop(parent);
-        }
-        gc.collect();
-        gc.collect_young();
-        for index in [1, 0] {
-            assert!((0..1024).any(|_| {
-                gc.next_domain.store(index, Ordering::Release);
-                gc.coordinated_step(false);
-                gc.domains[index].active()
-            }));
-        }
-        let epochs = gc
-            .domains
-            .each_ref()
-            .map(|d| d.epoch.load(Ordering::Acquire));
-        let index = sources
-            .iter()
-            .position(|(m, _, _)| (0..2).all(|i| !m.marked(i, epochs[i])))
-            .expect("unvisited in both domains");
-        let (metadata, source, handle) = sources.swap_remove(index);
-        gc.remove_detached_root(&source);
-        // Absent admission, both queues own the strong deletion traversal.
-        // Neither domain has marked the source synchronously.
-        for (i, epoch) in epochs.into_iter().enumerate() {
-            assert!(!metadata.marked(i, epoch));
-            assert!(
-                gc.domains[i]
-                    .mark_queue
-                    .queued_sample()
-                    .is_some_and(|n| n > 0)
+    for storage in [crate::RootStorage::Tree, crate::RootStorage::Slots] {
+        for counted in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .root_storage(storage)
+                    .concurrent_publication(counted)
+                    .incremental_step_size(1)
+                    .allocation_threshold(usize::MAX)
+                    .max_pause_time_us(0)
+                    .build(),
             );
-        }
-        assert!((0..16384).any(|_| gc.step()));
-        assert_eq!(*Gc::<u64>::from_handle_rooted(&gc, handle)?, 41);
-        gc.collect_full()?;
-        assert!(Gc::<u64>::from_handle_rooted(&gc, handle).is_err());
-        for (_, source, _) in sources {
+            let context = gc.register_context();
+            let mut sources = Vec::new();
+            for _ in 0..4 {
+                let child = Gc::try_new(&gc, 41_u64)?;
+                let handle = child.as_handle_i64();
+                let parent = Gc::try_new(&gc, vec![child.into_rooted()])?;
+                let address = parent.as_ptr().addr();
+                sources.push((
+                    gc.objects.lookup(address).unwrap(),
+                    if storage == crate::RootStorage::Tree {
+                        crate::roots::Registration::Tree(gc.insert_root(address))
+                    } else {
+                        drop_test_registration(&gc, &context, address)
+                    },
+                    handle,
+                ));
+                drop(parent);
+            }
+            gc.collect();
+            gc.collect_young();
+            for index in [1, 0] {
+                assert!((0..1024).any(|_| {
+                    gc.next_domain.store(index, Ordering::Release);
+                    gc.coordinated_step(false);
+                    gc.domains[index].active()
+                }));
+            }
+            let epochs = gc
+                .domains
+                .each_ref()
+                .map(|d| d.epoch.load(Ordering::Acquire));
+            let index = sources
+                .iter()
+                .position(|(m, _, _)| (0..2).all(|i| !m.marked(i, epochs[i])))
+                .expect("unvisited in both domains");
+            let (metadata, source, handle) = sources.swap_remove(index);
             gc.remove_detached_root(&source);
+            // Absent admission, both queues own the strong deletion traversal.
+            // Neither domain has marked the source synchronously.
+            for (i, epoch) in epochs.into_iter().enumerate() {
+                assert!(!metadata.marked(i, epoch));
+                assert!(
+                    gc.domains[i]
+                        .mark_queue
+                        .queued_sample()
+                        .is_some_and(|n| n > 0)
+                );
+            }
+            assert!((0..16384).any(|_| gc.step()));
+            assert_eq!(*Gc::<u64>::from_handle_rooted(&gc, handle)?, 41);
+            gc.collect_full()?;
+            assert!(Gc::<u64>::from_handle_rooted(&gc, handle).is_err());
+            for (_, source, _) in sources {
+                gc.remove_detached_root(&source);
+            }
+            gc.stop()?;
+            assert_eq!(gc.managed_bytes(), 0);
         }
-        gc.stop()?;
-        assert_eq!(gc.managed_bytes(), 0);
     }
     Ok(())
 }
