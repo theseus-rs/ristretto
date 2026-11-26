@@ -3107,8 +3107,18 @@ impl GarbageCollector {
                 return Err(crate::Error::OutOfMemory);
             }
             if empty_cycles == 2 {
-                let check = released.get_or_insert_with(|| self.released_donors.snapshot());
-                if self.reap_retired(false, Some(check)).is_some() {
+                if released.is_none() {
+                    let mut snapshot = self.released_donors.snapshot();
+                    if snapshot.pending() {
+                        // The final ticket may have used this poll's one GC batch.
+                        crate::recovery::yield_once().await;
+                    }
+                    released = Some(snapshot);
+                }
+                if let Some(check) = &mut released
+                    && check.pending()
+                {
+                    self.reap_retired(false, Some(check));
                     crate::recovery::yield_once().await;
                     continue;
                 }
@@ -4655,12 +4665,11 @@ impl GarbageCollector {
         let cpu_started = (concurrent && self.diagnostics_enabled())
             .then(crate::diagnostics::thread_cpu_ns)
             .flatten();
-        let measurement = if concurrent {
+        let timing = if concurrent {
             &self.diagnostics.worker_steps
         } else {
             &self.diagnostics.caller_steps
-        }
-        .measure(self.diagnostics_enabled());
+        };
         let budget = self.configuration.incremental_step_size.clamp(1, 32);
         let queued = || self.retired.load().as_ref()?.pop().map(|task| (task, None));
         let prefer_queue = check.is_none() && self.released_turn.fetch_xor(true, Ordering::Relaxed);
@@ -4676,7 +4685,7 @@ impl GarbageCollector {
             match released {
                 Some(crate::retirement_grants::ReleasedWork::Progress) => {
                     self.record_step(started, cpu_started, concurrent, &mut counters);
-                    drop(measurement);
+                    drop(timing.measure_from(self.diagnostics_enabled(), started));
                     self.notify_progress();
                     return Some(false);
                 }
@@ -4701,6 +4710,7 @@ impl GarbageCollector {
             },
             selection,
         ) = task?;
+        let measurement = timing.measure_from(self.diagnostics_enabled(), started);
         self.retired_objects.fetch_sub(1, Ordering::AcqRel);
         let budget = budget.min(metadata.trace.budget);
         let progress = self.clear_retired(

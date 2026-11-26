@@ -152,6 +152,19 @@ pub(crate) struct ReleasedCheck {
 }
 
 impl ReleasedCheck {
+    pub(crate) fn pending(&mut self) -> bool {
+        if self
+            .jobs
+            .as_ref()
+            .is_some_and(|jobs| jobs.next_after(self.previous).is_some())
+        {
+            true
+        } else {
+            self.jobs = None;
+            false
+        }
+    }
+
     pub(crate) fn step(
         &mut self,
         active: &ReleasedDonors,

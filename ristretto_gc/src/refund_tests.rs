@@ -611,7 +611,15 @@ pub(super) fn park_selection(point: SelectionPoint) {
     reason = "a returned donor covers the final waiter after a long prefix"
 )]
 fn terminal_allocation_assists_a_released_donor_past_nonfitting_requests() -> Result<()> {
-    let gc = capped_heap(false, false);
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .max_heap_bytes(64)
+            .diagnostics(true)
+            .allocation_threshold(usize::MAX)
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .build(),
+    );
     let value = ((1u64, 2u64), (3u64, 4u64));
     let live = Gc::try_new(&gc, value)?;
     let retiring = Gc::try_new(&gc, value)?;
@@ -619,7 +627,24 @@ fn terminal_allocation_assists_a_released_donor_past_nonfitting_requests() -> Re
         .map(|_| gc.grant_registry.register(&gc, 40))
         .collect::<Result<_>>()?;
     release_donor(&gc, retiring, true)?;
-    let root = allocate_when_woken(&gc, 23, &Barrier::new(1))
+    let mut peer = WaitingPeer::new(&gc, 23);
+    for _ in 0..20_000 {
+        let before = gc.diagnostics().caller_steps.count;
+        assert!(
+            peer.poll_when_woken(),
+            "a cooperative helper must retain a wake"
+        );
+        assert!(
+            gc.diagnostics().caller_steps.count <= before + 1,
+            "one collection batch per poll"
+        );
+        if peer.result.is_some() {
+            break;
+        }
+    }
+    let root = peer
+        .result
+        .take()
         .expect("active helper must finish the cutoff")?;
     assert_eq!(**root, 23);
     assert_eq!(gc.managed_bytes(), 40);
