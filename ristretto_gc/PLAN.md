@@ -9,6 +9,15 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `0b76cfaf`, construction root handoff, young array card contention and
+unlinking an empty numeric root page each allow the tested peer to progress.
+The lowest individual 95% complete-collection speedup bounds against
+`f1daebeb` were 11.90× native and 11.48× WASI. The single JVM heap still
+failed all nine 64 MiB Java reference-array forks. A weak witness cleared
+before physical allocation failed. The next reclamation gate is to complete
+the same workload and preserve bounded exhaustion when all storage is live.
+[Controls, JVM comparisons and qualification results](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/root-handoff-and-array-progress/README.md).
+
 At `ee80df21` another thread could inspect the same conditional slot and finish a
 full collection while its owner was being constructed. All 18 cooperative
 schedules passed on native, WASI and Miri. The minimum individual 95% speedup

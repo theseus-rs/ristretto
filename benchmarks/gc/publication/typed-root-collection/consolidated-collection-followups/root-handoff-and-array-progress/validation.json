@@ -1,0 +1,196 @@
+{
+  "complete_collection_revisions": [
+    "8ef683e743cd00bf360f131d5a5609cad9232406",
+    "0b76cfaf3e3fb618500f622a57aa4b3eac44adc5"
+  ],
+  "gc_suites": {
+    "removal_native": {
+      "pass": 1020,
+      "fail": 0,
+      "ignored": 1
+    },
+    "removal_wasi": {
+      "pass": 458,
+      "fail": 0,
+      "ignored": 0
+    },
+    "unlink_native": {
+      "pass": 1021,
+      "fail": 0,
+      "ignored": 1
+    },
+    "unlink_wasi": {
+      "pass": 459,
+      "fail": 0,
+      "ignored": 0
+    }
+  },
+  "fresh_processes": {
+    "parked_construction_removal_cannot_capture_a_reused_generation": {
+      "candidate": 100,
+      "parent": 3
+    },
+    "removed_construction_root_protects_the_exact_graph": {
+      "candidate": 100,
+      "parent": 3
+    },
+    "generation_queries_return_while_the_queried_shard_is_parked": {
+      "candidate": 100,
+      "parent": 3
+    },
+    "a_parked_dirty_card_scan_yields_and_keeps_its_last_child": {
+      "candidate": 100,
+      "parent": 3
+    }
+  },
+  "older_page": {
+    "ticket_budget": 2048,
+    "parent_completed": [
+      false,
+      false
+    ],
+    "candidate_completed_and_cleared": [
+      true,
+      true
+    ],
+    "concurrent_publication": [
+      false,
+      true
+    ],
+    "replacement_numeric_id": 32
+  },
+  "verification_log_sha256": {
+    "native_clippy": "a553c823d3fce561bb8982ed2336f0f28e1a6605a89eec70ef46b164475e4a7d",
+    "wasi_clippy": "c318ba3e14670768e800239b10517368c6c2852573851e91c9737661bdc76be5",
+    "vm_clippy": "e6fa3962c7c47b2ba9d8c4f1645f27beac263acffa3fbadd1db3f95f1f180c84",
+    "root_miri": "30126063626c950a285944602e46313cf8712ccdd35c2934f0c75fcfed25e460",
+    "capture_miri": "d1130779d5e6cff4632b5a2d3ef7f475d2219e5a47186bcb229e74994acdce70",
+    "page_miri": "41f6f273da46d666bd90a8f3e5c5d7ae873c70c2c245bb81ac4edc3298c71742",
+    "package": "562c2c52af4cc3359fffebfaa1e92817e008c30a2b578f4e7b180f8223d2a327",
+    "normalized_native": "6bbea892822be4e596aba58ad8c5b7c1326c8ab786c55c98cd7a8f09ad49c8c2",
+    "normalized_wasi": "59a83cd00126fd60357f351b1df3da5bbf8e58f4f3cdf1594bf2ffb8eab34f2d",
+    "donor": "e132cc49daf4b6fc52f684b26cafa146f66ac6088cf650171b37f550712fba27",
+    "gc_release_launcher": "6db38bbb4852a99794273bfbef835501c86c0057a2970344c80b47018f7d6973"
+  },
+  "workspace_graphs": 14,
+  "previews": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "array_suites": {
+    "ristretto_vm_native": 34,
+    "ristretto_intrinsics_native": 141,
+    "ristretto_types_native": 5,
+    "ristretto_vm_wasi": 35,
+    "ristretto_intrinsics_wasi": 141,
+    "ristretto_types_wasi": 4,
+    "native_jit_multianewarray": 3
+  },
+  "trace_certificate": {
+    "upstream_commit": "c673a8d800f3a8163586e8a6177ddafd01f2e665",
+    "overlay_sha256": "c54eb1bfccad1caab30938204ad8f4142bd4864948ca280f7069bbacc7042cf9",
+    "production_and_model_sources": {
+      "ristretto_gc/src/trace_certificate.rs": "3cdbe0a576e0d263520a01982346cb0ee7a38c42a3284219e2ff696ddc5bd9dc",
+      "ristretto_gc/tests/trace_certificate_model.rs": "5cda8bc55bca2f2996020bf5146c90fc8fd4b5e17b91dcd32dfe3d9efa6d2959"
+    },
+    "log_sha256": "49cd5707b44097e48facdacd886c91d0af8f9153b62c534eedc3122aa38749d8"
+  },
+  "audits": {
+    "root": [
+      {
+        "attempt": "root-audit-gemini-4-carbon-high",
+        "status": "ERROR",
+        "error": "print timeout after 5m0s with the turn still in progress; the response is partial",
+        "response_sha256": null
+      },
+      {
+        "attempt": "root-audit-gemini-4-carbon-xhigh",
+        "status": "ERROR",
+        "error": "invalid model selection (--model \"gemini-4-carbon\" --effort \"xhigh\"): gemini-4-carbon has no \"xhigh\" effort (available: low, medium, high)",
+        "response_sha256": null
+      },
+      {
+        "attempt": "root-audit-gemini-4-neon-high",
+        "status": "SUCCESS",
+        "error": null,
+        "response_sha256": "3e34b454189c8589f29a6b8f81ea5b018f71276512833a7209ce7f80df6c06cf"
+      }
+    ],
+    "card": [
+      {
+        "attempt": "card-audit-gemini-4-carbon-high",
+        "status": "ERROR",
+        "error": "print timeout after 5m0s with the turn still in progress; the response is partial",
+        "response_sha256": null
+      },
+      {
+        "attempt": "card-audit-gemini-4-carbon-xhigh",
+        "status": "ERROR",
+        "error": "invalid model selection (--model \"gemini-4-carbon\" --effort \"xhigh\"): gemini-4-carbon has no \"xhigh\" effort (available: low, medium, high)",
+        "response_sha256": null
+      },
+      {
+        "attempt": "card-audit-gemini-4-neon-high",
+        "status": "ERROR",
+        "error": "print timeout after 3m0s with the turn still in progress; the response is partial",
+        "response_sha256": null
+      },
+      {
+        "attempt": "card-retry-gemini-4-neon",
+        "status": "SUCCESS",
+        "error": null,
+        "response_sha256": "3574828e3f76bbeb2ec27d863dde4928a79ab2e317b71ddefdf7b5c48fac4319"
+      }
+    ],
+    "page": [
+      {
+        "attempt": "audit-gemini-4-carbon-high",
+        "status": "SUCCESS",
+        "error": null,
+        "response_sha256": "a4f4e71d70a946bda6f6cca463a4e4bae04fdf3bf004cad7ce9248031b2f94e3"
+      },
+      {
+        "attempt": "audit-gemini-4-carbon-xhigh",
+        "status": "ERROR",
+        "error": "invalid model selection (--model \"gemini-4-carbon\" --effort \"xhigh\"): gemini-4-carbon has no \"xhigh\" effort (available: low, medium, high)",
+        "response_sha256": null
+      }
+    ],
+    "auditor_test": [
+      {
+        "attempt": "auditor-test",
+        "status": "SUCCESS",
+        "error": null,
+        "response_sha256": "94b00df9e9b7530b5a1d5a1482ef29efd1b33f188ea4b8804dec6d5c40103d19"
+      }
+    ]
+  }
+}
