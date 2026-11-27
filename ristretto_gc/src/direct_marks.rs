@@ -100,26 +100,37 @@ mod concurrent_test {
 
     #[test]
     fn parked_slot_writer_revalidates_after_a_same_number_replacement() {
-        let queues = MarkQueues::new(0, 1);
-        let marks = DirectMarks::default();
-        queues.open_graph_inbox(4, false, Weak::new());
-        let first = queues.birth_epoch().unwrap();
-        let (entered, parked) = mpsc::channel();
-        let (release, resume) = mpsc::channel();
-        std::thread::scope(|scope| {
-            let (marks, queues) = (&marks, &queues);
-            let worker = scope.spawn(move || {
-                PAUSE.set(Some((entered, resume)));
-                marks.publish(1, &first, Retention::Strong, queues);
-            });
-            parked.recv_timeout(Duration::from_secs(5)).unwrap();
-            queues.close_graph_inbox();
+        for publish_new_first in [false, true] {
+            let queues = MarkQueues::new(0, 1);
+            let marks = DirectMarks::default();
             queues.open_graph_inbox(4, false, Weak::new());
-            let second = queues.birth_epoch().unwrap();
-            marks.publish(1, &second, Retention::Final, queues);
-            release.send(()).unwrap();
-            worker.join().unwrap();
-            assert_eq!(marks.get(1, 4, queues), Some(Retention::Final));
-        });
+            let first = queues.birth_epoch().unwrap();
+            let (entered, parked) = mpsc::channel();
+            let (release, resume) = mpsc::channel();
+            std::thread::scope(|scope| {
+                let (marks, queues) = (&marks, &queues);
+                let worker = scope.spawn(move || {
+                    PAUSE.set(Some((entered, resume)));
+                    marks.publish(1, &first, Retention::Strong, queues);
+                });
+                parked.recv_timeout(Duration::from_secs(5)).unwrap();
+                queues.close_graph_inbox();
+                queues.open_graph_inbox(4, false, Weak::new());
+                let second = queues.birth_epoch().unwrap();
+                if publish_new_first {
+                    marks.publish(1, &second, Retention::Final, queues);
+                }
+                release.send(()).unwrap();
+                worker.join().unwrap();
+                assert_eq!(
+                    marks.get(1, 4, queues),
+                    publish_new_first.then_some(Retention::Final)
+                );
+                if !publish_new_first {
+                    marks.publish(1, &second, Retention::Final, queues);
+                    assert_eq!(marks.get(1, 4, queues), Some(Retention::Final));
+                }
+            });
+        }
     }
 }
