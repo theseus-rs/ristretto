@@ -28,6 +28,8 @@ def check_shipping_source(package, root):
 def check_tree(output, expected):
     collectors = set()
     for line in output.splitlines():
+        if not line:  # Cargo separates workspace roots with empty lines.
+            continue
         package_id, features = line.removesuffix(" (*)").rsplit("|", 1)
         name = package_id.split()[0]
         if name in RETIRED:
@@ -52,3 +54,11 @@ def verify_tree(manifest, expected, *, target=None, package=None, feature_args=(
     if target:
         args.extend(["--target", target])
     check_tree(subprocess.check_output(args, cwd=cargo_cwd or manifest.parent, text=True), expected)
+
+
+def verify_workspace_tree(manifest, expected):
+    """Check workspace-wide development, benchmark and target-specific dependencies."""
+    args = ["cargo", "tree", "--locked", "--manifest-path", manifest, "--workspace",
+            "--all-features", "--target", "all", "--edges", "normal,build,dev",
+            "--prefix", "none", "--format", "{p}|{f}"]
+    check_tree(subprocess.check_output(args, cwd=manifest.parent, text=True), expected)

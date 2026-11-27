@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / ".github/scripts"))
-from collector_graph import check_shipping_source, check_tree, verify_tree
+from collector_graph import check_shipping_source, check_tree, verify_tree, verify_workspace_tree
 
 
 class CollectorIdentityTests(unittest.TestCase):
@@ -81,6 +81,33 @@ class CollectorIdentityTests(unittest.TestCase):
                 verify_tree(manifest, expected, target=target, feature_args=["--no-default-features"])
             verify_tree(manifest, expected, target=target,
                         feature_args=["--no-default-features", "--features", "heap"])
+
+    def test_workspace_detects_a_second_collector_in_target_specific_dev_dependencies(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            workspace = root / "workspace"
+            consumer = workspace / "benchmark"
+            primary = workspace / "heap"
+            other = root / "alternate"
+            for package, name, version in [(consumer, "benchmark", "0.1.0"),
+                                           (primary, "ristretto_gc", "1.0.0"),
+                                           (other, "ristretto_gc", "0.9.0")]:
+                (package / "src").mkdir(parents=True)
+                (package / "src/lib.rs").touch()
+                (package / "Cargo.toml").write_text(
+                    f'[package]\nname = "{name}"\nversion = "{version}"\nedition = "2024"\n')
+            manifest = workspace / "Cargo.toml"
+            manifest.write_text('[workspace]\nmembers = ["heap", "benchmark"]\nresolver = "3"\n')
+            expected = f"ristretto_gc v1.0.0 ({primary})"
+            subprocess.run(["cargo", "generate-lockfile", "--offline"], cwd=workspace, check=True)
+            verify_workspace_tree(manifest, expected)
+            with (consumer / "Cargo.toml").open("a") as stream:
+                stream.write('''[target.'cfg(target_family = "wasm")'.dev-dependencies]
+other = { package = "ristretto_gc", path = "../../alternate" }
+''')
+            subprocess.run(["cargo", "generate-lockfile", "--offline"], cwd=workspace, check=True)
+            with self.assertRaisesRegex(ValueError, "ristretto_gc v0.9.0"):
+                verify_workspace_tree(manifest, expected)
 
     def test_wasi_consumer_cannot_link_a_second_collector(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -6,6 +6,8 @@ The JVM, source preview and browser engine use the same `GarbageCollector`.
 The separate catalog collector, pool, and restricted Java runtime have been
 retired. The source preview exercises interpreted and compiled Java graph
 operations, weak clearing and physical reclamation on the JVM heap.
+CI also checks every workspace member across all target-specific normal, build
+and development dependencies for a second collector, including benchmark-only dependencies.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 

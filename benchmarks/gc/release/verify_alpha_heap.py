@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 sys.path.insert(0, str(ROOT / ".github/scripts"))
-from collector_graph import RETIRED, check_shipping_source, verify_tree
+from collector_graph import RETIRED, check_shipping_source, verify_tree, verify_workspace_tree
 
 
 def verify_workspace():
@@ -65,6 +65,9 @@ if __name__ == "__main__":
             features.extend(["--features", args.features])
         verify("ristretto_java", args.launcher_target, expected, features)
         sys.exit(0)
+
+    verify_workspace_tree(ROOT / "Cargo.toml", expected)
+    print(f"All workspace targets, features and dependency kinds: {expected}")
 
     for package, targets in [
         ("ristretto_classloader", [None, "wasm32-wasip2"]),
