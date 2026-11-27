@@ -1,5 +1,86 @@
 use super::*;
 
+thread_local! {
+    static EMPTY_ROOT_PAGE: std::cell::RefCell<Option<Box<dyn FnOnce()>>> = const {
+        std::cell::RefCell::new(None)
+    };
+}
+
+pub(crate) fn probe_empty_root_page() {
+    if let Some(probe) = EMPTY_ROOT_PAGE.take() {
+        probe();
+    }
+}
+
+#[test]
+fn an_older_empty_tree_page_allows_a_full_collection_during_unlink() {
+    use crate::{GcWeak, ReferenceKind};
+    let mut completed = Vec::new();
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .allocation_threshold(usize::MAX)
+                .concurrent_publication(counted)
+                .build(),
+        );
+        let removed = Gc::try_new(&gc, 11_u64).unwrap();
+        let live = Gc::try_new(&gc, 22_u64).unwrap();
+        let witness = GcWeak::new(&removed, ReferenceKind::Weak, 0);
+        gc.next_root_id.store(32, Ordering::Relaxed);
+        let older = gc.add_root(&removed);
+        gc.next_root_id.store(64, Ordering::Relaxed);
+        let recent = gc.add_root(&live);
+        drop(removed);
+        let observed = std::rc::Rc::new(std::cell::Cell::new(None));
+        let result = observed.clone();
+        let replacement = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let published = replacement.clone();
+        let peer = gc.clone();
+        EMPTY_ROOT_PAGE.set(Some(Box::new(move || {
+            let ticket = peer.request_full_cycle();
+            for _ in 0..2048 {
+                if peer.completed_full_ticket() >= ticket {
+                    break;
+                }
+                peer.step();
+            }
+            let finished = peer.completed_full_ticket() >= ticket;
+            result.set(Some((finished, witness.is_cleared())));
+            if finished {
+                // Reinstall the same numeric page while the unlinker still holds
+                // its old directory view.
+                let child = Gc::try_new(&peer, 33_u64).unwrap();
+                let weak = GcWeak::new(&child, ReferenceKind::Weak, 0);
+                peer.next_root_id.store(older, Ordering::Relaxed);
+                assert_eq!(peer.add_root(&child), older);
+                published.replace(Some(weak));
+            }
+        })));
+        gc.remove_root_by_id(older);
+        assert!(
+            EMPTY_ROOT_PAGE.take().is_none(),
+            "older page was never unlinked"
+        );
+        completed.push((counted, observed.get()));
+        if let Some(weak) = replacement.take() {
+            gc.collect_full().unwrap();
+            assert_eq!(*weak.upgrade().unwrap(), 33);
+            gc.remove_root_by_id(older);
+            gc.collect_full().unwrap();
+            assert!(weak.is_cleared());
+        }
+        assert_eq!(**live, 22);
+        gc.remove_root_by_id(recent);
+        drop(live);
+        gc.collect_full().unwrap();
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    assert_eq!(
+        completed,
+        [(false, Some((true, true))), (true, Some((true, true)))]
+    );
+}
+
 #[test]
 fn a_parked_tree_read_view_allows_unrelated_payload_reclamation() {
     for concurrent in [false, true] {

@@ -379,8 +379,9 @@ impl GarbageCollector {
             super::publication_tests::record_covered_removal();
             return;
         }
+        let mut removal = self.roots.removal(id, generation);
         self.detach_root::<ADOPT>(|| {
-            let address = self.roots.remove(id, generation)?;
+            let address = removal.take()?;
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
             super::pause_after_tree_detach();
             Some(address)

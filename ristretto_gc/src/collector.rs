@@ -3403,3 +3403,5 @@ mod private_allocation_tests;
 #[cfg(test)]
 #[path = "tree_root_progress_tests.rs"]
 mod tree_root_progress_tests;
+#[cfg(test)]
+pub(crate) use tree_root_progress_tests::probe_empty_root_page;

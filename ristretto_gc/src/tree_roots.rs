@@ -100,6 +100,37 @@ pub(crate) struct TreeRoots {
     live: AtomicUsize,
 }
 
+/// The entry and its occupancy are released at the deletion barrier. Only an
+/// older page which became empty needs to survive until after admission ends.
+pub(crate) struct TreeRemoval<'a> {
+    roots: &'a TreeRoots,
+    id: usize,
+    expected: Option<NonZeroU64>,
+    empty: Option<Arc<Page>>,
+}
+
+impl TreeRemoval<'_> {
+    #[expect(clippy::indexing_slicing, reason = "page slot is a five-bit index")]
+    pub(crate) fn take(&mut self) -> Option<usize> {
+        self.roots.with_page((self.id >> PAGE_BITS) as u64, |page| {
+            let address = page.slots[self.id & (SLOTS - 1)].remove(self.expected)?;
+            self.roots.live.fetch_sub(1, Ordering::Relaxed);
+            if self.roots.vacate(self.id, self.expected, page) {
+                self.empty = Some(page.clone());
+            }
+            Some(address)
+        })
+    }
+}
+
+impl Drop for TreeRemoval<'_> {
+    fn drop(&mut self) {
+        if let Some(page) = &self.empty {
+            self.roots.retire_empty((self.id >> PAGE_BITS) as u64, page);
+        }
+    }
+}
+
 /// An issued numeric position whose generation remains invisible to root scans.
 pub(crate) struct VacantRoot<'a> {
     roots: &'a TreeRoots,
@@ -335,6 +366,8 @@ impl TreeRoots {
             {
                 return;
             }
+            #[cfg(test)]
+            crate::collector::probe_empty_root_page();
             let proposed = Arc::new(Pages {
                 older: view.older.remove(key).0,
                 recent: view.recent.clone(),
@@ -345,14 +378,18 @@ impl TreeRoots {
         }
     }
 
+    pub(crate) fn removal(&self, id: usize, expected: Option<NonZeroU64>) -> TreeRemoval<'_> {
+        TreeRemoval {
+            roots: self,
+            id,
+            expected,
+            empty: None,
+        }
+    }
+
+    #[cfg(test)]
     pub(crate) fn remove(&self, id: usize, expected: Option<NonZeroU64>) -> Option<usize> {
-        let key = (id >> PAGE_BITS) as u64;
-        self.with_page(key, |page| {
-            let slot = id & (SLOTS - 1);
-            let address = page.slots[slot].remove(expected)?;
-            self.release_position(id, expected, page);
-            Some(address)
-        })
+        self.removal(id, expected).take()
     }
 
     /// The source remains visible until the scanner vetoes removal or the
@@ -384,14 +421,22 @@ impl TreeRoots {
     }
 
     fn release_occupancy(&self, id: usize, expected: Option<NonZeroU64>, page: &Arc<Page>) {
+        if self.vacate(id, expected, page) {
+            self.retire_empty((id >> PAGE_BITS) as u64, page);
+        }
+    }
+
+    fn vacate(&self, id: usize, expected: Option<NonZeroU64>, page: &Page) -> bool {
         let key = (id >> PAGE_BITS) as u64;
         let slot = id & (SLOTS - 1);
         let bit = 1u64 << slot;
         if page.occupied.release(bit) && key != 0 && !self.pages.load().is_recent(key) {
-            self.retire_empty(key, page);
-        } else if expected.is_some_and(|generation| generation.get() & OWNED_TREE_ROOT != 0) {
+            return true;
+        }
+        if expected.is_some_and(|generation| generation.get() & OWNED_TREE_ROOT != 0) {
             self.last_owned_vacancy.store(id, Ordering::Relaxed);
         }
+        false
     }
 
     /// Inspect at most one page per collector work unit. Re-reading a numeric
