@@ -31,7 +31,10 @@ arrivals, but their median p99.9 was 219 ms.
 Private notifier preparation at `f7d32751` let a capped peer receive its
 refund with another creator parked. The full-collection gate passed all 36
 conditions. The two-minute Java candidate completed 55,163 of the required
-60,000 arrivals, so the startup change remains withheld.
+60,000 arrivals, so the startup change remains withheld. In a subsequent
+direct comparison the queue-only JVM completed 31,578 and 36,394 arrivals,
+and the notifier completed 23,560 and 53,553. Sustained completion remains
+unqualified on both.
 [Controls, individual forks and release thresholds](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/cold-refund-notifier/README.md).
 
 A suspended explicit context flush can hold a required clean edge privately.

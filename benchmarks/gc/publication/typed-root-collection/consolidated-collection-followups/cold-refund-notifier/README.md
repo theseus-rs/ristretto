@@ -29,3 +29,15 @@ The candidate cleared all 36 complete-collection conditions against `f1daebeb`. 
 The two-minute completion gate required all 60,000 arrivals. The candidate missed 4,837, with no cgroup OOM kills and no reported CPU throttling. The candidate completed 3,370 collections over the whole JVM process. The earlier queue-only candidate completed 1,914 collections in its successful two-minute fork. These counts include setup and warmup. The cause of the backlog remains unverified. The candidate remains withheld. [Release criteria](policy.json) · [Sustained forks](java/sustained.csv) · [Raw processes](java/sustained.jsonl.gz).
 
 ![Scheduled JVM response times](java/sustained.png)
+
+## Direct comparison with the published queue
+
+Four further two-minute forks used the queue-only and notifier binaries directly
+under the same limits. Queue-only completed 31,578 and 36,394 arrivals. The
+notifier completed 23,560 and 53,553. All four forks fell short of 60,000.
+The relative order reversed across pairs. The queue-only implementation's
+earlier successful fork remains in its report. Sustained completion is still
+unqualified on both revisions. [Individual forks](matched/forks.csv) ·
+[Matched inputs](matched/inputs.json) · [Raw processes](matched/processes.jsonl.gz).
+
+![Outstanding Java requests throughout the four matched forks](matched/backlog.png)
