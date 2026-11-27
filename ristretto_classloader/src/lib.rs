@@ -23,7 +23,7 @@
 //! use ristretto_classloader::{runtime, ClassLoader, JavaStr, Result};
 //! use std::sync::Arc;
 //!
-//! #[tokio::main]
+//! #[tokio::main(flavor = "current_thread")]
 //! async fn main() -> Result<()> {
 //!     let (_java_home, java_version, class_loader) = runtime::version_class_loader("21").await?;
 //!     let class_name = "java.util.HashMap";
@@ -45,7 +45,7 @@
 //! | `tls-native-tls`           | Enables Native TLS support                     | No       |
 //! | `tls-rustls-aws-lc-rs`     | Enables Rustls with the AWS-LC crypto provider | No       |
 //! | `tls-rustls-ring`          | Enables Rustls with the Ring crypto provider   | Yes      |
-//! | `url`                      | Enables URL class path entries                 | No       |
+//! | `url`                      | Enables URL class path entries on native hosts | No       |
 
 #![deny(unsafe_code)]
 #![cfg_attr(
