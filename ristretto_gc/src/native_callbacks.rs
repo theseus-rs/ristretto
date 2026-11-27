@@ -586,26 +586,27 @@ mod tests {
         let (send, unfitting) = mpsc::channel();
         let observed = std::task::Waker::from(Arc::new(Notice(send)));
         let mut cx = std::task::Context::from_waker(&observed);
+        let mut initial = std::task::Context::from_waker(std::task::Waker::noop());
         for _ in 0..33 {
             let earlier = runner.service.snapshot();
             let mut request = Box::pin(heap.reserve_bytes_async(32));
             assert!(
                 poll_until_dispatch(
                     request.as_mut(),
-                    &mut cx,
+                    &mut initial,
                     &runner.service,
                     earlier,
                     deadline
                 )
                 .is_none()
             );
+            // Only terminal dispatch uses this destination. An earlier ticket
+            // wake can legitimately be delivered after its task has migrated.
+            assert!(request.as_mut().poll(&mut cx).is_pending());
             larger.push(request);
         }
-        // Drain the initial cooperative wakes used to reach terminal dispatch.
-        while unfitting.try_recv().is_ok() {}
         let earlier = runner.service.snapshot();
         let mut fitting = Box::pin(heap.reserve_bytes_async(16));
-        let mut initial = std::task::Context::from_waker(std::task::Waker::noop());
         assert!(
             poll_until_dispatch(
                 fitting.as_mut(),
