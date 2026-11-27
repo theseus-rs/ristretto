@@ -546,6 +546,25 @@ mod tests {
     }
 
     #[test]
+    fn unpublished_manual_positions_are_invisible_and_cannot_be_revoked() {
+        let roots = TreeRoots::default();
+        let next = AtomicUsize::new(1);
+        let abandoned = roots.reserve_manual(&next);
+        let mut live = roots.reserve_manual(&next);
+        let id = live.key().id;
+        assert_eq!(roots.len(), 0);
+        assert!(matches!(roots.scan(0), TreeScan::Advance(_)));
+        assert_eq!(roots.remove(id, None), None);
+        drop(abandoned);
+        live.publish(103);
+        assert_eq!(roots.scan(0), TreeScan::Root(id, 103));
+        drop(live);
+        assert_eq!(roots.remove(id, None), Some(103));
+        assert_eq!(roots.remove(id, None), None);
+        assert_eq!(roots.len(), 0);
+    }
+
+    #[test]
     fn a_private_slot_claim_cannot_pin_unrelated_root_membership() {
         let roots = TreeRoots::default();
         let next = AtomicUsize::new(1);

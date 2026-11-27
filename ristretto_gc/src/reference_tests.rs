@@ -799,6 +799,9 @@ fn logically_retired_handles_cannot_resurrect_an_untraced_graph() -> Result<()> 
         gc.collect();
         at_reference_stage(&gc, 1, 1);
         assert!(gc.clone_edge_root(&stale).is_none());
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gc.add_root(&stale))).is_err()
+        );
         assert!(Gc::<crate::sync::RwLock<Vec<Gc<u64>>>>::from_handle_rooted(&gc, handle).is_err());
         for _ in 0..10_000 {
             if lock(&gc.domains[1].cycle).phase == Phase::Sweep {
@@ -813,6 +816,9 @@ fn logically_retired_handles_cannot_resurrect_an_untraced_graph() -> Result<()> 
         );
         assert!(Gc::<crate::sync::RwLock<Vec<Gc<u64>>>>::from_raw_rooted(&gc, address).is_err());
         assert!(gc.clone_edge_root(&stale).is_none());
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gc.add_root(&stale))).is_err()
+        );
         assert!(retained.upgrade().is_none());
         finish(&gc);
         assert_eq!(gc.statistics()?.live_objects, 0);
