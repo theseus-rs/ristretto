@@ -1240,7 +1240,7 @@ fn poll_while_flusher_is_suspended(
 fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspended() -> Result<()>
 {
     let mut outcomes = Vec::new();
-    for counted in [false, true] {
+    for (counted, raw) in [(false, false), (true, false), (false, true), (true, true)] {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .barrier_buffer_size(4)
@@ -1266,11 +1266,18 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
         }
         assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Mark);
         let target = parent.first().expect("child");
-        context.with(|| gc.write_barrier(target));
+        if raw {
+            // SAFETY: the rooted parent retains this exact child across the barrier.
+            let borrowed = unsafe { Gc::<u64>::from_raw_i64(target.as_ptr_i64())? };
+            assert_eq!(borrowed.identity().to_i64(), 0);
+            context.with(|| borrowed.write_barrier(&gc));
+        } else {
+            context.with(|| gc.write_barrier(target));
+        }
         let debt = gc.contexts.pending.load(Ordering::Acquire);
         assert!(debt <= 1);
         let (full, acquired, pending) = poll_while_flusher_is_suspended(&gc, context, debt);
-        outcomes.push((counted, debt, pending, full, acquired));
+        outcomes.push((counted, raw, debt, pending, full, acquired));
         drop(funding);
         gc.collect_full()?;
         assert!(weak.refers_to(target));
@@ -1283,7 +1290,7 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
     assert!(
         outcomes
             .iter()
-            .all(|(_, _, _, full, acquired)| *full && *acquired),
+            .all(|(_, _, _, _, full, acquired)| *full && *acquired),
         "{outcomes:?}"
     );
     Ok(())

@@ -243,15 +243,18 @@ impl GarbageCollector {
             .barrier_record
             .measure(self.diagnostics_enabled());
         let mut certificate = None;
-        // The phase clock describes both publication policies. A traced edge
-        // owns its descriptor, so an attached context can use its validated
-        // idle or already-strong certificate before taking legacy admission.
-        let clock = self.publication_clock.as_ref().or_else(|| {
-            (known.is_some()
-                && self.configuration.barrier_buffer_size != 0
-                && crate::context::with_state(self, |_| ()).is_some())
-            .then_some(&self.phase_clock)
-        });
+        // A traced edge owns its descriptor. A protected raw address is
+        // resolved below while its caller still keeps the original birth live.
+        // Preserve the existing raw handoff on heaps with old-only passes.
+        let protected_raw =
+            identity.to_i64() == 0 && self.configuration.old_collection_interval == 0;
+        let context_edge = (known.is_some() || protected_raw)
+            && self.configuration.barrier_buffer_size != 0
+            && crate::context::with_state(self, |_| ()).is_some();
+        let clock = self
+            .publication_clock
+            .as_ref()
+            .or(context_edge.then_some(&self.phase_clock));
         let legacy = if let Some(clock) = clock {
             if let Some(snapshot) = clock.snapshot() {
                 if (snapshot.flags(0) | snapshot.flags(1)) & 1 == 0 {
@@ -314,12 +317,9 @@ impl GarbageCollector {
         }) {
             return;
         }
-        if known.is_some()
-            && self.configuration.barrier_buffer_size != 0
-            && crate::context::with_state(self, |_| ()).is_some()
-        {
+        if context_edge {
             drop(legacy);
-            self.shade_traced_context_edge(metadata);
+            self.shade_context_edge(metadata);
             return;
         }
         let publication = legacy.unwrap_or_else(|| self.barrier_guard());
@@ -328,8 +328,8 @@ impl GarbageCollector {
         }
     }
 
-    fn shade_traced_context_edge(&self, metadata: &MetadataRef) {
-        // A traced same-heap edge owns this exact birth descriptor. Move
+    fn shade_context_edge(&self, metadata: &MetadataRef) {
+        // The caller holds this exact same-heap birth descriptor. Move
         // its strong-phase traversal onto the epoch queues, where the
         // collector can claim a committed proposal or cancel a pending one.
         let phases = self.phase_clock.indexed_root();

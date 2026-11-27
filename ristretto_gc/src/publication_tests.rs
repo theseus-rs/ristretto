@@ -4451,11 +4451,12 @@ fn flushing_an_old_identity_preserves_an_unrelated_pending_birth() -> Result<()>
 
 #[test]
 fn raw_explicit_barrier_queues_the_protected_child_identity() -> Result<()> {
-    for counted in [false, true] {
+    for (counted, old_interval) in [(false, 0), (true, 0), (false, 4), (true, 4)] {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .concurrent_publication(counted)
                 .barrier_buffer_size(4)
+                .old_collection_interval(old_interval)
                 .incremental_step_size(1)
                 .max_pause_time_us(0)
                 .allocation_threshold(usize::MAX)
@@ -4475,12 +4476,21 @@ fn raw_explicit_barrier_queues_the_protected_child_identity() -> Result<()> {
         let context = gc.register_context();
         context.with(|| {
             raw.write_barrier(&gc);
-            let record = context.0.try_peek().expect("pending raw edge");
-            assert_eq!(record.identity, id);
-            assert_eq!(record.address, address.addr());
             drop(raw);
-            assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 1);
-            context.flush();
+            if old_interval == 0 {
+                assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+                let work = gc.domains[1].mark_queue.claim(0, 1, &mut 1);
+                let (item, _) = work.items[0].as_ref().expect("exact deletion mark");
+                assert_eq!(item.metadata.id, id);
+                assert_eq!(item.metadata.trace.ptr.addr(), address.addr());
+                assert_eq!(metadata.retention(1, epoch), Some(Retention::Strong));
+            } else {
+                let record = context.0.try_peek().expect("pending raw edge");
+                assert_eq!(record.identity, id);
+                assert_eq!(record.address, address.addr());
+                assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 1);
+                context.flush();
+            }
         });
         assert!(metadata.marked(1, epoch));
         assert_eq!(**parent.first().expect("protected child"), 42);
@@ -4712,7 +4722,7 @@ fn construction_retains_only_winning_slot_and_overflow_detaches() {
 fn a_paused_traced_edge_offer_allows_peer_allocation_and_two_full_cycles() -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
-    for counted in [false, true] {
+    for (counted, raw) in [(false, false), (true, false), (false, true), (true, true)] {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .concurrent_publication(counted)
@@ -4747,7 +4757,16 @@ fn a_paused_traced_edge_offer_allows_peer_allocation_and_two_full_cycles() -> Re
                     entered: arrived,
                     resume,
                 }));
-                context.with(|| heap.write_barrier(target));
+                context.with(|| {
+                    if raw {
+                        // SAFETY: the enclosing scope retains the original rooted parent.
+                        let edge = unsafe { Gc::<u64>::from_raw_i64(target.as_ptr_i64()) }
+                            .expect("protected raw child");
+                        edge.write_barrier(heap);
+                    } else {
+                        heap.write_barrier(target);
+                    }
+                });
             });
             parked
                 .recv_timeout(Duration::from_secs(3))
