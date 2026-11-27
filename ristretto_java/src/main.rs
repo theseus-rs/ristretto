@@ -1,5 +1,7 @@
 //! Ristretto CLI entry point.
 
+// The launcher resolves the VM thread/frame Send and Sync bounds at its call sites.
+#![recursion_limit = "256"]
 #![forbid(unsafe_code)]
 #![cfg_attr(
     test,
