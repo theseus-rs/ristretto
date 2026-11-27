@@ -8,6 +8,8 @@
 
 A generational collector with stable descriptors and optional compaction of Java fields and arrays. Native hosts run concurrent workers with parallel tracing and relocation. `wasm32-unknown-unknown` and `wasm32-wasip2` run the same incremental state machine cooperatively, without requiring OS threads or shared wasm memory.
 
+The interpreter, native JIT and browser engine share `ristretto_gc::GarbageCollector`. Source users of the retired catalog and pool can use `Gc` with the JVM collector. [Java preview and migration guide](https://github.com/theseus-rs/ristretto/blob/dcdc7dbed3eecd3b90525b83f815bf87947d9d06/GC_PREVIEW.md).
+
 The implementation targets low ordinary collection latency through bounded root, marking, reference-processing, and reclamation work. `max_pause_time_us` is a soft scheduling target, not a real-time guarantee. Synchronous allocation recovery, explicit full collection, host allocation/deallocation, and custom Rust tracing/finalization can take longer.
 
 See [the architecture and invariants](ARCHITECTURE.md) and [validation and measurements](VALIDATION.md).
@@ -293,8 +295,3 @@ include old-pass classification/counters. Update exhaustive matches and explicit
 struct literals when adopting this API. `Trace::may_contain_gc_references()`
 defaults to true, preserving custom tracing hooks. Primitive buffers use it to skip
 reference-free traversal; destructor-bearing elements retain bounded clearing.
-
-The internal canonical leaf experiment now has [automatic allocation retries](CANONICAL_RETRY.md)
-that retain payloads through slot collisions and root-quota pressure. Native/Wasm
-correctness and storage evidence are scoped to that path; public constructors,
-defaults and full performance/endurance qualification remain unchanged.

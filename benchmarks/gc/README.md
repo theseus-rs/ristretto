@@ -1086,61 +1086,9 @@ This is a scoped model check with explicit root-barrier assumptions, not a full
 collector or performance qualification. See the
 [rooted-projection results](IMPLEMENTATION.md#rooted-object-array-projections-permit-unrelated-collection).
 
-## Reproduce the current tagged catalog models
+## Archived catalog experiments
 
-```sh
-python3 benchmarks/gc/tagged_catalog_model_check.py --output target/tagged-catalog-current
-```
-
-Use an unused output directory. The runner requires offline Rust dependencies and
-Loom 0.7.2 source (`--loom-source` can select its installed directory). It applies
-the recorded RMW correction only to its isolated checker copy, then runs 59 catalog
-and six pool models plus 32 fault controls. All mutation anchors are checked before
-building. `--preflight-only` explicitly skips execution and cannot qualify evidence.
-Per-variant source/build roots, source/checker hashes, logs and actual binaries are
-recorded. Strict results reject incomplete suites and failures that never ran the
-intended fixture. These models exclude real pointer protection, concrete payloads,
-facade capacities, callbacks and full-GC performance/progress qualification.
-See [the runner report](../../target/gc-implementation/canonical-checker-REPORT.md).
-
-## Concrete leaf lifecycle screen
-
-The feature-gated `leaf_lifecycle` example takes exactly MODE OPERATIONS BATCH.
-MODE is `legacy`, `canonical-explicit` or `canonical-auto`; operations are 1..10000000,
-batch capacity 1..16384. `leaf_lifecycle_counts` has identical arguments but uses a
-separate counting allocator. It performs one complete warm invocation then three
-recorded heap lifetimes, including setup, teardown and report formatting. Its timing
-values are discarded. Never run counting during performance measurements.
-
-```sh
-cargo build --release -p ristretto_gc --features experimental-canonical-leaves   --example leaf_lifecycle --example leaf_lifecycle_counts
-cargo build --release -p ristretto_gc --features experimental-canonical-leaves   --example leaf_lifecycle --example leaf_lifecycle_counts --target wasm32-wasip2
-```
-
-`leaf_lifecycle.py run` requires `--binary`, `--provenance`, `--sources`, `--output`,
-`--kind timing|counts` and `--cpu`. Build provenance must contain matching
-`binary_sha256` and `source_archive_sha256`. `--wasmtime` is required for WASI and
-must be omitted for native. Use a fresh output directory; the runner copies and hashes
-inputs and fixes argv0. Timing defaults to seven process blocks, randomized modes,
-batches 64/1024/16384; pass `--operations 1000000` to reproduce the recorded screen.
-The measured policy, toolchains and build records must accompany a new binary; hashes
-alone do not establish that an arbitrary executable was built from a claimed source.
-Generate reports/CSV and optional standalone SVG/PNG only after measurements finish:
-
-```sh
-python3 benchmarks/gc/leaf_lifecycle.py report --output target/leaf-screen --plot
-```
-
-Plotting requires the repository's Matplotlib environment. Lifecycle includes actual
-batch reclamation and validation; setup/teardown are separate. The workload has one
-mutator, no background workers and reference-free 32-byte values. It is not an
-operation-latency, pause, contention or JVM comparison. The first recorded screen
-shows substantial canonical regressions despite fewer allocator calls; see
-[the evidence and graphs](../../target/gc-implementation/canonical-leaf-cost-REPORT.md).
-
-The first bounded root-scan optimization is compared against those frozen binaries
-in a separate 252-process paired experiment. Its standalone runner, declared policy,
-both source/binary revisions, raw rows and graphs are retained with the
-[batching evidence](../../target/gc-implementation/canonical-cleanup-REPORT.md).
-Canonical lifecycle time improves 18–21% with unchanged allocation activity, while
-remaining slower than legacy. The original single-slot scan API remains available.
+The tagged catalog models and leaf lifecycle examples ran on the retired
+research collector. Revision `0497123e` contains their source, Cargo features
+and reproduction commands. Current native and Wasm checks exercise the JVM
+collector. [Archived model and lifecycle instructions](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/benchmarks/gc/README.md#reproduce-the-current-tagged-catalog-models) · [Run the unified heap preview](../../GC_PREVIEW.md).
