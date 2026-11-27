@@ -260,20 +260,30 @@ struct Ready(mpsc::SyncSender<()>);
 #[cfg(all(not(miri), panic = "unwind"))]
 #[test]
 fn shutdown_observes_a_failed_clear_from_the_pressure_consumer() -> Result<()> {
-    struct Fails(mpsc::Sender<String>, Arc<AtomicUsize>);
-    // SAFETY: both fields contain host-side test state.
+    struct Fails {
+        started: mpsc::Sender<String>,
+        release: Mutex<mpsc::Receiver<()>>,
+        drops: Arc<AtomicUsize>,
+    }
+    // SAFETY: these fields contain only host-side test state.
     unsafe impl Trace for Fails {
         fn trace(&self, _: &GarbageCollector) {}
         fn clear_step(&mut self, _: usize, _: usize) -> TraceProgress {
-            self.0
+            self.started
                 .send(std::thread::current().name().unwrap_or("").to_owned())
                 .expect("observer live");
+            // Keep the donor charged until the foreground has polled under pressure.
+            self.release
+                .get_mut()
+                .expect("release channel")
+                .recv_timeout(Duration::from_secs(4))
+                .expect("foreground observed the pending allocation");
             panic!("independent clearing failure");
         }
     }
     impl Drop for Fails {
         fn drop(&mut self) {
-            self.1.fetch_add(1, Ordering::Release);
+            self.drops.fetch_add(1, Ordering::Release);
         }
     }
     let (entered, parked) = mpsc::channel();
@@ -288,9 +298,14 @@ fn shutdown_observes_a_failed_clear_from_the_pressure_consumer() -> Result<()> {
         dropped: AtomicUsize::new(0),
     });
     let (signal, clearing) = mpsc::channel();
+    let (release_failure, release) = mpsc::channel();
     let drops = Arc::new(AtomicUsize::new(0));
     let first = Payload(older.clone());
-    let second = Fails(signal, drops.clone());
+    let second = Fails {
+        started: signal,
+        release: Mutex::new(release),
+        drops: drops.clone(),
+    };
     let cap = Gc::allocation_size(&first)? + Gc::allocation_size(&second)?;
     let heap = GarbageCollector::with_config(
         Configuration::builder()
@@ -316,6 +331,7 @@ fn shutdown_observes_a_failed_clear_from_the_pressure_consumer() -> Result<()> {
     );
     let thread = clearing.recv_timeout(Duration::from_secs(3));
     let still_parked = !older.released.load(Ordering::Acquire);
+    release_failure.send(()).expect("release failing donor");
     drop(allocation);
     drop(resume);
     let stopped = heap.stop();
