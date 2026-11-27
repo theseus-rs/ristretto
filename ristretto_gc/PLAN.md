@@ -9,15 +9,24 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `e0f2b29c`, a Java reference publisher parked on either side of the
+queue link lets a peer allocate, finish a new full collection and deliver two
+distinct owners exactly once. With the previous collector a new ticket
+exhausted 2,048 polls in every configuration. The 16 configurations passed in
+100 fresh processes. The 36 complete-collection conditions retained minimum
+individual 95% lower speedup bounds of 10.64× native and 10.31× WASI against
+`f1daebeb`. Preparing the queue root and disposing of stale birth proposals
+remain open progress boundaries.
+[Java reference publication, controls and graphs](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/rooted-reference-queue/README.md).
+
 At `64f6f736` the default heap performed 2,048 idle steps without acquiring
 the publication writer. An ordinary conditional owner bound its exact referent
 and independent young garbage was destroyed while the mature shard stayed
 parked. A peer finished a full collection while the previous birth epoch was
 being destroyed. All 400 forced candidate runs passed. The 36 complete-cycle
 conditions retained minimum individual 95% lower speedup bounds of 10.72×
-native and 10.33× WASI against `f1daebeb`. Pending Java reference delivery
-under the default writer and the last releaser's synchronous queue teardown
-remain open progress boundaries.
+native and 10.33× WASI against `f1daebeb`. This checkpoint identified Java reference queue linking and the final
+owner's synchronous queue teardown as remaining progress boundaries.
 [Progress controls, collection graph and browser measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/idle-publication-and-epoch-release/README.md).
 
 At `29634965` native callback claimants can reclaim every published sibling
