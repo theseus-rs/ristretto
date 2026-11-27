@@ -9,6 +9,19 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+Every release preview now passes two VM-owned nodes to Java, verifies the field
+mutation against their original weak identities, then requires a full collection
+to clear both witnesses and refund their entire managed charge. The compiled
+lane also checks that the method which rewired these objects ran as native code.
+[Shared-heap release check](../GC_PREVIEW.md).
+
+A native JIT candidate reused identical frame-root publications within a single
+basic block. With the Java benchmark method explicitly prepared on both arms,
+the roots throughput ratio was 1.045× (individual 95% interval 1.004–1.165×).
+The byte-array allocation interval was 0.772–1.272× and missed the 0.95 lower
+limit. The candidate is archived. The ordinary JVM still interprets the benchmark
+method. [Dispatch counts, graph and all 54 measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/compiled-frame-publications/README.md).
+
 At `c4f527d1` a parked weak upgrade permits a peer to finish a full collection
 under either publication policy. On resume, the upgrade either returns the exact
 live target or observes clearing or reclamation. Across 36 complete-collection
