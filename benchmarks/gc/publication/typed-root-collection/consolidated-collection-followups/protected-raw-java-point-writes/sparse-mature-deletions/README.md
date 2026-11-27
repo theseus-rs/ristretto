@@ -34,6 +34,8 @@ A five-page fixture, with its epoch pinned, released one populated page per fore
 For all 2,048-target repetitions the second and later candidate visits made zero host allocation requests. At smaller sizes some second visits allocated. All steady sparse visits used zero allocations. The ordinary inbox held one proposal after each candidate visit. The earlier per-target sparse fallback requested 361,936 bytes in 7,438 allocations on the default index. Under the default index and legacy publication policy, median steady sparse visit time in this debug fixture increased from 5.64 ms to 28.09 ms. The optimized JVM capacity and latency runs below measure the cost at the application boundary.
 [3,200 allocator samples](allocations/visits.csv) · [Group medians](allocations/summary.csv) · [Fixture](allocations/fixture.rs.gz) · [Binary identities](allocations/identity.json)
 
+Two follow-up lookup optimizations missed the predeclared timing screen. Bounding sparse-page searches reduced the steady 2,048-target visit time by 16–18% across the two publication policies. [Interleaved comparisons and patches](lookup-cost/README.md).
+
 ![First-visit allocation costs](allocations/first-visit.png)
 
 ## Complete collection and whole-JVM screens

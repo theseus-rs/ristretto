@@ -1,0 +1,10 @@
+{
+  "probe": {
+    "status": "SUCCESS",
+    "response": "No; because every installer's `count.fetch_add(1, AcqRel)` is an atomic read-modify-write on `count`, the final write of `64` lies in the C++20/Rust release sequence headed by each of the 64 installers, so `count.load(Acquire) == 64` synchronizes-with all 64 `fetch_add`s and establishes happens-before from every `max_offset.fetch_max(offset, Relaxed)` to `max_offset.load(Relaxed)`. By write-read coherence on `max_offset` and RMW atomicity making `fetch_max` monotonically non-decreasing along `max_offset`'s modification order, `max_offset.load(Relaxed)` must observe a value at or after all 64 `fetch_max` writes and therefore at least every installed tag's displacement.\n"
+  },
+  "page-probe": {
+    "status": "SUCCESS",
+    "response": "No: because only each empty slot's first successful installer (and never a duplicate) updates the maximum probe distance before its `AcqRel` increment of `assigned`, a publisher parked between its tag CAS and `max` update keeps `assigned <= 58` (preventing consumers from taking the `assigned == 59` early-stop path), and once `assigned` reaches 59 an `Acquire` load synchronizes with all 59 `AcqRel` increments so every probe distance is visible before bounding lookups to `max + 1` probes. A deterministic collision test that fills all 59 slots with a known probe chain (including wrap-around past slot 58) and queries the exact ID sitting at distance `max` catches a probe-limit off-by-one (`max` instead of `max + 1`), while a parked-publisher test that fills 58 non-colliding slots (`max == 0`), parks the 59th colliding installer between its tag CAS and `max` update, and queries that 59th ID catches an `assigned`-threshold off-by-one (`58` instead of `59`).\n"
+  }
+}
