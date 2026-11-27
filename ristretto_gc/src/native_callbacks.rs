@@ -13,8 +13,9 @@ use callback_pages::Pages;
 #[path = "pressure_turn.rs"]
 mod pressure_turn;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub(crate) struct Turn {
+    completed: AtomicBool,
     pool: std::sync::Weak<super::WorkerSignals>,
     dispatch: pressure_turn::Turn,
     inbox: std::sync::Weak<Inbox<Job>>,
@@ -22,14 +23,23 @@ pub(crate) struct Turn {
 
 impl Turn {
     pub(crate) fn pending(&self) -> bool {
-        self.pool
+        if self.completed.load(Ordering::Acquire) {
+            return false;
+        }
+        let pending = self
+            .pool
             .upgrade()
             .is_some_and(|pool| !pool.closed.load(Ordering::Acquire))
             && self.dispatch.pending()
             && self
                 .inbox
                 .upgrade()
-                .is_some_and(|inbox| inbox.jobs.has_available())
+                .is_some_and(|inbox| inbox.jobs.has_available());
+        if !pending {
+            // A later publication cannot revive an already observed last claim.
+            self.completed.store(true, Ordering::Release);
+        }
+        pending
     }
 }
 
@@ -183,7 +193,7 @@ struct Job {
 }
 
 impl Callbacks {
-    pub(super) fn terminal_turn(&self, pool: &Arc<super::WorkerSignals>) -> Option<Turn> {
+    pub(super) fn terminal_turn(&self, pool: &Arc<super::WorkerSignals>) -> Option<Arc<Turn>> {
         let runner = self.0.get()?;
         if !runner.inbox.has_work() {
             return None;
@@ -192,11 +202,12 @@ impl Callbacks {
         let _ = runner.pressure.try_send(());
         // A peer may take the last job after enrollment, before the pressure
         // assistant acknowledges the turn. Private jobs keep their charge.
-        Some(Turn {
+        Some(Arc::new(Turn {
+            completed: AtomicBool::new(false),
             pool: Arc::downgrade(pool),
             dispatch: turn,
             inbox: Arc::downgrade(&runner.inbox),
-        })
+        }))
     }
 
     pub(super) fn wake_pressure(&self) {
@@ -613,6 +624,10 @@ mod tests {
             .recv_timeout(Duration::from_secs(3))
             .expect("independent refund woke fitting sleeper");
         assert_eq!(unfitting.try_recv(), Err(mpsc::TryRecvError::Empty));
+        let stolen = heap.reserve_exact_bytes(16)?;
+        let replacement = quiet_executor(fitting.as_mut());
+        drop(stolen);
+        receive_notice(&replacement);
         let paid = finish_poll(fitting.as_mut(), &mut initial, deadline)?;
         assert!(runner.inbox.jobs.has_available());
         assert_eq!(
@@ -625,6 +640,56 @@ mod tests {
         allow.send(()).expect("resume assistant");
         fixture.resume.send(()).expect("resume primary");
         heap.stop()?;
+        assert_eq!(heap.managed_bytes(), 0);
+        Ok(())
+    }
+
+    #[test]
+    #[expect(
+        clippy::panic_in_result_fn,
+        clippy::unwrap_in_result,
+        reason = "replace a claimed callback before executor repoll"
+    )]
+    fn a_later_publication_cannot_reopen_an_observed_last_claim() -> Result<()> {
+        let extra_drops = Arc::new(AtomicUsize::new(0));
+        let extra = Donor(extra_drops.clone());
+        let charge = Gc::allocation_size(&extra)?;
+        let fixture = PressureHeap::new(false, charge)?;
+        let heap = &fixture.heap;
+        let retained = Gc::try_new(heap, extra)?;
+        let pool = heap.worker_signals.load_full().expect("pool");
+        let runner = pool.callbacks.0.get().expect("runner");
+        let (seen, allow) = pause_before_dispatch(runner);
+        let deadline = Instant::now() + Duration::from_secs(4);
+        // Each donor alone is too small to bind this request.
+        let mut request = Box::pin(heap.reserve_bytes_async(charge + 1));
+        let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+        assert!(
+            poll_until_dispatch(request.as_mut(), &mut cx, &runner.service, 0, deadline).is_none()
+        );
+        let notifications = quiet_executor(request.as_mut());
+        receive_notice(&seen);
+        let first = runner.inbox.jobs.claim().expect("last job");
+        receive_notice(&notifications);
+        drop(retained);
+        finish_poll(std::pin::pin!(heap.collect_full_async()), &mut cx, deadline)?;
+        while !runner.inbox.jobs.has_available() {
+            assert!(Instant::now() < deadline);
+            thread::yield_now();
+        }
+        let result = poll_while_service_is_parked(request.as_mut(), &mut cx);
+        let still_charged = heap.managed_bytes();
+        drop(request);
+        assert!(!first.run());
+        allow.send(()).expect("resume assistant");
+        fixture.resume.send(()).expect("resume primary");
+        heap.stop()?;
+        assert!(
+            matches!(result, Some(Err(crate::Error::OutOfMemory))),
+            "later publication revived completed turn"
+        );
+        assert_eq!(still_charged, fixture.cap);
+        assert_eq!(extra_drops.load(Ordering::Acquire), 1);
         assert_eq!(heap.managed_bytes(), 0);
         Ok(())
     }

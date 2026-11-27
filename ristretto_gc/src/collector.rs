@@ -2846,7 +2846,7 @@ impl GarbageCollector {
     }
 
     #[cfg(not(target_family = "wasm"))]
-    fn terminal_callback_turn(&self) -> Option<native_callbacks::Turn> {
+    fn terminal_callback_turn(&self) -> Option<Arc<CallbackTurn>> {
         if self.callback_jobs.load(Ordering::Acquire) == 0 {
             return None;
         }
@@ -2856,22 +2856,17 @@ impl GarbageCollector {
     }
 
     #[cfg(not(target_family = "wasm"))]
-    async fn wait_for_dispatch(
-        &self,
-        dispatch: &CallbackTurn,
-        request: &crate::retirement_grants::Request,
+    async fn wait_for_dispatch<'a>(
+        &'a self,
+        dispatch: Arc<CallbackTurn>,
+        demand: &crate::retirement_grants::Demand<'a>,
         size: usize,
-    ) -> Result<()> {
+    ) -> Result<Option<AllocationReservation<'a>>> {
         self.ensure_refund_notifier(false)?;
         if let Some(notifier) = self.refund_notifier.load_full() {
-            return notifier.wait_for_turn(self, dispatch, request, size).await;
+            return notifier.wait_for_turn(self, dispatch, demand, size).await;
         }
-        if dispatch.pending() {
-            return Err(crate::Error::SyncError(
-                "no callback dispatch worker".into(),
-            ));
-        }
-        Ok(())
+        Ok(None)
     }
 
     pub(crate) fn reserve_bytes_blocking(&self, size: usize) -> Result<AllocationReservation<'_>> {
@@ -2923,12 +2918,13 @@ impl GarbageCollector {
                     // queue cannot extend the wait for the user callback to return.
                     let turn =
                         terminal_service.get_or_insert_with(|| self.terminal_callback_turn());
-                    if let Some(dispatch) = turn.as_ref().filter(|turn| turn.pending()) {
-                        self.wait_for_dispatch(dispatch, &demand.request, size)
-                            .await?;
-                        continue;
-                    }
-                    if turn.take().is_some() {
+                    if let Some(dispatch) = turn.take() {
+                        if dispatch.pending()
+                            && let Some(reservation) =
+                                self.wait_for_dispatch(dispatch, &demand, size).await?
+                        {
+                            return Ok(reservation);
+                        }
                         empty_cycles = 1;
                         continue;
                     }

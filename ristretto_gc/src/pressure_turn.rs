@@ -11,7 +11,7 @@ pub(super) struct Service {
     stopped: AtomicBool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub(in crate::collector) struct Turn {
     service: Arc<Service>,
     ticket: usize,

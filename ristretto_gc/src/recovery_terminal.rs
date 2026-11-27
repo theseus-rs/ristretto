@@ -1,14 +1,17 @@
 //! Native allocations that have already exhausted their collection attempts may
 //! sleep for a single callback dispatch. Only the allocating task acquires funds.
 use super::{GarbageCollector, Ordering, RefundNotifier, Result, WaiterId, index::Index};
-use crate::{collector::CallbackTurn, retirement_grants::Request};
+use crate::{
+    collector::{AllocationReservation, CallbackTurn},
+    retirement_grants::{Demand, Request},
+};
 use arc_swap::{ArcSwap, ArcSwapOption};
 use std::sync::Arc;
 use std::task::{Poll, Waker};
 
 #[derive(Debug)]
 struct Wait {
-    turn: CallbackTurn,
+    turn: Arc<CallbackTurn>,
     request: Request,
     bytes: usize,
     waker: ArcSwapOption<Waker>,
@@ -16,17 +19,22 @@ struct Wait {
 
 impl Wait {
     fn ready(&self, gc: &GarbageCollector) -> bool {
-        retry(
-            &self.turn,
-            &self.request,
-            self.bytes,
-            gc.allocation_headroom(),
-        ) || gc.recovery.worker_failed()
+        !self.turn.pending()
+            || self.request.settled_donor()
+            || self.bytes <= gc.allocation_headroom()
+            || gc.recovery.worker_failed()
     }
-}
 
-fn retry(turn: &CallbackTurn, request: &Request, bytes: usize, available: usize) -> bool {
-    bytes <= available || request.settled_donor() || !turn.pending()
+    fn refresh(&self, incoming: &Waker) -> bool {
+        let current = self.waker.load();
+        current.as_ref().is_some_and(|old| {
+            old.will_wake(incoming)
+                || self
+                    .waker
+                    .compare_and_swap(&*current, Some(Arc::new(incoming.clone())))
+                    .is_some()
+        })
+    }
 }
 
 #[derive(Debug, Default)]
@@ -98,66 +106,63 @@ impl Drop for Registration<'_> {
 }
 
 impl RefundNotifier {
-    pub(crate) async fn wait_for_turn(
+    pub(crate) async fn wait_for_turn<'a>(
         &self,
-        gc: &GarbageCollector,
-        turn: &CallbackTurn,
-        request: &Request,
+        gc: &'a GarbageCollector,
+        turn: Arc<CallbackTurn>,
+        demand: &Demand<'a>,
         bytes: usize,
-    ) -> Result<()> {
+    ) -> Result<Option<AllocationReservation<'a>>> {
         let mut registration: Option<Registration<'_>> = None;
         let mut interest = None;
+        let reserve = || demand.take().or_else(|| gc.reserve_bytes(bytes).ok());
         std::future::poll_fn(|cx| {
-            // A task can resume in a different execution context. While asleep
-            // it needs fitting credit visible to the independent notifier.
+            // Context-local credit must remain visible if the executor migrates.
             gc.refresh_allocation_interest(&mut interest)?;
-            if crate::cell::has_guards()
-                || self.event.closed.load(Ordering::Acquire)
-                || retry(turn, request, bytes, gc.allocation_headroom())
-            {
-                return Poll::Ready(Ok(()));
+            if let Some(reservation) = reserve() {
+                return Poll::Ready(Ok(Some(reservation)));
+            }
+            if crate::cell::has_guards() {
+                return Poll::Ready(Err(crate::Error::OutOfMemory));
+            }
+            if self.event.closed.load(Ordering::Acquire) || !turn.pending() {
+                return Poll::Ready(Ok(None));
             }
             if gc.recovery.worker_failed() {
                 return Poll::Ready(Err(crate::Error::SyncError(
                     "collector worker panicked".into(),
                 )));
             }
-            if let Some(registered) = &registration {
-                let slot = &registered.wait.waker;
-                let current = slot.load();
-                let Some(old) = current.as_ref() else {
-                    return Poll::Ready(Ok(()));
-                };
-                if !old.will_wake(cx.waker())
-                    && slot
-                        .compare_and_swap(&*current, Some(Arc::new(cx.waker().clone())))
-                        .is_none()
-                {
-                    return Poll::Ready(Ok(()));
-                }
-            } else {
-                let id = gc.recovery.new_id()?;
-                let wait = Arc::new(Wait {
-                    turn: turn.clone(),
-                    request: request.clone(),
-                    bytes,
-                    waker: ArcSwapOption::from(Some(Arc::new(cx.waker().clone()))),
-                });
-                let list = &self.event.turns;
-                list.0.rcu(|current| {
-                    let mut next = (**current).clone();
-                    next.insert(id, wait.clone());
-                    next
-                });
-                registration = Some(Registration { list, id, wait });
-                self.signal();
-                // Registration precedes both the budget handshake and the
-                // closed check. Late arrivals to a retired notifier cannot sleep.
-                if retry(turn, request, bytes, gc.headroom_after_registration())
-                    || self.event.closed.load(Ordering::Acquire)
-                {
-                    return Poll::Ready(Ok(()));
-                }
+            if registration
+                .as_ref()
+                .is_some_and(|arm| arm.wait.refresh(cx.waker()))
+            {
+                return Poll::Pending;
+            }
+            // A stolen offer can exhaust the old callback. Enroll a fresh ID so
+            // delayed cleanup cannot remove the replacement, then try funds once.
+            let id = gc.recovery.new_id()?;
+            let wait = Arc::new(Wait {
+                turn: turn.clone(),
+                request: demand.request.clone(),
+                bytes,
+                waker: ArcSwapOption::from(Some(Arc::new(cx.waker().clone()))),
+            });
+            let list = &self.event.turns;
+            list.0.rcu(|current| {
+                let mut next = (**current).clone();
+                next.insert(id, wait.clone());
+                next
+            });
+            registration = Some(Registration { list, id, wait });
+            self.signal();
+            if (bytes <= gc.headroom_after_registration() || demand.request.settled_donor())
+                && let Some(reservation) = reserve()
+            {
+                return Poll::Ready(Ok(Some(reservation)));
+            }
+            if self.event.closed.load(Ordering::Acquire) || !turn.pending() {
+                return Poll::Ready(Ok(None));
             }
             Poll::Pending
         })
