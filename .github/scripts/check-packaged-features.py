@@ -45,7 +45,8 @@ def main():
     subprocess.run(stage, check=True)
     archives = Path(metadata["target_directory"]) / "package"
     with tempfile.TemporaryDirectory() as temporary:
-        root = Path(temporary)
+        # Cargo displays the canonical source path, including on hosts with a symlinked TMPDIR.
+        root = Path(temporary).resolve()
         manifest = ['[package]', 'name = "packaged-feature-check"', 'version = "0.0.0"',
                     'edition = "2024"', 'publish = false', '[workspace]', '[dependencies]']
         for name, features in sorted(selected.items()):
@@ -77,7 +78,9 @@ def main():
         if "ristretto_gc" in selected:
             version = packages["ristretto_gc"]["version"]
             unpacked = root / f"ristretto_gc-{version}"
-            verify_tree(root / "Cargo.toml", f"ristretto_gc v{version} ({unpacked})", target=args.target)
+            # Use the same Cargo config and toolchain discovery as the consumer build below.
+            verify_tree(root / "Cargo.toml", f"ristretto_gc v{version} ({unpacked})",
+                        target=args.target, cargo_cwd=Path.cwd())
         # Cargo archives normalize file timestamps. Two revisions can have the same
         # version, filenames and mtimes; only reuse artifacts for identical archives.
         suffix = "packaged-features" if args.target is None else "packaged-features-" + args.target

@@ -48,3 +48,9 @@ class CollectorIdentityTests(unittest.TestCase):
             verify_tree(manifest, expected, target="x86_64-unknown-linux-gnu")
             with self.assertRaisesRegex(ValueError, "ristretto_gc v0.9.0"):
                 verify_tree(manifest, expected, target="wasm32-wasip2")
+            # The external consumer build also inherits the caller's Cargo config.
+            config = root / "driver/.cargo"
+            config.mkdir(parents=True)
+            (config / "config.toml").write_text('[build]\ntarget = "wasm32-wasip2"\n')
+            with self.assertRaisesRegex(ValueError, "ristretto_gc v0.9.0"):
+                verify_tree(manifest, expected, cargo_cwd=config.parent)
