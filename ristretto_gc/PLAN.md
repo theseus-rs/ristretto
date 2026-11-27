@@ -16,11 +16,14 @@ condition passed all 24 native conditions, with a minimum lower bound of 10.847Ã
 [Native replication](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/stock-publication/exact-charge-cycles/isolated-native/results.csv).
 [Per-condition measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/stock-publication/exact-charge-cycles/complete-cycles.csv).
 
-Both stock publication policies returned Java heap-space errors in every
+Before the exact-charge fix, both stock publication policies returned Java heap-space errors in every
 two-worker native 64 MiB reference-array fork, and in all twelve 512 MiB
 ordinary native launcher forks. Two debugger stops found 438 and 4,014
 retired arrays ready for cleanup. One physical refund would have covered the
-131,400-byte request in either case. Counted publication remains opt-in.
+131,400-byte request in either case. With exact preflight alone, ten 64 MiB native stock JIT forks and three
+ordinary 512 MiB launcher checks produced valid results. Eighteen of 25,000
+scheduled arrivals were unfinished. A forced host-array reclamation schedule
+still reproduces premature exhaustion. Counted publication remains opt-in.
 [Stock controls, heap snapshots and capped recovery](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/stock-publication/README.md).
 
 The candidate at `c051ed39` allowed a funded allocation and two fresh full

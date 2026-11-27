@@ -73,6 +73,15 @@ is one byte smaller. This corrects the size estimate. The measured retirement
 backlog exhausted much more than eight bytes of headroom.
 [Native and WASI tests, Clippy and package verification](exact-charge.json)
 
+In a subsequent native comparison the exact-charge code alone produced valid
+Java results in all ten 64 MiB stock two-worker JIT processes. The rate-500
+forks completed 24,982 of 25,000 scheduled arrivals. The ordinary 512 MiB
+release launcher completed all three fresh four-second runs. These runs
+establish that the reference-array workload can complete with the exact-charge
+fix. A forced storage-lease schedule still reproduces an advisory OOM after
+an array becomes available for clearing.
+[Native launcher and driver evidence](exact-charge-native-jvm.json.gz)
+
 ## Snapshot-start progress
 
 Completing a short counted root publication during snapshot preparation can
