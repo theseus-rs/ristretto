@@ -149,15 +149,12 @@ impl Object {
     }
 
     fn field_allocation_size(length: usize) -> ristretto_gc::Result<usize> {
-        length
+        let bytes = length
             .checked_mul(size_of::<Value>())
-            .and_then(|bytes| {
-                bytes.checked_add(
-                    size_of::<ristretto_gc::sync::RwLock<Reference>>()
-                        + align_of::<ristretto_gc::sync::RwLock<Reference>>(),
-                )
-            })
-            .ok_or(ristretto_gc::Error::OutOfMemory)
+            .ok_or(ristretto_gc::Error::OutOfMemory)?;
+        ristretto_gc::Gc::<ristretto_gc::sync::RwLock<Reference>>::allocation_size_with_external(
+            bytes,
+        )
     }
 
     fn new_with_collector(class: Arc<Class>, collector: Option<&GarbageCollector>) -> Result<Self> {
@@ -1003,6 +1000,26 @@ mod tests {
 
     async fn string_class() -> Result<Arc<Class>> {
         load_class("java.lang.String").await
+    }
+
+    #[tokio::test]
+    async fn field_preflight_matches_the_published_charge() -> Result<()> {
+        let class = load_class("java.lang.Integer").await?;
+        let reference = Reference::Object(Object::new(class.clone())?);
+        let charge =
+            ristretto_gc::Gc::allocation_size(&ristretto_gc::sync::RwLock::new(reference))?;
+        let gc = GarbageCollector::with_config(
+            ristretto_gc::Configuration::builder()
+                .max_heap_bytes(charge)
+                .build(),
+        );
+        let object = Object::new_in_async(&gc, class).await?;
+        let value = Value::try_new_object_async(&gc, Reference::Object(object)).await?;
+        assert_eq!(gc.managed_bytes(), charge);
+        drop(value);
+        gc.collect_full_async().await?;
+        assert_eq!(gc.managed_bytes(), 0);
+        Ok(())
     }
 
     #[tokio::test]

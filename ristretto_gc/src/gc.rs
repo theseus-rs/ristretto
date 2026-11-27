@@ -173,9 +173,17 @@ impl<T> Gc<T> {
     where
         T: Trace,
     {
+        Self::allocation_size_with_external(data.external_size())
+    }
+
+    /// Managed charge for a value of this type and its exclusively owned backing.
+    /// Use this before constructing the value when its backing size is known.
+    /// # Errors
+    /// Returns `OutOfMemory` when the combined size overflows.
+    pub fn allocation_size_with_external(bytes: usize) -> Result<usize> {
         Allocation::<T>::layout()
             .size()
-            .checked_add(data.external_size())
+            .checked_add(bytes)
             .ok_or(Error::OutOfMemory)
     }
 

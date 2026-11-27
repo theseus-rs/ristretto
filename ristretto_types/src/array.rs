@@ -127,14 +127,12 @@ pub fn check_array_allocation(
 fn array_allocation_size(length: usize, element_size: usize) -> Result<usize> {
     let bytes = length
         .checked_mul(element_size)
-        .and_then(|bytes| {
-            bytes.checked_add(
-                size_of::<ristretto_gc::sync::RwLock<Reference>>()
-                    + align_of::<ristretto_gc::sync::RwLock<Reference>>(),
-            )
-        })
-        .ok_or_else(|| JavaError::OutOfMemoryError("Java heap space".into()))?;
-    Ok(bytes)
+        .ok_or(ristretto_gc::Error::OutOfMemory)?;
+    Ok(
+        ristretto_gc::Gc::<ristretto_gc::sync::RwLock<Reference>>::allocation_size_with_external(
+            bytes,
+        )?,
+    )
 }
 
 /// Allocates primitive storage after checking the managed heap budget.
@@ -181,6 +179,49 @@ pub async fn allocate_primitive_array_in_async(
 mod tests {
     use super::*;
     use crate::Error;
+
+    #[tokio::test]
+    async fn reference_array_preflight_matches_the_published_charge() -> Result<()> {
+        let mut constant_pool = ristretto_classfile::ConstantPool::default();
+        let this_class = constant_pool.add_class("[Ljava/lang/Object;")?;
+        let class = Class::from(
+            None,
+            ristretto_classfile::ClassFile {
+                constant_pool,
+                this_class,
+                ..Default::default()
+            },
+        )?;
+        let allocate = async |gc: &Arc<ristretto_gc::GarbageCollector>| -> Result<Value> {
+            let array = allocate_null_reference_array_in_async(gc, class.clone(), 4097).await?;
+            Ok(Value::try_new_object_async(gc, array).await?)
+        };
+        let control = ristretto_gc::GarbageCollector::new();
+        let sample = allocate(&control).await?;
+        let charge = control.managed_bytes();
+        drop(sample);
+        for cap in [charge, charge - 1] {
+            let gc = ristretto_gc::GarbageCollector::with_config(
+                ristretto_gc::Configuration::builder()
+                    .max_heap_bytes(cap)
+                    .build(),
+            );
+            let result = allocate(&gc).await;
+            if cap == charge {
+                let value = result?;
+                assert_eq!(gc.managed_bytes(), charge);
+                drop(value);
+                gc.collect_full_async().await?;
+            } else {
+                assert!(matches!(
+                    result,
+                    Err(Error::JavaError(JavaError::OutOfMemoryError(_)))
+                ));
+            }
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+        Ok(())
+    }
 
     #[tokio::test]
     async fn async_arrays_recover_without_blocking_other_executor_tasks() -> Result<()> {
