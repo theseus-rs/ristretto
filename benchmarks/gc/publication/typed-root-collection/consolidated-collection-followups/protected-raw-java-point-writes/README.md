@@ -144,3 +144,5 @@ above improved against the original baseline. Longer WASIp2 runs remain open.
 [Native forks](native-baseline/forks.csv) · [Executable and class hashes](native-baseline/provenance.json) · [Four-build WASI comparison](../prepared-writes-array-retirement/README.md#four-build-comparison-on-one-cpu-pair)
 
 ![Final native JVM compared with the original baseline, G1 and ZGC](native-baseline/comparison.png)
+
+[Resolve numeric edges during precise full marking](precise-full-numeric/README.md).

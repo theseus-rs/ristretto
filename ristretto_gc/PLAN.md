@@ -9,6 +9,9 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+The precise-full numeric deletion change passed the release screen. In the 780 forced configurations, both the funded allocation and fresh full ticket completed during precise full marking on heaps with old-only passes enabled. All 36 full-collection conditions cleared 10× versus `f1daebeb`, with minimum individual lower 95% bounds of 10.304× native and 11.004× WASIp2. A true old-only pass with a promoted white target still stalled both peers in 96 forced cases. The short native capacity ratio was 1.032, the two-minute scheduled p99.9 ratio was 0.887, and workerless WASIp2 capacity was 1.011 times the measured parent.
+[Forced schedules, graphs and JVM gates](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/precise-full-numeric/README.md).
+
 The integrated point-write and protected raw barrier revision `f97f8a99`
 passed 640 forced configurations. All 36 complete-collection conditions
 again cleared 10× versus `f1daebeb`, with minimum individual lower 95%
