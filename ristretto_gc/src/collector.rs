@@ -1952,23 +1952,17 @@ impl GarbageCollector {
     /// until this returns. Root deletion covers a young scan that already passed
     /// this owner. Later scans see membership before the last root can disappear.
     pub(crate) fn remember_before_unroot(&self, address: usize) -> bool {
-        if self.configuration.barrier_buffer_size != 0 {
-            return false;
-        }
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         barrier_progress_tests::pause_before_remembering();
-        // If the shard is busy, the caller keeps the demoted registrations
-        // through the ordinary barrier, which can publish to the overflow index.
-        self.remembered
-            .try_lock(address)
-            .and_then(|remembered| self.enroll_unbuffered_owner(address, &remembered))
+        let remembered = self.remembered.try_lock(address);
+        self.enroll_remembered_owner(address, remembered.as_ref())
             .is_some()
     }
 
-    fn enroll_unbuffered_owner(
+    fn enroll_remembered_owner(
         &self,
         address: usize,
-        remembered: &crate::index::RememberedGuard<'_>,
+        remembered: Option<&crate::index::RememberedGuard<'_>>,
     ) -> Option<MetadataRef> {
         let _measurement = self
             .diagnostics
@@ -1977,10 +1971,21 @@ impl GarbageCollector {
         // A pinned owner can outlive registry unlink. Enrollment and removal
         // use the never-recycled birth, including if unlink wins this race.
         let metadata = self.objects.lookup(address)?;
-        metadata.record_mutation();
-        remembered.insert(address, metadata.id);
+        let version = metadata.record_mutation();
+        let id = metadata.id.to_i64().cast_unsigned();
+        if let Some(remembered) = remembered {
+            remembered.insert(address, metadata.id);
+        } else {
+            // A stale primary prune can remove its entry after our version
+            // increment. The independently versioned overflow retains the write.
+            self.remembered.dirty.publish(id, address, version);
+        }
         if self.objects.lookup_identity(address, metadata.id).is_none() {
-            self.remembered.remove(address, metadata.id);
+            if remembered.is_some() {
+                self.remembered.remove(address, metadata.id);
+            } else {
+                self.remembered.dirty.retire(id);
+            }
             return None;
         }
         Some(metadata)
@@ -1990,7 +1995,7 @@ impl GarbageCollector {
         let _publication = self.allocation_guard();
         if self.configuration.barrier_buffer_size == 0 {
             if let Some(remembered) = self.remembered.try_lock(address) {
-                if let Some(metadata) = self.enroll_unbuffered_owner(address, &remembered) {
+                if let Some(metadata) = self.enroll_remembered_owner(address, Some(&remembered)) {
                     self.rescan_dirty_owner(&metadata);
                 }
             } else if let Some(metadata) = self.objects.lookup(address) {

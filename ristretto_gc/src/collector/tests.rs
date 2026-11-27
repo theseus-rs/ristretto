@@ -848,65 +848,79 @@ fn root_published_after_slot_scan_is_shaded_in_each_generation() -> Result<()> {
 
 #[test]
 fn context_records_cover_both_snapshots_and_late_dirty_owners() -> Result<()> {
-    let gc = GarbageCollector::with_config(
-        Configuration::builder()
-            .root_storage(crate::RootStorage::Contexts)
-            .barrier_buffer_size(64)
-            .diagnostics(true)
-            .incremental_step_size(1)
-            .max_pause_time_us(0)
-            .allocation_threshold(usize::MAX)
-            .full_collection_interval(usize::MAX)
-            .build(),
-    );
-    let context = gc.register_context();
-    let parent = context
-        .with(|| Gc::try_new(&gc, crate::sync::RwLock::new(Vec::<Gc<u64>>::new())))?
-        .into_rooted();
-    gc.collect_full()?;
-    gc.collect_full()?;
-    assert!(!gc.is_young_allocation(parent.as_ptr() as usize));
-    gc.collect_young();
-    gc.collect();
-    for _ in 0..1000 {
-        gc.step();
-        if lock(&gc.domains[0].cycle).phase == Phase::Mark {
-            break;
+    for prepared in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .root_storage(crate::RootStorage::Contexts)
+                .barrier_buffer_size(64)
+                .diagnostics(true)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .full_collection_interval(usize::MAX)
+                .build(),
+        );
+        let context = gc.register_context();
+        let parent = context
+            .with(|| Gc::try_new(&gc, crate::sync::RwLock::new(Vec::<Gc<u64>>::new())))?
+            .into_rooted();
+        gc.collect_full()?;
+        gc.collect_full()?;
+        assert!(!gc.is_young_allocation(parent.as_ptr() as usize));
+        gc.collect_young();
+        gc.collect();
+        for _ in 0..1000 {
+            gc.step();
+            if lock(&gc.domains[0].cycle).phase == Phase::Mark {
+                break;
+            }
         }
-    }
-    assert_eq!(lock(&gc.domains[0].cycle).phase, Phase::Mark);
-    assert!(gc.domains.iter().all(Domain::active));
-    let child = context.with(|| Gc::try_new(&gc, 42_u64))?.into_rooted();
-    let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
-    let address = parent.as_ptr() as usize;
-    let version = gc
-        .objects
-        .lock(address)
-        .get(&address)
-        .expect("parent")
-        .mutation
-        .load(Ordering::Acquire);
-    context.with(|| parent.write().push(child));
-    assert!(gc.contexts.pending.load(Ordering::Acquire) > 0);
-    assert!(
-        gc.objects
+        assert_eq!(lock(&gc.domains[0].cycle).phase, Phase::Mark);
+        assert!(gc.domains.iter().all(Domain::active));
+        let child = context.with(|| Gc::try_new(&gc, 42_u64))?.into_rooted();
+        let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+        let address = parent.as_ptr() as usize;
+        let version = gc
+            .objects
             .lock(address)
             .get(&address)
             .expect("parent")
             .mutation
-            .load(Ordering::Acquire)
-            > version
-    );
-    while !gc.step() {}
-    assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
-    gc.collect_young();
-    while !gc.step() {}
-    assert_eq!(weak.upgrade().as_deref(), Some(&42));
-    context.with(|| parent.write().clear());
-    drop(parent);
-    gc.stop()?;
-    assert!(weak.upgrade().is_none());
-    assert_eq!(gc.statistics()?.live_objects, 0);
+            .load(Ordering::Acquire);
+        context.with(|| {
+            let mut writer = parent.write();
+            if prepared {
+                writer.push(child);
+            } else {
+                // SAFETY: this appends an owning root without moving existing traced edges.
+                unsafe { writer.unrooted_mut() }.push(child);
+            }
+        });
+        if prepared {
+            assert!(gc.remembered.lock(address).contains(address));
+        } else {
+            assert!(gc.contexts.pending.load(Ordering::Acquire) > 0);
+        }
+        assert!(
+            gc.objects
+                .lock(address)
+                .get(&address)
+                .expect("parent")
+                .mutation
+                .load(Ordering::Acquire)
+                > version
+        );
+        while !gc.step() {}
+        assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+        gc.collect_young();
+        while !gc.step() {}
+        assert_eq!(weak.upgrade().as_deref(), Some(&42));
+        context.with(|| parent.write().clear());
+        drop(parent);
+        gc.stop()?;
+        assert!(weak.upgrade().is_none());
+        assert_eq!(gc.statistics()?.live_objects, 0);
+    }
     Ok(())
 }
 
@@ -1166,19 +1180,65 @@ fn root_and_weak_identifiers_skip_live_entries_after_wrap() -> Result<()> {
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
-#[test]
-#[expect(
-    clippy::unwrap_in_result,
-    clippy::panic_in_result_fn,
-    reason = "bounded peer progress schedule"
-)]
-fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspended() -> Result<()>
-{
+fn poll_while_flusher_is_suspended(
+    gc: &Arc<GarbageCollector>,
+    context: crate::ExecutionContext,
+    debt: usize,
+) -> (bool, bool, usize) {
     use std::future::Future;
     use std::sync::mpsc;
     use std::task::{Context as TaskContext, Poll, Waker};
     use std::time::Duration;
 
+    let (entered, observed) = mpsc::channel();
+    let (release, resume) = mpsc::channel();
+    let flusher = thread::spawn(move || {
+        if debt != 0 {
+            barrier_progress_tests::park_next_claim(ClaimPause { entered, resume });
+            context.flush();
+        } else {
+            context.flush();
+            entered.send(()).expect("flush finished");
+            resume
+                .recv_timeout(Duration::from_secs(10))
+                .expect("resume after flush");
+        }
+    });
+    observed
+        .recv_timeout(Duration::from_secs(3))
+        .expect("flusher suspended");
+    let ticket = gc.request_full_cycle();
+    let mut peer = Box::pin(Gc::try_new_async(gc, 23u64));
+    let mut task = TaskContext::from_waker(Waker::noop());
+    let mut grant = None;
+    for _ in 0..2048 {
+        if grant.is_none()
+            && let Poll::Ready(result) = peer.as_mut().poll(&mut task)
+        {
+            grant = Some(result);
+        }
+        gc.step();
+        if grant.is_some() && gc.completed_full_ticket() >= ticket {
+            break;
+        }
+    }
+    let full = gc.completed_full_ticket() >= ticket;
+    let acquired = grant
+        .as_ref()
+        .is_some_and(|x| x.as_ref().is_ok_and(|root| ***root == 23));
+    let pending = gc.contexts.pending.load(Ordering::Acquire);
+    release.send(()).expect("resume flusher");
+    flusher.join().expect("flusher");
+    drop(peer);
+    drop(grant);
+    (full, acquired, pending)
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(clippy::panic_in_result_fn, reason = "bounded peer progress schedule")]
+fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspended() -> Result<()>
+{
     let mut outcomes = Vec::new();
     for counted in [false, true] {
         let gc = GarbageCollector::with_config(
@@ -1209,47 +1269,8 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
         context.with(|| gc.write_barrier(target));
         let debt = gc.contexts.pending.load(Ordering::Acquire);
         assert!(debt <= 1);
-        let (entered, observed) = mpsc::channel();
-        let (release, resume) = mpsc::channel();
-        let flusher = thread::spawn(move || {
-            if debt != 0 {
-                barrier_progress_tests::park_next_claim(ClaimPause { entered, resume });
-                context.flush();
-            } else {
-                context.flush();
-                entered.send(()).expect("flush finished");
-                resume
-                    .recv_timeout(Duration::from_secs(10))
-                    .expect("resume after flush");
-            }
-        });
-        observed
-            .recv_timeout(Duration::from_secs(3))
-            .expect("flusher suspended");
-        let ticket = gc.request_full_cycle();
-        let mut peer = Box::pin(Gc::try_new_async(&gc, 23u64));
-        let mut task = TaskContext::from_waker(Waker::noop());
-        let mut grant = None;
-        for _ in 0..2048 {
-            if grant.is_none()
-                && let Poll::Ready(result) = peer.as_mut().poll(&mut task)
-            {
-                grant = Some(result);
-            }
-            gc.step();
-            if grant.is_some() && gc.completed_full_ticket() >= ticket {
-                break;
-            }
-        }
-        let full = gc.completed_full_ticket() >= ticket;
-        let acquired = grant
-            .as_ref()
-            .is_some_and(|x| x.as_ref().is_ok_and(|root| ***root == 23));
-        outcomes.push((counted, debt, full, acquired));
-        release.send(()).expect("resume flusher");
-        flusher.join().expect("flusher");
-        drop(peer);
-        drop(grant);
+        let (full, acquired, pending) = poll_while_flusher_is_suspended(&gc, context, debt);
+        outcomes.push((counted, debt, pending, full, acquired));
         drop(funding);
         gc.collect_full()?;
         assert!(weak.refers_to(target));
@@ -1262,7 +1283,102 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
     assert!(
         outcomes
             .iter()
-            .all(|(_, _, full, acquired)| *full && *acquired),
+            .all(|(_, _, _, full, acquired)| *full && *acquired),
+        "{outcomes:?}"
+    );
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(clippy::panic_in_result_fn, reason = "bounded peer progress schedule")]
+fn fresh_full_and_capped_allocation_finish_while_dirty_owner_flusher_is_suspended() -> Result<()> {
+    let mut outcomes = Vec::new();
+    for (counted, busy) in [false, true]
+        .into_iter()
+        .flat_map(|counted| [(counted, false), (counted, true)])
+    {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .barrier_buffer_size(4)
+                .concurrent_publication(counted)
+                .max_heap_bytes(512)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let child = Gc::try_new(&gc, 42u64)?.into_rooted();
+        let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+        let parent = Gc::try_new(&gc, crate::cell::RwLock::new(vec![child]))?;
+        let inserted = Gc::try_new(&gc, 51_u64)?.into_rooted();
+        let inserted_weak = crate::GcWeak::new(&inserted, crate::ReferenceKind::Weak, 0);
+        drop(Gc::try_new(&gc, 99u64)?);
+        let funding = gc.reserve_bytes(gc.allocation_headroom())?;
+        let context = gc.register_context();
+        gc.collect();
+        for _ in 0..2048 {
+            if lock(&gc.domains[1].cycle).phase == Phase::Mark {
+                break;
+            }
+            gc.step();
+        }
+        assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Mark);
+        let address = parent.as_ptr().addr();
+        let held = busy.then(|| gc.remembered.lock(address));
+        let metadata = gc
+            .objects
+            .lookup_identity(address, parent.identity())
+            .expect("original parent");
+        metadata.mutation.store(usize::MAX, Ordering::Release);
+        context.with(|| parent.write().push(inserted));
+        context.with(|| {
+            let state = crate::context::current(&gc).expect("active mutation context");
+            for _ in 0..crate::context::MAX_RECORDS {
+                let Some(record) = state.try_peek() else {
+                    if busy {
+                        let mut cursor = gc.remembered.dirty.cursor();
+                        assert!(
+                            std::iter::from_fn(|| gc.remembered.dirty.next(&mut cursor))
+                                .any(|entry| entry
+                                    == (parent.identity().to_i64().cast_unsigned(), address))
+                        );
+                    } else {
+                        assert!(gc.remembered.lock(address).contains(address));
+                    }
+                    return;
+                };
+                if record.dirty {
+                    assert_eq!(record.identity, parent.identity());
+                    return;
+                }
+                assert!(gc.flush_context_record(&state));
+            }
+            panic!("dirty owner not found");
+        });
+        let debt = gc.contexts.pending.load(Ordering::Acquire);
+        let (full, acquired, pending) = poll_while_flusher_is_suspended(&gc, context, debt);
+        outcomes.push((counted, busy, debt, pending, full, acquired));
+        drop(held);
+        drop(funding);
+        gc.collect_full()?;
+        {
+            let edges = parent.read();
+            assert!(weak.refers_to(&edges[0]) && inserted_weak.refers_to(&edges[1]));
+        }
+        drop(parent);
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none() && inserted_weak.upgrade().is_none());
+        gc.stop()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    assert!(
+        outcomes
+            .iter()
+            .all(|(_, _, debt, pending, full, acquired)| *debt == 0
+                && *pending == 0
+                && *full
+                && *acquired),
         "{outcomes:?}"
     );
     Ok(())

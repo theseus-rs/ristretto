@@ -73,6 +73,10 @@ unsafe impl<T: Trace> Trace for Option<T> {
 // SAFETY: every initialized element is traced and participates in ownership
 // conversion; clearing only destroys initialized elements under exclusive access.
 unsafe impl<T: Trace> Trace for Vec<T> {
+    fn edges_rooted_before_unroot(&self) -> bool {
+        self.iter().all(Trace::edges_rooted_before_unroot)
+    }
+
     fn has_bounded_cleanup() -> bool {
         T::has_bounded_drop()
     }

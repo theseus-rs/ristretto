@@ -756,10 +756,11 @@ fn demoted_vector_edge_survives_a_young_cycle_before_owner_notification() -> Res
 
 #[test]
 fn prepared_field_update_keeps_new_membership_against_a_stale_prune() -> Result<()> {
-    for counted in [false, true] {
+    for (counted, buffer) in [(false, 0), (false, 4), (true, 0), (true, 4)] {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .concurrent_publication(counted)
+                .barrier_buffer_size(buffer)
                 .promotion_age(1)
                 .allocation_threshold(usize::MAX)
                 .full_collection_interval(usize::MAX)
