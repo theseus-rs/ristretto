@@ -1088,8 +1088,8 @@ mod tests {
             let guard = array.as_reference()?;
             let (_, values) = guard.as_class_vec_ref()?;
             assert_eq!(values.len(), 129);
-            let Value::Object(Some(last)) = &values[128] else {
-                panic!("missing final child")
+            let Some(Value::Object(Some(last))) = values.last() else {
+                return Err(InternalError("missing final child".to_owned()));
             };
             GcWeak::new(last, ReferenceKind::Weak, 0)
         };

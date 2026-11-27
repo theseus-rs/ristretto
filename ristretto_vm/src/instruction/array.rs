@@ -420,7 +420,7 @@ mod tests {
         let gc = vm.garbage_collector();
         let child = Value::new_object(gc, Reference::from(vec![73_i8]));
         let Value::Object(Some(handle)) = &child else {
-            unreachable!()
+            return Err(InternalError("missing allocated child".to_owned()));
         };
         let witness = GcWeak::new(handle, ReferenceKind::Weak, 0);
         array
