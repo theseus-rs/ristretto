@@ -9,6 +9,16 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `d1cab313`, full collection and a capped allocation completed under both
+publication policies with a parked predictive-scheduling reader or allocating
+sampler. All 400 schedules passed. Across 36 complete-collection conditions,
+the lowest individual 95% bounds were 10.073× native and 10.272× WASI versus
+`f1daebeb`. The new predictor measured 18.05 ns per allocation-recording
+event, versus 17.95 ns previously. With prediction enabled it made 192 host
+allocation requests over 64 full cycles, versus 64 previously. All nine
+short Chromium forks completed their arrivals and teardown.
+[Controls, collection graph, costs and remaining limits](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/predictive-scheduling-progress/README.md).
+
 At `cc0cd61e`, a suspended statistics reader allows a fresh collection ticket
 and capped allocation to complete under both publication policies, with and
 without diagnostics. All 36 complete-cycle conditions cleared the 10× gate
