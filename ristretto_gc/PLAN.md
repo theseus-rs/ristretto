@@ -2411,9 +2411,9 @@ in separate changes so their costs and benefits remain attributable.
 
 Keep public synchronous embedding APIs and current unsafe lifetime contracts
 explicit. Add asynchronous recovery through new VM/internal paths rather than
-silently changing a synchronous call's completion semantics. Preserve a selectable
-known-correct implementation during algorithm qualification; never mix incompatible
-reclamation protocols within a live heap. Record each milestone's completed tests
+silently changing a synchronous call's completion semantics. Compare algorithm changes against a frozen build of the same collector.
+The alpha ships one `ristretto_gc::GarbageCollector` across native and Wasm.
+A live heap uses one reclamation protocol throughout its lifetime. Record each milestone's completed tests
 and measurements before changing its status.
 
 ## Whole-JVM execution workstream
