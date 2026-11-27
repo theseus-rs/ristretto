@@ -19,6 +19,18 @@ The matched Java reference-array saturation medians were 625 operations/s
 on Ristretto, 1,076,274 on G1 and 583,313 on ZGC.
 [Measurements and shipping checks](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/predictor-snapshot-reuse/README.md).
 
+The capped allocator also recovered when a publisher had committed a prediction
+and had yet to deliver its collection request. With zero background workers,
+only the allocation was polled in 200 forced schedules.
+[Notification handoff](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/predictor-snapshot-reuse/README.md#a-predicting-publisher-parked-before-notification).
+
+**Next progress hypothesis.** With the default old-collection interval of
+zero, tracing an embedded `GcRootGuard` during ordinary marking may wait
+on the target's object shard inside `Objects::live`. Park the shard after
+the parent callback enters and check whether the assisting poll returns.
+Release the shard before checking full-ticket completion and liveness.
+The Java comparison configuration uses an interval of four.
+
 At `d1cab313`, full collection and a capped allocation completed under both
 publication policies with a parked predictive-scheduling reader or allocating
 sampler. All 400 schedules passed. Across 36 complete-collection conditions,
