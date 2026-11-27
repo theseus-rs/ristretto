@@ -302,6 +302,13 @@ impl Recovery {
         .await;
     }
 
+    pub(crate) fn reference_delivery_pending(&self) -> bool {
+        self.references
+            .directory
+            .get()
+            .is_some_and(|directory| directory.ready.load().is_some())
+    }
+
     pub(super) fn notify_reference_handlers(
         &self,
         gc: &GarbageCollector,

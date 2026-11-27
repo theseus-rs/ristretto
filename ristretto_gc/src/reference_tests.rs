@@ -890,21 +890,44 @@ fn mark_epoch_rollover_resets_incrementally_without_aliasing() -> Result<()> {
 
 #[cfg(not(target_family = "wasm"))]
 #[test]
-fn reference_waiters_can_be_woken_by_another_helper_during_a_stalled_wake() {
+fn idle_step_delivers_remaining_handlers_after_a_reentrant_handler_drains_the_queue() {
+    for counted in [false, true] {
+        for request_another in [false, true] {
+            reentrant_handler_broadcast(counted, request_another);
+        }
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn reentrant_handler_broadcast(counted: bool, request_another: bool) {
     use std::future::Future;
     use std::sync::mpsc;
     use std::task::{Context, Wake, Waker};
     use std::time::Duration;
 
+    const HANDLERS: usize = 130;
     struct Calls {
         count: AtomicUsize,
+        request_another: bool,
+        heap: Weak<GarbageCollector>,
+        owner: crate::ObjectId,
         entered: mpsc::Sender<()>,
         release: Mutex<mpsc::Receiver<()>>,
     }
     struct Callback(Arc<Calls>);
     impl Wake for Callback {
         fn wake(self: Arc<Self>) {
-            if self.0.count.fetch_add(1, Ordering::SeqCst) == 0 {
+            let index = self.0.count.fetch_add(1, Ordering::SeqCst);
+            if index + 1 == HANDLERS && self.0.request_another {
+                self.0.heap.upgrade().unwrap().collect();
+            }
+            if index == 0 {
+                let heap = self.0.heap.upgrade().unwrap();
+                let root = heap.take_pending_reference::<u64>().unwrap().unwrap();
+                assert_eq!(root.identity(), self.0.owner);
+                heap.collect_full().unwrap();
+                assert!(!heap.has_pending_references());
+                assert!(!heap.pending());
                 assert!(self.0.entered.send(()).is_ok());
                 assert!(
                     lock(&self.0.release)
@@ -914,17 +937,24 @@ fn reference_waiters_can_be_woken_by_another_helper_during_a_stalled_wake() {
             }
         }
     }
-    let gc = GarbageCollector::new();
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .concurrent_publication(counted)
+            .build(),
+    );
+    let owner = Gc::new(&gc, 53_u64);
     let (entered, parked) = mpsc::channel();
     let (release, resume) = mpsc::channel();
     let calls = Arc::new(Calls {
         count: AtomicUsize::new(0),
+        request_another,
+        heap: Arc::downgrade(&gc),
+        owner: owner.identity(),
         entered,
         release: Mutex::new(resume),
     });
     let mut futures = Vec::new();
-    let handlers = 130;
-    for _ in 0..handlers {
+    for _ in 0..HANDLERS {
         let waker = Waker::from(Arc::new(Callback(calls.clone())));
         let mut future = Box::pin(gc.wait_for_pending_references());
         assert!(
@@ -935,26 +965,20 @@ fn reference_waiters_can_be_woken_by_another_helper_during_a_stalled_wake() {
         );
         futures.push(future);
     }
-    let owner = Gc::new(&gc, 53_u64);
     let target = Gc::new(&gc, 11_u64);
     let link = GcWeak::new(&target, ReferenceKind::Weak, owner.as_ptr().addr());
-    let notice = gc.prepare_reference(&link.slot).expect("live owner");
-    while !notice.linked() {
-        gc.link_reference(&notice);
-    }
+    drop(target);
     thread::scope(|scope| {
-        scope.spawn(|| gc.notify_progress());
+        scope.spawn(|| gc.collect_full().unwrap());
         parked.recv_timeout(Duration::from_secs(10)).unwrap();
-        // The first callback remains parked. The original notification
-        // must reach the remaining pages even after the queue is consumed.
-        let transferred = gc.take_pending_reference::<u64>().unwrap().unwrap();
-        assert_eq!(transferred.identity(), owner.identity());
-        assert!(!gc.has_pending_references());
-        gc.notify_progress();
+        let idle = gc.step();
         let delivered = calls.count.load(Ordering::SeqCst);
         release.send(()).unwrap();
-        assert_eq!(delivered, handlers);
+        assert_eq!(delivered, HANDLERS);
+        assert_eq!(idle, !request_another);
     });
+    gc.collect_full().unwrap();
+    assert!(link.upgrade().is_none());
 }
 
 #[test]
