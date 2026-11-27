@@ -66,8 +66,10 @@ cargo package --locked -p ristretto_gc
 The workspace check covers 21 graphs, including the release `java` launcher
 with default features disabled on bare wasm32, WASIp2 and bare wasm64. Each
 release job verifies its own launcher target and Cargo features before packaging.
-The wasm64 check verifies dependency identity. The runnable Wasm preview uses
-WASIp2.
+All three Wasm launchers built using the release workflow’s dry-run profile.
+On WASIp2 the released launcher entry point executed eight rounds of the Java
+graph fixture and returned 64. The bare wasm32 and wasm64 results cover build
+and dependency identity. [Launcher targets, build hashes and fixture](benchmarks/gc/release/launcher-artifacts.json).
 
 CI also builds reproducible source archives, runs each tier from the extracted
 archive, and builds normalized Cargo archives from an external consumer.
