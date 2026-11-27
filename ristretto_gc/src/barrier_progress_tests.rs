@@ -1317,3 +1317,38 @@ fn young_collection_progress_with_parked_counted_remembered_publisher() -> Resul
     young_progress_with_remembered_publisher(true, false)?;
     young_progress_with_remembered_publisher(true, true)
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn generation_queries_return_while_the_queried_shard_is_parked() {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .promotion_age(1)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let old = Gc::try_new(&gc, 17_u64).unwrap();
+        gc.collect_full().unwrap();
+        let young = Gc::try_new(&gc, 41_u64).unwrap();
+        for (address, expected) in [(old.as_ptr().addr(), false), (young.as_ptr().addr(), true)] {
+            let shard = gc.objects.lock(address);
+            let (sent, received) = mpsc::channel();
+            let observed = thread::scope(|s| {
+                let worker = s.spawn(|| sent.send(gc.is_young_allocation(address)).unwrap());
+                let value = received.recv_timeout(Duration::from_secs(2));
+                drop(shard);
+                worker.join().unwrap();
+                value
+            });
+            assert_eq!(observed, Ok(expected));
+        }
+        let expired = young.as_ptr().addr();
+        drop(young);
+        gc.collect_full().unwrap();
+        assert!(!gc.is_young_allocation(expired));
+    }
+}

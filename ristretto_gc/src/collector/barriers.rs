@@ -156,9 +156,8 @@ impl GarbageCollector {
     #[must_use]
     pub fn is_young_allocation(&self, address: usize) -> bool {
         self.objects
-            .lock(address)
-            .get(&address)
-            .is_some_and(|metadata| self.is_young_metadata(metadata))
+            .lookup(address)
+            .is_some_and(|metadata| self.is_young_metadata(&metadata))
     }
 
     pub(super) fn is_young_metadata(&self, metadata: &ObjectMetadata) -> bool {

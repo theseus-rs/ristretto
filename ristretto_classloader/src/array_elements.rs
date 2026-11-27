@@ -3,7 +3,7 @@ use crate::Value;
 use crate::card_set::CardSet;
 use ristretto_gc::{GarbageCollector, Trace, TraceProgress};
 use std::ops::{Deref, DerefMut, Index, IndexMut, Range};
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard, TryLockError};
 
 const CARD_SIZE: usize = 32;
 
@@ -181,6 +181,14 @@ impl ArrayElements {
         }
     }
 
+    fn try_cards(&self) -> Option<MutexGuard<'_, CardSet>> {
+        match self.cards.try_lock() {
+            Ok(cards) => Some(cards),
+            Err(TryLockError::Poisoned(error)) => Some(error.into_inner()),
+            Err(TryLockError::WouldBlock) => None,
+        }
+    }
+
     pub(crate) fn trace_step(
         &self,
         gc: &GarbageCollector,
@@ -189,10 +197,9 @@ impl ArrayElements {
     ) -> TraceProgress {
         let old = gc.is_young_collection() && !gc.is_young_allocation(self.owner);
         let start = if old {
-            let cards = self
-                .cards
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            let Some(cards) = self.try_cards() else {
+                return TraceProgress::Busy;
+            };
             let Some(card) = cards.next_from(offset / CARD_SIZE) else {
                 return TraceProgress::Complete;
             };
@@ -221,11 +228,9 @@ impl ArrayElements {
                 }
             }
         }
-        if can_prune {
-            self.cards
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .remove(start / CARD_SIZE);
+        // Another tracer can retain a clean card for a later young scan.
+        if can_prune && let Some(mut cards) = self.try_cards() {
+            cards.remove(start / CARD_SIZE);
         }
         if end == self.values.len() {
             TraceProgress::Complete
@@ -473,6 +478,58 @@ mod tests {
         assert_eq!(heap.statistics().bytes_recopied, chunk_bytes as u64);
         drop(array);
         gc.stop()?;
+        Ok(())
+    }
+
+    #[cfg(all(not(target_family = "wasm"), not(miri)))]
+    #[test]
+    fn a_parked_dirty_card_scan_yields_and_keeps_its_last_child() -> ristretto_gc::Result<()> {
+        use std::sync::mpsc;
+        use std::time::Duration;
+        let gc = collector(1);
+        let array = Gc::new(
+            &gc,
+            RwLock::new(Array(vec![Value::Object(None); 65].into())),
+        )
+        .into_rooted();
+        gc.collect_full()?;
+        for _ in 0..3 {
+            young(&gc);
+        }
+        let child = Value::new_object(&gc, Reference::ByteArray(vec![73].into()));
+        let Value::Object(Some(reference)) = &child else {
+            unreachable!()
+        };
+        let witness = GcWeak::new(reference, ReferenceKind::Weak, 0);
+        *array.write().0.get_mut(64).unwrap() = child;
+        let before = gc.statistics()?.young_collections;
+        let view = array.read();
+        let cards = view.0.cards.lock().unwrap();
+        gc.collect_young();
+        let (sent, received) = mpsc::channel();
+        let returned = std::thread::scope(|s| {
+            let worker = s.spawn(|| {
+                for _ in 0..2048 {
+                    gc.step();
+                }
+                sent.send(()).unwrap();
+            });
+            let ready = received.recv_timeout(Duration::from_secs(2)).is_ok();
+            drop(cards);
+            worker.join().unwrap();
+            ready
+        });
+        drop(view);
+        assert!(
+            returned,
+            "a young collection step blocked on the array's card set"
+        );
+        assert_eq!(gc.statistics()?.young_collections, before);
+        while !gc.step() {}
+        assert!(witness.upgrade().is_some());
+        *array.write().0.get_mut(64).unwrap() = Value::Object(None);
+        gc.collect_full()?;
+        assert!(witness.is_cleared());
         Ok(())
     }
 
