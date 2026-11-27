@@ -7,6 +7,10 @@ impl GarbageCollector {
     #[expect(clippy::too_many_lines, reason = "resumable phases share one budget")]
     pub(super) fn coordinated_step(&self, concurrent: bool) -> Option<bool> {
         let started = now();
+        // Declared before the guards so the detached epoch outlives publication,
+        // both cursor locks and the domain context, including on a failed start.
+        // Its last Arc can release a whole queue of stale birth proposals.
+        let _detached_epoch;
         let Ok(coordinator) = self.coordinator.try_lock() else {
             if self.diagnostics_enabled() {
                 self.diagnostics
@@ -128,7 +132,7 @@ impl GarbageCollector {
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
             super::phase_tests::before_snapshot_commit();
             if !self.commit_phase(observation, true, true, 0) {
-                self.domain().mark_queue.close_graph_inbox();
+                _detached_epoch = self.domain().mark_queue.close_graph_inbox();
                 if cycle.kind == CollectionKind::Old {
                     self.old_requested.store(true, Ordering::Release);
                 } else {
@@ -586,7 +590,7 @@ impl GarbageCollector {
                         {
                             heap.end_evacuation();
                         }
-                        self.domain().mark_queue.close_graph_inbox();
+                        _detached_epoch = self.domain().mark_queue.close_graph_inbox();
                         self.domain().active.store(false, Ordering::Release);
                         self.domain().marking.store(false, Ordering::Release);
                         self.domain().weak_phase.store(0, Ordering::Release);

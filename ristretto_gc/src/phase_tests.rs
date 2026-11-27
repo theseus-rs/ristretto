@@ -8,6 +8,7 @@ thread_local! {
     static AFTER_FULL_REQUEST: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static BEFORE_SWEEP_HANDOFF: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static BEFORE_SNAPSHOT_COMMIT: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+    static EPOCH_DESTRUCTION: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static AFTER_ACTIVATION: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
 }
 
@@ -40,6 +41,11 @@ fn pause_once(point: &'static thread::LocalKey<std::cell::Cell<Option<ClaimPause
             .recv_timeout(std::time::Duration::from_secs(10))
             .expect("resume collection");
     }
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(crate) fn before_epoch_destruction() {
+    pause_once(&EPOCH_DESTRUCTION);
 }
 
 fn collector(concurrent: bool) -> Arc<GarbageCollector> {
@@ -1132,5 +1138,73 @@ fn an_idle_step_can_finish_during_publication_and_preserves_the_next_request() -
             );
         }
     }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn detached_birth_epoch_destruction_allows_the_next_full_collection() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let mut outcomes = Vec::new();
+    for (counted, abort_start) in [(false, false), (true, false), (true, true)] {
+        let gc = collector(counted);
+        gc.collect();
+        let (entered, parked) = mpsc::channel();
+        let (release, resume) = mpsc::channel();
+        let (attempt, starting) = mpsc::channel();
+        let (retry, retry_rx) = mpsc::channel();
+        let accessible = thread::scope(|scope| {
+            let heap = &gc;
+            let first = scope.spawn(move || {
+                if abort_start {
+                    BEFORE_SNAPSHOT_COMMIT.set(Some(ClaimPause {
+                        entered: attempt,
+                        resume: retry_rx,
+                    }));
+                }
+                EPOCH_DESTRUCTION.set(Some(ClaimPause { entered, resume }));
+                for _ in 0..10_000 {
+                    if heap.step() {
+                        break;
+                    }
+                }
+            });
+            if abort_start {
+                starting
+                    .recv_timeout(Duration::from_secs(5))
+                    .expect("opening the epoch");
+                drop(gc.phase_clock.enter());
+                retry.send(()).expect("attempt stale phase stamp");
+            }
+            parked
+                .recv_timeout(Duration::from_secs(5))
+                .expect("last epoch owner released");
+            let accessible = (
+                gc.publication.try_read().is_some(),
+                gc.coordinator.try_lock().is_ok(),
+                gc.domains[1].cycle.try_lock().is_ok(),
+            );
+            if accessible == (true, true, true) {
+                let before = gc.statistics()?.full_collections;
+                let root = Gc::try_new(&gc, 37_u64)?;
+                gc.collect_full()?;
+                assert!(gc.statistics()?.full_collections > before);
+                assert_eq!(**root, 37);
+            }
+            release.send(()).expect("finish epoch destruction");
+            first.join().expect("first collector step");
+            Ok::<_, crate::Error>(accessible)
+        })?;
+        outcomes.push(accessible);
+        gc.collect_full()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    assert_eq!(
+        outcomes,
+        [(true, true, true); 3],
+        "(publication, coordinator, full cursor) at final epoch release"
+    );
     Ok(())
 }

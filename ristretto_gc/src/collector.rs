@@ -43,6 +43,8 @@ mod generation_tests;
 #[cfg(test)]
 #[path = "phase_tests.rs"]
 mod phase_tests;
+#[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+pub(crate) use phase_tests::before_epoch_destruction;
 
 #[cfg(all(test, not(target_family = "wasm")))]
 #[path = "index_progress_tests.rs"]

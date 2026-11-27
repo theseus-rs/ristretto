@@ -537,6 +537,13 @@ pub(crate) struct BirthEpoch {
     strong_closed: AtomicBool,
 }
 
+#[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+impl Drop for BirthEpoch {
+    fn drop(&mut self) {
+        crate::collector::before_epoch_destruction();
+    }
+}
+
 impl BirthEpoch {
     // An obsolete descriptor witness retains only the small token's control
     // block. It can never retain the mark queue or its descriptor graph.
@@ -668,10 +675,10 @@ impl MarkQueues {
         })));
     }
 
-    pub(crate) fn close_graph_inbox(&self) {
+    pub(crate) fn close_graph_inbox(&self) -> Option<Arc<BirthEpoch>> {
         self.root_offered.store(false, Ordering::Release);
         self.graph_offered.store(false, Ordering::Release);
-        self.graph_inbox.store(None);
+        self.graph_inbox.swap(None)
     }
 
     pub(crate) fn finish_strong_births(&self) {
