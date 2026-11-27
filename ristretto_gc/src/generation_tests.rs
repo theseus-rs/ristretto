@@ -54,6 +54,59 @@ fn a_requested_full_start_drains_the_previous_young_snapshot() -> Result<()> {
 }
 
 #[test]
+fn reserved_numeric_tracing_preserves_raw_owners_and_rejects_full_sweep_garbage() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .overlapping_generations(true)
+                .concurrent_publication(counted)
+                .incremental_step_size(1)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let live = Gc::try_new(&gc, 41_u64)?;
+        let owner = Gc::try_new(&gc, vec![live.into_rooted()])?;
+        let edge = &owner[0];
+        // SAFETY: the rooted owner's immutable edge keeps the allocation alive.
+        let raw = unsafe { Gc::from_raw(edge.as_ptr()) }?;
+        let garbage = Gc::try_new(&gc, 17_u64)?;
+        let dead = gc
+            .objects
+            .lookup_identity(garbage.as_ptr().addr(), garbage.identity())
+            .expect("garbage descriptor");
+        let survivor = gc
+            .objects
+            .lookup_identity(edge.as_ptr().addr(), edge.identity())
+            .expect("rooted descriptor");
+        drop(garbage);
+        gc.collect();
+        assert!((0..4096).any(|_| {
+            gc.step();
+            gc.domains[1].weak_phase() == 5
+        }));
+        assert!(gc.logically_retired(&dead) && dead.birth.is_live());
+        gc.collect_young();
+        gc.next_domain.store(0, Ordering::Release);
+        gc.coordinated_step(false);
+        assert!(gc.domains[0].active() && gc.domains[1].weak_phase() == 5);
+        let young = gc.domains[0].epoch.load(Ordering::Acquire);
+        {
+            let _domain = Context::enter(&gc, 0);
+            let _reservation = TraceRetention::callback(&gc, Retention::Strong);
+            assert!(!survivor.marked(0, young));
+            raw.trace(&gc);
+            assert!(survivor.marked(0, young));
+            gc.mark_object(dead.ptr(), dead.id);
+            assert!(!dead.marked(0, young));
+        }
+        gc.collect_full()?;
+        assert!(gc.address_for_identity(dead.id).is_none());
+        assert_eq!(**edge, 41);
+    }
+    Ok(())
+}
+
+#[test]
 fn full_sweeping_does_not_promote_allocations_born_after_tracing() -> Result<()> {
     for concurrent in [false, true] {
         let gc = GarbageCollector::with_config(

@@ -3218,30 +3218,24 @@ impl GarbageCollector {
     }
 
     pub(crate) fn mark_object(&self, ptr: SafePtr, identity: crate::ObjectId) {
-        if self.trace_needs_epoch_proposal() {
-            if self.domain().active()
-                && let Some(metadata) = self.objects.lookup(ptr.0)
-                && (identity.to_i64() == 0 || metadata.id == identity)
-            {
-                self.publish_external_trace(&metadata);
-            }
+        // Old-only collection needs publication admission across the handoff
+        // to young marking. An ordinary callback already pins its source epoch.
+        let old_handoff = self.configuration.old_collection_interval != 0;
+        let _admission = old_handoff.then(|| self.allocation_guard());
+        if !self.domain().active() {
             return;
         }
-        // With independent young closure, each actual cross-domain publication
-        // carries admission; the old callback itself does not park young GC.
-        if self.configuration.old_collection_interval == 0 {
-            self.shade(ptr.0);
-            return;
-        }
-        let _admission = self.allocation_guard();
-        if self.domain().active()
-            && let Some(metadata) = self.objects.lookup(ptr.0)
-            && (identity.to_i64() == 0 || metadata.id == identity)
-        {
-            if self.domain_index() == 1 {
+        let metadata = if identity.to_i64() == 0 {
+            // from_raw requires its caller to keep the original allocation live.
+            self.objects.lookup(ptr.0)
+        } else {
+            self.objects.lookup_identity(ptr.0, identity)
+        };
+        if let Some(metadata) = metadata {
+            if old_handoff && self.domain_index() == 1 {
                 self.retain_old_callback_edge(&metadata);
             }
-            self.shade_known(&metadata);
+            self.mark_traced_edge(&metadata);
         }
     }
 

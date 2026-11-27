@@ -24,6 +24,107 @@ enum HeldIndex {
     Remembered,
 }
 
+#[test]
+#[cfg_attr(miri, ignore = "forced native thread schedule")]
+fn reserved_guard_trace_finishes_its_step_while_the_child_shard_is_held() -> Result<()> {
+    struct Parent {
+        child: GcRootGuard<u64>,
+        unrelated_address: usize,
+        entered: mpsc::Sender<()>,
+        resume: Mutex<Option<mpsc::Receiver<()>>>,
+        traced: Arc<AtomicBool>,
+    }
+
+    // SAFETY: the child is an independently rooted guard. The numerical
+    // address used to challenge the identity check is never dereferenced.
+    unsafe impl Trace for Parent {
+        fn trace(&self, gc: &GarbageCollector) {
+            if TraceRetention::current(gc).is_some_and(|(_, reserved)| reserved)
+                && let Some(resume) = lock(&self.resume).take()
+            {
+                self.entered.send(()).expect("parent entered");
+                resume
+                    .recv_timeout(Duration::from_secs(10))
+                    .expect("resume parent");
+                self.child.trace(gc);
+                gc.mark_object(SafePtr(self.unrelated_address), self.child.identity());
+                self.traced.store(true, Ordering::Release);
+            } else {
+                self.child.trace(gc);
+            }
+        }
+    }
+
+    let mut outcomes = vec![];
+    for counted in [false, true] {
+        for independent in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .threads(0)
+                    .concurrent_publication(counted)
+                    .independent_marking(independent)
+                    .incremental_step_size(1)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let child = Gc::try_new(&gc, 41_u64)?;
+            let address = child.as_ptr() as usize;
+            let witness = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+            let unrelated = Gc::try_new(&gc, 17_u64)?;
+            let unrelated_address = unrelated.as_ptr() as usize;
+            let dead = crate::GcWeak::new(&unrelated, crate::ReferenceKind::Weak, 0);
+            let (entered, started) = mpsc::channel();
+            let (resume, released) = mpsc::channel();
+            let traced = Arc::new(AtomicBool::new(false));
+            let parent = Gc::try_new(
+                &gc,
+                Parent {
+                    child,
+                    unrelated_address,
+                    entered,
+                    resume: Mutex::new(Some(released)),
+                    traced: traced.clone(),
+                },
+            )?;
+            drop(unrelated);
+            let ticket = gc.request_full_cycle();
+            let (returned, step_done) = mpsc::channel();
+            let heap = &gc;
+            let advanced = thread::scope(|scope| {
+                scope.spawn(move || {
+                    for _ in 0..4096 {
+                        heap.step();
+                        if traced.load(Ordering::Acquire) {
+                            returned.send(()).expect("step returned");
+                            break;
+                        }
+                    }
+                });
+                started
+                    .recv_timeout(Duration::from_secs(3))
+                    .expect("reserved trace");
+                let shard = gc.objects.lock(address);
+                resume.send(()).expect("trace child");
+                let advanced = step_done.recv_timeout(Duration::from_secs(1)).is_ok();
+                drop(shard);
+                advanced
+            });
+            assert!((0..4096).any(|_| {
+                gc.step();
+                gc.completed_full_ticket() >= ticket
+            }));
+            assert!(witness.refers_to(&parent.child));
+            assert_eq!(**parent.child, 41);
+            outcomes.push((counted, independent, advanced, dead.upgrade().is_none()));
+        }
+    }
+    assert!(
+        outcomes.iter().all(|row| row.2 && row.3),
+        "(counted publication, independent marking, step returned, unrelated cleared): {outcomes:?}"
+    );
+    Ok(())
+}
+
 #[cfg(not(miri))]
 #[test]
 #[expect(

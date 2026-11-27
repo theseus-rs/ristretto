@@ -561,13 +561,6 @@ impl Objects {
         })
     }
 
-    /// Mark traversal needs only the visible descriptor. Keep the same shard
-    /// ordering as sweep, without acquiring a second owner of its address page.
-    pub(crate) fn live(&self, address: usize) -> Option<MetadataRef> {
-        let _guard = self.guards.lock(address);
-        self.lookup(address)
-    }
-
     /// An owning snapshot of the exact cell. It grants no graph or payload access.
     pub(crate) fn lookup(&self, address: usize) -> Option<MetadataRef> {
         self.descriptor_at(address)

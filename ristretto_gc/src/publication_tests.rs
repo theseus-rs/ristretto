@@ -4345,6 +4345,39 @@ fn deleting_a_live_child_edge_keeps_marking_while_its_shard_is_parked() -> Resul
 }
 
 #[test]
+fn tracing_a_stale_identity_does_not_veto_a_replacement_birth() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .incremental_step_size(1)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        gc.collect();
+        assert!((0..4096).any(|_| {
+            gc.step();
+            lock(&gc.domains[1].cycle).phase == Phase::Mark
+        }));
+        PENDING_BIRTH_PROBE.set(Some(|gc, pending| {
+            let _domain = Context::enter(gc, 1);
+            let wrong = crate::ObjectId::allocate().expect("distinct birth");
+            gc.mark_object(pending.ptr(), wrong);
+            let _reservation = TraceRetention::callback(gc, Retention::Strong);
+            gc.mark_object(pending.ptr(), wrong);
+        }));
+        let replacement = Gc::try_new(&gc, 19_u64)?;
+        let metadata = gc
+            .objects
+            .lookup_identity(replacement.as_ptr().addr(), replacement.identity())
+            .expect("published replacement");
+        assert!(metadata.birth.first_attempt());
+        assert_eq!(**replacement, 19);
+    }
+    Ok(())
+}
+
+#[test]
 fn flushing_an_old_identity_preserves_an_unrelated_pending_birth() -> Result<()> {
     for counted in [false, true] {
         let gc = GarbageCollector::with_config(

@@ -63,15 +63,6 @@ impl GarbageCollector {
         changed
     }
 
-    pub(super) fn shade(&self, address: usize) -> bool {
-        if !self.domain().active() {
-            return false;
-        }
-        self.objects
-            .live(address)
-            .is_some_and(|metadata| self.shade_known(&metadata))
-    }
-
     /// The phase unit orders its root read and shade against closure. Resolve
     /// only visible metadata; shading never borrows the target payload.
     pub(super) fn shade_registered_root(&self, address: usize) {
