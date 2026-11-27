@@ -23,6 +23,8 @@ scheduled Java operations/s for two minutes the candidate completed 31,096 of
 60,000. The parent, G1 and ZGC each completed 60,000. The first implementation
 priority for this candidate is to explain the growing backlog and the increase
 in process-wide collection frequency before changing the shipping array tracer.
+In a separate parent-first two-minute pair after builds finished, both revisions
+completed 60,000. The slower fork remains unexplained.
 [Candidate patch, graphs and JVM traces](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/sparse-java-reference-arrays/README.md).
 
 At `a0f40eac`, reusing released predictor snapshots brought the finite-heap

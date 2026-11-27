@@ -1,0 +1,84 @@
+{
+  "inputs": [
+    {
+      "label": "diagnostic",
+      "raw_sha256": "0929af2e560fc051a637049e659d5c124078fe9ff73eb4b70584a65b942e411c",
+      "source_sha256": "b159a420a47769e4964b08da9d4e5ea17413216a71065c0a0e420e659d010753",
+      "schedule": [
+        [
+          0,
+          "reference-array",
+          500,
+          "ristretto-candidate-jit"
+        ],
+        [
+          0,
+          "reference-array",
+          500,
+          "ristretto-candidate-jit-before"
+        ],
+        [
+          1,
+          "reference-array",
+          500,
+          "ristretto-candidate-jit"
+        ],
+        [
+          1,
+          "reference-array",
+          500,
+          "ristretto-candidate-jit-before"
+        ]
+      ]
+    },
+    {
+      "label": "reverse-120",
+      "raw_sha256": "f2d98b09e4565df5c06cca5ca6f71bfd757faf184a9b2419a4480b021bfd8882",
+      "source_sha256": "0592f2b3a0f393c37370d5e1ba73152d1fffdd8e915a41b3037d5fe45a3c067c",
+      "schedule": [
+        [
+          0,
+          "reference-array",
+          500,
+          "ristretto-candidate-jit-before"
+        ],
+        [
+          0,
+          "reference-array",
+          500,
+          "ristretto-candidate-jit"
+        ]
+      ]
+    }
+  ],
+  "binaries": {
+    "before": "78f88d4e611d8edf6eb35728a1fa2ece503724edc594592d7a98452183c07e43",
+    "candidate": "d3931facadce75001dc2e4660310cc10f55d9154e0aa4e1ab0403b2e52e6ea3e"
+  },
+  "host_wall_samples": 131,
+  "host_samples_with_rustc": 0,
+  "host_cpus": [
+    8,
+    9,
+    10,
+    11
+  ],
+  "sampled_processes": 4,
+  "thread_stat_clock_ticks_per_second": 100,
+  "normalized_archive_fault": {
+    "native": "rejected",
+    "wasi": "rejected",
+    "before_compilation": true,
+    "removed": "ristretto_classloader GC dependency and its forwarded feature",
+    "diagnostics": {
+      "native": "ValueError: expected ristretto_gc v0.35.0 (<extracted archive>/ristretto_gc-0.35.0), found []",
+      "wasi": "ValueError: expected ristretto_gc v0.35.0 (<extracted archive>/ristretto_gc-0.35.0), found []"
+    }
+  },
+  "callback_thread_cpu_seconds": [
+    11.42,
+    11.84,
+    11.46,
+    12.22
+  ]
+}
