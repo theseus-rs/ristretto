@@ -15,3 +15,16 @@ Run from a clean checkout of the measured revision. The final assertion is expec
 gzip -dc /path/to/control.patch.gz | git apply -
 cargo test --locked -p ristretto_gc --lib fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspended
 ```
+
+## A parked dirty-owner flush still blocks peers
+
+At `9d9edb63` a write through the managed guard appended a child to an existing
+vector. The probe drained the clean edge records, verified that the remaining
+dirty record named the exact parent, then parked its explicit flusher after
+claim. Under both publication policies the single record remained outstanding.
+Neither the fresh full ticket nor the independently funded allocation finished
+in 2,048 polls and steps. Once the flusher resumed, both exact child witnesses
+survived, then cleared when the parent died. All 100 cases across 50 fresh
+native processes had the same outcome.
+[Single-collector reproducer](dirty-owner/control.patch.gz) ·
+[Assertion](dirty-owner/control.log.gz) · [Process results](dirty-owner/processes.json.gz).
