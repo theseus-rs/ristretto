@@ -4738,19 +4738,46 @@ fn construction_retains_only_winning_slot_and_overflow_detaches() {
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[test]
 fn a_paused_traced_edge_offer_allows_peer_allocation_and_two_full_cycles() -> Result<()> {
-    for (counted, raw, interval, mature_old) in [false, true].into_iter().flat_map(|c| {
+    for (counted, raw, interval, start) in [false, true].into_iter().flat_map(|c| {
         [
-            (c, false, 0, false),
-            (c, true, 0, false),
-            (c, false, 4, false),
-            (c, true, 4, false),
-            (c, false, 4, true),
-            (c, true, 4, true),
+            (c, false, 0, DeletionStart::Full),
+            (c, true, 0, DeletionStart::Full),
+            (c, false, 4, DeletionStart::Full),
+            (c, true, 4, DeletionStart::Full),
+            (c, false, 4, DeletionStart::Old),
+            (c, true, 4, DeletionStart::Old),
+            (c, false, 4, DeletionStart::FullOldInbox),
+            (c, true, 4, DeletionStart::FullOldInbox),
         ]
     }) {
-        check_paused_deletion_offer(counted, raw, interval, mature_old)?;
+        check_paused_deletion_offer(counted, raw, interval, start)?;
     }
     Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[derive(Clone, Copy)]
+enum DeletionStart {
+    Full,
+    Old,
+    FullOldInbox,
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+impl DeletionStart {
+    fn configuration(self, counted: bool, interval: usize) -> Configuration {
+        let saturated = matches!(self, Self::FullOldInbox);
+        Configuration::builder()
+            .concurrent_publication(counted)
+            .old_collection_interval(interval)
+            .promotion_age(1)
+            .barrier_buffer_size(if saturated { 1 } else { 4 })
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .allocation_threshold(usize::MAX)
+            .max_heap_bytes(1024)
+            .build()
+    }
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
@@ -4759,25 +4786,20 @@ fn check_paused_deletion_offer(
     counted: bool,
     raw: bool,
     interval: usize,
-    mature_old: bool,
+    start: DeletionStart,
 ) -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
-    let gc = GarbageCollector::with_config(
-        Configuration::builder()
-            .concurrent_publication(counted)
-            .old_collection_interval(interval)
-            .promotion_age(1)
-            .barrier_buffer_size(4)
-            .incremental_step_size(1)
-            .max_pause_time_us(0)
-            .allocation_threshold(usize::MAX)
-            .max_heap_bytes(512)
-            .build(),
-    );
+    let mature_old = !matches!(start, DeletionStart::Full);
+    let saturated = matches!(start, DeletionStart::FullOldInbox);
+    let gc = GarbageCollector::with_config(start.configuration(counted, interval));
     let child = Gc::try_new(&gc, 42u64)?.into_rooted();
     let weak = (!mature_old).then(|| crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0));
-    let parent = Gc::try_new(&gc, vec![child])?;
+    let mut children = vec![child];
+    if saturated {
+        children.push(Gc::try_new(&gc, 71u64)?.into_rooted());
+    }
+    let parent = Gc::try_new(&gc, children)?;
     if mature_old {
         gc.collect_full()?;
     }
@@ -4802,15 +4824,26 @@ fn check_paused_deletion_offer(
         assert!(gc.old_collection_active() && !gc.is_young_metadata(&m));
         assert!(!m.marked(1, gc.domains[1].epoch.load(Ordering::Acquire)));
     }
+    if saturated {
+        let inbox = gc.domains[1].mark_queue.birth_epoch().expect("old inbox");
+        assert!(inbox.has_root_capacity(1));
+        context.with(|| gc.write_barrier(parent.last().expect("independent mature child")));
+        assert!(!inbox.has_root_capacity(1));
+    }
     let (arrived, parked) = mpsc::channel();
     let (release, resume) = mpsc::channel();
     let heap = &gc;
     let recovered = thread::scope(|scope| -> Result<_> {
         let publisher = scope.spawn(move || {
-            STALE_LINK_PAUSE.set(Some(ClaimPause {
+            let pause = Some(ClaimPause {
                 entered: arrived,
                 resume,
-            }));
+            });
+            if saturated {
+                OLD_DELETION_VISIBILITY.set(pause);
+            } else {
+                STALE_LINK_PAUSE.set(pause);
+            }
             context.with(|| {
                 if raw {
                     // SAFETY: the enclosing scope retains the original rooted parent.

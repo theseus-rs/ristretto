@@ -368,6 +368,13 @@ impl GarbageCollector {
                                 } else {
                                     cycle.reference_stage.clamp(1, 5)
                                 };
+                                if cycle.kind == CollectionKind::Old
+                                    && previous_stage == 0
+                                    && let Some(epoch) = self.domain().mark_queue.birth_epoch()
+                                    && !epoch.mature_deletions.seal_if_empty()
+                                {
+                                    break;
+                                }
                                 if !self.commit_phase(observation, true, false, stage) {
                                     break;
                                 }

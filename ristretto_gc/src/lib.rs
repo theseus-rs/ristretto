@@ -40,6 +40,7 @@ mod identity_pages;
 mod index;
 #[cfg(test)]
 mod managed_bytes_tests;
+mod mature_deletions;
 mod metadata;
 #[cfg(not(target_family = "wasm"))]
 mod pacing;

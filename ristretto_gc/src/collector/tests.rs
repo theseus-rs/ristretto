@@ -1490,3 +1490,86 @@ fn detached_clean_edge_preserves_its_graph_for_one_full_epoch() -> Result<()> {
     }
     Ok(())
 }
+
+#[test]
+#[expect(clippy::panic_in_result_fn, reason = "bounded mature graph traversal")]
+fn saturated_mature_deletion_traces_the_detached_child_and_grandchild() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .threads(0)
+                .promotion_age(1)
+                .old_collection_interval(4)
+                .concurrent_publication(counted)
+                .barrier_buffer_size(1)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let graph = |value: u64| -> Result<_> {
+            let leaf = Gc::try_new(&gc, value)?.into_rooted();
+            let leaf_key = (leaf.as_ptr().addr(), leaf.identity());
+            let child = Gc::try_new(&gc, vec![leaf])?.into_rooted();
+            let child_key = (child.as_ptr().addr(), child.identity());
+            let owner = Gc::try_new(&gc, crate::cell::RwLock::new(Some(child)))?;
+            Ok((owner, [child_key, leaf_key]))
+        };
+        let (owner, kept) = graph(59)?;
+        let (control, dead) = graph(61)?;
+        let filler = Gc::try_new(&gc, vec![Gc::try_new(&gc, 71u64)?.into_rooted()])?;
+        gc.collect_full()?;
+        // SAFETY: only discard the in-place handle. No unrooted value escapes.
+        #[expect(unsafe_code)]
+        unsafe {
+            *control.write().unrooted_mut() = None;
+        }
+        let context = gc.register_context();
+        gc.collect_old();
+        assert!((0..2048).any(|_| {
+            gc.coordinated_step(false);
+            lock(&gc.domains[1].cycle).phase == Phase::Mark
+        }));
+        let epoch = gc.domains[1]
+            .mark_queue
+            .birth_epoch()
+            .expect("old receiver");
+        let exact = |(addr, id)| gc.objects.lookup_identity(addr, id);
+        for &key in kept.iter().chain(&dead) {
+            let target = exact(key).expect("mature before sweep");
+            assert!(epoch.old_only && !gc.is_young_metadata(&target));
+            assert!(!gc.visible_mark(&target, 1, epoch.number));
+        }
+        context.with(|| {
+            gc.write_barrier(filler.first().expect("independent filler"));
+            assert!(!epoch.has_root_capacity(1));
+            // SAFETY: drop the original edge in place before ending the write.
+            #[expect(unsafe_code)]
+            unsafe {
+                *owner.write().unrooted_mut() = None;
+            }
+        });
+        assert_eq!(epoch.proposal_count(), 1);
+        assert!(epoch.mature_deletions.contains(kept[0].1));
+        let ticket = gc.completed_full_ticket();
+        assert!((0..8192).any(|_| {
+            gc.step();
+            !gc.domains[1].active()
+        }));
+        assert_eq!(gc.completed_full_ticket(), ticket);
+        for key in kept {
+            assert!(exact(key).is_some(), "lost detached identity {key:?}");
+        }
+        for key in dead {
+            assert!(exact(key).is_none(), "control retained {key:?}");
+        }
+        gc.collect_full()?;
+        for key in kept {
+            assert!(exact(key).is_none());
+        }
+        drop((filler, owner, control));
+        gc.collect_full()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}

@@ -354,8 +354,16 @@ impl GarbageCollector {
             }
             let mut debt = None;
             let mut handoff = [None, None];
+            let mut saturated_old = None;
             let certified = self.certify_root_attempt(phases, metadata, |index, epoch| {
                 if !epoch.has_root_capacity(limit) {
+                    if numeric_handoff
+                        && index == 1
+                        && epoch.old_only
+                        && !self.is_young_metadata(metadata)
+                    {
+                        saturated_old = Some(epoch.clone());
+                    }
                     return None;
                 }
                 if numeric_handoff
@@ -371,6 +379,32 @@ impl GarbageCollector {
                     .clone(),
                 )
             });
+            // A mature target has exactly one receiver in this old-only pass.
+            // Its open stripe is a traversal certificate until the mark gate
+            // transfers the bit into an in-flight claim. Closure seals it first.
+            if let Some(epoch) = saturated_old
+                && metadata.birth.is_live()
+                && epoch
+                    .mature_deletions
+                    .offer(metadata.id, metadata.trace.ptr.addr())
+            {
+                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                super::publication_tests::pause_before_old_deletion_visibility();
+                // A later old receiver must see a deletion whose caller was stopped
+                // after publishing to its predecessor. A newly active young receiver
+                // has no marking duty for this mature birth.
+                match self.phase_clock.indexed_root() {
+                    publication_state::Birth::Idle => return,
+                    publication_state::Birth::Inline(s) | publication_state::Birth::Epochs(s)
+                        if s.stage(1).is_none()
+                            || (s.stage(1) == Some(0)
+                                && self.domain_at(1).mark_queue.current_birth_epoch(&epoch)) =>
+                    {
+                        return;
+                    }
+                    _ => continue,
+                }
+            }
             if certified != Some(true)
                 || !metadata.birth.is_live()
                 || debt.is_some_and(|r| !r.commit_typed())

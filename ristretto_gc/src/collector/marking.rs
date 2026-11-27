@@ -16,12 +16,30 @@ impl GarbageCollector {
         claim: &mut crate::work::Claim,
         remaining: &mut usize,
     ) -> usize {
-        self.domain().mark_queue.claim_into(
-            self.local_queue(),
-            self.configuration.mark_batch_size,
-            remaining,
-            claim,
-        );
+        let epoch = (self.domain_index() == 1 && self.old_collection_active())
+            .then(|| self.domain().mark_queue.birth_epoch())
+            .flatten();
+        let first = epoch
+            .as_ref()
+            .is_some_and(|e| e.mature_deletions.prefer_claim());
+        if !(first
+            && epoch
+                .as_ref()
+                .is_some_and(|e| self.claim_mature_deletion(e, claim, remaining)))
+        {
+            self.domain().mark_queue.claim_into(
+                self.local_queue(),
+                self.configuration.mark_batch_size,
+                remaining,
+                claim,
+            );
+            if !first
+                && let Some(epoch) = epoch
+                && claim.count() == 0
+            {
+                self.claim_mature_deletion(&epoch, claim, remaining);
+            }
+        }
         #[cfg(test)]
         if claim.count() != 0 {
             let pause = lock(&self.mark_claim_pause).take();
@@ -46,6 +64,35 @@ impl GarbageCollector {
             }
         }
         claim.count()
+    }
+
+    fn claim_mature_deletion(
+        &self,
+        epoch: &crate::work::BirthEpoch,
+        claim: &mut crate::work::Claim,
+        remaining: &mut usize,
+    ) -> bool {
+        if *remaining == 0 {
+            return false;
+        }
+        let Some(target) = epoch.mature_deletions.take() else {
+            return false;
+        };
+        #[cfg(feature = "experimental-identity-index")]
+        let address = Some(target.address);
+        #[cfg(not(feature = "experimental-identity-index"))]
+        let address = self.identities.get(target.id.to_i64().cast_unsigned());
+        if let Some(metadata) = address.and_then(|a| self.objects.lookup_identity(a, target.id))
+            && metadata.birth.is_live()
+            && metadata.mark(1, epoch.number, super::Retention::Strong)
+        {
+            let budget = (*remaining).min(32).min(metadata.trace.budget.max(1));
+            *remaining -= budget;
+            claim.items[0] = Some((super::MarkItem::fresh(metadata), budget));
+        } else {
+            *remaining -= 1;
+        }
+        true
     }
 
     /// A successful independent step never reacquires the coordinator. Reservations

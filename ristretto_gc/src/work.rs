@@ -533,6 +533,7 @@ pub(crate) struct BirthEpoch {
     pub(crate) old_only: bool,
     collector: Weak<crate::GarbageCollector>,
     offers: AtomicUsize,
+    pub(crate) mature_deletions: crate::mature_deletions::MatureDeletions,
     direct_identity: OnceBox<Arc<()>>,
     roots: OnceBox<graph_birth_queue::Queue<RootProposal>>,
     inbox: OnceBox<graph_birth_queue::Queue<GraphBirth>>,
@@ -754,6 +755,7 @@ impl MarkQueues {
             old_only,
             collector,
             offers: AtomicUsize::new(0),
+            mature_deletions: crate::mature_deletions::MatureDeletions::default(),
             direct_identity: OnceBox::new(),
             roots: OnceBox::new(),
             inbox: OnceBox::new(),
@@ -765,6 +767,9 @@ impl MarkQueues {
         self.root_offered.store(false, Ordering::Release);
         self.graph_offered.store(false, Ordering::Release);
         let epoch = self.graph_inbox.swap(None)?;
+        if epoch.old_only {
+            epoch.mature_deletions.abandon();
+        }
         epoch.offers.fetch_or(SEALED, Ordering::AcqRel);
         Some(DetachedEpoch(epoch))
     }
