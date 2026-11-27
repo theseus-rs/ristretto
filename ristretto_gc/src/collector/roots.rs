@@ -241,14 +241,17 @@ impl GarbageCollector {
         self.insert_tree_root(address, true)
     }
 
+    #[cfg(test)]
+    pub(super) fn probe_tree_root_insertion(&self) {
+        let probe = *lock(&self.tree_root_insert_probe);
+        if let Some(probe) = probe {
+            probe(self);
+        }
+    }
+
     pub(super) fn insert_tree_root(&self, address: usize, owned: bool) -> crate::roots::TreeRoot {
         #[cfg(test)]
-        {
-            let probe = *lock(&self.tree_root_insert_probe);
-            if let Some(probe) = probe {
-                probe(self);
-            }
-        }
+        self.probe_tree_root_insertion();
         if self.diagnostics_enabled() {
             self.diagnostics
                 .root_registrations

@@ -8,6 +8,48 @@ use super::{
 type NoticeEntry = (crate::ObjectId, crate::roots::TreeRoot);
 pub(super) type PendingNotice = crate::publication_queue::Prepared<NoticeEntry>;
 
+#[derive(Clone, Debug)]
+pub(super) struct NoticeRequest {
+    pub(super) slot: std::sync::Weak<crate::weak::WeakSlot>,
+    pub(super) id: usize,
+    pub(super) stage: usize,
+    pub(super) owner: crate::ObjectId,
+}
+
+impl NoticeRequest {
+    fn matches(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.stage == other.stage
+            && self.owner == other.owner
+            && self.slot.ptr_eq(&other.slot)
+    }
+}
+
+pub(super) struct ReservedNotice<'a> {
+    owner: crate::ObjectId,
+    root: crate::roots::VacantRoot<'a>,
+    notice: Arc<PendingNotice>,
+}
+
+impl ReservedNotice<'_> {
+    pub(super) fn commit(
+        &mut self,
+        gc: &GarbageCollector,
+        owner: &MetadataRef,
+    ) -> Option<Arc<PendingNotice>> {
+        if self.owner != owner.id {
+            return None;
+        }
+        self.root.publish(owner.ptr().0);
+        if gc.diagnostics_enabled() {
+            gc.diagnostics
+                .root_registrations
+                .fetch_add(1, Ordering::Relaxed);
+        }
+        Some(self.notice.clone())
+    }
+}
+
 impl GarbageCollector {
     pub(super) fn register_weak(&self, slot: &Arc<crate::weak::WeakSlot>) {
         let address = slot.target.load(Ordering::Acquire);
@@ -58,13 +100,13 @@ impl GarbageCollector {
         })
     }
 
-    pub(super) fn reference_owner_live(&self, slot: &crate::weak::WeakSlot) -> bool {
-        self.reference_owner(slot).is_some_and(|metadata| {
-            if self.configuration.overlapping_generations && self.logically_retired(&metadata) {
+    pub(super) fn live_reference_owner(&self, slot: &crate::weak::WeakSlot) -> Option<MetadataRef> {
+        self.reference_owner(slot).filter(|metadata| {
+            if self.configuration.overlapping_generations && self.logically_retired(metadata) {
                 return false;
             }
             self.visible_mark(
-                &metadata,
+                metadata,
                 self.domain_index(),
                 self.domain().epoch.load(Ordering::Acquire),
             ) || ((self.domain_index() == 0)
@@ -221,15 +263,96 @@ impl GarbageCollector {
             .get_or_init(|| Box::new(crate::publication_queue::Queue::new()))
     }
 
+    // Reentry owns the original domain cut and rechecks both the current
+    // referent and owner. A numeric reservation cannot establish eligibility.
+    pub(super) fn commit_or_prepare_notice(
+        &self,
+        cycle: &mut super::Cycle,
+        id: usize,
+        entry: &std::sync::Weak<crate::weak::WeakSlot>,
+        owner: &MetadataRef,
+        reserved: Option<&mut ReservedNotice<'_>>,
+    ) -> Option<super::Unit> {
+        if let Some(notice) = reserved.and_then(|r| r.commit(self, owner)) {
+            cycle.pending_notice = Some(notice);
+            None
+        } else {
+            let request = NoticeRequest {
+                id,
+                slot: entry.clone(),
+                stage: cycle.reference_stage,
+                owner: owner.id,
+            };
+            Some(super::Unit::External(
+                super::phase_work::ExternalWork::PrepareReference(request),
+            ))
+        }
+    }
+
+    // No phase, publication or slot-decision guard crosses this allocation.
+    fn reserve_notice(&self, owner: crate::ObjectId) -> ReservedNotice<'_> {
+        #[cfg(test)]
+        self.probe_tree_root_insertion();
+        let root = self.roots.reserve(&self.next_root_id);
+        let notice = Arc::new(self.reference_queue().prepare((owner, root.key())));
+        ReservedNotice {
+            owner,
+            root,
+            notice,
+        }
+    }
+
+    pub(super) fn help_prepare_notice(
+        &self,
+        index: usize,
+        epoch: u64,
+        request: &NoticeRequest,
+        counters: &mut super::WorkCounters,
+    ) {
+        let mut reserved = self.reserve_notice(request.owner);
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        super::reference_tests::pause_with_vacant_notice();
+        let link = {
+            let _coordinator = if self.configuration.independent_phases {
+                None
+            } else {
+                let Ok(guard) = self.coordinator.try_lock() else {
+                    return;
+                };
+                Some(guard)
+            };
+            let Ok(mut cycle) = self.domain_at(index).cycle.try_lock() else {
+                return;
+            };
+            if cycle.epoch != epoch
+                || cycle.phase != super::Phase::References
+                || cycle.reference_stage != request.stage
+                || !cycle
+                    .preparing_notice
+                    .as_ref()
+                    .is_some_and(|(current, _)| current.matches(request))
+            {
+                return;
+            }
+            match self.reference_unit_prepared(&mut cycle, counters, Some(&mut reserved)) {
+                super::Unit::External(super::phase_work::ExternalWork::LinkReference(link)) => {
+                    Some(link)
+                }
+                _ => None,
+            }
+        };
+        if let Some(link) = link {
+            self.link_reference(&link);
+        }
+    }
+
+    #[cfg(test)]
     pub(super) fn prepare_reference(
         &self,
         slot: &crate::weak::WeakSlot,
     ) -> Option<Arc<PendingNotice>> {
         let metadata = self.reference_owner(slot)?;
-        let root = self.insert_root(metadata.ptr().0);
-        Some(Arc::new(
-            self.reference_queue().prepare((metadata.id, root)),
-        ))
+        self.reserve_notice(metadata.id).commit(self, &metadata)
     }
 
     pub(super) fn link_reference(&self, notice: &PendingNotice) {

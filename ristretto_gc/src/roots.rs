@@ -113,7 +113,7 @@ pub(crate) struct TreeRoot {
 
 #[path = "tree_roots.rs"]
 mod tree_roots;
-pub(crate) use tree_roots::{TreeRoots, TreeScan};
+pub(crate) use tree_roots::{TreeRoots, TreeScan, VacantRoot};
 
 #[derive(Debug, Default)]
 pub(crate) struct Cursor {

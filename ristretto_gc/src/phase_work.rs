@@ -14,6 +14,7 @@ pub(super) enum Unit {
 }
 
 pub(super) enum ExternalWork {
+    PrepareReference(super::references::NoticeRequest),
     LinkReference(std::sync::Arc<super::references::PendingNotice>),
     #[cfg(not(target_family = "wasm"))]
     CleanupBatch(
@@ -56,6 +57,9 @@ impl ExternalWork {
                     let (task, budget) = batch.first;
                     gc.reclaim_swept(task, index, epoch, budget, counters, None);
                 }
+            }
+            Self::PrepareReference(request) => {
+                gc.help_prepare_notice(index, epoch, &request, counters);
             }
             Self::LinkReference(notice) => gc.link_reference(&notice),
             Self::PrepareGrant(request) => request.prepare(),
@@ -425,6 +429,20 @@ impl GarbageCollector {
         true
     }
     pub(super) fn reference_unit(&self, cycle: &mut Cycle, counters: &mut WorkCounters) -> Unit {
+        self.reference_unit_prepared(cycle, counters, None)
+    }
+
+    pub(super) fn reference_unit_prepared(
+        &self,
+        cycle: &mut Cycle,
+        counters: &mut WorkCounters,
+        reserved: Option<&mut super::references::ReservedNotice<'_>>,
+    ) -> Unit {
+        if reserved.is_none()
+            && let Some((request, _)) = &cycle.preparing_notice
+        {
+            return Unit::External(ExternalWork::PrepareReference(request.clone()));
+        }
         // The cursor owns the decision and its root until insertion is certified.
         // Each helper carries the same append intent outside all three guards.
         if let Some(notice) = &cycle.pending_notice {
@@ -442,32 +460,44 @@ impl GarbageCollector {
         if self.contexts.pending.load(Ordering::Acquire) != 0 {
             return Unit::Busy;
         }
-        let late = &self.domain().late_references;
-        let young = cycle.kind == CollectionKind::Young;
-        // Alternate so repeated late registrations cannot starve the range scan.
-        cycle.late_reference_turn = !cycle.late_reference_turn;
-        let mut take_late = || late.next(cycle.reference_stage, &mut cycle.retry_reference);
-        let next = if cycle.late_reference_turn {
-            take_late().map(|e| (e, true))
+        let next = if let Some((request, extra)) = &cycle.preparing_notice {
+            Some(((request.id, request.slot.clone()), *extra))
         } else {
-            None
-        }
-        .or_else(|| {
-            self.weak_slots
-                .next(young, cycle.cursor)
-                .map(|e| (e, false))
-        })
-        .or_else(|| take_late().map(|e| (e, true)));
+            let late = &self.domain().late_references;
+            let young = cycle.kind == CollectionKind::Young;
+            // Alternate so repeated late registrations cannot starve the range scan.
+            cycle.late_reference_turn = !cycle.late_reference_turn;
+            let mut take_late = || late.next(cycle.reference_stage, &mut cycle.retry_reference);
+            if cycle.late_reference_turn {
+                take_late().map(|e| (e, true))
+            } else {
+                None
+            }
+            .or_else(|| {
+                self.weak_slots
+                    .next(young, cycle.cursor)
+                    .map(|e| (e, false))
+            })
+            .or_else(|| take_late().map(|e| (e, true)))
+        };
         let Some(((id, entry), extra)) = next else {
             return Unit::Boundary;
         };
-        let result = self.decide_reference(cycle, counters, id, &entry);
+        let result = self.decide_reference(cycle, counters, id, &entry, reserved);
+        if let Unit::External(ExternalWork::PrepareReference(request)) = &result {
+            cycle.preparing_notice = Some((request.clone(), extra));
+            return result;
+        }
         if matches!(result, Unit::Busy) {
+            cycle.preparing_notice = None;
             if extra {
                 cycle.retry_reference = Some((id, entry));
             }
-        } else if !extra {
-            cycle.cursor = id;
+        } else {
+            cycle.preparing_notice = None;
+            if !extra {
+                cycle.cursor = id;
+            }
         }
         // Preserve single-unit delivery on an uncontended queue. A parked first
         // attempt leaves its clone discoverable at the top of the next unit.
@@ -483,8 +513,8 @@ impl GarbageCollector {
         counters: &mut WorkCounters,
         id: usize,
         entry: &std::sync::Weak<crate::weak::WeakSlot>,
+        reserved: Option<&mut super::references::ReservedNotice<'_>>,
     ) -> Unit {
-        let index = self.domain_index();
         let Some(slot) = entry.upgrade() else {
             self.weak_slots.prune(id, entry, false);
             return Unit::Progress;
@@ -510,7 +540,22 @@ impl GarbageCollector {
             // cycle open for a hook that may be suspended indefinitely.
             return Unit::Progress;
         }
-        counters.references += 1;
+        let result = self.decide_guarded_reference(cycle, &slot, id, entry, reserved);
+        if !matches!(result, Unit::External(ExternalWork::PrepareReference(_))) {
+            counters.references += 1;
+        }
+        result
+    }
+
+    fn decide_guarded_reference(
+        &self,
+        cycle: &mut Cycle,
+        slot: &crate::weak::WeakSlot,
+        id: usize,
+        entry: &std::sync::Weak<crate::weak::WeakSlot>,
+        mut reserved: Option<&mut super::references::ReservedNotice<'_>>,
+    ) -> Unit {
+        let index = self.domain_index();
         let address = slot.target.load(Ordering::Acquire);
         let pending = slot.pending.load(Ordering::Acquire);
         if address == 0 && !pending {
@@ -520,35 +565,44 @@ impl GarbageCollector {
         // Reading an owning descriptor grants no access to its payload. A
         // parked object-shard holder cannot stall the weak/soft decision while
         // the coordinator owns publication. An address replacement is a miss.
-        let target = self.weak_target_metadata(&slot, address);
+        let target = self.weak_target_metadata(slot, address);
         if !pending && target.as_ref().is_none_or(|m| !self.is_young_metadata(m)) {
             self.weak_slots.prune(id, entry, true);
         }
         let owner = slot.owner.load(Ordering::Acquire);
         if cycle.reference_stage == 4 {
-            // Final-reference tracing has now established reachability of
-            // Reference subclasses as well. A dead Reference must never be
-            // resurrected solely to deliver a queue notification.
-            if slot.pending.swap(false, Ordering::AcqRel)
+            if pending
                 && owner != 0
-                && self.reference_owner_live(&slot)
+                && let Some(metadata) = self.live_reference_owner(slot)
+                && let Some(work) = self.commit_or_prepare_notice(
+                    cycle,
+                    id,
+                    entry,
+                    &metadata,
+                    reserved.as_deref_mut(),
+                )
             {
-                cycle.pending_notice = self.prepare_reference(&slot);
+                return work;
             }
+            slot.pending.store(false, Ordering::Release);
             return Unit::Progress;
         }
         // Clearing applies even to Reference objects that will only become
         // reachable through finalization. Queue eligibility is decided after
         // that closure, independently of clearing the conditional edge.
         // Retaining edges, however, must not keep dead owners' graphs alive.
-        if matches!(
+        let retaining_owner = if matches!(
             slot.kind,
             crate::ReferenceKind::Final | crate::ReferenceKind::PhantomRetained
         ) && owner != 0
-            && !self.reference_owner_live(&slot)
         {
-            return Unit::Progress;
-        }
+            let Some(metadata) = self.live_reference_owner(slot) else {
+                return Unit::Progress;
+            };
+            Some(metadata)
+        } else {
+            None
+        };
         let relevant = match slot.kind {
             crate::ReferenceKind::Soft | crate::ReferenceKind::Weak => cycle.reference_stage == 1,
             crate::ReferenceKind::Final => cycle.reference_stage == 2,
@@ -569,6 +623,15 @@ impl GarbageCollector {
                 .is_none_or(|m| !self.reference_metadata_live(m, slot.kind))
                 || cycle.phantom_retained.contains(&address))
         {
+            if slot.kind == crate::ReferenceKind::Final
+                && owner != 0
+                && !slot.activated.load(Ordering::Acquire)
+                && let Some(metadata) = retaining_owner.as_ref()
+                && let Some(work) =
+                    self.commit_or_prepare_notice(cycle, id, entry, metadata, reserved)
+            {
+                return work;
+            }
             if matches!(
                 slot.kind,
                 crate::ReferenceKind::Final | crate::ReferenceKind::PhantomRetained
@@ -582,12 +645,11 @@ impl GarbageCollector {
             } else {
                 slot.target.store(0, Ordering::Release);
             }
-            if !slot.activated.swap(true, Ordering::AcqRel) && owner != 0 {
-                if slot.kind == crate::ReferenceKind::Final {
-                    cycle.pending_notice = self.prepare_reference(&slot);
-                } else {
-                    slot.pending.store(true, Ordering::Release);
-                }
+            if !slot.activated.swap(true, Ordering::AcqRel)
+                && owner != 0
+                && slot.kind != crate::ReferenceKind::Final
+            {
+                slot.pending.store(true, Ordering::Release);
             }
         }
         Unit::Progress

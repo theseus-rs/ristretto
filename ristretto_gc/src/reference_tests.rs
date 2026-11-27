@@ -8,6 +8,22 @@ thread_local! {
     static PENDING_NOTICE_PAUSE: std::cell::Cell<Option<(bool, ClaimPause)>> = const { std::cell::Cell::new(None) };
 }
 
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+thread_local! {
+    static VACANT_NOTICE_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn pause_with_vacant_notice() {
+    if let Some(pause) = VACANT_NOTICE_PAUSE.take() {
+        pause.entered.send(()).expect("private notice reserved");
+        pause
+            .resume
+            .recv_timeout(std::time::Duration::from_secs(15))
+            .expect("resume private notice");
+    }
+}
+
 #[cfg(not(target_family = "wasm"))]
 pub(super) fn pause_pending_notice(linked: bool) {
     if let Some((after_link, pause)) = PENDING_NOTICE_PAUSE.take() {
@@ -1878,3 +1894,6 @@ mod construction_contention {
         Ok(())
     }
 }
+
+#[path = "reference_queue_root_tests.rs"]
+mod queue_roots;

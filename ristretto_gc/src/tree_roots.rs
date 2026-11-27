@@ -100,6 +100,35 @@ pub(crate) struct TreeRoots {
     live: AtomicUsize,
 }
 
+/// An issued numeric position whose generation remains invisible to root scans.
+pub(crate) struct VacantRoot<'a> {
+    roots: &'a TreeRoots,
+    page: Arc<Page>,
+    key: TreeRoot,
+    published: bool,
+}
+
+impl VacantRoot<'_> {
+    pub(crate) fn key(&self) -> TreeRoot {
+        self.key
+    }
+
+    pub(crate) fn publish(&mut self, address: usize) {
+        assert!(!self.published, "vacant root already committed");
+        self.roots.publish(self.key, &self.page, address);
+        self.published = true;
+    }
+}
+
+impl Drop for VacantRoot<'_> {
+    fn drop(&mut self) {
+        if !self.published {
+            self.roots
+                .release_occupancy(self.key.id, Some(self.key.generation), &self.page);
+        }
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) enum TreeScan {
     Root(usize, usize),
@@ -135,12 +164,38 @@ impl TreeRoots {
         self.insert_kind(next, address, false)
     }
 
+    fn insert_kind(&self, next: &AtomicUsize, address: usize, owned: bool) -> TreeRoot {
+        self.claim_slot(next, owned, |key, page| {
+            self.publish(key, page, address);
+            key
+        })
+    }
+
+    fn publish(&self, key: TreeRoot, page: &Page, address: usize) {
+        debug_assert_ne!(address, 0);
+        self.live.fetch_add(1, Ordering::Relaxed);
+        page.slots[key.id & (SLOTS - 1)].publish(key.generation, address);
+    }
+
+    pub(crate) fn reserve(&self, next: &AtomicUsize) -> VacantRoot<'_> {
+        self.claim_slot(next, true, |key, page| VacantRoot {
+            roots: self,
+            page: page.clone(),
+            key,
+            published: false,
+        })
+    }
+
     #[expect(
         clippy::expect_used,
         reason = "root generations fail closed before reuse"
     )]
-    fn insert_kind(&self, next: &AtomicUsize, address: usize, owned: bool) -> TreeRoot {
-        debug_assert_ne!(address, 0);
+    fn claim_slot<R>(
+        &self,
+        next: &AtomicUsize,
+        owned: bool,
+        claim: impl Fn(TreeRoot, &Arc<Page>) -> R,
+    ) -> R {
         let previous = self
             .generation
             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |value| {
@@ -173,12 +228,13 @@ impl TreeRoots {
                         }
                         Claim::Sealed => return None,
                     };
-                    self.live.fetch_add(1, Ordering::Relaxed);
-                    page.slots[slot].publish(generation, address);
-                    Some(TreeRoot {
-                        id: base | slot,
-                        generation,
-                    })
+                    Some(claim(
+                        TreeRoot {
+                            id: base | slot,
+                            generation,
+                        },
+                        page,
+                    ))
                 })
             {
                 return root;
@@ -200,9 +256,7 @@ impl TreeRoots {
                 };
                 match page.occupied.claim(bit) {
                     Claim::Reserved => {
-                        self.live.fetch_add(1, Ordering::Relaxed);
-                        page.slots[slot].publish(generation, address);
-                        return TreeRoot { id, generation };
+                        return claim(TreeRoot { id, generation }, page);
                     }
                     Claim::Sealed => self.install_page(key, &view),
                     Claim::InUse => break, // This numeric ID is still in use.
@@ -312,9 +366,13 @@ impl TreeRoots {
     }
 
     fn release_position(&self, id: usize, expected: Option<NonZeroU64>, page: &Arc<Page>) {
+        self.live.fetch_sub(1, Ordering::Relaxed);
+        self.release_occupancy(id, expected, page);
+    }
+
+    fn release_occupancy(&self, id: usize, expected: Option<NonZeroU64>, page: &Arc<Page>) {
         let key = (id >> PAGE_BITS) as u64;
         let slot = id & (SLOTS - 1);
-        self.live.fetch_sub(1, Ordering::Relaxed);
         let bit = 1u64 << slot;
         if page.occupied.release(bit) && key != 0 && !self.pages.load().is_recent(key) {
             self.retire_empty(key, page);
