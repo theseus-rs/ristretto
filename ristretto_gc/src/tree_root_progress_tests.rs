@@ -273,3 +273,157 @@ fn conditional_owner_reservation_permits_a_fresh_full_ticket() {
         }
     }
 }
+
+#[test]
+fn removed_construction_root_protects_the_exact_graph_through_handoff() {
+    use crate::{GcWeak, ReferenceKind, RootStorage};
+
+    fn require_ticket(gc: &GarbageCollector) {
+        lock(&gc.tree_root_insert_probe).take();
+        let ticket = gc.request_full_cycle();
+        for _ in 0..2048 {
+            if gc.completed_full_ticket() >= ticket {
+                return;
+            }
+            gc.step();
+        }
+        assert!(
+            gc.completed_full_ticket() >= ticket,
+            "full ticket stalled during removal preparation"
+        );
+    }
+    struct Owner {
+        manual: usize,
+        graph: GcWeak<Vec<Gc<u64>>>,
+        original: crate::ObjectId,
+    }
+    // SAFETY: the slot is a host weak witness. The numeric ID grants no payload access.
+    unsafe impl Trace for Owner {
+        fn trace(&self, _: &GarbageCollector) {}
+        unsafe fn attach(&mut self, owner: crate::TraceOwner<'_>) {
+            let gc = owner.collector().upgrade().unwrap();
+            *lock(&gc.tree_root_insert_probe) = Some(require_ticket);
+            gc.remove_root_by_id(self.manual);
+            assert!(lock(&gc.tree_root_insert_probe).is_none());
+            gc.collect_full().unwrap();
+            let graph = self.graph.upgrade().unwrap();
+            assert_eq!(graph.identity(), self.original);
+            assert_eq!(*graph[0], 41);
+        }
+    }
+    for counted in [false, true] {
+        for storage in [RootStorage::Tree, RootStorage::Slots, RootStorage::Contexts] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .root_storage(storage)
+                    .concurrent_publication(counted)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let child = Gc::try_new(&gc, 41_u64).unwrap();
+            let weak_child = GcWeak::new(&child, ReferenceKind::Weak, 0);
+            let graph = Gc::try_new(&gc, vec![child.into_rooted()]).unwrap();
+            let owner = Owner {
+                manual: gc.add_root(&graph),
+                graph: GcWeak::new(&graph, ReferenceKind::Weak, 0),
+                original: graph.identity(),
+            };
+            drop(graph);
+            drop(Gc::try_new(&gc, owner).unwrap());
+            gc.collect_full().unwrap();
+            assert!(weak_child.is_cleared());
+            assert_eq!(gc.root_statistics().compatibility_roots, 0);
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn parked_construction_removal_cannot_capture_a_reused_generation() {
+    use crate::{GcWeak, ReferenceKind, RootStorage};
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    // The collector probes without borrowing the TLS capture or holding admission.
+    fn park(gc: &GarbageCollector) {
+        lock(&gc.tree_root_insert_probe).take();
+        gc.pause_metadata_preparation();
+    }
+    fn full_ticket(gc: &GarbageCollector) -> bool {
+        let ticket = gc.request_full_cycle();
+        for _ in 0..2048 {
+            if gc.completed_full_ticket() >= ticket {
+                return true;
+            }
+            gc.step();
+        }
+        gc.completed_full_ticket() >= ticket
+    }
+    for counted in [false, true] {
+        for storage in [RootStorage::Tree, RootStorage::Slots, RootStorage::Contexts] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .root_storage(storage)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let child = Gc::try_new(&gc, 41_u64).unwrap();
+            let original = GcWeak::new(&child, ReferenceKind::Weak, 0);
+            let graph = Gc::try_new(&gc, vec![child.into_rooted()]).unwrap();
+            let manual = gc.add_root(&graph);
+            let exact = gc
+                .roots
+                .matching(graph.as_ptr().addr())
+                .into_iter()
+                .find(|key| key.id == manual)
+                .unwrap();
+            let replacement = Gc::try_new(&gc, 73_u64).unwrap();
+            let expected = replacement.identity();
+            let witness = GcWeak::new(&replacement, ReferenceKind::Weak, 0);
+            drop(graph);
+            let (entered, parked) = mpsc::channel();
+            let (resume, release) = mpsc::channel();
+            *lock(&gc.metadata_prepare_pause) = Some(ClaimPause {
+                entered,
+                resume: release,
+            });
+            *lock(&gc.tree_root_insert_probe) = Some(park);
+            thread::scope(|s| {
+                let worker = s.spawn(|| {
+                    let mut scope = crate::construction::Roots::new(&gc);
+                    let _active = scope.enter();
+                    gc.remove_tree_root(exact);
+                });
+                parked.recv_timeout(Duration::from_secs(3)).unwrap();
+                let progressed = full_ticket(&gc);
+                if progressed {
+                    assert!(!original.is_cleared());
+                    gc.remove_root_by_id(manual);
+                    // Force the real allocator's wrap/reuse case while the exact token is parked.
+                    gc.next_root_id.store(manual, Ordering::Relaxed);
+                    assert_eq!(gc.add_root(&replacement), manual);
+                    drop(replacement);
+                    assert!(full_ticket(&gc));
+                    assert!(original.is_cleared());
+                }
+                resume.send(()).unwrap();
+                worker.join().unwrap();
+                assert!(
+                    progressed,
+                    "first full ticket stalled during retention preparation"
+                );
+            });
+            gc.collect_full().unwrap();
+            assert_eq!(
+                witness.upgrade().map(|v| (v.identity(), *v)),
+                Some((expected, 73))
+            );
+            gc.remove_root_by_id(manual);
+            gc.collect_full().unwrap();
+            assert!(witness.is_cleared());
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+}

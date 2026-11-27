@@ -171,15 +171,29 @@ impl GarbageCollector {
             super::publication_tests::record_covered_removal();
             return root.release();
         }
-        let _publication = self.allocation_guard();
-        if let Some(address) = root.take_address() {
-            if ADOPT {
-                crate::construction::retain(self, address);
+        self.detach_root::<ADOPT>(|| root.take_address()) && root.release()
+    }
+
+    /// Keep source removal, any replacement publication, and the deletion
+    /// barrier in the same admission. The source remains scannable throughout
+    /// preparation. Only the exact winning removal supplies an address.
+    fn detach_root<const ADOPT: bool>(&self, take: impl FnOnce() -> Option<usize>) -> bool {
+        let detach = |replacement: Option<&mut crate::roots::VacantRoot<'_>>| {
+            let _publication = self.allocation_guard();
+            let Some(address) = take() else { return false };
+            if let Some(root) = replacement
+                && self.objects.lookup(address).is_some()
+            {
+                // Skip the initial root of an unpublished allocation on unwind.
+                self.publish_reserved_tree_root(root, address);
             }
             self.barrier(address, None);
-            root.release()
+            true
+        };
+        if ADOPT {
+            crate::construction::with_removal_root(self, detach)
         } else {
-            false
+            detach(None)
         }
     }
 
@@ -243,13 +257,7 @@ impl GarbageCollector {
             roots.finish_overflow(record);
             return;
         }
-        let publication = self.allocation_guard();
-        if let Some(address) = record.take_address() {
-            if ADOPT {
-                crate::construction::retain(self, address);
-            }
-            self.barrier(address, None);
-            drop(publication);
+        if self.detach_root::<ADOPT>(|| record.take_address()) {
             roots.finish_overflow(record);
         }
     }
@@ -271,16 +279,6 @@ impl GarbageCollector {
                 .fetch_add(1, Ordering::Relaxed);
         }
         self.roots.insert(&self.next_root_id, address)
-    }
-
-    /// Called under a publication reader before the removed root can cease to
-    /// protect its target. Unpublished descriptors have no registry entry yet.
-    pub(crate) fn retain_construction_root(
-        &self,
-        address: usize,
-    ) -> Option<crate::roots::TreeRoot> {
-        let address = self.objects.lock(address).get(&address)?.ptr().0;
-        Some(self.insert_root(address))
     }
 
     /// A conditional edge is not proof of liveness. Check its allocation identity
@@ -381,16 +379,12 @@ impl GarbageCollector {
             super::publication_tests::record_covered_removal();
             return;
         }
-        let _publication = self.allocation_guard();
-        let removed = self.roots.remove(id, generation);
-        if let Some(address) = removed {
+        self.detach_root::<ADOPT>(|| {
+            let address = self.roots.remove(id, generation)?;
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
             super::pause_after_tree_detach();
-            if ADOPT {
-                crate::construction::retain(self, address);
-            }
-            self.barrier(address, None);
-        }
+            Some(address)
+        });
     }
 
     /// Revokes every registration for an allocation, including owning handles.

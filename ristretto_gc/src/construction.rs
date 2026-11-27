@@ -201,18 +201,40 @@ impl Drop for Scope<'_, '_> {
     }
 }
 
-/// Called between root removal and its deletion barrier, under publication read
-/// admission. A replacement registration closes that gap before admission ends.
-/// Each replacement has a fresh ID; repeated removals cannot alias its cleanup.
-pub(crate) fn retain(collector: &GarbageCollector, address: usize) {
-    with_roots(collector, true, |roots| {
-        if let Some(id) = collector.retain_construction_root(address) {
-            roots
-                .registrations
-                .borrow_mut()
-                .push(Registration::Tree(id));
+/// Reserve backing before the source registration is detached. The removal
+/// returns with its publication guard released. Only a winning detach of a
+/// registered object publishes this generation and transfers it into the scope.
+pub(crate) fn with_removal_root<R>(
+    collector: &GarbageCollector,
+    remove: impl FnOnce(Option<&mut crate::roots::VacantRoot<'_>>) -> R,
+) -> R {
+    struct Capture<'a, 'gc> {
+        registrations: &'a RefCell<Vec<Registration>>,
+        root: crate::roots::VacantRoot<'gc>,
+    }
+
+    impl Drop for Capture<'_, '_> {
+        fn drop(&mut self) {
+            if let Some(key) = self.root.published_key() {
+                // The registration itself protects the graph from publication
+                // until scope cleanup, including if the deletion barrier unwinds.
+                self.registrations
+                    .borrow_mut()
+                    .push(Registration::Tree(key));
+            }
         }
-    });
+    }
+
+    with_matching_roots(collector, true, |scope| {
+        let Some(roots) = scope else {
+            return remove(None);
+        };
+        let mut capture = Capture {
+            registrations: &roots.registrations,
+            root: collector.reserve_tree_root(),
+        };
+        remove(Some(&mut capture.root))
+    })
 }
 
 /// The last owning handle transfers its existing registration rather than
@@ -299,6 +321,16 @@ fn with_roots(
     construction_only: bool,
     operation: impl FnOnce(&Roots<'_>),
 ) -> bool {
+    with_matching_roots(collector, construction_only, |roots| {
+        roots.map(operation).is_some()
+    })
+}
+
+fn with_matching_roots<R>(
+    collector: &GarbageCollector,
+    construction_only: bool,
+    operation: impl FnOnce(Option<&Roots<'_>>) -> R,
+) -> R {
     let mut current = CURRENT.get();
     while !current.is_null() {
         // SAFETY: enter borrows the stack Roots until Scope::drop restores the
@@ -306,12 +338,11 @@ fn with_roots(
         // predecessor alive. This reference never escapes this synchronous call.
         let roots = unsafe { &*current.cast::<Roots<'_>>() };
         if std::ptr::eq(roots.collector, collector) && (!construction_only || roots.construction) {
-            operation(roots);
-            return true;
+            return operation(Some(roots));
         }
         current = roots.previous.get();
     }
-    false
+    operation(None)
 }
 
 #[cfg(test)]

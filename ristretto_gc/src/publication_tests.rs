@@ -4610,3 +4610,36 @@ fn parked_epoch_publisher_allows_sibling_disposal_and_late_link_help() -> Result
     }
     Ok(())
 }
+
+#[test]
+fn construction_retains_only_winning_slot_and_overflow_detaches() {
+    use crate::{GcWeak, ReferenceKind, RootStorage};
+    for counted in [false, true] {
+        for storage in [RootStorage::Tree, RootStorage::Slots, RootStorage::Contexts] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .root_storage(storage)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let context = gc.register_context();
+            let leaf = Gc::try_new(&gc, 17_u64).unwrap();
+            let weak = GcWeak::new(&leaf, ReferenceKind::Weak, 0);
+            let graph = Gc::try_new(&gc, vec![leaf.into_rooted()]).unwrap();
+            let registration = drop_test_registration(&gc, &context, graph.as_ptr().addr());
+            drop(graph);
+            let mut captured = crate::construction::Roots::new(&gc);
+            let scope = captured.enter();
+            gc.remove_owned_root(&registration);
+            gc.remove_owned_root(&registration);
+            assert_eq!(gc.root_statistics().compatibility_roots, 1);
+            gc.collect_full().unwrap();
+            assert!(!weak.is_cleared());
+            drop(scope);
+            gc.collect_full().unwrap();
+            assert!(weak.is_cleared());
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+}

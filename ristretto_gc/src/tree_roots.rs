@@ -113,6 +113,10 @@ impl VacantRoot<'_> {
         self.key
     }
 
+    pub(crate) fn published_key(&self) -> Option<TreeRoot> {
+        self.published.then_some(self.key)
+    }
+
     pub(crate) fn publish(&mut self, address: usize) {
         assert!(!self.published, "vacant root already committed");
         self.roots.publish(self.key, &self.page, address);
