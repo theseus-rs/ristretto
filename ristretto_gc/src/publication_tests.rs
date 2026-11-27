@@ -2641,9 +2641,8 @@ fn idle_address_and_identity_lookups_use_slots_and_weak_upgrade_keeps_its_decisi
         static CHECKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
     }
     fn probe(gc: &GarbageCollector) {
-        // Observe the actual insertion, without depending on a type query that
-        // root entries no longer need. Validation's original admission survives.
-        assert_eq!(gc.diagnostics().active_publications, 1);
+        // A weak upgrade reserves a vacant tree slot before taking admission.
+        assert_eq!(gc.diagnostics().active_publications, 0);
         CHECKS.set(CHECKS.get() + 1);
     }
     let gc = GarbageCollector::with_config(
@@ -2742,7 +2741,7 @@ fn admitted_root_rejects_a_foreign_collectors_token() -> Result<()> {
     let gc = GarbageCollector::new();
     let other = GarbageCollector::new();
     let root = Gc::try_new(&gc, 42_u64)?;
-    let mut reservation = gc.reserve_owned_root(root.as_ptr() as usize);
+    let mut reservation = gc.reserve_conditional_root(root.as_ptr() as usize);
     let publication = other.root_publication_guard();
     assert!(
         Gc::<u64>::prepare_conditional_root(
@@ -2782,7 +2781,7 @@ fn prepared_root_protects_its_graph_after_admission_and_cancels_cleanly() -> Res
                 let parent = context.with(|| Gc::try_new(&gc, vec![child]))?;
                 let weak = crate::GcWeak::new(&parent, crate::ReferenceKind::Weak, 0);
                 let prepared = context.with(|| {
-                    let mut reservation = gc.reserve_owned_root(parent.as_ptr() as usize);
+                    let mut reservation = gc.reserve_conditional_root(parent.as_ptr() as usize);
                     let publication = gc.root_publication_guard();
                     Gc::<Vec<Gc<u64>>>::prepare_conditional_root(
                         &gc,
@@ -3509,7 +3508,7 @@ fn invisible_root_reservations_do_not_resurrect_expired_graphs_and_unwind_cleanl
                 let root = Gc::try_new(&gc, vec![Gc::new(&gc, 42_u64).into_rooted()])?;
                 let address = root.as_ptr_i64();
                 let identity = root.identity();
-                let mut reservation = gc.reserve_owned_root(root.as_ptr() as usize);
+                let mut reservation = gc.reserve_conditional_root(root.as_ptr() as usize);
                 drop(root);
                 gc.collect_full()?;
                 assert_eq!(gc.statistics()?.live_objects, 0);

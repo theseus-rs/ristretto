@@ -844,7 +844,7 @@ impl<T> Gc<T> {
     {
         let address_usize = usize::try_from(address)
             .map_err(|_| Error::InvalidPointer("invalid managed address".into()))?;
-        let mut reservation = collector.reserve_owned_root(address_usize);
+        let mut reservation = collector.reserve_conditional_root(address_usize);
         let publication = collector.root_publication_guard();
         let prepared = Self::prepare_conditional_root(
             collector,
@@ -865,7 +865,7 @@ impl<T> Gc<T> {
         retaining: bool,
         expected: Option<crate::ObjectId>,
         publication: &crate::collector::RootPublication<'_>,
-        reservation: &mut crate::collector::RootReservation<'_>,
+        reservation: &mut crate::collector::ConditionalRootReservation<'_>,
     ) -> Result<PreparedRoot<T>>
     where
         T: Trace + 'static,

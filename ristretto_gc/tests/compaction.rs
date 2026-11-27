@@ -481,7 +481,9 @@ fn young_finishes_during_full_tracing_and_full_waits_for_its_requested_cycle() -
         }
         drop(Gc::new(&gc, 12_u64));
         gc.collect_young();
-        for _ in 0..100 {
+        // The all-feature WASI build completes this young cycle on one-unit
+        // poll 101. The full trace still has thousands of units outstanding.
+        for _ in 0..101 {
             gc.step();
         }
         assert_eq!(

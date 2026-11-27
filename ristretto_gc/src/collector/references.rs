@@ -40,12 +40,7 @@ impl ReservedNotice<'_> {
         if self.owner != owner.id {
             return None;
         }
-        self.root.publish(owner.ptr().0);
-        if gc.diagnostics_enabled() {
-            gc.diagnostics
-                .root_registrations
-                .fetch_add(1, Ordering::Relaxed);
-        }
+        gc.publish_reserved_tree_root(&mut self.root, owner.ptr().0);
         Some(self.notice.clone())
     }
 }
@@ -291,9 +286,7 @@ impl GarbageCollector {
 
     // No phase, publication or slot-decision guard crosses this allocation.
     fn reserve_notice(&self, owner: crate::ObjectId) -> ReservedNotice<'_> {
-        #[cfg(test)]
-        self.probe_tree_root_insertion();
-        let root = self.roots.reserve(&self.next_root_id);
+        let root = self.reserve_tree_root();
         let notice = Arc::new(self.reference_queue().prepare((owner, root.key())));
         ReservedNotice {
             owner,
