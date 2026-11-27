@@ -211,3 +211,106 @@ fn time_limit_returns_unexecuted_tasks() -> Result<()> {
     assert_eq!(gc.statistics()?.live_objects, 0);
     Ok(())
 }
+
+#[test]
+fn optional_vector_visits_only_the_budgeted_edges_in_each_collection_step() -> Result<()> {
+    struct Visit(Arc<AtomicUsize>);
+    // SAFETY: this counter records visits and contains no managed edges.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for Visit {
+        fn trace(&self, _: &GarbageCollector) {
+            self.0.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
+    let visits = Arc::new(AtomicUsize::new(0));
+    let leaf = Gc::try_new(&gc, 73_u64)?.into_rooted();
+    let weak = ristretto_gc::GcWeak::new(&leaf, ristretto_gc::ReferenceKind::Weak, 0);
+    let len = if cfg!(miri) { 32 } else { 4096 };
+    let edges: Vec<_> = (0..len)
+        .map(|i| (Visit(visits.clone()), (i + 1 == len).then(|| leaf.clone())))
+        .collect();
+    let root = Gc::try_new(&gc, Some(edges))?;
+    drop(leaf);
+    visits.store(0, Ordering::Relaxed);
+    gc.collect();
+    let mut max_visits = 0;
+    for _ in 0..(len * 8 + 512) {
+        let before = visits.load(Ordering::Relaxed);
+        let done = gc.step();
+        max_visits = max_visits.max(visits.load(Ordering::Relaxed) - before);
+        if done {
+            break;
+        }
+    }
+    assert_eq!(gc.statistics()?.full_collections, 1);
+    assert_eq!(visits.load(Ordering::Relaxed), len);
+    assert_eq!(
+        max_visits, 1,
+        "optional edges visited in one budget-one step"
+    );
+    assert_eq!(weak.upgrade().map(|r| *r), Some(73));
+    drop(root);
+    gc.collect_full()?;
+    assert!(weak.is_cleared());
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn optional_locked_payload_returns_to_the_collector_while_the_mutator_is_parked() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .incremental_step_size(1)
+            .max_pause_time_us(0)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
+    let target = Gc::try_new(&gc, 89_u64)?.into_rooted();
+    let weak = ristretto_gc::GcWeak::new(&target, ristretto_gc::ReferenceKind::Weak, 0);
+    let root = Gc::try_new(&gc, Some(Mutex::new(vec![target])))?;
+    let locked = root
+        .as_ref()
+        .as_ref()
+        .expect("present mutex")
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    gc.collect();
+    let (done, finished) = mpsc::channel();
+    let returned = std::thread::scope(|scope| {
+        scope.spawn(|| {
+            for _ in 0..2048 {
+                gc.step();
+            }
+            done.send(()).unwrap();
+        });
+        let returned = finished.recv_timeout(Duration::from_secs(3)).is_ok();
+        drop(locked);
+        returned
+    });
+    assert!(
+        returned,
+        "a collection step blocked on the mutator's payload lock"
+    );
+    gc.collect_full()?;
+    assert_eq!(weak.upgrade().map(|r| *r), Some(89));
+    drop(root);
+    gc.collect_full()?;
+    // A standard mutex keeps its child independently rooted until the container
+    // is cleared. The following cycle can then reclaim that child.
+    gc.collect_full()?;
+    assert!(weak.is_cleared());
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
