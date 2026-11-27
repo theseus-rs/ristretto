@@ -144,6 +144,7 @@ jobs:
       - name: Verify the collector in the release launcher
         shell: bash
         env:
+          RUSTFLAGS: ${{ matrix.rustflags }}
           TARGET: ${{ matrix.target }}
         run: |
           features=()
