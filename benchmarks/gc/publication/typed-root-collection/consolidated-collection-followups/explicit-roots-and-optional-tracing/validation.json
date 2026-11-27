@@ -1,0 +1,168 @@
+{
+  "timed_revision": "fc698c052a60c7cc470cc288a186fecda25c7153",
+  "shipping_revision": "51cac03b44a917957261e0c92f8c3e11cc5289c7",
+  "previous_shipping_revision": "49a11d2f258ab7b465f40dc2566febc97a83d631",
+  "all_features": {
+    "native": {
+      "passed": 1015,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 455,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "default_regression": {
+    "native": {
+      "passed": 996,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 455,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "coverage_note": "The full all-feature runs include the final test-only changes. Default-feature runs preceded the last unit-test additions.",
+  "release": {
+    "workspace_graphs": [
+      "ristretto_vm (native, default runtime)",
+      "ristretto_vm (native, all features and build dependencies)",
+      "ristretto_vm (wasm32-wasip2, default runtime)",
+      "ristretto_vm (wasm32-wasip2, all features and build dependencies)",
+      "ristretto_java (native, default runtime)",
+      "ristretto_java (native, all features and build dependencies)",
+      "ristretto_java (wasm32-wasip2, default runtime)",
+      "ristretto_java (wasm32-wasip2, all features and build dependencies)",
+      "ristretto_javac (native, default runtime)",
+      "ristretto_javac (native, all features and build dependencies)",
+      "ristretto_playground (wasm32-wasip2, default runtime)",
+      "ristretto_playground (wasm32-wasip2, all features and build dependencies)",
+      "ristretto_playground (wasm32-unknown-unknown, default runtime)",
+      "ristretto_playground (wasm32-unknown-unknown, all features and build dependencies)"
+    ],
+    "graph_tests": 11,
+    "collector_package": "b8a11058c154f7a0156fe947310ada66f8fead30bd6bd4b48582d8f337ac3fdc",
+    "external_consumers": [
+      "native",
+      "wasm32-wasip2"
+    ],
+    "clippy_all_features_all_targets": [
+      "native",
+      "wasm32-wasip2"
+    ]
+  },
+  "miri": {
+    "explicit-root schedules": 1,
+    "optional traces": 2
+  },
+  "fresh_processes": {
+    "('parent', 'tree_root_progress_tests', False)": 10,
+    "('candidate', 'tree_root_progress_tests', True)": 100,
+    "('parent', 'optional_', False)": 2,
+    "('candidate', 'optional_', True)": 100
+  },
+  "previews": {
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "browser": {
+    "qualification": false,
+    "binary_sha256": "389a300a59bf46c9737e85807d88240b4e9275c8acb00fa721db82f7b3d0b3bb",
+    "source_revision": "31537fbf2b85602525d7461d99e056b1b34303c7",
+    "trials": [
+      {
+        "policy": "control",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "candidate",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "baseline",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "control",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "baseline",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "candidate",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "baseline",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "control",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "candidate",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      }
+    ]
+  },
+  "construction_control": {
+    "revision": "51cac03b44a917957261e0c92f8c3e11cc5289c7",
+    "case": "GcWeak::set_owner during Trace::attach",
+    "cases": 6,
+    "poll_limit": 2048,
+    "completed_before_resume": 0
+  }
+}

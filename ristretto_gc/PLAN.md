@@ -9,6 +9,14 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `fc698c05` peers finished fresh full collections during explicit root
+preparation in all 12 forced schedules. Optional vectors respected their edge
+budget and optional locked payloads returned control to the collector. The
+36-condition complete-collection benchmark retained minimum individual 95%
+speedup bounds of 10.692× native and 10.184× WASI against `f1daebeb`.
+Construction-time conditional owner binding still exhausted 2,048 polls in
+six configurations. [Controls, graph and raw observations](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/explicit-roots-and-optional-tracing/README.md).
+
 Every release preview now passes two VM-owned nodes to Java, verifies the field
 mutation against their original weak identities, then requires a full collection
 to clear both witnesses and refund their entire managed charge. The compiled
