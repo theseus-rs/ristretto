@@ -1,0 +1,24 @@
+{
+  "candidate": "58fe29491157b92cdff27d3cd6811cc2d75e52f1",
+  "artifacts": {
+    "classes/GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "classes/GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "classes/GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "classes/GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "classes/GcBench.class": "43bb33e4d45bd8255bef94901703b0b52e3a6db399f84f0d282e3084839e620c",
+    "gc_compare.wasm": "08ad889f6b02ae6a3d1b7ad670b60764f57ecee23a95166e1075156c4e96d980",
+    "gc_compare.wasm.provenance.json": "c38881782d42dfb579c8918f803d476eef50eb721ba0ffa013bb830853964488",
+    "gc_compare.wasm.sources.tar.gz": "47b7b5966d0c0814705f0ba411f902c00b36faae0c7dc32c2a060bfcdc42b97e",
+    "gc_compare.wasm-before": "e93f771b1d978d4250ceabd1ef334a7ea5cfa39a69b1170562800f23881b7702",
+    "gc_compare.wasm-before.provenance.json": "7ace037efae42e6c5fda08e70854ab86f0ce6fa1063250295e31344fd3ba82d7",
+    "gc_compare.wasm-before.sources.tar.gz": "f8dcc3842b23494289dc86b9de86623767d02d32f714d759f2bc016cd62518bd"
+  },
+  "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+  "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+  "wasmtime": "wasmtime 50.0.1 (c307ec81d 2026-10-29)",
+  "wasmtime_sha256": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8",
+  "source_sha256": "f3b8307f55c1c542e5ca82d04f155e45b13ee74e4faa1aacf25ec68062fb2cd2",
+  "raw_sha256": "607727a4f1a9fe56c39ea3bffffaafb14d765d6b1cdad4881de0ebb41889b81f",
+  "schedule_sha256": "f9f42c23abc4852233038593932f8dd986f111b29f419f663b9390c2ac7fd26f",
+  "inputs_unchanged": true
+}

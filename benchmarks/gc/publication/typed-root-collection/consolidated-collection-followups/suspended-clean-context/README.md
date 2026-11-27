@@ -40,3 +40,8 @@ progress when the remembered shard is busy.
 [Experimental patch](dirty-owner/direct-enrollment.patch.gz) ·
 [Parked-owner result](dirty-owner/direct-enrollment-probe.log.gz) ·
 [Full test outcomes](dirty-owner/direct-enrollment-suite.log.gz).
+
+Prepared vector writes now pass the parked-flusher schedule, including with
+the remembered shard occupied and a saturated mutation version. The protected
+raw embedding handle still stalls under both publication policies.
+[Follow-up measurements and raw-handle control](../prepared-writes-array-retirement/README.md).

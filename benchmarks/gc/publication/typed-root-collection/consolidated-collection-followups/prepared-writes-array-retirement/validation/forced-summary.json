@@ -1,0 +1,14 @@
+{
+  "revision": "58fe29491157b92cdff27d3cd6811cc2d75e52f1",
+  "sha256": "bf8bb99ede32a9e56dde0b48c4118981b0d731195995002f745e34ed3413cf45",
+  "native_tests": 200,
+  "repetitions_per_test": 40,
+  "test_configurations": {
+    "fresh_full_and_capped_allocation_finish_while_dirty_owner_flusher_is_suspended": 4,
+    "fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspended": 2,
+    "prepared_field_update_keeps_new_membership_against_a_stale_prune": 4,
+    "prepared_field_store_completes_with_a_parked_metadata_writer": 8,
+    "context_records_cover_both_snapshots_and_late_dirty_owners": 2
+  },
+  "forced_configurations": 800
+}

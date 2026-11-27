@@ -1,0 +1,22 @@
+{
+  "targets": [
+    "native",
+    "wasm32-wasip2"
+  ],
+  "sources": {
+    "parent": "df71e5a2",
+    "candidate": "58fe2949"
+  },
+  "shapes": [
+    "null",
+    "endpoints",
+    "strided",
+    "dense"
+  ],
+  "width": 4097,
+  "budget": 32,
+  "pairs": 16,
+  "rounds": 32,
+  "warmups": 3,
+  "seed": 251127429
+}
