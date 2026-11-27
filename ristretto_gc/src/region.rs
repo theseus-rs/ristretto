@@ -192,6 +192,7 @@ pub(crate) struct Pressure {
 pub(crate) struct Budget {
     used: AtomicUsize,
     released: AtomicU64,
+    returned_suffixes: AtomicU64,
     limit: usize,
     reserve: usize,
     peak_reserve_used: AtomicUsize,
@@ -205,6 +206,7 @@ impl Budget {
         Arc::new(Self {
             used: AtomicUsize::new(0),
             released: AtomicU64::new(0),
+            returned_suffixes: AtomicU64::new(0),
             limit,
             reserve: reserve.min(limit / 2),
             peak_reserve_used: AtomicUsize::new(0),
@@ -885,6 +887,12 @@ impl RegionHeap {
         )
     }
 
+    /// Bytes of destroyed suffixes already returned while their prefix was
+    /// still owned. The managed charge may be refunded only at final retirement.
+    pub(crate) fn returned_suffix_bytes(&self) -> u64 {
+        self.budget.returned_suffixes.load(Ordering::Acquire)
+    }
+
     pub(crate) fn record_staging(&self, bytes: usize) {
         self.staged.fetch_add(bytes as u64, Ordering::Relaxed);
     }
@@ -1164,9 +1172,19 @@ impl Block {
         let Some(free) = try_lock(&self.region.free) else {
             return false;
         };
-        self.release_locked(state, free, keep);
+        let length = self.length - keep;
+        // Both indexes are exclusively held. Remove the suffix from this
+        // owner's drop range before publishing it to either index.
         self.length = keep;
         self.returned = keep == 0;
+        self.release_locked(state, free, self.offset + keep, length);
+        if keep != 0 && !self.relocation {
+            self.region
+                .backing
+                .budget
+                .returned_suffixes
+                .fetch_add(length as u64, Ordering::Release);
+        }
         true
     }
 
@@ -1174,12 +1192,12 @@ impl Block {
         &self,
         mut state: Option<MutexGuard<'_, State>>,
         mut free: MutexGuard<'_, FreeRanges>,
-        keep: usize,
+        offset: usize,
+        length: usize,
     ) {
-        let length = self.length - keep;
         let previous = free.by_size.last().map_or(0, |(size, _)| *size);
         if length != 0 {
-            self.region.release(&mut free, self.offset + keep, length);
+            self.region.release(&mut free, offset, length);
             if !self.relocation {
                 self.region.reclaimed.store(true, Ordering::Relaxed);
             }
@@ -1220,7 +1238,7 @@ impl Drop for Block {
         let registry = self.region.registry.state.upgrade();
         let state = registry.as_ref().map(|registry| lock(registry));
         let free = lock(&self.region.free);
-        self.release_locked(state, free, 0);
+        self.release_locked(state, free, self.offset, self.length);
     }
 }
 

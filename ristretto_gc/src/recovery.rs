@@ -1168,6 +1168,46 @@ impl Drop for WorkerRegistration {
     }
 }
 
+/// A partially destroyed array keeps its whole managed charge until final
+/// retirement. New physical suffixes can justify another full collection,
+/// but cannot satisfy a logical allocation or extend one demand indefinitely.
+pub(crate) struct SpaceRetry {
+    pub(crate) empty_cycles: usize,
+    last_suffix: u64,
+    remaining: u64,
+}
+
+impl SpaceRetry {
+    pub(crate) fn new(gc: &GarbageCollector) -> Self {
+        Self {
+            empty_cycles: 0,
+            last_suffix: Self::returned_suffixes(gc),
+            remaining: gc.managed_bytes() as u64,
+        }
+    }
+
+    fn returned_suffixes(gc: &GarbageCollector) -> u64 {
+        gc.region_heap()
+            .map_or(0, |heap| heap.returned_suffix_bytes())
+    }
+
+    pub(crate) fn completed(&mut self, gc: &GarbageCollector, offered: bool) {
+        let returned = Self::returned_suffixes(gc);
+        let delta = returned.wrapping_sub(self.last_suffix);
+        self.last_suffix = returned;
+        if offered {
+            self.empty_cycles = 0;
+        } else if delta != 0 && self.remaining != 0 {
+            // Keep requesting collection. Even unrelated suffixes can spend
+            // at most the original charged heap on this waiter's extensions.
+            self.remaining = self.remaining.saturating_sub(delta);
+            self.empty_cycles = 0;
+        } else {
+            self.empty_cycles += 1;
+        }
+    }
+}
+
 /// Physical reservations are advisory until an allocator actually owns its block.
 /// Continuing reclamation can be consumed by competitors between collection and
 /// retry. Only consecutive cycles without returned ordinary ranges/backing spend
@@ -1226,6 +1266,46 @@ mod tests {
     #![expect(clippy::panic_in_result_fn)]
     use super::*;
     use crate::Configuration;
+
+    #[test]
+    fn partial_returns_extend_logical_retries_only_within_the_original_charge() {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .compact_heap(true)
+                .max_heap_bytes(256 * 1024)
+                .region_layout(64 * 1024, 0)
+                .build(),
+        );
+        let live = crate::Gc::try_new(&gc, vec![0_u8; 8192]).unwrap();
+        let charge = gc.managed_bytes();
+        assert!(charge >= 8192);
+        let heap = gc.region_heap().unwrap();
+        let mut block = heap
+            .allocate(Layout::from_size_align(4 * charge, 64).unwrap(), None)
+            .unwrap();
+        let mut retry = SpaceRetry::new(&gc);
+        retry.completed(&gc, false);
+        assert_eq!(retry.empty_cycles, 1);
+        block.set_staging(true);
+        assert!(block.try_return_suffix(3 * charge));
+        retry.completed(&gc, false);
+        assert_eq!(retry.empty_cycles, 2);
+
+        let mut retry = SpaceRetry::new(&gc);
+        block.set_staging(false);
+        assert!(block.try_return_suffix(2 * charge));
+        retry.completed(&gc, false);
+        assert_eq!(retry.empty_cycles, 0);
+        assert_eq!(retry.remaining, 0);
+        assert!(block.try_return_suffix(charge));
+        retry.completed(&gc, false);
+        assert_eq!(retry.empty_cycles, 1);
+        drop(block);
+        retry.completed(&gc, false);
+        assert_eq!(retry.empty_cycles, 2);
+        assert_eq!(gc.managed_bytes(), charge);
+        assert_eq!(live.len(), 8192);
+    }
 
     #[cfg(not(target_family = "wasm"))]
     #[test]

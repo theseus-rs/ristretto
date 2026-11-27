@@ -2932,7 +2932,7 @@ impl GarbageCollector {
         }
         #[cfg(not(target_family = "wasm"))]
         let mut terminal_service = None;
-        let mut empty_cycles = 0;
+        let mut retry = crate::recovery::SpaceRetry::new(self);
         let mut released = None;
         loop {
             if let Some(reservation) = demand.take() {
@@ -2944,7 +2944,7 @@ impl GarbageCollector {
             if crate::cell::has_guards() {
                 return Err(crate::Error::OutOfMemory);
             }
-            if empty_cycles == 2 {
+            if retry.empty_cycles == 2 {
                 if self.help_terminal_releases(&mut released) {
                     crate::recovery::yield_once().await;
                     continue;
@@ -2963,7 +2963,7 @@ impl GarbageCollector {
                         {
                             return Ok(reservation);
                         }
-                        empty_cycles = 1;
+                        retry.empty_cycles = 1;
                         continue;
                     }
                 }
@@ -2997,7 +2997,7 @@ impl GarbageCollector {
             if let Ok(reservation) = self.reserve_bytes(size) {
                 return Ok(reservation);
             }
-            let ticket = self.request_space_cycle(empty_cycles);
+            let ticket = self.request_space_cycle(retry.empty_cycles);
             let mut observed_space = false;
             loop {
                 observed_space |=
@@ -3011,11 +3011,7 @@ impl GarbageCollector {
                     return Ok(reservation);
                 }
                 if self.completed_full_ticket() >= ticket {
-                    empty_cycles = if observed_space || opportunity.was_offered() {
-                        0
-                    } else {
-                        empty_cycles + 1
-                    };
+                    retry.completed(self, observed_space || opportunity.was_offered());
                     break;
                 }
                 // Another allocator took the advertised space. Re-register for
@@ -3026,7 +3022,8 @@ impl GarbageCollector {
     }
 
     /// Checks headroom before publication, assisting one batch at a time until
-    /// space is available or two consecutive cycles complete without offering enough space.
+    /// space is available or two consecutive cycles fail to offer space or
+    /// advance a bounded allowance for partially returned array storage.
     /// A caller holding a managed guard can use available space but cannot assist.
     /// # Errors
     /// Returns a collection error, or `OutOfMemory` if the live heap cannot accommodate the request.
@@ -3037,14 +3034,14 @@ impl GarbageCollector {
         if !self.may_recover_bytes(size) {
             return Err(crate::Error::OutOfMemory);
         }
-        let mut empty_cycles = 0;
-        while empty_cycles < 2 {
+        let mut retry = crate::recovery::SpaceRetry::new(self);
+        while retry.empty_cycles < 2 {
             let _measurement = self
                 .diagnostics
                 .allocation_recovery
                 .measure(self.diagnostics_enabled());
             let opportunity = self.observe_space(size)?;
-            let ticket = self.request_space_cycle(empty_cycles);
+            let ticket = self.request_space_cycle(retry.empty_cycles);
             loop {
                 if size <= self.context_headroom(size) {
                     return Ok(());
@@ -3054,11 +3051,7 @@ impl GarbageCollector {
                 }
                 self.step();
             }
-            empty_cycles = if opportunity.was_offered() {
-                0
-            } else {
-                empty_cycles + 1
-            };
+            retry.completed(self, opportunity.was_offered());
         }
         let mut released = None;
         while size > self.context_headroom(size) {
@@ -3069,8 +3062,8 @@ impl GarbageCollector {
         Ok(())
     }
 
-    /// Checks headroom, returning as soon as enough space is available. At most two consecutive
-    /// recovery cycles without an observed or offered opportunity complete before failure.
+    /// Checks headroom, returning as soon as enough space is available. Two empty cycles end recovery. Actual returned
+    /// array suffixes may extend retries up to one starting heap footprint.
     /// This is an advisory check, not a reservation; publication must still reserve
     /// its bytes atomically. No collection work runs while holding managed guards.
     /// # Errors
@@ -3079,7 +3072,10 @@ impl GarbageCollector {
         if size > self.configuration.max_heap_bytes {
             return Err(crate::Error::OutOfMemory);
         }
-        let mut empty_cycles = 0;
+        if size <= self.context_headroom(size) {
+            return Ok(());
+        }
+        let mut retry = crate::recovery::SpaceRetry::new(self);
         let mut released = None;
         loop {
             if size <= self.context_headroom(size) {
@@ -3088,7 +3084,7 @@ impl GarbageCollector {
             if crate::cell::has_guards() {
                 return Err(crate::Error::OutOfMemory);
             }
-            if empty_cycles == 2 {
+            if retry.empty_cycles == 2 {
                 if self.help_terminal_releases(&mut released) {
                     crate::recovery::yield_once().await;
                     continue;
@@ -3104,14 +3100,10 @@ impl GarbageCollector {
             if size <= self.context_headroom(size) {
                 return Ok(());
             }
-            let ticket = self.request_space_cycle(empty_cycles);
+            let ticket = self.request_space_cycle(retry.empty_cycles);
             let offered =
                 crate::recovery::CollectionWait::for_space(self, ticket, &mut opportunity).await?;
-            empty_cycles = if offered || opportunity.was_offered() {
-                0
-            } else {
-                empty_cycles + 1
-            };
+            retry.completed(self, offered || opportunity.was_offered());
         }
     }
 
