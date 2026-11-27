@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 sys.path.insert(0, str(ROOT / ".github/scripts"))
-from collector_graph import RETIRED, check_collector_source, verify_tree
+from collector_graph import RETIRED, check_shipping_source, verify_tree
 
 
 def verify_workspace():
@@ -23,11 +23,12 @@ def verify_workspace():
             f.startswith("experimental-canonical") for f in package["features"]
         ):
             raise ValueError(f"retired research package or feature in {package['name']}")
-        if (Path(package["manifest_path"]) == collector_manifest
+        manifest = Path(package["manifest_path"])
+        check_shipping_source(package["name"], manifest.parent)
+        if (manifest == collector_manifest
                 and package["name"] == "ristretto_gc"
                 and package["id"] in metadata["workspace_members"]):
             collector = f"ristretto_gc v{package['version']} ({collector_manifest.parent})"
-    check_collector_source(collector_manifest.parent)
     for name in RETIRED:
         if (ROOT / name / "Cargo.toml").is_file():
             raise ValueError(f"retired research crate in workspace checkout: {name}")

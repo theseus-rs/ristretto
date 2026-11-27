@@ -67,6 +67,6 @@ CI also builds reproducible source archives, runs each tier from the extracted
 archive, and builds normalized Cargo archives from an external consumer.
 Both native and WASI consumer graphs must resolve every collector dependency
 to the exact unpacked `ristretto_gc` release archive. The verifier checks the
-workspace and the unpacked collector for retired catalog and pool sources,
-including when a consumer reaches the collector transitively.
+workspace and the unpacked GC and VM crates for the retired catalog, pool and
+restricted interpreter, including when a consumer reaches the collector transitively.
 [Archive and package instructions](benchmarks/gc/release/README.md)

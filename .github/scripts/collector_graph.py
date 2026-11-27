@@ -4,15 +4,25 @@ import subprocess
 RETIRED = {"ristretto_vm_research", "ristretto_gc_catalog"}
 
 
-def check_collector_source(root):
-    """Catch the retired heap even when its source has no Cargo dependency edge."""
-    for module in ("canonical_catalog", "canonical_pool", "canonical_diagnostics", "canonical_adapter"):
+# Historical Rust module paths in the two shipping packages. Java fixtures
+# under tests/fixtures/canonical still exercise the ordinary JVM.
+RETIRED_MODULES = {
+    "ristretto_gc": ("canonical_catalog", "canonical_pool", "canonical_diagnostics", "canonical_adapter"),
+    "ristretto_vm": ("canonical", "canonical_heap", "canonical_cycle_windows",
+                     "canonical_recording", "canonical_statics", "canonical_telemetry"),
+}
+
+
+def check_shipping_source(package, root):
+    """Catch retired heap or interpreter sources even without a Cargo dependency edge."""
+    for module in RETIRED_MODULES.get(package, ()):
         source = root / "src" / module
-        if source.with_suffix(".rs").is_file() or (source.is_dir() and any(source.rglob("*.rs"))):
-            raise ValueError(f"retired collector module in {root}: {module}")
-    prototypes = root / "validation/catalog"
-    if any(prototypes.rglob("Cargo.toml")) or any(prototypes.rglob("*.rs")):
-        raise ValueError(f"retired standalone catalog implementation in {prototypes}")
+        if source.with_suffix(".rs").is_file() or any(source.rglob("*.rs")):
+            raise ValueError(f"retired {package} module in {root}: {module}")
+    if package == "ristretto_gc":
+        prototypes = root / "validation/catalog"
+        if any(prototypes.rglob("Cargo.toml")) or any(prototypes.rglob("*.rs")):
+            raise ValueError(f"retired standalone catalog implementation in {prototypes}")
 
 
 def check_tree(output, expected):

@@ -8,7 +8,7 @@ import subprocess
 import tarfile
 import tempfile
 
-from collector_graph import check_collector_source, verify_tree
+from collector_graph import check_shipping_source, verify_tree
 
 
 def main():
@@ -64,6 +64,7 @@ def main():
                 package_set.update(hashlib.file_digest(source, "sha256").digest())
             with tarfile.open(path) as archive:
                 archive.extractall(root, filter="data")
+            check_shipping_source(name, root / directory)
             manifest.append(f'{name} = {{ path = "{directory}" }}')
         (root / "Cargo.toml").write_text("\n".join(manifest) + "\n", encoding="utf-8")
         (root / "src").mkdir()
@@ -78,7 +79,6 @@ def main():
         if "ristretto_gc" in required:
             version = packages["ristretto_gc"]["version"]
             unpacked = root / f"ristretto_gc-{version}"
-            check_collector_source(unpacked)
             # Use the same Cargo config and toolchain discovery as the consumer build below.
             verify_tree(root / "Cargo.toml", f"ristretto_gc v{version} ({unpacked})",
                         target=args.target, cargo_cwd=Path.cwd())

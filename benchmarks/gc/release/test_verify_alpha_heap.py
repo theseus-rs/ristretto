@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / ".github/scripts"))
-from collector_graph import check_collector_source, check_tree, verify_tree
+from collector_graph import check_shipping_source, check_tree, verify_tree
 
 
 class CollectorIdentityTests(unittest.TestCase):
@@ -35,16 +35,29 @@ class CollectorIdentityTests(unittest.TestCase):
                 source.parent.mkdir(parents=True)
                 source.touch()
                 with self.assertRaisesRegex(ValueError, "retired"):
-                    check_collector_source(root)
+                    check_shipping_source("ristretto_gc", root)
+
+    def test_retired_vm_heap_with_no_collector_dependency(self):
+        for path in ("src/canonical.rs", "src/canonical/compiled_heap.rs", "src/canonical_heap.rs",
+                     "src/canonical_recording.rs", "src/canonical_statics.rs",
+                     "src/canonical_cycle_windows.rs", "src/canonical_telemetry.rs"):
+            with self.subTest(path=path), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                source = root / path
+                source.parent.mkdir(parents=True)
+                source.touch()
+                with self.assertRaisesRegex(ValueError, "retired ristretto_vm module"):
+                    check_shipping_source("ristretto_vm", root)
 
     def test_archived_notes_and_java_fixture_names_are_allowed(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for path in ("docs/CANONICAL_CATALOG_PORT.md", "tests/canonical/Graph.java"):
+            for path in ("docs/CANONICAL_CATALOG_PORT.md", "tests/fixtures/canonical/Graph.java"):
                 file = root / path
                 file.parent.mkdir(parents=True)
                 file.touch()
-            check_collector_source(root)
+            check_shipping_source("ristretto_gc", root)
+            check_shipping_source("ristretto_vm", root)
 
     def test_wasi_consumer_cannot_link_a_second_collector(self):
         with tempfile.TemporaryDirectory() as directory:
