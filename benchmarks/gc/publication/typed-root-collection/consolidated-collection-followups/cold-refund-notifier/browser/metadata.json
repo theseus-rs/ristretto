@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "options": {
+    "wasm": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/notifier-cold-c02357ca-v1/release/browser-frozen/gc_browser.wasm",
+    "chrome": "/opt/google/chrome/google-chrome",
+    "output": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/notifier-cold-c02357ca-v1/release/browser-results",
+    "cgroup_parent": "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service",
+    "cpus": "0,2",
+    "cpu_quota": 2.0,
+    "rss_mib": 512,
+    "heap_mib": 16,
+    "seconds": 2.0,
+    "warmup": 1.0,
+    "rate": 2000,
+    "poll_budget": 64,
+    "repeats": 3,
+    "seed": 251127253,
+    "no_sandbox": false,
+    "plot": true
+  },
+  "python": "3.15.2 (main, Oct 25 2026, 16:57:51) [GCC 13.3.0]",
+  "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+  "hashes": {
+    "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/notifier-cold-c02357ca-v1/release/browser-results/frozen/sources.tar.gz": "96809ee9e240b7dc75fc336812976e47e3a711cef3da704ba8d9348006d57b53",
+    "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/notifier-cold-c02357ca-v1/release/browser-results/frozen/index.html": "4870396dd8e0d6e86e9f555fa5b272a3a46b39228b78aaa8cad7a3f817d677c5",
+    "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/notifier-cold-c02357ca-v1/release/browser-results/frozen/browser.js": "421a5dcd81335148b3654fcbc1eaa4b46d5a3a19a60b62af8c96f66fbb41f2c3",
+    "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/notifier-cold-c02357ca-v1/release/browser-results/frozen/workload.provenance.json": "8562d5f7fe0b2316086f7bc94b5a29e063b3ef71a0d3b4dc6e3f6e46789702d3",
+    "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/notifier-cold-c02357ca-v1/release/browser-results/frozen/workload.wasm": "b19fc543689da620bd741fbac8df1f0a0ad1b6386054b1b666238e927626e83c",
+    "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-notifier-queue-release-v1/benchmarks/gc/browser.py": "67ec001346616a99706ee1302e6e5b8f3466718c27e78944be4df45e049f9991",
+    "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-notifier-queue-release-v1/benchmarks/gc/cgroups.py": "dbdcba2a65dd0918ed274e6647b52da7886bc7c7f43eb823b358e841e36276ee",
+    "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-notifier-queue-release-v1/benchmarks/gc/run.py": "83e3f0b2fa1ea2dc65af2547069c39994efe71453a3be436b1056176279496b3",
+    "/opt/google/chrome/google-chrome": "aea09d69ce7f24d5901f6bfb15dd44d0c856e793e0a498f8d8393ec7d2c308ec",
+    "/opt/google/chrome/chrome": "da143614d917f346b02c1b29587cc13bf891d4b73faf2bea7b20cbd8fa61510f"
+  },
+  "chrome_version": "Google Chrome 156.0.8078.79",
+  "qualification": false,
+  "scope": "foreground-equivalent headless Chromium; one main-thread collector mutator; no concurrent build/test/profiler"
+}

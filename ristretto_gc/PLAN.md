@@ -28,6 +28,12 @@ arrivals with lower tails. The three short candidate forks also finished all
 arrivals, but their median p99.9 was 219 ms.
 [Queue, collection, browser and JVM measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/terminal-queue-links/README.md).
 
+Private notifier preparation at `f7d32751` let a capped peer receive its
+refund with another creator parked. The full-collection gate passed all 36
+conditions. The two-minute Java candidate completed 55,163 of the required
+60,000 arrivals, so the startup change remains withheld.
+[Controls, individual forks and release thresholds](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/cold-refund-notifier/README.md).
+
 A suspended explicit context flush can hold a required clean edge privately.
 On `c02357ca` both a fresh full ticket and an independent funded allocation
 remained pending for 2,048 polls under both publication policies. Removing
