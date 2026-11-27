@@ -175,6 +175,22 @@ impl GarbageCollector {
     }
 
     pub(super) fn step_inner(&self, concurrent: bool) -> Option<bool> {
+        let result = self.step_work(concurrent);
+        // A reentrant handler can consume the last Java reference and park
+        // while its sibling wakes remain published. Service these after the
+        // collector turn and outside its guards, including on an idle heap.
+        if result != Some(false)
+            && (self.recovery.reference_delivery_pending()
+                || result.is_none() && self.has_pending_references())
+        {
+            self.notify_progress();
+            // A synchronous wake may have requested another collection.
+            return result.map(|_| !self.pending());
+        }
+        result
+    }
+
+    fn step_work(&self, concurrent: bool) -> Option<bool> {
         if self.remembered.dirty.cleanup_pending() {
             self.remembered.dirty.cleanup_step(|id, address| {
                 self.objects
@@ -221,7 +237,7 @@ impl GarbageCollector {
             return Some(progress);
         }
         let mut waiting = false;
-        let result = if let Some(progress) = self.claim_independent_mark(concurrent, &mut waiting) {
+        if let Some(progress) = self.claim_independent_mark(concurrent, &mut waiting) {
             Some(progress)
         } else if waiting {
             None
@@ -233,12 +249,6 @@ impl GarbageCollector {
                     _ => self.coordinated_step(concurrent),
                 }
             })
-        };
-        // A producer may park after linking and before notifying the handler.
-        // Another ordinary worker or caller can deliver that visible notification.
-        if result.is_none() && self.has_pending_references() {
-            self.notify_progress();
         }
-        result
     }
 }
