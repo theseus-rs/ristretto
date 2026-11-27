@@ -1897,3 +1897,111 @@ mod construction_contention {
 
 #[path = "reference_queue_root_tests.rs"]
 mod queue_roots;
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn parked_weak_upgrade_tree_preparation_allows_collection_and_rechecks_clearing() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let mut observations = Vec::new();
+    for counted in [false, true] {
+        for (clear, drop_target) in [(false, false), (true, false), (false, true)] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .allocation_threshold(usize::MAX)
+                    .concurrent_publication(counted)
+                    .build(),
+            );
+            let target = Gc::try_new(&gc, 42_u64)?;
+            let weak = GcWeak::new(&target, ReferenceKind::Weak, 0);
+            let identity = target.identity();
+            let mut target = Some(target);
+            let baseline = gc.roots.len();
+            let (entered, parked) = mpsc::channel();
+            let (resume, release) = mpsc::channel();
+            *lock(&gc.metadata_prepare_pause) = Some(ClaimPause {
+                entered,
+                resume: release,
+            });
+            *lock(&gc.tree_root_insert_probe) = Some(GarbageCollector::pause_metadata_preparation);
+            let (completed, polls, observed) = thread::scope(|scope| {
+                let upgrader = scope.spawn(|| weak.upgrade());
+                parked
+                    .recv_timeout(Duration::from_secs(4))
+                    .expect("upgrader reached tree reservation");
+                if clear {
+                    weak.clear();
+                }
+                if drop_target {
+                    drop(target.take());
+                }
+                let ticket = gc.request_full_cycle();
+                let mut polls = 0;
+                while gc.completed_full_ticket() < ticket && polls < 2048 {
+                    gc.step();
+                    polls += 1;
+                }
+                let completed = gc.completed_full_ticket() >= ticket;
+                resume.send(()).unwrap();
+                let result = upgrader.join().unwrap();
+                (completed, polls, result.map(|r| (r.identity(), *r)))
+            });
+            observations.push((
+                counted,
+                clear,
+                drop_target,
+                completed,
+                polls,
+                observed == (!clear && !drop_target).then_some((identity, 42)),
+            ));
+            assert_eq!(gc.roots.len(), baseline - usize::from(drop_target));
+            drop(target);
+            gc.collect_full()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    assert!(
+        observations
+            .iter()
+            .all(|(_, _, _, completed, _, exact)| *completed && *exact),
+        "(counted, clear, drop_target, completed, polls, exact): {observations:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn a_full_ticket_completes_during_conditional_tree_root_preparation() -> Result<()> {
+    fn collect_during_reservation(gc: &GarbageCollector) {
+        lock(&gc.tree_root_insert_probe).take();
+        let ticket = gc.request_full_cycle();
+        for _ in 0..2048 {
+            if gc.completed_full_ticket() >= ticket {
+                return;
+            }
+            gc.step();
+        }
+        assert!(gc.completed_full_ticket() >= ticket);
+    }
+
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .allocation_threshold(usize::MAX)
+                .concurrent_publication(counted)
+                .build(),
+        );
+        let target = Gc::try_new(&gc, 42_u64)?;
+        let weak = GcWeak::new(&target, ReferenceKind::Weak, 0);
+        *lock(&gc.tree_root_insert_probe) = Some(collect_during_reservation);
+        let strong = weak
+            .upgrade()
+            .expect("target remains rooted through the collection");
+        assert_eq!((strong.identity(), *strong), (target.identity(), 42));
+        assert!(lock(&gc.tree_root_insert_probe).is_none());
+        drop((strong, target));
+        gc.collect_full()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}

@@ -208,7 +208,7 @@ impl<T: Trace + 'static> GcWeak<T> {
         if hint == 0 {
             return None;
         }
-        let mut reservation = gc.reserve_owned_root(hint);
+        let mut reservation = gc.reserve_conditional_root(hint);
         let (publication, decision) = self.slot.admitted_decision(&gc);
         let address = self.slot.target.load(Ordering::Acquire);
         if address == 0 || gc.weak_is_cleared(&self.slot, address) {

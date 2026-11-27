@@ -31,6 +31,35 @@ impl GarbageCollector {
         }
     }
 
+    pub(crate) fn reserve_conditional_root(
+        &self,
+        address: usize,
+    ) -> super::ConditionalRootReservation<'_> {
+        let owned = self.reserve_owned_root(address);
+        let tree = owned.slot.is_none().then(|| self.reserve_tree_root());
+        super::ConditionalRootReservation { owned, tree }
+    }
+
+    pub(super) fn reserve_tree_root(&self) -> crate::roots::VacantRoot<'_> {
+        #[cfg(test)]
+        self.probe_tree_root_insertion();
+        self.roots.reserve(&self.next_root_id)
+    }
+
+    pub(super) fn publish_reserved_tree_root(
+        &self,
+        tree: &mut crate::roots::VacantRoot<'_>,
+        address: usize,
+    ) -> crate::roots::TreeRoot {
+        tree.publish(address);
+        if self.diagnostics_enabled() {
+            self.diagnostics
+                .root_registrations
+                .fetch_add(1, Ordering::Relaxed);
+        }
+        tree.key()
+    }
+
     /// A managed edge already carries its original Rust type. Resolve its
     /// exact identity in this collector and certify liveness as for a VM handle.
     pub(crate) fn clone_edge_root<T>(&self, root: &Gc<T>) -> Option<crate::roots::Registration> {

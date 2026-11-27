@@ -153,6 +153,18 @@ pub(crate) struct RootReservation<'a> {
     slot: Option<crate::roots::PreparedSlot>,
 }
 
+/// Conditional lookup reserves backing before entering the phase and slot decision.
+pub(crate) struct ConditionalRootReservation<'a> {
+    owned: RootReservation<'a>,
+    tree: Option<crate::roots::VacantRoot<'a>>,
+}
+
+impl ConditionalRootReservation<'_> {
+    pub(crate) fn protects(&self, collector: &GarbageCollector, address: usize) -> bool {
+        self.owned.protects(collector, address)
+    }
+}
+
 impl RootReservation<'_> {
     pub(crate) fn protects(&self, collector: &GarbageCollector, address: usize) -> bool {
         std::ptr::eq(self.collector, collector) && self.address == address
@@ -200,7 +212,7 @@ impl RootPublication<'_> {
     pub(crate) fn add_conditional_root(
         &self,
         metadata: &MetadataRef,
-        reservation: &mut RootReservation<'_>,
+        reservation: &mut ConditionalRootReservation<'_>,
     ) -> crate::roots::Registration {
         let _measurement = self
             .collector
@@ -211,7 +223,15 @@ impl RootPublication<'_> {
             reservation.protects(self.collector, metadata.ptr().0),
             "foreign root reservation"
         );
-        let registration = self.collector.install_root_registration(reservation);
+        let registration = if let Some(tree) = &mut reservation.tree {
+            crate::roots::Registration::Tree(
+                self.collector
+                    .publish_reserved_tree_root(tree, metadata.ptr().0),
+            )
+        } else {
+            self.collector
+                .install_root_registration(&mut reservation.owned)
+        };
         // Both domains clamp strong discovery to their own reference stage.
         let _retention = TraceRetention::enter(self.collector, Retention::Strong);
         for index in 0..2 {
