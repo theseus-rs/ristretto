@@ -57,6 +57,21 @@ fn recover(gc: &std::sync::Arc<GarbageCollector>) -> Result<Option<GcRootGuard<u
     Ok(None)
 }
 
+fn capped_heap(counted: bool, size: usize) -> std::sync::Arc<GarbageCollector> {
+    GarbageCollector::with_config(
+        Configuration::builder()
+            .threads(0)
+            .concurrent_publication(counted)
+            .independent_phases(true)
+            .independent_marking(true)
+            .predictive_collection(true)
+            .allocation_threshold(usize::MAX)
+            .max_heap_bytes(3 * size)
+            .incremental_step_size(2)
+            .build(),
+    )
+}
+
 #[test]
 #[expect(clippy::panic_in_result_fn)]
 fn parked_pressure_reader_and_sampled_publisher_allow_capped_recovery() -> Result<()> {
@@ -64,18 +79,7 @@ fn parked_pressure_reader_and_sampled_publisher_allow_capped_recovery() -> Resul
     let mut stalled = Vec::new();
     for counted in [false, true] {
         for publisher in [false, true] {
-            let gc = GarbageCollector::with_config(
-                Configuration::builder()
-                    .threads(0)
-                    .concurrent_publication(counted)
-                    .independent_phases(true)
-                    .independent_marking(true)
-                    .predictive_collection(true)
-                    .allocation_threshold(usize::MAX)
-                    .max_heap_bytes(3 * size)
-                    .incremental_step_size(2)
-                    .build(),
-            );
+            let gc = capped_heap(counted, size);
             let survivor = Gc::try_new(&gc, 41_u64)?;
             let donor = Gc::try_new(&gc, 7_u64)?;
             let weak = GcWeak::new(&donor, ReferenceKind::Weak, 0);
@@ -152,6 +156,50 @@ fn parked_pressure_reader_and_sampled_publisher_allow_capped_recovery() -> Resul
         stalled.is_empty(),
         "pressure model blocked capped recovery: {stalled:?}"
     );
+    Ok(())
+}
+
+#[test]
+#[expect(clippy::panic_in_result_fn)]
+fn capped_allocation_recovers_before_the_predicting_publisher_requests_collection() -> Result<()> {
+    let size = Gc::allocation_size(&41_u64)?;
+    for counted in [false, true] {
+        let gc = capped_heap(counted, size);
+        let survivor = Gc::try_new(&gc, 41_u64)?;
+        let donor = Gc::try_new(&gc, 7_u64)?;
+        let weak = GcWeak::new(&donor, ReferenceKind::Weak, 0);
+        drop(donor);
+        assert_eq!(gc.scheduling_statistics().requests, 0);
+        let (entered, parked) = mpsc::channel();
+        let (resume, released) = mpsc::channel();
+        let heap = &gc;
+        let (replacement, third) = std::thread::scope(|scope| {
+            let publisher = scope.spawn(move || {
+                AFTER_SAMPLE_COMMIT.set(Some((entered, released)));
+                Gc::try_new(heap, 59_u64)
+            });
+            parked
+                .recv_timeout(Duration::from_secs(3))
+                .expect("predictor commit");
+            assert_eq!(heap.scheduling_statistics().requests, 1);
+            assert_eq!(heap.managed_bytes(), 3 * size);
+
+            // Only the allocation may request and drive recovery.
+            let mut allocation = std::pin::pin!(Gc::try_new_async(heap, 23_u64));
+            let mut context = Context::from_waker(Waker::noop());
+            let result = (0..4096).find_map(|_| match allocation.as_mut().poll(&mut context) {
+                Poll::Ready(result) => Some(result),
+                Poll::Pending => None,
+            });
+            assert!(weak.upgrade().is_none());
+            assert_eq!(heap.managed_bytes(), 3 * size);
+            resume.send(()).expect("resume predictor");
+            (result, publisher.join().expect("predicting publisher"))
+        });
+        let replacement = replacement.expect("capped allocation while publisher is parked")?;
+        let third = third?;
+        assert_eq!((**survivor, **third, **replacement), (41, 59, 23));
+    }
     Ok(())
 }
 
