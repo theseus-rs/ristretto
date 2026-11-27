@@ -14,6 +14,8 @@ passed 640 forced configurations. All 36 complete-collection conditions
 again cleared 10× versus `f1daebeb`, with minimum individual lower 95%
 bounds of 10.780× native and 10.953× WASIp2. The native two-minute forks
 each served 60,000/60,000 with scheduled p99.9 of 2.496 and 2.304 ms.
+Native JVM saturation was 4,918 ops/s against 635 on the PR baseline,
+948,740 on G1 and 572,312 on ZGC.
 On the workerless WASIp2 JVM its saturation was 7,392 ops/s against 6,090
 on the original PR baseline, 960,302 on G1 and 542,163 on ZGC. With the
 old-generation interval set to four, a parked context flusher during precise

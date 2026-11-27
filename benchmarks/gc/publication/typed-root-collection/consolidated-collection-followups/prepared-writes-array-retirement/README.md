@@ -78,6 +78,31 @@ the cause of the full combined loss unresolved.
 
 ![WASIp2 JVM after each change](wasi-java/steps/comparison.png)
 
+### Four-build comparison on one CPU pair
+
+A separate workerless WASIp2 experiment measured the parent, each commit in
+isolation, and the combined change. Four blocks at each rate put each release
+build in each run-order position exactly once. Within a block all builds used
+the same seed and Java classes. Each of the 32 fresh processes warmed up for
+four seconds and measured ten seconds on the same CPU pair.
+
+| Release build | Saturation median ops/s | Scheduled median p99.9 | Unfinished across four forks |
+|---|---:|---:|---:|
+| Original parent | 6,128 | 48.384 ms | 0 |
+| Prepared owners alone | 6,203 | 46.848 ms | 0 |
+| Array retirement alone | 5,392 | 62.720 ms | 32 |
+| Both changes | 5,587 | 60.160 ms | 0 |
+
+Both builds with bounded null retirement had lower median saturation and
+higher scheduled p99.9 than their corresponding unbatched builds. This
+isolates a WASIp2 whole-JVM cost of that change in this workload. The native
+callback worker and cooperative WASI interpreter schedule physical cleanup
+differently. The exact cause of the WASI cost still needs investigation.
+[Four-build inputs and ordering](wasi-java/four-builds/inputs.json) ·
+[Individual forks](wasi-java/four-builds/forks.csv) · [Fourth isolated build](wasi-java/four-builds/retirement-build.json)
+
+![All four builds in balanced order](wasi-java/four-builds/comparison.png)
+
 ## Shipping checks and remaining progress obligations
 
 Native GC and class loader tests passed 1,834 cases with 15 ignored. WASIp2 passed 1,235 with nine ignored. Strict Clippy passed on both. The collector packaged and verified, both normalized Cargo consumers passed, and the shipping dependency checks found the single collector. Native interpreted, native compiled and WASIp2 interpreted Java previews each returned 64, cleared two exact witnesses and reclaimed their charges. All nine short Chromium trials completed. The three candidate trials served 4,000/4,000 arrivals with request-turn p99.9 of 46, 60 and 75 µs. [Suites](validation/suites.json) · [Package](validation/gc-package.log.gz) · [Shipping graphs](validation/graphs.log.gz) · [Compiled preview](validation/native-compiled.json) · [Browser forks](browser/REPORT.md)

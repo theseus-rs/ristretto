@@ -1,0 +1,26 @@
+{
+  "base": {
+    "failed": 0,
+    "unfinished": 0,
+    "ops_s": 6127.529168788821,
+    "p999_us": 48384.0
+  },
+  "owners": {
+    "failed": 0,
+    "unfinished": 0,
+    "ops_s": 6203.089926114046,
+    "p999_us": 46848.0
+  },
+  "retirement": {
+    "failed": 0,
+    "unfinished": 32,
+    "ops_s": 5391.749512252869,
+    "p999_us": 62720.0
+  },
+  "both": {
+    "failed": 0,
+    "unfinished": 0,
+    "ops_s": 5586.732827568886,
+    "p999_us": 60160.0
+  }
+}

@@ -121,3 +121,26 @@ declared 95% baseline capacity and complete scheduled-arrival screen.
 [Per-fork results](wasi-baseline/forks.csv) · [Receipts](wasi-baseline/provenance.json) · [Decision](wasi-baseline/decision.json)
 
 ![Baseline, integrated WASI and native HotSpot](wasi-baseline/comparison.png)
+
+## Direct native comparison with the original PR baseline
+
+All four runtimes used the same Java classes, JDK, 64 MiB managed heap,
+two CPUs and 512 MiB cgroup. Each of the 24 fresh processes warmed up
+for five seconds and measured ten seconds. The candidate achieved
+7.75× the parent's median saturation and completed all 15,000
+scheduled requests across the three 500/s forks.
+
+| Runtime | Saturation median ops/s | Scheduled median p99.9 ms | Total unfinished scheduled requests |
+|---|---:|---:|---:|
+| Ristretto before | 635 | 335.872 | 0 |
+| Ristretto candidate | 4,918 | 2.848 | 0 |
+| HotSpot G1 | 948,740 | 0.017 | 0 |
+| HotSpot ZGC | 572,312 | 0.023 | 0 |
+
+The parent executable came from `729aea8f`; its runtime sources match
+`df71e5a2`. The four-build WASIp2 experiment also reproduced a throughput
+cost for bounded null retirement alone, while the integrated WASIp2 JVM
+above improved against the original baseline. Longer WASIp2 runs remain open.
+[Native forks](native-baseline/forks.csv) · [Executable and class hashes](native-baseline/provenance.json) · [Four-build WASI comparison](../prepared-writes-array-retirement/README.md#four-build-comparison-on-one-cpu-pair)
+
+![Final native JVM compared with the original baseline, G1 and ZGC](native-baseline/comparison.png)
