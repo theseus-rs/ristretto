@@ -60,3 +60,15 @@ six seconds. These measurements cover short recovery behavior.
 Use `--runtimes ristretto-stock-jit ristretto-stock-counted-jit` with the
 comparison runner on native. Use `--runtimes wasm-stock wasm-stock-counted`
 with the WASIp2 binary. Both arms share the same executable within each target.
+
+### Exact-fit Java allocations
+
+At `227708b2` Java field and array preflight uses the collector’s actual
+published charge. The prior estimate added one alignment unit to every Java
+header. On an empty heap capped at the measured charge of a 4,097-slot
+reference array, the previous code threw Java OOM. The corrected array and
+an ordinary Java instance publish at their exact limits and refund their
+charges after full collection. The array still throws Java OOM when the cap
+is one byte smaller. This corrects the size estimate. The measured retirement
+backlog exhausted much more than eight bytes of headroom.
+[Native and WASI tests, Clippy and package verification](exact-charge.json)

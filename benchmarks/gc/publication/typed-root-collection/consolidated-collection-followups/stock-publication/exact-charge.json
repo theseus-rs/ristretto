@@ -1,0 +1,43 @@
+{
+  "revision": "227708b26a247de13fe3df2521c1965a9f58cbc9",
+  "tested_source": "77aed442a5ba1bb31e4ea0615d76c35b4384a7a2",
+  "package": {
+    "sha256": "e20d041f70a587b916ae848d2487843a382b7c2a194fca8c37a2111603270846",
+    "package": "ristretto_gc-0.35.0",
+    "vcs": {
+      "git": {
+        "sha1": "227708b26a247de13fe3df2521c1965a9f58cbc9"
+      },
+      "path_in_vcs": "ristretto_gc"
+    },
+    "regular_members": 221,
+    "source_and_example_rust_files_compared": 136,
+    "retired_module_paths_present": [],
+    "experimental_canonical_feature_present": false
+  },
+  "targets": {
+    "native": {
+      "suites": 64,
+      "tests_passed": 2055,
+      "clippy": "passed -D warnings",
+      "normalized_consumer": "built",
+      "packages": [
+        "ristretto_gc",
+        "ristretto_classloader",
+        "ristretto_types"
+      ]
+    },
+    "wasi": {
+      "suites": 64,
+      "tests_passed": 1441,
+      "clippy": "passed -D warnings",
+      "normalized_consumer": "built",
+      "packages": [
+        "ristretto_gc",
+        "ristretto_classloader",
+        "ristretto_types"
+      ]
+    }
+  },
+  "parent_result": "JavaError(OutOfMemoryError(\"Java heap space\")) at exact measured charge"
+}
