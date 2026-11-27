@@ -38,6 +38,10 @@ fn a_parked_tree_read_view_allows_unrelated_payload_reclamation() {
 }
 
 #[test]
+#[expect(
+    clippy::panic_in_result_fn,
+    reason = "assert the progress and identity contract"
+)]
 fn explicit_tree_root_preparation_allows_a_fresh_full_collection() -> Result<()> {
     fn collect_during_reservation(gc: &GarbageCollector) {
         lock(&gc.tree_root_insert_probe).take();
@@ -94,6 +98,10 @@ fn explicit_tree_root_preparation_allows_a_fresh_full_collection() -> Result<()>
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[test]
+#[expect(
+    clippy::panic_in_result_fn,
+    reason = "assert each forced schedule after releasing the producer"
+)]
 fn parked_manual_root_revalidates_the_borrowed_identity_after_a_peer_collection() -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
