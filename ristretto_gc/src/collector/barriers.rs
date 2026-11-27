@@ -215,6 +215,16 @@ impl GarbageCollector {
     }
 
     pub(super) fn edge_barrier<T>(&self, target: &Gc<T>) {
+        // Keep the common idle deletion out of descriptor resolution. Use the
+        // same validated snapshot as the instrumented publication path.
+        if !self.diagnostics_enabled()
+            && self.phase_clock.snapshot().is_some_and(|snapshot| {
+                (snapshot.flags(0) | snapshot.flags(1)) & 1 == 0
+                    && self.phase_clock.unchanged(snapshot)
+            })
+        {
+            return;
+        }
         self.publish_edge(
             target.ptr.as_ptr().addr(),
             target.identity(),
@@ -233,7 +243,16 @@ impl GarbageCollector {
             .barrier_record
             .measure(self.diagnostics_enabled());
         let mut certificate = None;
-        let legacy = if let Some(clock) = &self.publication_clock {
+        // The phase clock describes both publication policies. A traced edge
+        // owns its descriptor, so an attached context can use its validated
+        // idle or already-strong certificate before taking legacy admission.
+        let clock = self.publication_clock.as_ref().or_else(|| {
+            (known.is_some()
+                && self.configuration.barrier_buffer_size != 0
+                && crate::context::with_state(self, |_| ()).is_some())
+            .then_some(&self.phase_clock)
+        });
+        let legacy = if let Some(clock) = clock {
             if let Some(snapshot) = clock.snapshot() {
                 if (snapshot.flags(0) | snapshot.flags(1)) & 1 == 0 {
                     if clock.unchanged(snapshot) {
@@ -295,8 +314,56 @@ impl GarbageCollector {
         }) {
             return;
         }
+        if known.is_some()
+            && self.configuration.barrier_buffer_size != 0
+            && crate::context::with_state(self, |_| ()).is_some()
+        {
+            drop(legacy);
+            self.shade_traced_context_edge(metadata);
+            return;
+        }
         let publication = legacy.unwrap_or_else(|| self.barrier_guard());
         if self.barrier_inner(metadata, None) {
+            publication.changed();
+        }
+    }
+
+    fn shade_traced_context_edge(&self, metadata: &MetadataRef) {
+        // A traced same-heap edge owns this exact birth descriptor. Move
+        // its strong-phase traversal onto the epoch queues, where the
+        // collector can claim a committed proposal or cancel a pending one.
+        let phases = self.phase_clock.indexed_root();
+        let strong = match &phases {
+            publication_state::Birth::Idle => return,
+            publication_state::Birth::Inline(s) | publication_state::Birth::Epochs(s) => {
+                (0..2).all(|i| s.stage(i).is_none_or(|stage| stage == 0))
+            }
+        };
+        if strong && metadata.birth.is_live() {
+            let limit = self
+                .configuration
+                .barrier_buffer_size
+                .min(crate::context::MAX_RECORDS);
+            let mut debt = None;
+            let certified = self.certify_root_attempt(phases, metadata, |epoch| {
+                epoch.has_root_capacity(limit).then(|| {
+                    debt.get_or_insert_with(|| {
+                        std::sync::Arc::new(crate::roots::Record::typed(metadata.trace.ptr.addr()))
+                    })
+                    .clone()
+                })
+            });
+            if certified == Some(true)
+                && metadata.birth.is_live()
+                && debt.is_none_or(|record| record.commit_typed())
+            {
+                return;
+            }
+        }
+        // A phase change or cancelled proposal has no private debt. Use
+        // fresh admission and strong retention for every receiving domain.
+        let publication = self.barrier_guard();
+        if metadata.birth.is_live() && self.shade_live_domains(metadata) {
             publication.changed();
         }
     }

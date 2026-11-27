@@ -1164,3 +1164,177 @@ fn root_and_weak_identifiers_skip_live_entries_after_wrap() -> Result<()> {
     assert!(third_weak.upgrade().is_none());
     Ok(())
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(
+    clippy::unwrap_in_result,
+    clippy::panic_in_result_fn,
+    reason = "bounded peer progress schedule"
+)]
+fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspended() -> Result<()>
+{
+    use std::future::Future;
+    use std::sync::mpsc;
+    use std::task::{Context as TaskContext, Poll, Waker};
+    use std::time::Duration;
+
+    let mut outcomes = Vec::new();
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .barrier_buffer_size(4)
+                .concurrent_publication(counted)
+                .max_heap_bytes(512)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let child = Gc::try_new(&gc, 42u64)?.into_rooted();
+        let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+        let parent = Gc::try_new(&gc, vec![child])?;
+        drop(Gc::try_new(&gc, 99u64)?);
+        let funding = gc.reserve_bytes(gc.allocation_headroom())?;
+        let context = gc.register_context();
+        gc.collect();
+        for _ in 0..2048 {
+            if lock(&gc.domains[1].cycle).phase == Phase::Mark {
+                break;
+            }
+            gc.step();
+        }
+        assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Mark);
+        let target = parent.first().expect("child");
+        context.with(|| gc.write_barrier(target));
+        let debt = gc.contexts.pending.load(Ordering::Acquire);
+        assert!(debt <= 1);
+        let (entered, observed) = mpsc::channel();
+        let (release, resume) = mpsc::channel();
+        let flusher = thread::spawn(move || {
+            if debt != 0 {
+                barrier_progress_tests::park_next_claim(ClaimPause { entered, resume });
+                context.flush();
+            } else {
+                context.flush();
+                entered.send(()).expect("flush finished");
+                resume
+                    .recv_timeout(Duration::from_secs(10))
+                    .expect("resume after flush");
+            }
+        });
+        observed
+            .recv_timeout(Duration::from_secs(3))
+            .expect("flusher suspended");
+        let ticket = gc.request_full_cycle();
+        let mut peer = Box::pin(Gc::try_new_async(&gc, 23u64));
+        let mut task = TaskContext::from_waker(Waker::noop());
+        let mut grant = None;
+        for _ in 0..2048 {
+            if grant.is_none()
+                && let Poll::Ready(result) = peer.as_mut().poll(&mut task)
+            {
+                grant = Some(result);
+            }
+            gc.step();
+            if grant.is_some() && gc.completed_full_ticket() >= ticket {
+                break;
+            }
+        }
+        let full = gc.completed_full_ticket() >= ticket;
+        let acquired = grant
+            .as_ref()
+            .is_some_and(|x| x.as_ref().is_ok_and(|root| ***root == 23));
+        outcomes.push((counted, debt, full, acquired));
+        release.send(()).expect("resume flusher");
+        flusher.join().expect("flusher");
+        drop(peer);
+        drop(grant);
+        drop(funding);
+        gc.collect_full()?;
+        assert!(weak.refers_to(target));
+        drop(parent);
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+        gc.stop()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    assert!(
+        outcomes
+            .iter()
+            .all(|(_, _, full, acquired)| *full && *acquired),
+        "{outcomes:?}"
+    );
+    Ok(())
+}
+
+#[test]
+#[expect(
+    clippy::panic_in_result_fn,
+    reason = "verify exact graph retention across two full epochs"
+)]
+fn detached_clean_edge_preserves_its_graph_for_one_full_epoch() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .barrier_buffer_size(4)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let leaf = Gc::try_new(&gc, 59u64)?.into_rooted();
+        let leaf_weak = crate::GcWeak::new(&leaf, crate::ReferenceKind::Weak, 0);
+        let child = Gc::try_new(&gc, vec![leaf])?.into_rooted();
+        let child_weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+        let parent = Gc::try_new(&gc, vec![child])?;
+        let edge = parent.first().expect("traced child");
+        let id = edge.identity();
+        let address = edge.as_ptr().addr();
+        let descriptor = edge
+            .traced_metadata()
+            .expect("same-heap traced edge")
+            .clone();
+        drop(parent);
+        // Only the captured edge can retain either weak witness in this epoch.
+        let ticket = gc.request_full_cycle();
+        for _ in 0..2048 {
+            if lock(&gc.domains[1].cycle).phase == Phase::Mark {
+                break;
+            }
+            gc.step();
+        }
+        assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Mark);
+        let context = gc.register_context();
+        let epoch = gc.domains[1]
+            .mark_queue
+            .birth_epoch()
+            .expect("active full epoch");
+        let before = epoch.proposal_count();
+        context.with(|| {
+            for _ in 0..4096 {
+                gc.publish_edge(address, id, Some(&descriptor));
+            }
+        });
+        let offered = epoch.proposal_count() - before;
+        assert!(offered <= 4, "one white target added {offered} proposals");
+        assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+        for _ in 0..2048 {
+            if gc.completed_full_ticket() >= ticket {
+                break;
+            }
+            gc.step();
+        }
+        assert!(gc.completed_full_ticket() >= ticket);
+        let recovered = child_weak.upgrade().expect("original child graph");
+        let leaf = recovered.first().expect("original leaf");
+        assert!(leaf_weak.refers_to(leaf));
+        assert_eq!(**leaf, 59);
+        drop(recovered);
+        gc.collect_full()?;
+        assert!(child_weak.upgrade().is_none() && leaf_weak.upgrade().is_none());
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
+}

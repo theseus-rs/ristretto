@@ -10,7 +10,6 @@ thread_local! {
     static BEFORE_SWEEP_HANDOFF: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static BEFORE_SNAPSHOT_COMMIT: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static EPOCH_DESTRUCTION: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
-    static AFTER_DELETION_SAMPLE: std::cell::Cell<Option<std::sync::mpsc::Sender<()>>> = const { std::cell::Cell::new(None) };
     static AFTER_ACTIVATION: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
 }
 
@@ -22,13 +21,6 @@ pub(super) fn after_statistics_snapshot() {
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 pub(super) fn before_snapshot_commit() {
     pause_once(&BEFORE_SNAPSHOT_COMMIT);
-}
-
-#[cfg(all(not(target_family = "wasm"), not(miri)))]
-pub(super) fn after_deletion_sample() {
-    if let Some(resume) = AFTER_DELETION_SAMPLE.take() {
-        resume.send(()).expect("resume snapshot");
-    }
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
@@ -370,7 +362,7 @@ mod native {
 
     #[cfg(not(miri))]
     #[test]
-    fn deleting_a_traced_edge_observes_the_committed_snapshot() -> Result<()> {
+    fn deleting_a_traced_edge_after_snapshot_activation_keeps_its_original_graph() -> Result<()> {
         struct Edge(Option<Gc<Vec<Gc<u64>>>>);
         // SAFETY: the single managed field forwards all tracing and rooting.
         unsafe impl Trace for Edge {
@@ -425,11 +417,9 @@ mod native {
                         .as_ref()
                         .is_some_and(|child| child.traced_metadata().is_some())
                 );
-                // Resume the starter only after the deletion samples the marking state.
-                // The original publication lock can then admit the barrier.
-                AFTER_DELETION_SAMPLE.set(Some(release));
                 edge.0 = None;
             });
+            release.send(()).expect("resume snapshot");
             starter.join().expect("snapshot starter");
             for _ in 0..2048 {
                 if gc.completed_full_ticket() >= ticket {

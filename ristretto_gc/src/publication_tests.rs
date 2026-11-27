@@ -297,7 +297,7 @@ fn dynamic_leaf_writes_preserve_hooks_and_later_reference_publication() -> Resul
 
 #[test]
 fn removing_a_white_edge_during_marking_survives_an_empty_write_finish() -> Result<()> {
-    struct MaybeEdge(Option<Gc<u64>>);
+    struct MaybeEdge(Option<Gc<Vec<Gc<u64>>>>);
 
     // SAFETY: the only edge is traced and rooted. The empty variant has no
     // demotion work, notification or relocation hooks.
@@ -317,23 +317,29 @@ fn removing_a_white_edge_during_marking_survives_an_empty_write_finish() -> Resu
         }
     }
 
-    for concurrent in [false, true] {
+    for (concurrent, traced_context) in [(false, false), (true, false), (false, true), (true, true)]
+    {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .allocation_threshold(usize::MAX)
                 .incremental_step_size(1)
                 .max_pause_time_us(0)
                 .concurrent_publication(concurrent)
+                .barrier_buffer_size(if traced_context { 4 } else { 0 })
                 .build(),
         );
-        let child = Gc::try_new(&gc, 17_u64)?;
+        let leaf = Gc::try_new(&gc, 17_u64)?.into_rooted();
+        let leaf_weak = crate::GcWeak::new(&leaf, crate::ReferenceKind::Weak, 0);
+        let child = Gc::try_new(&gc, vec![leaf])?;
         let address = child.as_ptr() as usize;
         let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
         let parent = Gc::try_new(
             &gc,
             crate::cell::RwLock::new(MaybeEdge(Some(child.into_rooted()))),
         )?;
-        gc.phase_clock.disable_certification();
+        if !traced_context {
+            gc.phase_clock.disable_certification();
+        }
         gc.collect();
         assert!((0..1024).any(|_| {
             gc.step();
@@ -341,12 +347,32 @@ fn removing_a_white_edge_during_marking_survives_an_empty_write_finish() -> Resu
         }));
         let metadata = gc.metadata_for_address(address).expect("registered child");
         assert!(!metadata.marked(1, gc.domains[1].epoch.load(Ordering::Acquire)));
-        parent.write().0 = None;
+        if traced_context {
+            gc.register_context().with(|| {
+                let mut guard = parent.write();
+                // SAFETY: the only old edge drops in place under its owner guard.
+                let slot = unsafe { guard.unrooted_mut() };
+                assert!(
+                    slot.0
+                        .as_ref()
+                        .is_some_and(|edge| edge.traced_metadata().is_some())
+                );
+                slot.0 = None;
+            });
+            assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+        } else {
+            parent.write().0 = None;
+        }
         assert!((0..1024).any(|_| gc.step()));
         assert!(!gc.pending());
-        assert_eq!(weak.upgrade().as_deref(), Some(&17));
+        {
+            let child = weak.upgrade().expect("original child retained by deletion");
+            let leaf = child.first().expect("original leaf");
+            assert!(leaf_weak.refers_to(leaf));
+            assert_eq!(**leaf, 17);
+        }
         gc.collect_full()?;
-        assert!(weak.upgrade().is_none());
+        assert!(weak.upgrade().is_none() && leaf_weak.upgrade().is_none());
         drop((parent, metadata));
         gc.stop()?;
         assert_eq!(gc.managed_bytes(), 0);
@@ -660,7 +686,7 @@ fn typed_root_cannot_reject_a_live_child_using_two_different_full_epochs() -> Re
             assert!(!metadata.marked(1, epoch));
             let record = crate::roots::RootSlots::default().prepare_typed_attempt(address);
             REJECTED_ROOT_PROBE.set(Some(reach_sweep));
-            let decision = gc.certify_root_attempt(old_phase, &metadata, &record);
+            let decision = gc.certify_root_attempt(old_phase, &metadata, |_| Some(record.clone()));
             if REJECTED_ROOT_PROBE.take().is_some() {
                 reach_sweep(&gc);
             }
@@ -4675,4 +4701,84 @@ fn construction_retains_only_winning_slot_and_overflow_detaches() {
             assert_eq!(gc.managed_bytes(), 0);
         }
     }
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+#[expect(
+    clippy::panic_in_result_fn,
+    reason = "force a clean edge offer across full epochs"
+)]
+fn a_paused_traced_edge_offer_allows_peer_allocation_and_two_full_cycles() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .barrier_buffer_size(4)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .max_heap_bytes(512)
+                .build(),
+        );
+        let child = Gc::try_new(&gc, 42u64)?.into_rooted();
+        let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+        let parent = Gc::try_new(&gc, vec![child])?;
+        drop(Gc::try_new(&gc, 99u64)?);
+        let funding = gc.reserve_bytes(gc.allocation_headroom())?;
+        let context = gc.register_context();
+        gc.collect();
+        for _ in 0..2048 {
+            if lock(&gc.domains[1].cycle).phase == Phase::Mark {
+                break;
+            }
+            gc.step();
+        }
+        assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Mark);
+        let target = parent.first().expect("traced child");
+        let (arrived, parked) = mpsc::channel();
+        let (release, resume) = mpsc::channel();
+        let heap = &gc;
+        let recovered = thread::scope(|scope| -> Result<_> {
+            let publisher = scope.spawn(move || {
+                STALE_LINK_PAUSE.set(Some(ClaimPause {
+                    entered: arrived,
+                    resume,
+                }));
+                context.with(|| heap.write_barrier(target));
+            });
+            parked
+                .recv_timeout(Duration::from_secs(3))
+                .expect("pending proposal is linked");
+            let ticket = gc.request_full_cycle();
+            for _ in 0..2048 {
+                if gc.completed_full_ticket() >= ticket {
+                    break;
+                }
+                gc.step();
+            }
+            let second_ticket = gc.request_full_cycle();
+            for _ in 0..2048 {
+                if gc.completed_full_ticket() >= second_ticket {
+                    break;
+                }
+                gc.step();
+            }
+            let finished = gc.completed_full_ticket() >= second_ticket;
+            let allocation = finished.then(|| Gc::try_new(&gc, 23u64)).transpose();
+            release.send(()).expect("resume pending proposal");
+            publisher.join().expect("clean edge publisher");
+            Ok((finished, allocation?))
+        })?;
+        assert!(recovered.0 && recovered.1.as_ref().is_some_and(|root| ***root == 23));
+        assert!(weak.refers_to(target));
+        drop((funding, recovered, parent));
+        gc.collect_full()?;
+        assert!(weak.upgrade().is_none());
+        gc.stop()?;
+        assert_eq!(gc.managed_bytes(), 0);
+    }
+    Ok(())
 }

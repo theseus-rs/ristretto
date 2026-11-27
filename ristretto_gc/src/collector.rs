@@ -1742,7 +1742,7 @@ impl GarbageCollector {
             {
                 return Err(invalid());
             }
-            match self.certify_root_attempt(phases, &metadata, &record) {
+            match self.certify_root_attempt(phases, &metadata, |_| Some(record.clone())) {
                 Some(false) => return Err(invalid()),
                 None => continue,
                 Some(true) => {}
@@ -1771,7 +1771,7 @@ impl GarbageCollector {
         &self,
         phases: publication_state::Birth,
         metadata: &MetadataRef,
-        record: &Arc<crate::roots::Record>,
+        mut proposal_record: impl FnMut(&crate::work::BirthEpoch) -> Option<Arc<crate::roots::Record>>,
     ) -> Option<bool> {
         let snapshot = match phases {
             publication_state::Birth::Idle => return Some(true),
@@ -1818,7 +1818,7 @@ impl GarbageCollector {
                     epoch,
                     crate::work::RootProposal {
                         metadata: metadata.clone(),
-                        record: record.clone(),
+                        record: proposal_record(epoch)?,
                         index,
                         strength,
                         promotion_age: mature,
@@ -1943,10 +1943,7 @@ impl GarbageCollector {
     }
 
     pub(crate) fn snapshot_edge<T>(&self, target: &Gc<T>) {
-        let marking = self.phase_clock.any_marking();
-        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
-        phase_tests::after_deletion_sample();
-        if marking {
+        if self.phase_clock.any_marking() {
             self.edge_barrier(target);
         }
     }

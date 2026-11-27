@@ -590,6 +590,12 @@ impl BirthEpoch {
         self.offers.load(Ordering::Acquire) & !SEALED != 0
     }
 
+    /// An advisory limit for repeated deletion barriers. Concurrent publishers
+    /// may each contribute one additional in-flight offer before observing it.
+    pub(crate) fn has_root_capacity(&self, limit: usize) -> bool {
+        self.roots.get().is_none_or(|roots| roots.pending() < limit)
+    }
+
     pub(crate) fn has_visible_proposals(&self) -> bool {
         self.roots.get().is_some_and(|q| !q.is_empty())
             || self.inbox.get().is_some_and(|q| !q.is_empty())
