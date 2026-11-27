@@ -1753,7 +1753,7 @@ impl GarbageCollector {
             {
                 return Err(invalid());
             }
-            match self.certify_root_attempt(phases, &metadata, |_| Some(record.clone())) {
+            match self.certify_root_attempt(phases, &metadata, |_, _| Some(record.clone())) {
                 Some(false) => return Err(invalid()),
                 None => continue,
                 Some(true) => {}
@@ -1782,17 +1782,10 @@ impl GarbageCollector {
         &self,
         phases: publication_state::Birth,
         metadata: &MetadataRef,
-        proposal_record: impl FnMut(&crate::work::BirthEpoch) -> Option<Arc<crate::roots::Record>>,
-    ) -> Option<bool> {
-        self.certify_root_attempt_in(phases, metadata, false, proposal_record)
-    }
-
-    fn certify_root_attempt_in(
-        &self,
-        phases: publication_state::Birth,
-        metadata: &MetadataRef,
-        precise_full_only: bool,
-        mut proposal_record: impl FnMut(&crate::work::BirthEpoch) -> Option<Arc<crate::roots::Record>>,
+        mut proposal_record: impl FnMut(
+            usize,
+            &Arc<crate::work::BirthEpoch>,
+        ) -> Option<Arc<crate::roots::Record>>,
     ) -> Option<bool> {
         let snapshot = match phases {
             publication_state::Birth::Idle => return Some(true),
@@ -1807,15 +1800,6 @@ impl GarbageCollector {
         // captured queue owners before sampling marks; the final validation
         // then covers both the mark reads and any root proposals.
         if !self.phase_clock.same_phases(&snapshot) {
-            return None;
-        }
-        // Precise full marking on an old-enabled heap excludes a young
-        // start until weak processing finishes. During an old-only pass a new
-        // young snapshot can instead need immediately visible old retention.
-        if precise_full_only
-            && (snapshot.stage(1) != Some(0)
-                || epochs[1].as_ref().is_none_or(|epoch| epoch.old_only))
-        {
             return None;
         }
         let mut eligible = true;
@@ -1848,7 +1832,7 @@ impl GarbageCollector {
                     epoch,
                     crate::work::RootProposal {
                         metadata: metadata.clone(),
-                        record: proposal_record(epoch)?,
+                        record: proposal_record(index, epoch)?,
                         index,
                         strength,
                         promotion_age: mature,

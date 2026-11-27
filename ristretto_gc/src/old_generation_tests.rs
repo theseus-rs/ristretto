@@ -114,7 +114,7 @@ fn numeric_deletions_publish_initial_young_retention_before_the_old_handoff_scan
             .expect("post-snapshot birth");
         assert_eq!(after.old_birth.load(Ordering::Acquire), epoch);
         assert!(after.marked(1, epoch));
-        assert_eq!(after.retention(1, epoch), None);
+        assert_eq!(gc.visible_retention(&after, 1, epoch), None);
         // SAFETY: late keeps this exact post-snapshot allocation live.
         let raw = unsafe { Gc::from_raw(late.as_ptr())? };
         let context = gc.register_context();
@@ -122,8 +122,11 @@ fn numeric_deletions_publish_initial_young_retention_before_the_old_handoff_scan
             gc.write_barrier(edge);
             raw.write_barrier(&gc);
             assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
-            assert_eq!(initial.retention(1, epoch), Some(Retention::Strong));
-            assert_eq!(after.retention(1, epoch), None);
+            assert_eq!(
+                gc.visible_retention(&initial, 1, epoch),
+                Some(Retention::Strong)
+            );
+            assert_eq!(gc.visible_retention(&after, 1, epoch), None);
         });
         drop((raw, late, owner));
         let overlapping_owner = Gc::try_new(&gc, vec![Gc::try_new(&gc, 31u64)?.into_rooted()])?;
@@ -146,8 +149,11 @@ fn numeric_deletions_publish_initial_young_retention_before_the_old_handoff_scan
         let young_epoch = gc.domains[0].epoch.load(Ordering::Acquire);
         assert!(!both.marked(0, young_epoch));
         context.with(|| raw_both.write_barrier(&gc));
-        assert_eq!(both.retention(0, young_epoch), Some(Retention::Strong));
-        assert_eq!(both.retention(1, epoch), None);
+        assert_eq!(
+            gc.visible_retention(&both, 0, young_epoch),
+            Some(Retention::Strong)
+        );
+        assert_eq!(gc.visible_retention(&both, 1, epoch), None);
         assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
         drop((raw_both, overlapping_owner));
         assert!((0..10000).any(|_| {

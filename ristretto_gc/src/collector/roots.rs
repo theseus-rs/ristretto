@@ -233,7 +233,7 @@ impl GarbageCollector {
                 // linking, while a live matching generation still owns the address.
                 let debt = Arc::new(crate::roots::Record::typed(address));
                 let certified = self
-                    .certify_root_attempt(phases, &metadata, |_| Some(debt.clone()))
+                    .certify_root_attempt(phases, &metadata, |_, _| Some(debt.clone()))
                     == Some(true);
                 #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
                 super::publication_tests::pause_after_typed_proposals();

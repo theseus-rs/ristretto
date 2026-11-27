@@ -248,9 +248,9 @@ impl GarbageCollector {
         // A traced edge owns its descriptor. A protected raw address is
         // resolved below while its caller still keeps the original birth live.
         // Numeric managed edges on old-enabled heaps go through exact identity
-        // lookup. Their old-only handoff remains on the admitted barrier path.
-        let precise_full_only = numeric_edge && self.configuration.old_collection_interval != 0;
-        let context_edge = (known.is_some() || identity.to_i64() == 0 || precise_full_only)
+        // lookup before a committed old mark can be imported by a young scan.
+        let numeric_handoff = numeric_edge && self.configuration.old_collection_interval != 0;
+        let context_edge = (known.is_some() || identity.to_i64() == 0 || numeric_handoff)
             && self.configuration.barrier_buffer_size != 0
             && crate::context::with_state(self, |_| ()).is_some();
         let clock = self
@@ -321,7 +321,7 @@ impl GarbageCollector {
         }
         if context_edge {
             drop(legacy);
-            self.shade_context_edge(metadata, precise_full_only);
+            self.shade_context_edge(metadata, numeric_handoff);
             return;
         }
         let publication = legacy.unwrap_or_else(|| self.barrier_guard());
@@ -330,40 +330,75 @@ impl GarbageCollector {
         }
     }
 
-    fn shade_context_edge(&self, metadata: &MetadataRef, precise_full_only: bool) {
+    fn shade_context_edge(&self, metadata: &MetadataRef, numeric_handoff: bool) {
         // The caller holds this exact same-heap birth descriptor. Move
         // its strong-phase traversal onto the epoch queues, where the
         // collector can claim a committed proposal or cancel a pending one.
-        let phases = self.phase_clock.indexed_root();
-        let strong = match &phases {
-            publication_state::Birth::Idle => return,
-            publication_state::Birth::Inline(s) | publication_state::Birth::Epochs(s) => {
-                (0..2).all(|i| s.stage(i).is_none_or(|stage| stage == 0))
+        let limit = self
+            .configuration
+            .barrier_buffer_size
+            .min(crate::context::MAX_RECORDS);
+        for _ in 0..2 {
+            let phases = self.phase_clock.indexed_root();
+            match &phases {
+                publication_state::Birth::Idle => return,
+                publication_state::Birth::Inline(s) | publication_state::Birth::Epochs(s)
+                    if (0..2).any(|i| s.stage(i).is_some_and(|stage| stage != 0)) =>
+                {
+                    break;
+                }
+                _ => {}
             }
-        };
-        if strong && metadata.birth.is_live() {
-            let limit = self
-                .configuration
-                .barrier_buffer_size
-                .min(crate::context::MAX_RECORDS);
-            let mut debt = None;
-            let certified =
-                self.certify_root_attempt_in(phases, metadata, precise_full_only, |epoch| {
-                    epoch.has_root_capacity(limit).then(|| {
-                        debt.get_or_insert_with(|| {
-                            std::sync::Arc::new(crate::roots::Record::typed(
-                                metadata.trace.ptr.addr(),
-                            ))
-                        })
-                        .clone()
-                    })
-                });
-            if certified == Some(true)
-                && metadata.birth.is_live()
-                && debt.is_none_or(|record| record.commit_typed())
-            {
+            if !metadata.birth.is_live() {
                 return;
             }
+            let mut debt = None;
+            let mut handoff = [None, None];
+            let certified = self.certify_root_attempt(phases, metadata, |index, epoch| {
+                if !epoch.has_root_capacity(limit) {
+                    return None;
+                }
+                if numeric_handoff
+                    && (index == 0 || epoch.old_only)
+                    && self.is_young_metadata(metadata)
+                {
+                    *handoff.get_mut(index)? = Some(epoch.clone());
+                }
+                Some(
+                    debt.get_or_insert_with(|| {
+                        std::sync::Arc::new(crate::roots::Record::typed(metadata.trace.ptr.addr()))
+                    })
+                    .clone(),
+                )
+            });
+            if certified != Some(true)
+                || !metadata.birth.is_live()
+                || debt.is_some_and(|r| !r.commit_typed())
+            {
+                break;
+            }
+            let published_old = handoff[1].is_some();
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            if published_old {
+                super::publication_tests::pause_before_old_deletion_visibility();
+            }
+            for (i, epoch) in handoff.into_iter().enumerate() {
+                if let Some(epoch) = epoch {
+                    metadata.direct_marks.publish(
+                        i,
+                        &epoch,
+                        Retention::Strong,
+                        &self.domain_at(i).mark_queue,
+                    );
+                }
+            }
+            if !published_old {
+                return;
+            }
+            // A young snapshot could already have passed this child between
+            // committing the old traversal and exposing its retention. Order
+            // the visible witness before a fresh receiver sample and cover
+            // that young epoch as well. A later young start imports the mark.
         }
         // A phase change or cancelled proposal has no private debt. Use
         // fresh admission and strong retention for every receiving domain.
