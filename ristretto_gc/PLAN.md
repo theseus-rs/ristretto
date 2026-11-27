@@ -9,6 +9,14 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `f4cdf10f`, the single JVM collector completed the 8,192-allocation Java
+reference-array reproducer on native and WASI. All nine Ristretto forks of
+the 64 MiB Java comparison completed, as did a two-minute run at 100
+arrivals/s with 12,000 completed operations. Partial regional returns permit
+a bounded additional retry while retaining the full managed charge. The
+all-live exhaustion controls passed on both targets.
+[Reclamation gates and remaining workload limits](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/regional-array-reclamation/README.md).
+
 At `0b76cfaf`, construction root handoff, young array card contention and
 unlinking an empty numeric root page each allow the tested peer to progress.
 The lowest individual 95% complete-collection speedup bounds against

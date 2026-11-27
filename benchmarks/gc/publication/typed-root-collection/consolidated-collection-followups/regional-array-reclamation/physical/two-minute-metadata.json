@@ -1,0 +1,52 @@
+{
+  "git_head": "b9d5e953796e80284164eb43ade4d8f1a82fb173",
+  "git_status": "",
+  "options": {
+    "jdk": "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+    "ristretto": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/root-retention-removal-f8cb08cf-v1/suffix/gc_compare",
+    "ristretto_before": null,
+    "wasm": "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-regional-array-tail-return-v1/target/wasm32-wasip2/release/examples/gc_compare.wasm",
+    "wasm_before": null,
+    "wasmtime": null,
+    "runtimes": [
+      "ristretto-candidate-jit",
+      "g1",
+      "zgc"
+    ],
+    "workloads": [
+      "reference-array"
+    ],
+    "rates": [
+      100
+    ],
+    "seconds": 120,
+    "warmup": 10,
+    "repeats": 1,
+    "heap_mib": 64,
+    "workers": 2,
+    "cpus": [
+      4,
+      6
+    ],
+    "cgroup_parent": "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service",
+    "rss_mib": 512,
+    "cpu_quota": 2.0,
+    "timeout": 200,
+    "seed": 251130109,
+    "output": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/root-retention-removal-f8cb08cf-v1/suffix/two-minute-java",
+    "pause_recording": false,
+    "pause_capacity": 65536,
+    "acceptance_policy": null
+  },
+  "artifacts_sha256": {
+    "classes/GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "classes/GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "classes/GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "classes/GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "classes/GcBench.class": "43bb33e4d45bd8255bef94901703b0b52e3a6db399f84f0d282e3084839e620c",
+    "gc_compare": "8f2b526a240f4e48530496e2fd9f4d04502f1e8e3d5fc87023c0e1cc3d1ffce6"
+  },
+  "source_archive_sha256": "5005df7de3f98c51c03e8c4847397164e03df21f6661537b30836c338c40d377",
+  "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+  "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638"
+}
