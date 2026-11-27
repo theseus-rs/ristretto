@@ -43,6 +43,13 @@ collection explicitly. These are functional checks.
 
 Three fresh Chromium workers exercised Java collections on the production WASIp2 playground engine. Each completed 13 guest collections, reclaimed 10,473,075 managed bytes and returned checksum 799864. The measured component contains the same workspace collector as the JVM. [Browser Java workload, worker recordings and artifact hashes](benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/epoch-visible-deletions/browser-jvm/README.md).
 
+The playground packager and WASI smoke command use Cargo's resolved target
+directory. With stale components in the checkout's default `target/`, the
+release build packaged the externally configured engine and the smoke command
+ran Java 8, 11, 17, 21 and 25. Three Chromium workers then completed the Java
+GC fixture with that release build.
+[Artifact hashes, worker recordings and stale-file control](benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/mature-deletion-bitmap/browser/artifact-paths/README.md).
+
 ## Migrate from the restricted research preview
 
 Source users of the earlier bounded catalog, pool, restricted Java session,
