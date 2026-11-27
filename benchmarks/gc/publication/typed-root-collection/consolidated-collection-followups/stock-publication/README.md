@@ -86,6 +86,15 @@ the 95% release floor, so the change remains experimental.
 At `227708b2`, 19 of 24 native conditions and all 12 WASIp2 conditions
 cleared the 10× individual lower 95% speedup requirement against `f1daebeb`.
 The lowest bounds were 7.024× native and 10.424× WASIp2. Native compilation
-overlapped some benchmark cores during this run. The native release gate is
-open. [All 36 estimates](exact-charge-cycles/complete-cycles.csv) ·
+overlapped some benchmark cores during this first run. [All 36 estimates](exact-charge-cycles/complete-cycles.csv) ·
 [Speedup graph](exact-charge-cycles/speedup.png) · [Run identities](exact-charge-cycles/provenance.json)
+
+
+The native replication used the identical frozen control and candidate
+executables, three dedicated physical cores, and 48 randomized pairs per
+condition. All 24 native lower bounds passed, with a minimum of 10.847×
+across 2,304 fresh processes. The earlier WASIp2 minimum remains 10.424×.
+The first native run and its five misses remain above for comparison.
+[Replication policy](exact-charge-cycles/isolated-native/policy.json) ·
+[Native estimates](exact-charge-cycles/isolated-native/results.csv) ·
+[Native process data](exact-charge-cycles/isolated-native/native.jsonl.gz)

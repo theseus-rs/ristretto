@@ -11,8 +11,9 @@ operations, weak clearing and physical reclamation on the JVM heap.
 
 The first complete-cycle rerun on exact-charge revision `227708b2`
 passed 31 of 36 conditions. Five native lower confidence bounds missed 10×,
-with a 7.024× minimum. All 12 WASIp2 conditions passed. The native 10×
-release gate remains open while the result is checked on isolated cores.
+with a 7.024× minimum. All 12 WASIp2 conditions passed. A prespecified isolated native replication with the same binaries and 48 pairs per
+condition passed all 24 native conditions, with a minimum lower bound of 10.847×.
+[Native replication](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/stock-publication/exact-charge-cycles/isolated-native/results.csv).
 [Per-condition measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/stock-publication/exact-charge-cycles/complete-cycles.csv).
 
 Both stock publication policies returned Java heap-space errors in every
