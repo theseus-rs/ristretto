@@ -1,0 +1,16 @@
+{
+  "source": "729aea8f2b5a506d949fa016459daaae23d4be2e",
+  "parent": "8cd9d2e4",
+  "runtime_parent": "ab7a3000",
+  "no_notifier_candidate": true,
+  "cycle_control": "f1daebeb",
+  "individual_lower_95_min": 10.0,
+  "short_500_completion": 5000,
+  "minimum_saturation_parent_ratio": 0.95,
+  "sustained_500_completion": 60000,
+  "timeout_s": 220,
+  "graph_seed": 251127301,
+  "short_seed": 251127307,
+  "sustained_seed": 251127309,
+  "correctness": "After clock activation and before mirrors, an in-place deletion retains child and grandchild in the original full snapshot, then both clear in the next one."
+}

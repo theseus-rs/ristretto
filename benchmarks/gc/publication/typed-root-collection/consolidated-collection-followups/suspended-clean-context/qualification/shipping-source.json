@@ -1,0 +1,37 @@
+{
+  "benchmark_revision": "729aea8f2b5a506d949fa016459daaae23d4be2e",
+  "shipping_commit": "cc51335ceae7590834020eeba387aff53c60ba65",
+  "identical_git_objects": {
+    "ristretto_gc/src": "1630103ef7567b0e609e0b5ab25d585d0b458b87",
+    "ristretto_gc/tests": "8777c1f1821023bcfe1e74436acfd024ea2b23b0",
+    "ristretto_gc/Cargo.toml": "61ae0c1a0e22714f3ee7007c0c5e2907927eb30b",
+    "ristretto_classloader/src": "9b5f1ee82579a3216e735ee84dc2e0168ebd79cc",
+    "ristretto_vm/src": "5c881100743f89c648f247445d5773c92e5708c9",
+    "ristretto_java/src": "9481cb98cb9f0b2f656f5859e37ca8128186dab0",
+    "Cargo.lock": "94214ffdabb64fd573946d3adb2828e27014402a"
+  },
+  "standalone_boundary_fix": "430eaa8de4fbd6a132f9989c9efe9d51df09c2c9",
+  "standalone_suites": {
+    "native": {
+      "passed": 1038,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasm32-wasip2": {
+      "passed": 470,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "standalone_strict_clippy": [
+    "native",
+    "wasm32-wasip2"
+  ],
+  "negative_control": "The old legacy mirror lost child and grandchild after committing the full snapshot.",
+  "positive_control": "The standalone test resumes the starter immediately after the mutator samples marking. The combined test requires deletion to finish while the starter is still suspended.",
+  "read_only_auditor": {
+    "model": "gemini-4-neon",
+    "status": "SUCCESS",
+    "result": "Confirmed the deterministically sampled phase window. The standalone test alone assumes the starter resumes. The combined test exercises suspension."
+  }
+}

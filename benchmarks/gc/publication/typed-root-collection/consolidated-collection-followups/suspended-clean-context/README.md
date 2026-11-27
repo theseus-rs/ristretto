@@ -7,7 +7,7 @@ On `c02357ca`, an explicit context flush claimed one clean edge and suspended be
 | Legacy | 1 | No | No |
 | Counted | 1 | No | No |
 
-After the flusher resumed, the test checked the original weak identity, collected the now-unreachable graph and verified that the managed charge returned to zero. An unbounded wait on this schedule remains an open alpha release issue. [Regression patch](control.patch.gz) · [Observed assertion and toolchain output](control.log.gz).
+After the flusher resumed, the test checked the original weak identity, collected the now-unreachable graph and verified that the managed charge returned to zero. The registered traced-edge case now completes with the flusher suspended on both publication policies. The alpha still needs progress evidence for dirty owners, raw handles and other phases. [Corrected collector, forced schedules and release measurements](qualification/README.md). [Regression patch](control.patch.gz) · [Observed assertion and toolchain output](control.log.gz).
 
 Run from a clean checkout of the measured revision. The final assertion is expected to fail on that revision.
 

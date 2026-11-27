@@ -37,11 +37,18 @@ and the notifier completed 23,560 and 53,553. Sustained completion remains
 unqualified on both.
 [Controls, individual forks and release thresholds](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/cold-refund-notifier/README.md).
 
-A suspended explicit context flush can hold a required clean edge privately.
-On `c02357ca` both a fresh full ticket and an independent funded allocation
-remained pending for 2,048 polls under both publication policies. Removing
-this dependency and validating the exact referent across epoch changes remains
-an open progress gate. [Reproducer and results](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/suspended-clean-context/README.md).
+At `cc51335c`, dropping a traced edge observes the full snapshot even when the
+cycle starter is parked before updating the legacy marking flag. A registered
+context publishes a clean traced edge to the receiving marking epochs. Peers
+completed a fresh full ticket and a funded allocation with the producer parked
+under both publication policies. All 1,200 forced cases passed. The minimum
+individual lower 95% full-collection bounds were 10.430× native and 10.443×
+WASI. The two-minute Java candidate finished all 60,000 arrivals, and the
+parent finished 59,999. Scheduled p99.9 rose from 729 ms on the parent to
+1,262 ms on the candidate in that pair. Short saturation medians were 537 ops/s for Ristretto,
+912,567 for G1 and 489,136 for ZGC. Dirty-owner publication, raw handles and
+later-phase progress remain open.
+[Original failure, corrected collector and measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/suspended-clean-context/qualification/README.md).
 
 The sparse reference-array candidate is withheld. Full collection of one
 4,097-slot array with two populated endpoints improved 6.28× on native and

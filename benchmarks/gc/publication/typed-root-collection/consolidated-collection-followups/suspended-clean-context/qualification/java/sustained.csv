@@ -1,0 +1,5 @@
+runtime,status,offered,completed,unfinished,p999_us,p9999_us,max_backlog,peak_mib,oom_kills
+Ristretto before,ok,60000,59999,1,729088,819200,411,130.72265625,0
+Ristretto candidate,ok,60000,60000,0,1261568,1327104,664,128.16015625,0
+HotSpot G1,ok,60000,60000,0,514,2272,4,64.20703125,0
+HotSpot ZGC,ok,60000,60000,0,259,1920,1,126.49609375,0

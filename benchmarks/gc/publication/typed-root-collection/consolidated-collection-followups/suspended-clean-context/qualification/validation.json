@@ -1,0 +1,80 @@
+{
+  "source": "729aea8f2b5a506d949fa016459daaae23d4be2e",
+  "processes": 100,
+  "tests": [
+    "fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspended",
+    "a_paused_traced_edge_offer_allows_peer_allocation_and_two_full_cycles",
+    "detached_clean_edge_preserves_its_graph_for_one_full_epoch",
+    "removing_a_white_edge_during_marking_survives_an_empty_write_finish",
+    "deleting_a_traced_edge_after_snapshot_activation_keeps_its_original_graph"
+  ],
+  "cases": 1200,
+  "binary_sha256": "a7a496a4639e59e0c71ad21b3b157a58d60d7849296d0da36113732f9117e43e",
+  "suite": {
+    "native": {
+      "passed": 1832,
+      "failed": 0,
+      "ignored": 15
+    },
+    "wasi": {
+      "passed": 1234,
+      "failed": 0,
+      "ignored": 9
+    }
+  },
+  "strict_clippy": [
+    "native",
+    "wasm32-wasip2"
+  ],
+  "workspace_graphs": 21,
+  "previews": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "ordinary_java_8192": {
+    "native": {
+      "live_objects": 12239,
+      "managed_bytes": 65028425,
+      "workers": 2,
+      "candidate": true,
+      "jit_enabled": true,
+      "collections_completed": 758
+    },
+    "wasi": {
+      "live_objects": 12756,
+      "managed_bytes": 58425720,
+      "workers": 0,
+      "candidate": true,
+      "jit_enabled": false,
+      "collections_completed": 30
+    }
+  }
+}

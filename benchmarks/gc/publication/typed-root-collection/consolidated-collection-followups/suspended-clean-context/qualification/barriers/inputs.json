@@ -1,0 +1,290 @@
+{
+  "bounded": {
+    "revision": "d4a252f5c1e629b6fa479436146ff474249ba2bb",
+    "plan": {
+      "parent": "f7d32751",
+      "workloads": [
+        "traced_barrier",
+        "traced_barrier_idle"
+      ],
+      "policies": [
+        "contexts",
+        "candidate"
+      ],
+      "repeats": 18,
+      "operations": 16384,
+      "paired_seed": 251127269,
+      "targets": {
+        "native": 12,
+        "wasi": 14
+      },
+      "decision": "Require all paired point estimates for operation and total cost to be below 1.10 candidate/parent before expanding to integrated qualification; retain failed runs. Require bounded proposals and exact original graph survival in addition to this cost screen."
+    },
+    "targets": {
+      "native": {
+        "raw_sha256": "9b7c85e413ccde127adfefe8b0e25d4cbb279c9885685a877a1bb3a2f5b6a775",
+        "metadata": {
+          "binaries": {
+            "before": {
+              "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/native-measure/before",
+              "sha256": "ae83fc729ba046d8e31a25de36a0924970938c81585977dc8a82a050251a465e"
+            },
+            "after": {
+              "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/native-measure/after",
+              "sha256": "f342d13f546c08c5f7837649d383b08bf0859001c1b809f3812589b0ecb884b2"
+            }
+          },
+          "runner": null,
+          "target": "native",
+          "harness_sha256": "c9f9c0c2746193f7a925f7d0f298da9f843a63069a3095a5a99e09791d659bf5",
+          "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+          "cpu": 12,
+          "repeats": 18,
+          "seed": 251127269,
+          "operations": 16384,
+          "workloads": [
+            "traced_barrier",
+            "traced_barrier_idle"
+          ],
+          "policies": [
+            "contexts",
+            "candidate"
+          ],
+          "argv0": "mechanisms",
+          "qualification": false,
+          "scope": "single mutator, operation time excludes between-batch collection"
+        }
+      },
+      "wasi": {
+        "raw_sha256": "bc948a35debbfdd0f10afe536b77ad5d080177e8a6504f56405920c9f46ec846",
+        "metadata": {
+          "binaries": {
+            "before": {
+              "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/wasi-measure/before",
+              "sha256": "575a15ac06a43f8e1f531e4cd4c459a247cdab7d0a7732747f5166ba5cc4223e"
+            },
+            "after": {
+              "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/wasi-measure/after",
+              "sha256": "e2032db5ad982c5827c366a215d941962486ac1b13188b10e4671e817810cfc5"
+            }
+          },
+          "runner": {
+            "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/wasi-measure/wasmtime",
+            "sha256": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8",
+            "version": "wasmtime 50.0.1 (c307ec81d 2026-10-29)"
+          },
+          "target": "WASI",
+          "harness_sha256": "c9f9c0c2746193f7a925f7d0f298da9f843a63069a3095a5a99e09791d659bf5",
+          "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+          "cpu": 14,
+          "repeats": 18,
+          "seed": 251127269,
+          "operations": 16384,
+          "workloads": [
+            "traced_barrier",
+            "traced_barrier_idle"
+          ],
+          "policies": [
+            "contexts",
+            "candidate"
+          ],
+          "argv0": "mechanisms",
+          "qualification": false,
+          "scope": "single mutator, operation time excludes between-batch collection"
+        }
+      }
+    }
+  },
+  "certificate": {
+    "revision": "830bdd43159046c367ca26063c30989a7baec9ef",
+    "plan": {
+      "parent": "f7d32751",
+      "workloads": [
+        "traced_barrier",
+        "traced_barrier_idle"
+      ],
+      "policies": [
+        "contexts",
+        "candidate"
+      ],
+      "repeats": 18,
+      "operations": 16384,
+      "paired_seed": 251127271,
+      "targets": {
+        "native": 12,
+        "wasi": 14
+      },
+      "decision": "Require all paired point estimates for operation and total cost to be below 1.10 candidate/parent before expanding to integrated qualification; retain failed runs. Require bounded proposals and exact original graph survival in addition to this cost screen."
+    },
+    "targets": {
+      "native": {
+        "raw_sha256": "57fb39ac67d129a1e4bcdf62540f96d185d1f6aa60bf8f8c3c478a4f9701dee6",
+        "metadata": {
+          "binaries": {
+            "before": {
+              "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/certified/native-measure/before",
+              "sha256": "ae83fc729ba046d8e31a25de36a0924970938c81585977dc8a82a050251a465e"
+            },
+            "after": {
+              "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/certified/native-measure/after",
+              "sha256": "97e00ba55bcf89c268cad8a79e2db18dbee7db0ccc33a78d022d4889934449a9"
+            }
+          },
+          "runner": null,
+          "target": "native",
+          "harness_sha256": "c9f9c0c2746193f7a925f7d0f298da9f843a63069a3095a5a99e09791d659bf5",
+          "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+          "cpu": 12,
+          "repeats": 18,
+          "seed": 251127271,
+          "operations": 16384,
+          "workloads": [
+            "traced_barrier",
+            "traced_barrier_idle"
+          ],
+          "policies": [
+            "contexts",
+            "candidate"
+          ],
+          "argv0": "mechanisms",
+          "qualification": false,
+          "scope": "single mutator, operation time excludes between-batch collection"
+        }
+      },
+      "wasi": {
+        "raw_sha256": "d64562e654c6f75d9ac8865167df1b12e41335792a177914749affe13d74ceb6",
+        "metadata": {
+          "binaries": {
+            "before": {
+              "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/certified/wasi-measure/before",
+              "sha256": "575a15ac06a43f8e1f531e4cd4c459a247cdab7d0a7732747f5166ba5cc4223e"
+            },
+            "after": {
+              "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/certified/wasi-measure/after",
+              "sha256": "268d08decf730d05dc404f847c3076309fe4233e8ac4d7abcc9c2e5315f19c7a"
+            }
+          },
+          "runner": {
+            "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/certified/wasi-measure/wasmtime",
+            "sha256": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8",
+            "version": "wasmtime 50.0.1 (c307ec81d 2026-10-29)"
+          },
+          "target": "WASI",
+          "harness_sha256": "c9f9c0c2746193f7a925f7d0f298da9f843a63069a3095a5a99e09791d659bf5",
+          "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+          "cpu": 14,
+          "repeats": 18,
+          "seed": 251127271,
+          "operations": 16384,
+          "workloads": [
+            "traced_barrier",
+            "traced_barrier_idle"
+          ],
+          "policies": [
+            "contexts",
+            "candidate"
+          ],
+          "argv0": "mechanisms",
+          "qualification": false,
+          "scope": "single mutator, operation time excludes between-batch collection"
+        }
+      }
+    }
+  },
+  "idle": {
+    "revision": "d85fda57e1159ddca2b45d8ef356586f091f95cf",
+    "plan": {
+      "parent": "f7d32751",
+      "workloads": [
+        "traced_barrier",
+        "traced_barrier_idle"
+      ],
+      "policies": [
+        "contexts",
+        "candidate"
+      ],
+      "repeats": 18,
+      "operations": 16384,
+      "paired_seed": 251127277,
+      "targets": {
+        "native": 12,
+        "wasi": 14
+      },
+      "decision": "Require all paired point estimates for operation and total cost to be below 1.10 candidate/parent before expanding to integrated qualification; retain failed runs. Require bounded proposals and exact original graph survival in addition to this cost screen."
+    },
+    "targets": {
+      "native": {
+        "raw_sha256": "ddb4f1bcd7c09c98c09d0425d83b112e2914475a897d62a9593c218cf2d92cfa",
+        "metadata": {
+          "binaries": {
+            "before": {
+              "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/idle/native-measure/before",
+              "sha256": "ae83fc729ba046d8e31a25de36a0924970938c81585977dc8a82a050251a465e"
+            },
+            "after": {
+              "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/idle/native-measure/after",
+              "sha256": "babd726b56820a1eacbe5cca1974e889c667df7df283cecbd6cd7c31c258e72f"
+            }
+          },
+          "runner": null,
+          "target": "native",
+          "harness_sha256": "c9f9c0c2746193f7a925f7d0f298da9f843a63069a3095a5a99e09791d659bf5",
+          "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+          "cpu": 12,
+          "repeats": 18,
+          "seed": 251127277,
+          "operations": 16384,
+          "workloads": [
+            "traced_barrier",
+            "traced_barrier_idle"
+          ],
+          "policies": [
+            "contexts",
+            "candidate"
+          ],
+          "argv0": "mechanisms",
+          "qualification": false,
+          "scope": "single mutator, operation time excludes between-batch collection"
+        }
+      },
+      "wasi": {
+        "raw_sha256": "dd1bec83e4f49eb3a16438908d0c2c5aca85b909cb826d8f2664ba695fe83a7e",
+        "metadata": {
+          "binaries": {
+            "before": {
+              "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/idle/wasi-measure/before",
+              "sha256": "575a15ac06a43f8e1f531e4cd4c459a247cdab7d0a7732747f5166ba5cc4223e"
+            },
+            "after": {
+              "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/idle/wasi-measure/after",
+              "sha256": "474c5c74a339d50c40fbfd08b963f54a0aabe4cbc0659416f9f9ef095d52ec79"
+            }
+          },
+          "runner": {
+            "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/idle/wasi-measure/wasmtime",
+            "sha256": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8",
+            "version": "wasmtime 50.0.1 (c307ec81d 2026-10-29)"
+          },
+          "target": "WASI",
+          "harness_sha256": "c9f9c0c2746193f7a925f7d0f298da9f843a63069a3095a5a99e09791d659bf5",
+          "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+          "cpu": 14,
+          "repeats": 18,
+          "seed": 251127277,
+          "operations": 16384,
+          "workloads": [
+            "traced_barrier",
+            "traced_barrier_idle"
+          ],
+          "policies": [
+            "contexts",
+            "candidate"
+          ],
+          "argv0": "mechanisms",
+          "qualification": false,
+          "scope": "single mutator, operation time excludes between-batch collection"
+        }
+      }
+    }
+  }
+}
