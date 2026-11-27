@@ -24,6 +24,12 @@ arrivals with lower tails. The three short candidate forks also finished all
 arrivals, but their median p99.9 was 219 ms.
 [Queue, collection, browser and JVM measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/terminal-queue-links/README.md).
 
+A suspended explicit context flush can hold a required clean edge privately.
+On `c02357ca` both a fresh full ticket and an independent funded allocation
+remained pending for 2,048 polls under both publication policies. Removing
+this dependency and validating the exact referent across epoch changes remains
+an open progress gate. [Reproducer and results](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/suspended-clean-context/README.md).
+
 The sparse reference-array candidate is withheld. Full collection of one
 4,097-slot array with two populated endpoints improved 6.28× on native and
 7.13× on WASI against its immediate parent. Across all 36 established graph
