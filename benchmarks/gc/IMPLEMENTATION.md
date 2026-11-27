@@ -72,7 +72,7 @@ checks make no performance or RSS-ceiling claim; older timing evidence is unchan
 
 ## Java integration checkpoints (2026-11-15)
 
-The feature-gated [canonical Java tier](../../ristretto_vm/CANONICAL_JAVA.md)
+The feature-gated [canonical Java tier](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_vm_research/CANONICAL_JAVA.md)
 runs shared javac graph bytecode on native and WASI; each platform passes twelve
 integration cases and a parked-future cancellation check. The independent
 [ordinary-VM JIT slice](../../ristretto_vm/EXPERIMENTAL_JIT.md) verifies HotSpot

@@ -3,7 +3,7 @@
 This document records the earlier restricted source preview. The [alpha release plan](PLAN.md#alpha-collector-and-review-gates) governs the shipping JVM.
 
 
-The release is an **opt-in source prerelease for restricted Java programs**. A user should be able to build from the archive, run the same Java 17 classfiles on the native interpreter, native compiled tier and WASI interpreter, and observe cyclic reclamation. The example must return **64**, allocate **16** objects, leave **zero** payload bytes after cleanup and **zero** catalog bytes after drop. Its compiled execution must report **25** compiled entries and **8** compiled backedges. The rest of the supported Java surface is also part of the milestone. [Java contract](../ristretto_vm/CANONICAL_JAVA.md) · [Runnable example](../ristretto_vm/examples/canonical_java.rs)
+The release is an **opt-in source prerelease for restricted Java programs**. A user should be able to build from the archive, run the same Java 17 classfiles on the native interpreter, native compiled tier and WASI interpreter, and observe cyclic reclamation. The example must return **64**, allocate **16** objects, leave **zero** payload bytes after cleanup and **zero** catalog bytes after drop. Its compiled execution must report **25** compiled entries and **8** compiled backedges. The rest of the supported Java surface is also part of the milestone. [Java contract](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_vm_research/CANONICAL_JAVA.md) · [Runnable example](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_vm_research/examples/canonical_java.rs)
 
 ## Source and merge destination
 
@@ -58,7 +58,7 @@ Start V01 on C12. The two targets use the same admitted classfiles. Expose each 
 | V09 | Add one-dimensional reference arrays and their checked element edges. | Store, load and clear a child. A wrong-component store preserves the prior element and heap accounting. |
 | V10 | Add the supported closed-layout type checks and finish the admission matrix. | Positive, null and failing cast cases agree with the contract. General dispatch, monitors, native calls, exception handlers and unsupported layouts are rejected. |
 
-**V04b is the first end-to-end demonstration.** V05–V10 are part of the published preview contract even though the demonstration is already green. Use the existing `canonical_java`, `canonical_heap`, `canonical_statics`, `canonical_static_handoff`, array and cast tests as the source of the individual MRs. [Interpreter contract and fixtures](../ristretto_vm/CANONICAL_JAVA.md)
+**V04b is the first end-to-end demonstration.** V05–V10 are part of the published preview contract even though the demonstration is already green. Use the existing `canonical_java`, `canonical_heap`, `canonical_statics`, `canonical_static_handoff`, array and cast tests as the source of the individual MRs. [Interpreter contract and fixtures](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_vm_research/CANONICAL_JAVA.md)
 
 ### Run the same program through the native JIT
 
@@ -76,7 +76,7 @@ J01 can be reviewed against the base after C01. It has its own runnable JIT test
 | J07 | Lower reference-array and checked-cast requests. | Native and interpreter outcomes agree for element identity, null, wrong component and failed casts. |
 | J08 | Route compiled static state and initialization through the shared Java heap. | A value written in one tier is read in the other. A suspended initializer preserves its roots and resumes once. |
 
-Use `ristretto_jit`'s activation and request interfaces, `canonical_frame_table.rs` and `canonical_compiled.rs` as the extraction boundaries. Reviewers can reproduce every JIT row on native. The WASI lane continues to run the interpreter and build the supported feature configuration. [Compiled execution contract](../ristretto_vm/CANONICAL_JAVA.md) · [Compiled static-state cases](../ristretto_vm/CANONICAL_COMPILED_STATICS.md)
+Use `ristretto_jit`'s activation and request interfaces, `canonical_frame_table.rs` and `canonical_compiled.rs` as the extraction boundaries. Reviewers can reproduce every JIT row on native. The WASI lane continues to run the interpreter and build the supported feature configuration. [Compiled execution contract](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_vm_research/CANONICAL_JAVA.md) · [Compiled static-state cases](../ristretto_vm/CANONICAL_COMPILED_STATICS.md)
 
 ### Package, compare and release
 

@@ -1132,7 +1132,7 @@ compiled entries/backedges, HotSpot parity, suspension, cancellation and excepti
 ownership. A request-only compiler ABI removes synchronous legacy GC helpers from
 the code intended for canonical execution. These checkpoints are integrated;
 combined-source validation passes thirteen native and twelve WASI integration
-cases, cancellation on both platforms, Clippy and formatting. See [canonical Java](../ristretto_vm/CANONICAL_JAVA.md)
+cases, cancellation on both platforms, Clippy and formatting. See [canonical Java](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/ristretto_vm_research/CANONICAL_JAVA.md)
 and [experimental dispatch](../ristretto_vm/EXPERIMENTAL_JIT.md).
 
 The compiled canonical bridge is now integrated: bounded token tables, owning
