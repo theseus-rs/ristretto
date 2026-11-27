@@ -59,6 +59,29 @@ class CollectorIdentityTests(unittest.TestCase):
             check_shipping_source("ristretto_gc", root)
             check_shipping_source("ristretto_vm", root)
 
+    def test_release_launcher_must_resolve_the_collector_with_its_own_features(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            for name in ("ristretto_gc", "launcher"):
+                package = root / name
+                (package / "src").mkdir(parents=True)
+                (package / "src/lib.rs").touch()
+                (package / "Cargo.toml").write_text(
+                    f'[package]\nname = "{name}"\nversion = "1.0.0"\nedition = "2024"\n')
+            manifest = root / "launcher/Cargo.toml"
+            with manifest.open("a") as stream:
+                stream.write('[features]\ndefault = ["heap"]\nheap = ["dep:ristretto_gc"]\n'
+                             '[dependencies]\nristretto_gc = { path = "../ristretto_gc", optional = true }\n')
+            subprocess.run(["cargo", "generate-lockfile", "--offline"], cwd=manifest.parent,
+                           check=True, capture_output=True)
+            expected = f"ristretto_gc v1.0.0 ({root / 'ristretto_gc'})"
+            target = "wasm64-unknown-unknown"
+            verify_tree(manifest, expected, target=target)
+            with self.assertRaisesRegex(ValueError, r"found \[\]"):
+                verify_tree(manifest, expected, target=target, feature_args=["--no-default-features"])
+            verify_tree(manifest, expected, target=target,
+                        feature_args=["--no-default-features", "--features", "heap"])
+
     def test_wasi_consumer_cannot_link_a_second_collector(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()

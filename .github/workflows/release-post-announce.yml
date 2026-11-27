@@ -90,6 +90,9 @@ jobs:
           - { platform: x86_64-windows-gnu, cross: true, audio: true, os: ubuntu-latest, target: x86_64-pc-windows-gnu }
 
     runs-on: ${{ matrix.os }}
+    env:
+      JAVA_NO_DEFAULT_FEATURES: ${{ !matrix.audio }}
+      JAVA_FEATURES: ${{ !matrix.audio && !matrix.disable_tls && 'tls-rustls-ring' || '' }}
     steps:
       - name: Checkout source code
         uses: actions/checkout@v7
@@ -138,6 +141,16 @@ jobs:
           echo "CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16" >> "$GITHUB_ENV"
           echo "CARGO_PROFILE_RELEASE_OPT_LEVEL=2" >> "$GITHUB_ENV"
 
+      - name: Verify the collector in the release launcher
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          features=()
+          if [[ "$JAVA_NO_DEFAULT_FEATURES" == "true" ]]; then features+=(--no-default-features); fi
+          if [[ -n "$JAVA_FEATURES" ]]; then features+=(--features "$JAVA_FEATURES"); fi
+          python3 benchmarks/gc/release/verify_alpha_heap.py --launcher-target "$TARGET" "${features[@]}"
+
       - name: Build and upload release archive
         if: ${{ matrix.platform != 'wasm64' }}
         uses: taiki-e/upload-rust-binary-action@v1
@@ -147,9 +160,9 @@ jobs:
           checksum: sha256
           dry-run: ${{ inputs.dry_run }}
           dry-run-intended: ${{ inputs.dry_run }}
-          features: ${{ !matrix.audio && !matrix.disable_tls && 'tls-rustls-ring' || '' }}
+          features: ${{ env.JAVA_FEATURES }}
           locked: true
-          no-default-features: ${{ !matrix.audio }}
+          no-default-features: ${{ env.JAVA_NO_DEFAULT_FEATURES }}
           package: ristretto_java
           tar: all
           target: ${{ matrix.target }}

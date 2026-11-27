@@ -10,7 +10,11 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
 The standalone class loader now has its own single-collector dependency check.
-All 18 workspace graphs and both normalized Cargo consumers passed. Removing
+The 21 workspace checks include the feature selection used by the released
+wasm32, WASIp2 and wasm64 Java launchers. The exact launcher dependency graph
+also passed for all 59 configurations in the binary release matrix. These are
+dependency checks. Native and WASIp2 have separate runtime tests. Both
+normalized Cargo consumers passed. Removing
 the class loader's GC dependency left the enclosing VM graph green in four
 target and feature combinations. The independent class loader check rejected
 all four.

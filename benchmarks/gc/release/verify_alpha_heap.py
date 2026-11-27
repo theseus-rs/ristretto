@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Verify that shipping entry points resolve to the ordinary collector on each host."""
+import argparse
 import json
 from pathlib import Path
 import subprocess
@@ -37,19 +38,34 @@ def verify_workspace():
     return collector
 
 
-def verify(package, target, expected, all_features):
-    mode = "all features and build dependencies" if all_features else "default runtime"
-    context = f"{package} ({target or 'native'}, {mode})"
+def verify(package, target, expected, feature_args=(), *, build_deps=False):
+    mode = " ".join(feature_args) or "default features"
+    edges = "normal and build" if build_deps else "normal"
+    context = f"{package} ({target or 'native'}, {mode}, {edges})"
     try:
         verify_tree(ROOT / "Cargo.toml", expected, package=package, target=target,
-                    all_features=all_features, build_deps=all_features)
+                    feature_args=feature_args, build_deps=build_deps)
     except ValueError as error:
         raise ValueError(f"{context}: {error}") from error
     print(f"{context}: {expected}")
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--launcher-target", help="verify the java release binary for this Rust target")
+    parser.add_argument("--no-default-features", action="store_true")
+    parser.add_argument("--features", help="Cargo features selected by the release build")
+    args = parser.parse_args()
+    if not args.launcher_target and (args.no_default_features or args.features):
+        parser.error("launcher feature selection requires --launcher-target")
     expected = verify_workspace()
+    if args.launcher_target:
+        features = ["--no-default-features"] if args.no_default_features else []
+        if args.features:
+            features.extend(["--features", args.features])
+        verify("ristretto_java", args.launcher_target, expected, features)
+        sys.exit(0)
+
     for package, targets in [
         ("ristretto_classloader", [None, "wasm32-wasip2"]),
         ("ristretto_vm", [None, "wasm32-wasip2"]),
@@ -58,5 +74,7 @@ if __name__ == "__main__":
         ("ristretto_playground", ["wasm32-wasip2", "wasm32-unknown-unknown"]),
     ]:
         for target in targets:
-            for all_features in (False, True):
-                verify(package, target, expected, all_features)
+            verify(package, target, expected)
+            verify(package, target, expected, ["--all-features"], build_deps=True)
+    for target in ("wasm32-unknown-unknown", "wasm32-wasip2", "wasm64-unknown-unknown"):
+        verify("ristretto_java", target, expected, ["--no-default-features"])
