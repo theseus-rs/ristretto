@@ -58,6 +58,26 @@ The initial shared Cargo target linked the control module for both arms. Its res
 
 ![Optimized WASI and native HotSpot](wasi-java/comparison.png)
 
+### Repeat with each commit measured separately
+
+A second CPU pair ran three fresh processes per arm and rate. Each process
+warmed up for four seconds and measured ten seconds. All three comparisons
+used the same frozen optimized modules and the same workerless JVM, heap
+and cgroup limits. The two individual changes showed smaller median throughput changes than
+the direct combined comparison. Different forks ran in each comparison.
+
+| Change | Parent → candidate median saturation ops/s | Parent → candidate scheduled median p99.9 | Unfinished scheduled arrivals across three candidate forks |
+|---|---:|---:|---:|
+| Prepared owner enrollment | 5,345 → 5,238 | 54.272 → 52.224 ms | 0 |
+| Array retirement on the prepared parent | 5,518 → 5,441 | 46.080 → 63.488 ms | 0 |
+| Both against the original parent | 4,857 → 4,289 | 59.904 → 73.728 ms | 32 |
+
+The combined throughput loss repeated at 11.7%. The three candidate forks missed 32 arrivals in total. The individual comparisons leave
+the cause of the full combined loss unresolved.
+[Individual forks](wasi-java/steps/forks.csv) · [Source and executable identities](wasi-java/steps/provenance.json) · [Fresh intermediate build](wasi-java/steps/prepared-build.json)
+
+![WASIp2 JVM after each change](wasi-java/steps/comparison.png)
+
 ## Shipping checks and remaining progress obligations
 
 Native GC and class loader tests passed 1,834 cases with 15 ignored. WASIp2 passed 1,235 with nine ignored. Strict Clippy passed on both. The collector packaged and verified, both normalized Cargo consumers passed, and the shipping dependency checks found the single collector. Native interpreted, native compiled and WASIp2 interpreted Java previews each returned 64, cleared two exact witnesses and reclaimed their charges. All nine short Chromium trials completed. The three candidate trials served 4,000/4,000 arrivals with request-turn p99.9 of 46, 60 and 75 µs. [Suites](validation/suites.json) · [Package](validation/gc-package.log.gz) · [Shipping graphs](validation/graphs.log.gz) · [Compiled preview](validation/native-compiled.json) · [Browser forks](browser/REPORT.md)

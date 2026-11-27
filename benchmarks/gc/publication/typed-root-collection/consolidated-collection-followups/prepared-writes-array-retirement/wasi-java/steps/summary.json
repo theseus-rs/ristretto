@@ -1,0 +1,41 @@
+{
+  "enrollment": {
+    "before": {
+      "capacity": 5344.615520329158,
+      "p999_us": 54272,
+      "unfinished": 0
+    },
+    "after": {
+      "capacity": 5237.968469001207,
+      "p999_us": 52224,
+      "unfinished": 0
+    },
+    "capacity_ratio": 0.9800458890031845
+  },
+  "cleanup": {
+    "before": {
+      "capacity": 5518.366454311834,
+      "p999_us": 46080,
+      "unfinished": 0
+    },
+    "after": {
+      "capacity": 5440.719967031105,
+      "p999_us": 63488,
+      "unfinished": 0
+    },
+    "capacity_ratio": 0.9859294434460656
+  },
+  "combined": {
+    "before": {
+      "capacity": 4856.5860994792665,
+      "p999_us": 59904,
+      "unfinished": 0
+    },
+    "after": {
+      "capacity": 4288.599210916292,
+      "p999_us": 73728,
+      "unfinished": 32
+    },
+    "capacity_ratio": 0.8830481171488187
+  }
+}

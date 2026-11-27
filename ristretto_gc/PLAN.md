@@ -16,7 +16,8 @@ lowest individual lower 95% bounds versus `f1daebeb` were 10.411× native and
 from 608 to 5,868 ops/s. Both two-minute native candidate forks finished
 60,000/60,000 arrivals, with scheduled p99.9 of 2.432 and 2.976 ms. G1 and ZGC
 still lead. Optimized WASIp2 JVM saturation fell from 6,061 to 4,000 ops/s.
-A protected raw embedding handle also reproduced a parked-flush stall.
+A second three-fork comparison found an 11.7% saturation loss and 32 missed
+WASIp2 arrivals. A protected raw embedding handle also reproduced a parked-flush stall.
 These remain alpha release blockers.
 [Measurements, graphs and failing control](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/prepared-writes-array-retirement/README.md).
 
