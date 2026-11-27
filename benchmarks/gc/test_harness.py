@@ -54,6 +54,21 @@ class ProtocolTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "diagnostic"):
                     validate_execution_mode(runtime, observation)
 
+    def test_stock_comparisons_preserve_policy_and_verify_the_observed_admission(self):
+        options = SimpleNamespace(jdk=Path("/jdk"), heap_mib=64, workers=2, wasmtime="/wt",
+                                  workload="allocation", seconds=1, warmup=1, rate=0, seed=1)
+        args = options, Path("/classes"), Path("/out"), Path("/native"), Path("/module")
+        for runtime in ("ristretto-stock-counted-jit", "wasm-stock-counted-before"):
+            command = command_for(runtime, *args, Path("/old-native"), Path("/old-module"))
+            self.assertIn("stock-counted-jit" if runtime.startswith("ristretto") else "stock-counted", command)
+            for actual in (None, False, 1):
+                with self.assertRaisesRegex(ValueError, "stock collector policy"):
+                    validate_execution_mode(runtime, {"ristretto": {"collector_policy": "stock-counted",
+                                            "concurrent_publication": actual}})
+        for actual in (True, False):
+            validate_execution_mode("wasm-stock", {"ristretto": {"collector_policy": "stock",
+                                                                 "concurrent_publication": actual}})
+
     def test_identity_screen_rejects_lost_ids_and_invalid_worker_timings(self):
         data = {'producers': 2, 'per_worker': 10, 'operations': 20, 'unique': True,
                 'wall_ns': 100, 'worker_ns': [80, 90]}

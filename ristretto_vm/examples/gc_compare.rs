@@ -1,5 +1,5 @@
 //! Execute the shared GC comparison workload with an explicit collector policy.
-//! Arguments: JDK home, class directory, heap MiB, workers, baseline|candidate[-jit],
+//! Arguments: JDK home, class directory, heap MiB, workers, stock|stock-counted|baseline|candidate (optional -jit),
 //! followed by `GcBench` arguments. Native and WASI use the same entry point.
 #![forbid(unsafe_code)]
 #![expect(clippy::print_stdout, reason = "benchmark machine-readable output")]
@@ -95,7 +95,7 @@ async fn run(
         seed,
     ] = args.as_slice()
     else {
-        return Err("expected: JDK classes heap-MiB workers baseline|candidate[-jit] workload duration-ms warmup-ms rate seed".into());
+        return Err("expected: JDK classes heap-MiB workers stock|stock-counted|baseline|candidate (optional -jit) workload duration-ms warmup-ms rate seed".into());
     };
     let heap = heap
         .parse::<usize>()?
@@ -111,12 +111,21 @@ async fn run(
     if jit_enabled && cfg!(target_family = "wasm") {
         return Err("JIT comparison is native only".into());
     }
-    let candidate = match policy {
-        "baseline" => false,
-        "candidate" => true,
+    let gc_configuration = match policy {
+        "stock" | "stock-counted" => {
+            let stock = Configuration::builder()
+                .max_heap_bytes(heap)
+                .threads(workers);
+            if policy == "stock-counted" {
+                stock.concurrent_publication(true).build()
+            } else {
+                stock.build()
+            }
+        }
+        "baseline" | "candidate" => collector_configuration(heap, workers, policy == "candidate"),
         _ => return Err("unknown collector policy".into()),
     };
-    let gc_configuration = collector_configuration(heap, workers, candidate);
+    let counted = gc_configuration.concurrent_publication;
     #[cfg(all(
         feature = "experimental-pause-recorder",
         target_os = "linux",
@@ -190,11 +199,13 @@ async fn run(
     );
     let statistics = gc.statistics()?;
     println!(
-        "RISTRETTO_GC {{\"live_objects\":{},\"managed_bytes\":{},\"workers\":{},\"candidate\":{},\"jit_enabled\":{},\"collections_completed\":{}}}",
+        "RISTRETTO_GC {{\"live_objects\":{},\"managed_bytes\":{},\"workers\":{},\"collector_policy\":\"{}\",\"concurrent_publication\":{},\"candidate\":{},\"jit_enabled\":{},\"collections_completed\":{}}}",
         statistics.live_objects,
         statistics.bytes_managed,
         workers,
-        candidate,
+        policy,
+        counted,
+        policy == "candidate",
         jit_enabled,
         statistics.collections_completed
     );

@@ -29,6 +29,10 @@ RUNTIMES += [
     "ristretto-baseline-jit-before", "ristretto-candidate-jit-before",
     "wasm-baseline-before", "wasm-candidate-before",
 ]
+RUNTIMES += [runtime + suffix for policy in ("stock", "stock-counted")
+             for runtime in (f"ristretto-{policy}", f"ristretto-{policy}-jit", f"wasm-{policy}")
+             for suffix in ("", "-before")]
+
 
 
 def digest(path):
@@ -72,7 +76,7 @@ def command_for(runtime, options, classes, run_dir, binary, wasm, binary_before=
     if runtime.startswith("wasm-"):
         return [str(options.wasmtime), "run", "-W", "max-wasm-stack=8388608", "-S", "http",
                 "--dir", f"{options.jdk}::/jdk", "--dir", f"{classes}::/classes",
-                str(wasm), "/jdk", "/classes", str(options.heap_mib), "0", runtime.split("-")[1], *workload]
+                str(wasm), "/jdk", "/classes", str(options.heap_mib), "0", runtime.removeprefix("wasm-"), *workload]
     collector = "-XX:+UseZGC" if runtime.startswith("zgc") else "-XX:+UseG1GC"
     return [str(options.jdk / "bin/java"), collector,
             f"-Xms{options.heap_mib}m", f"-Xmx{options.heap_mib}m",
@@ -188,6 +192,13 @@ def gc_observation(directory):
 def validate_execution_mode(runtime, observation):
     if observation.get("execution_profile"):
         raise ValueError("execution-profile build is diagnostic; use coverage.py, not timing comparisons")
+    policy = runtime.removesuffix("-before").removesuffix("-jit").partition("-")[2]
+    if policy in ("stock", "stock-counted"):
+        settings = observation.get("ristretto", {})
+        counted = settings.get("concurrent_publication")
+        if (settings.get("collector_policy") != policy or type(counted) is not bool
+                or (policy == "stock-counted" and not counted)):
+            raise ValueError("stock collector policy differs from the requested comparison")
     if runtime.startswith("ristretto-"):
         expected = runtime.removesuffix("-before").endswith("-jit")
         actual = observation.get("ristretto", {}).get("jit_enabled", False)
