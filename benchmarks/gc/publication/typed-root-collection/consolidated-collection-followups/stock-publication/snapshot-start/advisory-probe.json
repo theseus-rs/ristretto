@@ -1,0 +1,50 @@
+[
+  {
+    "fork": "512-stock-counted-jit-0",
+    "status": "java_heap_oom"
+  },
+  {
+    "fork": "512-stock-counted-jit-1",
+    "status": "java_heap_oom"
+  },
+  {
+    "fork": "512-stock-counted-jit-2",
+    "status": "java_heap_oom"
+  },
+  {
+    "fork": "512-stock-jit-0",
+    "status": "ok"
+  },
+  {
+    "fork": "512-stock-jit-1",
+    "status": "ok"
+  },
+  {
+    "fork": "512-stock-jit-2",
+    "status": "java_heap_oom"
+  },
+  {
+    "fork": "64-stock-counted-jit-0",
+    "status": "java_heap_oom"
+  },
+  {
+    "fork": "64-stock-counted-jit-1",
+    "status": "java_heap_oom"
+  },
+  {
+    "fork": "64-stock-counted-jit-2",
+    "status": "java_heap_oom"
+  },
+  {
+    "fork": "64-stock-jit-0",
+    "status": "java_heap_oom"
+  },
+  {
+    "fork": "64-stock-jit-1",
+    "status": "java_heap_oom"
+  },
+  {
+    "fork": "64-stock-jit-2",
+    "status": "java_heap_oom"
+  }
+]

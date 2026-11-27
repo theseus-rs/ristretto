@@ -1,0 +1,141 @@
+{
+  "policy": {
+    "before": "19d3cdb7",
+    "after": "6a165bbc",
+    "native_cpus": [
+      20,
+      22
+    ],
+    "wasi_cpus": [
+      8,
+      10
+    ],
+    "rates": [
+      0,
+      500
+    ],
+    "short": {
+      "warmup": 4,
+      "seconds": 10,
+      "pairs": 3
+    },
+    "sustained": {
+      "warmup": 10,
+      "seconds": 120,
+      "pairs": 2
+    },
+    "capacity_floor": 0.95,
+    "long_p999_ceiling": 1.1,
+    "require_no_oom": true,
+    "require_all_scheduled": true,
+    "heap_mib": 64,
+    "rss_mib": 512,
+    "policy": "previously qualified JVM candidate bundle, counted on both revisions",
+    "seed": [
+      251127725,
+      251127727,
+      251127729,
+      251127731
+    ]
+  },
+  "measurements": {
+    "activation-native-short": {
+      "ristretto-candidate-jit-0": {
+        "median_ops_s": 3796.4764695398358,
+        "median_response_p999_us": 28160,
+        "completed_min": 35591,
+        "forks": 3
+      },
+      "ristretto-candidate-jit-500": {
+        "median_ops_s": 500.0,
+        "median_response_p999_us": 2528,
+        "completed_min": 5000,
+        "forks": 3
+      },
+      "ristretto-candidate-jit-before-0": {
+        "median_ops_s": 4034.9351359633506,
+        "median_response_p999_us": 27392,
+        "completed_min": 35442,
+        "forks": 3
+      },
+      "ristretto-candidate-jit-before-500": {
+        "median_ops_s": 500.0,
+        "median_response_p999_us": 2592,
+        "completed_min": 5000,
+        "forks": 3
+      }
+    },
+    "activation-native-long": {
+      "ristretto-candidate-jit-500": {
+        "median_ops_s": 500.0,
+        "median_response_p999_us": 2736.0,
+        "completed_min": 60000,
+        "forks": 2
+      },
+      "ristretto-candidate-jit-before-500": {
+        "median_ops_s": 500.0,
+        "median_response_p999_us": 2800.0,
+        "completed_min": 60000,
+        "forks": 2
+      }
+    },
+    "activation-wasi-short": {
+      "wasm-candidate-0": {
+        "median_ops_s": 7257.605513171554,
+        "median_response_p999_us": 43008,
+        "completed_min": 53615,
+        "forks": 3
+      },
+      "wasm-candidate-500": {
+        "median_ops_s": 500.0,
+        "median_response_p999_us": 42496,
+        "completed_min": 5000,
+        "forks": 3
+      },
+      "wasm-candidate-before-0": {
+        "median_ops_s": 7054.61981786624,
+        "median_response_p999_us": 40960,
+        "completed_min": 47472,
+        "forks": 3
+      },
+      "wasm-candidate-before-500": {
+        "median_ops_s": 500.0,
+        "median_response_p999_us": 39424,
+        "completed_min": 5000,
+        "forks": 3
+      }
+    },
+    "activation-wasi-long": {
+      "wasm-candidate-500": {
+        "median_ops_s": 500.0,
+        "median_response_p999_us": 42752.0,
+        "completed_min": 60000,
+        "forks": 2
+      },
+      "wasm-candidate-before-500": {
+        "median_ops_s": 500.0,
+        "median_response_p999_us": 43264.0,
+        "completed_min": 60000,
+        "forks": 2
+      }
+    },
+    "native-ratios": {
+      "capacity": 0.9409014870404894,
+      "sustained_p999": 0.9771428571428571
+    },
+    "wasi-ratios": {
+      "capacity": 1.0287734421621475,
+      "sustained_p999": 0.9881656804733728
+    }
+  },
+  "verified_tests": {
+    "native": 1847,
+    "wasi": 1242
+  },
+  "lint": "gc + classloader all targets all features, -D warnings, native and WASIp2",
+  "review": {
+    "carbon_xhigh": "unsupported by installed CLI",
+    "carbon_high": "timed out",
+    "neon_high": "Only if the active-publisher count shares that same CAS word and publishers atomically validate the stamp on it (via CAS or by checking an RMW's returned stamp); otherwise, a stamp modified only by the exclusive coordinator cannot exclude a publisher racing between the zero-publisher observation and the CAS.\n"
+  }
+}

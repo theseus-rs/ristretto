@@ -72,3 +72,11 @@ charges after full collection. The array still throws Java OOM when the cap
 is one byte smaller. This corrects the size estimate. The measured retirement
 backlog exhausted much more than eight bytes of headroom.
 [Native and WASI tests, Clippy and package verification](exact-charge.json)
+
+## Snapshot-start progress
+
+Completing a short counted root publication during snapshot preparation can
+force a restart. A candidate fixed that schedule while preserving ticket and
+weak-identity checks. Native Java capacity reached 94.1% of control, below
+the 95% release floor, so the change remains experimental.
+[Native and WASI gates, complete-cycle graph and candidate patches](snapshot-start/README.md)
