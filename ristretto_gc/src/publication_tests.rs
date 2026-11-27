@@ -1999,7 +1999,7 @@ fn capped_reservation_reclaims_other_shards_during_counted_registration() -> Res
                 Poll::Pending => None,
             }
         });
-        let freed = lock(&gc.statistics).bytes_freed;
+        let freed = gc.statistics.load().bytes_freed;
         resume.send(()).expect("resume constructor");
         let parent = constructor.join().expect("constructor")?;
         let reserved = credit.expect("unrelated reclaim must fund the capped reservation")?;
@@ -2109,7 +2109,7 @@ fn check_parked_constructor_recovery(
             Poll::Pending => None,
         });
         // The public statistics snapshot visits the parked object's shard.
-        let freed_while_parked = lock(&gc.statistics).bytes_freed;
+        let freed_while_parked = gc.statistics.load().bytes_freed;
         drop(peer);
         resume.send(()).expect("resume constructor");
         let parent = constructor.join().expect("constructor")?;

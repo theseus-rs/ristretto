@@ -5,6 +5,7 @@ mod reclamation;
 mod references;
 mod relocation_work;
 mod roots;
+mod statistics;
 mod trace_batch;
 mod trace_impls;
 mod workers;
@@ -15,6 +16,7 @@ use crate::pointers::SafePtr;
 use crate::work::{MarkItem, MarkQueues};
 use crate::{Finalize, Gc, GcRootGuard, Result};
 use portable_atomic::AtomicU64;
+use statistics::WorkCounters;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, RwLock, Weak};
@@ -637,29 +639,6 @@ impl ReclaimTask {
     }
 }
 
-/// Accumulate useful work without taking the statistics mutex for every object.
-#[derive(Default)]
-struct WorkCounters {
-    marked: usize,
-    swept: usize,
-    freed: usize,
-    logical_freed: usize,
-    promoted: usize,
-    references: usize,
-}
-
-impl WorkCounters {
-    fn flush(&mut self, stats: &mut Statistics) {
-        let delta = std::mem::take(self);
-        stats.objects_marked += delta.marked;
-        stats.objects_swept += delta.swept;
-        stats.bytes_freed += delta.logical_freed;
-        stats.managed_bytes_freed += delta.freed;
-        stats.objects_promoted += delta.promoted;
-        stats.references_examined += delta.references;
-    }
-}
-
 /// Metadata that owns VM roots outside the traced object graph.
 pub trait HeapOwner: Send + Sync {
     /// Releases VM-owned roots during shutdown. Escaped owning handles remain valid.
@@ -1114,7 +1093,7 @@ pub struct GarbageCollector {
     regions: Option<Arc<crate::region::RegionHeap>>,
     descriptor_regions: Option<Arc<crate::region::RegionHeap>>,
     small_allocations: crate::allocation::SmallAllocations,
-    statistics: Mutex<Statistics>,
+    statistics: arc_swap::ArcSwap<Statistics>,
     leaves_marked_at_birth: AtomicUsize,
     scheduler: Option<crate::scheduling::Scheduler>,
     #[cfg(not(target_family = "wasm"))]
@@ -2202,7 +2181,7 @@ impl GarbageCollector {
                     configuration.max_heap_bytes,
                 )),
                 configuration,
-                statistics: Mutex::new(Statistics::default()),
+                statistics: arc_swap::ArcSwap::from_pointee(Statistics::default()),
                 leaves_marked_at_birth: AtomicUsize::new(0),
                 diagnostics: Arc::new(crate::diagnostics::Counters::default()),
                 recovery: crate::recovery::Recovery::default(),
@@ -3158,21 +3137,6 @@ impl GarbageCollector {
         self.managed_budget.used()
     }
 
-    /// Returns live heap accounting and collection statistics.
-    ///
-    /// # Errors
-    /// Reserved for compatibility with callers of the previous collector.
-    pub fn statistics(&self) -> Result<Statistics> {
-        let mut stats = lock(&self.statistics).clone();
-        stats.objects_marked += self.leaves_marked_at_birth.load(Ordering::Relaxed);
-        stats.bytes_allocated = self.published_debt.load(Ordering::Acquire);
-        stats.bytes_live = self.published_bytes.load(Ordering::Acquire);
-        stats.bytes_managed = self.managed_bytes();
-        stats.allocation_debt = self.allocation_debt.load(Ordering::Acquire);
-        stats.live_objects = self.objects.len();
-        Ok(stats)
-    }
-
     /// Returns root occupancy and retained slot-page storage, separately from managed bytes.
     #[must_use]
     pub fn root_statistics(&self) -> crate::RootStatistics {
@@ -3278,39 +3242,6 @@ impl GarbageCollector {
                 self.retain_old_callback_edge(&metadata);
             }
             self.shade_known(&metadata);
-        }
-    }
-
-    fn record_step(
-        &self,
-        started: Option<std::time::Instant>,
-        cpu_started: Option<u64>,
-        concurrent: bool,
-        counters: &mut WorkCounters,
-    ) {
-        if let Some(started) = cpu_started
-            && let Some(finished) = crate::diagnostics::thread_cpu_ns()
-        {
-            self.diagnostics
-                .worker_cpu_ns
-                .fetch_add(finished.saturating_sub(started), Ordering::Relaxed);
-        }
-        let mut stats = lock(&self.statistics);
-        counters.flush(&mut stats);
-        stats.collection_steps += 1;
-        if let Some(started) = started {
-            let duration = started.elapsed();
-            let micros = u64::try_from(duration.as_micros()).unwrap_or(u64::MAX);
-            if concurrent {
-                stats.concurrent_time_us = stats.concurrent_time_us.saturating_add(micros);
-            } else {
-                stats.total_pause_time_us = stats.total_pause_time_us.saturating_add(micros);
-            }
-            stats.max_step_duration = Some(
-                stats
-                    .max_step_duration
-                    .map_or(duration, |old| old.max(duration)),
-            );
         }
     }
 

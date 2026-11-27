@@ -1,7 +1,6 @@
 use super::{
     Arc, CleanupScope, CollectionKind, GarbageCollector, MetadataRef, ObjectMetadata, Ordering,
-    Phase, ReclaimStage, ReclaimTask, RetirementStep, TraceProgress, WorkCounters, lock, now,
-    phase_work,
+    Phase, ReclaimStage, ReclaimTask, RetirementStep, TraceProgress, WorkCounters, now, phase_work,
 };
 #[cfg(not(target_family = "wasm"))]
 use super::{WORKER, WorkerSignals, native_callbacks};
@@ -135,7 +134,7 @@ impl GarbageCollector {
         drop(task.full_cleanup.take());
         if let Some(panic) = callback_panic.or(destruction.err()) {
             self.retired_ready.fetch_sub(1, Ordering::AcqRel);
-            counters.flush(&mut lock(&self.statistics));
+            counters.publish(self);
             self.wake();
             resume_unwind(panic);
         }

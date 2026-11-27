@@ -5,11 +5,17 @@ use super::*;
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 thread_local! {
+    static STATISTICS_SNAPSHOT: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static AFTER_FULL_REQUEST: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static BEFORE_SWEEP_HANDOFF: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static BEFORE_SNAPSHOT_COMMIT: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static EPOCH_DESTRUCTION: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static AFTER_ACTIVATION: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn after_statistics_snapshot() {
+    pause_once(&STATISTICS_SNAPSHOT);
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
@@ -483,6 +489,96 @@ mod native {
         Ok(())
     }
 
+    #[cfg(not(miri))]
+    #[test]
+    fn paused_statistics_reader_allows_collection_and_capped_allocation() -> Result<()> {
+        use std::future::Future;
+        use std::task::{Context as PollContext, Poll, Waker};
+        let size = Gc::allocation_size(&41_u64)?;
+        let mut blocked = Vec::new();
+        for counted in [false, true] {
+            for diagnostics in [false, true] {
+                let gc = GarbageCollector::with_config(
+                    Configuration::builder()
+                        .threads(0)
+                        .concurrent_publication(counted)
+                        .independent_phases(true)
+                        .independent_marking(true)
+                        .diagnostics(diagnostics)
+                        .allocation_threshold(usize::MAX)
+                        .max_heap_bytes(2 * size)
+                        .incremental_step_size(2)
+                        .build(),
+                );
+                let survivor = Gc::try_new(&gc, 41_u64)?;
+                let donor = Gc::try_new(&gc, 7_u64)?;
+                let weak = crate::GcWeak::new(&donor, crate::ReferenceKind::Weak, 0);
+                drop(donor);
+                let before = gc.statistics()?;
+                assert_eq!(gc.managed_bytes(), 2 * size);
+                let (entered, parked) = mpsc::channel();
+                let (resume, resumed) = mpsc::channel();
+                let (done, result) = mpsc::channel();
+                let (while_parked, peer, held) = thread::scope(|scope| {
+                    let heap = &gc;
+                    let reader = scope.spawn(move || {
+                        STATISTICS_SNAPSHOT.set(Some(ClaimPause {
+                            entered,
+                            resume: resumed,
+                        }));
+                        heap.statistics()
+                    });
+                    parked
+                        .recv_timeout(Duration::from_secs(3))
+                        .expect("statistics snapshot");
+                    let collector = scope.spawn(move || {
+                        let ticket = heap.request_full_cycle();
+                        let mut allocation = Box::pin(Gc::try_new_async(heap, 23_u64));
+                        let mut cx = PollContext::from_waker(Waker::noop());
+                        let mut object = None;
+                        for _ in 0..4096 {
+                            if object.is_none()
+                                && let Poll::Ready(result) = allocation.as_mut().poll(&mut cx)
+                            {
+                                object = Some(result.expect("refunded donor"));
+                            }
+                            if object.is_some() && heap.completed_full_ticket() >= ticket {
+                                break;
+                            }
+                            heap.step();
+                        }
+                        let finished = heap.completed_full_ticket() >= ticket && object.is_some();
+                        done.send(finished).expect("progress observer");
+                        object
+                    });
+                    let while_parked = result.recv_timeout(Duration::from_secs(2)).unwrap_or(false);
+                    resume.send(()).expect("resume snapshot reader");
+                    (
+                        while_parked,
+                        collector.join().unwrap(),
+                        reader.join().unwrap(),
+                    )
+                });
+                if !while_parked {
+                    blocked.push((counted, diagnostics));
+                }
+                let held = held?;
+                assert_eq!(held.full_collections, before.full_collections);
+                assert_eq!(held.managed_bytes_freed, before.managed_bytes_freed);
+                let after = gc.statistics()?;
+                assert!(after.full_collections > before.full_collections);
+                assert_eq!(after.managed_bytes_freed - before.managed_bytes_freed, size);
+                assert!(weak.upgrade().is_none());
+                assert_eq!((**survivor, **peer.expect("replacement")), (41, 23));
+            }
+        }
+        assert!(
+            blocked.is_empty(),
+            "statistics reader blocked collection or recovery: {blocked:?}"
+        );
+        Ok(())
+    }
+
     #[test]
     fn phase_statistics_do_not_park_unrelated_root_and_edge_publication() -> Result<()> {
         for starting in [true, false] {
@@ -504,7 +600,7 @@ mod native {
                 assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Compact);
             }
             thread::scope(|scope| {
-                let stats = lock(&gc.statistics);
+                let stats = gc.statistics.load();
                 scope.spawn(|| gc.coordinated_step(false));
                 let waiting = if starting {
                     &gc.domains[1].requested

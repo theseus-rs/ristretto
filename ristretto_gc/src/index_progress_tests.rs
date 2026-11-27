@@ -265,7 +265,7 @@ fn capped_allocation_finishes_while_a_nursery_reader_is_parked() -> Result<()> {
         });
         drop(allocation);
         let finished = (0..4096).any(|_| gc.step());
-        let freed = lock(&gc.statistics).bytes_freed;
+        let freed = gc.statistics.load().bytes_freed;
         let promoted = survivor_metadata.age.load(Ordering::Acquire) == 1;
         resume.send(()).expect("resume nursery reader");
         reader.join().expect("reader");

@@ -210,9 +210,10 @@ impl GarbageCollector {
             if let Some((scheduler, live)) = scheduler_start {
                 scheduler.started(live);
             }
-            let mut stats = lock(&self.statistics);
-            stats.collections_started += 1;
-            stats.last_collection_start = started;
+            self.update_statistics(|stats| {
+                stats.collections_started += 1;
+                stats.last_collection_start = started;
+            });
         }
         let budget = self.configuration.incremental_step_size.max(1);
         let mut counters = WorkCounters::default();
@@ -292,7 +293,7 @@ impl GarbageCollector {
                             // Another worker can close the epoch as soon as the last
                             // reservation is released. Publish completed mark work first.
                             if counters.marked != 0 {
-                                counters.flush(&mut lock(&self.statistics));
+                                counters.publish(self);
                             }
                             self.domain().in_flight.release(count);
                             if stalled || work == 0 {
@@ -619,44 +620,7 @@ impl GarbageCollector {
                         // Roots and barriers may enter the inactive domain.
                         // The coordinator still orders metrics and ticket completion.
                         drop(publication);
-                        let mut stats = lock(&self.statistics);
-                        counters.flush(&mut stats);
-                        stats.collections_completed += 1;
-                        match cycle.kind {
-                            CollectionKind::Young => {
-                                stats.young_collections += 1;
-                                // Request exactly at completion: repeated or coalesced
-                                // mutator requests must not miss an interval boundary.
-                                if stats.young_collections.is_multiple_of(
-                                    self.configuration.full_collection_interval.max(1),
-                                ) {
-                                    self.domains[1].publish_request();
-                                } else if self.configuration.old_collection_interval != 0
-                                    && stats
-                                        .young_collections
-                                        .is_multiple_of(self.configuration.old_collection_interval)
-                                {
-                                    self.old_requested.store(true, Ordering::Release);
-                                }
-                            }
-                            CollectionKind::Old => {
-                                stats.old_collections += 1;
-                            }
-                            CollectionKind::Full => {
-                                stats.full_collections += 1;
-                                if let Some(scheduler) = &self.scheduler {
-                                    scheduler.completed(
-                                        cycle.reclaimed_bytes,
-                                        self.managed_budget.used(),
-                                    );
-                                }
-                            }
-                        }
-                        if let Some(started) = cycle.started {
-                            let duration = started.elapsed();
-                            stats.last_collection_duration = Some(duration);
-                            stats.total_collection_time += duration;
-                        }
+                        self.record_cycle_completion(&cycle, &mut counters);
                         #[cfg(not(target_family = "wasm"))]
                         if cycle.kind == CollectionKind::Full {
                             cycle.active_full_cleanup = None;
