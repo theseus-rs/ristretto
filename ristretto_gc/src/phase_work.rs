@@ -469,6 +469,11 @@ impl GarbageCollector {
         } else if !extra {
             cycle.cursor = id;
         }
+        // Preserve single-unit delivery on an uncontended queue. A parked first
+        // attempt leaves its clone discoverable at the top of the next unit.
+        if let Some(notice) = &cycle.pending_notice {
+            return Unit::External(ExternalWork::LinkReference(notice.clone()));
+        }
         result
     }
 
