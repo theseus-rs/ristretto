@@ -9,6 +9,16 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `cc0cd61e`, a suspended statistics reader allows a fresh collection ticket
+and capped allocation to complete under both publication policies, with and
+without diagnostics. All 36 complete-cycle conditions cleared the 10× gate
+against `f1daebeb`. The lowest individual 95% bounds were 10.37× native and
+10.45× WASI. Reusing uniquely held snapshots restored the previous 64 host
+allocation requests per 64 warmed full collections in the rooted scalar probe.
+The 14 shipping dependency graphs, native/WASI package consumers and three
+Java previews passed with the same collector.
+[Collection results, progress controls and limits](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/statistics-snapshot-progress/README.md).
+
 At `f4cdf10f`, the single JVM collector completed the 8,192-allocation Java
 reference-array reproducer on native and WASI. All nine Ristretto forks of
 the 64 MiB Java comparison completed, as did a two-minute run at 100

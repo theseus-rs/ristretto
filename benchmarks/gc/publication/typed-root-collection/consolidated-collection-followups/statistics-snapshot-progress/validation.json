@@ -1,0 +1,195 @@
+{
+  "shipping_revision": "cc0cd61eec6941225f308e4abb178644067fd7a2",
+  "tested_revision": "c078830700b22c021609c86dffe61b1f05ec8af6",
+  "identical_git_tree": "2bf189f7c79b218665b034ef675520f00dab902a",
+  "stages": {
+    "snapshot": {
+      "tested_revision": "8d8a3efc0261d8389e0a524891cee42226d07f17",
+      "suites": {
+        "native": {
+          "passed": 1026,
+          "failed": 0,
+          "ignored": 1
+        },
+        "wasi": {
+          "passed": 463,
+          "failed": 0,
+          "ignored": 0
+        }
+      },
+      "parked_readers": {
+        "processes": 100,
+        "schedules_per_process": 4
+      },
+      "lowest_95_bounds": {
+        "native": 10.121674568000882,
+        "wasm": 10.310801022090649
+      }
+    },
+    "timing": {
+      "tested_revision": "28b76ca9e23f40806520dd0dd2f5a7705e0d4334",
+      "suites": {
+        "native": {
+          "passed": 1027,
+          "failed": 0,
+          "ignored": 1
+        },
+        "wasi": {
+          "passed": 464,
+          "failed": 0,
+          "ignored": 0
+        }
+      },
+      "parked_readers": {
+        "processes": 100,
+        "schedules_per_process": 4
+      },
+      "lowest_95_bounds": {
+        "native": 10.479728365777763,
+        "wasm": 10.104295203460364
+      }
+    },
+    "reuse": {
+      "tested_revision": "c078830700b22c021609c86dffe61b1f05ec8af6",
+      "suites": {
+        "native": {
+          "passed": 1028,
+          "failed": 0,
+          "ignored": 1
+        },
+        "wasi": {
+          "passed": 465,
+          "failed": 0,
+          "ignored": 0
+        }
+      },
+      "parked_readers": {
+        "processes": 100,
+        "schedules_per_process": 4
+      },
+      "lowest_95_bounds": {
+        "native": 10.369001559299713,
+        "wasm": 10.448834598962339
+      }
+    }
+  },
+  "limits": {},
+  "host_allocations": {
+    "shipping": {
+      "revision": "f4cdf10f1a42f70b5a1cfcd00990f05f6a89312c",
+      "allocation_calls": 64,
+      "requested_bytes": 4608,
+      "steps": 1216
+    },
+    "snapshot": {
+      "revision": "28b76ca9e23f40806520dd0dd2f5a7705e0d4334",
+      "allocation_calls": 1408,
+      "requested_bytes": 316416,
+      "steps": 1216
+    },
+    "reuse": {
+      "revision": "c078830700b22c021609c86dffe61b1f05ec8af6",
+      "allocation_calls": 64,
+      "requested_bytes": 4608,
+      "steps": 1216
+    }
+  },
+  "miri": [
+    "shared_step_duration_preserves_counts_totals_and_maximum",
+    "competing_work_commits_publish_each_exact_delta_once",
+    "recycling_a_snapshot_never_overwrites_a_reader_or_carries_counts_to_another_heap"
+  ],
+  "strict_clippy": {
+    "native": "passed",
+    "wasi": "passed"
+  },
+  "browser_collector_check": "passed",
+  "cargo_package": "verified",
+  "selection": {
+    "all_36_lower_95_above": 10,
+    "direct_diagnostic_mixed_wasi_max_upper_elapsed_ratio": 1.02
+  },
+  "reviews": {
+    "initial_carbon_xhigh": {
+      "status": "ERROR",
+      "error": "invalid model selection (--model \"gemini-4-carbon\" --effort \"xhigh\"): gemini-4-carbon has no \"xhigh\" effort (available: low, medium, high)"
+    },
+    "initial_carbon_high": {
+      "status": "ERROR",
+      "error": "print timeout after 5m0s with the turn still in progress; the response is partial"
+    },
+    "snapshot_neon": {
+      "status": "SUCCESS",
+      "response": "Based strictly on the described design:\n\n### 1. Does a parked snapshot block other updates?\n**No.** `ArcSwap` reads (`Guard`) are lock-free with respect to `ArcSwap::rcu` writers.\n- A parked `stats()` reader holding an immutable guard only pins reclamation (drop) of that old `Arc` snapshot (and holds an `arc-swap` debt slot, falling back to refcounting if slots saturate); concurrent `rcu` writers still commit via CAS.\n- Likewise, a parked `rcu` writer does not block other writers; it simply retries its closure when resumed.\n\n---\n\n### 2. Can retries double-charge?\n- **Into cumulative snapshots: No**, under the **necessary invariant** that all destructive takes/timer reads happen strictly *before* `rcu` into an immutable local delta, and the closure is strictly pure (clones `previous.as_ref()`, adds the saved delta, mutates no captured/shared state). Each failed CAS discards the stale candidate and recomputes from the latest `previous`.\n- **In `stats()` (external reader, pre-existing tear \u2014 not an `rcu` retry bug):** If `stats()` samples live counters *before* loading the immutable guard, a concurrent take + `rcu` commit between the two reads causes that `stats()` call to **double-count** the delta.\n\n---\n\n### 3. Can retries lose a counter?\n- **Permanent loss across `rcu` retries: No**, subject to two **necessary invariants**:\n  1. **No non-`rcu` overwrites:** Every mutator to the `ArcSwap` must compose via `rcu` (never `load` + `store` or blind `store`). *Counterexample:* Actor commits `S0 + delta` via `rcu`; a concurrent blind `store` overwrites it, permanently losing `delta`.\n  2. **Infallible commit path:** No panic or early return may occur between the destructive take (which zeros live counters) and the `rcu` commit, or the taken delta is permanently dropped.\n- **Transient loss in unsynchronized `stats()` (counterexample, widened by `rcu` retries):**\n  1. Actor destructively takes `delta` (live counters drop to `0`).\n  2. Actor is delayed/retrying in `rcu` before CAS commits.\n  3. `stats()` loads the pre-commit guard (missing `delta`) and samples live counters (`0`).\n  4. That `stats()` sample transiently under-counts by `delta` (though the delta is preserved once `rcu` commits, and waiters synchronizing via `Acquire` on `completed_ticket` after the actor's `Release` are guaranteed to observe the committed snapshot).\n\n---\n\n### 4. Can retries duplicate interval requests?\n- **From `rcu` retries alone: No.** The scheduler action runs once *after* `rcu` commits, and `ArcSwap::rcu` returns the exact `prior` snapshot swapped out by the **winning** CAS (not an earlier failed attempt).\n- **Necessary invariants to prevent duplicates (with counterexamples if violated):**\n  1. **Closure increments `young_collections` by exactly `1` (without saturation/wrapping):** If a commit can apply `delta.young_collections == 0` while still computing `prior.young_collections + 1`, two commits seeing `prior.young_collections == k` both produce `k + 1` and duplicate the request (and `delta > 1` skips interval boundaries).\n  2. **Monotonicity (no resets/decrements):** Any writer resetting `young_collections` allows a later commit to repeat a prior `prior.young_collections + 1` value.\n  3. **Single young-collection actor OR stateless/exact-index trigger:** If multiple threads can concurrently run this young-collection commit path, Thread A can commit `9 -> 10` (`prior + 1 = 10`) and pause before the scheduler action while Thread B commits `10 -> 11` (`prior + 1 = 11`). An exact predicate (`n % interval == 0`) still fires once, but a racy threshold check (`n >= next_due` before advancing `next_due`) would duplicate the request. Serializing young-collection completions in the single actor (consistent with `completed_ticket` publication) eliminates this interleaving.\n"
+    },
+    "reuse_carbon_xhigh": {
+      "status": "ERROR",
+      "error": "invalid model selection (--model \"gemini-4-carbon\" --effort \"xhigh\"): gemini-4-carbon has no \"xhigh\" effort (available: low, medium, high)"
+    },
+    "reuse_carbon_high": {
+      "status": "SUCCESS",
+      "response": "Reused storage is safe because `ArcSwap::rcu` converts any active reader load-guard debts into strong counts before returning the exact `prior` `Arc` displaced by the winning CAS (while its own load guard prevents pointer ABA across each attempt), so `Arc::get_mut` grants in-place reuse only under `Acquire`-verified unique ownership\u2014dropping `SPARE` unmutated if a reader still pins it\u2014and every attempt freshly copies all fields from the latest `prev` (`clone_from` on unique `SPARE`, or `Arc::new` when `SPARE` is empty, contended, or spent on a failed CAS) before applying a pure delta with clocks, takes, scheduler effects, and reading `young_collections` from `prior` kept outside the retry loop, while storing only plain values and timestamps ensures `SPARE` retention or migration across threads and collector heaps cannot mutate a pinned reader, lose a competing delta, bleed state, or leak a managed object. This design is **stop-free** rather than **wait-free**\u2014threads never block on locks, stop-the-world pauses, or stalled peers (a pinned `SPARE` immediately falls back instead of waiting), yet `rcu` is only lock-free due to unbounded CAS retries under writer contention and `Arc::new` allocator fallbacks rather than guaranteeing bounded per-thread steps\u2014and if TLS access fails during thread shutdown, `try_with` on `SPARE` avoids panicking by returning `None` on take (falling back to `Arc::new`) and immediately dropping `prior` when post-CAS caching fails.\n"
+    },
+    "independent_test_neon": {
+      "status": "SUCCESS",
+      "response": "- **Command:** `cargo test --locked -p ristretto_gc --lib competing_work_commits_publish_each_exact_delta_once`\n- **Exit status:** `0`\n- **Number of tests:** `1` (`621 filtered out`)\n- **Test result:** `ok. 1 passed; 0 failed; 0 ignored; 0 measured; 621 filtered out; finished in 0.00s` (`test collector::statistics::tests::competing_work_commits_publish_each_exact_delta_once ... ok`)\n"
+    }
+  },
+  "shipping_graphs": [
+    "ristretto_vm (native, default runtime)",
+    "ristretto_vm (native, all features and build dependencies)",
+    "ristretto_vm (wasm32-wasip2, default runtime)",
+    "ristretto_vm (wasm32-wasip2, all features and build dependencies)",
+    "ristretto_java (native, default runtime)",
+    "ristretto_java (native, all features and build dependencies)",
+    "ristretto_java (wasm32-wasip2, default runtime)",
+    "ristretto_java (wasm32-wasip2, all features and build dependencies)",
+    "ristretto_javac (native, default runtime)",
+    "ristretto_javac (native, all features and build dependencies)",
+    "ristretto_playground (wasm32-wasip2, default runtime)",
+    "ristretto_playground (wasm32-wasip2, all features and build dependencies)",
+    "ristretto_playground (wasm32-unknown-unknown, default runtime)",
+    "ristretto_playground (wasm32-unknown-unknown, all features and build dependencies)"
+  ],
+  "release_tool_tests": 12,
+  "packaged_consumers": {
+    "native": "passed",
+    "wasi": "passed"
+  },
+  "ordinary_java_allocations": {
+    "native": 8192,
+    "wasi": 8192
+  },
+  "previews": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  }
+}
