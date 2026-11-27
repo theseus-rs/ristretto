@@ -633,7 +633,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(feature = "url")]
+    #[cfg(all(feature = "url", not(target_family = "wasm")))]
     #[tokio::test]
     async fn test_from_url_read_class() -> Result<()> {
         let url = "https://repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.3.0/spring-boot-3.3.0.jar";
@@ -655,7 +655,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(feature = "url")]
+    #[cfg(all(feature = "url", not(target_family = "wasm")))]
     #[tokio::test]
     async fn test_from_url_read_names() -> Result<()> {
         let url = "https://repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.3.0/spring-boot-3.3.0.jar";
