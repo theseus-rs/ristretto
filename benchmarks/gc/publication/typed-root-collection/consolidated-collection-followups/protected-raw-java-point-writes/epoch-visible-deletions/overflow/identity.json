@@ -1,0 +1,19 @@
+{
+  "seed": 251127622,
+  "forks": 60,
+  "visits": 480,
+  "build": "cargo test --no-run --locked --all-features -p ristretto_gc --lib, dev debug=0, incremental=0",
+  "binaries": {
+    "before": "5a542f5ecc2d84c075ef0e5cb7c2a7f58b7d9f59dbe081352dfabfe5c07c40d9",
+    "after": "6abf89b904385a2cfde066ea74667f6c61f2cf01e15fbaebadbc00591d6a5e88"
+  },
+  "source_commits": {
+    "before": "6f577187",
+    "after": "003b650a"
+  },
+  "fixture_hash": "981d0d413cefa0d81b981a6d3a481c0393f43058991a39345a6fd05e954a5951",
+  "cpus": [
+    4,
+    6
+  ]
+}

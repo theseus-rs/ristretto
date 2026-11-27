@@ -9,6 +9,11 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+Epoch-owned numeric deletion passed the alpha PR screen. Both peers finished during a parked old-epoch publication in the covered schedules. A second young cycle also preserved the original edge while the producer was stopped. All 36 complete-collection conditions cleared 10× against `f1daebeb`, with minimum individual lower 95% bounds of 11.345× native and 10.962× WASIp2. Both two-minute native forks served 60,000 arrivals. Median scheduled p99.9 rose from 2.528 to 2.752 ms. The direct native Java workload measured 6,322 ops/s against 712 on the original alpha baseline, 1,053,376 on G1 and 585,742 on ZGC.
+
+A saturated marking inbox still stalled a funded peer allocation and a fresh full collection in 96 cases. A trial fix let both finish, but raised first-visit host allocation requests from 19,712 to 373,184 bytes at 2,048 distinct targets. It was withheld. The remaining design must keep the work discoverable under saturation and bound the cost per distinct target.
+[Forced schedules, Java comparisons, complete-collection graphs and overflow experiment](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/epoch-visible-deletions/README.md).
+
 The eager old-only deletion change passed the release screen. Managed and protected raw deletions of a promoted white child no longer left a parked flusher in charge of progress. All 960 forced configurations passed. In a separate 96-case control a producer parked inside its fresh publication guard exhausted both the funded allocation and full ticket budgets with zero buffered records. The short native capacity ratio was 1.036, the two-minute scheduled p99.9 ratio was 1.069, and workerless WASIp2 capacity was 1.123 times the measured parent.
 [Forced schedules, graphs and JVM gates](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/eager-old-deletion/README.md).
 

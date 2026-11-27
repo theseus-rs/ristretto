@@ -1,0 +1,48 @@
+{
+  "command": [
+    "taskset",
+    "-c",
+    "4,6,12,14,20,22",
+    "cargo",
+    "build",
+    "--locked",
+    "--release",
+    "--target",
+    "wasm32-wasip2",
+    "--no-default-features",
+    "-p",
+    "ristretto_vm",
+    "--example",
+    "gc_compare",
+    "--message-format=json-render-diagnostics"
+  ],
+  "packages": {
+    "ristretto_gc": {
+      "target": "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-old-deletion-epoch-visibility-v1/ristretto_gc/src/lib.rs",
+      "files": {
+        "libristretto_gc-bb0afa3163c46393.rlib": "d510aba1c921c559b93a23020ac63b76daab701150c95d33f22e1cbd3a3a310e",
+        "libristretto_gc-bb0afa3163c46393.rmeta": "9cbb9b2133966db19a329893917837a01adb9a43432e9d4a6208169da5c76b85"
+      }
+    },
+    "ristretto_classloader": {
+      "target": "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-old-deletion-epoch-visibility-v1/ristretto_classloader/src/lib.rs",
+      "files": {
+        "libristretto_classloader-cd5e7f3145d3e7cd.rlib": "2a1ece4208525d1643e96c46e9d72237786e7edc8b9127a10b8bdf098d3a48f3",
+        "libristretto_classloader-cd5e7f3145d3e7cd.rmeta": "b2dcae5dda1e0858887ddfc8fd961b6d25b47eb69d38a23948dcd40d592f2e42"
+      }
+    },
+    "ristretto_vm": {
+      "target": "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-old-deletion-epoch-visibility-v1/ristretto_vm/src/lib.rs",
+      "files": {
+        "libristretto_vm-bc236ff7281c33fe.rlib": "933a57df4a80ace382e1acce4033774e6a3b5a889f05d6291d9a94fed0571d95",
+        "libristretto_vm-bc236ff7281c33fe.rmeta": "300c02b55f0df9df59e0078d8e1ada2750180d2b7708d67faf2517e340cc4a74"
+      }
+    },
+    "gc_compare": {
+      "target": "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-old-deletion-epoch-visibility-v1/ristretto_vm/examples/gc_compare.rs",
+      "files": {
+        "gc_compare.wasm": "38fcdf0f73a0835890c5b667e1ce2cce8a68917aec52dff6cb8d53d1428a41f1"
+      }
+    }
+  }
+}
