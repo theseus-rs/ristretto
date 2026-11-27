@@ -8,7 +8,7 @@ import subprocess
 import tarfile
 import tempfile
 
-from collector_graph import verify_tree
+from collector_graph import check_collector_source, verify_tree
 
 
 def main():
@@ -75,9 +75,10 @@ def main():
         # Keep the overall workspace's pinned versions wherever their constraints allow them.
         (root / "Cargo.lock").write_bytes((Path(metadata["workspace_root"]) / "Cargo.lock").read_bytes())
         subprocess.run(["cargo", "update", "--workspace", "--manifest-path", root / "Cargo.toml", "--offline"], check=True)
-        if "ristretto_gc" in selected:
+        if "ristretto_gc" in required:
             version = packages["ristretto_gc"]["version"]
             unpacked = root / f"ristretto_gc-{version}"
+            check_collector_source(unpacked)
             # Use the same Cargo config and toolchain discovery as the consumer build below.
             verify_tree(root / "Cargo.toml", f"ristretto_gc v{version} ({unpacked})",
                         target=args.target, cargo_cwd=Path.cwd())

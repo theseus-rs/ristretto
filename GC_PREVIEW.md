@@ -2,7 +2,9 @@
 
 The native JVM, WASI interpreter, browser engine and GC preview all use
 `ristretto_gc::GarbageCollector`. The native compiled tier uses the same JVM
-heap and reference barriers as the interpreter.
+heap and reference barriers as the interpreter. Java instance fields, arrays,
+typed roots and soft, weak, final and phantom references all use this collector.
+The catalog and pool are available in the historical revision linked below.
 
 ## Run the preview
 
@@ -62,5 +64,7 @@ cargo package --locked -p ristretto_gc
 CI also builds reproducible source archives, runs each tier from the extracted
 archive, and builds normalized Cargo archives from an external consumer.
 Both native and WASI consumer graphs must resolve every collector dependency
-to the exact unpacked `ristretto_gc` release archive.
+to the exact unpacked `ristretto_gc` release archive. The verifier checks the
+workspace and the unpacked collector for retired catalog and pool sources,
+including when a consumer reaches the collector transitively.
 [Archive and package instructions](benchmarks/gc/release/README.md)

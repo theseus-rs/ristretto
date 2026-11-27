@@ -1,7 +1,18 @@
-"""Check the resolved collector's version and source in shipping Cargo graphs."""
+"""Verify the source and Cargo dependency identity of the unified collector."""
 import subprocess
 
 RETIRED = {"ristretto_vm_research", "ristretto_gc_catalog"}
+
+
+def check_collector_source(root):
+    """Catch the retired heap even when its source has no Cargo dependency edge."""
+    for module in ("canonical_catalog", "canonical_pool", "canonical_diagnostics", "canonical_adapter"):
+        source = root / "src" / module
+        if source.with_suffix(".rs").is_file() or (source.is_dir() and any(source.rglob("*.rs"))):
+            raise ValueError(f"retired collector module in {root}: {module}")
+    prototypes = root / "validation/catalog"
+    if any(prototypes.rglob("Cargo.toml")) or any(prototypes.rglob("*.rs")):
+        raise ValueError(f"retired standalone catalog implementation in {prototypes}")
 
 
 def check_tree(output, expected):

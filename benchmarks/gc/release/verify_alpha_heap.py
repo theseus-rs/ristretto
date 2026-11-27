@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 sys.path.insert(0, str(ROOT / ".github/scripts"))
-from collector_graph import RETIRED, verify_tree
+from collector_graph import RETIRED, check_collector_source, verify_tree
 
 
 def verify_workspace():
@@ -27,8 +27,10 @@ def verify_workspace():
                 and package["name"] == "ristretto_gc"
                 and package["id"] in metadata["workspace_members"]):
             collector = f"ristretto_gc v{package['version']} ({collector_manifest.parent})"
-    if any((ROOT / "ristretto_gc/validation/catalog").rglob("Cargo.toml")):
-        raise ValueError("retired standalone catalog implementation is present")
+    check_collector_source(collector_manifest.parent)
+    for name in RETIRED:
+        if (ROOT / name / "Cargo.toml").is_file():
+            raise ValueError(f"retired research crate in workspace checkout: {name}")
     if collector is None:
         raise ValueError(f"missing workspace collector at {collector_manifest}")
     return collector

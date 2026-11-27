@@ -99,5 +99,4 @@ jobs:
       - name: Build the packaged WASI interpreter and collector
         run: |
           python3 .github/scripts/check-packaged-features.py --target wasm32-wasip2 \
-            ristretto_gc \
             ristretto_vm/execution-profile

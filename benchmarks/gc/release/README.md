@@ -35,10 +35,10 @@ python3 .github/scripts/check-packaged-features.py \
   ristretto_jit/experimental-reference-dispatch
 rustup target add wasm32-wasip2
 python3 .github/scripts/check-packaged-features.py --target wasm32-wasip2 \
-  ristretto_gc \
   ristretto_vm/execution-profile
 ```
 
 The native consumer builds the VM's reference-dispatch feature. The WASI
-consumer builds the interpreter. Both resolve the same GC library. The
+consumer depends only on the VM and reaches the collector transitively.
+Both verify the collector source inside the extracted archive. The
 [source preview](../../../GC_PREVIEW.md) exercises both execution tiers.
