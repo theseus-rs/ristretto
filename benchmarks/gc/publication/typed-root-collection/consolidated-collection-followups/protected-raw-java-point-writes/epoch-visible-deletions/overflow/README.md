@@ -9,3 +9,9 @@ The experiment remains outside the shipping collector. A replacement must give a
 [Per-pass counters](passes.csv.gz) · [Medians](summary.csv) · [Fixture](fixture.rs.gz) · [Source and executable hashes](identity.json)
 
 ![Host allocation costs and pending work under saturation](host-cost.png)
+
+## Next experiment
+
+**Hypothesis.** A fixed pending-bit word owned by an old collection epoch could cover a group of mature object IDs when the normal inbox is full. The identity index supplies an address hint. The helper must resolve the exact live ID at that address before tracing. Only an atomic change from an empty word to a permanently sealed word may close the receiver. When publication wins that race, a helper must claim the bit under the existing marking reservation before closure. A different ID group needs an explicit fallback.
+
+The first test should fill the normal inbox, park the producer on each side of the overflow publication, and make a peer trace a detached child and grandchild. A pre-existing weak handle would itself be an old-generation root in this fixture. Observe exact birth identities and trace counters before creating a weak handle. Then test closure racing the final bit, a same-number replacement epoch, a group collision, and host allocations across repeated visits. This protocol has no implementation or qualification results.

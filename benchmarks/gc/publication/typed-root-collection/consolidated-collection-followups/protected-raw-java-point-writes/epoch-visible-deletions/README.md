@@ -1,6 +1,6 @@
 # Registered deletion across old and young collection epochs
 
-The implementation at `6f577187` is **qualified for the consolidated alpha PR**. Its parent runtime is
+The implementation at `6f577187` passed the original PR screen. A later two-minute WASIp2 comparison missed its scheduled-latency limit. [Sustained WASIp2 results](wasi-sustained/README.md). Its parent runtime is
 `379ad59a`. Both managed and protected raw numeric deletions now let a peer
 finish two fresh full collections and receive its funded allocation with the
 producer parked after linking an old-only mark for a promoted white child.
@@ -106,3 +106,5 @@ All four runtimes ran the same Java classfiles on CPUs 8 and 10 under a 64 MiB m
 The packaged collector at `6f577187` matched all 134 Rust source and example files in its measured checkout. Its archive contained no retired modules or canonical feature. Commit `2a92c22b` keeps both young-receiver schedules in the unit suite. All 657 native library tests and strict all-target Clippy passed after integrating the regression. [Package identity](validation/package-source.json) · [Integrated tests](young-turnover/integrated-tests.log.gz) · [Clippy](young-turnover/integrated-clippy.log.gz)
 
 The production Chromium Java worker at the same revision completed 13 guest collections, reclaimed 10,473,075 bytes and returned checksum 799864 in each of three fresh processes. All 227 scheduled worker pings received a response during Java execution. [Browser JVM receipts and component identity](browser-jvm/README.md)
+
+A dedicated pool-only continuation queue also failed a separate public foreground progress test in 24/24 trials. The heap retirement queue allowed a foreground refund in all 24 controls. [Native callback experiment and shipping regression](native-callback-continuation/README.md).
