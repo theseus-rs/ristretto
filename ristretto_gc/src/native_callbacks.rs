@@ -322,6 +322,10 @@ impl Job {
                 }
             } else {
                 gc.queue_clearing(task, progress);
+                #[cfg(all(test, not(miri), panic = "unwind"))]
+                if matches!(progress, TraceProgress::Continue(_)) {
+                    continuation_tests::after_continuation_publication();
+                }
             }
             gc.retired_ready.fetch_sub(1, Ordering::AcqRel);
             gc.record_step(started, None, true, &mut counters);
@@ -471,6 +475,10 @@ mod claim_pause {
         });
     }
 }
+
+#[cfg(all(test, not(miri), panic = "unwind"))]
+#[path = "callback_continuation_tests.rs"]
+mod continuation_tests;
 
 #[cfg(all(test, not(miri), panic = "unwind"))]
 mod tests {
