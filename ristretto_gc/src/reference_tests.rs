@@ -799,6 +799,7 @@ fn logically_retired_handles_cannot_resurrect_an_untraced_graph() -> Result<()> 
         gc.collect();
         at_reference_stage(&gc, 1, 1);
         assert!(gc.clone_edge_root(&stale).is_none());
+        #[cfg(panic = "unwind")]
         assert!(
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gc.add_root(&stale))).is_err()
         );
@@ -816,6 +817,7 @@ fn logically_retired_handles_cannot_resurrect_an_untraced_graph() -> Result<()> 
         );
         assert!(Gc::<crate::sync::RwLock<Vec<Gc<u64>>>>::from_raw_rooted(&gc, address).is_err());
         assert!(gc.clone_edge_root(&stale).is_none());
+        #[cfg(panic = "unwind")]
         assert!(
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gc.add_root(&stale))).is_err()
         );
