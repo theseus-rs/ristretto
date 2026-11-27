@@ -50,3 +50,7 @@ Three fresh Chromium 153.0.8010.12 workers ran the production WASI playground on
 | [1](09b6207d-chromium-1.json.gz) | 1.174 | 73/73 | 20.5 | 24.0 | 24.0 |
 | [2](09b6207d-chromium-2.json.gz) | 1.235 | 77/77 | 21.5 | 22.9 | 22.9 |
 | [3](09b6207d-chromium-3.json.gz) | 1.202 | 75/75 | 20.6 | 23.2 | 23.2 |
+
+## Epoch-owned numeric deletion at `6f577187`
+
+Three production Chromium workers each completed 13 Java collections and reclaimed 10,473,075 managed bytes. Each returned checksum 799864. The workers answered all 227 scheduled pings during Java execution. [Per-process gaps and linked collector identity](../../typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/epoch-visible-deletions/browser-jvm/README.md).
