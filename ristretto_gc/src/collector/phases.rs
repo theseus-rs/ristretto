@@ -43,6 +43,13 @@ impl GarbageCollector {
         let context = Context::enter(self, index);
         let mut cycle = self.domain().cycle.try_lock().ok()?;
         if cycle.phase == Phase::Idle {
+            // An in-flight callback or another domain can keep the heap busy.
+            // Only a real request needs to exclude publishers in this domain.
+            if !(self.domain().requested.load(Ordering::Acquire)
+                || index == 1 && self.old_requested.load(Ordering::Acquire))
+            {
+                return (!self.pending()).then_some(true);
+            }
             // Drain an earlier young snapshot before starting a requested full
             // pass. Otherwise its floating roots can be imported into successive
             // full passes after every mutator has already dropped them. New young
@@ -62,26 +69,22 @@ impl GarbageCollector {
             {
                 return Some(false);
             }
-        }
-        if cycle.phase == Phase::Idle
-            && (self.domain().requested.load(Ordering::Acquire)
-                || (index == 1 && self.old_requested.load(Ordering::Acquire)))
-            && self
+            if self
                 .domain()
                 .epoch
                 .load(Ordering::Acquire)
                 .checked_add(crate::metadata::EPOCH_STRIDE)
                 .is_none()
-        {
-            // Keep this domain inactive and its request pending while resetting
-            // one metadata entry per work unit. Publication initializes unmarked
-            // storage; neither domain may shade an inactive domain. No old epoch
-            // can alias epoch one after the reset finishes.
-            self.contexts
-                .completed_disabled
-                .store(true, Ordering::Release);
-            cycle.phase = Phase::ResetMarks;
-            cycle.object_cursor = crate::index::Cursor::default();
+            {
+                // Keep the request pending while resetting one entry per unit.
+                // Neither domain shades an inactive domain, so no old epoch
+                // can alias epoch one when the reset finishes.
+                self.contexts
+                    .completed_disabled
+                    .store(true, Ordering::Release);
+                cycle.phase = Phase::ResetMarks;
+                cycle.object_cursor = crate::index::Cursor::default();
+            }
         }
         if cycle.phase == Phase::Idle {
             let Some(publication) = self.try_publication_write() else {

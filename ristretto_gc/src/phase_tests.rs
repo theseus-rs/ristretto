@@ -1078,3 +1078,59 @@ mod native {
         Ok(())
     }
 }
+
+#[test]
+fn an_idle_step_can_finish_during_publication_and_preserves_the_next_request() -> Result<()> {
+    for counted in [false, true] {
+        for kind in [
+            CollectionKind::Young,
+            CollectionKind::Full,
+            CollectionKind::Old,
+        ] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .old_collection_interval(usize::MAX)
+                    .full_collection_interval(usize::MAX)
+                    .incremental_step_size(1)
+                    .build(),
+            );
+            let publisher = gc.allocation_guard();
+            assert!(
+                gc.step(),
+                "idle with a publisher, {kind:?}, counted={counted}"
+            );
+            match kind {
+                CollectionKind::Young => gc.collect_young(),
+                CollectionKind::Full => gc.collect(),
+                CollectionKind::Old => gc.collect_old(),
+            }
+            assert!(!gc.step());
+            assert_eq!(gc.statistics()?.collections_completed, 0);
+            drop(publisher);
+            for _ in 0..2048 {
+                if gc.step() {
+                    break;
+                }
+            }
+            let stats = gc.statistics()?;
+            assert_eq!(
+                stats.collections_completed, 1,
+                "{kind:?}, counted={counted}"
+            );
+            assert_eq!(
+                stats.young_collections,
+                usize::from(kind == CollectionKind::Young)
+            );
+            assert_eq!(
+                stats.full_collections,
+                usize::from(kind == CollectionKind::Full)
+            );
+            assert_eq!(
+                stats.old_collections,
+                usize::from(kind == CollectionKind::Old)
+            );
+        }
+    }
+    Ok(())
+}

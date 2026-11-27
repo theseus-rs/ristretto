@@ -91,3 +91,23 @@ fn measured_gc_counter_tracks_real_completed_collections()
     assert_eq!(after - before, 1);
     Ok(())
 }
+
+#[test]
+fn idle_steps_do_not_acquire_publication() -> std::io::Result<()> {
+    const STEPS: usize = 2048;
+    let recorder = Arc::new(PauseRecorder::new(STEPS)?);
+    let gc = GarbageCollector::with_config(Configuration {
+        pause_recorder: Some(Arc::clone(&recorder)),
+        ..Configuration::default()
+    });
+    for _ in 0..STEPS {
+        assert!(gc.step());
+    }
+    drop(gc);
+    let snapshot = Arc::try_unwrap(recorder)
+        .map_err(|_| std::io::Error::other("recorder owner leaked"))?
+        .finish();
+    assert_eq!(snapshot.publication_acquisitions, 0);
+    assert_eq!(snapshot.publication_attempts, 0);
+    Ok(())
+}
