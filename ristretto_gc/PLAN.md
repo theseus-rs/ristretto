@@ -16,7 +16,10 @@ against `f1daebeb`. The lowest individual 95% bounds were 10.37× native and
 10.45× WASI. Reusing uniquely held snapshots restored the previous 64 host
 allocation requests per 64 warmed full collections in the rooted scalar probe.
 The 14 shipping dependency graphs, native/WASI package consumers and three
-Java previews passed with the same collector.
+Java previews passed with the same collector. On the 64 MiB Java reference-array
+screen, Ristretto, G1 and ZGC reached 673, 974,983 and 592,186 operations/s,
+respectively. At 500 arrivals/s their median scheduled p99.9 was 159,744, 199
+and 134 µs.
 [Collection results, progress controls and limits](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/statistics-snapshot-progress/README.md).
 
 At `f4cdf10f`, the single JVM collector completed the 8,192-allocation Java

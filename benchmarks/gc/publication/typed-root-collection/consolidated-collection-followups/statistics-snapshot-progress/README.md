@@ -29,3 +29,17 @@ Each candidate passed 100 independent processes containing all four parked-reade
 On the final runtime tree, 1,028 native GC tests passed, with one ignored, and 465 WASI tests passed. The three focused Miri cases, strict native/WASI Clippy, browser collector check and Cargo archive verification passed. Fourteen default/all-feature dependency graphs and both normalized Cargo package consumers resolve to the same collector. Interpreted native/WASI and compiled native previews each cleared two weak witnesses. The compiled preview reported 25 entries and eight backedges. The ordinary 64 MiB Java reproducer completed 8,192 allocations in native and WASI runs. A browser dependency check establishes which collector ships. Host-turn latency needs runtime measurement.
 
 The Carbon auditor accepted the uniqueness requirement and identified unbounded per-writer retries and fresh-allocation fallback. This CLI rejected the requested Carbon `xhigh` effort. The successful audit used Carbon `high`. Neon independently ran the competing-commit regression. The measured tree at `c0788307` and the consolidated runtime commit `cc0cd61e` have the same Git tree. [Checks, revisions and audit responses](validation.json).
+
+## Ordinary Java comparison
+
+All 27 fresh processes completed the reference-array workload using the same Java classes, two CPU cores of quota, a 64 MiB logical heap and a 512 MiB cgroup limit. Each fork warmed up for five seconds and measured for ten. All scheduled arrivals completed. Points in the figure represent individual forks and the vertical bars give their medians.
+
+| JVM | Saturation, operations/s | Scheduled p99.9 at 100/s | Scheduled p99.9 at 500/s |
+| --- | ---: | ---: | ---: |
+| Ristretto | 673 | 2,592 µs | 159,744 µs |
+| HotSpot G1 | 974,983 | 1,120 µs | 199 µs |
+| HotSpot ZGC | 592,186 | 304 µs | 134 µs |
+
+At 500 arrivals/s the highest sampled Ristretto backlog was 140 operations. These observations cover the complete JVM, including allocation, interpretation, compiled dispatch and collection. The full-cycle speedup above uses a different control and measures collector work only. [Per-fork results](java-screen/processes.csv) · [Histograms and process records](java-screen/processes.jsonl.gz) · [Frozen inputs and limits](java-screen/provenance.json).
+
+![Whole-JVM throughput and scheduled response by independent fork](java-screen/comparison.png)

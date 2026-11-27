@@ -1,0 +1,143 @@
+{
+  "0": {
+    "Ristretto": {
+      "forks": 3,
+      "successful": 3,
+      "failed": 0,
+      "completed_in_successful_forks": 20241,
+      "unfinished_in_successful_forks": 0,
+      "max_cgroup_peak_mib": 117.3515625,
+      "oom_kills": 0,
+      "max_sampled_backlog": 0,
+      "per_fork_medians": {
+        "ops_per_second": 673.390101969411,
+        "p999_us": 60416,
+        "p9999_us": 139264
+      }
+    },
+    "G1": {
+      "forks": 3,
+      "successful": 3,
+      "failed": 0,
+      "completed_in_successful_forks": 29234543,
+      "unfinished_in_successful_forks": 0,
+      "max_cgroup_peak_mib": 66.18359375,
+      "oom_kills": 0,
+      "max_sampled_backlog": 0,
+      "per_fork_medians": {
+        "ops_per_second": 974982.9381013135,
+        "p999_us": 10,
+        "p9999_us": 613
+      }
+    },
+    "ZGC": {
+      "forks": 3,
+      "successful": 3,
+      "failed": 0,
+      "completed_in_successful_forks": 17558578,
+      "unfinished_in_successful_forks": 0,
+      "max_cgroup_peak_mib": 151.36328125,
+      "oom_kills": 0,
+      "max_sampled_backlog": 0,
+      "per_fork_medians": {
+        "ops_per_second": 592186.1474730887,
+        "p999_us": 79,
+        "p9999_us": 96
+      }
+    }
+  },
+  "100": {
+    "Ristretto": {
+      "forks": 3,
+      "successful": 3,
+      "failed": 0,
+      "completed_in_successful_forks": 3000,
+      "unfinished_in_successful_forks": 0,
+      "max_cgroup_peak_mib": 105.890625,
+      "oom_kills": 0,
+      "max_sampled_backlog": 6,
+      "per_fork_medians": {
+        "ops_per_second": 100.08849902151627,
+        "p999_us": 2592,
+        "p9999_us": 3456
+      }
+    },
+    "G1": {
+      "forks": 3,
+      "successful": 3,
+      "failed": 0,
+      "completed_in_successful_forks": 3000,
+      "unfinished_in_successful_forks": 0,
+      "max_cgroup_peak_mib": 60.7890625,
+      "oom_kills": 0,
+      "max_sampled_backlog": 0,
+      "per_fork_medians": {
+        "ops_per_second": 100.10001713432013,
+        "p999_us": 1120,
+        "p9999_us": 1920
+      }
+    },
+    "ZGC": {
+      "forks": 3,
+      "successful": 3,
+      "failed": 0,
+      "completed_in_successful_forks": 3000,
+      "unfinished_in_successful_forks": 0,
+      "max_cgroup_peak_mib": 111.62109375,
+      "oom_kills": 0,
+      "max_sampled_backlog": 0,
+      "per_fork_medians": {
+        "ops_per_second": 100.10006143281912,
+        "p999_us": 304,
+        "p9999_us": 457
+      }
+    }
+  },
+  "500": {
+    "Ristretto": {
+      "forks": 3,
+      "successful": 3,
+      "failed": 0,
+      "completed_in_successful_forks": 15000,
+      "unfinished_in_successful_forks": 0,
+      "max_cgroup_peak_mib": 113.36328125,
+      "oom_kills": 0,
+      "max_sampled_backlog": 140,
+      "per_fork_medians": {
+        "ops_per_second": 500.07821073192383,
+        "p999_us": 159744,
+        "p9999_us": 169984
+      }
+    },
+    "G1": {
+      "forks": 3,
+      "successful": 3,
+      "failed": 0,
+      "completed_in_successful_forks": 15000,
+      "unfinished_in_successful_forks": 0,
+      "max_cgroup_peak_mib": 61.0703125,
+      "oom_kills": 0,
+      "max_sampled_backlog": 0,
+      "per_fork_medians": {
+        "ops_per_second": 500.099958229301,
+        "p999_us": 199,
+        "p9999_us": 1680
+      }
+    },
+    "ZGC": {
+      "forks": 3,
+      "successful": 3,
+      "failed": 0,
+      "completed_in_successful_forks": 15000,
+      "unfinished_in_successful_forks": 0,
+      "max_cgroup_peak_mib": 122.6171875,
+      "oom_kills": 0,
+      "max_sampled_backlog": 4,
+      "per_fork_medians": {
+        "ops_per_second": 500.0997596500051,
+        "p999_us": 134,
+        "p9999_us": 2144
+      }
+    }
+  }
+}
