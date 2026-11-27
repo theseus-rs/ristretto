@@ -736,6 +736,15 @@ unsafe impl<T: crate::Trace> crate::Trace for HeapBuffer<T> {
         };
         self.truncate(keep);
         if !self.is_empty() {
+            // Publish reusable space after the elements' destructors return.
+            // Batch small suffixes to amortize free-range index updates. The
+            // managed object's original charge stays in place until retirement.
+            if let Storage::Region(block) = &mut self.storage {
+                let initialized = keep * size_of::<T>();
+                if block.len() - initialized >= 4096 {
+                    block.try_return_suffix(initialized);
+                }
+            }
             return TraceProgress::Continue(0);
         }
         if let Storage::Region(block) = &mut self.storage {

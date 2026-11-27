@@ -1145,6 +1145,13 @@ impl Block {
         }
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         crate::refund_tests::before_region_return();
+        self.try_return_suffix(0)
+    }
+
+    /// Release only the destroyed suffix. The prefix stays at its original
+    /// address. If either index is busy the block keeps its entire range.
+    pub(crate) fn try_return_suffix(&mut self, keep: usize) -> bool {
+        debug_assert!(!self.returned && keep <= self.length);
         let registry = self.region.registry.state.upgrade();
         let state = if let Some(registry) = &registry {
             let Some(state) = try_lock(registry) else {
@@ -1157,8 +1164,9 @@ impl Block {
         let Some(free) = try_lock(&self.region.free) else {
             return false;
         };
-        self.release_locked(state, free);
-        self.returned = true;
+        self.release_locked(state, free, keep);
+        self.length = keep;
+        self.returned = keep == 0;
         true
     }
 
@@ -1166,10 +1174,12 @@ impl Block {
         &self,
         mut state: Option<MutexGuard<'_, State>>,
         mut free: MutexGuard<'_, FreeRanges>,
+        keep: usize,
     ) {
+        let length = self.length - keep;
         let previous = free.by_size.last().map_or(0, |(size, _)| *size);
-        if self.length != 0 {
-            self.region.release(&mut free, self.offset, self.length);
+        if length != 0 {
+            self.region.release(&mut free, self.offset + keep, length);
             if !self.relocation {
                 self.region.reclaimed.store(true, Ordering::Relaxed);
             }
@@ -1178,8 +1188,8 @@ impl Block {
         if let Some(state) = &mut state
             && state.regions.contains_key(&self.region.id)
         {
-            recorded = !self.relocation && self.length != 0;
-            state.occupied -= self.length;
+            recorded = !self.relocation && length != 0;
+            state.occupied -= length;
             state.available.remove(&(previous, self.region.id));
             let largest = free.by_size.last().map_or(0, |(size, _)| *size);
             state.available.insert((largest, self.region.id));
@@ -1195,7 +1205,7 @@ impl Block {
             // counts as progress for an exact physical recovery retry.
             self.region
                 .returned_bytes
-                .fetch_add(self.length as u64, Ordering::Release);
+                .fetch_add(length as u64, Ordering::Release);
         }
     }
 }
@@ -1210,13 +1220,49 @@ impl Drop for Block {
         let registry = self.region.registry.state.upgrade();
         let state = registry.as_ref().map(|registry| lock(registry));
         let free = lock(&self.region.free);
-        self.release_locked(state, free);
+        self.release_locked(state, free, 0);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn busy_suffix_release_keeps_both_free_indexes_and_prefix_intact() {
+        let heap = RegionHeap::new(8192, 8192, 0);
+        let mut source = heap
+            .allocate(Layout::from_size_align(8192, 64).unwrap(), None)
+            .unwrap();
+        let region = source.region.clone();
+        let address = source.ptr::<u8>().addr();
+        let before = heap.recovery_progress();
+        {
+            let _registry = lock(heap.shard(heap.index(source.id())));
+            assert!(!source.try_return_suffix(4097));
+        }
+        {
+            let _ranges = lock(&region.free);
+            assert!(!source.try_return_suffix(4097));
+        }
+        assert_eq!(source.len(), 8192);
+        assert_eq!(heap.recovery_progress(), before);
+        assert_eq!(heap.statistics().occupied_bytes, 8192);
+        assert!(source.try_return_suffix(4097));
+        assert_eq!(source.ptr::<u8>().addr(), address);
+        assert_eq!(source.len(), 4097);
+        assert_eq!(heap.recovery_progress().0 - before.0, 4095);
+        let suffix = heap
+            .allocate(Layout::from_size_align(2048, 256).unwrap(), None)
+            .unwrap();
+        assert!(suffix.ptr::<u8>().addr() >= address + 4097);
+        assert!(suffix.ptr::<u8>().addr().is_multiple_of(256));
+        assert_eq!(heap.statistics().occupied_bytes, 4097 + 2048);
+        drop(source);
+        assert_eq!(heap.statistics().occupied_bytes, 2048);
+        drop(suffix);
+        assert_eq!(heap.statistics().occupied_bytes, 0);
+    }
 
     #[test]
     fn selection_preserves_mutator_space_and_rechecks_refilled_candidates() {

@@ -981,6 +981,75 @@ mod native {
 }
 
 #[test]
+fn a_partially_cleared_buffer_donates_only_its_destroyed_suffix() -> Result<()> {
+    use ristretto_gc::TraceProgress;
+    #[repr(align(64))]
+    struct Counted(Arc<AtomicUsize>);
+    // SAFETY: Counted shares a host-side counter and contains no managed edges.
+    #[expect(unsafe_code, reason = "the test element has no managed edges")]
+    unsafe impl Trace for Counted {
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+    impl Drop for Counted {
+        fn drop(&mut self) {
+            self.0.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+    let size = 256 * size_of::<Counted>();
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .compact_heap(true)
+            .max_heap_bytes(size)
+            .region_layout(size, 0)
+            .allocation_threshold(usize::MAX)
+            .incremental_step_size(1)
+            .build(),
+    );
+    let heap = gc.region_heap().expect("regional storage");
+    let drops = Arc::new(AtomicUsize::new(0));
+    let mut donor = HeapBuffer::try_with_fn(Some(heap), 256, |_| Ok(Counted(drops.clone())))?;
+    let base = donor.as_ptr().addr();
+    let initialized = AtomicUsize::new(0);
+    let mut request = Box::pin(HeapBuffer::try_with_fn_in_async(&gc, size / 2, |_| {
+        initialized.fetch_add(1, Ordering::Relaxed);
+        Ok(73_u8)
+    }));
+    assert!(
+        request
+            .as_mut()
+            .poll(&mut Context::from_waker(Waker::noop()))
+            .is_pending()
+    );
+    for step in 1..=2 {
+        assert_eq!(donor.clear_step(0, 64), TraceProgress::Continue(0));
+        assert_eq!(drops.load(Ordering::Relaxed), step * 64);
+        assert_eq!(donor.as_ptr().addr(), base);
+        assert_eq!(heap.statistics().occupied_bytes, size - step * 4096);
+        gc.collect_full()?;
+        if step == 1 {
+            assert!(
+                request
+                    .as_mut()
+                    .poll(&mut Context::from_waker(Waker::noop()))
+                    .is_pending()
+            );
+            assert_eq!(initialized.load(Ordering::Relaxed), 0);
+        }
+    }
+    let received = finish(&gc, request)?;
+    assert_eq!(received.as_ptr().addr(), base + size / 2);
+    assert_eq!(initialized.load(Ordering::Relaxed), size / 2);
+    assert!(received.iter().all(|value| *value == 73));
+    assert_eq!(donor.len(), 128);
+    drop(donor);
+    assert_eq!(drops.load(Ordering::Relaxed), 256);
+    assert_eq!(heap.statistics().occupied_bytes, size / 2);
+    drop(received);
+    assert_eq!(heap.statistics().occupied_bytes, 0);
+    Ok(())
+}
+
+#[test]
 fn reclaimed_physical_ranges_stolen_by_a_competitor_do_not_exhaust_recovery() -> Result<()> {
     let gc = GarbageCollector::with_config(
         Configuration::builder()
