@@ -653,13 +653,13 @@ impl GarbageCollector {
             };
             context = next;
         }
-        self.record_step(
+        let duration = self.record_step(
             started,
             cpu_started,
             concurrent,
             &mut WorkCounters::default(),
         );
-        drop(measurement);
+        measurement.finish_with(duration);
         self.notify_progress();
         Some(!self.pending())
     }

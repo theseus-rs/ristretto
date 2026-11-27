@@ -102,7 +102,7 @@ impl GarbageCollector {
         cpu_started: Option<u64>,
         concurrent: bool,
         counters: &mut WorkCounters,
-    ) {
+    ) -> Option<std::time::Duration> {
         if let Some(started) = cpu_started
             && let Some(finished) = crate::diagnostics::thread_cpu_ns()
         {
@@ -129,6 +129,7 @@ impl GarbageCollector {
                 );
             }
         });
+        duration
     }
 }
 

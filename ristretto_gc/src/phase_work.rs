@@ -248,8 +248,8 @@ impl GarbageCollector {
                 .fetch_add(1, Ordering::Relaxed);
         }
         drop(context);
-        self.record_step(started, cpu_started, concurrent, &mut counters);
-        drop(measurement);
+        let duration = self.record_step(started, cpu_started, concurrent, &mut counters);
+        measurement.finish_with(duration);
         self.notify_progress();
         Ok(Some(!self.pending()))
     }

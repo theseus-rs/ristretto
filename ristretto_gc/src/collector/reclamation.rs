@@ -264,8 +264,11 @@ impl GarbageCollector {
             };
             match released {
                 Some(crate::retirement_grants::ReleasedWork::Progress) => {
-                    self.record_step(started, cpu_started, concurrent, &mut counters);
-                    drop(timing.measure_from(self.diagnostics_enabled(), started));
+                    let duration =
+                        self.record_step(started, cpu_started, concurrent, &mut counters);
+                    if self.diagnostics_enabled() {
+                        timing.record_duration(duration);
+                    }
                     self.notify_progress();
                     return Some(RetirementStep::Progress(false));
                 }
@@ -297,8 +300,8 @@ impl GarbageCollector {
         } else {
             self.requeue_retirement(task, progress);
         }
-        self.record_step(started, cpu_started, concurrent, &mut counters);
-        drop(measurement);
+        let duration = self.record_step(started, cpu_started, concurrent, &mut counters);
+        measurement.finish_with(duration);
         self.notify_progress();
         Some(if contended {
             RetirementStep::Contended

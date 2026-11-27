@@ -136,9 +136,13 @@ pub(crate) struct Timing {
 
 impl Timing {
     pub(crate) fn record(&self, started: Option<Instant>) {
+        self.record_duration(started.map(|time| time.elapsed()));
+    }
+
+    pub(crate) fn record_duration(&self, duration: Option<std::time::Duration>) {
         self.count.fetch_add(1, Ordering::Relaxed);
-        if let Some(started) = started {
-            let ns = u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX);
+        if let Some(duration) = duration {
+            let ns = u64::try_from(duration.as_nanos()).unwrap_or(u64::MAX);
             self.total.fetch_add(ns, Ordering::Relaxed);
             self.max.fetch_max(ns, Ordering::Relaxed);
         }
@@ -168,6 +172,16 @@ impl Timing {
 pub(crate) struct Measurement<'a> {
     timing: Option<&'a Timing>,
     started: Option<Instant>,
+}
+
+impl Measurement<'_> {
+    /// The diagnostic and collection step end at the same work boundary.
+    /// Keep the normal drop measurement if the operation unwinds earlier.
+    pub(crate) fn finish_with(mut self, duration: Option<std::time::Duration>) {
+        if let Some(timing) = self.timing.take() {
+            timing.record_duration(duration);
+        }
+    }
 }
 
 impl Drop for Measurement<'_> {
@@ -350,5 +364,36 @@ impl Counters {
             queued_relocation_tasks: [0; 2],
             relocation_queue_capacity: [0; 2],
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn shared_step_duration_preserves_counts_totals_and_maximum() {
+        let timing = Timing::default();
+        for (enabled, nanos) in [
+            (true, Some(11)),
+            (true, None),
+            (false, Some(100)),
+            (true, Some(5)),
+        ] {
+            timing
+                .measure_from(enabled, None)
+                .finish_with(nanos.map(Duration::from_nanos));
+        }
+        // An unfinished guard still records its count on drop, including on a clockless host.
+        drop(timing.measure_from(true, None));
+        assert_eq!(
+            timing.snapshot(),
+            TimingStatistics {
+                count: 4,
+                total_ns: 16,
+                max_ns: 11
+            }
+        );
     }
 }
