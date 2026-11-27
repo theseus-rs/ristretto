@@ -30,6 +30,7 @@ pub struct SchedulingStatistics {
 pub(crate) struct Scheduler {
     origin: Option<Instant>,
     allocated: AtomicU64,
+    skip_before: AtomicU64,
     model: ArcSwap<Model>,
 }
 
@@ -43,6 +44,7 @@ impl Scheduler {
         Self {
             origin,
             allocated: AtomicU64::new(0),
+            skip_before: AtomicU64::new(model.last_sample_floor),
             model: ArcSwap::from_pointee(model),
         }
     }
@@ -52,7 +54,14 @@ impl Scheduler {
     }
 
     pub(crate) fn allocated(&self, bytes: usize, live: usize, heap: Option<&RegionHeap>) -> bool {
-        self.allocated.fetch_add(bytes as u64, Ordering::Relaxed);
+        let total = self
+            .allocated
+            .fetch_add(bytes as u64, Ordering::Relaxed)
+            .saturating_add(bytes as u64);
+        let cached = self.skip_before.load(Ordering::Relaxed);
+        if total < cached {
+            return false;
+        }
         let current = self.model.load();
         let total = self.allocated.load(Ordering::Relaxed);
         if total < current.next_sample {
@@ -81,10 +90,30 @@ impl Scheduler {
             model.quantum.min(remaining)
         };
         model.next_sample = total.saturating_add(interval);
+        model.last_sample_floor = model.sample_floor(total);
         // Sampling is advisory. A competing sample or lifecycle transition wins;
         // the cumulative allocation counter still includes this allocation.
         let prior = self.model.compare_and_swap(&*current, Arc::new(model));
-        Arc::ptr_eq(&prior, &current) && request
+        if !Arc::ptr_eq(&prior, &current) {
+            return false;
+        }
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        parked_tests::after_sample_commit();
+        self.publish_sample_floor(cached, model.last_sample_floor);
+        request
+    }
+
+    fn publish_sample_floor(&self, cached: u64, floor: u64) {
+        if cached != 0 {
+            // A delayed sampler may miss a hint update. Zero permanently disables
+            // this optimization after a discontinuity in the cumulative byte count.
+            let _ = self.skip_before.compare_exchange(
+                cached,
+                floor,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            );
+        }
     }
 
     fn update(&self, apply: impl Fn(&mut Model)) {
@@ -113,6 +142,12 @@ impl Scheduler {
             model.completed(now, total, freed, live);
             model.next_sample =
                 total.saturating_add(model.quantum.min(model.minimum_growth as u64).max(1));
+            if model.next_sample < model.last_sample_floor {
+                // A wrapping allocator may still be parked immediately after its
+                // fetch_add. Disable old hints before making the lower threshold
+                // observable. Repeating this on a losing RCU attempt is harmless.
+                self.skip_before.store(0, Ordering::Release);
+            }
         });
     }
 
@@ -128,6 +163,7 @@ impl Scheduler {
 struct Model {
     quantum: u64,
     next_sample: u64,
+    last_sample_floor: u64,
     limit: usize,
     stats: SchedulingStatistics,
     last_sample: Option<Duration>,
@@ -146,9 +182,12 @@ struct Model {
 impl Model {
     fn new(limit: usize, clock: bool) -> Self {
         let quantum = (limit / 64).clamp(4096, 1024 * 1024) as u64;
+        let minimum_growth = (limit / 64).max(1);
+        let next_sample = quantum.min(limit.saturating_sub(limit / 4) as u64).max(1);
         Self {
             quantum,
-            next_sample: quantum.min(limit.saturating_sub(limit / 4) as u64).max(1),
+            next_sample,
+            last_sample_floor: next_sample.min(minimum_growth as u64),
             limit,
             stats: SchedulingStatistics {
                 enabled: true,
@@ -166,9 +205,17 @@ impl Model {
             start_live: 0,
             observed_reclamation: false,
             completed_total: 0,
-            minimum_growth: (limit / 64).max(1),
+            minimum_growth,
             burst: 0,
         }
+    }
+
+    // Samples only move the threshold past the current total. A full completion
+    // can shorten it, but its cooldown is always at least min(quantum, limit/64
+    // rounded up to one byte). A wrapped total is handled at full completion.
+    fn sample_floor(&self, total: u64) -> u64 {
+        let cooldown = self.quantum.min((self.limit / 64).max(1) as u64);
+        self.next_sample.min(total.saturating_add(cooldown))
     }
 
     fn sample(
@@ -381,6 +428,53 @@ mod tests {
                 limit
             );
         }
+    }
+
+    #[test]
+    fn a_delayed_sampling_floor_preserves_an_earlier_post_collection_sample() {
+        let scheduler = Scheduler::new(8192);
+        // An explicit full collection can shorten the initial threshold.
+        scheduler.started(0);
+        scheduler.completed(0, 0);
+        assert!(!scheduler.allocated(128, 0, None));
+        assert_eq!(scheduler.statistics().samples, 1);
+
+        let total = 7000;
+        assert!(scheduler.allocated(total - 128, total, None));
+        let pending = scheduler.model.load();
+        let floor = pending.sample_floor(total as u64);
+        scheduler.started(total);
+        scheduler.completed(total, 0);
+        let current = scheduler.model.load();
+        assert!(current.next_sample < pending.next_sample);
+        assert_eq!(current.next_sample, floor);
+        scheduler.publish_sample_floor(scheduler.skip_before.load(Ordering::Relaxed), floor);
+        assert!(!scheduler.allocated(127, total, None));
+        assert!(scheduler.allocated(1, total, None));
+        assert_eq!(scheduler.statistics().samples, 3);
+    }
+
+    #[test]
+    fn completion_after_byte_counter_wrap_rearms_prediction_with_a_stale_sampler() {
+        let scheduler = Scheduler::new(8192);
+        let first_hint = scheduler.skip_before.load(Ordering::Relaxed);
+        scheduler.allocated.store(u64::MAX - 8, Ordering::Relaxed);
+        assert!(!scheduler.allocated(8, 0, None));
+        let old = scheduler.model.load();
+        assert_eq!(old.last_sample_floor, u64::MAX);
+        // The wrapping publisher has taken its RMW but has done nothing afterward.
+        assert_eq!(
+            scheduler.allocated.fetch_add(1, Ordering::Relaxed),
+            u64::MAX
+        );
+        scheduler.started(0);
+        scheduler.completed(0, 0);
+        assert_eq!(scheduler.model.load().next_sample, 128);
+        scheduler.publish_sample_floor(first_hint, old.last_sample_floor);
+        scheduler.publish_sample_floor(0, old.last_sample_floor);
+        assert_eq!(scheduler.skip_before.load(Ordering::Relaxed), 0);
+        assert!(scheduler.allocated(128, 8192, None));
+        assert_eq!(scheduler.statistics().requests, 1);
     }
 
     #[test]

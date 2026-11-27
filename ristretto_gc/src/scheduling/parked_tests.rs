@@ -6,16 +6,27 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
+type Pause = Cell<Option<(Sender<()>, Receiver<()>)>>;
+
 thread_local! {
-    static PAUSE: Cell<Option<(Sender<()>, Receiver<()>)>> = const { Cell::new(None) };
+    static PAUSE: Pause = const { Cell::new(None) };
+    static AFTER_SAMPLE_COMMIT: Pause = const { Cell::new(None) };
+}
+
+pub(super) fn after_model_read() {
+    park(&PAUSE);
+}
+
+pub(super) fn after_sample_commit() {
+    park(&AFTER_SAMPLE_COMMIT);
 }
 
 #[expect(
     clippy::expect_used,
     reason = "a missing peer or timeout invalidates the forced schedule"
 )]
-pub(super) fn after_model_read() {
-    if let Some((entered, release)) = PAUSE.take() {
+fn park(point: &'static std::thread::LocalKey<Pause>) {
+    if let Some((entered, release)) = point.take() {
         entered.send(()).expect("observe model acquisition");
         release
             .recv_timeout(Duration::from_secs(10))
@@ -142,4 +153,31 @@ fn parked_pressure_reader_and_sampled_publisher_allow_capped_recovery() -> Resul
         "pressure model blocked capped recovery: {stalled:?}"
     );
     Ok(())
+}
+
+#[test]
+fn a_stalled_pre_wrap_winner_cannot_reinstate_its_hint_after_completion() {
+    use super::{Ordering, Scheduler};
+
+    let scheduler = &Scheduler::new(8192);
+    scheduler.allocated.store(u64::MAX - 8, Ordering::Relaxed);
+    let (entered, parked) = mpsc::channel();
+    let (resume, released) = mpsc::channel();
+    std::thread::scope(|scope| {
+        let sampler = scope.spawn(move || {
+            AFTER_SAMPLE_COMMIT.set(Some((entered, released)));
+            scheduler.allocated(8, 0, None)
+        });
+        parked
+            .recv_timeout(Duration::from_secs(3))
+            .expect("pre-wrap sample committed");
+        assert!(!scheduler.allocated(1, 0, None));
+        scheduler.started(0);
+        scheduler.completed(0, 0);
+        assert!(scheduler.allocated(128, 8192, None));
+        resume.send(()).expect("resume pre-wrap winner");
+        assert!(!sampler.join().expect("pre-wrap sample"));
+    });
+    assert_eq!(scheduler.skip_before.load(Ordering::Relaxed), 0);
+    assert_eq!(scheduler.statistics().requests, 1);
 }
