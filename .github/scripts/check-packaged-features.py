@@ -76,12 +76,15 @@ def main():
         # Keep the overall workspace's pinned versions wherever their constraints allow them.
         (root / "Cargo.lock").write_bytes((Path(metadata["workspace_root"]) / "Cargo.lock").read_bytes())
         subprocess.run(["cargo", "update", "--workspace", "--manifest-path", root / "Cargo.toml", "--offline"], check=True)
-        if "ristretto_gc" in required:
+        if {"ristretto_gc", "ristretto_classloader", "ristretto_vm"} & required:
             version = packages["ristretto_gc"]["version"]
             unpacked = root / f"ristretto_gc-{version}"
             # Use the same Cargo config and toolchain discovery as the consumer build below.
-            verify_tree(root / "Cargo.toml", f"ristretto_gc v{version} ({unpacked})",
-                        target=args.target, cargo_cwd=Path.cwd())
+            expected = f"ristretto_gc v{version} ({unpacked})"
+            verify_tree(root / "Cargo.toml", expected, target=args.target, cargo_cwd=Path.cwd())
+            if "ristretto_classloader" in required:
+                verify_tree(root / "Cargo.toml", expected, target=args.target,
+                            package="ristretto_classloader", cargo_cwd=Path.cwd())
         # Cargo archives normalize file timestamps. Two revisions can have the same
         # version, filenames and mtimes; only reuse artifacts for identical archives.
         suffix = "packaged-features" if args.target is None else "packaged-features-" + args.target

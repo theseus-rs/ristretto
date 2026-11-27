@@ -40,5 +40,6 @@ python3 .github/scripts/check-packaged-features.py --target wasm32-wasip2 \
 
 The native consumer builds the VM's reference-dispatch feature. The WASI
 consumer depends only on the VM and reaches the collector transitively.
-Both check the extracted GC and VM packages for retired heap and interpreter sources. The
+Both also verify that the normalized class loader independently resolves the same
+GC archive and check the extracted GC and VM packages for retired heap and interpreter sources. The
 [source preview](../../../GC_PREVIEW.md) exercises both execution tiers.

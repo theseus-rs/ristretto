@@ -68,5 +68,7 @@ archive, and builds normalized Cargo archives from an external consumer.
 Both native and WASI consumer graphs must resolve every collector dependency
 to the exact unpacked `ristretto_gc` release archive. The verifier checks the
 workspace and the unpacked GC and VM crates for the retired catalog, pool and
-restricted interpreter, including when a consumer reaches the collector transitively.
+restricted interpreter. It also checks the public class loader independently on
+native and WASI, so a direct VM dependency cannot mask a missing collector in
+the crate that owns Java objects and arrays.
 [Archive and package instructions](benchmarks/gc/release/README.md)

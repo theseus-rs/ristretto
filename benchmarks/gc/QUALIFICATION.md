@@ -106,13 +106,12 @@ open or out-of-order boundaries cannot satisfy measured-window binding. The nati
 producer stores one begin/end pair using a single atomic state transition per
 boundary, with no wait/retry and no new collector lock.
 
-A recorder-local atomic counts actual completed legacy VM collections. Both sides
+A recorder-local atomic counts completed collections on the JVM heap. Both sides
 of each boundary timestamp sample that counter, exposing boundary races explicitly.
 The guaranteed in-window count is end-before minus begin-after; the possible count
 is end-after minus begin-before. Startup/warmup/reporting collections do not become
-measured exposure. Zero observed in-window completions remain zero. These counters
-measure the configured legacy VM collector; they do not describe the experimental
-canonical heap without its own completion producer.
+measured exposure. Zero observed in-window completions remain zero. Both execution tiers report completions from the same
+`ristretto_gc::GarbageCollector`.
 
 `measurement_boundaries` retains observer start/end times and both counter samples;
 `gc_exposure` retains the conservative lower/upper completed-count bounds. Observer

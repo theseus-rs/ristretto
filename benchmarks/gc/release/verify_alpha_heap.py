@@ -51,6 +51,7 @@ def verify(package, target, expected, all_features):
 if __name__ == "__main__":
     expected = verify_workspace()
     for package, targets in [
+        ("ristretto_classloader", [None, "wasm32-wasip2"]),
         ("ristretto_vm", [None, "wasm32-wasip2"]),
         ("ristretto_java", [None, "wasm32-wasip2"]),
         ("ristretto_javac", [None]),
