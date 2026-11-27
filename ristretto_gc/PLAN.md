@@ -9,6 +9,17 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `64f6f736` the default heap performed 2,048 idle steps without acquiring
+the publication writer. An ordinary conditional owner bound its exact referent
+and independent young garbage was destroyed while the mature shard stayed
+parked. A peer finished a full collection while the previous birth epoch was
+being destroyed. All 400 forced candidate runs passed. The 36 complete-cycle
+conditions retained minimum individual 95% lower speedup bounds of 10.72×
+native and 10.33× WASI against `f1daebeb`. Pending Java reference delivery
+under the default writer and the last releaser's synchronous queue teardown
+remain open progress boundaries.
+[Progress controls, collection graph and browser measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/idle-publication-and-epoch-release/README.md).
+
 At `29634965` native callback claimants can reclaim every published sibling
 past a parked claimant. Ten schedules passed in 1,000 fresh processes. When a
 peer took the last job after dispatch enrollment, the control exhausted 2,048
