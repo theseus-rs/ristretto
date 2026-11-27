@@ -1,0 +1,116 @@
+{
+  "code": "b65722a05a6e913adec5c069a0dab4105928e1c0",
+  "native": {
+    "passed": 980,
+    "ignored": 1
+  },
+  "wasi": {
+    "passed": 448,
+    "ignored": 0
+  },
+  "release_dependency_graphs": 14,
+  "verified_collector_archive": true,
+  "external_archive_consumers": [
+    "native",
+    "wasm32-wasip2"
+  ],
+  "strict_all_target_all_feature_clippy": [
+    "native",
+    "wasm32-wasip2"
+  ],
+  "schedules": {
+    "self_waking_control": {
+      "revision": "64a6660c",
+      "binary_sha256": "293c58b7626242caca9c918980f35211b2ea673f1263b6fe131506b51cabac5b",
+      "schedule_count": 1,
+      "processes": 10,
+      "passes": 0
+    },
+    "unlatched_control": {
+      "revision": "5061a647",
+      "binary_sha256": "672473744870f550f814d97f4ae3984d2cca0191d7f4c390229a2ce465bf0d0d",
+      "schedule_count": 1,
+      "processes": 100,
+      "passes": 0
+    },
+    "candidate": {
+      "revision": "b65722a05a6e913adec5c069a0dab4105928e1c0",
+      "binary_sha256": "d6eb559e593a5f4ff5c782002c01c7d8b6d21e74edc5bca6055521a4a1d57df3",
+      "schedule_count": 7,
+      "processes": 700,
+      "passes": 700
+    }
+  },
+  "preview": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "callback_fixture": {
+    "parent": "83a437e97fddb21a9cc9627084bb1c4a4fc2bfabe02e17dd64fa134d07084a60",
+    "candidate": "fa90872ece73eaedb64bbcd8e5c9ea7f555fdc1d89ad7a2cee4fbc47ba960963"
+  },
+  "callback_source_sha256": "10e36e25eb033dab59f6785da3e6f7120cb80eedd3d42b8f61a3aeb8f9058e43",
+  "browser": {
+    "summary": {
+      "qualification": false,
+      "inputs_unchanged": true,
+      "failed": 0,
+      "trials": 9
+    },
+    "wasm_sha256": "681fec0246c612adff97fcd345b09205aa3b56c6b8ee21cc3a1ea9bc294f5448",
+    "chrome_version": "Google Chrome 156.0.8078.79",
+    "asset_hashes": {
+      "sources.tar.gz": "e058aa76919a34b43b59e8e1461fc9cd4e44cfafb3d49717c153f7eebc4cf5bb",
+      "index.html": "4870396dd8e0d6e86e9f555fa5b272a3a46b39228b78aaa8cad7a3f817d677c5",
+      "browser.js": "421a5dcd81335148b3654fcbc1eaa4b46d5a3a19a60b62af8c96f66fbb41f2c3",
+      "workload.provenance.json": "59e6cc5971564a8ac73a457ce4a616fbbff54b69e8587a7d2482a3c3a55bf806",
+      "workload.wasm": "681fec0246c612adff97fcd345b09205aa3b56c6b8ee21cc3a1ea9bc294f5448",
+      "browser.py": "67ec001346616a99706ee1302e6e5b8f3466718c27e78944be4df45e049f9991",
+      "cgroups.py": "dbdcba2a65dd0918ed274e6647b52da7886bc7c7f43eb823b358e841e36276ee",
+      "run.py": "fd67c45a6c0c7013b237c0a8380426847532d960f2dd3060757944954af9c46b",
+      "google-chrome": "aea09d69ce7f24d5901f6bfb15dd44d0c856e793e0a498f8d8393ec7d2c308ec",
+      "chrome": "da143614d917f346b02c1b29587cc13bf891d4b73faf2bea7b20cbd8fa61510f"
+    },
+    "seed": 251127425
+  },
+  "packaged_collector_checker": "fa3ce3d0",
+  "shipping_bare_wasm_check": true,
+  "auditor": {
+    "tool": "agy",
+    "model": "gemini-4-neon",
+    "description_review": "SUCCESS",
+    "schedule_run": "SUCCESS",
+    "carbon_xhigh": "unsupported by installed CLI",
+    "carbon_high": "timed out"
+  },
+  "symlinked_temp_archive_consumers": [
+    "native",
+    "wasm32-wasip2"
+  ],
+  "collector_archive_sha256": "6b59de58e30a88a2d239e7e97d3b3d57d011b38549709c4fb5d0e0e984f1f23d"
+}

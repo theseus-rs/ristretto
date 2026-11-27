@@ -75,6 +75,9 @@ cumulative destructor count. [Callback estimates](callback-cost.csv) ·
 
 ## Remaining executor wake-ups
 
+The [subsequent wake-driven implementation](../terminal-dispatch-waits/README.md)
+closed the parked-donor case measured below.
+
 With one donor still published and the primary destructor and pressure
 assistant both parked, a terminal allocator remained pending. Across 100
 fresh native processes, each of 2,048 polls issued one immediate wake to its

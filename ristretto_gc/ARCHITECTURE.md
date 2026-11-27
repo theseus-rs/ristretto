@@ -1172,6 +1172,21 @@ allocation performs no extra progress sampling. A forced test consumes each retu
 range before the waiter retries, then holds it live to verify eventual OOM once
 reclamation stops.
 
+After two empty full cycles, a native allocation can wait for one chance to
+dispatch an already published callback. Its turn belongs to the worker pool
+that accepted it. Once a participant observes the final published job claimed,
+the turn stays complete even if a different callback arrives. Closing that pool
+also completes the turn. Either event permits one more collection attempt.
+
+The allocating task checks its own grant and reserves general headroom directly.
+A competitor can take offered space first. In that case the sleeper installs
+a fresh registration, checks funds again, and returns control to the executor.
+While terminal registrations exist, the refund notifier checks up to 32 per
+pass and uses a one-millisecond timed park between idle passes. This lets it
+notice a claim even if the claimant pauses before signaling. Each ready waker
+runs independently, and a running destructor retains its full charge until
+reclamation transfers or refunds it.
+
 ### JIT allocation recovery
 
 Experimental resumable object/array instructions await direct construction and

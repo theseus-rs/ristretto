@@ -18,12 +18,14 @@ individual 95% lower speedup bounds of **10.70× native and 10.18× WASI**.
 The original six cheap-finalizer cost intervals included parity with shipping.
 [Progress controls, retention, qualification and graphs](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/independent-native-callbacks/README.md).
 
-While a donor remained published and the assistant was paused before dispatch,
-the current allocator issued 2,048 immediate executor wakes in 2,048 polls in
-100/100 processes. It obtained a real reservation once service resumed.
-A wake-driven wait must also notice a last-job claim and a physical refund
-if the actor responsible for the next notification stops.
-[Forced wake counts](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/independent-native-callbacks/README.md#remaining-executor-wake-ups).
+At `b65722a0` a terminal native allocation issued zero immediate wakes in
+2,048 polls while a published donor was parked before dispatch. The prior
+collector issued 2,048 wakes. Observing the last public callback claimed
+completes that dispatch turn even if another callback arrives before the
+allocator runs. Seven schedules passed in 700 fresh processes. All 36
+complete-cycle conditions cleared 10× against `f1daebeb`, with minimum
+individual 95% lower bounds of 10.80× native and 10.20× WASI.
+[Reclamation, collection and browser measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/terminal-dispatch-waits/README.md).
 
 At `fe7d8c39` all three JVM smoke tiers reclaimed their complete two-node
 charge. All 36 complete-collection conditions passed the 10× gate relative to
