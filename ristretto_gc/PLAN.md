@@ -15,6 +15,8 @@ predictor made 192 requests for 35,328 bytes. All 800 parked-thread schedules
 passed, and all 36 collection conditions exceeded 10× versus `f1daebeb` at
 their individual lower 95% bounds (10.625× native, 10.251× WASI minima).
 In Chromium one candidate fork had four unfinished arrivals at the deadline.
+The matched Java reference-array saturation medians were 625 operations/s
+on Ristretto, 1,076,274 on G1 and 583,313 on ZGC.
 [Measurements and shipping checks](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/predictor-snapshot-reuse/README.md).
 
 At `d1cab313`, full collection and a capped allocation completed under both

@@ -1,0 +1,78 @@
+{
+  "saturation": {
+    "Ristretto": {
+      "forks": 3,
+      "failed": 0,
+      "completed": 18789,
+      "unfinished": 0,
+      "maximum_sampled_backlog": 0,
+      "median_per_process": {
+        "ops_per_second": 625.0050856651823,
+        "p999_us": 86016,
+        "p9999_us": 149504
+      }
+    },
+    "G1": {
+      "forks": 3,
+      "failed": 0,
+      "completed": 31935854,
+      "unfinished": 0,
+      "maximum_sampled_backlog": 0,
+      "median_per_process": {
+        "ops_per_second": 1076273.5643845976,
+        "p999_us": 7,
+        "p9999_us": 266
+      }
+    },
+    "ZGC": {
+      "forks": 3,
+      "failed": 0,
+      "completed": 17604691,
+      "unfinished": 0,
+      "maximum_sampled_backlog": 0,
+      "median_per_process": {
+        "ops_per_second": 583312.5381105397,
+        "p999_us": 79,
+        "p9999_us": 99
+      }
+    }
+  },
+  "two-minute": {
+    "Ristretto": {
+      "forks": 1,
+      "failed": 0,
+      "completed": 60000,
+      "unfinished": 0,
+      "maximum_sampled_backlog": 2,
+      "median_per_process": {
+        "ops_per_second": 500.0078580609963,
+        "p999_us": 3488,
+        "p9999_us": 4480
+      }
+    },
+    "G1": {
+      "forks": 1,
+      "failed": 0,
+      "completed": 60000,
+      "unfinished": 0,
+      "maximum_sampled_backlog": 1,
+      "median_per_process": {
+        "ops_per_second": 500.0083288220696,
+        "p999_us": 401,
+        "p9999_us": 1872
+      }
+    },
+    "ZGC": {
+      "forks": 1,
+      "failed": 0,
+      "completed": 60000,
+      "unfinished": 0,
+      "maximum_sampled_backlog": 3,
+      "median_per_process": {
+        "ops_per_second": 500.00832203434356,
+        "p999_us": 428,
+        "p9999_us": 1776
+      }
+    }
+  }
+}

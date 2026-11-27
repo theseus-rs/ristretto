@@ -27,3 +27,17 @@ Native testing passed 1,033 tests with one ignored. WASI passed 468, and Miri pa
 ## Browser screen
 
 At 2,000 scheduled arrivals/s, two candidate Chromium forks completed all 4,000 arrivals and one completed 3,996 before the deadline. Candidate p99.9 request-turn work was 40–46 µs, and the largest heartbeat gap was 5.595 ms. The completed-request latency distribution excludes those four unfinished arrivals. Browser JVM latency and zero global pauses remain unqualified. [Per-fork results](browser/REPORT.md) · [Graph](browser/browser.png) · [Raw processes](browser/processes.jsonl.gz).
+
+## Whole-JVM reference arrays
+
+The same Java classfiles ran on the native Ristretto JVM and JDK 25 G1 and ZGC. Each process had a 64 MiB managed heap, two CPUs and a 512 MiB process memory limit. All three JVMs completed their 60,000 scheduled arrivals without an OOM kill in the two-minute run. Saturation is the median of three independent ten-second forks. The latency and backlog columns come from one separate 120-second fork per JVM at 500 arrivals/s, measured from scheduled arrival to completion.
+
+| JVM | Saturation (operations/s) | Scheduled p99.9 (ms) | Scheduled p99.99 (ms) | Maximum sampled backlog |
+| --- | ---: | ---: | ---: | ---: |
+| Ristretto | 625 | 3.488 | 4.480 | 2 |
+| G1 | 1,076,274 | 0.401 | 1.872 | 1 |
+| ZGC | 583,313 | 0.428 | 1.776 | 3 |
+
+This workload still has a large whole-JVM throughput and latency gap. The long run has one observation per JVM. It establishes neither a between-fork tail distribution nor how much time the collector stopped application work. [Per-fork measurements](java/forks.csv) · [Raw scheduled runs](java/two-minute.jsonl.gz) · [JVM, classfile and binary identities](java/two-minute-inputs.json).
+
+![Reference-array saturation and scheduled latency on the three JVMs](java/comparison.png)

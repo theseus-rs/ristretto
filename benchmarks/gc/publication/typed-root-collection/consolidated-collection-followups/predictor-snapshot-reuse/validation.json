@@ -105,6 +105,10 @@
     "neon-high": {
       "status": "SUCCESS",
       "response": "**Yes.** `update` preserves the winning displaced `prior` (`displaced(&prior)` runs before caching), never mutates published data, and prevents double counting (assuming `change` only mutates `&mut T`).\n\n- **Pinned guard:** `rcu` pays reader debts before returning `prior`; live guards keep strong count >1, so `Arc::get_mut` returns `None` and drops the handle without mutating.\n- **Re-entrant/losing CAS:** `Cell::take` prevents aliasing; retries rebuild from fresh `previous`.\n- **Cross-heap:** `clone_from` overwrites all scalar/time fields; idle TLS retains no collector objects.\n- **TLS teardown:** `try_with` ignores `AccessError`, allocating and dropping `prior`.\n- **Limitations:** Lock-free `rcu` risks writer starvation under contention. Allocator fallbacks occur when guards pin `retired`, losing CAS discards the recycled candidate, or TLS tears down.\n"
+    },
+    "runner-neon": {
+      "status": "SUCCESS",
+      "response": "- **Command:** `cargo test --locked -p ristretto_gc --lib a_pinned_model_and_two_heap_limits_survive_reuse_during_full_lifecycles`\n- **Rust test:** `scheduling::tests::a_pinned_model_and_two_heap_limits_survive_reuse_during_full_lifecycles`\n- **Result:** `ok` (`1 passed; 0 failed; 0 ignored; 0 measured; 626 filtered out; finished in 0.00s`)\n- **Process exit:** `0`\n"
     }
   },
   "minimum_95_speedup_bounds": {
