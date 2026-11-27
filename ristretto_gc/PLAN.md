@@ -9,6 +9,18 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `ee80df21` another thread could inspect the same conditional slot and finish a
+full collection while its owner was being constructed. All 18 cooperative
+schedules passed on native, WASI and Miri. The minimum individual 95% speedup
+bounds for complete collection against `f1daebeb` were 10.125× native and
+10.391× WASI. Removing a manual root inside a constructor still exhausted
+2,048 polls under both publication policies and all three root storage modes.
+[Controls, graph and raw observations](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/conditional-owner-construction/README.md).
+
+The ordinary Java roots comparison at `31537fbf` measured 3,375 operations/s for
+Ristretto, 8.90 million/s for G1 and 8.68 million/s for ZGC. Ristretto left 721
+scheduled operations unfinished. [Comparison, tails and all 27 processes](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/explicit-roots-shipping/README.md).
+
 At `fc698c05` peers finished fresh full collections during explicit root
 preparation in all 12 forced schedules. Optional vectors respected their edge
 budget and optional locked payloads returned control to the collector. The
