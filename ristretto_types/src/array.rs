@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 /// Shares the cooperative work allowance across every level of a Java
 /// multidimensional array, including zero-length children.
+#[derive(Debug)]
 pub struct ArrayNodeBudget {
     remaining: usize,
 }
