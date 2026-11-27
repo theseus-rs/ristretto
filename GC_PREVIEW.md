@@ -72,8 +72,10 @@ python3 benchmarks/gc/release/verify_alpha_heap.py
 cargo package --locked -p ristretto_gc
 ```
 
-The workspace check covers 21 graphs, including the release `java` launcher
-with default features disabled on bare wasm32, WASIp2 and bare wasm64. Each
+The verifier checks normal, build and development dependencies across all workspace
+members, features and targets. It also checks 21 shipping graphs individually,
+including the release `java` launcher with default features disabled on bare
+wasm32, WASIp2 and bare wasm64. Each
 release job verifies its own launcher target and Cargo features before packaging.
 All three Wasm launchers built using the release workflow’s dry-run profile.
 On WASIp2 the released launcher entry point executed eight rounds of the Java
