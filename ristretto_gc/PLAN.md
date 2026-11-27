@@ -9,6 +9,13 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+Both stock publication policies returned Java heap-space errors in every
+two-worker native 64 MiB reference-array fork, and in all twelve 512 MiB
+ordinary native launcher forks. Two debugger stops found 438 and 4,014
+retired arrays ready for cleanup. One physical refund would have covered the
+131,400-byte request in either case. Counted publication remains opt-in.
+[Stock controls, heap snapshots and capped recovery](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/stock-publication/README.md).
+
 The candidate at `c051ed39` allowed a funded allocation and two fresh full
 tickets to finish while a producer was parked at the 129th distinct mature
 deletion group. Its minimum individual lower 95% bounds for complete collection

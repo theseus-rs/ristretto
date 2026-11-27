@@ -39,6 +39,13 @@ run with `cargo test -p ristretto_gc --test helpable_publication_model -- --noca
 Four expected counterexamples and seven reduced positive checks constrain the next
 runtime redesign; they are not collector progress benchmarks or qualification.
 
+The `stock` and `stock-counted` comparison modes use JVM defaults with the
+specified heap and worker count. The latter enables counted publication.
+The native JIT runtime names are `ristretto-stock-jit` and
+`ristretto-stock-counted-jit`. The WASIp2 names are `wasm-stock` and
+`wasm-stock-counted`. Each run records the selected policy and its effective
+publication setting. [Stock controls and native heap-space failures](publication/typed-root-collection/consolidated-collection-followups/stock-publication/README.md).
+
 ## Build and run
 
 The runner currently requires Linux, Python 3.11+, GNU `/usr/bin/time`, and a local
