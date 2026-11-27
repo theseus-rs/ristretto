@@ -2,6 +2,12 @@
 //! threads commit fresh work or complete a collection ticket.
 use super::{Arc, CollectionKind, Cycle, GarbageCollector, Ordering, Result, Statistics};
 
+thread_local! {
+    /// One retired allocation per updating thread. Statistics contain only values
+    /// and timestamps, so an idle thread retains no collector or managed object.
+    static SPARE: std::cell::Cell<Option<Arc<Statistics>>> = const { std::cell::Cell::new(None) };
+}
+
 /// Accumulate useful work until its reservation or collector step completes.
 #[derive(Default)]
 pub(super) struct WorkCounters {
@@ -51,19 +57,31 @@ impl GarbageCollector {
     }
 
     // The closure can retry against a competing commit. Keep clocks, ticket
-    // publication, scheduler notifications and destructive takes outside it.
-    pub(super) fn update_statistics(&self, change: impl Fn(&mut Statistics)) -> Arc<Statistics> {
-        self.statistics.rcu(|previous| {
+    // publication, scheduler notifications and work-counter takes outside it.
+    pub(super) fn update_statistics(&self, change: impl Fn(&mut Statistics)) -> usize {
+        let prior = self.statistics.rcu(|previous| {
+            if let Some(mut spare) = SPARE.try_with(std::cell::Cell::take).ok().flatten()
+                && let Some(snapshot) = Arc::get_mut(&mut spare)
+            {
+                // A published or reader-pinned version can never be unique here.
+                snapshot.clone_from(previous.as_ref());
+                change(snapshot);
+                return spare;
+            }
             let mut next = previous.as_ref().clone();
             change(&mut next);
             Arc::new(next)
-        })
+        });
+        let young_collections = prior.young_collections;
+        // TLS may already be unavailable during thread teardown.
+        let _ = SPARE.try_with(|slot| slot.set(Some(prior)));
+        young_collections
     }
 
     pub(super) fn record_cycle_completion(&self, cycle: &Cycle, counters: &mut WorkCounters) {
         let duration = cycle.started.map(|started| started.elapsed());
         let completed = std::mem::take(counters);
-        let prior = self.update_statistics(|stats| {
+        let previous_young = self.update_statistics(|stats| {
             completed.add_to(stats);
             stats.collections_completed += 1;
             match cycle.kind {
@@ -78,7 +96,7 @@ impl GarbageCollector {
         });
         match cycle.kind {
             CollectionKind::Young => {
-                let young = prior.young_collections + 1;
+                let young = previous_young + 1;
                 if young.is_multiple_of(self.configuration.full_collection_interval.max(1)) {
                     self.domains[1].publish_request();
                 } else if self.configuration.old_collection_interval != 0
@@ -138,6 +156,22 @@ mod tests {
     use super::*;
 
     #[test]
+    fn recycling_a_snapshot_never_overwrites_a_reader_or_carries_counts_to_another_heap() {
+        let gc = GarbageCollector::new();
+        let other = GarbageCollector::new();
+        let held = gc.statistics.load();
+        for _ in 0..8 {
+            gc.update_statistics(|s| s.objects_marked += 2);
+            other.update_statistics(|s| s.objects_swept += 1);
+        }
+        assert_eq!((held.objects_marked, held.objects_swept), (0, 0));
+        let current = gc.statistics.load();
+        let peer = other.statistics.load();
+        assert_eq!((current.objects_marked, current.objects_swept), (16, 0));
+        assert_eq!((peer.objects_marked, peer.objects_swept), (0, 8));
+    }
+
+    #[test]
     fn competing_work_commits_publish_each_exact_delta_once() {
         let gc = GarbageCollector::new();
         let initial = gc.statistics.load_full();
@@ -153,24 +187,18 @@ mod tests {
             logical_freed: 64,
             ..WorkCounters::default()
         };
-        let prior = gc.update_statistics(|snapshot| {
+        let previous_young = gc.update_statistics(|snapshot| {
             completed.add_to(snapshot);
             // This commit wins the first publication attempt. The outer update
             // must recalculate its whole delta from the winning snapshot.
             if let Some(mut delta) = other.take() {
+                gc.update_statistics(|s| s.young_collections += 1);
                 delta.publish(&gc);
             }
         });
         let current = gc.statistics().expect("collection statistics");
         assert_eq!(initial.objects_swept, 0);
-        assert_eq!(
-            (
-                prior.objects_swept,
-                prior.managed_bytes_freed,
-                prior.bytes_freed
-            ),
-            (2, 80, 48)
-        );
+        assert_eq!(previous_young, 1);
         assert_eq!(
             (
                 current.objects_swept,
