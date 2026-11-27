@@ -16,6 +16,9 @@ impl<T> Link<T> {
     fn load(&self) -> Option<Arc<T>> {
         self.0.load_full()
     }
+    fn is_none_or(&self, predicate: impl FnOnce(&T) -> bool) -> bool {
+        self.0.load().as_deref().is_none_or(predicate)
+    }
     fn swap(&self, value: Option<Arc<T>>) -> Option<Arc<T>> {
         self.0.swap(value)
     }
@@ -371,10 +374,20 @@ mod tests {
             .stack_size(128 * 1024)
             .spawn(|| {
                 let queue = Queue::new();
-                for item in 0..100_000 {
-                    queue.push(item);
+                let witness = Arc::new(());
+                let detached = queue.prepare(None);
+                queue.push(None);
+                assert_eq!(queue.pop(), Some(None));
+                // The second predecessor retains the live suffix after queue teardown.
+                let live = queue.prepare(None);
+                for _ in 0..100_000 {
+                    queue.push(Some(witness.clone()));
                 }
                 drop(queue);
+                drop(detached);
+                assert_eq!(Arc::strong_count(&witness), 100_001);
+                drop(live);
+                assert_eq!(Arc::strong_count(&witness), 1);
             })
             .expect("small-stack thread")
             .join()

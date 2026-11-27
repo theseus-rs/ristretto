@@ -36,6 +36,11 @@ impl<T> Node<T> {
 impl<T> Drop for Node<T> {
     fn drop(&mut self) {
         self.counts.nodes.fetch_sub(1, Ordering::Relaxed);
+        // Under sole ownership, a terminal link cannot change. Its ordinary
+        // field destructor releases the sentinel and settles any reader debt.
+        if self.retired || self.next.is_none_or(|next| next.retired) {
+            return;
+        }
         // Queue destruction or an abandoned reader must not recursively destroy
         // an arbitrarily long chain on the native or Wasm stack.
         let mut next = self.next.swap(None);

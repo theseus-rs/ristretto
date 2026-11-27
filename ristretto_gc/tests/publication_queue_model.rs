@@ -25,6 +25,9 @@ impl<T> Link<T> {
     fn load(&self) -> Option<Arc<T>> {
         self.0.lock().unwrap().clone()
     }
+    fn is_none_or(&self, predicate: impl FnOnce(&T) -> bool) -> bool {
+        self.0.lock().unwrap().as_deref().is_none_or(predicate)
+    }
     fn swap(&self, value: Option<Arc<T>>) -> Option<Arc<T>> {
         std::mem::replace(&mut *self.0.lock().unwrap(), value)
     }
