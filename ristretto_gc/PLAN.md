@@ -19,6 +19,12 @@ All 36 complete-collection conditions passed against `f1daebeb`; the minimum
 individual 95% lower speedup bounds were 10.73× native and 10.004× WASI.
 [Queue-root controls, validation and complete-collection graphs](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/java-queue-root-preparation/README.md).
 
+The explicit Java execution window at the same revision recorded 349 interpreted
+roots operations and 5,584 interpreted node constructors with the JIT enabled.
+The positive control recorded seven compiled entries and 35 compiled backedges.
+The first ordinary operation rejection was `new` at bytecode offset 51.
+[Execution windows, separate release-profile forks and small-field layout measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/queue-root-execution/README.md).
+
 At `a5ad4aec` a completed epoch rejects new proposals and public steps
 discard at most one already-admitted proposal each. Native and WASI drained
 4,096 proposals in 4,096 steps. A separate native schedule completed a new
