@@ -1,5 +1,7 @@
 # Protected raw barriers and bounded Java array writes
 
+The [mature deletion follow-up](mature-deletion-bitmap/README.md) records the passing native and WASIp2 release screens and the remaining 65-group stall.
+
 The integrated revision `f97f8a99` uses the same JVM collector as its
 parent `58fe2949`. It passed the native Java gate. The two edits address
 distinct ways a suspended publisher could hold up a peer.

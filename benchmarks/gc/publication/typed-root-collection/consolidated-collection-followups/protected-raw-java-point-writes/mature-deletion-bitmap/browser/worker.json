@@ -1,0 +1,98 @@
+{
+  "revision": "f462e61ca477e2b6e6330b563369171f0e23d214",
+  "component_sha256": "36e4f8d54d14bbd22a55a824f48799512a469509f5bd29583762a93c948d5726",
+  "web_source_archive": "40a7dfe7c0fa7bd3856a2d0e1dff49fd438bd74cf1318f4442d8b406b8b5d628",
+  "packages": {
+    "ristretto_gc": {
+      "path_in_checkout": "ristretto_gc/src/lib.rs",
+      "sha256": {
+        "libristretto_gc-332a2de53a031fb8.rlib": "c6e36311fe24cf8c1cf611fa2a3c61fd8a161bb93a68359a641460a845e5aa7f",
+        "libristretto_gc-332a2de53a031fb8.rmeta": "e091399ebed4150dd911f0a556cfd533b64cc85bea6e60a319a097c756c7f54b"
+      }
+    },
+    "ristretto_classloader": {
+      "path_in_checkout": "ristretto_classloader/src/lib.rs",
+      "sha256": {
+        "libristretto_classloader-8d619fd0f50c4515.rlib": "6aeea40431b9eece0b9c4d208db47ebb137c6e6bbbd3e2d15bce7457e247563f",
+        "libristretto_classloader-8d619fd0f50c4515.rmeta": "380479f7e37a2340a1580dc9a188b259044aa2392f8af4126248f7f1768f5e43"
+      }
+    },
+    "ristretto_vm": {
+      "path_in_checkout": "ristretto_vm/src/lib.rs",
+      "sha256": {
+        "libristretto_vm-55ff15f1fff48ca6.rlib": "08b7f30fe79d2e1dda7a82fb81290031a04a9314c50263a41534da3c06a019b3",
+        "libristretto_vm-55ff15f1fff48ca6.rmeta": "8bd7a0b72fd87d23a3b93366e6bcf85e0195e2229fd2b860de6d32dae6d5b46f"
+      }
+    },
+    "ristretto_playground_engine": {
+      "path_in_checkout": "web/runner/src/lib.rs",
+      "sha256": {
+        "ristretto_playground_engine.wasm": "36e4f8d54d14bbd22a55a824f48799512a469509f5bd29583762a93c948d5726",
+        "libristretto_playground_engine.rlib": "96520c1862f0d227526a1450bf86d6704290ca95e4d5d2b8d587635ed12990ff"
+      }
+    }
+  },
+  "jdk": {
+    "version": "25.0.4.10.1",
+    "file": "b69177aa59cab12f-jdk-25.zip",
+    "sha256": "b69177aa59cab12ff109915135fb5eb4903606f322eab025cacce2d657b3b778",
+    "size": 22214764
+  },
+  "worker_sha256": "bc4c48fdcf091f75d9ae51a0ea704d5d2bad0a1829a1540e05890f4e38c74959",
+  "class_source_sha256": "7bef65d33b7d3bed1c925806e46ad6bc3077ca9807f61a79033e919741dd0cfb",
+  "inputs": "Release WASIp2 playground engine, pinned JS packages, production worker source, verified cached Java 25 archive",
+  "cpus": [
+    4,
+    6
+  ],
+  "processes": [
+    {
+      "fork": 1,
+      "browser": "153.0.8010.12",
+      "bytesFreed": 10473075,
+      "completed": 13,
+      "liveBytesAfter": 3853065,
+      "liveBytesBefore": 2291474,
+      "objectsSwept": 54059,
+      "maxWorkerReplyGapMs": 23.899999618530273,
+      "p95WorkerReplyGapMs": 19.59999990463257,
+      "p99WorkerReplyGapMs": 23.899999618530273,
+      "javaWindowMs": 1511.9000000953674,
+      "scheduledPings": 95,
+      "workerRepliesDuringJava": 95,
+      "unansweredPings": 0
+    },
+    {
+      "fork": 2,
+      "browser": "153.0.8010.12",
+      "bytesFreed": 10473075,
+      "completed": 13,
+      "liveBytesAfter": 3853065,
+      "liveBytesBefore": 2291474,
+      "objectsSwept": 54059,
+      "maxWorkerReplyGapMs": 24,
+      "p95WorkerReplyGapMs": 20.40000009536743,
+      "p99WorkerReplyGapMs": 24,
+      "javaWindowMs": 1477.5,
+      "scheduledPings": 93,
+      "workerRepliesDuringJava": 93,
+      "unansweredPings": 0
+    },
+    {
+      "fork": 3,
+      "browser": "153.0.8010.12",
+      "bytesFreed": 10473075,
+      "completed": 13,
+      "liveBytesAfter": 3853065,
+      "liveBytesBefore": 2291474,
+      "objectsSwept": 54059,
+      "maxWorkerReplyGapMs": 21.90000009536743,
+      "p95WorkerReplyGapMs": 19.5,
+      "p99WorkerReplyGapMs": 21.399999618530273,
+      "javaWindowMs": 1620.8000001907349,
+      "scheduledPings": 101,
+      "workerRepliesDuringJava": 101,
+      "unansweredPings": 0
+    }
+  ]
+}

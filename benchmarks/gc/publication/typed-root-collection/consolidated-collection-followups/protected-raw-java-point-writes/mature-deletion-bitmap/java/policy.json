@@ -1,0 +1,31 @@
+{
+  "parent": "6f577187c3d44a11f1e2cef1a513d956f89cb456",
+  "candidate": "f462e61ca477e2b6e6330b563369171f0e23d214",
+  "workers": 2,
+  "cpu_quota": 2,
+  "heap_mib": 64,
+  "rss_mib": 512,
+  "cpus": [
+    20,
+    22
+  ],
+  "rates": [
+    0,
+    500
+  ],
+  "minimum_native_capacity_ratio": 0.95,
+  "long_forks_per_runtime": 2,
+  "short_forks_per_runtime_rate": 3,
+  "short_completions": 5000,
+  "long_completions": 60000,
+  "max_long_median_p999_ratio": 1.1,
+  "minimum_full_collection_lower_95": 10,
+  "seeds": {
+    "short_native": 251127659,
+    "long_native": 251127661,
+    "short_wasi": 251127663
+  },
+  "wasi_sustained_reference": "379ad59a",
+  "wasi_sustained_seed": 251127665,
+  "max_wasi_sustained_p999_ratio": 1.1
+}

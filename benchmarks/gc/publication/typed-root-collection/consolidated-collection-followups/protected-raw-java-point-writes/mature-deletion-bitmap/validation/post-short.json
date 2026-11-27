@@ -1,0 +1,5 @@
+{
+  "status": "SUCCESS",
+  "response": "No, close cannot lose a bit from a publisher parked immediately before its CAS because either (1) the publisher's CAS wins first, making the state non-empty so close's empty-to-SEALED CAS fails and must handle the admitted bit, or (2) close's empty-to-SEALED CAS wins first, causing the publisher's CAS to fail and observe SEALED so the bit is never admitted into a sealed state.\n",
+  "duration_seconds": 12.047865544
+}

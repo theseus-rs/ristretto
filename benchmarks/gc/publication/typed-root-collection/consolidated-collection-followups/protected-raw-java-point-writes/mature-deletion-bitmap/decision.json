@@ -1,0 +1,11 @@
+{
+  "revision": "f462e61ca477e2b6e6330b563369171f0e23d214",
+  "collection_lower_bounds": {
+    "native": 11.228170891075068,
+    "wasm": 10.933535889245578
+  },
+  "native_short_and_sustained": true,
+  "wasi_short": true,
+  "wasi_sustained": true,
+  "include_in_alpha_pr": true
+}

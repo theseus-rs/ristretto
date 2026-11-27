@@ -9,7 +9,17 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
-The two-minute workerless WASIp2 JVM screen missed the scheduled-latency gate. Both runtimes completed 60,000/60,000 arrivals in each fork. Median p99.9 went from 39.936 ms on the immediate parent to 45.056 ms with epoch-owned deletion, a 12.8% increase against the 10% limit. A separate native callback experiment left a published continuation unreachable from foreground `gc.step()` while its primary was parked. The experimental queue failed in 24/24 trials. The shipping collector passed all 24 and now keeps this schedule in its unit suite.
+The mature deletion bitmap at `f462e61c` passed the collection and JVM release screens.
+Its lowest individual lower 95% bounds for complete collection were 11.228×
+native and 10.934× WASIp2 versus `f1daebeb`. The default index requested
+4,288 host bytes for 2,048 dense targets, down from 19,712. Both two-minute
+candidate forks on each platform completed 60,000 arrivals. Scheduled p99.9
+was 2.896 ms native and 36.736 ms WASIp2. At 65 sparse identity groups a
+parked producer still exhausted a peer allocation and a full ticket. The
+next progress gate covers sparse overflow and claims parked before reservation.
+[Schedules, host allocation counts, complete-collection graph and G1/ZGC comparison](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/mature-deletion-bitmap/README.md).
+
+The earlier two-minute workerless WASIp2 JVM screen missed the scheduled-latency gate. Both runtimes completed 60,000/60,000 arrivals in each fork. Median p99.9 went from 39.936 ms on the immediate parent to 45.056 ms with epoch-owned deletion, a 12.8% increase against the 10% limit. A separate native callback experiment left a published continuation unreachable from foreground `gc.step()` while its primary was parked. The experimental queue failed in 24/24 trials. The shipping collector passed all 24 and now keeps this schedule in its unit suite.
 [Sustained WASIp2 gate](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/epoch-visible-deletions/wasi-sustained/README.md) · [Foreground reclamation experiment](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/epoch-visible-deletions/native-callback-continuation/README.md).
 
 Epoch-owned numeric deletion passed the alpha PR screen. Both peers finished during a parked old-epoch publication in the covered schedules. A second young cycle also preserved the original edge while the producer was stopped. All 36 complete-collection conditions cleared 10× against `f1daebeb`, with minimum individual lower 95% bounds of 11.345× native and 10.962× WASIp2. Both two-minute native forks served 60,000 arrivals. Median scheduled p99.9 rose from 2.528 to 2.752 ms. The direct native Java workload measured 6,322 ops/s against 712 on the original alpha baseline, 1,053,376 on G1 and 585,742 on ZGC.
