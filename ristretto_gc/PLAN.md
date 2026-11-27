@@ -23,6 +23,14 @@ removing it from the source. The next implementation needs to preserve the
 graph across that handoff and meet the JVM latency gate.
 [Sparse-deletion results, exact-claim schedules and model](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/sparse-mature-deletions/README.md).
 
+In a follow-up, staging the selected ID in its dense stripe allowed an old
+collection, a fresh full ticket and, in a separate case, a demand-only capped
+allocation to finish with the selector parked. Parking the executor after
+physical marking still left both peers pending for 2,048 turns. The handoff
+remains experimental.
+[Runtime schedules, independent review and patch](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/sparse-mature-deletions/dense-selection/README.md).
+
+
 The mature deletion bitmap at `f462e61c` passed the collection and JVM release screens.
 Its lowest individual lower 95% bounds for complete collection were 11.228×
 native and 10.934× WASIp2 versus `f1daebeb`. The default index requested
