@@ -1,5 +1,7 @@
 # Java latency and memory across integrated collector revisions
 
+[Inline instance fields missed the Java roots throughput gate in nine paired JVM runs.](inline-instance-fields/README.md)
+
 [Unified JVM heap against G1 and ZGC at `b65722a0`, including saturated throughput and scheduled response](unified-heap-roots/README.md).
 
 [Static long stores and scheduled Java roots latency at 1,000 and 1,500 requests/s](ordinary-static-long/README.md).

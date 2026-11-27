@@ -9,6 +9,11 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+An inline-storage candidate for Java instances with up to two fields missed its
+roots throughput gate. Nine paired forks gave a median throughput ratio of
+0.984×, with a 95% interval of 0.963–1.189×. The shipping JVM retains its
+existing field backing. [Candidate source, graph and all 54 process measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/inline-instance-fields/README.md).
+
 At `ae693278` Java queue-root preparation moved outside the collector cut.
 A peer finished a fresh full collection while the preparing thread was parked.
 Before that thread resumed, peers delivered a rebound owner exactly once and
