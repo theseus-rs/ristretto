@@ -9,6 +9,17 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `899d8a92`, an idle public GC step delivered all 129 remaining wakes
+after the first Java handler consumed the sole reference, completed a full
+collection reentrantly and parked. The 100 fresh candidate processes also
+checked whether the last handler requested more work. The minimum individual
+95% lower speedup bounds across the 36 complete-collection conditions were
+10.62× native and 10.34× WASI against `f1daebeb`. A separate native and WASI
+control directly offered 512 or 4,096 stale root proposals to a retained
+epoch. Dropping its last owner released every proposal synchronously. Disposal
+work per cooperative step remains a release gate.
+[Idle handler delivery, complete-collection graphs and stale-epoch controls](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/idle-reference-handlers/README.md).
+
 At `e0f2b29c`, a Java reference publisher parked on either side of the
 queue link lets a peer allocate, finish a new full collection and deliver two
 distinct owners exactly once. With the previous collector a new ticket
