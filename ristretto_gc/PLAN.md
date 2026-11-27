@@ -24,12 +24,15 @@ and had yet to deliver its collection request. With zero background workers,
 only the allocation was polled in 200 forced schedules.
 [Notification handoff](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/predictor-snapshot-reuse/README.md#a-predicting-publisher-parked-before-notification).
 
-**Next progress hypothesis.** With the default old-collection interval of
-zero, tracing an embedded `GcRootGuard` during ordinary marking may wait
-on the target's object shard inside `Objects::live`. Park the shard after
-the parent callback enters and check whether the assisting poll returns.
-Release the shard before checking full-ticket completion and liveness.
-The Java comparison configuration uses an interval of four.
+At `46d0afec`, a reserved callback tracing a rooted child returned from its
+mark step while the child's shard remained parked in all 400 forced schedules.
+The parent blocked and retained an unrelated object on a mismatched identity
+in all four configurations. Two more probes covered a pending birth, raw-owner
+liveness and logical retirement during overlapping sweep. The 36 complete-cycle
+conditions cleared 10× against `f1daebeb`, with minimum individual 95% bounds
+of 10.361× native and 10.154× WASI. The blocked path used the default old-cycle
+interval of zero. The whole-JVM comparison uses an interval of four.
+[Negative control, schedules and collection graph](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/reserved-edge-shard/README.md).
 
 At `d1cab313`, full collection and a capped allocation completed under both
 publication policies with a parked predictive-scheduling reader or allocating

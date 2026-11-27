@@ -1,0 +1,93 @@
+{
+  "source_revision": "46d0afec1a71fedc98d4ce0c29203375dc5609af",
+  "parent": "f72a6053",
+  "native_test_binary_sha256": "a16e4a2cf960868d8ca10c920556e6563230e180bf9f374d29ce0e540d57f01e",
+  "suites": {
+    "native": {
+      "passed": 1037,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasm": {
+      "passed": 470,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "miri": {
+    "birth": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "overlap": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "forced_settings": 800,
+  "fresh_processes": 300,
+  "previews": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "shipping": {
+    "collector_dependency_graphs": 14,
+    "release_tool_tests": 12,
+    "managed_64_mib_array_allocations": {
+      "native": 8192,
+      "wasi": 8192
+    },
+    "cargo": [
+      "verified archive",
+      "native and WASI normalized consumers",
+      "strict native and WASI all-feature all-target Clippy"
+    ]
+  },
+  "minimum_individual_95_speedup_bounds": {
+    "native": 10.360960134517637,
+    "wasm": 10.153984615880614
+  },
+  "audit": {
+    "installed_carbon_xhigh": "unsupported",
+    "carbon_high": "print timeouts on design and implementation reviews",
+    "post_edit_neon": {
+      "status": "SUCCESS",
+      "response": "No: for nonzero allocation IDs, matching the ID in the address-index snapshot before `birth.visible()` rejects any replacement at a reused address, and cloning the exact descriptor `Arc` binds the subsequent `birth.is_live()` recheck and `shade_known` retirement/admission checks (alongside the retained callback reservation and old-only admission) to the original descriptor rather than the address slot. This relies on the lifetime assumptions that nonzero allocation IDs are never reused or wrapped while an in-flight mark can still target an old allocation, and that for raw id zero the independently live original owner keeps the original allocation alive with its address unrecycled at least until the snapshot lookup clones its `Arc` (violating either assumption could allow address reuse to redirect the mark to a replacement).\n"
+    },
+    "lifetime_checks": [
+      "identity::tests::partial_final_ranges_exhaust_without_wrapping_or_invalidating_reserved_ids",
+      "identity::tests::abandoned_ranges_are_not_recycled",
+      "collector::generation_tests::reserved_numeric_tracing_preserves_raw_owners_and_rejects_full_sweep_garbage"
+    ]
+  }
+}
