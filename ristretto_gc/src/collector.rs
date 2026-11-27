@@ -974,6 +974,7 @@ struct Cycle {
     reference_stage: usize,
     late_reference_turn: bool,
     retry_reference: Option<crate::weak_registry::Entry>,
+    pending_notice: Option<Arc<references::PendingNotice>>,
     ticket: u64,
     #[cfg(not(target_family = "wasm"))]
     active_full_cleanup: Option<FullCleanup>,
@@ -1016,6 +1017,7 @@ impl Default for Cycle {
             reference_stage: 0,
             late_reference_turn: false,
             retry_reference: None,
+            pending_notice: None,
             ticket: 0,
             #[cfg(not(target_family = "wasm"))]
             active_full_cleanup: None,

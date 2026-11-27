@@ -59,8 +59,17 @@ pub(crate) struct Prepared<T> {
     predecessor: Link<Node<T>>,
 }
 
+impl<T> fmt::Debug for Prepared<T> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Prepared")
+            .field("linked", &self.node.linked.load(Ordering::Acquire))
+            .finish_non_exhaustive()
+    }
+}
+
 impl<T> Prepared<T> {
-    fn linked(&self) -> bool {
+    pub(crate) fn linked(&self) -> bool {
         if self.node.linked.load(Ordering::Acquire) {
             return true;
         }
@@ -142,7 +151,7 @@ impl<T> Queue<T> {
         self.help_observed(prepared, || {}, || {})
     }
 
-    fn help_observed(
+    pub(crate) fn help_observed(
         &self,
         prepared: &Prepared<T>,
         before_link: impl FnOnce(),

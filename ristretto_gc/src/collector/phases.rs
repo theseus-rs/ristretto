@@ -381,7 +381,7 @@ impl GarbageCollector {
                     Phase::References => match self.reference_unit(&mut cycle, &mut counters) {
                         Unit::Progress => {}
                         Unit::Busy => break,
-                        Unit::Sweep(work) => {
+                        Unit::External(work) => {
                             let epoch = cycle.epoch;
                             drop(cycle);
                             drop(coordinator);
@@ -665,7 +665,7 @@ impl GarbageCollector {
                     Phase::Sweep => match self.sweep_unit(&mut cycle, &mut work, &mut counters) {
                         Unit::Progress => {}
                         Unit::Busy => break,
-                        Unit::Sweep(external) => {
+                        Unit::External(external) => {
                             let epoch = cycle.epoch;
                             drop(cycle);
                             drop(coordinator);

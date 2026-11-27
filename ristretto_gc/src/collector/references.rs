@@ -5,6 +5,9 @@ use super::{
     PendingReferenceRoot, Result, Retention, Trace,
 };
 
+type NoticeEntry = (crate::ObjectId, crate::roots::TreeRoot);
+pub(super) type PendingNotice = crate::publication_queue::Prepared<NoticeEntry>;
+
 impl GarbageCollector {
     pub(super) fn register_weak(&self, slot: &Arc<crate::weak::WeakSlot>) {
         let address = slot.target.load(Ordering::Acquire);
@@ -213,19 +216,32 @@ impl GarbageCollector {
         result.map(Some)
     }
 
-    pub(super) fn enqueue_reference(&self, slot: &crate::weak::WeakSlot) {
-        if let Some(metadata) = self.reference_owner(slot) {
-            let id = self.insert_root(metadata.ptr().0);
-            let queue = self
-                .pending_references
-                .get_or_init(|| Box::new(crate::publication_queue::Queue::new()));
-            #[cfg(all(test, not(target_family = "wasm")))]
-            queue.test_push_after_link(
-                (metadata.id, id),
-                super::reference_tests::pause_after_pending_notice,
-            );
-            #[cfg(not(all(test, not(target_family = "wasm"))))]
-            queue.push((metadata.id, id));
-        }
+    fn reference_queue(&self) -> &crate::publication_queue::Queue<NoticeEntry> {
+        self.pending_references
+            .get_or_init(|| Box::new(crate::publication_queue::Queue::new()))
+    }
+
+    pub(super) fn prepare_reference(
+        &self,
+        slot: &crate::weak::WeakSlot,
+    ) -> Option<Arc<PendingNotice>> {
+        let metadata = self.reference_owner(slot)?;
+        let root = self.insert_root(metadata.ptr().0);
+        Some(Arc::new(
+            self.reference_queue().prepare((metadata.id, root)),
+        ))
+    }
+
+    pub(super) fn link_reference(&self, notice: &PendingNotice) {
+        // A failed bounded attempt leaves the intent in the cycle for the next worker.
+        let queue = self.reference_queue();
+        #[cfg(all(test, not(target_family = "wasm")))]
+        queue.help_observed(
+            notice,
+            || super::reference_tests::pause_pending_notice(false),
+            || super::reference_tests::pause_pending_notice(true),
+        );
+        #[cfg(not(all(test, not(target_family = "wasm"))))]
+        queue.help(notice);
     }
 }

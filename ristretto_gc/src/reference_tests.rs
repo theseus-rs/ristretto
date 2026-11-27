@@ -5,23 +5,64 @@ use crate::{GcWeak, ReferenceKind, RootStorage};
 
 #[cfg(not(target_family = "wasm"))]
 thread_local! {
-    static PENDING_NOTICE_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+    static PENDING_NOTICE_PAUSE: std::cell::Cell<Option<(bool, ClaimPause)>> = const { std::cell::Cell::new(None) };
 }
 
 #[cfg(not(target_family = "wasm"))]
-pub(super) fn pause_after_pending_notice() {
-    if let Some(pause) = PENDING_NOTICE_PAUSE.take() {
+pub(super) fn pause_pending_notice(linked: bool) {
+    if let Some((after_link, pause)) = PENDING_NOTICE_PAUSE.take() {
+        if linked != after_link {
+            PENDING_NOTICE_PAUSE.set(Some((after_link, pause)));
+            return;
+        }
         pause.entered.send(()).expect("observed pending notice");
         pause
             .resume
-            .recv_timeout(std::time::Duration::from_secs(15))
+            .recv_timeout(std::time::Duration::from_secs(if cfg!(miri) {
+                120
+            } else {
+                15
+            }))
             .expect("resume notifier");
     }
 }
 
 #[cfg(not(target_family = "wasm"))]
 #[test]
-fn published_reference_can_notify_while_the_first_notifier_is_parked() -> Result<()> {
+fn parked_pending_notice_allows_allocation_full_collection_and_exact_transfer() -> Result<()> {
+    if cfg!(miri) {
+        assert_eq!(
+            parked_pending_notice(false, false, ReferenceKind::Weak, true)?,
+            (true, true, true)
+        );
+        return Ok(());
+    }
+    let mut outcomes = Vec::new();
+    for counted in [false, true] {
+        for independent in [false, true] {
+            for kind in [ReferenceKind::Weak, ReferenceKind::Final] {
+                for after_link in [false, true] {
+                    outcomes.push(parked_pending_notice(
+                        counted,
+                        independent,
+                        kind,
+                        after_link,
+                    )?);
+                }
+            }
+        }
+    }
+    assert_eq!(outcomes, [(true, true, true); 16]);
+    Ok(())
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn parked_pending_notice(
+    counted: bool,
+    independent: bool,
+    kind: ReferenceKind,
+    after_link: bool,
+) -> Result<(bool, bool, bool)> {
     use std::future::Future;
     use std::sync::mpsc;
     use std::task::{Context, Wake, Waker};
@@ -33,54 +74,109 @@ fn published_reference_can_notify_while_the_first_notifier_is_parked() -> Result
             self.0.store(true, Ordering::Release);
         }
     }
-    let gc = GarbageCollector::new();
+
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .concurrent_publication(counted)
+            .independent_phases(independent)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
     let target = Gc::try_new(&gc, 42_u64)?;
     let owner = Gc::try_new(&gc, 7_u64)?;
-    let weak = GcWeak::new(&target, ReferenceKind::Weak, owner.as_ptr() as usize);
+    let weak = GcWeak::new(&target, kind, owner.as_ptr().addr());
     drop(target);
     let mut wait = std::pin::pin!(gc.wait_for_pending_references());
     let signal = Arc::new(Signal(AtomicBool::new(false)));
     let waker = Waker::from(signal.clone());
-    assert!(
-        wait.as_mut()
-            .poll(&mut Context::from_waker(&waker))
-            .is_pending()
-    );
+    let mut cx = Context::from_waker(&waker);
+    assert!(wait.as_mut().poll(&mut cx).is_pending());
     let (entered, parked) = mpsc::channel();
     let (resume, release) = mpsc::channel();
-    thread::scope(|scope| -> Result<()> {
+    let outcome = thread::scope(|scope| -> Result<_> {
         let collector = gc.clone();
         let first = scope.spawn(move || {
-            PENDING_NOTICE_PAUSE.set(Some(ClaimPause {
-                entered,
-                resume: release,
-            }));
+            PENDING_NOTICE_PAUSE.set(Some((
+                after_link,
+                ClaimPause {
+                    entered,
+                    resume: release,
+                },
+            )));
             collector.collect_full()
         });
         parked
-            .recv_timeout(Duration::from_secs(10))
-            .expect("published reference");
-        assert!(gc.has_pending_references());
-        gc.step();
+            .recv_timeout(Duration::from_secs(if cfg!(miri) { 120 } else { 10 }))
+            .expect("pending queue link");
+        assert_eq!(gc.has_pending_references(), after_link);
+        let (allocated, allocation) = mpsc::channel();
+        let heap = &gc;
+        scope.spawn(move || {
+            let fresh = Gc::try_new(heap, 73_u64).expect("allocation with headroom");
+            let value = **fresh;
+            drop(fresh);
+            allocated.send(value).expect("allocation result");
+        });
+        let allocated =
+            allocation.recv_timeout(Duration::from_secs(if cfg!(miri) { 60 } else { 2 })) == Ok(73);
+        let ticket = gc.request_full_cycle();
+        for _ in 0..2048 {
+            gc.step();
+            if gc.completed_full_ticket() >= ticket {
+                break;
+            }
+        }
+        let completed = gc.completed_full_ticket() >= ticket;
         let delivered = signal.0.load(Ordering::Acquire);
+        if completed {
+            assert!(wait.as_mut().poll(&mut cx).is_ready());
+            let root = gc
+                .take_pending_reference::<u64>()?
+                .expect("exact queued owner");
+            assert_eq!(root.identity(), owner.identity());
+            assert_eq!(*root, 7);
+            assert!(gc.take_pending_reference::<u64>()?.is_none());
+            deliver_next_owner(&gc)?;
+        }
         resume.send(()).expect("resume first notifier");
         first.join().expect("first notifier joined")?;
-        assert!(
-            delivered,
-            "published notification was stranded with the first notifier"
-        );
-        Ok(())
+        Ok((allocated, completed, delivered))
     })?;
-    assert!(
-        wait.as_mut()
-            .poll(&mut Context::from_waker(&waker))
-            .is_ready()
+    if !outcome.1 {
+        assert_eq!(
+            gc.take_pending_reference::<u64>()?
+                .expect("completed pending owner")
+                .identity(),
+            owner.identity()
+        );
+    }
+    assert!(gc.take_pending_reference::<u64>()?.is_none());
+    assert_eq!(weak.upgrade().is_some(), kind == ReferenceKind::Final);
+    weak.clear();
+    drop(owner);
+    gc.collect_full()?;
+    assert_eq!(gc.statistics()?.live_objects, 0);
+    Ok(outcome)
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn deliver_next_owner(gc: &Arc<GarbageCollector>) -> Result<()> {
+    let next_target = Gc::try_new(gc, 101_u64)?;
+    let next_owner = Gc::try_new(gc, 103_u64)?;
+    let next_weak = GcWeak::new(
+        &next_target,
+        ReferenceKind::Weak,
+        next_owner.as_ptr().addr(),
     );
+    drop(next_target);
+    gc.collect_full()?;
+    assert!(next_weak.upgrade().is_none());
     assert_eq!(
-        *gc.take_pending_reference::<u64>()?.expect("pending owner"),
-        7
+        gc.take_pending_reference::<u64>()?
+            .expect("next queued owner")
+            .identity(),
+        next_owner.identity()
     );
-    assert!(weak.upgrade().is_none());
     Ok(())
 }
 
@@ -842,7 +938,10 @@ fn reference_waiters_can_be_woken_by_another_helper_during_a_stalled_wake() {
     let owner = Gc::new(&gc, 53_u64);
     let target = Gc::new(&gc, 11_u64);
     let link = GcWeak::new(&target, ReferenceKind::Weak, owner.as_ptr().addr());
-    gc.enqueue_reference(&link.slot);
+    let notice = gc.prepare_reference(&link.slot).expect("live owner");
+    while !notice.linked() {
+        gc.link_reference(&notice);
+    }
     thread::scope(|scope| {
         scope.spawn(|| gc.notify_progress());
         parked.recv_timeout(Duration::from_secs(10)).unwrap();
@@ -1614,7 +1713,10 @@ fn reference_registration_delivery_and_cancellation_survive_a_parked_allocation_
             let mut cancelled = Box::pin(gc.wait_for_pending_references());
             assert!(cancelled.as_mut().poll(&mut cx).is_pending());
             drop(cancelled);
-            gc.enqueue_reference(&link.slot);
+            let notice = gc.prepare_reference(&link.slot).expect("live owner");
+            while !notice.linked() {
+                gc.link_reference(&notice);
+            }
             gc.notify_progress();
             assert!(wait.as_mut().poll(&mut cx).is_ready());
             assert_eq!(

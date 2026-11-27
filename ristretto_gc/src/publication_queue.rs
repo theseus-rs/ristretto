@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 
 #[path = "publication_queue_state.rs"]
 mod state;
-pub(crate) use state::Queue;
+pub(crate) use state::{Prepared, Queue};
 
 struct Link<T>(ArcSwapOption<T>);
 

@@ -234,7 +234,7 @@ impl GarbageCollector {
                 }
             })
         };
-        // A producer may park after linking while still holding the coordinator.
+        // A producer may park after linking and before notifying the handler.
         // Another ordinary worker or caller can deliver that visible notification.
         if result.is_none() && self.has_pending_references() {
             self.notify_progress();

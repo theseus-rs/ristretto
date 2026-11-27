@@ -10,10 +10,11 @@ pub(super) enum Unit {
     Progress,
     Busy,
     Boundary,
-    Sweep(SweepWork),
+    External(ExternalWork),
 }
 
-pub(super) enum SweepWork {
+pub(super) enum ExternalWork {
+    LinkReference(std::sync::Arc<super::references::PendingNotice>),
     #[cfg(not(target_family = "wasm"))]
     CleanupBatch(
         std::sync::Arc<super::WorkerSignals>,
@@ -29,7 +30,7 @@ pub(super) enum SweepWork {
     Unlink(SealedPages),
 }
 
-impl SweepWork {
+impl ExternalWork {
     pub(super) fn run(
         self,
         gc: &GarbageCollector,
@@ -56,6 +57,7 @@ impl SweepWork {
                     gc.reclaim_swept(task, index, epoch, budget, counters, None);
                 }
             }
+            Self::LinkReference(notice) => gc.link_reference(&notice),
             Self::PrepareGrant(request) => request.prepare(),
             Self::ReleasePacket(packet) => drop(packet),
             Self::Reclaim(task, budget, selection) => {
@@ -76,10 +78,10 @@ impl SealedPages {
     fn into_unit(self) -> Unit {
         #[cfg(not(feature = "experimental-identity-index"))]
         if self.identity.is_some() {
-            return Unit::Sweep(SweepWork::Unlink(self));
+            return Unit::External(ExternalWork::Unlink(self));
         }
         if self.address.is_some() {
-            Unit::Sweep(SweepWork::Unlink(self))
+            Unit::External(ExternalWork::Unlink(self))
         } else {
             Unit::Progress
         }
@@ -209,7 +211,7 @@ impl GarbageCollector {
                         break;
                     }
                     Unit::Boundary => break,
-                    Unit::Sweep(work) => {
+                    Unit::External(work) => {
                         progressed = true;
                         let epoch = cycle.epoch;
                         drop(cycle);
@@ -423,6 +425,14 @@ impl GarbageCollector {
         true
     }
     pub(super) fn reference_unit(&self, cycle: &mut Cycle, counters: &mut WorkCounters) -> Unit {
+        // The cursor owns the decision and its root until insertion is certified.
+        // Each helper carries the same append intent outside all three guards.
+        if let Some(notice) = &cycle.pending_notice {
+            if !notice.linked() {
+                return Unit::External(ExternalWork::LinkReference(notice.clone()));
+            }
+            cycle.pending_notice = None;
+        }
         let Some(_publication) = self.try_publication_write() else {
             return Unit::Busy;
         };
@@ -518,7 +528,7 @@ impl GarbageCollector {
                 && owner != 0
                 && self.reference_owner_live(&slot)
             {
-                self.enqueue_reference(&slot);
+                cycle.pending_notice = self.prepare_reference(&slot);
             }
             return Unit::Progress;
         }
@@ -569,7 +579,7 @@ impl GarbageCollector {
             }
             if !slot.activated.swap(true, Ordering::AcqRel) && owner != 0 {
                 if slot.kind == crate::ReferenceKind::Final {
-                    self.enqueue_reference(&slot);
+                    cycle.pending_notice = self.prepare_reference(&slot);
                 } else {
                     slot.pending.store(true, Ordering::Release);
                 }
@@ -578,7 +588,7 @@ impl GarbageCollector {
         Unit::Progress
     }
     #[cfg(not(target_family = "wasm"))]
-    fn cleanup_batch(&self, cycle: &mut Cycle, work: &mut usize) -> Option<SweepWork> {
+    fn cleanup_batch(&self, cycle: &mut Cycle, work: &mut usize) -> Option<ExternalWork> {
         if self.configuration.max_pause_time_us != 0
             || *work == 0
             || cycle.reclaim.len() < 2
@@ -612,7 +622,7 @@ impl GarbageCollector {
         let rest = prefix.collect();
         *work = units;
         self.retired_ready.fetch_add(count, Ordering::AcqRel);
-        Some(SweepWork::CleanupBatch(
+        Some(ExternalWork::CleanupBatch(
             pool,
             super::native_callbacks::Batch { first, rest },
         ))
@@ -626,7 +636,7 @@ impl GarbageCollector {
     ) -> Unit {
         #[cfg(not(target_family = "wasm"))]
         if let Some(batch) = self.cleanup_batch(cycle, work) {
-            return Unit::Sweep(batch);
+            return Unit::External(batch);
         }
         if let Some(task) = cycle.reclaim.front() {
             if cycle.refund_selection.is_none() {
@@ -637,7 +647,7 @@ impl GarbageCollector {
                 match selection.scan(work) {
                     ScanProgress::More => return Unit::Progress,
                     ScanProgress::Prepare(request) => {
-                        return Unit::Sweep(SweepWork::PrepareGrant(request));
+                        return Unit::External(ExternalWork::PrepareGrant(request));
                     }
                     ScanProgress::Done => {}
                 }
@@ -651,7 +661,7 @@ impl GarbageCollector {
             let scan_budget = scan_budget.min(task.metadata.trace.budget);
             *work = work.saturating_sub(scan_budget.saturating_sub(1));
             self.retired_ready.fetch_add(1, Ordering::AcqRel);
-            return Unit::Sweep(SweepWork::Reclaim(
+            return Unit::External(ExternalWork::Reclaim(
                 task,
                 scan_budget,
                 cycle.refund_selection.take(),
@@ -861,7 +871,7 @@ impl GarbageCollector {
                 if let Some(cursor) = &mut cycle.packet_cleanup {
                     match self.domain_at(1).mark_queue.take_cache_entry(cursor) {
                         crate::index::Scan::Entry(_, packet) => {
-                            return Unit::Sweep(SweepWork::ReleasePacket(packet));
+                            return Unit::External(ExternalWork::ReleasePacket(packet));
                         }
                         crate::index::Scan::Advance => return Unit::Progress,
                         crate::index::Scan::Done => cycle.packet_cleanup = None,
