@@ -2741,7 +2741,7 @@ fn admitted_root_rejects_a_foreign_collectors_token() -> Result<()> {
     let gc = GarbageCollector::new();
     let other = GarbageCollector::new();
     let root = Gc::try_new(&gc, 42_u64)?;
-    let mut reservation = gc.reserve_conditional_root(root.as_ptr() as usize);
+    let mut reservation = gc.prepare_root_registration(root.as_ptr() as usize);
     let publication = other.root_publication_guard();
     assert!(
         Gc::<u64>::prepare_conditional_root(
@@ -2781,7 +2781,7 @@ fn prepared_root_protects_its_graph_after_admission_and_cancels_cleanly() -> Res
                 let parent = context.with(|| Gc::try_new(&gc, vec![child]))?;
                 let weak = crate::GcWeak::new(&parent, crate::ReferenceKind::Weak, 0);
                 let prepared = context.with(|| {
-                    let mut reservation = gc.reserve_conditional_root(parent.as_ptr() as usize);
+                    let mut reservation = gc.prepare_root_registration(parent.as_ptr() as usize);
                     let publication = gc.root_publication_guard();
                     Gc::<Vec<Gc<u64>>>::prepare_conditional_root(
                         &gc,
@@ -3508,7 +3508,7 @@ fn invisible_root_reservations_do_not_resurrect_expired_graphs_and_unwind_cleanl
                 let root = Gc::try_new(&gc, vec![Gc::new(&gc, 42_u64).into_rooted()])?;
                 let address = root.as_ptr_i64();
                 let identity = root.identity();
-                let mut reservation = gc.reserve_conditional_root(root.as_ptr() as usize);
+                let mut reservation = gc.prepare_root_registration(root.as_ptr() as usize);
                 drop(root);
                 gc.collect_full()?;
                 assert_eq!(gc.statistics()?.live_objects, 0);

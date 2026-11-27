@@ -31,13 +31,13 @@ impl GarbageCollector {
         }
     }
 
-    pub(crate) fn reserve_conditional_root(
+    pub(crate) fn prepare_root_registration(
         &self,
         address: usize,
-    ) -> super::ConditionalRootReservation<'_> {
+    ) -> super::PreparedRootRegistration<'_> {
         let owned = self.reserve_owned_root(address);
         let tree = owned.slot.is_none().then(|| self.reserve_tree_root());
-        super::ConditionalRootReservation { owned, tree }
+        super::PreparedRootRegistration { owned, tree }
     }
 
     pub(super) fn reserve_tree_root(&self) -> crate::roots::VacantRoot<'_> {
@@ -73,9 +73,13 @@ impl GarbageCollector {
             .diagnostics
             .root_acquire
             .measure(self.diagnostics_enabled());
-        let mut reservation = self.reserve_owned_root(root.ptr.as_ptr() as usize);
+        // The existing owner keeps the graph live while this independent root is prepared.
+        let address = root.ptr.as_ptr().addr();
+        let mut reservation = self.prepare_root_registration(address);
         let _publication = self.allocation_guard();
-        self.commit_owned_root(root, &mut reservation)
+        let registration = reservation.publish();
+        self.shade_all(address);
+        registration
     }
 
     /// Install the initial root of an exclusively owned, unregistered allocation.
@@ -88,22 +92,6 @@ impl GarbageCollector {
             .root_acquire
             .measure(self.diagnostics_enabled());
         self.install_root_registration(&mut self.reserve_owned_root(metadata.ptr().0))
-    }
-
-    /// Caller retains this collector's publication admission through commit/shading.
-    pub(super) fn commit_owned_root<T>(
-        &self,
-        root: &Gc<T>,
-        reservation: &mut RootReservation<'_>,
-    ) -> crate::roots::Registration {
-        let address = root.ptr.as_ptr() as usize;
-        assert!(
-            reservation.protects(self, address),
-            "foreign root reservation"
-        );
-        let registration = self.install_root_registration(reservation);
-        self.shade_all(address);
-        registration
     }
 
     pub(super) fn install_root_registration(
@@ -266,10 +254,6 @@ impl GarbageCollector {
         }
     }
 
-    pub(super) fn insert_root(&self, address: usize) -> crate::roots::TreeRoot {
-        self.insert_tree_root(address, true)
-    }
-
     #[cfg(test)]
     pub(super) fn probe_tree_root_insertion(&self) {
         let probe = *lock(&self.tree_root_insert_probe);
@@ -278,7 +262,7 @@ impl GarbageCollector {
         }
     }
 
-    pub(super) fn insert_tree_root(&self, address: usize, owned: bool) -> crate::roots::TreeRoot {
+    pub(super) fn insert_root(&self, address: usize) -> crate::roots::TreeRoot {
         #[cfg(test)]
         self.probe_tree_root_insertion();
         if self.diagnostics_enabled() {
@@ -286,11 +270,7 @@ impl GarbageCollector {
                 .root_registrations
                 .fetch_add(1, Ordering::Relaxed);
         }
-        if owned {
-            self.roots.insert(&self.next_root_id, address)
-        } else {
-            self.roots.insert_manual(&self.next_root_id, address)
-        }
+        self.roots.insert(&self.next_root_id, address)
     }
 
     /// Called under a publication reader before the removed root can cease to
@@ -325,24 +305,48 @@ impl GarbageCollector {
     /// Registers a manual root, including while a collection is in progress.
     /// Release the returned ID with `remove_root_by_id`; owning handles and
     /// internal collector registrations are managed independently.
+    ///
+    /// # Panics
+    /// Panics if the handle is foreign, unassociated or no longer live.
+    #[expect(
+        clippy::expect_used,
+        reason = "the manual root API requires a live handle"
+    )]
     pub fn add_root<T: Trace>(&self, root: &Gc<T>) -> usize {
+        assert!(
+            root.belongs_to(self),
+            "manual root collector does not own this allocation"
+        );
+        #[cfg(test)]
+        self.probe_tree_root_insertion();
+        let mut tree = self.roots.reserve_manual(&self.next_root_id);
+        let address = root.ptr.as_ptr().addr();
         let _publication = self.allocation_guard();
-        let id = self.insert_tree_root(root.ptr.as_ptr() as usize, false);
-        self.shade_all(root.ptr.as_ptr() as usize);
+        // The argument can be a borrowed edge. Match its non-reused identity and
+        // check both domains after preparation, before making the manual ID visible.
+        let metadata = self
+            .objects
+            .lookup_identity(address, root.identity())
+            .filter(|metadata| self.can_root(metadata, false))
+            .expect("manual root target is no longer live");
+        let id = self.publish_reserved_tree_root(&mut tree, address);
+        self.shade_live_domains(&metadata);
         id.id
     }
 
     /// Creates an owning root registration in this allocation's collector.
     ///
     /// # Panics
-    /// Panics before registration if the handle belongs to another collector or
-    /// is unassociated. Use `Gc::as_root` to receive a mismatch as an error.
+    /// Panics if the handle belongs to another collector, is unassociated, or has
+    /// retired. Use `Gc::as_root` for a fallible conversion.
+    #[expect(
+        clippy::expect_used,
+        reason = "the owning guard API requires a live handle"
+    )]
     pub fn create_root_guard<T: Trace>(self: &Arc<Self>, root: Gc<T>) -> GcRootGuard<T> {
-        assert!(
-            root.belongs_to(self),
-            "root guard collector does not own this allocation"
-        );
-        let id = self.add_owned_root(&root);
+        let id = root
+            .guard_registration(self)
+            .expect("cannot register root guard");
         GcRootGuard::new(self.clone(), id, root)
     }
 

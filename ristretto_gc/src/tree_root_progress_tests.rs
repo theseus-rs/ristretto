@@ -36,3 +36,146 @@ fn a_parked_tree_read_view_allows_unrelated_payload_reclamation() {
         assert_eq!(gc.managed_bytes(), 0);
     }
 }
+
+#[test]
+fn explicit_tree_root_preparation_allows_a_fresh_full_collection() -> Result<()> {
+    fn collect_during_reservation(gc: &GarbageCollector) {
+        lock(&gc.tree_root_insert_probe).take();
+        let ticket = gc.request_full_cycle();
+        for _ in 0..2048 {
+            if gc.completed_full_ticket() >= ticket {
+                return;
+            }
+            gc.step();
+        }
+        assert!(
+            gc.completed_full_ticket() >= ticket,
+            "full ticket stalled during explicit root preparation"
+        );
+    }
+
+    for counted in [false, true] {
+        for manual in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let target = Gc::try_new(&gc, 42_u64)?.into_rooted();
+            let weak = crate::GcWeak::new(&target, crate::ReferenceKind::Weak, 0);
+            let original = target.identity();
+            *lock(&gc.tree_root_insert_probe) = Some(collect_during_reservation);
+            if manual {
+                let registration = gc.add_root(&target);
+                drop(target);
+                gc.collect_full()?;
+                assert_eq!(
+                    weak.upgrade().map(|object| (object.identity(), *object)),
+                    Some((original, 42))
+                );
+                gc.remove_root_by_id(registration);
+            } else {
+                let guard = target.as_root(&gc)?;
+                drop(target);
+                gc.collect_full()?;
+                assert_eq!((guard.identity(), **guard), (original, 42));
+                assert!(weak.refers_to(&guard));
+                drop(guard);
+            }
+            assert!(lock(&gc.tree_root_insert_probe).is_none());
+            gc.collect_full()?;
+            assert!(weak.is_cleared());
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn parked_manual_root_revalidates_the_borrowed_identity_after_a_peer_collection() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let mut observations = Vec::new();
+    for counted in [false, true] {
+        for storage in [
+            crate::RootStorage::Tree,
+            crate::RootStorage::Slots,
+            crate::RootStorage::Contexts,
+        ] {
+            for retain in [false, true] {
+                let gc = GarbageCollector::with_config(
+                    Configuration::builder()
+                        .concurrent_publication(counted)
+                        .root_storage(storage)
+                        .allocation_threshold(usize::MAX)
+                        .build(),
+                );
+                let root = Gc::try_new(&gc, 17_u64)?.into_rooted();
+                let expected = root.identity();
+                let weak = crate::GcWeak::new(&root, crate::ReferenceKind::Weak, 0);
+                let mut borrowed = root.clone();
+                // SAFETY: the owning root protects this conversion. Only checked
+                // identity registration is attempted after it may be released.
+                unsafe { borrowed.unroot() };
+                let mut root = Some(root);
+                let (entered, parked) = mpsc::channel();
+                let (resume, release) = mpsc::channel();
+                *lock(&gc.metadata_prepare_pause) = Some(ClaimPause {
+                    entered,
+                    resume: release,
+                });
+                *lock(&gc.tree_root_insert_probe) =
+                    Some(GarbageCollector::pause_metadata_preparation);
+                let (finished, registration) = thread::scope(|scope| {
+                    let request = scope.spawn(|| {
+                        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            gc.add_root(&borrowed)
+                        }))
+                    });
+                    parked
+                        .recv_timeout(Duration::from_secs(4))
+                        .expect("manual root backing preparation");
+                    if !retain {
+                        drop(root.take());
+                    }
+                    let ticket = gc.request_full_cycle();
+                    for _ in 0..2048 {
+                        if gc.completed_full_ticket() >= ticket {
+                            break;
+                        }
+                        gc.step();
+                    }
+                    let finished = gc.completed_full_ticket() >= ticket;
+                    resume.send(()).unwrap();
+                    (finished, request.join().unwrap().ok())
+                });
+                observations.push((counted, storage, retain, finished, registration.is_some()));
+                drop(root);
+                gc.collect_full()?;
+                if let Some(id) = registration {
+                    if retain {
+                        assert_eq!(
+                            weak.upgrade().map(|r| (r.identity(), *r)),
+                            Some((expected, 17))
+                        );
+                    }
+                    gc.remove_root_by_id(id);
+                }
+                gc.collect_full()?;
+                assert!(weak.is_cleared());
+                assert_eq!(gc.root_statistics().compatibility_roots, 0);
+                assert_eq!(gc.managed_bytes(), 0);
+            }
+        }
+    }
+    assert!(
+        observations
+            .iter()
+            .all(|(_, _, retain, finished, registered)| *finished && retain == registered),
+        "(counted, storage, retained, ticket complete, registered): {observations:?}"
+    );
+    Ok(())
+}

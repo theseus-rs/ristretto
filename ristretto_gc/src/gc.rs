@@ -844,7 +844,7 @@ impl<T> Gc<T> {
     {
         let address_usize = usize::try_from(address)
             .map_err(|_| Error::InvalidPointer("invalid managed address".into()))?;
-        let mut reservation = collector.reserve_conditional_root(address_usize);
+        let mut reservation = collector.prepare_root_registration(address_usize);
         let publication = collector.root_publication_guard();
         let prepared = Self::prepare_conditional_root(
             collector,
@@ -865,7 +865,7 @@ impl<T> Gc<T> {
         retaining: bool,
         expected: Option<crate::ObjectId>,
         publication: &crate::collector::RootPublication<'_>,
-        reservation: &mut crate::collector::ConditionalRootReservation<'_>,
+        reservation: &mut crate::collector::PreparedRootRegistration<'_>,
     ) -> Result<PreparedRoot<T>>
     where
         T: Trace + 'static,
@@ -906,19 +906,7 @@ impl<T> Gc<T> {
     where
         T: Trace,
     {
-        if !self.belongs_to(collector) {
-            return Err(Error::InvalidPointer(
-                "root guard collector does not own this allocation".into(),
-            ));
-        }
-        let registration = match &self.owner {
-            Owner::Root(_) => collector.add_owned_root(self),
-            Owner::Edge(_) | Owner::Traced(_) => {
-                collector.clone_edge_root(self).ok_or_else(|| {
-                    Error::InvalidPointer("root guard target is no longer live".into())
-                })?
-            }
-        };
+        let registration = self.guard_registration(collector)?;
         // The guard owns the new registration. Copying the inner handle can
         // preserve its current ownership without promoting an edge a second time.
         let root = Self {
@@ -928,6 +916,25 @@ impl<T> Gc<T> {
             owner: self.owner.clone(),
         };
         Ok(GcRootGuard::new(collector.clone(), registration, root))
+    }
+
+    pub(crate) fn guard_registration(
+        &self,
+        collector: &GarbageCollector,
+    ) -> Result<crate::roots::Registration> {
+        if !self.belongs_to(collector) {
+            return Err(Error::InvalidPointer(
+                "root guard collector does not own this allocation".into(),
+            ));
+        }
+        Ok(match &self.owner {
+            Owner::Root(_) => collector.add_owned_root(self),
+            Owner::Edge(_) | Owner::Traced(_) => {
+                collector.clone_edge_root(self).ok_or_else(|| {
+                    Error::InvalidPointer("root guard target is no longer live".into())
+                })?
+            }
+        })
     }
 
     /// Triggers a write barrier for this `Gc`.

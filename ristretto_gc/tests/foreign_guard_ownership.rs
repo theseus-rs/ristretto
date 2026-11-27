@@ -40,6 +40,10 @@ fn infallible_foreign_rooting_rejects_before_registration_and_cleans_up() -> Res
         let child = Gc::try_new(&source, 42_u64)?.into_rooted();
         let weak = GcWeak::new(&child, ReferenceKind::Weak, 0);
         let before = destination.diagnostics().root_registrations;
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| destination.add_root(&child)))
+                .is_err()
+        );
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             destination.create_root_guard(child)
         }));

@@ -226,6 +226,13 @@ fn cloning_an_expired_edge_rejects_it_without_leaking_a_reserved_root() -> Resul
             context.with(|| stale.as_root(&gc)),
             Err(ristretto_gc::Error::InvalidPointer(_))
         ));
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gc.add_root(&stale))).is_err()
+        );
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gc.create_root_guard(stale)))
+                .is_err()
+        );
         assert_eq!(gc.diagnostics().root_registrations, before);
         assert_eq!(gc.root_statistics().reserved_slots, 0);
         assert_eq!(gc.root_statistics().slot_roots, 0);

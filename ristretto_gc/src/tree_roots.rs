@@ -160,6 +160,7 @@ impl TreeRoots {
         self.insert_kind(next, address, true)
     }
 
+    #[cfg(test)]
     pub(crate) fn insert_manual(&self, next: &AtomicUsize, address: usize) -> TreeRoot {
         self.insert_kind(next, address, false)
     }
@@ -178,7 +179,15 @@ impl TreeRoots {
     }
 
     pub(crate) fn reserve(&self, next: &AtomicUsize) -> VacantRoot<'_> {
-        self.claim_slot(next, true, |key, page| VacantRoot {
+        self.reserve_kind(next, true)
+    }
+
+    pub(crate) fn reserve_manual(&self, next: &AtomicUsize) -> VacantRoot<'_> {
+        self.reserve_kind(next, false)
+    }
+
+    fn reserve_kind(&self, next: &AtomicUsize, owned: bool) -> VacantRoot<'_> {
+        self.claim_slot(next, owned, |key, page| VacantRoot {
             roots: self,
             page: page.clone(),
             key,

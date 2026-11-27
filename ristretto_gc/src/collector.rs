@@ -153,15 +153,26 @@ pub(crate) struct RootReservation<'a> {
     slot: Option<crate::roots::PreparedSlot>,
 }
 
-/// Conditional lookup reserves backing before entering the phase and slot decision.
-pub(crate) struct ConditionalRootReservation<'a> {
+/// Explicit registrations reserve their backing before phase or weak-slot admission.
+pub(crate) struct PreparedRootRegistration<'a> {
     owned: RootReservation<'a>,
     tree: Option<crate::roots::VacantRoot<'a>>,
 }
 
-impl ConditionalRootReservation<'_> {
+impl PreparedRootRegistration<'_> {
     pub(crate) fn protects(&self, collector: &GarbageCollector, address: usize) -> bool {
         self.owned.protects(collector, address)
+    }
+
+    fn publish(&mut self) -> crate::roots::Registration {
+        let collector = self.owned.collector;
+        if let Some(tree) = &mut self.tree {
+            crate::roots::Registration::Tree(
+                collector.publish_reserved_tree_root(tree, self.owned.address),
+            )
+        } else {
+            collector.install_root_registration(&mut self.owned)
+        }
     }
 }
 
@@ -212,7 +223,7 @@ impl RootPublication<'_> {
     pub(crate) fn add_conditional_root(
         &self,
         metadata: &MetadataRef,
-        reservation: &mut ConditionalRootReservation<'_>,
+        reservation: &mut PreparedRootRegistration<'_>,
     ) -> crate::roots::Registration {
         let _measurement = self
             .collector
@@ -223,15 +234,7 @@ impl RootPublication<'_> {
             reservation.protects(self.collector, metadata.ptr().0),
             "foreign root reservation"
         );
-        let registration = if let Some(tree) = &mut reservation.tree {
-            crate::roots::Registration::Tree(
-                self.collector
-                    .publish_reserved_tree_root(tree, metadata.ptr().0),
-            )
-        } else {
-            self.collector
-                .install_root_registration(&mut reservation.owned)
-        };
+        let registration = reservation.publish();
         // Both domains clamp strong discovery to their own reference stage.
         let _retention = TraceRetention::enter(self.collector, Retention::Strong);
         for index in 0..2 {
