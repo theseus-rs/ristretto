@@ -28,3 +28,15 @@ survived, then cleared when the parent died. All 100 cases across 50 fresh
 native processes had the same outcome.
 [Single-collector reproducer](dirty-owner/control.patch.gz) ·
 [Assertion](dirty-owner/control.log.gz) · [Process results](dirty-owner/processes.json.gz).
+
+An experimental change published remembered membership immediately during an
+old/full-only epoch. It passed the new parked-owner probe. Five of 653 native
+library tests failed, including a young-start schedule and a busy-index
+reclamation schedule. Several failed while establishing their expected pending
+record. Those failures leave the affected schedules untested for this
+alternative. The change is withheld. Any replacement must preserve exact owner
+identity and mutation version across a concurrent young start and prove
+progress when the remembered shard is busy.
+[Experimental patch](dirty-owner/direct-enrollment.patch.gz) ·
+[Parked-owner result](dirty-owner/direct-enrollment-probe.log.gz) ·
+[Full test outcomes](dirty-owner/direct-enrollment-suite.log.gz).
