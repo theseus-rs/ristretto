@@ -69,6 +69,9 @@ requested 361,936 host bytes for 2,048 sparse targets versus 20,752 on the
 shipping bitmap. That experiment was withheld.
 [Schedules, host allocation counts, complete-collection graph and G1/ZGC comparison](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/mature-deletion-bitmap/README.md).
 
+On shipping revision `4ae63553`, a collector parked after physically marking a child and before publishing traversal blocked 16 of 16 fresh full tickets and 16 of 16 funded allocations for 2,048 peer turns. Both publication policies were affected with independent old-only marking enabled. All peers finished after the executor resumed.
+[Shipping controls and exact mark-to-traversal probe](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/sparse-mature-deletions/dense-selection/shipping-mark-before-traversal/README.md).
+
 The earlier two-minute workerless WASIp2 JVM screen missed the scheduled-latency gate. Both runtimes completed 60,000/60,000 arrivals in each fork. Median p99.9 went from 39.936 ms on the immediate parent to 45.056 ms with epoch-owned deletion, a 12.8% increase against the 10% limit. A separate native callback experiment left a published continuation unreachable from foreground `gc.step()` while its primary was parked. The experimental queue failed in 24/24 trials. The shipping collector passed all 24 and now keeps this schedule in its unit suite.
 [Sustained WASIp2 gate](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/epoch-visible-deletions/wasi-sustained/README.md) · [Foreground reclamation experiment](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/epoch-visible-deletions/native-callback-continuation/README.md).
 
