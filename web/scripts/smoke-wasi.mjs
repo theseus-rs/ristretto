@@ -5,9 +5,11 @@ import { unzipSync, zipSync } from 'fflate';
 import manifest from '../generated/runtime-manifest.json' with { type: 'json' };
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { wasiReleaseDirectory } from './wasi-release.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const workspace = resolve(root, 'target/playground-smoke');
+const runner = resolve(wasiReleaseDirectory(root), 'ristretto_playground.wasm');
 for (const { major } of jdks) {
   const jdk = resolve(workspace, `jdk-${major}`);
   rmSync(jdk, { recursive: true, force: true });
@@ -87,7 +89,7 @@ public class Main {
       `--dir=${workspace}::/workspace`,
       `--dir=${jdk}::/jdk`,
       `--dir=${temporary}::/tmp`,
-      resolve(root, 'target/wasm32-wasip2/release/ristretto_playground.wasm'),
+      runner,
     ],
     { encoding: 'utf8', timeout: 120_000 },
   );

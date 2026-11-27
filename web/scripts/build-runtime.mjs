@@ -17,6 +17,7 @@ import { zipSync } from 'fflate';
 import { licenses } from './licenses.mjs';
 import jdks from '../jdks.json' with { type: 'json' };
 import { buildLanguages } from './build-languages.mjs';
+import { wasiReleaseDirectory } from './wasi-release.mjs';
 
 const playground = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const root = resolve(playground, '..');
@@ -42,7 +43,7 @@ rmSync(assets, { recursive: true, force: true });
 mkdirSync(generated, { recursive: true });
 mkdirSync(assets, { recursive: true });
 const { files } = await transpileBytes(
-  readFileSync(join(root, 'target/wasm32-wasip2/release/ristretto_playground_engine.wasm')),
+  readFileSync(join(wasiReleaseDirectory(root), 'ristretto_playground_engine.wasm')),
   {
     name: 'runner',
     instantiation: 'async',
