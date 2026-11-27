@@ -1,7 +1,8 @@
 //! Opt-in pressure prediction. Allocation sampling never waits for the model or region registry.
 use crate::region::{Pressure, RegionHeap};
+use arc_swap::ArcSwap;
 use portable_atomic::AtomicU64;
-use std::sync::Mutex;
+use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
@@ -29,21 +30,20 @@ pub struct SchedulingStatistics {
 pub(crate) struct Scheduler {
     origin: Option<Instant>,
     allocated: AtomicU64,
-    next_sample: AtomicU64,
-    quantum: u64,
-    model: Mutex<Model>,
+    model: ArcSwap<Model>,
 }
+
+#[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+mod parked_tests;
 
 impl Scheduler {
     pub(crate) fn new(limit: usize) -> Self {
         let origin = crate::diagnostics::now();
-        let quantum = (limit / 64).clamp(4096, 1024 * 1024) as u64;
+        let model = Model::new(limit, origin.is_some());
         Self {
             origin,
             allocated: AtomicU64::new(0),
-            next_sample: AtomicU64::new(quantum.min(limit.saturating_sub(limit / 4) as u64).max(1)),
-            quantum,
-            model: Mutex::new(Model::new(limit, origin.is_some())),
+            model: ArcSwap::from_pointee(model),
         }
     }
 
@@ -52,21 +52,15 @@ impl Scheduler {
     }
 
     pub(crate) fn allocated(&self, bytes: usize, live: usize, heap: Option<&RegionHeap>) -> bool {
-        let total = self
-            .allocated
-            .fetch_add(bytes as u64, Ordering::Relaxed)
-            .saturating_add(bytes as u64);
-        if total < self.next_sample.load(Ordering::Relaxed) {
-            return false;
-        }
-        // A collector phase hook may own the model. Never block publication on it.
-        let Ok(mut model) = self.model.try_lock() else {
-            return false;
-        };
+        self.allocated.fetch_add(bytes as u64, Ordering::Relaxed);
+        let current = self.model.load();
         let total = self.allocated.load(Ordering::Relaxed);
-        if total < self.next_sample.load(Ordering::Relaxed) {
+        if total < current.next_sample {
             return false;
         }
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        parked_tests::after_model_read();
+        let mut model = **current;
         let request = model.sample(
             self.time(),
             total,
@@ -82,54 +76,58 @@ impl Scheduler {
             )
             .max(1);
         let interval = if model.active || model.pending {
-            self.quantum
+            model.quantum
         } else {
-            self.quantum.min(remaining)
+            model.quantum.min(remaining)
         };
-        self.next_sample
-            .store(total.saturating_add(interval), Ordering::Relaxed);
-        request
+        model.next_sample = total.saturating_add(interval);
+        // Sampling is advisory. A competing sample or lifecycle transition wins;
+        // the cumulative allocation counter still includes this allocation.
+        let prior = self.model.compare_and_swap(&*current, Arc::new(model));
+        Arc::ptr_eq(&prior, &current) && request
+    }
+
+    fn update(&self, apply: impl Fn(&mut Model)) {
+        self.model.rcu(|previous| {
+            let mut model = **previous;
+            apply(&mut model);
+            Arc::new(model)
+        });
     }
 
     pub(crate) fn started(&self, live: usize) {
-        let mut model = self
-            .model
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        model.started(self.time(), live);
+        let now = self.time();
+        self.update(|model| model.started(now, live));
     }
 
     pub(crate) fn reclaimed(&self) {
-        let mut model = self
-            .model
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        model.reclaimed(self.time());
+        let now = self.time();
+        self.update(|model| model.reclaimed(now));
     }
 
     pub(crate) fn completed(&self, freed: usize, live: usize) {
-        let mut model = self
-            .model
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let total = self.allocated.load(Ordering::Relaxed);
-        model.completed(self.time(), total, freed, live);
-        self.next_sample.store(
-            total.saturating_add(self.quantum.min(model.minimum_growth as u64).max(1)),
-            Ordering::Relaxed,
-        );
+        let now = self.time();
+        self.update(|model| {
+            // Pair the total with this version even when another sample won a retry.
+            let total = self.allocated.load(Ordering::Relaxed);
+            model.completed(now, total, freed, live);
+            model.next_sample =
+                total.saturating_add(model.quantum.min(model.minimum_growth as u64).max(1));
+        });
     }
 
     pub(crate) fn statistics(&self) -> SchedulingStatistics {
-        self.model
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .stats
+        let model = self.model.load();
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        parked_tests::after_model_read();
+        model.stats
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 struct Model {
+    quantum: u64,
+    next_sample: u64,
     limit: usize,
     stats: SchedulingStatistics,
     last_sample: Option<Duration>,
@@ -147,7 +145,10 @@ struct Model {
 
 impl Model {
     fn new(limit: usize, clock: bool) -> Self {
+        let quantum = (limit / 64).clamp(4096, 1024 * 1024) as u64;
         Self {
+            quantum,
+            next_sample: quantum.min(limit.saturating_sub(limit / 4) as u64).max(1),
             limit,
             stats: SchedulingStatistics {
                 enabled: true,
@@ -383,13 +384,18 @@ mod tests {
     }
 
     #[test]
-    fn contention_defers_sample_without_losing_allocated_bytes() {
+    fn pinned_model_preserves_the_original_sample_and_cumulative_allocation_bytes() {
         let scheduler = Scheduler::new(8192);
-        let guard = scheduler.model.lock().expect("model");
-        assert!(!scheduler.allocated(7000, 7000, None));
-        drop(guard);
-        assert!(scheduler.allocated(1, 7001, None));
-        assert_eq!(scheduler.statistics().samples, 1);
-        assert_eq!(scheduler.allocated.load(Ordering::Relaxed), 7001);
+        let held = scheduler.model.load();
+        assert!(scheduler.allocated(7000, 7000, None));
+        scheduler.started(7000);
+        assert!(!scheduler.allocated(1, 7001, None));
+        scheduler.completed(0, 7001);
+        assert_eq!(held.stats.samples, 0);
+        let current = scheduler.model.load();
+        assert_eq!(current.stats.samples, 1);
+        assert_eq!(current.stats.requests, 1);
+        assert_eq!(current.completed_total, 7001);
+        assert!(!current.active);
     }
 }
