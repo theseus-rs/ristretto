@@ -11,7 +11,8 @@ from verify_preview import check_report, command_for, run
 def example(compiled=False):
     return dict(result=64, cleared_witnesses=2, managed_bytes_freed=128, full_collections=1,
                 interpreted_entries=0 if compiled else 25, compiled_entries=25 if compiled else 0,
-                compiled_backedges=8 if compiled else 0)
+                compiled_backedges=8 if compiled else 0,
+                cycle_rewired_by="compiled" if compiled else "interpreted")
 
 
 class ReportChecks(unittest.TestCase):
@@ -27,6 +28,8 @@ class ReportChecks(unittest.TestCase):
         for key in fields:
             with self.subTest(key=key), self.assertRaises(ValueError):
                 check_report(json.dumps({k: v for k, v in fields.items() if k != key}), False)
+        with self.assertRaisesRegex(ValueError, "execution tier"):
+            check_report(json.dumps(dict(fields, cycle_rewired_by="compiled")), False)
         for key in ("managed_bytes_freed", "full_collections", "cleared_witnesses", "result"):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 check_report(json.dumps(dict(fields, **{key: 0})), False)

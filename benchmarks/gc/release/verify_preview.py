@@ -31,6 +31,8 @@ def check_report(output, compiled):
                 "compiled_backedges": 8 if compiled else 0}
     if not isinstance(fields, dict):
         raise ValueError("missing JVM report")
+    if fields.get("cycle_rewired_by") != ("compiled" if compiled else "interpreted"):
+        raise ValueError("missing or incorrect execution tier for the witnessed cycle")
     for key, value in expected.items():
         if type(fields.get(key)) is not int or fields[key] != value:
             raise ValueError(f"incorrect {key} in JVM report")
@@ -117,7 +119,7 @@ def main():
         fields = check_report(run(execute, root, max(0, deadline-time.monotonic())), args.tier == "native-compiled")
     except (OSError, ValueError, RuntimeError) as error:
         parser.exit(1, f"preview verification failed: {error}\n")
-    receipt = {"schema_version": 2, "tier": args.tier, "source_root": str(root),
+    receipt = {"schema_version": 3, "tier": args.tier, "source_root": str(root),
                "command": command, "execute": execute, "report": fields, "scope": "finite functional example",
                "performance_qualified": False}
     if args.receipt is not None:

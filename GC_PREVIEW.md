@@ -31,10 +31,11 @@ Each tier invokes the same Java graph and checks its result of **64**. The
 method counters are scoped to that invocation. The interpreter records
 25 calls across the entry method, node constructor and checksum method. The
 compiled tier must record all 25 calls and eight taken backward branches.
-The example also builds a separate two-node cycle through ordinary Java
-fields, drops its roots, runs a full collection, and checks that both weak
-witnesses clear and the full managed charge returns to its pre-allocation
-baseline. For this check the VM stops its background GC worker and drives
+The example also passes two linked VM-owned nodes to Java in the selected
+execution tier. Java moves one edge from `next` to `other`. The VM checks both
+ends of the resulting cycle against the original weak identities, drops the
+roots and runs a full collection. Both witnesses must clear and the managed
+charge must return to its pre-allocation baseline. For this check the VM stops its background GC worker and drives
 collection explicitly. These are functional checks.
 [Java fixture](ristretto_vm/tests/fixtures/canonical/CanonicalGraphWorkload.java) ·
 [Rust example](ristretto_vm/examples/gc_preview.rs)
