@@ -1,0 +1,14 @@
+{
+  "parent": {
+    "native": 1024,
+    "wasi": 1024
+  },
+  "flag": {
+    "native": 0,
+    "wasi": 0
+  },
+  "borrow": {
+    "native": 0,
+    "wasi": 0
+  }
+}

@@ -15,6 +15,15 @@ the class loader's GC dependency left the enclosing VM graph green in four
 target and feature combinations. The independent class loader check rejected
 all four.
 
+The borrowed queue-link check at `ab7a3000` cleared all 36 complete-collection
+conditions with minimum individual lower 95% bounds of 10.449× native and
+10.419× WASI versus `f1daebeb`. All three Java tiers reused the shared heap.
+In the two-minute Java reference-array run the candidate finished 60,000 of
+60,000 arrivals with a 3.744 ms scheduled p99.9. G1 and ZGC completed all
+arrivals with lower tails. The three short candidate forks also finished all
+arrivals, but their median p99.9 was 219 ms.
+[Queue, collection, browser and JVM measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/terminal-queue-links/README.md).
+
 The sparse reference-array candidate is withheld. Full collection of one
 4,097-slot array with two populated endpoints improved 6.28× on native and
 7.13× on WASI against its immediate parent. Across all 36 established graph

@@ -58,6 +58,11 @@ Each revision, including the withheld experiment, ran the full 36-condition comp
 | Budgeted destruction of string container elements | `65b668aa` | 251127281 | **10.30×** | **10.55×** | **36 / 36** |
 | Service independent native callbacks under allocation pressure | `0048fdc4` | 251127293 | **10.41×** | **10.61×** | **36 / 36** |
 
+
+[Terminal queue links](terminal-queue-links/README.md) covers the borrowed-link
+change, its rejected terminal-flag alternative and the native, WASI, browser
+and Java comparisons.
+
 ## Native allocation with an independent arbitrary destructor
 
 A full managed heap held two allocations with ordinary Rust destructors. The native callback thread parked in the first destructor. The second allocation lost its last root. A fresh allocator needed its physical storage. On the published parent all 600 unsynchronized native processes returned out-of-memory. On the candidate all 600 obtained the allocation while the first destructor stayed parked. The randomized comparison used 300 process pairs pinned to one CPU and 300 pairs allowed twelve CPUs. [Fixture, schedule, executable checksums and process output](pressure-allocation-samples.json.gz)

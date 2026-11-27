@@ -1,0 +1,30 @@
+{
+  "arms": {
+    "before": {
+      "commit": "c02357cab38f326956f6b44e43e5e1f701bd4ed8",
+      "sources": {
+        "publication_queue.rs": "b7fcbe78d57f42ce0e715d84c72188e50b62cc8b07790d4b71f02862649bda95",
+        "publication_queue_state.rs": "a170cab4133499c58b48eeb948d6e61471451e5c8e3167c0c02e90ba567f2a86"
+      },
+      "binaries": {
+        "native": "ea39ada3de2968b19fddf0ccfb30b78122c64be6e20a9e90b9d386ced6c83787",
+        "wasi": "d0625c9b8893c1dc3ed3efdd9b64b9e77f777fc87f143d61b70a757e600a4ac0"
+      }
+    },
+    "after": {
+      "commit": "ab7a3000dc4183fee096bb4547fe2806d2a02fa2",
+      "sources": {
+        "publication_queue.rs": "85ea850972e162df3057b4d05c8eb28d140b80a3e81c6b275964f9b41c6bd36e",
+        "publication_queue_state.rs": "948fba2fe4adb6f8f9f749dac43fe07f0ba5c981ca37379933d91ac12b2a7b56"
+      },
+      "binaries": {
+        "native": "5039234e14f22764d4bc8d76af92349610007ed33514e05c2225668f0cb72f27",
+        "wasi": "14968f0d2e964239afa89c379ff54f21b88f269c845c5eb426edda6a5ecf8861"
+      }
+    }
+  },
+  "fixture_sha256": "e6a439c77fd3b7b094d719052a39c8b2038a94759bc0c48d9cdba43e741f1199",
+  "lock_sha256": "b01c1305ebd684dd8a3551eb4f1fab0203fe5ab23cb590c5c0fc9f95c866e054",
+  "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)",
+  "wasmtime": "wasmtime 50.0.1 (c307ec81d 2026-10-29)"
+}
