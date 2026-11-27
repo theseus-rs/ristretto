@@ -50,6 +50,14 @@ frozen executables, identical compiler controls and the same published
 baseline. [Physical results](physical/cycles/complete-cycles.csv) ·
 [Managed retry results](logical/cycles/complete-cycles.csv).
 
+A second matrix ran the frozen native and WASI executables sequentially
+after all builds, tests and Java comparison forks had completed. 34 of 36
+individual lower bounds exceeded 10×. The lowest was 10.39× on native
+and 9.95× on WASI. [All conditions](logical/serial-cycles/complete-cycles.csv) ·
+[Binary and compiler provenance](logical/serial-cycles/provenance.json).
+
+![Complete collection speedups and individual 95% intervals](logical/serial-cycles/speedup.png)
+
 ## Whole-JVM progress
 
 All 27 Java processes completed at `f4cdf10f`, including all nine Ristretto
@@ -61,6 +69,25 @@ CPU affinities. The earlier physical-only revision raised Java heap OOM in
 both screens. [All 27 short processes](logical/functional-java/processes.csv) ·
 [Two-minute measurements](logical/two-minute/processes.jsonl.gz) ·
 [Two-minute schedule](logical/two-minute/schedule.json).
+
+## Isolated JVM timing
+
+The follow-up kept the release binary, Java classfiles, heap, cgroup, CPU
+affinity, warmup and measurement length from the three-fork functional
+screen. A new seeded schedule ran the 27 processes sequentially after the
+other workloads and builds had completed. Each cell is the median of three
+fresh processes. The scheduled latencies include backlog.
+
+| Reference-array workload | Ristretto | G1 | ZGC |
+| --- | ---: | ---: | ---: |
+| Saturation throughput, operations/s | 689 | 1,077,864 | 609,591 |
+| Scheduled p99.9 at 100 arrivals/s, µs | 2,752 | 1,104 | 241 |
+| Scheduled p99.9 at 500 arrivals/s, µs | 180,224 | 207 | 343 |
+
+All 27 JVMs exited successfully. All scheduled work finished. [Raw forks](logical/java/processes.csv) ·
+[Build and fixture identity](logical/java/provenance.json).
+
+![Reference-array saturation throughput and scheduled latency](logical/java/comparison.png)
 
 ## Shared-heap release checks
 
@@ -76,3 +103,11 @@ The load screens establish progress for these workloads. The alpha still
 needs stronger whole-JVM throughput, scheduled p99.9 and p99.99 latency,
 and evidence of continued progress for each remaining global contention case
 and Wasm host turn. [Release criteria](../../../../../../ristretto_gc/PLAN.md#success-criteria).
+
+The release verifier at `b72fdcdd` also rejects the retired restricted VM
+inside its original Rust module paths. A negative control restored the
+historical unreferenced `src/canonical/compiled_heap.rs` from Git. The
+previous workspace source check accepted it. Both the updated workspace
+check and the unpacked WASI VM consumer rejected the restored module.
+The unchanged source layout passed all 14 shipping graphs, 12 release-tool
+tests and both external consumer builds. [Release and negative-control receipts](shipping.json).

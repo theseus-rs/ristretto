@@ -15,6 +15,10 @@ the 64 MiB Java comparison completed, as did a two-minute run at 100
 arrivals/s with 12,000 completed operations. Partial regional returns permit
 a bounded additional retry while retaining the full managed charge. The
 all-live exhaustion controls passed on both targets.
+An isolated repeat put the lowest individual complete-cycle speedup bounds
+at 10.39× native and 9.95× WASI versus `f1daebeb`. The reference-array
+JVMs sustained median saturation throughput of 689 operations/s on Ristretto,
+1,077,864 on G1 and 609,591 on ZGC in the ten-second measurement.
 [Reclamation gates and remaining workload limits](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/regional-array-reclamation/README.md).
 
 At `0b76cfaf`, construction root handoff, young array card contention and
