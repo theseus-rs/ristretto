@@ -9,6 +9,16 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `ae693278` Java queue-root preparation moved outside the collector cut.
+A peer finished a fresh full collection while the preparing thread was parked.
+Before that thread resumed, peers delivered a rebound owner exactly once and
+reclaimed both the original and replacement owners after their roots dropped.
+Four native tests covered 16 schedules in 100 fresh processes. Independent
+processing delivered Weak and Final owners in one public step on WASI as well.
+All 36 complete-collection conditions passed against `f1daebeb`; the minimum
+individual 95% lower speedup bounds were 10.73× native and 10.004× WASI.
+[Queue-root controls, validation and complete-collection graphs](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/java-queue-root-preparation/README.md).
+
 At `a5ad4aec` a completed epoch rejects new proposals and public steps
 discard at most one already-admitted proposal each. Native and WASI drained
 4,096 proposals in 4,096 steps. A separate native schedule completed a new
