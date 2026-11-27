@@ -4859,16 +4859,34 @@ fn check_paused_deletion_offer(
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[test]
+fn young_scan_that_passed_a_committed_old_deletion_is_covered_before_return() -> Result<()> {
+    check_young_receiver_during_old_deletion(false)
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn young_receiver_turnover_before_old_deletion_returns_preserves_the_edge() -> Result<()> {
+    check_young_receiver_during_old_deletion(true)
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
 #[expect(
     clippy::panic_in_result_fn,
     reason = "bounded old and young receiver schedule"
 )]
-fn young_scan_that_passed_a_committed_old_deletion_is_covered_before_return() -> Result<()> {
+fn check_young_receiver_during_old_deletion(turn_over_young: bool) -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
     for counted in [false, true] {
+        let config = Configuration::builder();
+        // Keep the target young across a complete collection in the turnover case.
+        let config = if turn_over_young {
+            config.promotion_age(8)
+        } else {
+            config
+        };
         let gc = GarbageCollector::with_config(
-            Configuration::builder()
+            config
                 .concurrent_publication(counted)
                 .old_collection_interval(4)
                 .overlapping_generations(true)
@@ -4917,13 +4935,26 @@ fn young_scan_that_passed_a_committed_old_deletion_is_covered_before_return() ->
                 .recv_timeout(Duration::from_secs(3))
                 .expect("committed old deletion");
             assert_eq!(gc.visible_retention(&target, 1, old_epoch), None);
-            gc.collect_young();
-            assert!((0..2048).any(|_| {
-                gc.coordinated_step(false);
-                lock(&gc.domains[0].cycle).phase == Phase::Remembered
-            }));
-            let young_epoch = gc.domains[0].epoch.load(Ordering::Acquire);
+            let young_epoch = advance_young_past_cross_roots(&gc);
             assert_eq!(gc.visible_retention(&target, 0, young_epoch), None);
+            let receiver = if turn_over_young {
+                assert!((0..100_000).any(|_| {
+                    gc.step();
+                    !gc.domains[0].active()
+                }));
+                assert!(target.birth.is_live());
+                assert_eq!(child.identity(), target.id);
+                assert_eq!(target.retention(1, old_epoch), Some(Retention::Strong));
+                let next = advance_young_past_cross_roots(&gc);
+                assert_ne!(young_epoch, next);
+                assert_eq!(
+                    gc.visible_retention(&target, 0, next),
+                    Some(Retention::Strong)
+                );
+                next
+            } else {
+                young_epoch
+            };
             release.send(()).expect("resume deletion");
             producer.join().expect("producer");
             assert_eq!(
@@ -4931,7 +4962,7 @@ fn young_scan_that_passed_a_committed_old_deletion_is_covered_before_return() ->
                 Some(Retention::Strong)
             );
             assert_eq!(
-                gc.visible_retention(&target, 0, young_epoch),
+                gc.visible_retention(&target, 0, receiver),
                 Some(Retention::Strong)
             );
         });
@@ -4945,4 +4976,14 @@ fn young_scan_that_passed_a_committed_old_deletion_is_covered_before_return() ->
         assert_eq!(gc.managed_bytes(), 0);
     }
     Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+fn advance_young_past_cross_roots(gc: &GarbageCollector) -> u64 {
+    gc.collect_young();
+    assert!((0..2048).any(|_| {
+        gc.coordinated_step(false);
+        lock(&gc.domains[0].cycle).phase == Phase::Remembered
+    }));
+    gc.domains[0].epoch.load(Ordering::Acquire)
 }
