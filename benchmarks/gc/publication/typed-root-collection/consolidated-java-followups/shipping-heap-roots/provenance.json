@@ -1,0 +1,56 @@
+{
+  "source": "880cce8835daa2cb80922e57fe3d2ec4d728acfc",
+  "binary_sha256": "4790b3f0f667801ad182bb1930e20743616ae331f3997b5d658bafccefcc62ac",
+  "harness_source_archive_sha256": "c1189f87e24e4103f28a80ef5ea4149ecec40de16efe333c31603d251965c7ec",
+  "matching_source_files": 2431,
+  "source_archive_sha256": "908950c1a75d52cc90d50e699cbad944417ef522c3b176661c3d929b6cbcfa06",
+  "features": [
+    "audio",
+    "default",
+    "tls-rustls-ring"
+  ],
+  "build_command": "cargo build --release --locked -p ristretto_vm --example gc_compare",
+  "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)",
+  "integrity": {
+    "inputs_unchanged": true
+  },
+  "seed": 251128017,
+  "per_process": {
+    "heap_mib": 64,
+    "cpu_affinity": [
+      4,
+      6
+    ],
+    "cpu_quota": 2,
+    "memory_mib": 512,
+    "warmup_seconds": 5,
+    "measurement_seconds": 10
+  },
+  "artifacts_sha256": {
+    "classes/GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "classes/GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "classes/GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "classes/GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "classes/GcBench.class": "b4532f8c7186f8505ba38d1edc05d7ee072eec67b490d7382d173cd8a3b4144a",
+    "gc_compare": "4790b3f0f667801ad182bb1930e20743616ae331f3997b5d658bafccefcc62ac"
+  },
+  "schedule_sha256": "a1d090964f0f5742f56032a7d9ac5e9bdeaa3fa9e51200e3af302b18127d4132",
+  "raw_sha256": "709cafcb36f3cd6cd733f8495c15672b7da7c824f28291c04c66cd0e165b5c45",
+  "metadata": {
+    "java": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+    "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+    "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+    "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+    "scope": "same-Java end-to-end runtime comparison; not isolated collector speed",
+    "qualification": false,
+    "git_head": "880cce8835daa2cb80922e57fe3d2ec4d728acfc",
+    "created_utc": "2026-11-27T03:00:31Z"
+  },
+  "classes": {
+    "GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "GcBench.class": "b4532f8c7186f8505ba38d1edc05d7ee072eec67b490d7382d173cd8a3b4144a"
+  }
+}

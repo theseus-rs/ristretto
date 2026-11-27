@@ -9,6 +9,11 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `880cce88` the Java roots workload reached 4,979 operations/s on Ristretto,
+14.42 million/s on G1 and 14.30 million/s on ZGC. At 1,500 arrivals/s the
+scheduled p99.9 medians were 2,032, 155 and 91 µs respectively. All 225,000
+scheduled operations completed. [Whole-JVM comparison and raw observations](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/shipping-heap-roots/README.md).
+
 An inline-storage candidate for Java instances with up to two fields missed its
 roots throughput gate. Nine paired forks gave a median throughput ratio of
 0.984×, with a 95% interval of 0.963–1.189×. The shipping JVM retains its
