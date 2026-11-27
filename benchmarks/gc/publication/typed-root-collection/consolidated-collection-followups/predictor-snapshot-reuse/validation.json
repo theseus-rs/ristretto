@@ -1,0 +1,163 @@
+{
+  "source_revision": "060af5a8da2242517a50d1ba42b14891b052474f",
+  "shipping_revision": "a0f40eac78d4c8b9028cec534cbbc992a770da89",
+  "gc_source_tree": "8b16b8813750f2216723b52efcf631e97683867b",
+  "suites": {
+    "native": {
+      "passed": 1033,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 468,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "miri": {
+    "scheduler": {
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0
+    },
+    "statistics": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "cargo": [
+    "strict native and WASI all-target all-feature Clippy",
+    "verified collector Cargo archive",
+    "wasm32-unknown-unknown all-feature check"
+  ],
+  "forced": {
+    "pressure": {
+      "fresh_processes": 100,
+      "schedules_per_process": 4
+    },
+    "statistics": {
+      "fresh_processes": 100,
+      "schedules_per_process": 4
+    }
+  },
+  "previews": {
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "shipping_checks": {
+    "dependency_graphs": 14,
+    "release_tool_tests": 12,
+    "normalized_package_consumers": [
+      "native",
+      "wasi"
+    ],
+    "ordinary_jvm_reproducer": {
+      "native": 8192,
+      "wasi": 8192
+    }
+  },
+  "reviews": {
+    "design-xhigh": {
+      "status": "ERROR",
+      "error": "invalid model selection (--model \"gemini-4-carbon\" --effort \"xhigh\"): gemini-4-carbon has no \"xhigh\" effort (available: low, medium, high)"
+    },
+    "design-high": {
+      "status": "SUCCESS",
+      "response": "**Verdict: No new soundness or correctness hazards** in reusing the [statistics.rs](file:///home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-predictor-spare-v1/ristretto_gc/src/collector/statistics.rs#L55-L82) TLS-spare `ArcSwap::rcu` helper for `started`/`reclaimed`/`completed` in [scheduling.rs](file:///home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-predictor-spare-v1/ristretto_gc/src/collector/scheduling.rs#L114-L149), provided TLS access uses `LocalKey::try_with` (no borrow held across `rcu`) and `*slot` is fully overwritten from `**prev` before applying the closure.\n\n### Hazard Audit\n\n* **Alias (None):**\n  * Before `ArcSwap::rcu` returns the winning displaced `Arc<Model>`, `arc-swap` converts all active fast-path reader debts on that pointer into real `Arc` strong counts (and waits on fallback readers). Any live `Guard` or `Arc`\u2014including single-CAS allocation sampling holding `cur = model.load()` across `compare_and_swap(&*cur, ...)`\u2014keeps `strong_count >= 2`, forcing `Arc::get_mut` to return `None`. This rules out both mutable reader/writer aliasing and pointer-address ABA while `cur` is live.\n  * Reader drops (`Release` decrement) synchronize with `Arc::get_mut`'s `Acquire` uniqueness check (`strong == 1 && weak == 0`) before `*slot` is written.\n  * Conservation of ownership: `ArcSwap` yields its single slot-owned `Arc` only to the winning CAS thread, so two threads' TLS slots can never hold the same spare.\n\n* **CAS-retry (None; minor one-shot fallback under contention):**\n  * `take` clears the TLS slot to `None` on attempt 1 and moves the `Arc` into `compare_and_swap`. If CAS loses (e.g., to single-CAS sampling or a concurrent lifecycle call), `arc-swap` drops that unpublished `Arc` immediately; attempts $\\ge 2$ observe `None` and allocate `Arc::new` from the updated `**prev` before saving the eventual winning displaced `Arc`.\n  * Copying `**prev` overwrites the entire `Model` before delta mutation, leaving no stale state from either the old spare or a failed attempt.\n\n* **Cross-heap (None):**\n  * Rust `thread_local!` is per concrete `Model` type, so multiple `Scheduler`/heap instances on one OS thread share a single `Option<Arc<Model>>` spare.\n  * If Heap A's displaced `Arc` still has Heap A readers, `Arc::get_mut` on Heap B returns `None` and drops the handle safely. If unique, overwriting `*slot` from Heap B's `**prev` replaces every field before applying the delta, preventing cross-heap counter/timer/threshold leakage.\n  * Caching one `Arc<Model>` per participating thread retains only a fixed-size scalar/timer allocation with no GC-heap or object-graph references.\n\n* **Side-effect (No *new* hazards):**\n  * The closure runs **once per CAS attempt** (after branching between `Arc::get_mut` reuse and fresh `Arc::new`, never both), identical to plain `ArcSwap::rcu`.\n  * Idempotently disabling `skip_before` on rollover therefore has identical retry/ordering behavior: repeated execution on retry is a no-op, and any speculative disable before a lost CAS fails conservatively (forcing slow-path `Model` checks rather than suppressing GC).\n  * Deferring destruction of the displaced `Model` in TLS introduces no `Drop` side effects because `Model` contains only trivial-drop scalars, timers, and a threshold (no locks or RAII handles).\n\n* **TLS teardown (Safe with `try_with`):**\n  * Using `LocalKey::try_with` on both pre-`rcu` `take` and post-`rcu` save handles calls during/after TLS destruction (`AccessError`) without panicking: `take` falls back to `None` (`Arc::new`), and save drops the displaced `Arc` immediately.\n  * Normal thread-exit destruction of `Option<Arc<Model>>` only decrements refcount / deallocates `ArcInner<Model>` via the global allocator without touching other TLS keys or collector locks, avoiding destructor-order panics or deadlocks.\n"
+    },
+    "carbon-high": {
+      "status": "ERROR",
+      "error": "print timeout after 5m0s with the turn still in progress; the response is partial"
+    },
+    "carbon-xhigh": {
+      "status": "ERROR",
+      "error": "invalid model selection (--model \"gemini-4-carbon\" --effort \"xhigh\"): gemini-4-carbon has no \"xhigh\" effort (available: low, medium, high)"
+    },
+    "neon-high": {
+      "status": "SUCCESS",
+      "response": "**Yes.** `update` preserves the winning displaced `prior` (`displaced(&prior)` runs before caching), never mutates published data, and prevents double counting (assuming `change` only mutates `&mut T`).\n\n- **Pinned guard:** `rcu` pays reader debts before returning `prior`; live guards keep strong count >1, so `Arc::get_mut` returns `None` and drops the handle without mutating.\n- **Re-entrant/losing CAS:** `Cell::take` prevents aliasing; retries rebuild from fresh `previous`.\n- **Cross-heap:** `clone_from` overwrites all scalar/time fields; idle TLS retains no collector objects.\n- **TLS teardown:** `try_with` ignores `AccessError`, allocating and dropping `prior`.\n- **Limitations:** Lock-free `rcu` risks writer starvation under contention. Allocator fallbacks occur when guards pin `retired`, losing CAS discards the recycled candidate, or TLS tears down.\n"
+    }
+  },
+  "minimum_95_speedup_bounds": {
+    "native": 10.624825451159868,
+    "wasm": 10.25106867289364
+  },
+  "allocations": {
+    "control": {
+      "calls": [
+        64
+      ],
+      "requested_bytes": [
+        4608
+      ],
+      "steps": [
+        1216
+      ]
+    },
+    "before": {
+      "calls": [
+        192
+      ],
+      "requested_bytes": [
+        35328
+      ],
+      "steps": [
+        1216
+      ]
+    },
+    "reuse": {
+      "calls": [
+        64
+      ],
+      "requested_bytes": [
+        4608
+      ],
+      "steps": [
+        1216
+      ]
+    }
+  },
+  "allocation_recording": {
+    "ns_per_event": {
+      "original mutex": 18.211304,
+      "immutable predictor": 18.02266525,
+      "reused predictor": 18.181447249999998
+    },
+    "reuse_vs_preceding": {
+      "median": 1.0040215906553263,
+      "low": 0.9885969423100556,
+      "high": 1.015324743688041
+    },
+    "forks_per_arm": 24,
+    "measured_events_per_batch": 2000000
+  }
+}

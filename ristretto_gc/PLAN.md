@@ -9,6 +9,14 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `a0f40eac`, reusing released predictor snapshots brought the finite-heap
+64-cycle probe back to 64 host allocation requests for 4,608 bytes. The prior
+predictor made 192 requests for 35,328 bytes. All 800 parked-thread schedules
+passed, and all 36 collection conditions exceeded 10× versus `f1daebeb` at
+their individual lower 95% bounds (10.625× native, 10.251× WASI minima).
+In Chromium one candidate fork had four unfinished arrivals at the deadline.
+[Measurements and shipping checks](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/predictor-snapshot-reuse/README.md).
+
 At `d1cab313`, full collection and a capped allocation completed under both
 publication policies with a parked predictive-scheduling reader or allocating
 sampler. All 400 schedules passed. Across 36 complete-collection conditions,
