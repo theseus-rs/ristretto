@@ -89,6 +89,28 @@ All 27 JVMs exited successfully. All scheduled work finished. [Raw forks](logica
 
 ![Reference-array saturation throughput and scheduled latency](logical/java/comparison.png)
 
+## Sweep accounting experiment
+
+A follow-up candidate summed the exact managed charges while removing
+unmarked descriptors, eliminating a second pass over each retired prefix.
+The mixed-size, marked-survivor and accounting checks passed on native and
+WASI. In a direct comparison with the shipping runtime, the 95% intervals for
+the change in elapsed time included 1.0 in both diagnostic-enabled WASI
+conditions. Across the full matrix against `f1daebeb`, the lowest individual
+95% bound was 10.53× native and 9.87× WASI. The candidate was withheld.
+[Candidate patch](sweep-charge-experiment/candidate.patch.gz) ·
+[All matrix conditions](sweep-charge-experiment/cycles/complete-cycles.csv) ·
+[512 paired-comparison processes](sweep-charge-experiment/wasm-candidate-vs-shipping.jsonl.gz) ·
+[Tests, audit and intervals](sweep-charge-experiment/validation.json).
+
+A separate Wasmtime guest profile of the shipping runtime retained 3,680
+periodic samples. Of 302 stacks containing `collect_full` or `step_inner`,
+38 had `record_step` as their innermost collector symbol and 32 had
+`sweep_unit`. The profile covers the entire fixture, including warmup and
+teardown. It identifies places to investigate with the uninstrumented
+comparison. [Profile and grouping](sweep-charge-experiment/wasm-profile.json) ·
+[Sample stacks](sweep-charge-experiment/wasm-samples.json.gz).
+
 ## Shared-heap release checks
 
 All 14 shipping dependency graphs resolved one `ristretto_gc`. The external

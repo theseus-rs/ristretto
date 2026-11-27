@@ -1,0 +1,96 @@
+{
+  "candidate": "a87b235ac6d286097809956b9500fe2c8c2f486b",
+  "shipping_runtime": "f4cdf10f",
+  "applied": false,
+  "targets": {
+    "native": {
+      "passed": 1007,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 464,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "direct_comparison": {
+    "target": "wasm32-wasip2",
+    "seed": 251130157,
+    "pairs_per_condition": 64,
+    "candidate_vs_shipping_time_ratios": [
+      {
+        "shape": "mixed",
+        "policy": "gated",
+        "workers": 0,
+        "diagnostics": false,
+        "before_ns": 50.517528998779,
+        "after_ns": 50.60282356532356,
+        "after_before": {
+          "median": 0.9973419946614537,
+          "low": 0.9874385573331887,
+          "high": 1.0135907138072209,
+          "pairs": 64
+        }
+      },
+      {
+        "shape": "mixed",
+        "policy": "gated",
+        "workers": 0,
+        "diagnostics": true,
+        "before_ns": 52.720245726495726,
+        "after_ns": 52.4333257020757,
+        "after_before": {
+          "median": 0.9887420728958737,
+          "low": 0.9813041174259859,
+          "high": 1.000296600990652,
+          "pairs": 64
+        }
+      },
+      {
+        "shape": "mixed",
+        "policy": "counted",
+        "workers": 0,
+        "diagnostics": false,
+        "before_ns": 50.67508394383394,
+        "after_ns": 50.82573260073261,
+        "after_before": {
+          "median": 1.0059859374790934,
+          "low": 0.9934053047815291,
+          "high": 1.016561245254375,
+          "pairs": 64
+        }
+      },
+      {
+        "shape": "mixed",
+        "policy": "counted",
+        "workers": 0,
+        "diagnostics": true,
+        "before_ns": 52.749068986568986,
+        "after_ns": 53.0157967032967,
+        "after_before": {
+          "median": 1.0017703388735344,
+          "low": 0.9891299113507057,
+          "high": 1.0112138194565656,
+          "pairs": 64
+        }
+      }
+    ],
+    "raw_sha256": "99b2b9e1ea45e8909a657cafafb957f586ace4098e82ef5f26083b06a3e3e47d",
+    "before_sha256": "322e8ddebe4921a289d074efd73ec8062c2584679dc22f87533fc6684cc03c8f",
+    "after_sha256": "5b2aeee06c060cf1f625a8ae6b2d4a965de27b90cdbcc27f1fc172677cc7fde6"
+  },
+  "package_log_sha256": "f03b62ccd780f00d48155dd0c6072e3dfd3872654f495da672ea9786c932fe50",
+  "miri_log_sha256": "f7ebbc9d508e254fe963dd5a63c8e384219e119a36c734e82d0ba1c3072ee3fe",
+  "wasi-clippy_log_sha256": "66e094b2e61f1e8298c4a9ccc214d68244bdb26a573ffcf9d1332556694fb208",
+  "native-clippy_log_sha256": "b6266b73178ad8ecbf1045b91c3f8330e7eaa2b50268a32bb2c4e8d87b3993ca",
+  "wasi-suite_log_sha256": "872a98788c41d4cab3afaaec7a643ed426f8eb95b62a9ea606fca5cbed0be226",
+  "native-suite_log_sha256": "9448f136aac9119837075a73f4a574319348ab7add1ed5d7b7a7c8bb641049a6",
+  "audit": {
+    "model": "gemini-4-neon",
+    "status": "SUCCESS",
+    "response_sha256": "7fe0add355e288154bee2a5f6ff19c07342bf8e9ab62b2337bbbd013cdfbacbe",
+    "carbon_xhigh": "ERROR",
+    "carbon_high": "ERROR"
+  }
+}
