@@ -27,6 +27,12 @@ complete-cycle conditions cleared 10× against `f1daebeb`, with minimum
 individual 95% lower bounds of 10.80× native and 10.20× WASI.
 [Reclamation, collection and browser measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/terminal-dispatch-waits/README.md).
 
+On the same source, the native Java roots workload reached medians of
+4,596, 14,496,218, 14,410,704 operations/s at saturation for Ristretto, G1 and ZGC,
+respectively. At 1,500 offered operations/s their scheduled p99.9 medians
+were 557, 123, 209 µs, respectively. Whole-JVM throughput, latency and endurance remain open.
+[All 27 processes and per-fork ranges](../benchmarks/gc/publication/typed-root-collection/consolidated-java-followups/unified-heap-roots/README.md).
+
 At `fe7d8c39` all three JVM smoke tiers reclaimed their complete two-node
 charge. All 36 complete-collection conditions passed the 10× gate relative to
 `f1daebeb`, with minimum individual 95% lower bounds of 10.84× on native and

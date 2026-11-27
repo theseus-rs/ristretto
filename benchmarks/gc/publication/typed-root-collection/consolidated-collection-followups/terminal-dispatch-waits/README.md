@@ -36,4 +36,4 @@ Nine foreground headless Chromium processes ran the bare-Wasm collector fixture 
 
 ![Chromium response, heartbeat, memory and backlog across policies](browser.png)
 
-[Browser observations](browser.jsonl.gz) · [Java receipts, browser binary and asset identities](validation.json) · [Whole-JVM G1 and ZGC measurements](../../consolidated-java-followups/null-local-roots/README.md).
+[Browser observations](browser.jsonl.gz) · [Java receipts, browser binary and asset identities](validation.json) · [Whole-JVM G1 and ZGC measurements](../../consolidated-java-followups/unified-heap-roots/README.md).
