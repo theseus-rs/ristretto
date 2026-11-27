@@ -187,6 +187,12 @@ impl Clock {
         ((self.state.load(Ordering::SeqCst) & ACTIVE_MASK) / ACTIVE_UNIT) as usize
     }
 
+    /// A deletion can race the snapshot commit before the legacy domain mirrors
+    /// are updated. Sample both marking flags at the same publication point.
+    pub(crate) fn any_marking(&self) -> bool {
+        self.state.load(Ordering::SeqCst) & (ACTIVE_DOMAINS << 1) != 0
+    }
+
     pub(crate) fn flags(&self, index: usize) -> u64 {
         domain_flags(self.state.load(Ordering::SeqCst), index)
     }

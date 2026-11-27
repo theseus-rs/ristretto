@@ -1943,7 +1943,10 @@ impl GarbageCollector {
     }
 
     pub(crate) fn snapshot_edge<T>(&self, target: &Gc<T>) {
-        if self.domains.iter().any(Domain::marking) {
+        let marking = self.phase_clock.any_marking();
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        phase_tests::after_deletion_sample();
+        if marking {
             self.edge_barrier(target);
         }
     }

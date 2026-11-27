@@ -10,6 +10,7 @@ thread_local! {
     static BEFORE_SWEEP_HANDOFF: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static BEFORE_SNAPSHOT_COMMIT: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static EPOCH_DESTRUCTION: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+    static AFTER_DELETION_SAMPLE: std::cell::Cell<Option<std::sync::mpsc::Sender<()>>> = const { std::cell::Cell::new(None) };
     static AFTER_ACTIVATION: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
 }
 
@@ -21,6 +22,13 @@ pub(super) fn after_statistics_snapshot() {
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 pub(super) fn before_snapshot_commit() {
     pause_once(&BEFORE_SNAPSHOT_COMMIT);
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(super) fn after_deletion_sample() {
+    if let Some(resume) = AFTER_DELETION_SAMPLE.take() {
+        resume.send(()).expect("resume snapshot");
+    }
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
@@ -357,6 +365,94 @@ mod native {
                 );
             }
         }
+        Ok(())
+    }
+
+    #[cfg(not(miri))]
+    #[test]
+    fn deleting_a_traced_edge_observes_the_committed_snapshot() -> Result<()> {
+        struct Edge(Option<Gc<Vec<Gc<u64>>>>);
+        // SAFETY: the single managed field forwards all tracing and rooting.
+        unsafe impl Trace for Edge {
+            fn root(&mut self) {
+                self.0.root();
+            }
+            fn trace(&self, gc: &GarbageCollector) {
+                self.0.trace(gc);
+            }
+            unsafe fn unroot(&mut self, owner: crate::TraceOwner<'_>) {
+                // SAFETY: the exclusive owner controls the optional edge.
+                unsafe { Trace::unroot(&mut self.0, owner) };
+            }
+            fn can_skip_unroot_after_write(&self) -> bool {
+                self.0.is_none()
+            }
+        }
+        let mut retained = Vec::new();
+        for counted in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .barrier_buffer_size(4)
+                    .incremental_step_size(1)
+                    .max_pause_time_us(0)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let leaf = Gc::try_new(&gc, 17u64)?.into_rooted();
+            let leaf_weak = crate::GcWeak::new(&leaf, crate::ReferenceKind::Weak, 0);
+            let child = Gc::try_new(&gc, vec![leaf])?.into_rooted();
+            let child_weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+            let parent = Gc::try_new(&gc, crate::cell::RwLock::new(Edge(Some(child))))?;
+            let context = gc.register_context();
+            let ticket = gc.request_full_cycle();
+            let (entered, parked) = mpsc::channel();
+            let (release, resume) = mpsc::channel();
+            let heap = gc.clone();
+            let starter = thread::spawn(move || {
+                AFTER_ACTIVATION.set(Some(ClaimPause { entered, resume }));
+                heap.step();
+            });
+            parked
+                .recv_timeout(Duration::from_secs(5))
+                .expect("full snapshot activated");
+            context.with(|| {
+                let mut guard = parent.write();
+                // SAFETY: the original edge is dropped in place while holding the owner guard.
+                let edge = unsafe { guard.unrooted_mut() };
+                assert!(
+                    edge.0
+                        .as_ref()
+                        .is_some_and(|child| child.traced_metadata().is_some())
+                );
+                // Resume the starter only after the deletion samples the marking state.
+                // The original publication lock can then admit the barrier.
+                AFTER_DELETION_SAMPLE.set(Some(release));
+                edge.0 = None;
+            });
+            starter.join().expect("snapshot starter");
+            for _ in 0..2048 {
+                if gc.completed_full_ticket() >= ticket {
+                    break;
+                }
+                gc.step();
+            }
+            assert!(gc.completed_full_ticket() >= ticket);
+            retained.push((
+                counted,
+                child_weak.upgrade().as_ref().is_some_and(|child| {
+                    child
+                        .first()
+                        .is_some_and(|leaf| leaf_weak.refers_to(leaf) && **leaf == 17)
+                }),
+            ));
+            gc.collect_full()?;
+            assert!(child_weak.upgrade().is_none() && leaf_weak.upgrade().is_none());
+            drop(parent);
+            gc.stop()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+        assert_eq!(retained, [(false, true), (true, true)]);
         Ok(())
     }
 
