@@ -1,0 +1,9 @@
+{
+  "matplotlib": "3.11.2",
+  "raw_sha256": "99bf55c587d854a9ea99cf2fc6d5cf46adc30b7d5820cd2e10837674b55661e0",
+  "renderer_sha256": "67ec001346616a99706ee1302e6e5b8f3466718c27e78944be4df45e049f9991",
+  "graphs": {
+    "browser.svg": "9f54342b5579038aaaa1eb8b0e27ccb29ee35cb9bd7e85acffb70e0f676c8dab",
+    "browser.png": "7c4f754020d306c9fd033006537122a3df279bd21dc72a4e89adc348ee95c147"
+  }
+}

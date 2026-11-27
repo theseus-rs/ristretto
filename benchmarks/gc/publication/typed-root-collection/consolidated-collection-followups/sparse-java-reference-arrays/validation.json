@@ -1,0 +1,150 @@
+{
+  "measured_parent": "46d0afec1a71fedc98d4ce0c29203375dc5609af",
+  "measured_candidate": "c0e078937b48d57067a0e7af17444d9096f14690",
+  "measured_tree": "83fe4e6f2c03b441385032a338651cfb86ebcba5",
+  "reconstruction_patch_sha256": "97378e72c129db967d6a56d4e8a2ba0e58da49033e4169abacdc15443f9022f0",
+  "parent_falsifier": "All-null array returned Continue(1) at budget 1. The candidate returns Complete.",
+  "tests_and_clippy": {
+    "native": {
+      "passed": 1832,
+      "ignored": 15,
+      "doc_example": true,
+      "strict_clippy": true,
+      "focused": 19,
+      "midcard": 1
+    },
+    "wasi": {
+      "passed": 1237,
+      "ignored": 9,
+      "doc_example": true,
+      "strict_clippy": true,
+      "focused": 17,
+      "midcard": 1
+    }
+  },
+  "archive_contract_tests_revision": "72694462ff03b215c6e669b190ef74fce2eb366c",
+  "midcard_regression_revision": "004133f3547bf817dfac8709114be33a3a0d34de",
+  "read_only_audit": {
+    "requested_model": "gemini-4-carbon",
+    "requested_effort": "xhigh",
+    "available_result": "gemini-4-neon high",
+    "status": "SUCCESS",
+    "finding": "No. Modulo collisions with monotonic bits only overscan; `CardSet` pruning preserves occupancy bits and only drops cards lacking young refs.\n\n**Lifetime assumptions:**\n- No `&mut` borrow outlives `ArrayElements` or overlaps the read guard.\n- Bits publish before exposure and match storage lifetime.\n- Skipping zero bits resets partial-card offsets.\n\n**Falsifying test:**\nScan mid-card from a zero bit before a strong ref at the next set card's offset 0; assert it is traced.\n",
+    "verification": "Verification completed with no repository edits.\n\n- **Command**: `cargo test --locked -p ristretto_classloader --lib skipping_the_remainder_of_an_empty_card_starts_at_the_next_cards_first_slot`\n- **Observed test name**: `array_elements::tests::skipping_the_remainder_of_an_empty_card_starts_at_the_next_cards_first_slot`\n- **Result**: `ok` (`1 passed; 0 failed; 0 ignored; 0 measured; 765 filtered out; finished in 0.00s`)\n- **Exit code**: `0`\n"
+  },
+  "capped_array_allocations": 8192,
+  "preview": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "runtime_source_comparison": {
+    "measured": "c0e078937b48d57067a0e7af17444d9096f14690",
+    "shipping": "09fd331255976f97579ce606a8fd66ef928ac56e",
+    "changed_runtime_source_files": [
+      {
+        "path": "ristretto_classloader/src/array_elements.rs",
+        "change": "unit tests"
+      },
+      {
+        "path": "ristretto_classloader/src/class_path.rs",
+        "change": "unit tests"
+      },
+      {
+        "path": "ristretto_classloader/src/class_path_entry/jar.rs",
+        "change": "unit tests"
+      },
+      {
+        "path": "ristretto_classloader/src/class_path_entry/model.rs",
+        "change": "unit tests"
+      },
+      {
+        "path": "ristretto_classloader/src/lib.rs",
+        "change": "crate documentation"
+      }
+    ]
+  },
+  "shipping_source_archive": {
+    "revision": "09fd331255976f97579ce606a8fd66ef928ac56e",
+    "archive_sha256": "40c1fc676d9267d6d576f2932dbec06c4de4e8f36819798c62063831c45fd422",
+    "reproducible": true,
+    "tiers": {
+      "native-interpreted": {
+        "cleared_witnesses": 2,
+        "compiled_backedges": 0,
+        "compiled_entries": 0,
+        "cycle_rewired_by": "interpreted",
+        "full_collections": 1,
+        "interpreted_entries": 25,
+        "managed_bytes_freed": 768,
+        "result": 64
+      },
+      "native-compiled": {
+        "cleared_witnesses": 2,
+        "compiled_backedges": 8,
+        "compiled_entries": 25,
+        "cycle_rewired_by": "compiled",
+        "full_collections": 1,
+        "interpreted_entries": 0,
+        "managed_bytes_freed": 768,
+        "result": 64
+      },
+      "wasi-interpreted": {
+        "cleared_witnesses": 2,
+        "compiled_backedges": 0,
+        "compiled_entries": 0,
+        "cycle_rewired_by": "interpreted",
+        "full_collections": 1,
+        "interpreted_entries": 25,
+        "managed_bytes_freed": 480,
+        "result": 64
+      }
+    }
+  },
+  "shipping_checks": {
+    "graphs": 18,
+    "release_tool_tests": 12,
+    "normalized_consumers": [
+      "native",
+      "wasm32-wasip2"
+    ],
+    "checked_probe_recipes": [
+      "native",
+      "wasm32-wasip2"
+    ],
+    "missing_classloader_dep_control": [
+      "native all_features=False: enclosing VM graph passes, class loader graph detects missing dependency",
+      "native all_features=True: enclosing VM graph passes, class loader graph detects missing dependency",
+      "wasm32-wasip2 all_features=False: enclosing VM graph passes, class loader graph detects missing dependency",
+      "wasm32-wasip2 all_features=True: enclosing VM graph passes, class loader graph detects missing dependency"
+    ],
+    "independent_graph_audit": "Yes, the second invocation would reject because `cargo tree --package ristretto_classloader` roots the normal/build traversal at `ristretto_classloader` itself, so once the class loader loses its only edge to `ristretto_gc`, the required `ristretto_gc` version and path disappear from its output even though `ristretto_vm` still keeps it reachable in the consumer's tree. A limitation is that this check still evaluates `ristretto_classloader` inside the consumer's unified feature set for only that single `--target` (and across its full transitive closure rather than direct edges only), so it can miss broken `cfg(...)` edges on other targets, standalone feature regressions where `ristretto_gc` was only enabled via the consumer, or a dropped direct edge masked by another transitive dependency.\n"
+  }
+}

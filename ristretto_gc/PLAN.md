@@ -9,6 +9,22 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+The standalone class loader now has its own single-collector dependency check.
+All 18 workspace graphs and both normalized Cargo consumers passed. Removing
+the class loader's GC dependency left the enclosing VM graph green in four
+target and feature combinations. The independent class loader check rejected
+all four.
+
+The sparse reference-array candidate is withheld. Full collection of one
+4,097-slot array with two populated endpoints improved 6.28× on native and
+7.13× on WASI against its immediate parent. Across all 36 established graph
+conditions the lower 95% bounds exceeded 10× versus `f1daebeb`. At 500
+scheduled Java operations/s for two minutes the candidate completed 31,096 of
+60,000. The parent, G1 and ZGC each completed 60,000. The first implementation
+priority for this candidate is to explain the growing backlog and the increase
+in process-wide collection frequency before changing the shipping array tracer.
+[Candidate patch, graphs and JVM traces](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/sparse-java-reference-arrays/README.md).
+
 At `a0f40eac`, reusing released predictor snapshots brought the finite-heap
 64-cycle probe back to 64 host allocation requests for 4,608 bytes. The prior
 predictor made 192 requests for 35,328 bytes. All 800 parked-thread schedules

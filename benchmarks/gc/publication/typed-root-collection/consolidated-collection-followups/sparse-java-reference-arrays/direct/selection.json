@@ -1,0 +1,32 @@
+{
+  "targets": [
+    "native",
+    "wasm32-wasip2"
+  ],
+  "slots": 4097,
+  "non_null_endpoints": [
+    0,
+    4096
+  ],
+  "paired_processes_per_shape": 24,
+  "measured_complete_collections_per_process": 16,
+  "additional_warmup_collections": 3,
+  "shapes": [
+    "null",
+    "endpoints",
+    "alias",
+    "unique"
+  ],
+  "direct_selection": {
+    "null_and_endpoints_individual_lower_95_minimum_speedup": 1.2,
+    "dense_alias_and_unique_individual_lower_95_minimum_speedup": 0.9523809523809523,
+    "maximum_reference_and_value_size_growth_bytes": 0,
+    "maximum_managed_bytes_growth": 0
+  },
+  "further_gates": [
+    "real Java and Rust graph liveness and refunds",
+    "measured JVM allocation and scheduled reference-array workload",
+    "native and WASI artifact/packaging and established full-collection gates"
+  ],
+  "notes": "The occupancy summary is monotone. Mask collisions may visit empty cards. The memory and speed gates refer to the supplied workloads."
+}
