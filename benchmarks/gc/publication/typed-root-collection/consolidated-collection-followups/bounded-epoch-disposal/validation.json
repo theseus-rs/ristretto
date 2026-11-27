@@ -1,0 +1,110 @@
+{
+  "source": "a5ad4aecfd4d39cd376433acb5bb69612e3b479a",
+  "previous": "78ba05a3",
+  "tests": {
+    "native": {
+      "passed": 985,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 450,
+      "failed": 0,
+      "ignored": 0
+    },
+    "native_java_references": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0
+    },
+    "miri": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "forced": {
+    "tests": {
+      "control": "last_stale_epoch_owner_releases_a_bounded_number_of_proposals",
+      "portable": "closed_epochs_reject_late_offers_and_drain_preexisting_proposals_one_per_step",
+      "parked": "parked_epoch_publisher_allows_sibling_disposal_and_late_link_help"
+    },
+    "processes": {
+      "native_parent": 10,
+      "native_portable": 100,
+      "native_parked": 100,
+      "wasi_portable": 20
+    },
+    "publication_policies_per_candidate_test": 2,
+    "control_patch_sha256": "b6b10a3f4828503f567e258785b79cdd6534c8136d3e1f04199c22655c488043",
+    "binaries": {
+      "candidate.test": "9de971d53ef2269843f95ab07f97b62c4dc7610737d14ba1d20f9c7c08b5df30",
+      "control.test": "a94bd7c754ae9b7b7bcf2f92f6105a6ebec783f142339f90a56e35f3c82692d4",
+      "candidate.wasm": "1150e0aa3192bd87d1c9aa8b5f3c4079381dfd024bdb4317811092be8dded2a3"
+    }
+  },
+  "shipping_checks": {
+    "clippy-native-final": "67094187bf0cb74da63ef36bd13b828647ccbf2eb0914e12d480e04dcb92bc21",
+    "clippy-wasi-final": "9c9fae9d4cab0a627eca2b474d09e08c7c6e9df50aa79baf228a14090f998945",
+    "package": "0eb468fc32200f5769e212e868e23ceee9a9f8ee91f78001120f586ea0fb1d00",
+    "consumer-native": "54c9c767993e1d6da23df81eb697b5b7209570bec645a3f622cf786aaf5a8303",
+    "consumer-wasi": "11f100a05c84d73419eb63a6b6866f87d5ca85e97ab4dd25a6b92182f7ce2968",
+    "playground": "92f0571353a1b65e9824ed24dcd96fa125375a916d9a3ddd28a4a08e795d8a7d"
+  },
+  "java": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "shipping_configurations": 14,
+  "reviews": {
+    "carbon": {
+      "effort": "high",
+      "response_sha256": "63cb2e6b8904636dea919e0034fe86fa3f8a6253926a3794477574836841674f"
+    },
+    "neon": {
+      "effort": "high",
+      "response_sha256": "51a42e1fd7ee58007e89d86d24a19deaa247ebfa0e70ad1312f3c9b562fa2c99"
+    }
+  },
+  "browser": {
+    "offered": 36000,
+    "unfinished_per_fork": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "module_sha256": "a1d4811f6a3f1b7431cf1e4e35dd7d958aa31f40b9a2f1e03f80d6271ff46bf6",
+    "source_archive_sha256": "6f92de77979532820c3a94daf508243c5a71961d885fb0a3ee3ae86de683cca2"
+  }
+}

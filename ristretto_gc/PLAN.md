@@ -9,6 +9,17 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `a5ad4aec` a completed epoch rejects new proposals and public steps
+discard at most one already-admitted proposal each. Native and WASI drained
+4,096 proposals in 4,096 steps. A separate native schedule completed a new
+full collection with a publisher still parked inside its private queue slot.
+All 36 complete-collection conditions passed against `f1daebeb`. Their minimum
+individual 95% lower speedup bounds were 10.90× native and 10.59× WASI.
+During preparation of a Java queue root, however, a fresh full ticket exhausted
+2,048 polls under both publication policies. Gated publication also blocked
+allocation of a new conditional owner during that park.
+[Disposal bounds, queue-root control and complete-collection graphs](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/bounded-epoch-disposal/README.md).
+
 At `899d8a92`, an idle public GC step delivered all 129 remaining wakes
 after the first Java handler consumed the sole reference, completed a full
 collection reentrantly and parked. The 100 fresh candidate processes also
