@@ -35,3 +35,18 @@ On the Chromium main thread, all nine short forks completed 4,000 of 4,000 sched
 Antigravity Neon confirmed the rollover recovery rule and pointed out the sequential scope of the first wrap test. The additional suspended-winner test passed independently under its verification runner. The CLI rejected Carbon `xhigh`, and the Carbon `high` audit timed out. Commit `f5bdd2e7` supplied the tested build. The Rust sources and manifests match the consolidated runtime at `d1cab313`. [Revisions and audit results](validation.json).
 
 A paused pressure reader or sampler at the tested model-acquisition point now permits bounded peer recovery. Individual lifecycle writers can still retry. A publisher suspended between winning an advisory request and notifying the collector is a distinct schedule. Global pause freedom and whole-JVM throughput and tail superiority remain open release criteria.
+
+## Matched Java forks
+
+On the 64 MiB reference-array workload, the 24 fresh forks used five seconds of warmup and ten seconds of measurement. The two Ristretto executables were frozen from their respective source trees, and all four runtimes used the same classfiles, two cores of quota and 512 MiB cgroup limit. Every fork completed its scheduled arrivals.
+
+| Runtime | Saturation, operations/s | Scheduled p99.9 at 500/s |
+| --- | ---: | ---: |
+| Ristretto before predictor change | 659 | 3,520 µs |
+| Ristretto with parked predictor progress | 672 | 3,680 µs |
+| HotSpot G1 | 1,065,537 | 70 µs |
+| HotSpot ZGC | 600,447 | 264 µs |
+
+These are medians of three forks per condition. The broader spread in the [earlier two-minute comparisons](../statistics-snapshot-progress/README.md#two-minutes-at-500-arrivals-per-second) illustrates the limits of short tail screens. [Individual forks](java/forks.csv) · [Raw histograms](java/processes.jsonl.gz) · [Binary and classfile identities](java/provenance.json).
+
+![Matched Java throughput and scheduled response](java/comparison.png)

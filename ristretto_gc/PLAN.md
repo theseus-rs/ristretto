@@ -17,6 +17,8 @@ the lowest individual 95% bounds were 10.073× native and 10.272× WASI versus
 event, versus 17.95 ns previously. With prediction enabled it made 192 host
 allocation requests over 64 full cycles, versus 64 previously. All nine
 short Chromium forks completed their arrivals and teardown.
+The matched Java saturation medians were 672 operations/s on Ristretto,
+1,065,537 on G1 and 600,447 on ZGC.
 [Controls, collection graph, costs and remaining limits](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/predictive-scheduling-progress/README.md).
 
 At `cc0cd61e`, a suspended statistics reader allows a fresh collection ticket
