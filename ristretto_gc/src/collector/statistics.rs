@@ -1,11 +1,9 @@
 //! Coherent cumulative statistics. Readers can retain a version while other
 //! threads commit fresh work or complete a collection ticket.
-use super::{Arc, CollectionKind, Cycle, GarbageCollector, Ordering, Result, Statistics};
+use super::{CollectionKind, Cycle, GarbageCollector, Ordering, Result, Statistics};
 
 thread_local! {
-    /// One retired allocation per updating thread. Statistics contain only values
-    /// and timestamps, so an idle thread retains no collector or managed object.
-    static SPARE: std::cell::Cell<Option<Arc<Statistics>>> = const { std::cell::Cell::new(None) };
+    static SPARE: crate::snapshot::Spare<Statistics> = const { std::cell::Cell::new(None) };
 }
 
 /// Accumulate useful work until its reservation or collector step completes.
@@ -59,23 +57,9 @@ impl GarbageCollector {
     // The closure can retry against a competing commit. Keep clocks, ticket
     // publication, scheduler notifications and work-counter takes outside it.
     pub(super) fn update_statistics(&self, change: impl Fn(&mut Statistics)) -> usize {
-        let prior = self.statistics.rcu(|previous| {
-            if let Some(mut spare) = SPARE.try_with(std::cell::Cell::take).ok().flatten()
-                && let Some(snapshot) = Arc::get_mut(&mut spare)
-            {
-                // A published or reader-pinned version can never be unique here.
-                snapshot.clone_from(previous.as_ref());
-                change(snapshot);
-                return spare;
-            }
-            let mut next = previous.as_ref().clone();
-            change(&mut next);
-            Arc::new(next)
-        });
-        let young_collections = prior.young_collections;
-        // TLS may already be unavailable during thread teardown.
-        let _ = SPARE.try_with(|slot| slot.set(Some(prior)));
-        young_collections
+        crate::snapshot::update(&self.statistics, &SPARE, change, |prior| {
+            prior.young_collections
+        })
     }
 
     pub(super) fn record_cycle_completion(&self, cycle: &Cycle, counters: &mut WorkCounters) {

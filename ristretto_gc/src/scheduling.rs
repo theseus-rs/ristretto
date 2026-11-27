@@ -37,6 +37,10 @@ pub(crate) struct Scheduler {
 #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
 mod parked_tests;
 
+thread_local! {
+    static SPARE: crate::snapshot::Spare<Model> = const { std::cell::Cell::new(None) };
+}
+
 impl Scheduler {
     pub(crate) fn new(limit: usize) -> Self {
         let origin = crate::diagnostics::now();
@@ -117,11 +121,7 @@ impl Scheduler {
     }
 
     fn update(&self, apply: impl Fn(&mut Model)) {
-        self.model.rcu(|previous| {
-            let mut model = **previous;
-            apply(&mut model);
-            Arc::new(model)
-        });
+        crate::snapshot::update(&self.model, &SPARE, apply, |_| ());
     }
 
     pub(crate) fn started(&self, live: usize) {
@@ -475,6 +475,34 @@ mod tests {
         assert_eq!(scheduler.skip_before.load(Ordering::Relaxed), 0);
         assert!(scheduler.allocated(128, 8192, None));
         assert_eq!(scheduler.statistics().requests, 1);
+    }
+
+    #[test]
+    fn a_pinned_model_and_two_heap_limits_survive_reuse_during_full_lifecycles() {
+        let small = Scheduler::new(8192);
+        let large = Scheduler::new(1024 * 1024);
+        assert!(small.allocated(7000, 7000, None));
+        let held = small.model.load();
+        for _ in 0..3 {
+            small.started(7000);
+            large.started(4000);
+            large.reclaimed();
+            small.completed(1000, 6000);
+            large.completed(4000, 0);
+        }
+        assert!(held.pending);
+        assert_eq!(held.stats.live_bytes, 0);
+        let a = small.model.load();
+        let b = large.model.load();
+        assert_eq!(
+            (a.limit, a.stats.requests, a.stats.live_bytes),
+            (8192, 1, 6000)
+        );
+        assert_eq!(
+            (b.limit, b.stats.requests, b.stats.live_bytes),
+            (1024 * 1024, 0, 0)
+        );
+        assert!(!a.active && !b.active);
     }
 
     #[test]
