@@ -9,6 +9,12 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+The first complete-cycle rerun on exact-charge revision `227708b2`
+passed 31 of 36 conditions. Five native lower confidence bounds missed 10×,
+with a 7.024× minimum. All 12 WASIp2 conditions passed. The native 10×
+release gate remains open while the result is checked on isolated cores.
+[Per-condition measurements](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/stock-publication/exact-charge-cycles/complete-cycles.csv).
+
 Both stock publication policies returned Java heap-space errors in every
 two-worker native 64 MiB reference-array fork, and in all twelve 512 MiB
 ordinary native launcher forks. Two debugger stops found 438 and 4,014

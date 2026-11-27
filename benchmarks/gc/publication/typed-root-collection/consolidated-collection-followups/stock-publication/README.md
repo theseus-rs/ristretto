@@ -80,3 +80,12 @@ force a restart. A candidate fixed that schedule while preserving ticket and
 weak-identity checks. Native Java capacity reached 94.1% of control, below
 the 95% release floor, so the change remains experimental.
 [Native and WASI gates, complete-cycle graph and candidate patches](snapshot-start/README.md)
+
+### Complete-cycle qualification of the exact-charge revision
+
+At `227708b2`, 19 of 24 native conditions and all 12 WASIp2 conditions
+cleared the 10× individual lower 95% speedup requirement against `f1daebeb`.
+The lowest bounds were 7.024× native and 10.424× WASIp2. Native compilation
+overlapped some benchmark cores during this run. The native release gate is
+open. [All 36 estimates](exact-charge-cycles/complete-cycles.csv) ·
+[Speedup graph](exact-charge-cycles/speedup.png) · [Run identities](exact-charge-cycles/provenance.json)
