@@ -675,3 +675,192 @@ fn foreign_instance_and_array_fields_keep_their_source_heap_alive() -> Result<()
     }
     Ok(())
 }
+
+#[test]
+fn a_java_array_point_store_retains_its_foreign_root_without_private_debt() -> Result<()> {
+    let mut pending = Vec::new();
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .threads(0)
+                .diagnostics(true)
+                .concurrent_publication(counted)
+                .barrier_buffer_size(4)
+                .incremental_step_size(1)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let foreign = GarbageCollector::new();
+        let existing = Value::new_object(&gc, Reference::ByteArray(vec![17].into()));
+        let original = weak(&existing);
+        let holder = array(&gc, vec![existing, Value::Object(None)])?;
+        let incoming = Value::new_object(&foreign, Reference::ByteArray(vec![41].into()));
+        let witness = weak(&incoming);
+        let Value::Object(Some(owner)) = &holder else {
+            unreachable!()
+        };
+        let context = gc.register_context();
+        gc.collect();
+        assert!(!gc.step());
+        assert_eq!(gc.diagnostics().pending_barrier_records, 0);
+        context
+            .with(|| owner.write().set_array_element(1, incoming))
+            .unwrap();
+        pending.push((counted, gc.diagnostics().pending_barrier_records));
+        gc.collect_full()?;
+        foreign.collect_full()?;
+        let guard = owner.read();
+        let Reference::Array(array) = &*guard else {
+            unreachable!()
+        };
+        let Value::Object(Some(existing)) = &array.elements[0] else {
+            unreachable!()
+        };
+        let Value::Object(Some(incoming)) = &array.elements[1] else {
+            unreachable!()
+        };
+        assert!(original.refers_to(existing) && witness.refers_to(incoming));
+        drop(guard);
+        owner
+            .write()
+            .set_array_element(1, Value::Object(None))
+            .unwrap();
+        foreign.collect_full()?;
+        assert!(witness.upgrade().is_none());
+        drop(holder);
+        gc.collect_full()?;
+        assert!(original.upgrade().is_none());
+        gc.stop()?;
+        foreign.stop()?;
+        assert_eq!((gc.managed_bytes(), foreign.managed_bytes()), (0, 0));
+    }
+    assert_eq!(pending, [(false, 0), (true, 0)]);
+    Ok(())
+}
+
+#[test]
+fn batched_java_writes_preserve_unrelated_traced_elements() -> Result<()> {
+    for counted in [false, true] {
+        for (last, gap, expected) in [(1, false, 0), (2, true, 1), (32, false, 1)] {
+            let heap = GarbageCollector::with_config(
+                Configuration::builder()
+                    .threads(0)
+                    .diagnostics(true)
+                    .concurrent_publication(counted)
+                    .barrier_buffer_size(4)
+                    .incremental_step_size(1)
+                    .allocation_threshold(usize::MAX)
+                    .build(),
+            );
+            let foreign = GarbageCollector::new();
+            let local = Value::new_object(&heap, Reference::IntArray(vec![73].into()));
+            let local_witness = weak(&local);
+            let known = if gap { 1 } else { 33 };
+            let mut values = vec![Value::Object(None); 34];
+            values[known] = local;
+            let holder = array(&heap, values)?;
+            let Value::Object(Some(parent)) = &holder else {
+                unreachable!()
+            };
+            let incoming = Value::new_object(&foreign, Reference::IntArray(vec![51].into()));
+            let witness = weak(&incoming);
+            let context = heap.register_context();
+            heap.collect();
+            assert!(!heap.step());
+            context.with(|| {
+                let mut writer = parent.write();
+                writer.set_array_element(0, incoming.clone()).unwrap();
+                writer.set_array_element(last, incoming).unwrap();
+            });
+            assert_eq!(heap.diagnostics().pending_barrier_records, expected);
+            heap.collect_full()?;
+            foreign.collect_full()?;
+            let read = parent.read();
+            let Reference::Array(array) = &*read else {
+                unreachable!()
+            };
+            for (i, w) in [(0, &witness), (last, &witness), (known, &local_witness)] {
+                let Value::Object(Some(target)) = &array.elements[i] else {
+                    unreachable!()
+                };
+                assert!(w.refers_to(target));
+            }
+            drop(read);
+            drop(holder);
+            heap.collect_full()?;
+            foreign.collect_full()?;
+            assert!(local_witness.upgrade().is_none() && witness.upgrade().is_none());
+            heap.stop()?;
+            foreign.stop()?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(panic = "unwind")]
+#[test]
+fn java_point_unwind_and_whole_array_replacement_preserve_ownership() -> Result<()> {
+    for replace in [false, true] {
+        let heap = GarbageCollector::with_config(
+            Configuration::builder()
+                .threads(0)
+                .diagnostics(true)
+                .barrier_buffer_size(4)
+                .incremental_step_size(1)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let foreign = GarbageCollector::new();
+        let holder = array(&heap, vec![Value::Object(None)])?;
+        let Value::Object(Some(parent)) = &holder else {
+            unreachable!()
+        };
+        let target = Value::new_object(&foreign, Reference::IntArray(vec![11].into()));
+        let witness = weak(&target);
+        let context = heap.register_context();
+        heap.collect();
+        assert!(!heap.step());
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            context.with(|| {
+                let mut writer = parent.write();
+                if replace {
+                    let Reference::Array(old) = &*writer else {
+                        unreachable!()
+                    };
+                    let class = old.class.clone();
+                    *writer = Reference::Array(ObjectArray {
+                        class,
+                        elements: vec![target].into(),
+                    });
+                } else {
+                    writer.set_array_element(0, target).unwrap();
+                }
+                panic!("unwind through the managed write guard");
+            });
+        }));
+        assert!(result.is_err());
+        assert_eq!(
+            heap.diagnostics().pending_barrier_records,
+            usize::from(replace)
+        );
+        heap.collect_full()?;
+        foreign.collect_full()?;
+        {
+            let guard = parent.read();
+            let Reference::Array(array) = &*guard else {
+                unreachable!()
+            };
+            let Value::Object(Some(target)) = &array.elements[0] else {
+                unreachable!()
+            };
+            assert!(witness.refers_to(target));
+        }
+        drop(holder);
+        heap.collect_full()?;
+        foreign.collect_full()?;
+        assert!(witness.upgrade().is_none());
+        heap.stop()?;
+        foreign.stop()?;
+    }
+    Ok(())
+}

@@ -590,8 +590,8 @@ impl<T: crate::Trace> RwLock<T> {
                 }
                 if T::may_contain_gc_references()
                     && let Some(gc) = owner.collector().upgrade()
-                    && !(prepared
-                        && value.edges_rooted_before_unroot()
+                    && !(((prepared && value.edges_rooted_before_unroot())
+                        || value.changed_edges_rooted_before_unroot(owner))
                         && gc.remember_before_unroot(owner.address()))
                 {
                     crate::construction::Roots::finish_write(&gc, owner.address(), || {

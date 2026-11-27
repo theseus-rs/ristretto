@@ -723,6 +723,10 @@ impl PartialEq for Reference {
     reason = "audited Reference ownership and tracing variants"
 )]
 unsafe impl Trace for Reference {
+    fn changed_edges_rooted_before_unroot(&self, owner: ristretto_gc::TraceOwner<'_>) -> bool {
+        matches!(self, Self::Array(array) if array.elements.changed_edges_rooted(owner))
+    }
+
     fn needs_write_barrier(&self) -> bool {
         !self.can_skip_unroot_after_write()
     }

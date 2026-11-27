@@ -138,6 +138,26 @@ impl ArrayElements {
         unsafe { self.unroot(owner) };
     }
 
+    pub(crate) fn changed_edges_rooted(&self, owner: ristretto_gc::TraceOwner<'_>) -> bool {
+        let Some(range) = &self.dirty else {
+            return false;
+        };
+        self.owner == owner.address()
+            && !range.is_empty()
+            && range.len() <= CARD_SIZE
+            && self.values.get(range.clone()).is_some_and(|values| {
+                values.iter().all(|value| match value {
+                    Value::Object(Some(edge)) => edge.edges_rooted_before_unroot(),
+                    Value::Object(None)
+                    | Value::Int(_)
+                    | Value::Long(_)
+                    | Value::Float(_)
+                    | Value::Double(_)
+                    | Value::Unused => true,
+                })
+            })
+    }
+
     /// True when the owner binding changed or the whole value was rooted for movement.
     #[expect(
         unsafe_code,

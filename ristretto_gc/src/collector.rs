@@ -712,6 +712,17 @@ pub unsafe trait Trace {
         false
     }
 
+    /// Whether this value is still attached to the supplied owner, every slot
+    /// changed since its last demotion carries only owning roots or no edges,
+    /// and the remaining slots still contain that owner's original traced edges.
+    /// Demotion must operate only on the recorded slots and use ordinary root
+    /// deletion barriers. Conditional edges and other custom actions must
+    /// decline. The check runs under the write guard and must not allocate,
+    /// lock or call into the collector.
+    fn changed_edges_rooted_before_unroot(&self, _owner: crate::TraceOwner<'_>) -> bool {
+        false
+    }
+
     /// Maximum useful slots per scan, sampled before allocation publication.
     /// A small value still traces correctly if the payload later changes shape.
     fn trace_work(&self) -> usize {
