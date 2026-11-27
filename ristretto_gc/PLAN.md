@@ -9,6 +9,12 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+At `c4f527d1` a parked weak upgrade permits a peer to finish a full collection
+under either publication policy. On resume, the upgrade either returns the exact
+live target or observes clearing or reclamation. Across 36 complete-collection
+conditions the lowest individual 95% speedup bounds were 10.75× native and
+10.20× WASI against `f1daebeb`. [Forced schedules, collection graphs and raw data](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/weak-upgrade-tree-roots/README.md).
+
 At `880cce88` the Java roots workload reached 4,979 operations/s on Ristretto,
 14.42 million/s on G1 and 14.30 million/s on ZGC. At 1,500 arrivals/s the
 scheduled p99.9 medians were 2,032, 155 and 91 µs respectively. All 225,000

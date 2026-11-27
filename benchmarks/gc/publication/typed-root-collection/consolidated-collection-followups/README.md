@@ -1,5 +1,7 @@
 # Collection performance through the integrated collector revisions
 
+[Weak upgrades during tree-root preparation, exact target rechecks and complete-collection results](weak-upgrade-tree-roots/README.md).
+
 Each revision, including the withheld experiment, ran the full 36-condition comparison against the same baseline collector at `f1daebeb`. The table shows the weakest of the individual paired bootstrap 95% lower speedup bounds. Every condition must reach 10×.
 
 | Collector change | Revision | Schedule seed | Native | WASI | Passing conditions |
