@@ -48,6 +48,21 @@ unsafe impl<T: Trace> Trace for Option<T> {
             value.root();
         }
     }
+    fn trace_work(&self) -> usize {
+        self.as_ref().map_or(1, Trace::trace_work)
+    }
+
+    fn trace_step(
+        &self,
+        collector: &GarbageCollector,
+        offset: usize,
+        budget: usize,
+    ) -> TraceProgress {
+        self.as_ref().map_or(TraceProgress::Complete, |value| {
+            value.trace_step(collector, offset, budget)
+        })
+    }
+
     fn trace(&self, collector: &GarbageCollector) {
         if let Some(value) = self {
             value.trace(collector);

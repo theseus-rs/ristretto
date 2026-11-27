@@ -34,6 +34,35 @@ unsafe impl Trace for Resumable {
 }
 
 #[test]
+fn optional_marking_preserves_the_inner_work_hint_and_retries() -> Result<()> {
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .incremental_step_size(64)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
+    let offsets = Arc::new(Mutex::new(Vec::new()));
+    let root = Gc::try_new(
+        &gc,
+        Some(Resumable {
+            offsets: offsets.clone(),
+            busy: AtomicBool::new(true),
+        }),
+    )?;
+    gc.collect_full()?;
+    assert_eq!(
+        *offsets
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner),
+        [0, 1, 1, 2]
+    );
+    drop(root);
+    gc.collect_full()?;
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
+
+#[test]
 fn continuations_and_busy_tasks_preserve_offsets_and_step_limits() -> Result<()> {
     for independent in [false, true] {
         for storage in [RootStorage::Tree, RootStorage::Slots] {
