@@ -16,7 +16,7 @@ The full all-feature WASI suite exposed an existing compaction test boundary on 
 
 ## Complete collection
 
-All 36 complete-collection conditions exceeded the 10× lower-bound gate against frozen Ristretto `f1daebeb`. The lowest individual 95% lower bound was **10.75× on native** and **10.20× on WASI**. Each native condition used 24 fresh process pairs and each WASI condition used 48. The 2,304 processes exercised tree, wide and mixed heaps with the benchmark's graph, reclamation and accounting checks. [Condition-level results](cycles/complete-cycles.csv) · [Source and artifact hashes](cycles/cycle-provenance.json) · [Native records](cycles/native.jsonl.gz) · [WASI records](cycles/wasm.jsonl.gz).
+All 36 complete-collection conditions exceeded the 10× lower-bound gate against frozen Ristretto `f1daebeb`. The lowest individual 95% lower bound was **10.753× on native** and **10.206× on WASI**. Each native condition used 24 fresh process pairs and each WASI condition used 48. The 2,304 processes exercised tree, wide and mixed heaps with the benchmark's graph, reclamation and accounting checks. [Condition-level results](cycles/complete-cycles.csv) · [Source and artifact hashes](cycles/cycle-provenance.json) · [Native records](cycles/native.jsonl.gz) · [WASI records](cycles/wasm.jsonl.gz).
 
 ![Complete-collection speedup against the frozen Ristretto control](cycles/speedup.png)
 
